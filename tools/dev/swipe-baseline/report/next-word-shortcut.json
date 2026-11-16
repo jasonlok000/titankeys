@@ -1,0 +1,152 @@
+{
+ "prompted": {
+  "n": 404,
+  "before_swiping_no_stroke_info": {
+   "phone_model": {
+    "in_top_1": 15.1,
+    "in_top_3": 24.0,
+    "in_top_5": 30.9,
+    "in_top_10": 41.6
+   },
+   "strong_model": {
+    "in_top_1": 33.2,
+    "in_top_3": 53.7,
+    "in_top_5": 60.1,
+    "in_top_10": 68.1
+   }
+  },
+  "with_stroke_start_and_end": {
+   "phone_model": {
+    "in_top_1": 36.1,
+    "in_top_3": 51.0,
+    "in_top_5": 58.4,
+    "in_top_10": 64.4
+   },
+   "strong_model": {
+    "in_top_1": 57.9,
+    "in_top_3": 71.3,
+    "in_top_5": 76.0,
+    "in_top_10": 81.7
+   }
+  },
+  "words_swipe_got_wrong_first_n": 95,
+  "wrong_first_rescued_no_stroke": {
+   "phone_model": {
+    "in_top_1": 3.2,
+    "in_top_3": 12.6,
+    "in_top_5": 16.8,
+    "in_top_10": 21.1
+   },
+   "strong_model": {
+    "in_top_1": 20.0,
+    "in_top_3": 37.9,
+    "in_top_5": 46.3,
+    "in_top_10": 56.8
+   }
+  },
+  "wrong_first_rescued_with_stroke": {
+   "phone_model": {
+    "in_top_1": 6.3,
+    "in_top_3": 14.7,
+    "in_top_5": 20.0,
+    "in_top_10": 26.3
+   },
+   "strong_model": {
+    "in_top_1": 28.4,
+    "in_top_3": 41.1,
+    "in_top_5": 45.3,
+    "in_top_10": 50.5
+   }
+  },
+  "not_in_strip_n": 69,
+  "not_in_strip_rescued_with_stroke": {
+   "phone_model": {
+    "in_top_1": 2.9,
+    "in_top_3": 7.2,
+    "in_top_5": 13.0,
+    "in_top_10": 17.4
+   },
+   "strong_model": {
+    "in_top_1": 17.4,
+    "in_top_3": 26.1,
+    "in_top_5": 31.9,
+    "in_top_10": 34.8
+   }
+  }
+ },
+ "hand": {
+  "n": 344,
+  "before_swiping_no_stroke_info": {
+   "phone_model": {
+    "in_top_1": 11.3,
+    "in_top_3": 16.6,
+    "in_top_5": 20.1,
+    "in_top_10": 27.9
+   },
+   "strong_model": {
+    "in_top_1": 13.7,
+    "in_top_3": 23.8,
+    "in_top_5": 27.6,
+    "in_top_10": 34.6
+   }
+  },
+  "with_stroke_start_and_end": {
+   "phone_model": {
+    "in_top_1": 21.8,
+    "in_top_3": 37.2,
+    "in_top_5": 42.7,
+    "in_top_10": 47.4
+   },
+   "strong_model": {
+    "in_top_1": 26.5,
+    "in_top_3": 43.6,
+    "in_top_5": 48.3,
+    "in_top_10": 53.2
+   }
+  },
+  "words_swipe_got_wrong_first_n": 120,
+  "wrong_first_rescued_no_stroke": {
+   "phone_model": {
+    "in_top_1": 6.7,
+    "in_top_3": 7.5,
+    "in_top_5": 11.7,
+    "in_top_10": 19.2
+   },
+   "strong_model": {
+    "in_top_1": 5.0,
+    "in_top_3": 12.5,
+    "in_top_5": 15.8,
+    "in_top_10": 23.3
+   }
+  },
+  "wrong_first_rescued_with_stroke": {
+   "phone_model": {
+    "in_top_1": 10.8,
+    "in_top_3": 17.5,
+    "in_top_5": 20.8,
+    "in_top_10": 24.2
+   },
+   "strong_model": {
+    "in_top_1": 11.7,
+    "in_top_3": 22.5,
+    "in_top_5": 28.3,
+    "in_top_10": 33.3
+   }
+  },
+  "not_in_strip_n": 80,
+  "not_in_strip_rescued_with_stroke": {
+   "phone_model": {
+    "in_top_1": 6.2,
+    "in_top_3": 7.5,
+    "in_top_5": 7.5,
+    "in_top_10": 10.0
+   },
+   "strong_model": {
+    "in_top_1": 6.2,
+    "in_top_3": 11.2,
+    "in_top_5": 16.2,
+    "in_top_10": 22.5
+   }
+  }
+ }
+}

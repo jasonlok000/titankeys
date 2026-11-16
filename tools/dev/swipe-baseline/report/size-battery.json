@@ -1,0 +1,605 @@
+{
+ "A within a stroke": {
+  "by turning angle (degrees): mean rel": {
+   "0-20": [
+    -0.003,
+    10751
+   ],
+   "20-40": [
+    -0.03,
+    526
+   ],
+   "40-60": [
+    -0.004,
+    89
+   ],
+   "60-80": [
+    -0.325,
+    15
+   ],
+   "80-100": [
+    -0.247,
+    5
+   ],
+   "100-120": [
+    0.132,
+    3
+   ],
+   "120-140": [
+    -0.23,
+    2
+   ]
+  },
+  "by speed (keys/s): mean rel": {
+   "0-5": [
+    0.092,
+    4029
+   ],
+   "5-10": [
+    0.055,
+    3114
+   ],
+   "10-15": [
+    0.034,
+    3008
+   ],
+   "15-20": [
+    -0.017,
+    2837
+   ],
+   "20-25": [
+    0.0,
+    2489
+   ],
+   "25-30": [
+    -0.021,
+    1987
+   ],
+   "30-35": [
+    -0.001,
+    1620
+   ],
+   "35-40": [
+    0.021,
+    1061
+   ],
+   "40-45": [
+    -0.011,
+    1350
+   ]
+  },
+  "corr(speed ratio now/before, rel)": 0.06,
+  "by distance to the nearest intended letter (keys): mean rel": {
+   "0.00": [
+    -0.064,
+    2442
+   ],
+   "0.25": [
+    0.026,
+    5572
+   ],
+   "0.50": [
+    0.002,
+    5200
+   ],
+   "0.75": [
+    -0.042,
+    3919
+   ],
+   "1.00": [
+    0.025,
+    2463
+   ],
+   "1.25": [
+    0.035,
+    1614
+   ],
+   "1.50": [
+    0.012,
+    1002
+   ],
+   "1.75": [
+    0.006,
+    680
+   ],
+   "2.00": [
+    0.022,
+    1243
+   ]
+  },
+  "around inner intended letters (points before/after): mean rel": {
+   "-4": [
+    -0.032,
+    1034
+   ],
+   "-3": [
+    -0.037,
+    1036
+   ],
+   "-2": [
+    -0.041,
+    1036
+   ],
+   "-1": [
+    -0.054,
+    1036
+   ],
+   "0": [
+    -0.078,
+    1037
+   ],
+   "1": [
+    -0.059,
+    1037
+   ],
+   "2": [
+    0.05,
+    775
+   ],
+   "3": [
+    0.006,
+    758
+   ],
+   "4": [
+    0.019,
+    740
+   ]
+  },
+  "by time through the stroke (tenths): mean pos": {
+   "0": [
+    -0.06,
+    1569
+   ],
+   "1": [
+    0.062,
+    2214
+   ],
+   "2": [
+    0.039,
+    2444
+   ],
+   "3": [
+    0.004,
+    2478
+   ],
+   "4": [
+    0.017,
+    2492
+   ],
+   "5": [
+    0.02,
+    2556
+   ],
+   "6": [
+    0.027,
+    2529
+   ],
+   "7": [
+    0.04,
+    2536
+   ],
+   "8": [
+    0.047,
+    2530
+   ],
+   "9": [
+    -0.191,
+    2787
+   ]
+  }
+ },
+ "B across strokes": {
+  "strokes": 440,
+  "by pressure quarter (lightest first)": {
+   "Q1": {
+    "n": 110,
+    "level": -0.39,
+    "raw steps": 1.84,
+    "engine 2.0 live first %": 80.9,
+    "top 3 %": 85.5,
+    "keys from intended letters": 0.858,
+    "x offset (keys, + right)": -0.113,
+    "y offset (rows, + down)": 0.075,
+    "speed keys/s": 15.3,
+    "word length": 4.11
+   },
+   "Q2": {
+    "n": 110,
+    "level": -0.15,
+    "raw steps": 2.11,
+    "engine 2.0 live first %": 68.2,
+    "top 3 %": 73.6,
+    "keys from intended letters": 0.879,
+    "x offset (keys, + right)": -0.02,
+    "y offset (rows, + down)": 0.125,
+    "speed keys/s": 15.0,
+    "word length": 4.57
+   },
+   "Q3": {
+    "n": 110,
+    "level": 0.04,
+    "raw steps": 2.26,
+    "engine 2.0 live first %": 70.9,
+    "top 3 %": 80.0,
+    "keys from intended letters": 0.895,
+    "x offset (keys, + right)": -0.209,
+    "y offset (rows, + down)": 0.133,
+    "speed keys/s": 16.3,
+    "word length": 4.75
+   },
+   "Q4": {
+    "n": 110,
+    "level": 0.43,
+    "raw steps": 2.71,
+    "engine 2.0 live first %": 68.2,
+    "top 3 %": 77.3,
+    "keys from intended letters": 0.946,
+    "x offset (keys, + right)": -0.145,
+    "y offset (rows, + down)": 0.162,
+    "speed keys/s": 16.0,
+    "word length": 3.99
+   }
+  },
+  "corr(level, keys from letters)": 0.038,
+  "corr(level, speed)": 0.04,
+  "corr(level, right first)": -0.073,
+  "corr(spread within stroke, right first)": 0.009
+ },
+ "E correlations": {
+  "pressure level": {
+   "raw steps": {
+    "rho": 0.728,
+    "z": 15.3
+   },
+   "pressure spread": {
+    "rho": 0.282,
+    "z": 5.9
+   },
+   "pressure at start (first 100 ms)": {
+    "rho": 0.513,
+    "z": 10.8
+   },
+   "pressure drop at the end (last 100 ms minus the 200 ms before)": {
+    "rho": -0.157,
+    "z": -3.3
+   },
+   "length (keys)": {
+    "rho": 0.073,
+    "z": 1.5
+   },
+   "duration (ms)": {
+    "rho": 0.076,
+    "z": 1.6
+   },
+   "speed (keys/s)": {
+    "rho": 0.077,
+    "z": 1.6
+   },
+   "start row (0 top)": {
+    "rho": -0.124,
+    "z": -2.6
+   },
+   "end row (0 top)": {
+    "rho": 0.185,
+    "z": 3.9
+   },
+   "start column": {
+    "rho": 0.116,
+    "z": 2.4
+   },
+   "end column": {
+    "rho": -0.065,
+    "z": -1.4
+   },
+   "hour of day": {
+    "rho": 0.183,
+    "z": 3.8
+   },
+   "word length": {
+    "rho": -0.009,
+    "z": -0.2
+   },
+   "keys from intended letters": {
+    "rho": 0.094,
+    "z": 2.0
+   },
+   "engine 2.0 live right first": {
+    "rho": -0.089,
+    "z": -1.9
+   },
+   "engine 2.0 live in top 3": {
+    "rho": -0.045,
+    "z": -0.9
+   },
+   "broken (a later piece rejoined it)": {
+    "rho": NaN,
+    "z": NaN
+   }
+  },
+  "raw steps": {
+   "pressure level": {
+    "rho": 0.728,
+    "z": 15.3
+   },
+   "pressure spread": {
+    "rho": 0.347,
+    "z": 7.3
+   },
+   "pressure at start (first 100 ms)": {
+    "rho": 0.353,
+    "z": 7.4
+   },
+   "pressure drop at the end (last 100 ms minus the 200 ms before)": {
+    "rho": -0.153,
+    "z": -3.2
+   },
+   "length (keys)": {
+    "rho": 0.235,
+    "z": 4.9
+   },
+   "duration (ms)": {
+    "rho": 0.202,
+    "z": 4.2
+   },
+   "speed (keys/s)": {
+    "rho": 0.152,
+    "z": 3.2
+   },
+   "start row (0 top)": {
+    "rho": 0.136,
+    "z": 2.9
+   },
+   "end row (0 top)": {
+    "rho": 0.347,
+    "z": 7.3
+   },
+   "start column": {
+    "rho": -0.072,
+    "z": -1.5
+   },
+   "end column": {
+    "rho": -0.096,
+    "z": -2.0
+   },
+   "hour of day": {
+    "rho": 0.095,
+    "z": 2.0
+   },
+   "word length": {
+    "rho": 0.095,
+    "z": 2.0
+   },
+   "keys from intended letters": {
+    "rho": 0.201,
+    "z": 4.2
+   },
+   "engine 2.0 live right first": {
+    "rho": -0.09,
+    "z": -1.9
+   },
+   "engine 2.0 live in top 3": {
+    "rho": -0.015,
+    "z": -0.3
+   },
+   "broken (a later piece rejoined it)": {
+    "rho": NaN,
+    "z": NaN
+   }
+  },
+  "pressure spread": {
+   "pressure level": {
+    "rho": 0.282,
+    "z": 5.9
+   },
+   "raw steps": {
+    "rho": 0.347,
+    "z": 7.3
+   },
+   "pressure at start (first 100 ms)": {
+    "rho": 0.161,
+    "z": 3.4
+   },
+   "pressure drop at the end (last 100 ms minus the 200 ms before)": {
+    "rho": -0.188,
+    "z": -3.9
+   },
+   "length (keys)": {
+    "rho": 0.261,
+    "z": 5.5
+   },
+   "duration (ms)": {
+    "rho": 0.241,
+    "z": 5.0
+   },
+   "speed (keys/s)": {
+    "rho": 0.067,
+    "z": 1.4
+   },
+   "start row (0 top)": {
+    "rho": 0.022,
+    "z": 0.5
+   },
+   "end row (0 top)": {
+    "rho": 0.085,
+    "z": 1.8
+   },
+   "start column": {
+    "rho": -0.094,
+    "z": -2.0
+   },
+   "end column": {
+    "rho": -0.01,
+    "z": -0.2
+   },
+   "hour of day": {
+    "rho": 0.047,
+    "z": 1.0
+   },
+   "word length": {
+    "rho": 0.131,
+    "z": 2.7
+   },
+   "keys from intended letters": {
+    "rho": 0.019,
+    "z": 0.4
+   },
+   "engine 2.0 live right first": {
+    "rho": -0.001,
+    "z": -0.0
+   },
+   "engine 2.0 live in top 3": {
+    "rho": 0.027,
+    "z": 0.6
+   },
+   "broken (a later piece rejoined it)": {
+    "rho": NaN,
+    "z": NaN
+   }
+  },
+  "pressure drop at the end (last 100 ms minus the 200 ms before)": {
+   "pressure level": {
+    "rho": -0.157,
+    "z": -3.3
+   },
+   "raw steps": {
+    "rho": -0.153,
+    "z": -3.2
+   },
+   "pressure spread": {
+    "rho": -0.188,
+    "z": -3.9
+   },
+   "pressure at start (first 100 ms)": {
+    "rho": -0.23,
+    "z": -4.8
+   },
+   "length (keys)": {
+    "rho": -0.045,
+    "z": -0.9
+   },
+   "duration (ms)": {
+    "rho": -0.053,
+    "z": -1.1
+   },
+   "speed (keys/s)": {
+    "rho": 0.009,
+    "z": 0.2
+   },
+   "start row (0 top)": {
+    "rho": -0.028,
+    "z": -0.6
+   },
+   "end row (0 top)": {
+    "rho": 0.162,
+    "z": 3.4
+   },
+   "start column": {
+    "rho": -0.001,
+    "z": -0.0
+   },
+   "end column": {
+    "rho": -0.053,
+    "z": -1.1
+   },
+   "hour of day": {
+    "rho": -0.115,
+    "z": -2.4
+   },
+   "word length": {
+    "rho": -0.042,
+    "z": -0.9
+   },
+   "keys from intended letters": {
+    "rho": 0.067,
+    "z": 1.4
+   },
+   "engine 2.0 live right first": {
+    "rho": -0.042,
+    "z": -0.9
+   },
+   "engine 2.0 live in top 3": {
+    "rho": -0.073,
+    "z": -1.5
+   },
+   "broken (a later piece rejoined it)": {
+    "rho": NaN,
+    "z": NaN
+   }
+  }
+ },
+ "F broken strokes": {
+  "broken / ends lower": {
+   "n": 9,
+   "pressure level": -0.182,
+   "raw steps": 2.171,
+   "pressure drop at the end (last 100 ms minus the 200 ms before)": -0.115,
+   "speed (keys/s)": 17.152,
+   "end row (0 top)": 1.531,
+   "end column": 3.787,
+   "duration (ms)": 386.222
+  },
+  "broken / ends on the top row": {
+   "n": 96,
+   "pressure level": -0.091,
+   "raw steps": 2.059,
+   "pressure drop at the end (last 100 ms minus the 200 ms before)": -0.258,
+   "speed (keys/s)": 14.362,
+   "end row (0 top)": 0.643,
+   "end column": 5.778,
+   "duration (ms)": 450.448
+  },
+  "whole / ends lower": {
+   "n": 399,
+   "pressure level": 0.012,
+   "raw steps": 2.317,
+   "pressure drop at the end (last 100 ms minus the 200 ms before)": -0.077,
+   "speed (keys/s)": 15.469,
+   "end row (0 top)": 1.674,
+   "end column": 4.041,
+   "duration (ms)": 580.82
+  },
+  "whole / ends on the top row": {
+   "n": 316,
+   "pressure level": -0.078,
+   "raw steps": 2.044,
+   "pressure drop at the end (last 100 ms minus the 200 ms before)": -0.145,
+   "speed (keys/s)": 15.136,
+   "end row (0 top)": 0.746,
+   "end column": 4.071,
+   "duration (ms)": 524.589
+  },
+  "pressure (position-corrected) in the last 300 ms, by 50 ms before the end": {
+   "broken": {
+    "0-50 ms": -0.369,
+    "50-100 ms": -0.101,
+    "100-150 ms": 0.024,
+    "150-200 ms": 0.049,
+    "200-250 ms": 0.037,
+    "250-300 ms": 0.005
+   },
+   "whole": {
+    "0-50 ms": -0.236,
+    "50-100 ms": 0.055,
+    "100-150 ms": 0.072,
+    "150-200 ms": 0.002,
+    "200-250 ms": -0.028,
+    "250-300 ms": -0.011
+   }
+  },
+  "top-row ends: pressure drop at the end (last 100 ms minus the 200 ms before) against broken": {
+   "rho": -0.152,
+   "z": -3.0,
+   "n": 412
+  },
+  "top-row ends: pressure level against broken": {
+   "rho": -0.014,
+   "z": -0.3,
+   "n": 412
+  },
+  "top-row ends: speed (keys/s) against broken": {
+   "rho": -0.055,
+   "z": -1.1,
+   "n": 412
+  }
+ }
+}

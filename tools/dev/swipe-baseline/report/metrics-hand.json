@@ -1,0 +1,901 @@
+{
+ "all": {
+  "n": 344,
+  "top1": 231,
+  "top3": 265,
+  "final": 344
+ },
+ "by_style": {
+  "everyday": {
+   "n": 344,
+   "top1": 231,
+   "top3": 265,
+   "final": 344
+  }
+ },
+ "thumb_and_index": {
+  "n": 344,
+  "top1": 231,
+  "top3": 265,
+  "final": 344
+ },
+ "by_length": {
+  "1-2": {
+   "n": 85,
+   "top1": 60,
+   "top3": 67,
+   "final": 85
+  },
+  "3": {
+   "n": 85,
+   "top1": 59,
+   "top3": 71,
+   "final": 85
+  },
+  "4": {
+   "n": 68,
+   "top1": 44,
+   "top3": 50,
+   "final": 68
+  },
+  "5": {
+   "n": 46,
+   "top1": 32,
+   "top3": 34,
+   "final": 46
+  },
+  "6-7": {
+   "n": 44,
+   "top1": 25,
+   "top3": 31,
+   "final": 44
+  },
+  "8+": {
+   "n": 16,
+   "top1": 11,
+   "top3": 12,
+   "final": 16
+  }
+ },
+ "by_frequency": {
+  "255-200": {
+   "n": 47,
+   "top1": 41,
+   "top3": 42,
+   "final": 47
+  },
+  "199-150": {
+   "n": 147,
+   "top1": 98,
+   "top3": 115,
+   "final": 147
+  },
+  "149-100": {
+   "n": 109,
+   "top1": 70,
+   "top3": 83,
+   "final": 109
+  },
+  "<100": {
+   "n": 41,
+   "top1": 22,
+   "top3": 25,
+   "final": 41
+  }
+ },
+ "first_word": {
+  "first": {
+   "n": 55,
+   "top1": 37,
+   "top3": 42,
+   "final": 55
+  },
+  "later": {
+   "n": 289,
+   "top1": 194,
+   "top3": 223,
+   "final": 289
+  }
+ },
+ "by_top_row": {
+  "none": {
+   "n": 32,
+   "top1": 25,
+   "top3": 26,
+   "final": 32
+  },
+  "some (<50%)": {
+   "n": 82,
+   "top1": 53,
+   "top3": 61,
+   "final": 82
+  },
+  "half+": {
+   "n": 189,
+   "top1": 125,
+   "top3": 148,
+   "final": 189
+  },
+  "all": {
+   "n": 41,
+   "top1": 28,
+   "top3": 30,
+   "final": 41
+  }
+ },
+ "by_first_row": {
+  "top": {
+   "n": 179,
+   "top1": 125,
+   "top3": 141,
+   "final": 179
+  },
+  "middle": {
+   "n": 108,
+   "top1": 70,
+   "top3": 82,
+   "final": 108
+  },
+  "bottom": {
+   "n": 57,
+   "top1": 36,
+   "top3": 42,
+   "final": 57
+  }
+ },
+ "by_last_row": {
+  "top": {
+   "n": 170,
+   "top1": 119,
+   "top3": 131,
+   "final": 170
+  },
+  "middle": {
+   "n": 115,
+   "top1": 68,
+   "top3": 85,
+   "final": 115
+  },
+  "bottom": {
+   "n": 59,
+   "top1": 44,
+   "top3": 49,
+   "final": 59
+  }
+ },
+ "by_speed": {
+  "<5": {
+   "n": 27,
+   "top1": 24,
+   "top3": 24,
+   "final": 27
+  },
+  "5-8": {
+   "n": 21,
+   "top1": 13,
+   "top3": 15,
+   "final": 21
+  },
+  "8-11": {
+   "n": 44,
+   "top1": 28,
+   "top3": 33,
+   "final": 44
+  },
+  "11-14": {
+   "n": 53,
+   "top1": 38,
+   "top3": 41,
+   "final": 53
+  },
+  "14+": {
+   "n": 199,
+   "top1": 128,
+   "top3": 152,
+   "final": 199
+  }
+ },
+ "by_integrity": {
+  "one contact, not rejoined": {
+   "n": 303,
+   "top1": 204,
+   "top3": 236,
+   "final": 303
+  },
+  "broken stroke, rejoined": {
+   "n": 36,
+   "top1": 24,
+   "top3": 26,
+   "final": 36
+  },
+  "several contacts, one piece": {
+   "n": 5,
+   "top1": 3,
+   "top3": 3,
+   "final": 5
+  }
+ },
+ "attempts": {
+  "all_attempts": 449,
+  "correct_attempts": 299,
+  "retries": 105,
+  "retries_right": 68,
+  "attempts_per_word": 1.305
+ },
+ "ghosts": {
+  "attempts_with_no_surviving_word": 0,
+  "by_style": {}
+ },
+ "recovery": {
+  "other": 5,
+  "chosen from strip": 43,
+  "deleted and swiped again": 60,
+  "fixed by typing": 5
+ },
+ "failure_engine": {
+  "not offered (not in the top 3)": 77,
+  "ranked 2-3: path favoured the wrong word": 22,
+  "ranked 2-3: path favoured the right word": 11,
+  "inflection or prefix": 3
+ },
+ "gesture_base_rates": {
+  "clean: reached every letter": {
+   "n": 133,
+   "top1": 112,
+   "top3": 126,
+   "final": 133,
+   "fails": 21
+  },
+  "stroke broken into pieces": {
+   "n": 40,
+   "top1": 27,
+   "top3": 29,
+   "final": 40,
+   "fails": 13
+  },
+  "start > 1 key from first letter": {
+   "n": 45,
+   "top1": 20,
+   "top3": 23,
+   "final": 45,
+   "fails": 25
+  },
+  "end > 1 key from last letter": {
+   "n": 57,
+   "top1": 33,
+   "top3": 43,
+   "final": 57,
+   "fails": 24
+  },
+  "passes > 1 key from a middle letter": {
+   "n": 47,
+   "top1": 36,
+   "top3": 40,
+   "final": 47,
+   "fails": 11
+  },
+  "stroke cut short (< half the word)": {
+   "n": 17,
+   "top1": 2,
+   "top3": 3,
+   "final": 17,
+   "fails": 15
+  },
+  "stroke far longer than the word (label doubt)": {
+   "n": 5,
+   "top1": 1,
+   "top3": 1,
+   "final": 5,
+   "fails": 4
+  }
+ },
+ "failure_gesture": {
+  "stroke broken into pieces": 13,
+  "end > 1 key from last letter": 24,
+  "clean: reached every letter": 21,
+  "stroke cut short (< half the word)": 15,
+  "start > 1 key from first letter": 25,
+  "stroke far longer than the word (label doubt)": 4,
+  "passes > 1 key from a middle letter": 11
+ },
+ "failure_table": [
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "start > 1 key from first letter",
+   "n": 22
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "end > 1 key from last letter",
+   "n": 13
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "stroke cut short (< half the word)",
+   "n": 13
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "stroke broken into pieces",
+   "n": 11
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "clean: reached every letter",
+   "n": 9
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "clean: reached every letter",
+   "n": 7
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "passes > 1 key from a middle letter",
+   "n": 7
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "end > 1 key from last letter",
+   "n": 6
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "clean: reached every letter",
+   "n": 5
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "stroke far longer than the word (label doubt)",
+   "n": 4
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "passes > 1 key from a middle letter",
+   "n": 3
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "end > 1 key from last letter",
+   "n": 3
+  },
+  {
+   "engine": "inflection or prefix",
+   "gesture": "end > 1 key from last letter",
+   "n": 2
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "start > 1 key from first letter",
+   "n": 2
+  },
+  {
+   "engine": "inflection or prefix",
+   "gesture": "stroke cut short (< half the word)",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "start > 1 key from first letter",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "stroke broken into pieces",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "stroke cut short (< half the word)",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "passes > 1 key from a middle letter",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "stroke broken into pieces",
+   "n": 1
+  }
+ ],
+ "endpoint_error": {
+  "start": {
+   "w": {
+    "n": 32,
+    "dx": -0.07,
+    "dy": 0.37,
+    "sd": 1.24
+   },
+   "e": {
+    "n": 5,
+    "dx": -0.45,
+    "dy": 0.06,
+    "sd": 0.24
+   },
+   "r": {
+    "n": 8,
+    "dx": 0.99,
+    "dy": 0.33,
+    "sd": 0.98
+   },
+   "t": {
+    "n": 61,
+    "dx": -0.23,
+    "dy": 0.27,
+    "sd": 1.11
+   },
+   "y": {
+    "n": 11,
+    "dx": -0.6,
+    "dy": 0.24,
+    "sd": 1.3
+   },
+   "u": {
+    "n": 4,
+    "dx": -0.31,
+    "dy": 0.14,
+    "sd": 0.43
+   },
+   "i": {
+    "n": 27,
+    "dx": -0.57,
+    "dy": 0.46,
+    "sd": 0.79
+   },
+   "o": {
+    "n": 21,
+    "dx": -0.55,
+    "dy": 0.2,
+    "sd": 1.76
+   },
+   "p": {
+    "n": 6,
+    "dx": -0.35,
+    "dy": 0.21,
+    "sd": 0.35
+   },
+   "a": {
+    "n": 22,
+    "dx": 0.56,
+    "dy": 0.15,
+    "sd": 1.06
+   },
+   "s": {
+    "n": 16,
+    "dx": -0.01,
+    "dy": 0.08,
+    "sd": 0.6
+   },
+   "d": {
+    "n": 8,
+    "dx": -0.12,
+    "dy": -0.16,
+    "sd": 1.28
+   },
+   "f": {
+    "n": 15,
+    "dx": -0.27,
+    "dy": 0.11,
+    "sd": 0.62
+   },
+   "g": {
+    "n": 5,
+    "dx": -0.25,
+    "dy": -0.16,
+    "sd": 1.27
+   },
+   "h": {
+    "n": 15,
+    "dx": -0.1,
+    "dy": 0.07,
+    "sd": 0.44
+   },
+   "j": {
+    "n": 10,
+    "dx": 0.28,
+    "dy": 0.15,
+    "sd": 0.43
+   },
+   "k": {
+    "n": 6,
+    "dx": -0.97,
+    "dy": 0.08,
+    "sd": 2.75
+   },
+   "l": {
+    "n": 11,
+    "dx": -0.71,
+    "dy": -0.22,
+    "sd": 1.41
+   },
+   "z": {
+    "n": 1,
+    "dx": -0.19,
+    "dy": 0.51,
+    "sd": 0.0
+   },
+   "c": {
+    "n": 7,
+    "dx": -0.33,
+    "dy": -0.26,
+    "sd": 1.07
+   },
+   "b": {
+    "n": 20,
+    "dx": -0.44,
+    "dy": -0.05,
+    "sd": 1.29
+   },
+   "n": {
+    "n": 18,
+    "dx": -0.54,
+    "dy": -0.12,
+    "sd": 1.35
+   },
+   "m": {
+    "n": 10,
+    "dx": -0.28,
+    "dy": -0.18,
+    "sd": 0.58
+   }
+  },
+  "end": {
+   "w": {
+    "n": 7,
+    "dx": 0.63,
+    "dy": 0.23,
+    "sd": 0.53
+   },
+   "e": {
+    "n": 46,
+    "dx": 0.72,
+    "dy": 0.45,
+    "sd": 1.38
+   },
+   "r": {
+    "n": 11,
+    "dx": 0.57,
+    "dy": 0.22,
+    "sd": 0.58
+   },
+   "t": {
+    "n": 39,
+    "dx": -0.24,
+    "dy": 0.44,
+    "sd": 1.0
+   },
+   "y": {
+    "n": 19,
+    "dx": -0.3,
+    "dy": 0.57,
+    "sd": 1.09
+   },
+   "u": {
+    "n": 10,
+    "dx": -0.14,
+    "dy": 0.14,
+    "sd": 0.61
+   },
+   "i": {
+    "n": 1,
+    "dx": 0.35,
+    "dy": -0.03,
+    "sd": 0.0
+   },
+   "o": {
+    "n": 27,
+    "dx": -1.42,
+    "dy": 0.31,
+    "sd": 1.35
+   },
+   "p": {
+    "n": 6,
+    "dx": -1.22,
+    "dy": 0.12,
+    "sd": 0.95
+   },
+   "a": {
+    "n": 9,
+    "dx": 1.24,
+    "dy": -0.01,
+    "sd": 2.01
+   },
+   "s": {
+    "n": 39,
+    "dx": 0.05,
+    "dy": 0.17,
+    "sd": 1.29
+   },
+   "d": {
+    "n": 21,
+    "dx": 0.57,
+    "dy": -0.14,
+    "sd": 1.46
+   },
+   "f": {
+    "n": 3,
+    "dx": 0.28,
+    "dy": 0.14,
+    "sd": 0.83
+   },
+   "g": {
+    "n": 20,
+    "dx": -0.22,
+    "dy": 0.32,
+    "sd": 1.1
+   },
+   "h": {
+    "n": 7,
+    "dx": -0.18,
+    "dy": 0.04,
+    "sd": 0.42
+   },
+   "k": {
+    "n": 8,
+    "dx": -1.06,
+    "dy": -0.14,
+    "sd": 1.48
+   },
+   "l": {
+    "n": 8,
+    "dx": -0.95,
+    "dy": -0.22,
+    "sd": 1.83
+   },
+   "z": {
+    "n": 1,
+    "dx": -0.59,
+    "dy": 0.34,
+    "sd": 0.0
+   },
+   "x": {
+    "n": 1,
+    "dx": 0.36,
+    "dy": -0.42,
+    "sd": 0.0
+   },
+   "c": {
+    "n": 2,
+    "dx": 0.19,
+    "dy": 0.47,
+    "sd": 0.35
+   },
+   "b": {
+    "n": 2,
+    "dx": 0.82,
+    "dy": 0.61,
+    "sd": 0.74
+   },
+   "n": {
+    "n": 44,
+    "dx": -0.44,
+    "dy": -0.15,
+    "sd": 1.16
+   },
+   "m": {
+    "n": 8,
+    "dx": 0.13,
+    "dy": -0.05,
+    "sd": 0.52
+   }
+  }
+ },
+ "reach_cdf": {
+  "0.25": 28.6,
+  "0.5": 54.7,
+  "0.75": 70.4,
+  "1.0": 80.9,
+  "1.5": 90.3
+ },
+ "reach_by_letter": {
+  "w": {
+   "n": 40,
+   "median": 0.36,
+   "over1": 12.5
+  },
+  "e": {
+   "n": 129,
+   "median": 0.49,
+   "over1": 18.6
+  },
+  "r": {
+   "n": 59,
+   "median": 0.34,
+   "over1": 6.8
+  },
+  "t": {
+   "n": 139,
+   "median": 0.32,
+   "over1": 5.8
+  },
+  "y": {
+   "n": 33,
+   "median": 0.57,
+   "over1": 24.2
+  },
+  "u": {
+   "n": 33,
+   "median": 0.41,
+   "over1": 9.1
+  },
+  "i": {
+   "n": 83,
+   "median": 0.67,
+   "over1": 32.5
+  },
+  "o": {
+   "n": 130,
+   "median": 0.87,
+   "over1": 43.8
+  },
+  "p": {
+   "n": 18,
+   "median": 0.72,
+   "over1": 33.3
+  },
+  "a": {
+   "n": 119,
+   "median": 0.41,
+   "over1": 23.5
+  },
+  "s": {
+   "n": 89,
+   "median": 0.28,
+   "over1": 11.2
+  },
+  "d": {
+   "n": 34,
+   "median": 0.37,
+   "over1": 14.7
+  },
+  "f": {
+   "n": 29,
+   "median": 0.22,
+   "over1": 3.4
+  },
+  "g": {
+   "n": 33,
+   "median": 0.42,
+   "over1": 9.1
+  },
+  "h": {
+   "n": 78,
+   "median": 0.4,
+   "over1": 10.3
+  },
+  "j": {
+   "n": 11,
+   "median": 0.09,
+   "over1": 0.0
+  },
+  "k": {
+   "n": 22,
+   "median": 0.7,
+   "over1": 27.3
+  },
+  "l": {
+   "n": 42,
+   "median": 0.82,
+   "over1": 35.7
+  },
+  "z": {
+   "n": 2,
+   "median": 0.14,
+   "over1": 0.0
+  },
+  "x": {
+   "n": 4,
+   "median": 0.37,
+   "over1": 0.0
+  },
+  "c": {
+   "n": 22,
+   "median": 0.34,
+   "over1": 13.6
+  },
+  "v": {
+   "n": 9,
+   "median": 0.55,
+   "over1": 11.1
+  },
+  "b": {
+   "n": 26,
+   "median": 0.47,
+   "over1": 11.5
+  },
+  "n": {
+   "n": 112,
+   "median": 0.5,
+   "over1": 20.5
+  },
+  "m": {
+   "n": 27,
+   "median": 0.3,
+   "over1": 18.5
+  }
+ },
+ "reach_by_position": {
+  "first": {
+   "n": 339,
+   "median": 0.29,
+   "over1": 11.2
+  },
+  "middle": {
+   "n": 645,
+   "median": 0.49,
+   "over1": 21.7
+  },
+  "last": {
+   "n": 339,
+   "median": 0.6,
+   "over1": 22.1
+  }
+ },
+ "length_ratio": {
+  "p10": 0.62,
+  "p50": 0.87,
+  "p90": 1.15
+ },
+ "speed": {
+  "p10": 6.6,
+  "p50": 15.1,
+  "p90": 21.2,
+  "dur_p50": 533.0,
+  "dur_p90": 1144.8
+ },
+ "sampling": {
+  "intervals": 63065,
+  "p50": 10.0,
+  "p90": 10.0,
+  "p99": 47.0,
+  "max": 3505,
+  "over40ms": 653,
+  "zero": 2
+ },
+ "rejoin": {
+  "n": 188,
+  "gap_p50": 67.0,
+  "gap_p90": 145.7000000000001,
+  "where_finger_left": {
+   "top row": 156,
+   "middle": 13,
+   "bottom": 19
+  }
+ },
+ "coverage": {
+  "x_min": 0.056,
+  "x_p1": 0.056,
+  "x_p99": 0.871,
+  "x_max": 0.949,
+  "y_min": 0.116,
+  "y_p1": 0.116,
+  "y_p99": 0.758,
+  "y_max": 0.885
+ },
+ "contacts": {
+  "short touch": 1681,
+  "became a swipe": 1446,
+  "moved 1.5+ keys, no swipe": 539,
+  "moved 0.6-1.5 keys, no swipe": 179
+ },
+ "deletes": {
+  "delete_flicks": 402,
+  "by_block": {
+   "none": 191,
+   "step": 98,
+   "style": 113
+  }
+ },
+ "natural": {
+  "words": 447,
+  "outcomes": {
+   "deleted or edited, not swiped again": 40,
+   "chose another word from the strip": 28,
+   "deleted and swiped again": 77,
+   "kept as first offered": 302
+  },
+  "kept_pct": 67.6
+ }
+}

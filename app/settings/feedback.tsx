@@ -1,31 +1,20 @@
-import { useState } from "react";
-import { Row, Screen, openURL, useSnapshot } from "ink";
-import { arrowOutward } from "ink/icons";
-import { state } from "../../lib/atlas";
+import { Field, Row, Screen, Section, navigate, useSnapshot } from "ink";
+import { forceCrash, state } from "../../lib/atlas";
 
-const issues = "https://github.com/jasonlok000/titankeys/issues";
-
-function draft(title: string, body: string) {
-  return `${issues}/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}`;
-}
-
+/**
+ * Settings > Send feedback: Report a bug and Suggest an idea open the report form (#97), which sends straight to us and
+ * offers email if it can't (#74). No account needed.
+ */
 export default function Feedback() {
   const result = useSnapshot(state);
-  const [error, setError] = useState("");
-  const compose = async (title: string, body: string) => {
-    setError("");
-    try {
-      await openURL(draft(title, body));
-    } catch {
-      setError(`Couldn't open your browser. Go to ${issues}.`);
-    }
-  };
-  const details = result.status === "ready"
-    ? `TitanKeys version: ${result.data.version}\nPhone: ${result.data.phone}\nAndroid: ${result.data.android}`
-    : "";
-  return <Screen title="Send feedback" subtitle={error || "Opens a GitHub issue. Needs a GitHub account."}>
-    <Row title="Report a bug" endIcon={arrowOutward} onPress={() => void compose("Bug report",
-      `What happened?\n\n\nWhat should have happened?\n\n\n${details}`)} />
-    <Row title="Suggest an idea" endIcon={arrowOutward} onPress={() => void compose("Idea", "What would you like TitanKeys to do?\n\n")} />
+  const debug = result.status === "ready" && result.data.build === "debug";
+  // F: the subtitle is F's #74 line with its first half redone for the form (draft).
+  return <Screen title="Send feedback" subtitle="Goes straight to us from TitanKeys. A real person reads it.">
+    <Row title="Report a bug" onPress={() => navigate("/settings/report")} />
+    <Row title="Suggest an idea" onPress={() => navigate({ path: "/settings/report", params: { kind: "idea" } })} />
+    {debug && <Section title="TitanKeys Debug">
+      {/* Tests the crash offer: TitanKeys crashes, and the next open offers to send the report. F: draft label. */}
+      <Field label="Crash TitanKeys" onPress={() => void forceCrash()}>{""}</Field>
+    </Section>}
   </Screen>;
 }

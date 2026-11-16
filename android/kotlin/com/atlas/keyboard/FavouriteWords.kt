@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 
 /**
  * The words made favourites in the word menu, kept in lowercase, so a favourite counts in any case. They are kept beside Blocked
- * words, and go with the words when they are exported or imported: see LearningTransferActivity. See [Favourites].
+ * words, and go in Back up everything, and come back from Export words' old files: see BackupActivity. See [Favourites].
  */
 class FavouriteWords private constructor(private val preferences: SharedPreferences) {
     @Volatile

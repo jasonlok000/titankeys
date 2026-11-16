@@ -1,0 +1,86 @@
+{
+ "strokes": 363,
+ "letter minus between, mean steps": -0.086,
+ "strokes letters larger / smaller / equal": [
+  128,
+  173,
+  62
+ ],
+ "sign test z": -2.59,
+ "by speed (keys per second)": {
+  "0-4": {
+   "letters": 2.246,
+   "between": 2.54,
+   "n": [
+    338,
+    820
+   ]
+  },
+  "4-8": {
+   "letters": 2.35,
+   "between": 2.487,
+   "n": [
+    103,
+    517
+   ]
+  },
+  "8-12": {
+   "letters": 2.333,
+   "between": 2.476,
+   "n": [
+    66,
+    576
+   ]
+  },
+  "12-16": {
+   "letters": 2.355,
+   "between": 2.393,
+   "n": [
+    62,
+    652
+   ]
+  },
+  "16-20": {
+   "letters": 2.123,
+   "between": 2.348,
+   "n": [
+    65,
+    750
+   ]
+  },
+  "20-24": {
+   "letters": 2.295,
+   "between": 2.355,
+   "n": [
+    44,
+    816
+   ]
+  },
+  "24-28": {
+   "letters": 2.219,
+   "between": 2.355,
+   "n": [
+    137,
+    3581
+   ]
+  }
+ },
+ "size by turn": {
+  "0-30 degrees": {
+   "mean steps": 2.286,
+   "n": 18528
+  },
+  "30-60 degrees": {
+   "mean steps": 2.254,
+   "n": 118
+  },
+  "60-90 degrees": {
+   "mean steps": 1.429,
+   "n": 7
+  },
+  "90-181 degrees": {
+   "mean steps": 1.0,
+   "n": 1
+  }
+ }
+}

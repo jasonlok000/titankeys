@@ -1,0 +1,238 @@
+{
+ "strokes": 1253,
+ "prompted first tries": {
+  "n": 404,
+  "top1": 309,
+  "top3": 335,
+  "live_top1": 309,
+  "live_top3": 335,
+  "top1_pct": 76.5,
+  "top3_pct": 82.9,
+  "live_top1_pct": 76.5,
+  "live_top3_pct": 82.9
+ },
+ "  Swipe only": {
+  "n": 134,
+  "top1": 107,
+  "top3": 114,
+  "live_top1": 107,
+  "live_top3": 114,
+  "top1_pct": 79.9,
+  "top3_pct": 85.1,
+  "live_top1_pct": 79.9,
+  "live_top3_pct": 85.1
+ },
+ "  Left swipe": {
+  "n": 97,
+  "top1": 68,
+  "top3": 78,
+  "live_top1": 68,
+  "live_top3": 78,
+  "top1_pct": 70.1,
+  "top3_pct": 80.4,
+  "live_top1_pct": 70.1,
+  "live_top3_pct": 80.4
+ },
+ "  Index finger": {
+  "n": 130,
+  "top1": 101,
+  "top3": 108,
+  "live_top1": 101,
+  "live_top3": 108,
+  "top1_pct": 77.7,
+  "top3_pct": 83.1,
+  "live_top1_pct": 77.7,
+  "live_top3_pct": 83.1
+ },
+ "  Random": {
+  "n": 43,
+  "top1": 33,
+  "top3": 35,
+  "live_top1": 33,
+  "live_top3": 35,
+  "top1_pct": 76.7,
+  "top3_pct": 81.4,
+  "live_top1_pct": 76.7,
+  "live_top3_pct": 81.4
+ },
+ "  tune split (slot % 3 != 2)": {
+  "n": 268,
+  "top1": 205,
+  "top3": 224,
+  "live_top1": 205,
+  "live_top3": 224,
+  "top1_pct": 76.5,
+  "top3_pct": 83.6,
+  "live_top1_pct": 76.5,
+  "live_top3_pct": 83.6
+ },
+ "  held-back split (slot % 3 == 2)": {
+  "n": 136,
+  "top1": 104,
+  "top3": 111,
+  "live_top1": 104,
+  "live_top3": 111,
+  "top1_pct": 76.5,
+  "top3_pct": 81.6,
+  "live_top1_pct": 76.5,
+  "live_top3_pct": 81.6
+ },
+ "hand first tries": {
+  "n": 344,
+  "top1": 224,
+  "top3": 264,
+  "live_top1": 231,
+  "live_top3": 265,
+  "top1_pct": 65.1,
+  "top3_pct": 76.7,
+  "live_top1_pct": 67.2,
+  "live_top3_pct": 77.0
+ },
+ "recorder first tries": {
+  "n": 300,
+  "top1": 202,
+  "top3": 225,
+  "live_top1": 172,
+  "live_top3": 202,
+  "top1_pct": 67.3,
+  "top3_pct": 75.0,
+  "live_top1_pct": 57.3,
+  "live_top3_pct": 67.3
+ },
+ "  normal pace": {
+  "n": 200,
+  "top1": 129,
+  "top3": 148,
+  "live_top1": 110,
+  "live_top3": 134,
+  "top1_pct": 64.5,
+  "top3_pct": 74.0,
+  "live_top1_pct": 55.0,
+  "live_top3_pct": 67.0
+ },
+ "  rushed pace": {
+  "n": 100,
+  "top1": 73,
+  "top3": 77,
+  "live_top1": 62,
+  "live_top3": 68,
+  "top1_pct": 73.0,
+  "top3_pct": 77.0,
+  "live_top1_pct": 62.0,
+  "live_top3_pct": 68.0
+ },
+ "prompted all attempts": {
+  "n": 504,
+  "top1": 380,
+  "top3": 416,
+  "live_top1": 380,
+  "live_top3": 416,
+  "top1_pct": 75.4,
+  "top3_pct": 82.5,
+  "live_top1_pct": 75.4,
+  "live_top3_pct": 82.5
+ },
+ "hand all attempts": {
+  "n": 449,
+  "top1": 293,
+  "top3": 343,
+  "live_top1": 299,
+  "live_top3": 344,
+  "top1_pct": 65.3,
+  "top3_pct": 76.4,
+  "live_top1_pct": 66.6,
+  "live_top3_pct": 76.6
+ },
+ "depth": {
+  "prompted": {
+   "all": {
+    "rank 1": 305,
+    "not found": 49,
+    "rank 2-3": 33,
+    "rank 4-16": 16,
+    "rank 17-100": 1
+   },
+   "misses": {
+    "not found": 48,
+    "rank 4-16": 14,
+    "rank 2-3": 18,
+    "rank 1": 14,
+    "rank 17-100": 1
+   },
+   "n_first": 404,
+   "n_missed": 95
+  },
+  "hand": {
+   "all": {
+    "rank 2-3": 55,
+    "not found": 62,
+    "rank 1": 196,
+    "rank 4-16": 28,
+    "rank 17-100": 3
+   },
+   "misses": {
+    "rank 2-3": 27,
+    "not found": 59,
+    "rank 4-16": 16,
+    "rank 1": 16,
+    "rank 17-100": 2
+   },
+   "n_first": 344,
+   "n_missed": 120
+  },
+  "recorder": {
+   "all": {
+    "rank 1": 182,
+    "not found": 60,
+    "rank 2-3": 34,
+    "rank 4-16": 24
+   },
+   "misses": {
+    "not found": 56,
+    "rank 1": 10,
+    "rank 2-3": 14,
+    "rank 4-16": 18
+   },
+   "n_first": 300,
+   "n_missed": 98
+  }
+ },
+ "live_vs_current": {
+  "improved": 0,
+  "regressed": 0,
+  "improved_words": [],
+  "regressed_words": []
+ },
+ "miss_categories": {
+  "not found by the decoder": 48,
+  "in decoder list, path clearly worse than winner": 27,
+  "in decoder list, right word has as good a path (within 1)": 20
+ },
+ "latency_ms": {
+  "p50": 42,
+  "p90": 51,
+  "max": 61
+ },
+ "context": {
+  "0": {
+   "n": 17,
+   "top1": 76.5
+  },
+  "1": {
+   "n": 19,
+   "top1": 78.9
+  },
+  "2": {
+   "n": 16,
+   "top1": 68.8
+  },
+  "3": {
+   "n": 17,
+   "top1": 70.6
+  },
+  "4": {
+   "n": 335,
+   "top1": 77.0
+  }
+ }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Field, Screen, Section, useSnapshot } from "ink";
+import { Field, Screen, Section, navigate, useSnapshot } from "ink";
 import { MUTED, useAccent } from "../../lib/brand";
 import { bugState, deleteBug, shareBug, startBug, stopBug } from "../../lib/bug";
 import { bugText as text, duration } from "../../lib/bug-text";
@@ -8,7 +8,13 @@ import { StatusLine } from "../../lib/contribute";
 import { Note, Notes } from "../../lib/note";
 import { playHaptic } from "../../lib/app-haptics";
 
-/** Record a bug (#64): record, stop, look at what's in it, then share it through Android's share sheet. */
+/** The report form, with the recording attached by itself (#97). */
+const sendIt = () => navigate({ path: "/settings/report", params: { kind: "recording" } });
+
+/**
+ * Record a bug (#64): record, stop, and the report form opens with the recording attached (#97). Back here, see what's in
+ * it, send it, or share it through Android's share sheet.
+ */
 export default function RecordBug() {
   const accent = useAccent();
   const result = useSnapshot(bugState);
@@ -32,7 +38,7 @@ export default function RecordBug() {
     return <Screen title={text.title} subtitle={text.subtitle}>
       <Section title={text.recordingTitle}>
         <StatusLine label={text.recordingTitle} value={text.left(left)} colour={accent} />
-        <Field label={text.stop} onPress={() => void stopBug()}>{""}</Field>
+        <Field label={text.stop} onPress={() => void stopBug().then(sendIt)}>{""}</Field>
       </Section>
     </Screen>;
   }
@@ -51,6 +57,7 @@ export default function RecordBug() {
     <Section title={text.warningTitle}>
       <Notes lines={text.warning} />
     </Section>
+    <Field label={text.send} onPress={sendIt}>{""}</Field>
     <Field label={text.share} onPress={() => void shareBug(text.shareSubject, text.shareText)}>{""}</Field>
     <Field label={text.again} onPress={() => void startBug()}>{""}</Field>
     <Field label={text.delete} onPress={() => void deleteBug().then(() => playHaptic("app_deleted"))}>{""}</Field>

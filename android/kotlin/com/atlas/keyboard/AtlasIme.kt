@@ -833,6 +833,7 @@ class AtlasIme : InputMethodService() {
         }
         overlay = TouchpadOverlay(this, touchpad = overlayEvent)
         TypingSettings.listen(this, overlaySetting)
+        barSize = FixedScale.listen(this) { main.post(::followBarSize) }
         registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON), RECEIVER_NOT_EXPORTED)
         registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF), RECEIVER_NOT_EXPORTED)
         // The debug build can start the idle scene at once, so that a phone check need not wait three minutes. That build is not
@@ -1498,6 +1499,18 @@ class AtlasIme : InputMethodService() {
     private fun launcherPackage(): String? {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         return packageManager.resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
+    }
+
+    /** Hears Bar text size picked in Settings while the keyboard is up, as on its own page's field (#86). */
+    private var barSize: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    /**
+     * Makes the bar again at once at a new Bar text size, so a pick shows while you type. The bar keeps its words and selection
+     * ([onCreateInputView]). A keyboard that isn't up, or one in exact typing, catches up as the next field starts instead.
+     */
+    private fun followBarSize() {
+        if (!isInputViewShown || field.exact) return
+        if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
@@ -3778,6 +3791,7 @@ class AtlasIme : InputMethodService() {
         autocorrect.release()
         editor.cancelState()
         TypingSettings.stopListening(this, overlaySetting)
+        barSize?.let { FixedScale.stopListening(this, it) }
         overlay.hide()
         BackService.touchpad(null)
         rawLog?.finish()

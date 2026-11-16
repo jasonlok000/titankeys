@@ -1,0 +1,155 @@
+{
+ "touches": {
+  "everyday": {
+   "n": 2530,
+   "short: nothing": 677,
+   "tap": 478,
+   "swipe": 772,
+   "moved 1.5+ keys: nothing": 198,
+   "delete": 265,
+   "small move: nothing": 52,
+   "moved 0.6-1.5 keys: nothing": 88
+  },
+  "step": {
+   "n": 417,
+   "short: nothing": 124,
+   "delete": 23,
+   "small move: nothing": 10,
+   "moved 0.6-1.5 keys: nothing": 10,
+   "tap": 178,
+   "moved 1.5+ keys: nothing": 15,
+   "swipe": 57
+  },
+  "style": {
+   "n": 898,
+   "swipe": 609,
+   "delete": 113,
+   "short: nothing": 133,
+   "moved 0.6-1.5 keys: nothing": 6,
+   "small move: nothing": 8,
+   "tap": 29
+  },
+  "style:Random": {
+   "n": 116,
+   "swipe": 63,
+   "tap": 4,
+   "delete": 11,
+   "short: nothing": 34,
+   "moved 0.6-1.5 keys: nothing": 2,
+   "small move: nothing": 2
+  },
+  "step:01-normal-typing": {
+   "n": 28,
+   "short: nothing": 15,
+   "delete": 8,
+   "small move: nothing": 1,
+   "moved 0.6-1.5 keys: nothing": 1,
+   "tap": 3
+  }
+ },
+ "typing": {
+  "style:Random": {
+   "key_presses": 185,
+   "touches": 116,
+   "touches_overlapping_a_key": 33,
+   "touches_within_600ms_after_a_key": 34,
+   "swipes": 63,
+   "touches_per_100_keys": 62.7
+  },
+  "step:01-normal-typing": {
+   "key_presses": 117,
+   "touches": 28,
+   "touches_overlapping_a_key": 14,
+   "touches_within_600ms_after_a_key": 11,
+   "swipes": 0,
+   "touches_per_100_keys": 23.9
+  },
+  "everyday": {
+   "key_presses": 3230,
+   "touches": 2530,
+   "touches_overlapping_a_key": 505,
+   "touches_within_600ms_after_a_key": 374,
+   "swipes": 772,
+   "touches_per_100_keys": 78.3
+  }
+ },
+ "accidental": {
+  "removed_no_trace": 86,
+  "removed_after_key_700ms": 10,
+  "removed_short_under_2_keys": 18
+ },
+ "swipe_after_key": {
+  "key pressed within 700 ms before": {
+   "n": 96,
+   "removed_with_no_replacement": 10,
+   "removed_pct": 10.4,
+   "under_2_keys": 4,
+   "median_dur": 552
+  },
+  "no key within 700 ms before": {
+   "n": 988,
+   "removed_with_no_replacement": 76,
+   "removed_pct": 7.7,
+   "under_2_keys": 76,
+   "median_dur": 531
+  }
+ },
+ "short_strokes": {
+  "n": 80,
+  "removed_no_trace": 18
+ },
+ "deletes": {
+  "n": 401,
+  "dur": [
+   48.0,
+   77.0,
+   144.0
+  ],
+  "travel": [
+   1.3,
+   2.04,
+   2.95
+  ],
+  "same_word_reswiped_after_delete": 41,
+  "removed_a_right_word": 20,
+  "removed_a_wrong_word": 161
+ },
+ "dead_moves": {
+  "other: no outcome recorded": 54,
+  "started on the space row (cursor, or not a letter)": 90,
+  "a key was pressed during it": 27,
+  "started just after a key press": 4,
+  "long slow drag, 1.5 s or more": 38
+ },
+ "finger_swaps": 141,
+ "motion_actions": {
+  "0": 3875,
+  "2": 73054,
+  "1": 3852
+ },
+ "keys": {
+  "key_letters": 2324,
+  "backspaced_within_1500ms": 161,
+  "pct": 6.9
+ },
+ "taps": {
+  "n": 685,
+  "by_key": {
+   "space": 129,
+   "\u21e7": 88,
+   "V": 70,
+   "M": 68,
+   "N": 38,
+   "A": 31,
+   "alt": 31,
+   "G": 24,
+   "\u25c1": 19,
+   "\u25cb": 16,
+   "F": 16,
+   "X": 15,
+   "\u25a6": 15,
+   "S": 13,
+   "T": 12
+  }
+ }
+}

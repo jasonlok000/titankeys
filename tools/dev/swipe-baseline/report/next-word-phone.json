@@ -1,0 +1,20 @@
+{
+ "prompted": {
+  "n": 404,
+  "phone model top 1": 15.1,
+  "predictor top 1": 23.8,
+  "phone model top 3": 24.0,
+  "predictor top 3": 40.1,
+  "phone model top 8": 39.1,
+  "predictor top 8": 54.0
+ },
+ "hand": {
+  "n": 344,
+  "phone model top 1": 11.3,
+  "predictor top 1": 11.6,
+  "phone model top 3": 16.6,
+  "predictor top 3": 18.3,
+  "phone model top 8": 26.2,
+  "predictor top 8": 28.8
+ }
+}

@@ -11,6 +11,10 @@ For the app, write-only:
 
 - `POST /v1/batch`: one sealed batch (at most 320 KB) with the header `X-Contributor`, the SHA-256 of the contributor
   ID in hex. Answers 204.
+- `POST /v1/report`: one sealed part of a bug report or idea from the app's form (#97), at most 320 KB, with the headers
+  `X-Report` (a random 32-hex-digit ID the phone makes for the report) and `X-Part` (`index/count`, at most 24 parts).
+  A part sent again replaces the first. Answers 204. The phone packs the report into one ZIP (report.json, and any
+  recording or crash report), splits it, and seals each part exactly as a batch (`Reports.kt`, `ReportUpload.kt`).
 - `POST /v1/delete`: `{"contributor": "<the ID itself>"}`. Deletes every batch stored under the hash of that ID. Only
   the phone knows the ID, so the stored hashes cannot be used to delete anything. Answers 200 with the count.
 
@@ -21,6 +25,13 @@ For the owner only, with `Authorization: Bearer <EXPORT_TOKEN>` (without it, the
 - `GET /v1/export/batch?shard=N&id=ID`: one sealed batch.
 - `POST /v1/export/confirm` with `{"shard": N, "through": ID}`: deletes that shard's batches up to that ID, after they
   were exported safely.
+- `GET /v1/export/reports?after=ID`: up to 200 report parts as `{id, report, part, count, month, size}`, oldest first.
+- `GET /v1/export/report?id=ID`: one sealed report part.
+- `POST /v1/export/reports/confirm` with `{"through": ID}`: deletes report parts up to that ID.
+
+`bun tools/contributions/reports.ts download <address> <token file> <folder> [--confirm]` fetches the reports, still
+sealed, and with `--confirm` deletes the whole ones on the server. `bun tools/contributions/reports.ts open <key.pem>
+<folder>` then joins and opens each whole report into `<report>.zip`.
 
 Everything else answers 404. The batches stay sealed on the way out: only the owner's private key, kept offline,
 opens them (`tools/contributions/open.ts`). A leaked export token shows only sealed files. The Worker logs nothing.
@@ -30,6 +41,8 @@ opens them (`tools/contributions/open.ts`). A leaked export token shows only sea
 - 64 `Shard` objects, chosen by the first two digits of the folder hash. Each holds a SQLite table of batches (folder
   hash, upload time, month, size, the sealed bytes) and its own byte total. Each stops taking batches at 900 MB, below
   the Free plan's 1 GB per object.
+- One `Reports` object holds the report parts (#97) in a SQLite table, with its own byte total, and stops taking parts
+  at 800 MB. Its daily alarm deletes parts older than 2 years. Report parts count in the same caps below.
 - One `Cap` object holds the caps: 2000 uploads a day for everyone together, and 4 GB stored in all (the Free plan
   allows 5 GB for the account). It stores a date and byte counts per month, nothing about any phone. Only the last 24
   months count, since batches are deleted after 2 years. Deletes take bytes off the month each batch was uploaded in.

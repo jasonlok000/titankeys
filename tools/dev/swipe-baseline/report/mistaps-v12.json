@@ -1,0 +1,245 @@
+{
+ "contacts": 8664,
+ "not found in the replay": 0,
+ "by kind": {
+  "typed nothing (ignored)": {
+   "n": 2396,
+   "vibrated": 132
+  },
+  "real swipe": {
+   "n": 1717,
+   "vibrated": 1632
+  },
+  "delete flick": {
+   "n": 1005,
+   "vibrated": 1005
+  },
+  "typed nothing (tap)": {
+   "n": 918,
+   "vibrated": 39
+  },
+  "wrong word": {
+   "n": 860,
+   "vibrated": 826
+  },
+  "typed nothing (none)": {
+   "n": 815,
+   "vibrated": 70
+  },
+  "swipe changed later": {
+   "n": 286,
+   "vibrated": 256
+  },
+  "swipe with no recognition": {
+   "n": 206,
+   "vibrated": 191
+  },
+  "swipe in replay, none in log": {
+   "n": 203,
+   "vibrated": 202
+  },
+  "MISTYPE": {
+   "n": 156,
+   "vibrated": 146
+  },
+  "swipe removed later": {
+   "n": 102,
+   "vibrated": 95
+  }
+ },
+ "MISTAPS (vibrated, typed nothing)": 241,
+ "MISTAPS per 100 swipes": 7.7,
+ "MISTAPS by outcome": {
+  "typed nothing (ignored)": 132,
+  "typed nothing (none)": 70,
+  "typed nothing (tap)": 39
+ },
+ "MISTAPS with one tick": 235,
+ "MISTAPS whose first tick came before 0.6 keys (before it was a swipe)": 214,
+ "medians": {
+  "MISTAP": {
+   "n": 241,
+   "with sizes": 23,
+   "duration": 532,
+   "travel": 0.57,
+   "ticks": 1,
+   "time to first tick": 152,
+   "start row": 1.48,
+   "since key": 8538,
+   "since swipe": 20601,
+   "largest step": 2,
+   "landing over usual": 0.1
+  },
+  "vibrated and typed (meant)": {
+   "n": 3719,
+   "with sizes": 1090,
+   "duration": 324,
+   "travel": 4.51,
+   "ticks": 1,
+   "time to first tick": 66,
+   "start row": 1.29,
+   "since key": 10516,
+   "since swipe": 1028,
+   "largest step": 3,
+   "landing over usual": 0.24
+  },
+  "MISTYPE": {
+   "n": 156,
+   "with sizes": 40,
+   "duration": 381,
+   "travel": 3.51,
+   "ticks": 1,
+   "time to first tick": 75,
+   "start row": 1.16,
+   "since key": 12926,
+   "since swipe": 1313,
+   "largest step": 3,
+   "landing over usual": 0.26
+  },
+  "real swipe": {
+   "n": 1717,
+   "with sizes": 477,
+   "duration": 467,
+   "travel": 6.98,
+   "ticks": 1,
+   "time to first tick": 85,
+   "start row": 0.87,
+   "since key": 10131,
+   "since swipe": 723,
+   "largest step": 3,
+   "landing over usual": 0.23
+  }
+ },
+ "separation (AUC), MISTAP against vibrated and typed": {
+  "duration": 0.684,
+  "travel": 0.153,
+  "ticks": 0.327,
+  "time to first tick": 0.833,
+  "start row": 0.616,
+  "since key": 0.452,
+  "since swipe": 0.795,
+  "largest step": 0.435,
+  "landing over usual": 0.378
+ },
+ "separation (AUC), MISTYPE against real swipe": {
+  "duration": 0.404,
+  "travel": 0.355,
+  "ticks": 0.403,
+  "time to first tick": 0.436,
+  "start row": 0.495,
+  "since key": 0.553,
+  "since swipe": 0.568,
+  "largest step": 0.455,
+  "landing over usual": 0.535
+ },
+ "ignored MISTAPS with a key press during the contact": 125,
+ "MISTAPS with a key press during the contact": 126,
+ "first tick only from .6 keys": {
+  "MISTAPS silenced": "149 of 241",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "56 of 132",
+   "typed nothing (none)": "54 of 70",
+   "typed nothing (tap)": "39 of 39"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "1 of 191",
+  "meant input silenced": "33 of 3719",
+  "meant input silenced, by kind": {
+   "real swipe": 24,
+   "wrong word": 7,
+   "swipe changed later": 2
+  },
+  "meant input: first tick later by (median ms)": 19,
+  "MISTYPES silenced": "4 of 146"
+ },
+ "first tick only from 1.0 keys": {
+  "MISTAPS silenced": "179 of 241",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "81 of 132",
+   "typed nothing (none)": "59 of 70",
+   "typed nothing (tap)": "39 of 39"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "21 of 191",
+  "meant input silenced": "115 of 3719",
+  "meant input silenced, by kind": {
+   "wrong word": 43,
+   "swipe changed later": 21,
+   "real swipe": 51
+  },
+  "meant input: first tick later by (median ms)": 38,
+  "MISTYPES silenced": "22 of 146"
+ },
+ "size rule (step 6+ or landing 2+ over usual)": {
+  "silence ticks: MISTAPS silenced": "0 of 23",
+  "silence ticks: meant input silenced": "0 of 1090",
+  "drop input: MISTYPES caught": "0 of 40",
+  "drop input: meant input lost": "0 of 1090"
+ },
+ "pause signal on MISTYPES": {
+  "pause 1000 ms": {
+   "MISTYPES": "89 of 156",
+   "real swipes": "674 of 1717"
+  },
+  "pause 1000 ms and travel under 3 keys": {
+   "MISTYPES": "29 of 156",
+   "real swipes": "97 of 1717"
+  },
+  "pause 1000 ms and travel under 2 keys": {
+   "MISTYPES": "21 of 156",
+   "real swipes": "40 of 1717"
+  },
+  "pause 1500 ms": {
+   "MISTYPES": "72 of 156",
+   "real swipes": "493 of 1717"
+  },
+  "pause 1500 ms and travel under 3 keys": {
+   "MISTYPES": "23 of 156",
+   "real swipes": "74 of 1717"
+  },
+  "pause 1500 ms and travel under 2 keys": {
+   "MISTYPES": "15 of 156",
+   "real swipes": "37 of 1717"
+  },
+  "pause 2000 ms": {
+   "MISTYPES": "57 of 156",
+   "real swipes": "363 of 1717"
+  },
+  "pause 2000 ms and travel under 3 keys": {
+   "MISTYPES": "20 of 156",
+   "real swipes": "63 of 1717"
+  },
+  "pause 2000 ms and travel under 2 keys": {
+   "MISTYPES": "12 of 156",
+   "real swipes": "35 of 1717"
+  },
+  "pause 3000 ms": {
+   "MISTYPES": "50 of 156",
+   "real swipes": "266 of 1717"
+  },
+  "pause 3000 ms and travel under 3 keys": {
+   "MISTYPES": "17 of 156",
+   "real swipes": "57 of 1717"
+  },
+  "pause 3000 ms and travel under 2 keys": {
+   "MISTYPES": "10 of 156",
+   "real swipes": "32 of 1717"
+  }
+ },
+ "resting recording": {
+  "touches": 344,
+  "replayed": 344,
+  "read as nothing, quiet": 284,
+  "read as nothing, vibrated": 31,
+  "read as swipe, vibrated": 17,
+  "read as tap, vibrated": 5,
+  "read as tap, quiet": 7,
+  "vibrated as nothing, silenced by first tick only from 0.6 keys": 20,
+  "vibrated as nothing, silenced by first tick only from 1.0 keys": 25,
+  "vibrated, not silenced": 41,
+  "vibrated as swipe, silenced by first tick only from 1.0 keys": 6,
+  "vibrated, silenced by the size rule": 12,
+  "vibrated as tap, silenced by first tick only from 0.6 keys": 5,
+  "vibrated as tap, silenced by first tick only from 1.0 keys": 5,
+  "vibrated as swipe, silenced by first tick only from 0.6 keys": 1,
+  "replay reading agrees": 333
+ }
+}

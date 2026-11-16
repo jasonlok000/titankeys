@@ -17,8 +17,7 @@
     <string name="strip_block">Block</string>
     <!-- I on a blocked word: off Blocked words, back to not saved. -->
     <string name="strip_unblock">Unblock</string>
-    <!-- When exporting or importing words, the favourites from the word menu go with them. -->
-    <string name="favourites_not_exported">The words are exported, but the favourites couldn\'t be added. Try again.</string>
+    <!-- When Restore takes an Export words file from before 3.0, the favourites from the word menu come back with the words. -->
     <string name="favourites_not_imported">The words are imported, but the favourites couldn\'t be kept. Try again.</string>
     <string name="strip_back">Back</string>
     <!-- Shows on the strip for a second after TitanKeys has hidden and shown itself to work around Microsoft Teams. The owner's wish. -->

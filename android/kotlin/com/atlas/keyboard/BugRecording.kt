@@ -21,7 +21,8 @@ import java.io.File
  * the typing log's format, so the same tools read it. It holds touches, swipe shapes, keys and the keyboard's decisions,
  * with the build and the settings. It never holds the text around the cursor, and it records nothing in a field that
  * does not allow learning (passwords, private fields and the like). It stops by itself after [MAX_MILLIS].
- * TitanKeys uploads nothing: the user shares the file through Android's share sheet.
+ * TitanKeys uploads nothing by itself: the user sends it to us with the report form (#97), which seals it first, or shares
+ * it through Android's share sheet.
  */
 object BugRecording {
     const val MAX_MILLIS = 3 * 60_000L
@@ -99,7 +100,7 @@ object BugRecording {
         File(context.cacheDir, DIRECTORY).deleteRecursively()
     }
 
-    /** The finished recording as one file, ready to share. Only [share] makes it, so a file already lent out stays as it is. */
+    /** The finished recording as one file, ready to share. Only [share] and [attachment] make it, so a file already lent out stays as it is. */
     private fun file(context: Context): File? {
         if (recording || store(context).size() == 0L) return null
         val folder = File(context.cacheDir, DIRECTORY).apply { deleteRecursively(); mkdirs() }
@@ -149,6 +150,9 @@ object BugRecording {
         lines.use { store.export(it) }
         return Summary(if (last > first) last - first else 0L, fields, touches, swipes, keys, words)
     }
+
+    /** The finished recording's bytes, for the report form (#97), or null if there's none. */
+    fun attachment(context: Context): ByteArray? = file(context)?.readBytes()
 
     /** Opens Android's share sheet with the file. A read-only provider lends it to the app the user picks. */
     fun share(context: Context, subject: String, text: String) {

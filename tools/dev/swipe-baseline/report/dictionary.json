@@ -1,0 +1,131 @@
+{
+ "dictionary_words": 147068,
+ "outline_words": 12397,
+ "context_vocab": 31758,
+ "prompted": {
+  "n": 404,
+  "in_dictionary": 404,
+  "not_in_dictionary": 0,
+  "in_outline_set": 395,
+  "in_context_vocab": 403,
+  "misses": 95,
+  "misses_not_in_dictionary": 0,
+  "misses_not_outlined": 4,
+  "misses_not_in_context_vocab": 0,
+  "decoder_never_listed": 49,
+  "never_listed_not_in_dictionary": 0,
+  "by_frequency": {
+   "f>=200": {
+    "n": 83,
+    "first_pct": 92.8,
+    "never_listed_pct": 7.2
+   },
+   "150-199": {
+    "n": 170,
+    "first_pct": 77.1,
+    "never_listed_pct": 12.9
+   },
+   "100-149": {
+    "n": 142,
+    "first_pct": 67.6,
+    "never_listed_pct": 14.1
+   },
+   "1-99": {
+    "n": 9,
+    "first_pct": 55.6,
+    "never_listed_pct": 11.1
+   },
+   "not in dictionary": {
+    "n": 0,
+    "first_pct": null,
+    "never_listed_pct": null
+   }
+  },
+  "words_missed_twice_or_more": 9,
+  "misses_on_words_missed_twice_or_more": 20
+ },
+ "hand": {
+  "n": 344,
+  "in_dictionary": 337,
+  "not_in_dictionary": 7,
+  "in_outline_set": 303,
+  "in_context_vocab": 308,
+  "misses": 120,
+  "misses_not_in_dictionary": 7,
+  "misses_not_outlined": 22,
+  "misses_not_in_context_vocab": 17,
+  "decoder_never_listed": 62,
+  "never_listed_not_in_dictionary": 7,
+  "by_frequency": {
+   "f>=200": {
+    "n": 47,
+    "first_pct": 87.2,
+    "never_listed_pct": 10.6
+   },
+   "150-199": {
+    "n": 147,
+    "first_pct": 65.3,
+    "never_listed_pct": 17.7
+   },
+   "100-149": {
+    "n": 109,
+    "first_pct": 62.4,
+    "never_listed_pct": 17.4
+   },
+   "1-99": {
+    "n": 34,
+    "first_pct": 55.9,
+    "never_listed_pct": 14.7
+   },
+   "not in dictionary": {
+    "n": 7,
+    "first_pct": 0.0,
+    "never_listed_pct": 100.0
+   }
+  },
+  "words_missed_twice_or_more": 20,
+  "misses_on_words_missed_twice_or_more": 46
+ },
+ "recorder": {
+  "n": 300,
+  "in_dictionary": 300,
+  "not_in_dictionary": 0,
+  "in_outline_set": 300,
+  "in_context_vocab": 300,
+  "misses": 98,
+  "misses_not_in_dictionary": 0,
+  "misses_not_outlined": 0,
+  "misses_not_in_context_vocab": 0,
+  "decoder_never_listed": 60,
+  "never_listed_not_in_dictionary": 0,
+  "by_frequency": {
+   "f>=200": {
+    "n": 3,
+    "first_pct": 100.0,
+    "never_listed_pct": 0.0
+   },
+   "150-199": {
+    "n": 102,
+    "first_pct": 73.5,
+    "never_listed_pct": 9.8
+   },
+   "100-149": {
+    "n": 195,
+    "first_pct": 63.6,
+    "never_listed_pct": 25.6
+   },
+   "1-99": {
+    "n": 0,
+    "first_pct": null,
+    "never_listed_pct": null
+   },
+   "not in dictionary": {
+    "n": 0,
+    "first_pct": null,
+    "never_listed_pct": null
+   }
+  },
+  "words_missed_twice_or_more": 0,
+  "misses_on_words_missed_twice_or_more": 0
+ }
+}

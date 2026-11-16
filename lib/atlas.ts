@@ -40,6 +40,16 @@ export type State = {
   scrollAssistant: boolean;
   /** Atlas's accessibility service is on, so one back swipe closes the bar and goes back in any app. */
   backService: boolean;
+  /** "No thanks" on Accessibility's disclosure: setup goes on without it, as the guide's does (PhoneSetup.missing). */
+  backDeclined: boolean;
+  /** The phone's ro.agui.touchpad_function, "yes" on a Titan with the touchpad, else empty. See lib/front.ts. */
+  touchpadFunction: string;
+  /** Build.DEVICE, "Titan_2" on the Titan 2 Elite. */
+  device: string;
+  /** TitanKeys Debug only: act as another phone, so the other-phone warning can be checked on the Elite. Always false elsewhere. */
+  fakeOtherPhone: boolean;
+  /** The other-phone warning has shown once. */
+  phoneWarningSeen: boolean;
   /** The last time the overlay step opened, Android showed its whole list instead of TitanKeys' own page. */
   overlayOnList: boolean;
   /** The same for the Accessibility step. */
@@ -242,15 +252,6 @@ export async function removeSnippet(shortcut: string) {
   await state.refresh();
 }
 
-/** Opens the file picker. Returns false if the picker was cancelled. */
-export async function transferSnippets(mode: "import" | "export") {
-  try {
-    return await callNative("atlas", "transferSnippets", { mode }, { timeoutMs: 600_000 }) === "true";
-  } finally {
-    if (mode === "import") await state.refresh();
-  }
-}
-
 export async function addWord(word: string) {
   try {
     await atlas("addWord", { word });
@@ -291,14 +292,26 @@ export async function clearWords() {
   }
 }
 
-export async function transferLearning(mode: "import" | "export") {
+/**
+ * Settings > Your words > Back up everything and Restore (#65). Opens the file picker. Returns what was done: "backup", or for an
+ * old Export words or Export snippets file, "words" or "snippets"; "" if the picker was cancelled. A whole backup's restore
+ * restarts TitanKeys on its result page, so it never returns.
+ */
+export async function backup(mode: "backup" | "restore"): Promise<"backup" | "words" | "snippets" | ""> {
   try {
-    const result = await callNative("atlas", "transferLearning", { mode }, { timeoutMs: 600_000 });
-    return result === "true" ? mode : null;
+    return JSON.parse(await callNative("atlas", "backup", { mode }, { timeoutMs: 600_000 }));
   } finally {
-    if (mode === "import") await state.refresh();
+    if (mode === "restore") await state.refresh();
   }
 }
+
+/** Our address for feedback (#74), which the report form offers when it can't send (#97). Every public contact address is this one. */
+export const FEEDBACK_ADDRESS = "titankeys@everyones-niche.com";
+
+export const copyText = (label: string, text: string) => atlas("copyText", { label, text });
+
+/** Crashes TitanKeys on purpose, to test the crash offer. TitanKeys Debug only. */
+export const forceCrash = () => atlas("crash");
 
 /**
  * Opens the lab's screen: a practice field, the haptics the keyboard really plays as you type, and an editor and notes for each
@@ -409,6 +422,18 @@ export const chooseKeyboard = () => atlas("choose");
 export const allowOverlay = () => atlas("overlay");
 export const openScrollAssistant = () => atlas("scrollAssistant");
 export const allowBack = () => atlas("backService");
+
+/** The other-phone warning's button: it never shows again. */
+export async function markPhoneWarningSeen() {
+  await atlas("phoneWarningSeen");
+  await state.refresh();
+}
+
+/** TitanKeys Debug only: fake another phone, or stop. Turning it on shows the warning once more. */
+export async function fakeOtherPhone(on: boolean) {
+  await atlas("fakeOtherPhone", { on });
+  await state.refresh();
+}
 /** Opens the phone's Shortcut keys page, for the Sym and fn keys. */
 export const openShortcutKeys = () => atlas("shortcutKeys");
 

@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, back, navigate, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
-import { cancelPlayground, markNotesSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
+import { cancelPlayground, markNotesSeen, markPhoneWarningSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
 import { INK, useAccent } from "../lib/brand";
 import { connectedState, declineContributions, setContribute } from "../lib/connected";
 import { Disclosure } from "../lib/contribute";
+import { frontChoice } from "../lib/front";
 import { RADIUS } from "../lib/radii";
 import { hasReleaseNotes } from "../lib/release-notes";
 import { RoundedFill } from "../lib/rounded";
@@ -25,10 +26,23 @@ function Action({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 /**
+ * Reads the state again whenever the app's own window is in front, as after the guide closed, and once as the page first shows,
+ * so that a refresh that came before it listened is never lost (#71). Without it, a page that opened the guide kept the reading
+ * from before, and leaving the guide any way landed on setup again (#70).
+ */
+export function useFreshState() {
+  useEffect(() => {
+    void state.refresh();
+    return onAppWindow(() => void state.refresh());
+  }, []);
+}
+
+/**
  * Setup is the first slide of the interactive guide: it opens each Settings page and comes back by itself when the switch is on.
  * The first time, the guide opens by itself. After that, this page waits for a touch, so that closing the guide is a way out.
  */
 function SetupStart({ first }: { first: boolean }) {
+  useFreshState();
   useEffect(() => {
     if (first) void openGuide();
   }, []);
@@ -45,8 +59,28 @@ function SetupStart({ first }: { first: boolean }) {
 
 /** With setup done, the interactive guide opens once, by itself, over this ink screen. */
 function GuideStart() {
+  useFreshState();
   useEffect(() => void openGuide(), []);
   return <Screen />;
+}
+
+/**
+ * Another phone than the Titan 2 Elite (#75): once, on first launch, before setup. It never blocks anything: its one button
+ * carries on, and setup and the keyboard work as they can.
+ */
+function PhoneWarning() {
+  return <Screen centered theme="onboarding">
+    <Stack align="center" gap={44}>
+      <Stack align="center" gap={14}>
+        {/* F: draft, the other-phone warning's title, in the guide's humour. */}
+        <Text size={60} align="center">This isn't a Titan 2 Elite</Text>
+        {/* F: draft, the other-phone warning's body: swiping and the touch keys need the Elite, the rest works, nothing is blocked. */}
+        <Text size={30} align="center">TitanKeys was built for its touch keys. Swiping, Space taps and flick to delete won't work here. Typing still does, so have a go anyway.</Text>
+      </Stack>
+      {/* F: draft, the warning's one button. */}
+      <Action label="Carry on" onPress={() => void markPhoneWarningSeen()} />
+    </Stack>
+  </Screen>;
 }
 
 /**
@@ -95,9 +129,11 @@ export default function Home() {
   const result = useSnapshot(state);
   const connected = useSnapshot(connectedState);
   if (result.status !== "ready") return <Screen />;
-  const { enabled, selected, overlay, scrollAssistant, backService, version, whatsNew, guideDue } = result.data;
-  if (!enabled || !selected || !overlay || !scrollAssistant || !backService) return <SetupStart first={guideDue} />;
-  if (guideDue) return <GuideStart />;
+  const { version, whatsNew, guideDue } = result.data;
+  const choice = frontChoice(result.data);
+  if (choice === "warning") return <PhoneWarning />;
+  if (choice === "setup") return <SetupStart first={guideDue} />;
+  if (choice === "guide") return <GuideStart />;
   if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
   // The guide offers data contributions once, at its end. The answer can change any time in Settings. The playground
   // waits for this answer, so that it does not open only to close again.

@@ -1,6 +1,7 @@
 package com.atlas.keyboard
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.util.DisplayMetrics
 import android.view.ContextThemeWrapper
@@ -55,6 +56,17 @@ object FixedScale {
 
     fun size(context: Context, size: Size) {
         preferences(context).edit().putString(SIZE, size.id).apply()
+    }
+
+    /** Calls [changed] when Bar text size is picked or reset, so a keyboard that is up can make its bar again at once (#86). */
+    fun listen(context: Context, changed: () -> Unit): SharedPreferences.OnSharedPreferenceChangeListener {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key -> if (key == SIZE || key == null) changed() }
+        preferences(context).registerOnSharedPreferenceChangeListener(listener)
+        return listener
+    }
+
+    fun stopListening(context: Context, listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        preferences(context).unregisterOnSharedPreferenceChangeListener(listener)
     }
 
     /** Settings > Reset most things: the bar goes back to Normal. */

@@ -1,0 +1,158 @@
+{
+ "today": {
+  "all": {
+   "n": 540,
+   "first": 72.6,
+   "top3": 81.5,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 76.5,
+   "top3": 81.6,
+   "found": 90.4
+  },
+  "hand": {
+   "n": 304,
+   "first": 71.1,
+   "top3": 81.6,
+   "found": 90.1
+  },
+  "recorder": {
+   "n": 100,
+   "first": 72.0,
+   "top3": 81.0,
+   "found": 88.0
+  }
+ },
+ "fine-tuned CleverKeys alone": {
+  "all": {
+   "n": 540,
+   "first": 72.0,
+   "top3": 81.1,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 75.0,
+   "top3": 83.8,
+   "found": 90.4
+  },
+  "hand": {
+   "n": 304,
+   "first": 69.7,
+   "top3": 79.3,
+   "found": 90.1
+  },
+  "recorder": {
+   "n": 100,
+   "first": 75.0,
+   "top3": 83.0,
+   "found": 88.0
+  }
+ },
+ "engine only": {
+  "all": {
+   "n": 540,
+   "first": 73.9,
+   "top3": 83.3,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 79.4,
+   "top3": 85.3,
+   "found": 90.4
+  },
+  "hand": {
+   "n": 304,
+   "first": 72.0,
+   "top3": 82.9,
+   "found": 90.1
+  },
+  "recorder": {
+   "n": 100,
+   "first": 72.0,
+   "top3": 82.0,
+   "found": 88.0
+  }
+ },
+ "engine + fine-tuned CleverKeys": {
+  "all": {
+   "n": 540,
+   "first": 76.9,
+   "top3": 84.8,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 79.4,
+   "top3": 87.5,
+   "found": 90.4
+  },
+  "hand": {
+   "n": 304,
+   "first": 75.7,
+   "top3": 84.5,
+   "found": 90.1
+  },
+  "recorder": {
+   "n": 100,
+   "first": 77.0,
+   "top3": 82.0,
+   "found": 88.0
+  }
+ },
+ "engine + predictor": {
+  "all": {
+   "n": 540,
+   "first": 77.8,
+   "top3": 85.2,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 85.3,
+   "top3": 90.4,
+   "found": 90.4
+  },
+  "hand": {
+   "n": 304,
+   "first": 75.7,
+   "top3": 83.9,
+   "found": 90.1
+  },
+  "recorder": {
+   "n": 100,
+   "first": 74.0,
+   "top3": 82.0,
+   "found": 88.0
+  }
+ },
+ "engine + fine-tuned CleverKeys + predictor": {
+  "all": {
+   "n": 540,
+   "first": 79.1,
+   "top3": 86.5,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 85.3,
+   "top3": 90.4,
+   "found": 90.4
+  },
+  "hand": {
+   "n": 304,
+   "first": 77.0,
+   "top3": 85.5,
+   "found": 90.1
+  },
+  "recorder": {
+   "n": 100,
+   "first": 77.0,
+   "top3": 84.0,
+   "found": 88.0
+  }
+ }
+}

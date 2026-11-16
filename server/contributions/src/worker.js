@@ -4,7 +4,8 @@
 // batch: they are sealed on the phone with a public key whose private key is kept offline. It logs nothing.
 //
 // - POST /v1/batch and POST /v1/delete: for the app. Write-only: nothing can be read back through them.
-// - /v1/export...: for the owner only, with a long secret token. It returns the sealed batches, still sealed.
+// - POST /v1/report: a part of a bug report or idea from the app's form (#97), sealed the same way. Write-only too.
+// - /v1/export...: for the owner only, with a long secret token. It returns the sealed batches and reports, still sealed.
 //
 // Uploads need no account, so the Worker limits abuse: a per-client limit, counted in memory only and keyed by a salted
 // hash of the connecting address, which is never stored or logged; a daily cap on uploads; and a cap on what is stored.
@@ -30,6 +31,14 @@ export const KEEP_MILLIS = 730 * 24 * 60 * 60 * 1000;
 /** Batches that one export page lists. */
 const EXPORT_PAGE = 500;
 const DAY_MILLIS = 24 * 60 * 60 * 1000;
+/** A report is split into parts of at most MAX_BATCH_BYTES each, at most this many: a recording zips to a few MB. */
+export const MAX_REPORT_PARTS = 24;
+/** All reports, together, in their one storage object: under the Free plan's 1 GB per object. */
+export const MAX_REPORT_BYTES = 800 * 1024 * 1024;
+/** Report parts that one export page lists. */
+const REPORT_PAGE = 200;
+const REPORT_ID = /^[0-9a-f]{32}$/;
+const PART = /^([0-9]{1,2})\/([0-9]{1,2})$/;
 const FOLDER = /^[0-9a-f]{64}$/;
 const CONTRIBUTOR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -82,6 +91,35 @@ async function store(request, env) {
   return answer(204);
 }
 
+const reports = env => env.REPORTS.get(env.REPORTS.idFromName("reports"));
+
+/**
+ * One part of a report from the app's form (#97). The headers say which: X-Report, a random ID the phone makes for the
+ * report, and X-Part, "index/count". Parts take a place in the same caps and per-client limit as batches.
+ */
+async function report(request, env) {
+  const id = request.headers.get("X-Report") ?? "";
+  const part = PART.exec(request.headers.get("X-Part") ?? "");
+  if (!REPORT_ID.test(id) || !part) return answer(400, { error: "bad report" });
+  const index = Number(part[1]), count = Number(part[2]);
+  if (count < 1 || count > MAX_REPORT_PARTS || index >= count) return answer(413, { error: "too large" });
+  const length = Number(request.headers.get("Content-Length") ?? "0");
+  if (length > MAX_BATCH_BYTES) return answer(413, { error: "too large" });
+  const body = new Uint8Array(await request.arrayBuffer());
+  if (body.length > MAX_BATCH_BYTES) return answer(413, { error: "too large" });
+  if (body.length <= HEADER_BYTES + TAG_BYTES || MAGIC.some((byte, i) => body[i] !== byte)) return answer(400, { error: "not a sealed report" });
+  const now = Date.now();
+  const room = await call(counter(env), "take", { client: await clientKey(request, env), bytes: body.length, now });
+  if (room.result === "busy") return answer(429, { error: "too many requests" });
+  if (room.result !== "ok") return answer(503, { error: room.result === "day" ? "daily limit reached" : "storage full" });
+  const stored = await call(reports(env), "put", { report: id, part: index, count, now }, body);
+  if (stored.result !== "ok") {
+    await call(counter(env), "free", { months: { [monthOf(now)]: body.length } });
+    return answer(503, { error: "storage full" });
+  }
+  return answer(204);
+}
+
 async function remove(request, env) {
   const allowed = await call(counter(env), "allow", { client: await clientKey(request, env), kind: "delete", now: Date.now() });
   if (allowed.result === "busy") return answer(429, { error: "too many requests" });
@@ -122,6 +160,21 @@ async function owner(request, env) {
 async function exporting(request, env, pathname) {
   if (!await owner(request, env)) return answer(404, { error: "not found" });
   const url = new URL(request.url);
+  // Reports (#97): GET /v1/export/reports?after=ID lists parts as {id, report, part, count, month, size}; GET
+  // /v1/export/report?id=ID returns one sealed part; POST /v1/export/reports/confirm {through} deletes them up to that ID.
+  if (request.method === "GET" && pathname === "/v1/export/reports")
+    return answer(200, await call(reports(env), "list", { after: Number(url.searchParams.get("after") ?? "0") }));
+  if (request.method === "GET" && pathname === "/v1/export/report") {
+    const response = await reports(env).fetch("https://do/get", { method: "POST", body: JSON.stringify({ id: Number(url.searchParams.get("id")) }) });
+    return new Response(response.body, { status: response.status, headers: { "Content-Type": "application/octet-stream" } });
+  }
+  if (request.method === "POST" && pathname === "/v1/export/reports/confirm") {
+    const { through } = await request.json();
+    if (!Number.isInteger(through)) return answer(400, { error: "bad request" });
+    const { deleted, months } = await call(reports(env), "delete-through", { through });
+    if (deleted) await call(counter(env), "free", { months });
+    return answer(200, { deleted });
+  }
   if (request.method === "POST" && pathname === "/v1/export/confirm") {
     const { shard: number, through } = await request.json();
     if (!Number.isInteger(number) || number < 0 || number >= SHARDS || !Number.isInteger(through)) return answer(400, { error: "bad request" });
@@ -147,6 +200,7 @@ export default {
     const { pathname } = new URL(request.url);
     if (request.method === "POST" && pathname === "/v1/batch") return store(request, env);
     if (request.method === "POST" && pathname === "/v1/delete") return remove(request, env);
+    if (request.method === "POST" && pathname === "/v1/report") return report(request, env);
     if (pathname.startsWith("/v1/export")) return exporting(request, env, pathname);
     return answer(404, { error: "not found" });
   },
@@ -278,6 +332,73 @@ export class Shard {
   async alarm(now = Date.now()) {
     await this.removeWhere("created < ?", now - KEEP_MILLIS);
     const left = this.sql.exec("SELECT COUNT(*) AS count FROM batches").one().count;
+    if (left > 0) await this.storage.setAlarm(now + DAY_MILLIS);
+  }
+}
+
+/**
+ * Bug reports and ideas from the app's form (#97), in one storage object: a SQLite table of sealed parts, each with its
+ * report's random ID, its place and count, upload time, month and size. A part sent twice replaces the first. Like the
+ * shards, it keeps its own byte total, and a daily alarm deletes parts older than 2 years.
+ */
+export class Reports {
+  constructor(state) {
+    this.storage = state.storage;
+    this.sql = state.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS parts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, report TEXT NOT NULL, part INTEGER NOT NULL, count INTEGER NOT NULL,
+      created INTEGER NOT NULL, month TEXT NOT NULL, size INTEGER NOT NULL, body BLOB NOT NULL, UNIQUE (report, part))`);
+    this.sql.exec("CREATE INDEX IF NOT EXISTS parts_created ON parts (created)");
+  }
+
+  async removeWhere(where, ...values) {
+    const rows = this.sql.exec(`SELECT month, SUM(size) AS bytes, COUNT(*) AS count FROM parts WHERE ${where} GROUP BY month`, ...values).toArray();
+    this.sql.exec(`DELETE FROM parts WHERE ${where}`, ...values);
+    const freed = rows.reduce((sum, row) => sum + row.bytes, 0);
+    if (freed) await this.storage.put("bytes", Math.max(0, ((await this.storage.get("bytes")) ?? 0) - freed));
+    return {
+      deleted: rows.reduce((sum, row) => sum + row.count, 0),
+      months: Object.fromEntries(rows.map(row => [row.month, row.bytes])),
+    };
+  }
+
+  async fetch(request) {
+    const { pathname } = new URL(request.url);
+    if (pathname === "/put") {
+      const meta = JSON.parse(request.headers.get("X-Meta") ?? "{}");
+      const body = new Uint8Array(await request.arrayBuffer());
+      // A part sent again, after a lost answer, takes the place of the first.
+      await this.removeWhere("report = ? AND part = ?", meta.report, meta.part);
+      const used = (await this.storage.get("bytes")) ?? 0;
+      if (used + body.length > MAX_REPORT_BYTES) return Response.json({ result: "full" });
+      try {
+        this.sql.exec("INSERT INTO parts (report, part, count, created, month, size, body) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          meta.report, meta.part, meta.count, meta.now, monthOf(meta.now), body.length, body);
+      } catch {
+        return Response.json({ result: "full" });
+      }
+      await this.storage.put("bytes", used + body.length);
+      if (await this.storage.getAlarm() === null) await this.storage.setAlarm(meta.now + DAY_MILLIS);
+      return Response.json({ result: "ok" });
+    }
+    const body = await request.json();
+    if (pathname === "/delete-through") return Response.json(await this.removeWhere("id <= ?", body.through));
+    if (pathname === "/list") {
+      const items = this.sql.exec("SELECT id, report, part, count, month, size FROM parts WHERE id > ? ORDER BY id LIMIT ?",
+        body.after, REPORT_PAGE + 1).toArray();
+      return Response.json({ items: items.slice(0, REPORT_PAGE), more: items.length > REPORT_PAGE });
+    }
+    if (pathname === "/get") {
+      const row = this.sql.exec("SELECT body FROM parts WHERE id = ?", body.id).toArray()[0];
+      return row ? new Response(row.body) : new Response(null, { status: 404 });
+    }
+    return Response.json({ error: "not found" }, { status: 404 });
+  }
+
+  /** Once a day: deletes parts older than 2 years, and comes back while any are left. */
+  async alarm(now = Date.now()) {
+    await this.removeWhere("created < ?", now - KEEP_MILLIS);
+    const left = this.sql.exec("SELECT COUNT(*) AS count FROM parts").one().count;
     if (left > 0) await this.storage.setAlarm(now + DAY_MILLIS);
   }
 }

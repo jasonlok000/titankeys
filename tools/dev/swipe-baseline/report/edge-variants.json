@@ -1,0 +1,132 @@
+{
+ "control": {
+  "prompted": {
+   "n": 404,
+   "first": 76.5,
+   "top3": 82.9,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 0,
+   "top3_worse": 0
+  },
+  "prompted held-back": {
+   "n": 136,
+   "first": 76.5,
+   "top3": 81.6,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 0,
+   "top3_worse": 0
+  },
+  "hand": {
+   "n": 344,
+   "first": 65.1,
+   "top3": 76.7,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 0,
+   "top3_worse": 0
+  },
+  "recorder": {
+   "n": 300,
+   "first": 67.3,
+   "top3": 75.0,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 0,
+   "top3_worse": 0
+  },
+  "words with P": {
+   "n": 91,
+   "first": 54.9,
+   "top3": 59.3,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 0,
+   "top3_worse": 0
+  },
+  "words with A": {
+   "n": 344,
+   "first": 70.3,
+   "top3": 80.8,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 0,
+   "top3_worse": 0
+  },
+  "words with neither": {
+   "n": 639,
+   "first": 71.8,
+   "top3": 79.7,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 0,
+   "top3_worse": 0
+  }
+ },
+ "final": {
+  "prompted": {
+   "n": 404,
+   "first": 76.5,
+   "top3": 84.2,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 5,
+   "top3_worse": 0
+  },
+  "prompted held-back": {
+   "n": 136,
+   "first": 76.5,
+   "top3": 83.1,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 2,
+   "top3_worse": 0
+  },
+  "hand": {
+   "n": 344,
+   "first": 65.1,
+   "top3": 77.6,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 8,
+   "top3_worse": 5
+  },
+  "recorder": {
+   "n": 300,
+   "first": 67.3,
+   "top3": 77.0,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 6,
+   "top3_worse": 0
+  },
+  "words with P": {
+   "n": 91,
+   "first": 54.9,
+   "top3": 60.4,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 2,
+   "top3_worse": 1
+  },
+  "words with A": {
+   "n": 344,
+   "first": 70.3,
+   "top3": 81.7,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 5,
+   "top3_worse": 2
+  },
+  "words with neither": {
+   "n": 639,
+   "first": 71.8,
+   "top3": 81.4,
+   "first_better": 0,
+   "first_worse": 0,
+   "top3_better": 13,
+   "top3_worse": 2
+  }
+ }
+}

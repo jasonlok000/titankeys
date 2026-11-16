@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { appKey, type Envelope, type Feed, open, problems, sign } from "../announcements/feed";
 import worker, {
   Cap, CLIENT_DELETES_PER_MINUTE, CLIENT_UPLOADS_PER_MINUTE, DAILY_UPLOADS, folder, KEEP_MILLIS, MAX_BATCH_BYTES, MAX_SHARD_BYTES,
-  MAX_STORED_BYTES, Shard, SHARDS,
+  MAX_REPORT_PARTS, MAX_STORED_BYTES, Reports, Shard, SHARDS,
 } from "../../server/contributions/src/worker.js";
 
 const root = new URL("../../", import.meta.url);
@@ -101,6 +101,7 @@ const TOKEN = "t".repeat(48);
 const server = () => ({
   SHARDS: new Namespace(state => new Shard(state)),
   CAP: new Namespace(state => new Cap(state)),
+  REPORTS: new Namespace(state => new Reports(state)),
   RATE_SALT: "test-salt",
   EXPORT_TOKEN: TOKEN,
 });
@@ -290,6 +291,75 @@ describe("contributions server", () => {
     const config = await text("server/contributions/wrangler.toml");
     for (const word of ["r2_buckets", "ratelimits", "kv_namespaces", "queues", "new_classes = "]) expect(config.includes(word)).toBe(false);
     expect(config).toContain('new_sqlite_classes = ["Cap", "Shard"]');
+  });
+});
+
+describe("bug reports and ideas from the form (#97)", () => {
+  const id = "0123456789abcdef0123456789abcdef";
+  const part = (env: Server, index: number, count: number, body = sealed(), report = id) =>
+    worker.fetch(post("/v1/report", body, { "X-Report": report, "X-Part": `${index}/${count}` }), env);
+  const parts = (env: Server) => env.REPORTS.entry("reports").storage.sql.exec("SELECT report, part, count, size FROM parts ORDER BY id").toArray();
+
+  test("stores each sealed part with its report's ID and place, and a part sent again replaces the first", async () => {
+    const env = server();
+    expect((await part(env, 0, 2)).status).toBe(204);
+    expect((await part(env, 1, 2)).status).toBe(204);
+    expect((await part(env, 1, 2, sealed(300))).status).toBe(204);
+    expect(parts(env)).toEqual([{ report: id, part: 0, count: 2, size: 200 }, { report: id, part: 1, count: 2, size: 300 }]);
+    expect(env.REPORTS.entry("reports").storage.values.get("bytes")).toBe(500);
+    expect(env.REPORTS.entry("reports").storage.alarmAt).not.toBeNull();
+    // Reports take places in the same caps as batches.
+    expect(cap(env).storage.values.get("uploads")).toBe(3);
+  });
+
+  test("refuses what isn't a sealed part of a report, and reports that are too big", async () => {
+    const env = server();
+    expect((await part(env, 0, 1, new TextEncoder().encode("plain text"))).status).toBe(400);
+    expect((await part(env, 0, 1, sealed(), "not-an-id")).status).toBe(400);
+    expect((await worker.fetch(post("/v1/report", sealed(), { "X-Report": id }), env)).status).toBe(400);
+    expect((await part(env, 2, 2)).status).toBe(413);
+    expect((await part(env, 0, MAX_REPORT_PARTS + 1)).status).toBe(413);
+    expect((await part(env, 0, 1, sealed(MAX_BATCH_BYTES + 1))).status).toBe(413);
+    expect(parts(env)).toEqual([]);
+  });
+
+  test("the same per-client limit as contributions", async () => {
+    const env = server();
+    for (let i = 0; i < CLIENT_UPLOADS_PER_MINUTE; i++) expect((await part(env, i % MAX_REPORT_PARTS, MAX_REPORT_PARTS)).status).toBe(204);
+    expect((await part(env, 0, 1)).status).toBe(429);
+  });
+
+  test("the owner exports them, still sealed, and deletes them once exported; nobody else can", async () => {
+    const env = server();
+    await part(env, 0, 2);
+    await part(env, 1, 2, sealed(250));
+    expect((await worker.fetch(get("/v1/export/reports", "wrong-token-".repeat(4)), env)).status).toBe(404);
+    const list = await (await worker.fetch(get("/v1/export/reports?after=0"), env)).json() as { items: { id: number; report: string; part: number; count: number; size: number }[]; more: boolean };
+    expect(list.items.map(item => [item.report, item.part, item.count, item.size])).toEqual([[id, 0, 2, 200], [id, 1, 2, 250]]);
+    expect(list.more).toBe(false);
+    const body = new Uint8Array(await (await worker.fetch(get(`/v1/export/report?id=${list.items[1].id}`), env)).arrayBuffer());
+    expect(body).toEqual(sealed(250));
+    const confirm = (token = TOKEN) => new Request(`${URL_BASE}/v1/export/reports/confirm`, {
+      method: "POST", body: JSON.stringify({ through: list.items[1].id }), headers: { Authorization: `Bearer ${token}` },
+    });
+    expect((await worker.fetch(confirm("x".repeat(40)), env)).status).toBe(404);
+    expect(await (await worker.fetch(confirm(), env)).json()).toEqual({ deleted: 2 });
+    expect(parts(env)).toEqual([]);
+    expect(env.REPORTS.entry("reports").storage.values.get("bytes")).toBe(0);
+  });
+
+  test("parts older than 2 years go", async () => {
+    const env = server();
+    await part(env, 0, 1);
+    const reports = env.REPORTS.entry("reports");
+    await (reports.object as InstanceType<typeof Reports>).alarm(Date.now() + KEEP_MILLIS + 1);
+    expect(parts(env)).toEqual([]);
+  });
+
+  test("the Worker's config has the reports object and its migration", async () => {
+    const config = await text("server/contributions/wrangler.toml");
+    expect(config).toContain('name = "REPORTS"\nclass_name = "Reports"');
+    expect(config).toContain('tag = "v2"\nnew_sqlite_classes = ["Reports"]');
   });
 });
 

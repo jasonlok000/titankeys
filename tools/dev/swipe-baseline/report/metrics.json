@@ -1,0 +1,1398 @@
+{
+ "all": {
+  "n": 404,
+  "top1": 309,
+  "top3": 335,
+  "final": 401
+ },
+ "by_style": {
+  "Swipe only": {
+   "n": 134,
+   "top1": 107,
+   "top3": 114,
+   "final": 133
+  },
+  "Left swipe": {
+   "n": 97,
+   "top1": 68,
+   "top3": 78,
+   "final": 96
+  },
+  "Index finger": {
+   "n": 130,
+   "top1": 101,
+   "top3": 108,
+   "final": 129
+  },
+  "Random": {
+   "n": 43,
+   "top1": 33,
+   "top3": 35,
+   "final": 43
+  }
+ },
+ "thumb_and_index": {
+  "n": 361,
+  "top1": 276,
+  "top3": 300,
+  "final": 358
+ },
+ "by_length": {
+  "1-2": {
+   "n": 77,
+   "top1": 68,
+   "top3": 71,
+   "final": 77
+  },
+  "3": {
+   "n": 102,
+   "top1": 78,
+   "top3": 85,
+   "final": 101
+  },
+  "4": {
+   "n": 83,
+   "top1": 55,
+   "top3": 63,
+   "final": 82
+  },
+  "5": {
+   "n": 55,
+   "top1": 45,
+   "top3": 48,
+   "final": 55
+  },
+  "6-7": {
+   "n": 66,
+   "top1": 48,
+   "top3": 52,
+   "final": 66
+  },
+  "8+": {
+   "n": 21,
+   "top1": 15,
+   "top3": 16,
+   "final": 20
+  }
+ },
+ "by_frequency": {
+  "255-200": {
+   "n": 83,
+   "top1": 77,
+   "top3": 77,
+   "final": 83
+  },
+  "199-150": {
+   "n": 170,
+   "top1": 131,
+   "top3": 143,
+   "final": 168
+  },
+  "149-100": {
+   "n": 142,
+   "top1": 96,
+   "top3": 109,
+   "final": 141
+  },
+  "<100": {
+   "n": 9,
+   "top1": 5,
+   "top3": 6,
+   "final": 9
+  }
+ },
+ "first_word": {
+  "first": {
+   "n": 15,
+   "top1": 12,
+   "top3": 13,
+   "final": 15
+  },
+  "later": {
+   "n": 389,
+   "top1": 297,
+   "top3": 322,
+   "final": 386
+  }
+ },
+ "by_top_row": {
+  "none": {
+   "n": 33,
+   "top1": 25,
+   "top3": 32,
+   "final": 32
+  },
+  "some (<50%)": {
+   "n": 93,
+   "top1": 75,
+   "top3": 80,
+   "final": 91
+  },
+  "half+": {
+   "n": 237,
+   "top1": 177,
+   "top3": 190,
+   "final": 237
+  },
+  "all": {
+   "n": 41,
+   "top1": 32,
+   "top3": 33,
+   "final": 41
+  }
+ },
+ "by_first_row": {
+  "top": {
+   "n": 183,
+   "top1": 143,
+   "top3": 153,
+   "final": 183
+  },
+  "middle": {
+   "n": 150,
+   "top1": 112,
+   "top3": 124,
+   "final": 148
+  },
+  "bottom": {
+   "n": 71,
+   "top1": 54,
+   "top3": 58,
+   "final": 70
+  }
+ },
+ "by_last_row": {
+  "top": {
+   "n": 227,
+   "top1": 175,
+   "top3": 184,
+   "final": 226
+  },
+  "middle": {
+   "n": 134,
+   "top1": 99,
+   "top3": 113,
+   "final": 132
+  },
+  "bottom": {
+   "n": 43,
+   "top1": 35,
+   "top3": 38,
+   "final": 43
+  }
+ },
+ "by_speed": {
+  "<5": {
+   "n": 2,
+   "top1": 1,
+   "top3": 1,
+   "final": 2
+  },
+  "5-8": {
+   "n": 7,
+   "top1": 6,
+   "top3": 7,
+   "final": 7
+  },
+  "8-11": {
+   "n": 48,
+   "top1": 37,
+   "top3": 42,
+   "final": 48
+  },
+  "11-14": {
+   "n": 92,
+   "top1": 68,
+   "top3": 74,
+   "final": 91
+  },
+  "14+": {
+   "n": 255,
+   "top1": 197,
+   "top3": 211,
+   "final": 253
+  }
+ },
+ "by_integrity": {
+  "one contact, not rejoined": {
+   "n": 355,
+   "top1": 272,
+   "top3": 296,
+   "final": 352
+  },
+  "broken stroke, rejoined": {
+   "n": 48,
+   "top1": 36,
+   "top3": 38,
+   "final": 48
+  },
+  "several contacts, one piece": {
+   "n": 1,
+   "top1": 1,
+   "top3": 1,
+   "final": 1
+  }
+ },
+ "attempts": {
+  "all_attempts": 504,
+  "correct_attempts": 380,
+  "retries": 100,
+  "retries_right": 71,
+  "attempts_per_word": 1.248
+ },
+ "ghosts": {
+  "attempts_with_no_surviving_word": 10,
+  "by_style": {
+   "Left swipe": 2,
+   "Index finger": 8
+  }
+ },
+ "recovery": {
+  "deleted and swiped again": 64,
+  "chosen from strip": 25,
+  "left wrong in final text": 3,
+  "fixed by typing": 3
+ },
+ "failure_engine": {
+  "not offered (not in the top 3)": 67,
+  "ranked 2-3: path favoured the wrong word": 13,
+  "ranked 2-3: path favoured the right word": 13,
+  "inflection or prefix": 2
+ },
+ "gesture_base_rates": {
+  "clean: reached every letter": {
+   "n": 199,
+   "top1": 179,
+   "top3": 195,
+   "final": 199,
+   "fails": 20
+  },
+  "stroke broken into pieces": {
+   "n": 48,
+   "top1": 37,
+   "top3": 39,
+   "final": 48,
+   "fails": 11
+  },
+  "start > 1 key from first letter": {
+   "n": 27,
+   "top1": 9,
+   "top3": 11,
+   "final": 26,
+   "fails": 18
+  },
+  "end > 1 key from last letter": {
+   "n": 60,
+   "top1": 44,
+   "top3": 47,
+   "final": 59,
+   "fails": 16
+  },
+  "passes > 1 key from a middle letter": {
+   "n": 48,
+   "top1": 39,
+   "top3": 42,
+   "final": 47,
+   "fails": 9
+  },
+  "stroke cut short (< half the word)": {
+   "n": 18,
+   "top1": 0,
+   "top3": 0,
+   "final": 18,
+   "fails": 18
+  },
+  "stroke far longer than the word (label doubt)": {
+   "n": 4,
+   "top1": 1,
+   "top3": 1,
+   "final": 4,
+   "fails": 3
+  }
+ },
+ "failure_gesture": {
+  "end > 1 key from last letter": 16,
+  "stroke broken into pieces": 11,
+  "stroke cut short (< half the word)": 18,
+  "clean: reached every letter": 20,
+  "passes > 1 key from a middle letter": 9,
+  "start > 1 key from first letter": 18,
+  "stroke far longer than the word (label doubt)": 3
+ },
+ "failure_table": [
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "stroke cut short (< half the word)",
+   "n": 18
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "start > 1 key from first letter",
+   "n": 16
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "end > 1 key from last letter",
+   "n": 12
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "stroke broken into pieces",
+   "n": 9
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "clean: reached every letter",
+   "n": 8
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "clean: reached every letter",
+   "n": 8
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "passes > 1 key from a middle letter",
+   "n": 5
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "clean: reached every letter",
+   "n": 4
+  },
+  {
+   "engine": "not offered (not in the top 3)",
+   "gesture": "stroke far longer than the word (label doubt)",
+   "n": 3
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "passes > 1 key from a middle letter",
+   "n": 2
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "end > 1 key from last letter",
+   "n": 2
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "start > 1 key from first letter",
+   "n": 2
+  },
+  {
+   "engine": "ranked 2-3: path favoured the wrong word",
+   "gesture": "stroke broken into pieces",
+   "n": 1
+  },
+  {
+   "engine": "inflection or prefix",
+   "gesture": "end > 1 key from last letter",
+   "n": 1
+  },
+  {
+   "engine": "inflection or prefix",
+   "gesture": "passes > 1 key from a middle letter",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "end > 1 key from last letter",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "stroke broken into pieces",
+   "n": 1
+  },
+  {
+   "engine": "ranked 2-3: path favoured the right word",
+   "gesture": "passes > 1 key from a middle letter",
+   "n": 1
+  }
+ ],
+ "confusions": [
+  {
+   "expected": "add",
+   "got": "as",
+   "n": 3
+  },
+  {
+   "expected": "on",
+   "got": "in",
+   "n": 3
+  },
+  {
+   "expected": "you",
+   "got": "to",
+   "n": 2
+  },
+  {
+   "expected": "pot",
+   "got": "it",
+   "n": 2
+  },
+  {
+   "expected": "has",
+   "got": "had",
+   "n": 2
+  },
+  {
+   "expected": "how",
+   "got": "for",
+   "n": 1
+  },
+  {
+   "expected": "about",
+   "got": "all",
+   "n": 1
+  },
+  {
+   "expected": "follow",
+   "got": "for",
+   "n": 1
+  },
+  {
+   "expected": "her",
+   "got": "the",
+   "n": 1
+  },
+  {
+   "expected": "start",
+   "got": "draw",
+   "n": 1
+  },
+  {
+   "expected": "chopping",
+   "got": "coping",
+   "n": 1
+  },
+  {
+   "expected": "butter",
+   "got": "busy",
+   "n": 1
+  },
+  {
+   "expected": "until",
+   "got": "into",
+   "n": 1
+  },
+  {
+   "expected": "carrots",
+   "got": "various",
+   "n": 1
+  },
+  {
+   "expected": "potatoes",
+   "got": "pairs",
+   "n": 1
+  },
+  {
+   "expected": "soup",
+   "got": "so",
+   "n": 1
+  },
+  {
+   "expected": "is",
+   "got": "to",
+   "n": 1
+  },
+  {
+   "expected": "stop",
+   "got": "so",
+   "n": 1
+  },
+  {
+   "expected": "waste",
+   "got": "water",
+   "n": 1
+  },
+  {
+   "expected": "vegetables",
+   "got": "vegetable",
+   "n": 1
+  },
+  {
+   "expected": "pan",
+   "got": "past",
+   "n": 1
+  },
+  {
+   "expected": "pour",
+   "got": "or",
+   "n": 1
+  },
+  {
+   "expected": "enough",
+   "got": "which",
+   "n": 1
+  },
+  {
+   "expected": "hour",
+   "got": "to",
+   "n": 1
+  },
+  {
+   "expected": "later",
+   "got": "it",
+   "n": 1
+  },
+  {
+   "expected": "pepper",
+   "got": "proper",
+   "n": 1
+  },
+  {
+   "expected": "bus",
+   "got": "cha",
+   "n": 1
+  },
+  {
+   "expected": "work",
+   "got": "risk",
+   "n": 1
+  },
+  {
+   "expected": "late",
+   "got": "large",
+   "n": 1
+  },
+  {
+   "expected": "so",
+   "got": "all",
+   "n": 1
+  },
+  {
+   "expected": "stop",
+   "got": "all",
+   "n": 1
+  },
+  {
+   "expected": "with",
+   "got": "kg",
+   "n": 1
+  },
+  {
+   "expected": "same",
+   "got": "and",
+   "n": 1
+  },
+  {
+   "expected": "moment",
+   "got": "and",
+   "n": 1
+  },
+  {
+   "expected": "next",
+   "got": "near",
+   "n": 1
+  },
+  {
+   "expected": "said",
+   "got": "was",
+   "n": 1
+  },
+  {
+   "expected": "the",
+   "got": "and",
+   "n": 1
+  },
+  {
+   "expected": "had",
+   "got": "has",
+   "n": 1
+  },
+  {
+   "expected": "called",
+   "got": "caa",
+   "n": 1
+  },
+  {
+   "expected": "in",
+   "got": "asked",
+   "n": 1
+  },
+  {
+   "expected": "sick",
+   "got": "such",
+   "n": 1
+  },
+  {
+   "expected": "would",
+   "got": "weeks",
+   "n": 1
+  },
+  {
+   "expected": "walking",
+   "got": "asking",
+   "n": 1
+  },
+  {
+   "expected": "have",
+   "got": "gave",
+   "n": 1
+  },
+  {
+   "expected": "blister",
+   "got": "unique",
+   "n": 1
+  },
+  {
+   "expected": "heel",
+   "got": "two",
+   "n": 1
+  },
+  {
+   "expected": "when",
+   "got": "ehf",
+   "n": 1
+  },
+  {
+   "expected": "the",
+   "got": "eb",
+   "n": 1
+  },
+  {
+   "expected": "seat",
+   "got": "swad",
+   "n": 1
+  },
+  {
+   "expected": "door",
+   "got": "site",
+   "n": 1
+  },
+  {
+   "expected": "trying",
+   "got": "get",
+   "n": 1
+  },
+  {
+   "expected": "spill",
+   "got": "soul",
+   "n": 1
+  },
+  {
+   "expected": "coffee",
+   "got": "side",
+   "n": 1
+  },
+  {
+   "expected": "last",
+   "got": "lear",
+   "n": 1
+  },
+  {
+   "expected": "house",
+   "got": "tea",
+   "n": 1
+  },
+  {
+   "expected": "neither",
+   "got": "new",
+   "n": 1
+  },
+  {
+   "expected": "of",
+   "got": "user",
+   "n": 1
+  },
+  {
+   "expected": "our",
+   "got": "or",
+   "n": 1
+  },
+  {
+   "expected": "box",
+   "got": "mix",
+   "n": 1
+  },
+  {
+   "expected": "it",
+   "got": "with",
+   "n": 1
+  }
+ ],
+ "hard_words": [
+  {
+   "word": "on",
+   "fails": 3,
+   "n": 4
+  },
+  {
+   "word": "add",
+   "fails": 3,
+   "n": 3
+  },
+  {
+   "word": "the",
+   "fails": 2,
+   "n": 21
+  },
+  {
+   "word": "of",
+   "fails": 2,
+   "n": 10
+  },
+  {
+   "word": "you",
+   "fails": 2,
+   "n": 6
+  },
+  {
+   "word": "over",
+   "fails": 2,
+   "n": 3
+  },
+  {
+   "word": "stop",
+   "fails": 2,
+   "n": 2
+  },
+  {
+   "word": "pot",
+   "fails": 2,
+   "n": 2
+  },
+  {
+   "word": "has",
+   "fails": 2,
+   "n": 2
+  },
+  {
+   "word": "in",
+   "fails": 1,
+   "n": 9
+  },
+  {
+   "word": "it",
+   "fails": 1,
+   "n": 6
+  },
+  {
+   "word": "she",
+   "fails": 1,
+   "n": 5
+  },
+  {
+   "word": "her",
+   "fails": 1,
+   "n": 5
+  },
+  {
+   "word": "who",
+   "fails": 1,
+   "n": 4
+  },
+  {
+   "word": "that",
+   "fails": 1,
+   "n": 4
+  },
+  {
+   "word": "is",
+   "fails": 1,
+   "n": 4
+  },
+  {
+   "word": "have",
+   "fails": 1,
+   "n": 4
+  },
+  {
+   "word": "so",
+   "fails": 1,
+   "n": 3
+  },
+  {
+   "word": "next",
+   "fails": 1,
+   "n": 3
+  },
+  {
+   "word": "had",
+   "fails": 1,
+   "n": 3
+  },
+  {
+   "word": "are",
+   "fails": 1,
+   "n": 3
+  },
+  {
+   "word": "about",
+   "fails": 1,
+   "n": 3
+  },
+  {
+   "word": "would",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "with",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "when",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "trying",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "they",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "soup",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "said",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "last",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "forty",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "can",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "called",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "bus",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "because",
+   "fails": 1,
+   "n": 2
+  },
+  {
+   "word": "to",
+   "fails": 0,
+   "n": 17
+  },
+  {
+   "word": "and",
+   "fails": 0,
+   "n": 15
+  },
+  {
+   "word": "was",
+   "fails": 0,
+   "n": 5
+  },
+  {
+   "word": "my",
+   "fails": 0,
+   "n": 4
+  },
+  {
+   "word": "me",
+   "fails": 0,
+   "n": 4
+  }
+ ],
+ "endpoint_error": {
+  "start": {
+   "q": {
+    "n": 1,
+    "dx": 0.13,
+    "dy": 0.25,
+    "sd": 0.0
+   },
+   "w": {
+    "n": 29,
+    "dx": 0.49,
+    "dy": 0.18,
+    "sd": 1.5
+   },
+   "e": {
+    "n": 6,
+    "dx": -0.15,
+    "dy": 0.11,
+    "sd": 0.68
+   },
+   "r": {
+    "n": 3,
+    "dx": 0.33,
+    "dy": 0.06,
+    "sd": 0.37
+   },
+   "t": {
+    "n": 69,
+    "dx": -0.13,
+    "dy": 0.2,
+    "sd": 1.06
+   },
+   "y": {
+    "n": 8,
+    "dx": -0.2,
+    "dy": 0.13,
+    "sd": 0.21
+   },
+   "u": {
+    "n": 4,
+    "dx": 0.01,
+    "dy": 0.08,
+    "sd": 0.31
+   },
+   "i": {
+    "n": 21,
+    "dx": -0.84,
+    "dy": 0.13,
+    "sd": 1.97
+   },
+   "o": {
+    "n": 27,
+    "dx": -0.53,
+    "dy": 0.12,
+    "sd": 0.92
+   },
+   "p": {
+    "n": 15,
+    "dx": -1.02,
+    "dy": 0.19,
+    "sd": 1.63
+   },
+   "a": {
+    "n": 38,
+    "dx": 0.33,
+    "dy": -0.1,
+    "sd": 1.27
+   },
+   "s": {
+    "n": 44,
+    "dx": -0.02,
+    "dy": 0.04,
+    "sd": 0.59
+   },
+   "d": {
+    "n": 7,
+    "dx": -0.15,
+    "dy": 0.11,
+    "sd": 0.47
+   },
+   "f": {
+    "n": 16,
+    "dx": -0.23,
+    "dy": 0.12,
+    "sd": 0.66
+   },
+   "g": {
+    "n": 6,
+    "dx": 0.15,
+    "dy": 0.11,
+    "sd": 0.57
+   },
+   "h": {
+    "n": 26,
+    "dx": -0.19,
+    "dy": 0.04,
+    "sd": 0.66
+   },
+   "j": {
+    "n": 1,
+    "dx": -0.08,
+    "dy": 0.28,
+    "sd": 0.0
+   },
+   "k": {
+    "n": 6,
+    "dx": 0.11,
+    "dy": 0.29,
+    "sd": 0.35
+   },
+   "l": {
+    "n": 6,
+    "dx": -0.51,
+    "dy": -0.22,
+    "sd": 1.07
+   },
+   "c": {
+    "n": 14,
+    "dx": -0.14,
+    "dy": 0.0,
+    "sd": 0.56
+   },
+   "v": {
+    "n": 2,
+    "dx": 0.33,
+    "dy": -0.01,
+    "sd": 0.18
+   },
+   "b": {
+    "n": 22,
+    "dx": -0.36,
+    "dy": 0.02,
+    "sd": 0.66
+   },
+   "n": {
+    "n": 13,
+    "dx": -0.12,
+    "dy": 0.08,
+    "sd": 0.51
+   },
+   "m": {
+    "n": 20,
+    "dx": -0.42,
+    "dy": -0.12,
+    "sd": 1.6
+   }
+  },
+  "end": {
+   "w": {
+    "n": 7,
+    "dx": 0.73,
+    "dy": 0.2,
+    "sd": 1.47
+   },
+   "e": {
+    "n": 78,
+    "dx": 0.45,
+    "dy": 0.33,
+    "sd": 0.93
+   },
+   "r": {
+    "n": 34,
+    "dx": 0.33,
+    "dy": 0.18,
+    "sd": 1.17
+   },
+   "t": {
+    "n": 49,
+    "dx": -0.09,
+    "dy": 0.25,
+    "sd": 0.98
+   },
+   "y": {
+    "n": 20,
+    "dx": -0.25,
+    "dy": 0.32,
+    "sd": 0.52
+   },
+   "u": {
+    "n": 6,
+    "dx": -0.26,
+    "dy": 0.09,
+    "sd": 1.69
+   },
+   "o": {
+    "n": 26,
+    "dx": -0.79,
+    "dy": 0.3,
+    "sd": 1.17
+   },
+   "p": {
+    "n": 7,
+    "dx": -1.2,
+    "dy": 0.18,
+    "sd": 0.59
+   },
+   "s": {
+    "n": 35,
+    "dx": 0.53,
+    "dy": -0.0,
+    "sd": 1.63
+   },
+   "d": {
+    "n": 45,
+    "dx": 0.08,
+    "dy": 0.2,
+    "sd": 0.82
+   },
+   "f": {
+    "n": 12,
+    "dx": 0.36,
+    "dy": -0.16,
+    "sd": 0.7
+   },
+   "g": {
+    "n": 22,
+    "dx": -0.07,
+    "dy": 0.25,
+    "sd": 0.52
+   },
+   "h": {
+    "n": 8,
+    "dx": -0.18,
+    "dy": 0.12,
+    "sd": 0.43
+   },
+   "k": {
+    "n": 5,
+    "dx": -0.32,
+    "dy": 0.39,
+    "sd": 0.44
+   },
+   "l": {
+    "n": 7,
+    "dx": -0.36,
+    "dy": 0.01,
+    "sd": 0.66
+   },
+   "x": {
+    "n": 1,
+    "dx": 0.42,
+    "dy": 0.09,
+    "sd": 0.0
+   },
+   "c": {
+    "n": 1,
+    "dx": -0.43,
+    "dy": 0.16,
+    "sd": 0.0
+   },
+   "n": {
+    "n": 36,
+    "dx": -0.73,
+    "dy": 0.13,
+    "sd": 1.28
+   },
+   "m": {
+    "n": 5,
+    "dx": -0.19,
+    "dy": 0.25,
+    "sd": 0.49
+   }
+  }
+ },
+ "reach_cdf": {
+  "0.25": 36.3,
+  "0.5": 62.7,
+  "0.75": 77.3,
+  "1.0": 85.5,
+  "1.5": 94.7
+ },
+ "reach_by_letter": {
+  "q": {
+   "n": 1,
+   "median": 0.23,
+   "over1": 0.0
+  },
+  "w": {
+   "n": 43,
+   "median": 0.37,
+   "over1": 14.0
+  },
+  "e": {
+   "n": 192,
+   "median": 0.48,
+   "over1": 17.2
+  },
+  "r": {
+   "n": 70,
+   "median": 0.25,
+   "over1": 14.3
+  },
+  "t": {
+   "n": 170,
+   "median": 0.29,
+   "over1": 7.6
+  },
+  "y": {
+   "n": 33,
+   "median": 0.27,
+   "over1": 15.2
+  },
+  "u": {
+   "n": 48,
+   "median": 0.52,
+   "over1": 29.2
+  },
+  "i": {
+   "n": 89,
+   "median": 0.55,
+   "over1": 32.6
+  },
+  "o": {
+   "n": 145,
+   "median": 0.64,
+   "over1": 28.3
+  },
+  "p": {
+   "n": 35,
+   "median": 0.66,
+   "over1": 34.3
+  },
+  "a": {
+   "n": 133,
+   "median": 0.21,
+   "over1": 11.3
+  },
+  "s": {
+   "n": 99,
+   "median": 0.24,
+   "over1": 5.1
+  },
+  "d": {
+   "n": 69,
+   "median": 0.25,
+   "over1": 4.3
+  },
+  "f": {
+   "n": 29,
+   "median": 0.19,
+   "over1": 10.3
+  },
+  "g": {
+   "n": 42,
+   "median": 0.26,
+   "over1": 2.4
+  },
+  "h": {
+   "n": 107,
+   "median": 0.32,
+   "over1": 8.4
+  },
+  "j": {
+   "n": 1,
+   "median": 0.14,
+   "over1": 0.0
+  },
+  "k": {
+   "n": 22,
+   "median": 0.29,
+   "over1": 4.5
+  },
+  "l": {
+   "n": 49,
+   "median": 0.72,
+   "over1": 22.4
+  },
+  "x": {
+   "n": 4,
+   "median": 0.36,
+   "over1": 0.0
+  },
+  "c": {
+   "n": 29,
+   "median": 0.19,
+   "over1": 3.4
+  },
+  "v": {
+   "n": 17,
+   "median": 0.35,
+   "over1": 5.9
+  },
+  "b": {
+   "n": 32,
+   "median": 0.37,
+   "over1": 6.2
+  },
+  "n": {
+   "n": 125,
+   "median": 0.41,
+   "over1": 13.6
+  },
+  "m": {
+   "n": 38,
+   "median": 0.48,
+   "over1": 7.9
+  }
+ },
+ "reach_by_position": {
+  "first": {
+   "n": 404,
+   "median": 0.23,
+   "over1": 5.9
+  },
+  "last": {
+   "n": 404,
+   "median": 0.45,
+   "over1": 18.3
+  },
+  "middle": {
+   "n": 814,
+   "median": 0.41,
+   "over1": 16.8
+  }
+ },
+ "length_ratio": {
+  "p10": 0.69,
+  "p50": 0.88,
+  "p90": 1.12
+ },
+ "speed": {
+  "p10": 10.0,
+  "p50": 15.6,
+  "p90": 22.7,
+  "dur_p50": 486.0,
+  "dur_p90": 1051.2999999999997
+ },
+ "sampling": {
+  "intervals": 63065,
+  "p50": 10.0,
+  "p90": 10.0,
+  "p99": 47.0,
+  "max": 3505,
+  "over40ms": 653,
+  "zero": 2
+ },
+ "rejoin": {
+  "n": 188,
+  "gap_p50": 67.0,
+  "gap_p90": 145.7000000000001,
+  "where_finger_left": {
+   "top row": 156,
+   "middle": 13,
+   "bottom": 19
+  }
+ },
+ "coverage": {
+  "x_min": 0.056,
+  "x_p1": 0.056,
+  "x_p99": 0.871,
+  "x_max": 0.949,
+  "y_min": 0.116,
+  "y_p1": 0.116,
+  "y_p99": 0.758,
+  "y_max": 0.885
+ },
+ "contacts": {
+  "short touch": 1681,
+  "became a swipe": 1446,
+  "moved 1.5+ keys, no swipe": 539,
+  "moved 0.6-1.5 keys, no swipe": 179
+ },
+ "deletes": {
+  "delete_flicks": 402,
+  "by_block": {
+   "none": 191,
+   "step": 98,
+   "style": 113
+  }
+ },
+ "natural": {
+  "words": 300,
+  "outcomes": {
+   "kept as first offered": 160,
+   "deleted or edited, not swiped again": 40,
+   "chose another word from the strip": 41,
+   "deleted and swiped again": 59
+  },
+  "kept_pct": 53.3
+ }
+}

@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Word ladder v4</title>
+<style>
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  :root { --card:#161210; --cream:#FFF1E6; --muted:#99918A; --orange:#EF804E; --div:#2A2623; --ink:#160A04; --pitch: calc(100vw * 108 / 1076); }
+  * { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:#000; color:var(--cream); font:16px/1.45 Inter, system-ui, sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  .wrap { padding:20px 16px 80px; }
+  h1 { font-size:26px; margin:0 0 6px; } h2 { font-size:19px; margin:32px 0 8px; }
+  p, li { color:var(--muted); font-size:15px; } p { margin:0 0 10px; } ul { margin:0 0 10px; padding-left:20px; } li { margin:3px 0; }
+  b { color:var(--cream); font-weight:700; }
+  .rungs { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:12px 0; }
+  .rungs span.s { border:1px solid var(--div); border-radius:10px; padding:6px 10px; font-size:14px; background:var(--card); transition:border-color .17s, color .17s; }
+  .rungs span.s.on { border-color:var(--orange); color:var(--orange); }
+  .rungs span.a { color:var(--muted); font-size:13px; }
+  .card { background:var(--card); border-radius:14px; padding:12px 0 14px; margin:12px -16px 14px; }
+  .card .t { padding:0 16px; font-size:15px; font-weight:700; } .card .d { padding:2px 16px 0; font-size:13px; color:var(--muted); }
+  .stage { position:relative; width:100vw; margin-top:8px; background:#000; overflow:hidden; touch-action:none; }
+  .stage .app { position:absolute; left:16px; top:8px; font-size:11px; color:#4a4440; letter-spacing:.06em; text-transform:uppercase; }
+  .stage .bar { position:absolute; left:0; right:0; bottom:0; height:56px; border-top:1px solid #1c1917; }
+  .stage canvas { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:6; }
+  .btn { position:absolute; bottom:28px; width:48px; height:48px; transform:translate(-50%,50%); display:flex; align-items:center; justify-content:center;
+         color:#fff; z-index:4; touch-action:none; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; }
+  .btn svg { width:22px; height:22px; pointer-events:none; }
+  .col7 { left:calc(50vw + 2.5 * var(--pitch)); } .col8 { left:calc(50vw + 3.5 * var(--pitch)); } .col9 { left:calc(50vw + 4.5 * var(--pitch)); }
+  .pill { position:absolute; bottom:28px; height:34px; background:var(--orange); color:var(--ink); border-radius:17px; pointer-events:none;
+          display:flex; align-items:center; gap:6px; padding:0 12px 0 10px; font-size:14px; font-weight:500; font-family:Inter; z-index:5; white-space:nowrap;
+          opacity:0; transform:translateY(50%) scale(.94); transform-origin:100% 50%; transition:opacity .17s cubic-bezier(.2,.8,.2,1), transform .17s cubic-bezier(.2,.8,.2,1); }
+  .pill.on { opacity:1; transform:translateY(50%) scale(1); }
+  .pill svg { width:20px; height:20px; }
+  .keys { display:flex; justify-content:center; font-size:11px; color:#5b544e; margin-top:2px; }
+  .keys span { width:var(--pitch); text-align:center; }
+  .row { display:flex; gap:8px; padding:10px 16px 0; align-items:center; flex-wrap:wrap; }
+  button.c { font:inherit; font-size:14px; color:var(--orange); background:none; border:1.5px solid var(--orange); border-radius:999px; padding:6px 14px; -webkit-tap-highlight-color:transparent; }
+  button.c.tg { color:var(--muted); border-color:var(--div); }
+  button.c.tg[aria-pressed=true] { color:var(--orange); border-color:var(--orange); }
+  .hap { font-size:12px; color:var(--muted); opacity:.4; transition:opacity .3s, color .3s; margin-left:auto; display:flex; align-items:center; gap:5px; }
+  .hap i { width:7px; height:7px; border-radius:50%; background:currentColor; display:inline-block; }
+  .hap.on { opacity:1; color:var(--orange); transition:none; }
+  .tl { position:relative; height:16px; margin:10px 16px 0; }
+  .tl .track { position:absolute; left:0; right:0; top:7px; height:2px; background:var(--div); border-radius:1px; }
+  .tl .head { position:absolute; left:0; top:4px; width:2px; height:8px; background:var(--cream); opacity:0; will-change:transform; }
+  .tl .tick { position:absolute; top:0; width:2px; height:16px; background:var(--orange); transform:translateX(-1px); }
+  .tl .tick b { position:absolute; left:6px; top:-1px; font-size:11px; color:var(--orange); font-weight:500; white-space:nowrap; }
+  .tl .tick.r b { left:auto; right:6px; }
+  .tl .lab { position:absolute; right:0; top:-14px; font-size:10px; color:#5b544e; }
+  .stats { padding:4px 16px 0; font-size:11px; color:#5b544e; min-height:16px; }
+  .tag { display:inline-block; font-size:12px; border-radius:999px; padding:1px 8px; margin-left:6px; background:#3a2418; color:var(--orange); font-weight:500; }
+  table { border-collapse:collapse; font-size:13px; color:var(--muted); width:100%; }
+  td { padding:5px 10px 5px 0; vertical-align:top; border-top:1px solid var(--div); }
+  td:first-child { color:var(--cream); white-space:nowrap; }
+  .zoom { display:block; width:100vw; margin-top:4px; }
+  .top { display:flex; gap:8px; margin:14px 0 4px; }
+</style>
+</head>
+<body><div class="wrap">
+<h1>Word ladder, v4</h1>
+<p>The word menu, finished as a mockup before anything is built. Its icons and motion are what ship: every move here is the move in the app, one to one.</p>
+<p>Hold a word on the bar. <b>I</b> moves it one step up, <b>O</b> one step down, and <b>Back</b> closes. The menu stays open after every step. One-letter words open no menu, and symbols and emoji have no ladder.</p>
+<div class="rungs"><span class="s">Blocked</span><span class="a">⇄</span><span class="s">Not saved</span><span class="a">⇄</span><span class="s">Saved</span><span class="a">⇄</span><span class="s">Favourite</span></div>
+<ul>
+<li><b>Favourite</b>: always first. Solid, and now and then a faint heart rises from it.</li>
+<li><b>Saved</b>: TitanKeys knows the word. A dictionary word, a word it learned from your typing and a word you saved all count. Solid, with a faint book above it.</li>
+<li><b>Not saved</b>: TitanKeys doesn't know it. A light fill under a dotted outline: easy to read, clearly not kept.</li>
+<li><b>Blocked</b>: never suggested, learned or fixed into. The not-saved look in grey, struck through.</li>
+</ul>
+<p><b>A resting finger shows the future.</b> While a finger rests on I or O, the word shows in grey what that press will do. The press makes it real, in white or orange, with its effect.</p>
+<div class="top"><button class="c tg" id="rm" aria-pressed="false">Reduced motion</button></div>
+
+<h2>Try it</h2>
+<p>Hold I or O to see the preview, and let go to press. Press again in the middle of an effect: it carries on from where it is. Back starts again from Saved.</p>
+<div id="free"></div>
+
+<h2>The bar at rest</h2>
+<p>Each rung at real size. Hold a key here too.</p>
+<div id="states"></div>
+
+<h2>Not saved, close up</h2>
+<p>20 dp on black. Top: real size, v3's outline on the left and v4's look on the right. Bottom: v4 at 3×. The fill is 40% white, and the dots are bigger and closer.</p>
+<div class="card" style="padding:8px 0"><canvas class="zoom" id="zoom"></canvas></div>
+
+<h2>Each step</h2>
+<p>Play runs the step at full speed, and Slow at a quarter. With Hover on, the finger rests first: you see the preview, then the press, then the result. The orange tick on the line under each step is its haptic frame, the one frame the phone buzzes on.</p>
+<div id="moves"></div>
+
+<h2>One motion language</h2>
+<p>All six effects share these. The springs are real physics (mass, stiffness and damping), so a second press picks up from the current position and speed instead of starting over.</p>
+<table id="tokens"></table>
+</div>
+
+<script>
+'use strict';
+// ───────────────────────── icons (24 grid) ─────────────────────────
+const P = {
+  // From android/src/main/res/drawable: menu_favourite, menu_favourited, menu_unfavourite and panel_back.
+  heart:'M16.5,3c-1.74,0 -3.41,0.81 -4.5,2.09C10.91,3.81 9.24,3 7.5,3 4.42,3 2,5.42 2,8.5c0,3.78 3.4,6.86 8.55,11.54L12,21.35l1.45,-1.32C18.6,15.36 22,12.28 22,8.5 22,5.42 19.58,3 16.5,3zM12.1,18.55l-0.1,0.1 -0.1,-0.1C7.14,14.24 4,11.39 4,8.5 4,6.5 5.5,5 7.5,5c1.54,0 3.04,0.99 3.57,2.36h1.87C13.46,5.99 14.96,5 16.5,5c2,0 3.5,1.5 3.5,3.5 0,2.89 -3.14,5.74 -7.9,10.05z',
+  heartFull:'M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z',
+  zigHeart:'M12.3,6.6L10.4,10.4L13.6,12.6L11.6,17.4',
+  back:'M20,11H7.8l5.6,-5.6L12,4l-8,8l8,8l1.4,-1.4L7.8,13H20Z',
+  // v3's book, on the same 24 grid and 2-unit line: the left and right pages, the spine, and the tear for Unsave's icon.
+  pageL:'M12,6.6C10.3,5.3 8,4.6 5.5,4.6c-1.3,0 -2.5,0.2 -3.5,0.6V19c1,-0.4 2.2,-0.6 3.5,-0.6 2.5,0 4.8,0.7 6.5,2',
+  pageR:'M12,6.6c1.7,-1.3 4,-2 6.5,-2 1.3,0 2.5,0.2 3.5,0.6V19c-1,-0.4 -2.2,-0.6 -3.5,-0.6 -2.5,0 -4.8,0.7 -6.5,2',
+  spine:'M12,6.6V20.4',
+  zigBook:'M17.2,6.4L15.6,10L18.2,12L16.8,16',
+  // Material's format_strikethrough for Block, and the same T without its line for Unblock.
+  strike:'M10,19h4v-3h-4v3zM5,4v3h5v3h4V7h5V4H5zM3,14h18v-2H3v2z',
+  tee:'M5,4v3h5v12h4V7h5V4H5z',
+};
+// The page that tears out: the right page, closed along the spine by the tear (bottom to top).
+const TEAR = [[12,20.4],[12.9,18.3],[11.6,16.2],[12.9,14.1],[11.6,12],[12.9,9.9],[11.6,7.8],[12,6.6]];
+const LEAF_D = P.pageR + TEAR.slice(1).map(([x, y]) => `L${x},${y}`).join('') + 'Z';
+// The heart's crack, top to bottom, and the two halves it leaves.
+const CRACK = [[12.2,4.4],[10.5,9],[13.4,12.3],[11.2,16.4],[12,21.6]];
+const fillIcon = (d, col) => `<svg viewBox="0 0 24 24"><path d="${d}" fill="${col || 'currentColor'}"/></svg>`;
+const strokeBook = (extra) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="${P.pageL}"/><path d="${P.pageR}"/><path d="${P.spine}"/>${extra || ''}</svg>`;
+const IC = {
+  save: strokeBook(),
+  unsave: strokeBook(`<path d="${P.zigBook}"/>`),
+  fav: fillIcon(P.heart),
+  favOn: fillIcon(P.heartFull, '#EF804E'),
+  unfav: `<svg viewBox="0 0 24 24"><path d="${P.heart}" fill="currentColor"/><path d="${P.zigHeart}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  block: fillIcon(P.strike),
+  unblock: fillIcon(P.tee),
+  back: fillIcon(P.back),
+};
+const HEART = new Path2D(P.heartFull), PAGE_L = new Path2D(P.pageL), PAGE_R = new Path2D(P.pageR), SPINE = new Path2D(P.spine), LEAF = new Path2D(LEAF_D);
+const halfClip = (side) => { const p = new Path2D(); const e = side < 0 ? -2 : 26; const pts = [[e,-2],[12.2,-2],...CRACK,[12,26],[e,26]];
+  pts.forEach(([x, y], i) => i ? p.lineTo(x, y) : p.moveTo(x, y)); p.closePath(); return p; };
+const HALF = { '-1': halfClip(-1), '1': halfClip(1) };
+
+// ───────────────────────── the motion language ─────────────────────────
+// Every effect uses only these. Durations in ms; springs are mass, stiffness and damping (ζ = c / 2√(km)).
+const M = {
+  preview: 170,  // the grey preview fades in and out
+  squash: 70,    // anticipation: a 2% squash before every pop
+  fade: 220,     // things fading in or out
+  settle: 520,   // orange cooling to its resting colour, ambient marks returning
+  exit: 380,     // props leaving: they rise and fade, never cut
+  rm: 200,       // reduced motion: one crossfade to the end
+  spring: {
+    pop:    { m:1, k:520, c:16 },   // ζ 0.35, lively: the word pops, hearts and the book appear
+    snap:   { m:1, k:600, c:49 },   // ζ 1.0: a letter changes state, no overshoot
+    pen:    { m:1, k:420, c:41 },   // ζ 1.0: the strike, drawn or pulled back
+    sweep:  { m:1, k:150, c:24.5 }, // ζ 1.0: the ink front across the word
+    wobble: { m:1, k:180, c:7 },    // ζ 0.26: follow-through, the book settling
+    drift:  { m:1, k:40, c:12.6 },  // ζ 1.0: slow rises
+  },
+  pop: { anticipate: .98, kick: 2.0 },  // squash to 98%, then a velocity kick into the pop spring
+  air: { heavy: 900, light: 3.2, buoyant: -240 }, // gravity px/s², air drag 1/s, hearts' lift px/s²
+};
+const ease = {
+  out: t => 1 - Math.pow(1 - t, 3),
+  inOut: t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2,
+  lin: t => t,
+};
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const WHITE = [255,255,255], GREY = [153,145,138], OR = [239,128,78], CREAM = [255,241,230], BLACK = [0,0,0];
+const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+const rgba = (c, a) => `rgba(${c[0]|0},${c[1]|0},${c[2]|0},${clamp(a)})`;
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const seedOf = (s) => [...String(s)].reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619), 2166136261);
+
+class Spring {
+  constructor(x, cfg) { this.x = x; this.v = 0; this.t = x; this.cfg = cfg; }
+  to(t, cfg) { this.t = t; if (cfg) this.cfg = cfg; return this; }
+  set(x) { this.x = this.t = x; this.v = 0; return this; }
+  kick(v) { this.v += v; return this; }
+  step(dt) { const { m, k, c } = this.cfg; this.v += (-k * (this.x - this.t) - c * this.v) / m * dt; this.x += this.v * dt; }
+  get busy() { return Math.abs(this.x - this.t) > 4e-4 || Math.abs(this.v) > 4e-3; }
+}
+class Tween {
+  constructor(x) { this.x = this.a = this.b = x; this.p = 1; this.d = 1; this.e = ease.out; }
+  to(b, ms, e) { if (b === this.b && this.p < 1) return this; this.a = this.x; this.b = b; this.p = this.a === b ? 1 : 0; this.d = Math.max(1, ms) / 1000; this.e = e || ease.out; return this; }
+  set(x) { this.x = this.a = this.b = x; this.p = 1; return this; }
+  step(dt) { if (this.p >= 1) return; this.p = Math.min(1, this.p + dt / this.d); this.x = lerp(this.a, this.b, this.e(this.p)); }
+  get busy() { return this.p < 1; }
+}
+
+// ───────────────────────── particles ─────────────────────────
+// One integrator for every particle: forces, linear air drag, spin with its own drag, a pop-in spring, and a fade-out
+// that always finishes before the particle dies or leaves the stage.
+class Part {
+  constructor(o) {
+    Object.assign(this, { x:0, y:0, vx:0, vy:0, ax:0, ay:0, drag:0, rot:0, w:0, wdrag:0, age:0, life:1, fadeIn:.05, fadeOut:.35, alpha:1, size:1, s0:1, sway:null, kind:'dot' }, o);
+    this.sc = new Spring(this.s0, M.spring.pop).to(1);
+  }
+  step(dt) {
+    if (this.age < 0) { this.age += dt; return; }
+    let ax = this.ax, ay = this.ay;
+    if (this.sway) ax += Math.sin(this.age * this.sway.f + this.sway.p) * this.sway.a;
+    if (this.home) { const h = this.home(); ax += h.k * (h.x - this.x); ay += h.k * (h.y - this.y); }
+    this.vx += (ax - this.drag * this.vx) * dt; this.vy += (ay - this.drag * this.vy) * dt;
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.w -= this.wdrag * this.w * dt; this.rot += this.w * dt;
+    this.sc.step(dt); this.age += dt;
+  }
+  get a() {
+    const t = this.age; if (t < 0) return 0;
+    const f = Math.min(clamp(t / this.fadeIn), 1 - ease.inOut(clamp((t - (this.life - this.fadeOut)) / this.fadeOut)));
+    return this.alpha * f;
+  }
+  get dead() { return this.age >= this.life; }
+}
+// A torn page falling through air: a damped pendulum for its tilt, lift that turns its fall sideways along the tilt, and
+// drag that is strongest when it lies flat to the air. It swings and drifts down like paper, never in a straight line.
+class Leaf extends Part {
+  constructor(o) { super(Object.assign({ kind:'leaf', th:.1, thw:4, K:36, damp:.5, lift:14, kd:5, g:520 }, o)); }
+  step(dt) {
+    const drag = this.kd * (.35 + .65 * Math.abs(Math.cos(this.th)));
+    this.vx += (this.lift * Math.sin(this.th) * Math.max(this.vy, 0) - drag * this.vx) * dt;
+    this.vy += (this.g - drag * this.vy) * dt;
+    this.thw += (-this.K * this.th - this.damp * this.thw) * dt; this.th += this.thw * dt;
+    this.x += this.vx * dt; this.y += this.vy * dt; this.age += dt; this.sc.step(dt);
+  }
+}
+
+// ───────────────────────── drawing helpers ─────────────────────────
+const FONT_PX = 20, FONT = `700 ${FONT_PX}px Inter`;
+const NS = { fill: .42, dot: 1.3, gap: 2.1 };  // Not saved: a 40% fill under bigger, closer dots
+const V3 = { fill: 0, dot: 1.15, gap: 2.7 };    // v3's outline, for comparison only
+const BAR = 56, HEART_DP = 17;
+function polyPart(c, pts, p) {
+  const n = pts.length - 1, u = clamp(p) * n; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i <= n; i++) { if (i <= u) c.lineTo(pts[i][0], pts[i][1]); else { const f = u - (i - 1); if (f > 0) c.lineTo(lerp(pts[i-1][0], pts[i][0], f), lerp(pts[i-1][1], pts[i][1], f)); break; } }
+  c.stroke();
+}
+function drawHeart(c, x, y, s, rot, col, a) { if (a <= .002 || s <= 0) return; c.save(); c.translate(x, y); c.rotate(rot || 0); c.scale(s / 24, s / 24); c.translate(-12, -12.4); c.fillStyle = rgba(col, a); c.fill(HEART); c.restore(); }
+function drawCrack(c, x, y, s, p, col, a) {
+  if (p <= 0 || a <= .002) return;
+  c.save(); c.translate(x, y); c.scale(s / 24, s / 24); c.translate(-12, -12.4);
+  c.strokeStyle = rgba(col, a); c.lineWidth = 2.2; c.lineCap = 'round'; c.lineJoin = 'round'; polyPart(c, CRACK, p); c.restore();
+}
+function pageLines(c, side, a, col) {
+  c.save(); c.lineWidth = .9; c.lineCap = 'round'; c.strokeStyle = rgba(col, a * .55); c.beginPath();
+  for (const y of [9.4, 12.2, 15]) { const x0 = side > 0 ? 14.4 : 9.6, x1 = side > 0 ? 19.6 - (y > 14 ? 2 : 0) : 4.4 + (y > 14 ? 2 : 0); c.moveTo(x0, y); c.lineTo(x1, y); }
+  c.stroke(); c.restore();
+}
+// The book, from the icon. phi turns the left cover over the spine: 0 open as the icon, π shut on the right page.
+function drawBook(c, b, col) {
+  const a = b.a.x * clamp(b.s.x * 4); if (a <= .002) return;
+  const s = Math.max(0, b.s.x);
+  c.save(); c.translate(b.x, b.y.x + 13); c.rotate(b.rot.x); c.scale(b.sx.x, 2 - b.sx.x); c.translate(0, -13);
+  c.scale(s * b.size / 24, s * b.size / 24); c.translate(-12, -12.5);
+  c.lineJoin = 'round'; c.lineCap = 'round'; c.lineWidth = 2;
+  const fill = rgba(col, a * .16), line = rgba(col, a);
+  if (!b.torn) {
+    c.save();
+    const tug = b.tug.x; if (tug) { c.translate(12, 13.5); c.rotate(-tug * .07); c.translate(tug * .8, -tug * .7); c.translate(-12, -13.5); }
+    c.fillStyle = fill; c.fill(PAGE_R); c.strokeStyle = line; c.stroke(PAGE_R); pageLines(c, 1, a, col);
+    if (b.tear.x > 0) { c.lineWidth = 1.3; polyPart(c, TEAR.slice().reverse(), b.tear.x); }
+    c.restore();
+  } else { // the stub left on the spine
+    c.save(); c.lineWidth = 1.3; c.strokeStyle = rgba(col, a * .8); polyPart(c, TEAR, 1); c.restore();
+  }
+  c.save(); const cos = Math.cos(b.phi); c.translate(12, 0); c.scale(Math.abs(cos) < .02 ? .02 * (cos < 0 ? -1 : 1) : cos, 1); c.translate(-12, 0);
+  c.fillStyle = rgba(col, a * (.16 + .12 * clamp(-cos))); c.fill(PAGE_L); c.strokeStyle = line; c.stroke(PAGE_L); if (cos > .3) pageLines(c, -1, a * cos, col); c.restore();
+  c.strokeStyle = line; c.stroke(SPINE);
+  c.restore();
+}
+function drawSmallBook(c, x, y, size, col, a) {
+  if (a <= .002) return;
+  c.save(); c.translate(x, y); c.scale(size / 24, size / 24); c.translate(-12, -12.5); c.lineJoin = 'round'; c.lineCap = 'round'; c.lineWidth = 2;
+  c.strokeStyle = rgba(col, a); c.stroke(PAGE_L); c.stroke(PAGE_R); c.stroke(SPINE); c.restore();
+}
+function letter(c, ch, x, y, col, s, a) {
+  if (a <= .002) return;
+  const fillA = lerp(NS.fill, 1, s), lineA = 1 - s;
+  c.fillStyle = rgba(col, a * fillA); c.fillText(ch, x, y);
+  if (lineA > .01) { c.save(); c.setLineDash([.01, NS.gap]); c.lineCap = 'round'; c.lineWidth = NS.dot; c.strokeStyle = rgba(col, a * lineA); c.strokeText(ch, x, y); c.restore(); }
+}
+// The strike: a pen's taper where it starts, a round end where it stops.
+function strokeLine(c, xa, xb, y, col, a, taper) {
+  if (xb - xa < .3 || a <= .002) return;
+  const hw = 1.05; c.fillStyle = rgba(col, a); c.beginPath();
+  if (taper) { const T = Math.min(9, xb - xa); c.moveTo(xa, y); c.lineTo(xa + T, y - hw); }
+  else { c.arc(xa, y, hw, Math.PI / 2, Math.PI * 1.5); }
+  c.lineTo(xb, y - hw); c.arc(xb, y, hw, -Math.PI / 2, Math.PI / 2);
+  if (taper) c.lineTo(xa + Math.min(9, xb - xa), y + hw);
+  c.closePath(); c.fill();
+}
+
+// ───────────────────────── the ladder ─────────────────────────
+const RUNGS = ['blocked', 'notsaved', 'saved', 'fav'];
+const NAME = { blocked:'Blocked', notsaved:'Not saved', saved:'Saved', fav:'Favourite' };
+const UP = { blocked:'unblock', notsaved:'save', saved:'fav', fav:null };
+const DOWN = { fav:'unfav', saved:'unsave', notsaved:'block', blocked:null };
+const LABEL = { save:'Save', unsave:'Unsave', fav:'Favourite', unfav:'Unfavourite', block:'Block', unblock:'Unblock' };
+const TO = { save:'saved', unsave:'notsaved', fav:'fav', unfav:'saved', block:'blocked', unblock:'notsaved' };
+const WORD = 'whatever';
+let RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TL_S = 1.8; // the line under each step shows its first 1.8 s
+
+const cards = [];
+let measure = null;
+function layoutWord(word) {
+  if (!measure) measure = document.createElement('canvas').getContext('2d');
+  measure.font = FONT;
+  const xs = [], cs = [];
+  for (let i = 0; i < word.length; i++) { const x0 = measure.measureText(word.slice(0, i)).width, x1 = measure.measureText(word.slice(0, i + 1)).width; xs.push(x0); cs.push((x0 + x1) / 2); }
+  return { xs, cs, w: measure.measureText(word).width, chars: [...word] };
+}
+
+class Card {
+  constructor(host, o) {
+    Object.assign(this, { above: 200, rung: 'saved', title: '', desc: '', keys: false }, o);
+    this.home = this.rung; this.H = this.above + BAR; this.CY = this.above + BAR / 2; this.BY = this.CY + 6.5;
+    this.time = 0; this.speed = 1; this.cues = []; this.script = []; this.tracks = []; this.parts = [];
+    this.el = document.createElement('div'); this.el.className = 'card';
+    this.el.innerHTML = (this.title ? `<div class="t">${this.title}</div>` : '') + (this.desc ? `<div class="d">${this.desc}</div>` : '') +
+      `<div class="stage" style="height:${this.H}px">${this.above > 120 ? '<div class="app">The app</div>' : ''}<div class="bar"></div><canvas></canvas>
+        <div class="btn col7" data-k="i"></div><div class="btn col8" data-k="o"></div><div class="btn col9" data-k="back">${IC.back}</div>
+        <div class="pill" data-p="i" style="right:calc(50vw - 3 * var(--pitch))"></div><div class="pill" data-p="o" style="right:calc(50vw - 4 * var(--pitch))"></div></div>` +
+      (this.keys ? `<div class="keys">${'QWERTYUIO⌫'.split('').map(k => `<span>${k}</span>`).join('')}</div>` : '');
+    host.appendChild(this.el);
+    this.stage = this.el.querySelector('.stage'); this.cv = this.el.querySelector('canvas'); this.ctx = this.cv.getContext('2d');
+    this.btn = { i: this.el.querySelector('[data-k=i]'), o: this.el.querySelector('[data-k=o]'), back: this.el.querySelector('[data-k=back]') };
+    this.pill = { i: this.el.querySelector('[data-p=i]'), o: this.el.querySelector('[data-p=o]') };
+    this.L = layoutWord(WORD);
+    const n = this.L.chars.length;
+    this.s = Array.from({ length: n }, () => new Spring(0, M.spring.snap));    // solid: 0 the not-saved look, 1 solid
+    this.g = Array.from({ length: n }, () => new Spring(0, M.spring.snap));    // grey: 0 white, 1 grey
+    this.hot = Array.from({ length: n }, () => new Tween(0));                  // fresh ink: orange, cooling
+    this.gl = Array.from({ length: n }, () => new Tween(0));                   // the grey preview, per letter
+    this.gm = new Tween(0); this.ghost = null;                                 // the grey preview of a mark (strike, heart)
+    this.sx = new Spring(1, M.spring.pop); this.sy = new Spring(1, M.spring.pop); this.dy = new Spring(0, M.spring.pop);
+    this.strike = { end: new Spring(0, M.spring.pen), hot: new Tween(0), a: new Tween(1) };
+    this.mark = new Tween(0);  // Saved's faint book
+    this.hm = { a: new Tween(0), s: new Spring(1, M.spring.pop), hot: new Tween(0), crack: new Tween(0) };
+    this.book = null;
+    this.setLook(this.rung);
+    this.wire();
+    this.visible = true;
+    cards.push(this);
+  }
+  get cx() { return this.width / 2; }
+  get left() { return this.cx - this.L.w / 2; }
+  size() {
+    this.width = this.stage.clientWidth || innerWidth;
+    const dpr = Math.min(3, devicePixelRatio || 1);
+    this.cv.width = Math.round(this.width * dpr); this.cv.height = Math.round(this.H * dpr); this.dpr = dpr;
+    this.dirty = true;
+  }
+  // ── state ──
+  setLook(r) {
+    this.rung = r;
+    const solid = r === 'saved' || r === 'fav' ? 1 : 0, grey = r === 'blocked' ? 1 : 0;
+    this.s.forEach(x => x.set(solid)); this.g.forEach(x => x.set(grey)); this.hot.forEach(x => x.set(0)); this.gl.forEach(x => x.set(0));
+    this.gm.set(0); this.ghost = null; this.ghostOwned = false; this.penOn = false;
+    this.sx.set(1); this.sy.set(1); this.dy.set(0);
+    this.strike.end.set(grey); this.strike.hot.set(0); this.strike.a.set(1);
+    this.mark.set(r === 'saved' ? 1 : 0);
+    this.hm.a.set(0); this.hm.crack.set(0); this.hm.hot.set(0); this.hm.s.set(1);
+    this.book = null; this.parts = []; this.cues = []; this.tracks = [];
+    this.ambNext = this.time + 1.2;
+    this.buttons(); this.dirty = true;
+  }
+  buttons() {
+    const up = UP[this.rung], down = DOWN[this.rung];
+    this.btn.i.innerHTML = up ? IC[up] : IC.favOn;
+    this.btn.o.innerHTML = down ? IC[down] : '';
+    if (this.rungsEl) this.rungsEl.querySelectorAll('.s').forEach((e, i) => e.classList.toggle('on', RUNGS[i] === this.rung));
+  }
+  pillShow(k, act) {
+    for (const key of ['i', 'o']) {
+      const on = key === k && !!act;
+      if (on) this.pill[key].innerHTML = IC[act] + LABEL[act];
+      this.pill[key].classList.toggle('on', on);
+    }
+  }
+  wire() {
+    for (const k of ['i', 'o']) {
+      const b = this.btn[k];
+      b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} this.held = k; this.hover(k); });
+      b.addEventListener('pointerup', () => { if (this.held !== k) return; this.held = null; this.press(k); this.pillShow(null); this.unhover(); });
+      b.addEventListener('pointercancel', () => { this.held = null; this.pillShow(null); this.unhover(); });
+      b.addEventListener('contextmenu', e => e.preventDefault());
+    }
+    this.btn.back.addEventListener('click', () => this.reset(this.home));
+  }
+  act(k) { return k === 'i' ? UP[this.rung] : DOWN[this.rung]; }
+  // ── the resting finger: the grey preview of what the press will do ──
+  hover(k) {
+    const act = this.act(k);
+    this.pillShow(k, act);
+    if (!act) return;
+    const letters = a => a === 'save' || a === 'unsave';
+    if (this.ghost && this.ghost !== act && !(letters(this.ghost) && letters(act))) { this.gl.forEach(t => t.to(0, M.preview)); this.gm.set(0); }
+    if (this.ghost === 'unblock' && act !== 'unblock') this.strike.a.to(1, M.preview);
+    this.ghost = act; this.ghostOwned = false;
+    if (letters(act)) this.gl.forEach(t => t.to(1, M.preview)); else this.gm.to(1, M.preview);
+    if (act === 'unblock') this.strike.a.to(.3, M.preview);
+    this.wake();
+  }
+  unhover() {
+    if (this.ghostOwned) return;  // the press has taken the preview over; its effect fades it
+    this.gl.forEach(t => t.to(0, M.preview)); this.gm.to(0, M.preview);
+    if (this.ghost === 'unblock' && this.rung === 'blocked') this.strike.a.to(1, M.preview);
+    this.wake();
+  }
+  // ── cues, in this card's own clock (Slow runs it at a quarter) ──
+  at(ms, fn) { this.cues.push({ t: this.time + ms / 1000, fn }); }
+  when(pred, fn) { this.cues.push({ pred, fn }); }
+  later(ms, fn) { this.script.push({ t: this.time + ms / 1000, fn }); }
+  wake() { this.dirty = true; }
+  haptic(label) { if (this.onHaptic) this.onHaptic(this.time - this.pressT, label); }
+  // ── the press ──
+  press(k) {
+    const act = this.act(k);
+    if (!act) return;
+    this.pressT = this.time;
+    this.cues = []; this.tracks = [];       // the old effect's choreography stops; whatever is moving carries on from where it is
+    this.stats = { n: 0, worst: 0 };
+    if (this.onPress) this.onPress(act);
+    const to = TO[act];
+    if (RM) { this.crossfade(() => this.setLook(to)); this.haptic('end state'); return; }
+    // A preview for some other step fades; the press's own preview is handed to its effect.
+    if (this.ghost !== act) { this.gl.forEach(t => t.to(0, M.fade)); this.gm.to(0, M.fade); }
+    if (this.ghost === 'unblock' && act !== 'unblock') this.strike.a.to(1, M.fade);
+    this.ghostOwned = true; this.penOn = false;
+    // Props the new step doesn't use leave cleanly: rise and fade.
+    const b = this.book;
+    if (b && act !== 'save' && act !== 'unsave') { b.onLand = null; b.gone = true; b.a.to(0, M.exit, ease.inOut); b.y.to(b.y.x - 20); }
+    if (act !== 'fav' && act !== 'unfav' && this.hm.a.b > 0) this.hm.a.to(0, M.fade);
+    if (act !== 'block' && act !== 'unblock' && this.strike.hot.b > 0) this.strike.hot.to(0, M.settle);
+    this.rung = to; this.buttons();
+    FX[act](this, rng(seedOf(act)));
+  }
+  reset(r) { this.script = []; this.crossfade(() => this.setLook(r)); this.pillShow(null); }
+  crossfade(apply) {
+    const old = document.createElement('canvas'); old.width = this.cv.width; old.height = this.cv.height; old.getContext('2d').drawImage(this.cv, 0, 0);
+    apply(); this.xf = { old, p: new Tween(0).to(1, M.rm, ease.inOut) }; this.wake();
+  }
+  squash(kick) {
+    const a = M.pop.anticipate;
+    this.sx.to(1 + (1 - a) / 2, M.spring.snap); this.sy.to(a, M.spring.snap);
+    const v = kick == null ? M.pop.kick * .4 : kick;
+    this.at(M.squash, () => { this.sx.to(1, M.spring.pop).kick(v); this.sy.to(1, M.spring.pop).kick(v); });
+  }
+  pop(v) { this.sx.kick(v); this.sy.kick(v); }
+  // The ink front: a spring from one end of the word to the other, passing each letter's centre in turn.
+  sweep(dir, onPass) {
+    const n = this.L.chars.length, front = new Spring(dir > 0 ? -.02 : 1.02, M.spring.sweep).to(dir > 0 ? 1.06 : -.06);
+    const passed = new Set();
+    this.tracks.push(dt => {
+      front.step(dt);
+      for (let i = 0; i < n; i++) {
+        if (passed.has(i)) continue;
+        const c = this.L.cs[i] / this.L.w;
+        if (dir > 0 ? front.x >= c : front.x <= c) { passed.add(i); onPass(i); }
+      }
+      return passed.size < n;
+    });
+  }
+  ensureBook() {
+    if (!this.book) this.book = { x: this.cx, y: new Spring(this.CY - 92, M.spring.drift), size: 40, a: new Tween(0), s: new Spring(0, M.spring.pop), rot: new Spring(0, M.spring.wobble),
+      sx: new Spring(1, M.spring.pop), phi: 0, phiV: 0, phiMode: 'spring', phiS: new Spring(0, M.spring.snap), tug: new Spring(0, M.spring.snap), tear: new Tween(0), torn: false };
+    return this.book;
+  }
+  // ── per frame ──
+  step(dt) {
+    this.time += dt;
+    for (const q of [this.script, this.cues]) {
+      for (let i = 0; i < q.length; i++) { const c = q[i]; if (c.t != null ? this.time >= c.t : c.pred()) { q.splice(i--, 1); c.fn(); } }
+    }
+    this.tracks = this.tracks.filter(f => f(dt));
+    const sub = Math.max(1, Math.ceil(dt / (1 / 480))), h = dt / sub;
+    for (let k = 0; k < sub; k++) {
+      for (const x of this.s) x.step(h); for (const x of this.g) x.step(h);
+      this.sx.step(h); this.sy.step(h); this.dy.step(h); this.strike.end.step(h); this.hm.s.step(h);
+      const b = this.book;
+      if (b) {
+        b.y.step(h); b.s.step(h); b.rot.step(h); b.sx.step(h); b.tug.step(h);
+        if (b.phiMode === 'fall') { // the cover falls shut under its own weight and bounces once on the page
+          b.phiV += 150 * h; b.phi += b.phiV * h;
+          if (b.phi >= Math.PI) { b.phi = Math.PI; if (!b.landed) { b.landed = true; b.onLand && b.onLand(); } b.phiV = Math.abs(b.phiV) > 2 ? -b.phiV * .16 : 0; }
+        } else { b.phiS.step(h); b.phi = b.phiS.x; }
+      }
+      for (const p of this.parts) p.step(h);
+    }
+    for (const x of this.hot) x.step(dt); for (const x of this.gl) x.step(dt);
+    this.gm.step(dt); this.strike.hot.step(dt); this.strike.a.step(dt); this.mark.step(dt);
+    this.hm.a.step(dt); this.hm.hot.step(dt); this.hm.crack.step(dt);
+    if (this.book) { this.book.a.step(dt); this.book.tear.step(dt); if (this.book.gone && !this.book.a.busy && this.book.a.x <= .001) this.book = null; }
+    this.parts = this.parts.filter(p => !p.dead);
+    if (this.xf) { this.xf.p.step(dt); if (!this.xf.p.busy) this.xf = null; }
+    // Favourite at rest: now and then, one faint heart rises from the word.
+    if (this.rung === 'fav' && !this.cues.length && !this.parts.length && !RM && this.time >= this.ambNext) {
+      const r = rng(seedOf(Math.floor(this.time * 10)));
+      this.parts.push(new Part({ kind:'heart', amb:true, x: this.cx + (r() - .5) * this.L.w * .5, y: this.CY - 20, vy: -15, drag: .4, ay: -2, size: 7 + r() * 2, alpha: .32,
+        rot: (r() - .5) * .3, w: (r() - .5) * .4, life: 2.4, fadeIn: .6, fadeOut: 1.1, s0: .6, sway: { a: 6, f: 2.2, p: r() * 6 } }));
+      this.ambNext = this.time + 4 + r() * 3;
+    }
+  }
+  get busy() {
+    const any = a => a.some(x => x.busy);
+    return !!(this.dirty || this.cues.length || this.script.length || this.tracks.length || this.parts.length || this.xf || this.book ||
+      any(this.s) || any(this.g) || any(this.hot) || any(this.gl) || this.gm.busy || this.sx.busy || this.sy.busy || this.dy.busy ||
+      this.strike.end.busy || this.strike.hot.busy || this.strike.a.busy || this.mark.busy || this.hm.a.busy || this.hm.s.busy || this.hm.hot.busy || this.hm.crack.busy);
+  }
+  // ── drawing ──
+  draw() {
+    const c = this.ctx; c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); c.clearRect(0, 0, this.width, this.H);
+    if (this.xf) {
+      if (!this.buf) this.buf = document.createElement('canvas');
+      if (this.buf.width !== this.cv.width || this.buf.height !== this.cv.height) { this.buf.width = this.cv.width; this.buf.height = this.cv.height; }
+      const b = this.buf.getContext('2d'); b.setTransform(this.dpr, 0, 0, this.dpr, 0, 0); b.clearRect(0, 0, this.width, this.H); this.paint(b);
+      c.setTransform(1, 0, 0, 1, 0, 0); const p = this.xf.p.x;
+      c.globalAlpha = 1 - p; c.drawImage(this.xf.old, 0, 0); c.globalAlpha = p; c.drawImage(this.buf, 0, 0); c.globalAlpha = 1;
+      return;
+    }
+    this.paint(c);
+  }
+  paint(c) {
+    const cx = this.cx, CY = this.CY;
+    for (const p of this.parts) if (p.back) this.part(c, p);  // depth: the small, faint ones behind
+    drawSmallBook(c, cx, CY - 23, 14, CREAM, .24 * this.mark.x);
+    const HX = cx, HY = CY - 26;
+    if (this.gm.x > 0 && (this.ghost === 'fav' || this.ghost === 'unfav')) {
+      drawHeart(c, HX, HY, HEART_DP, 0, GREY, this.gm.x);
+      if (this.ghost === 'unfav') drawCrack(c, HX, HY, HEART_DP, 1, BLACK, this.gm.x);
+    }
+    if (this.hm.a.x > 0) {
+      const s = HEART_DP * this.hm.s.x, y = HY + (1 - this.hm.s.x) * 4;
+      drawHeart(c, HX, y, s, 0, mixc(GREY, OR, this.hm.hot.x), this.hm.a.x);
+      drawCrack(c, HX, y, s, this.hm.crack.x, BLACK, this.hm.a.x);
+    }
+    this.word(c);
+    if (this.book) drawBook(c, this.book, OR);
+    for (const p of this.parts) if (!p.back) this.part(c, p);
+  }
+  word(c) {
+    const L = this.L, n = L.chars.length, left = this.left, BY = this.BY, cx = this.cx;
+    c.save();
+    c.translate(cx, BY + this.dy.x); c.scale(this.sx.x, this.sy.x); c.translate(-cx, -BY);
+    c.font = FONT; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+    const letterPreview = this.ghost === 'save' || this.ghost === 'unsave';
+    for (let i = 0; i < n; i++) {
+      const x = left + L.xs[i], ch = L.chars[i];
+      const ga = letterPreview ? this.gl[i].x : 0;
+      const col = mixc(mixc(WHITE, GREY, clamp(this.g[i].x)), OR, this.hot[i].x);
+      letter(c, ch, x, BY, col, clamp(this.s[i].x), 1 - ga);                     // the letter as it is
+      if (ga > 0) letter(c, ch, x, BY, GREY, this.ghost === 'save' ? 1 : 0, ga);  // the letter as the press will leave it, in grey
+    }
+    const x0 = left - 3, x1 = left + L.w + 3, sy = BY - 5.6, e = this.strike.end.x;
+    if (this.gm.x > 0 && this.ghost === 'block') strokeLine(c, x0 + (x1 - x0) * clamp(e), x1, sy, GREY, this.gm.x, false);
+    if (e > .002) {
+      const xe = x0 + (x1 - x0) * clamp(e, 0, 1.02);
+      strokeLine(c, x0, xe, sy, mixc(GREY, OR, this.strike.hot.x), this.strike.a.x, true);
+      if (this.penOn) { c.beginPath(); c.arc(xe, sy, 1.8, 0, 7); c.fillStyle = rgba(OR, this.strike.a.x); c.fill(); }
+    }
+    c.restore();
+  }
+  part(c, p) {
+    let a = p.a; if (a <= .002) return;
+    a *= clamp(p.y / 28) * clamp((this.H + 4 - p.y) / 20);  // fade at the stage's edges, never cut
+    if (a <= .002) return;
+    const s = p.sc.x;
+    switch (p.kind) {
+      case 'heart': drawHeart(c, p.x, p.y, p.size * s, p.rot, OR, a); break;
+      case 'puff': c.beginPath(); c.arc(p.x, p.y, p.size * (1 + 1.2 * p.age) * s, 0, 7); c.fillStyle = rgba(OR, a); c.fill(); break;
+      case 'fleck': c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.fillStyle = rgba(p.col || OR, a); c.fillRect(-p.size / 2, -p.size * .3, p.size, p.size * .6); c.restore(); break;
+      case 'shard': c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.beginPath(); c.moveTo(0, -p.size); c.lineTo(p.size * .8, p.size * .7); c.lineTo(-p.size * .7, p.size * .5); c.closePath(); c.fillStyle = rgba(OR, a); c.fill(); c.restore(); break;
+      case 'half': c.save(); c.translate(p.x, p.y); c.rotate(p.rot); c.scale(p.size / 24, p.size / 24); c.translate(-12, -12.4); c.clip(HALF[p.side]); c.fillStyle = rgba(OR, a); c.fill(HEART); c.restore(); break;
+      case 'ink': { const k = .2 + .5 * clamp(Math.hypot(p.x - p.tx(), p.y - p.ty()) / p.d0); c.save(); c.translate(p.x, p.y); c.scale(k, k);
+        c.font = FONT; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = rgba(OR, a * (.3 + .5 * k)); c.fillText(p.ch, 0, 0); c.restore(); break; }
+      case 'leaf': {
+        c.save(); c.translate(p.x, p.y); c.rotate(p.th * .55); c.scale(1 - .12 * Math.abs(Math.sin(p.th)), .62 + .38 * Math.cos(p.th * 1.5));
+        c.scale(p.size / 24, p.size / 24); c.translate(-17, -12.5); c.lineJoin = 'round'; c.lineCap = 'round'; c.lineWidth = 2;
+        c.fillStyle = rgba(OR, a * .2); c.fill(LEAF); c.strokeStyle = rgba(OR, a); c.stroke(LEAF); pageLines(c, 1, a, OR); c.restore(); break;
+      }
+    }
+  }
+}
+
+// ───────────────────────── the six effects ─────────────────────────
+const FX = {
+  save(k, r) {
+    const n = k.L.chars.length, b = k.ensureBook();
+    k.squash(); k.mark.to(0, M.fade);
+    b.gone = false; b.landed = false; b.torn = false; b.onLand = null; b.tear.set(0); b.tug.set(0);
+    b.phiMode = 'spring'; b.phiS.set(b.phi).to(0); b.a.to(1, M.fade); b.y.to(k.CY - 92);
+    if (b.s.x < .05) b.s.set(.3); b.s.to(1, M.spring.pop);
+    k.at(110, () => k.sweep(1, i => {
+      k.s[i].to(1); k.g[i].to(0); k.hot[i].set(1).to(0, M.settle, ease.inOut); k.gl[i].to(0, M.fade);
+      const x = k.left + k.L.cs[i], y = k.BY - 7;
+      const p = new Part({ kind:'ink', ch: k.L.chars[i], x, y, vx: (r() - .5) * 40, vy: -120 - r() * 50, drag: 14, life: .7, fadeIn: .03, fadeOut: .2 });
+      p.tx = () => k.book ? k.book.x : x; p.ty = () => k.book ? k.book.y.x + 1 : y - 80; p.d0 = Math.hypot(p.tx() - x, p.ty() - y);
+      p.home = () => ({ x: p.tx(), y: p.ty(), k: 170 });
+      const step = p.step.bind(p); p.step = dt => { step(dt); if (!p.closing && Math.hypot(p.x - p.tx(), p.y - p.ty()) < 5) { p.closing = true; p.life = p.age + .06; p.fadeOut = .06; } };
+      k.parts.push(p);
+      if (i === n - 1) k.at(150, () => { b.phiMode = 'fall'; b.phiV = 2; });
+    }));
+    b.onLand = () => {
+      k.haptic('the book claps shut');
+      b.sx.set(1.12).to(1); b.rot.kick(-1.6);
+      for (const side of [-1, 1]) for (let j = 0; j < 5; j++) {
+        const d = j < 3 ? 1 : .6;
+        k.parts.push(new Part({ kind:'puff', back: d < 1, x: b.x + side * 9, y: b.y.x + 10 - j * 2, vx: side * (90 + r() * 90) * d, vy: -(10 + r() * 50) * d, drag: 6.5, ay: -40,
+          size: (1.3 + r() * 1.2) * d, alpha: .75 * d, life: .45 + r() * .25, fadeIn: .02, fadeOut: .4 }));
+      }
+      k.pop(M.pop.kick * .6);
+      k.at(240, () => { b.y.to(k.CY - 118); b.a.to(0, M.exit, ease.inOut); b.gone = true; });
+      k.at(560, () => k.mark.to(1, M.settle, ease.inOut));
+    };
+  },
+  unsave(k, r) {
+    const b = k.ensureBook();
+    k.squash(); k.mark.to(0, M.fade);
+    b.gone = false; b.torn = false; b.landed = false; b.onLand = null; b.tear.set(0); b.tug.set(0);
+    b.phiMode = 'spring'; b.phiS.set(b.phi).to(0); b.a.to(1, M.fade); b.y.to(k.CY - 92);
+    if (b.s.x < .05) b.s.set(.3); b.s.to(1, M.spring.pop);
+    k.at(250, () => { b.tug.to(1, M.spring.wobble); b.tear.to(1, 150, ease.inOut); });
+    k.at(420, () => {
+      k.haptic('the page rips free');
+      const s = b.size / 24 * b.s.x, tug = b.tug.x;
+      b.torn = true; b.tug.set(0); b.rot.kick(-2.4); b.sx.kick(-.8);
+      k.parts.push(new Leaf({ x: b.x + 5 * s + tug * 1.3, y: b.y.x - tug * 1.2, vx: 70, vy: -90, th: -.1 * tug, thw: 4, size: b.size * b.s.x, life: 2.3, fadeIn: .001, fadeOut: .6 }));
+      k.sweep(-1, i => { k.s[i].to(0); k.gl[i].to(0, M.fade); });
+      k.at(280, () => { b.y.to(k.CY - 112); b.a.to(0, M.exit, ease.inOut); b.gone = true; });
+    });
+  },
+  fav(k, r) {
+    k.squash(); k.mark.to(0, M.fade);
+    const hm = k.hm; hm.a.set(Math.max(hm.a.x, k.gm.x)).to(1, 60); hm.hot.to(1, 90); hm.crack.set(0); k.gm.set(0); k.ghost = null;
+    hm.s.to(M.pop.anticipate, M.spring.snap);
+    k.at(M.squash, () => { hm.s.to(1, M.spring.pop).kick(7); k.pop(M.pop.kick); });
+    k.at(160, () => {
+      k.haptic('the hearts release');
+      hm.s.kick(9); hm.a.to(0, 90, ease.out);
+      const HX = k.cx, HY = k.CY - 26;
+      for (let i = 0; i < 14; i++) {
+        const back = i >= 10, d = back ? .55 : 1;
+        const ang = -Math.PI / 2 + ((back ? (i - 10 + r()) / 4 : (i + r()) / 10) - .5) * 2.4, sp = (190 + r() * 260) * (back ? .7 : 1);
+        k.parts.push(new Part({ kind:'heart', back, age: -r() * .05, x: HX + Math.cos(ang) * 4, y: HY + Math.sin(ang) * 4, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+          drag: M.air.light, ay: M.air.buoyant * d * (.6 + .7 * r()), sway: { a: 30 * d, f: 2.4 + r() * 2.2, p: r() * 6 }, rot: (r() - .5) * .6, w: (r() - .5) * 3.2, wdrag: 1.6,
+          size: (7 + r() * 8) * d, alpha: back ? .45 : .95, life: 1.5 + r() * .9, fadeIn: .04, fadeOut: .6, s0: .35 }));
+      }
+    });
+  },
+  unfav(k, r) {
+    k.squash();
+    const hm = k.hm; hm.a.set(Math.max(hm.a.x, k.gm.x)).to(1, 60); hm.hot.to(1, 90); hm.crack.set(0); hm.s.set(1);
+    k.gm.to(0, 90);
+    k.at(60, () => hm.crack.to(1, 120, ease.lin));
+    k.when(() => hm.crack.x >= 1, () => {
+      k.haptic('the heart cracks');
+      hm.a.set(0); k.ghost = null;
+      const HX = k.cx, HY = k.CY - 26;
+      for (const side of [-1, 1]) k.parts.push(new Part({ kind:'half', side, x: HX + side * .5, y: HY, vx: side * (46 + r() * 14), vy: -(70 + r() * 15), ay: 620, drag: .8,
+        w: side * (1.6 + r() * .6), wdrag: .4, size: HEART_DP, life: .95, fadeIn: .001, fadeOut: .5 }));
+      for (let j = 0; j < 4; j++) { const side = j % 2 ? 1 : -1;
+        k.parts.push(new Part({ kind:'shard', back: j > 1, x: HX + side * 2, y: HY - 2 + j * 3, vx: side * (70 + r() * 70), vy: -(130 + r() * 90), ay: 900, drag: 1,
+          rot: r() * 6, w: side * (8 + r() * 6), size: 1.6 + r() * 1.1, alpha: j > 1 ? .6 : 1, life: .55 + r() * .2, fadeIn: .001, fadeOut: .3 })); }
+      k.dy.to(0, M.spring.pop).kick(80);
+    });
+  },
+  block(k, r) {
+    k.squash(.3);
+    const st = k.strike; st.hot.set(1); st.a.set(1);
+    k.penOn = true;
+    const x0 = k.left - 3, span = k.L.w + 6, n = k.L.chars.length;
+    k.at(st.end.busy ? 0 : 50, () => {
+      st.end.to(1, M.spring.pen);
+      let lastX = x0 + span * st.end.x, acc = 0;
+      k.tracks.push(dt => {
+        const x = x0 + span * st.end.x;
+        for (let i = 0; i < n; i++) if (k.left + k.L.cs[i] <= x && k.g[i].t < 1) k.g[i].to(1);
+        acc += Math.max(0, x - lastX); const v = (x - lastX) / Math.max(dt, 1e-4); lastX = x;
+        while (acc > 6) { acc -= 6; const back = r() < .35, d = back ? .55 : 1;
+          k.parts.push(new Part({ kind:'fleck', back, x: x - 1, y: k.BY - 5.6 + (r() - .5) * 1.2, vx: v * .1 * d + (r() - .5) * 50, vy: -(30 + r() * 70) * d, ay: 640, drag: 3,
+            rot: r() * 6, w: (r() - .5) * 24, size: (1 + r() * .9) * d, alpha: .9 * d, life: .3 + r() * .28, fadeIn: .01, fadeOut: .2 })); }
+        return true;
+      });
+      k.when(() => st.end.x >= .985, () => {
+        k.haptic('the strike lands'); k.penOn = false; k.dy.kick(26);
+        k.tracks = []; k.g.forEach(g => g.to(1));
+        k.gm.set(0); k.ghost = null;
+        k.at(300, () => st.hot.to(0, M.settle, ease.inOut));
+      });
+    });
+  },
+  unblock(k, r) {
+    k.squash(.3);
+    const st = k.strike; st.hot.to(1, 90); st.a.to(1, 120); k.gm.to(0, 90);
+    k.penOn = true;
+    const x0 = k.left - 3, span = k.L.w + 6, n = k.L.chars.length;
+    k.at(st.end.busy ? 0 : 50, () => {
+      st.end.to(0, M.spring.pen);
+      let lastX = x0 + span * st.end.x, acc = 0;
+      k.tracks.push(() => {
+        const x = x0 + span * st.end.x;
+        for (let i = 0; i < n; i++) if (k.left + k.L.cs[i] >= x && k.g[i].t > 0) k.g[i].to(0);
+        acc += Math.max(0, lastX - x); lastX = x;
+        while (acc > 10) { acc -= 10;
+          k.parts.push(new Part({ kind:'fleck', col: CREAM, x: x + 1, y: k.BY - 5.6, vx: (r() - .5) * 30, vy: -(25 + r() * 45), ay: -20, drag: 3, rot: r() * 6, w: (r() - .5) * 10,
+            size: .9 + r() * .6, alpha: .7, life: .45 + r() * .3, fadeIn: .02, fadeOut: .3 })); }
+        return true;
+      });
+      k.when(() => st.end.x <= .015, () => {
+        k.haptic('the strike is gone'); k.penOn = false; st.end.set(0); st.hot.set(0); st.a.set(1);
+        k.tracks = []; k.g.forEach(g => g.to(0)); k.ghost = null;
+        k.pop(M.pop.kick * .5);
+      });
+    });
+  },
+};
+
+// ───────────────────────── page ─────────────────────────
+function rungsRow() { const d = document.createElement('div'); d.className = 'rungs'; d.style.padding = '0 16px';
+  d.innerHTML = RUNGS.map(r => `<span class="s">${NAME[r]}</span>`).join('<span class="a">⇄</span>'); return d; }
+
+// Try it
+const free = new Card(document.getElementById('free'), { rung: 'saved', title: 'The ladder', keys: true });
+free.rungsEl = rungsRow(); free.el.insertBefore(free.rungsEl, free.stage); free.buttons();
+{
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<button class="c" data-d="1">Save, then Unsave halfway</button><button class="c" data-d="2">Block, then Unblock mid-stroke</button><button class="c tg" data-d="slow" aria-pressed="false">Slow</button>`;
+  const hap = document.createElement('div'); hap.className = 'stats';
+  free.el.append(row, hap);
+  free.onHaptic = (t, label) => { hap.textContent = `Haptic: ${label}`; };
+  row.addEventListener('click', e => {
+    const d = e.target.dataset.d; if (!d) return;
+    if (d === 'slow') { const on = e.target.getAttribute('aria-pressed') !== 'true'; e.target.setAttribute('aria-pressed', on); free.speed = on ? .25 : 1; return; }
+    free.script = []; free.setLook('notsaved'); free.pillShow(null);
+    free.later(250, () => free.press(d === '1' ? 'i' : 'o'));
+    free.later(d === '1' ? 250 + 380 : 250 + 200, () => free.press(d === '1' ? 'o' : 'i'));
+  });
+}
+
+// At rest
+for (const r of ['fav', 'saved', 'notsaved', 'blocked']) new Card(document.getElementById('states'), { rung: r, above: 64, title: NAME[r] });
+
+// Each step
+const MOVES = [
+  ['save', 'notsaved', 'i', 'Not saved → Saved', 'Preview: the letters solid, in grey. Press: the book opens, the letters are written in from the left as their ink flies up into it, and it claps shut with a puff, wobbles and rises away.'],
+  ['fav', 'saved', 'i', 'Saved → Favourite', 'Preview: a grey heart above the word. Press: it turns orange, squashes, pops and releases a burst of hearts that slow and rise through the app.'],
+  ['unfav', 'fav', 'o', 'Favourite → Saved', 'Preview: the heart in grey, cracked. Press: it turns orange, the crack runs down it, and the halves tip apart and fall with four shards. The word dips.'],
+  ['unsave', 'saved', 'o', 'Saved → Not saved', 'Preview: the word in grey, dotted. Press: the book opens, its right page strains, tears down the spine and flutters down through the air as the letters drain.'],
+  ['block', 'notsaved', 'o', 'Not saved → Blocked', 'Preview: the word struck through in grey. Press: an orange pen draws the strike from the left, greying each letter it passes and shedding flecks. It cools to grey.'],
+  ['unblock', 'blocked', 'i', 'Blocked → Not saved', 'Preview: the strike fades. Press: the pen pulls the strike back from the right, and each letter brightens to white behind it.'],
+];
+for (const [act, from, key, title, desc] of MOVES) {
+  const k = new Card(document.getElementById('moves'), { rung: from, title: `${title} <span class="tag">${key.toUpperCase()}: ${LABEL[act]}</span>`, desc });
+  k.id = act;
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = `<button class="c" data-s="1">Play</button><button class="c" data-s=".25">Slow</button><button class="c tg" data-h aria-pressed="true">Hover</button><span class="hap"><i></i><span>haptic</span></span>`;
+  const tl = document.createElement('div'); tl.className = 'tl'; tl.innerHTML = '<div class="track"></div><div class="head"></div><div class="lab">from the press, 1.8 s</div>';
+  const stats = document.createElement('div'); stats.className = 'stats';
+  k.el.append(row, tl, stats);
+  const hap = row.querySelector('.hap'), hapText = hap.querySelector('span'), head = tl.querySelector('.head'), hoverBtn = row.querySelector('[data-h]');
+  let tlw = 0;
+  k.onPress = () => { tl.querySelectorAll('.tick').forEach(e => e.remove()); k.timeline = true; tlw = tl.clientWidth - 2; head.style.opacity = 1; stats.textContent = ''; };
+  k.onHaptic = (t, label) => {
+    hap.classList.add('on'); hapText.textContent = 'haptic: ' + label; setTimeout(() => hap.classList.remove('on'), 160 / k.speed);
+    const f = clamp(t / TL_S), tick = document.createElement('div'); tick.className = 'tick' + (f > .6 ? ' r' : ''); tick.style.left = (f * 100) + '%';
+    tick.innerHTML = `<b>${Math.round(t * 1000)} ms</b>`; tl.appendChild(tick);
+  };
+  k.onFrame = () => {
+    if (!k.timeline) return;
+    const f = (k.time - k.pressT) / TL_S;
+    head.style.transform = `translateX(${clamp(f) * tlw}px)`;
+    if (f >= 1) { k.timeline = false; head.style.opacity = 0; }
+  };
+  k.onSettle = () => { if (k.stats && k.stats.n) stats.textContent = `${k.stats.n} frames drawn, slowest ${k.stats.worst.toFixed(1)} ms`; k.stats = null; };
+  hoverBtn.addEventListener('click', () => hoverBtn.setAttribute('aria-pressed', hoverBtn.getAttribute('aria-pressed') !== 'true'));
+  row.addEventListener('click', e => {
+    const sp = e.target.dataset.s; if (!sp) return;
+    k.play(+sp, hoverBtn.getAttribute('aria-pressed') === 'true');
+  });
+  k.play = (speed, hover) => {
+    k.speed = speed; k.script = []; k.setLook(from); k.pillShow(null);
+    let t = 350;
+    if (hover) { k.later(t, () => k.hover(key)); t += 800; }
+    k.later(t, () => { k.press(key); k.pillShow(key, k.act(key)); });
+    k.later(t + 1500, () => k.pillShow(null));
+  };
+}
+
+// Close up
+function drawZoom() {
+  const cv = document.getElementById('zoom'), w = cv.clientWidth || innerWidth, h = 150, dpr = Math.min(3, devicePixelRatio || 1);
+  cv.style.height = h + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
+  const L = layoutWord(WORD);
+  const at = (look, x, y, sc) => {
+    c.save(); c.translate(x, y); c.scale(sc, sc); c.font = FONT; c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+    for (let i = 0; i < L.chars.length; i++) {
+      const lx = -L.w / 2 + L.xs[i];
+      if (look.fill) { c.fillStyle = rgba(WHITE, look.fill); c.fillText(L.chars[i], lx, 0); }
+      c.save(); c.setLineDash([.01, look.gap]); c.lineCap = 'round'; c.lineWidth = look.dot; c.strokeStyle = '#fff'; c.strokeText(L.chars[i], lx, 0); c.restore();
+    }
+    c.restore();
+  };
+  at(V3, w * .3, 34, 1); at(NS, w * .7, 34, 1);
+  c.fillStyle = '#5b544e'; c.font = '500 11px Inter'; c.textAlign = 'center'; c.fillText('v3', w * .3, 54); c.fillText('v4', w * .7, 54);
+  at(NS, w / 2, 128, 3);
+}
+
+// Tokens table
+document.getElementById('tokens').innerHTML = [
+  ['Preview', `${M.preview} ms fade, in and out`],
+  ['Anticipation', `a squash to ${Math.round(M.pop.anticipate * 100)}% for ${M.squash} ms, then a kick into the pop spring`],
+  ['Pop', `spring k ${M.spring.pop.k}, c ${M.spring.pop.c}, m 1 (ζ 0.35): the word, the hearts, the book appearing`],
+  ['Snap', `spring k ${M.spring.snap.k}, c ${M.spring.snap.c} (ζ 1): a letter changing state`],
+  ['Pen', `spring k ${M.spring.pen.k}, c ${M.spring.pen.c} (ζ 1): the strike, drawn or pulled back`],
+  ['Sweep', `spring k ${M.spring.sweep.k}, c ${M.spring.sweep.c} (ζ 1): the ink front across the word`],
+  ['Wobble', `spring k ${M.spring.wobble.k}, c ${M.spring.wobble.c} (ζ 0.26): follow-through, the book settling`],
+  ['Drift', `spring k ${M.spring.drift.k}, c ${M.spring.drift.c} (ζ 1): slow rises`],
+  ['Fade, settle, exit', `${M.fade}, ${M.settle} and ${M.exit} ms`],
+  ['Air', `gravity up to ${M.air.heavy} px/s², drag ${M.air.light}/s, the hearts' lift ${-M.air.buoyant} px/s². The page falls as a pendulum with lift and drag.`],
+  ['Haptic', 'one frame per effect: the clap, the rip, the release, the crack, the strike landing, the strike gone'],
+  ['Reduced motion', `one ${M.rm} ms crossfade to the end state, no particles`],
+].map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+
+// Reduced motion
+const rmBtn = document.getElementById('rm');
+rmBtn.setAttribute('aria-pressed', RM);
+rmBtn.addEventListener('click', () => { RM = !RM; rmBtn.setAttribute('aria-pressed', RM); });
+
+// ───────────────────────── one loop for every card ─────────────────────────
+const io = new IntersectionObserver(es => es.forEach(e => { const k = cards.find(k => k.stage === e.target); if (k) { k.visible = e.isIntersecting; if (k.visible) k.wake(); } }), { rootMargin: '100px' });
+function sizeAll() { cards.forEach(k => { k.L = layoutWord(WORD); k.size(); }); drawZoom(); }
+let last = performance.now();
+function loop(now) {
+  const real = Math.min(.05, (now - last) / 1000); last = now;
+  for (const k of cards) {
+    if (!k.visible) { if (k.busy) k.step(real * k.speed); else k.time += real * k.speed; continue; }  // off screen: keep time, skip drawing
+    const due = k.rung === 'fav' && k.time >= k.ambNext;
+    if (k.busy || due) {
+      k.step(real * k.speed); k.dirty = false; k.draw();
+      if (k.stats) { k.stats.n++; if (k.stats.n > 2) k.stats.worst = Math.max(k.stats.worst, real * 1000); }
+    } else k.time += real * k.speed;
+    if (k.stats && k.onSettle && k.stats.n && !k.cues.length && !k.tracks.length && !k.book && !k.parts.some(p => !p.amb)) k.onSettle();
+    k.onFrame && k.onFrame();
+  }
+  requestAnimationFrame(loop);
+}
+Promise.all([document.fonts.load(FONT), document.fonts.load('500 14px Inter')]).catch(() => {}).then(() => {
+  sizeAll(); cards.forEach(k => { io.observe(k.stage); k.setLook(k.rung); });
+  addEventListener('resize', sizeAll);
+  requestAnimationFrame(t => { last = t; loop(t); });
+});
+</script>
+</body>
+</html>

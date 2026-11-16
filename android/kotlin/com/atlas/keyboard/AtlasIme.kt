@@ -3330,14 +3330,13 @@ class AtlasIme : InputMethodService() {
             panelPress = -1
         }
         val panelLast = !panelRelease && panelHover.keyUp(keyCode, event.eventTime) && panelOpen
-        // A key that picked a word menu button shows the button's next step in its pill while it's down, and when it's let go the
-        // hover ends with the press (owner, 2026-11-13: "When I press a button and let go it still registers as that I'm
-        // hovering"): it comes back when the touchpad shows the finger again. See [SteadyKey.releaseAndClear].
+        // A key that picked a word menu button keeps the hover when it is let go: the finger is still on it, and its pill and the
+        // word's colour now show the button's next step (#84, rule (a), as the quick settings page does). The touchpad's lift for
+        // the press mostly comes after the key, and is the press's own; a finger that really leaves then can't be seen, so the
+        // pill stays until the touchpad next shows the finger: on another key it follows, and a lift after that ends it. See
+        // [SteadyKey.press].
         val menuRelease = keyCode == menuKey && menuOpen
-        if (menuRelease && barHover.releaseAndClear(keyCode)) {
-            restingKey = barHover.key
-            markMenu(restingKey, quiet = true)
-        }
+        if (menuRelease) barHover.release(keyCode, event.eventTime)
         val barLast = !menuRelease && barHover.keyUp(keyCode, event.eventTime) && !panelOpen
         if (panelLast || barLast) {
             main.removeCallbacks(expireHover)

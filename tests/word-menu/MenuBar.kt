@@ -108,7 +108,7 @@ class MenuBar(state: MenuKeys.Step) : Fingers {
         at(time)
         val code = code(key)
         val menuRelease = code == menuKey && open
-        if (menuRelease && hover.releaseAndClear(code)) markMenu(hover.key)
+        if (menuRelease) hover.release(code, time)
         val barLast = !menuRelease && hover.keyUp(code, time)
         if (barLast) {
             posts.clear()

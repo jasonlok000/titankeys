@@ -19,9 +19,9 @@ const SCRIPTS: Record<string, string> = { Latn: "Latin letters", Cyrl: "Cyrillic
 export default function LanguagesPage() {
   const result = useSnapshot(state);
   const save = useAction(update);
-  // F: draft title, subtitle and notes.
+  // F (docs/words-m1.md).
   const title = "Input methods";
-  const subtitle = "Turn on the ones you type in. Hold Sym to switch between them.";
+  const subtitle = "Turn on the ones you type in. Hold Sym to hop between them.";
   if (result.status !== "ready") return <Screen title={title} subtitle={subtitle} />;
   const { inputMethods, availableInputMethods } = result.data;
   const byId = new Map(availableInputMethods.map(im => [im.id, im]));
@@ -41,9 +41,9 @@ export default function LanguagesPage() {
   return <Screen title={title} subtitle={subtitle}>
     <Section title="On">
       {on.map(im => row(im, true))}
-      {on.length === 1 && <Note>Turn on another one to switch with Sym.</Note>}
+      {on.length === 1 && <Note>Just one, so Sym has nothing to switch to. Turn on another.</Note>}
     </Section>
-    {full && <Note>Eight at a time. Turn one off first.</Note>}
+    {full && <Note>Eight at a time, tops. Turn one off first.</Note>}
     {[...groups].map(([script, ims]) =>
       <Section key={script} title={SCRIPTS[script] ?? script}>{ims.map(im => row(im, false))}</Section>)}
   </Screen>;

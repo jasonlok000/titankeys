@@ -184,8 +184,8 @@ class RimeEngine(
         /** The engine's name in im.json. */
         const val ENGINE = "rime"
 
-        /** The only choice until a Chinese variant is picked. F: draft. */
-        const val NO_VARIANT = "Pick characters in Settings"
+        /** The only choice until a Chinese variant is picked. F (docs/words-m1.md). */
+        const val NO_VARIANT = "Simplified or Traditional? Settings."
 
         /** How many engines have each Rime open: it closes when the last stops. */
         private val users = IdentityHashMap<RimeCalls, Int>()

@@ -56,7 +56,7 @@ export default function Settings() {
         onChange={autoPunctuation => save.run({ autoPunctuation })} />
       <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>
     </Section>
-    {/* Between Typing and Shortcuts (docs/languages.md). F: draft labels. */}
+    {/* Between Typing and Shortcuts (docs/languages.md). F (docs/words-m1.md). */}
     <Section title="Languages">
       <Field label="Input methods" href="/settings/languages">{inputMethodsLabel(settings)}</Field>
       {anyChinese(settings) && <Field label="Chinese characters" href="/settings/chinese">{chineseLabel(settings)}</Field>}

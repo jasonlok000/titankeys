@@ -92,9 +92,7 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
       {hasRecording && recording && <Note>{fromRecording
         ? "From Record a bug. It has your touches and keys, so it can show what you typed while it ran."
         : "Your last Record a bug. It has your touches and keys, so it can show what you typed while it ran."}</Note>}
-      {/* F: draft, the line while the recording is off. */}
-      {hasRecording && !recording && <Note>Your last Record a bug stays on your phone unless you switch it on. It can show what you typed while it ran.</Note>}
-      {/* F: draft, "It always goes along." */}
+      {hasRecording && !recording && <Note>Left out. Your last Record a bug stays on your phone.</Note>}
       {hasCrash && <Note>{froze ? "The freeze report: where it froze, and the versions. Nothing you typed. It always goes along."
         : "The crash report: where it crashed, and the versions. Nothing you typed. It always goes along."}</Note>}
     </Section>

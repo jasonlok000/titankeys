@@ -26,13 +26,13 @@ const licences = [
   { title: "Remix Icon", subtitle: "Apache 2.0", url: "https://github.com/Remix-Design/RemixIcon" },
   { title: "Unicode data", subtitle: "Unicode License 3.0", url: "https://www.unicode.org/license.txt" },
   { title: "gemoji", subtitle: "MIT. Emoji names, such as :smile:.", url: "https://github.com/github/gemoji" },
-  // F: draft, the Chinese entries (#56).
-  { title: "Rime", subtitle: "BSD-3-Clause. Types Chinese.", url: "https://github.com/rime/librime" },
-  { title: "OpenCC", subtitle: "Apache 2.0. Turns Chinese into Simplified, Hong Kong or Taiwan characters.", url: "https://github.com/BYVoid/OpenCC" },
+  // The Chinese entries (#56). F (docs/words-m1.md).
+  { title: "Rime", subtitle: "BSD-3-Clause. Turns what you type into Chinese.", url: "https://github.com/rime/librime" },
+  { title: "OpenCC", subtitle: "Apache 2.0. Gives you Simplified, Hong Kong or Taiwan characters.", url: "https://github.com/BYVoid/OpenCC" },
   { title: "Rime's libraries", subtitle: "marisa-trie, LevelDB, yaml-cpp, spdlog, Snappy and Boost", url: "https://github.com/rime/librime/tree/master/deps" },
   { title: "rime-cantonese", subtitle: "CC BY 4.0, place names ODbL 1.0. Cantonese words for Yale and Jyutping.", url: "https://github.com/rime/rime-cantonese" },
-  { title: "rime-jyutping", subtitle: "LGPL-3.0. The Yale spelling rules.", url: "https://github.com/rime/rime-jyutping" },
-  { title: "Rime's Pinyin and shared data", subtitle: "LGPL-3.0. rime-luna-pinyin, rime-essay and rime-prelude.", url: "https://github.com/rime/rime-luna-pinyin" },
+  { title: "rime-jyutping", subtitle: "LGPL-3.0. The Yale spelling rules, by 幸延.", url: "https://github.com/rime/rime-jyutping" },
+  { title: "Rime's Pinyin and shared data", subtitle: "LGPL-3.0. rime-luna-pinyin and rime-essay for Pinyin, rime-prelude for the rest.", url: "https://github.com/rime/rime-luna-pinyin" },
 ];
 
 export default function Licences() {

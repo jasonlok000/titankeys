@@ -1,0 +1,24 @@
+{
+  "id": "yue-jyutping",
+  "name": "粵拼",
+  "nameEnglish": "Cantonese, Jyutping",
+  "label": "粵",
+  "locale": "yue",
+  "script": "Hani",
+  "keys": "qwerty",
+  "accents": {},
+  "words": null,
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": "。？！.?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": {
+    "rime": "tk_jyutping"
+  },
+  "source": {
+    "words": "rime-cantonese (CC BY 4.0)"
+  }
+}

@@ -51,8 +51,12 @@ test("the shipped Chinese data is exactly the list data.sh wrote, and the list i
 
 test("the schemas the data ships are the repo's own, and the three the engine uses", () => {
   for (const schema of readdirSync(join(root, "native/rime/schemas"))) {
-    expect(read(`android/assets/rime/${schema}`)).toBe(read(`native/rime/schemas/${schema}`));
+    // OpenCC's configs go in OpenCC's folder.
+    const shipped = schema.endsWith(".json") ? `opencc/${schema}` : schema;
+    expect(read(`android/assets/rime/${shipped}`)).toBe(read(`native/rime/schemas/${schema}`));
   }
+  // The picker's ten places, over Q to P.
+  expect(read("android/assets/rime/default.yaml")).toMatch(/^  page_size: 10$/m);
   const engine = read("android/kotlin/com/atlas/rime/RimeEngine.kt");
   for (const id of ["tk_yale", "tk_jyutping", "tk_pinyin"]) {
     expect(engine).toContain(`"${id}"`);
@@ -68,7 +72,7 @@ test("the variants are the schemas' options, one each", () => {
   for (const option of ["zh_hk", "zh_tw", "zh_hans"]) expect(kotlin).toContain(`"${option}", "${option}"`);
   for (const schema of ["tk_yale", "tk_jyutping", "tk_pinyin"]) {
     const text = read(`native/rime/schemas/${schema}.schema.yaml`);
-    for (const option of ["zh_hk", "zh_tw", "zh_hans"]) expect(text).toMatch(new RegExp(`^${option}: +\\{ option_name: ${option}, opencc_config: \\S+\\.json`, "m"));
+    for (const option of ["zh_hk", "zh_tw", "zh_hans"]) expect(text).toMatch(new RegExp(`^${option}: +\\{ option_name: ${option}, +opencc_config: \\S+\\.json`, "m"));
   }
 });
 

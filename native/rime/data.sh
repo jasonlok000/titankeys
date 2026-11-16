@@ -41,14 +41,14 @@ D="$WORK/data"
 rm -rf "$D"; mkdir -p "$D/shared/opencc" "$D/user" "$D/occ"
 cd "$D/shared"
 cp "$SRC/rime-prelude/key_bindings.yaml" "$SRC/rime-prelude/punctuation.yaml" "$SRC/rime-prelude/symbols.yaml" .
-# default.yaml: rime-prelude's, with only TitanKeys' schemas and 8 choices a page.
+# default.yaml: rime-prelude's, with only TitanKeys' schemas, and 10 choices a page: the picker's places, over Q to P.
 python3 -I - "$SRC/rime-prelude/default.yaml" default.yaml <<'PY'
 import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
 s, n = re.subn(r'schema_list:\n(  - schema: .*\n)+',
                'schema_list:\n  - schema: tk_yale\n  - schema: tk_jyutping\n  - schema: tk_pinyin\n', s)
 assert n == 1
-s, n = re.subn(r'page_size: 5', 'page_size: 8', s)
+s, n = re.subn(r'page_size: 5', 'page_size: 10', s)
 assert n == 1
 open(sys.argv[2], 'w', encoding='utf-8').write(s)
 PY

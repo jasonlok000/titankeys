@@ -2,5 +2,7 @@
 -keep class org.futo.ml.inference.** { *; }
 # ONNX Runtime's native library does the same.
 -keep class ai.onnxruntime.** { *; }
-# Rime's JNI layer (native/rime/rime_jni.cc) registers its methods on this class by name.
+# Rime's JNI layer (native/rime/rime_jni.cc) registers its methods on RimeNative by name, and the keyboard makes RimeEngine
+# by name (InputEngines).
 -keep class com.atlas.rime.RimeNative { *; }
+-keep class com.atlas.rime.RimeEngine { public <init>(android.content.Context); }

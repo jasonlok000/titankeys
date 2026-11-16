@@ -15,7 +15,4 @@ object RimeAssets {
             data.install(manifest) { path -> assets.open("${RimeData.ASSETS}/$path") }
         }
     }
-
-    /** The engine for the keyboard: [RimeEngine] on the phone's Rime, with this installer. */
-    fun engine(context: Context) = RimeEngine(RimeNative, installer(context))
 }

@@ -1,0 +1,24 @@
+{
+  "id": "zh-pinyin",
+  "name": "漢語拼音",
+  "nameEnglish": "Mandarin, Pinyin",
+  "label": "拼",
+  "locale": "zh",
+  "script": "Hani",
+  "keys": "qwerty",
+  "accents": {},
+  "words": null,
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": "。？！.?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": {
+    "rime": "tk_pinyin"
+  },
+  "source": {
+    "words": "rime-luna-pinyin and rime-essay (LGPL-3.0)"
+  }
+}

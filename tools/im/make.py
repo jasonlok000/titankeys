@@ -10,6 +10,7 @@
 
 It writes, from the repository's root:
   android/assets/im/<id>/im.json, words.combined, NOTICE
+  (Chinese input methods: im.json and NOTICE only, without <data dir>'s sources; Rime's data is native/rime's)
   android/assets/im/index.json
   android/src/main/res/xml/input_method.xml and res/values/strings_im.xml (one keyboard-list entry per input method)
 
@@ -246,6 +247,33 @@ def build_latin(data, ident):
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice(notices))
 
 
+# Chinese through Rime (native/rime/SOURCES.md): no word list of their own here, since Rime's tables are in
+# android/assets/rime. Yale first, the owner's input method. F: draft, the names and labels.
+# id: (name, English name, label, locale, Rime schema, sources)
+CHINESE = {
+    "yue-yale": ("粵語耶魯", "Cantonese, Yale", "耶", "yue", "tk_yale",
+                 "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"),
+    "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping", "rime-cantonese (CC BY 4.0)"),
+    "zh-pinyin": ("漢語拼音", "Mandarin, Pinyin", "拼", "zh", "tk_pinyin",
+                  "rime-luna-pinyin and rime-essay (LGPL-3.0)"),
+}
+
+CHINESE_NOTICE = ("Typed with Rime (librime, BSD-3-Clause) and OpenCC (Apache License 2.0). The words and spelling rules: "
+                  "{source}. OpenCC's conversion dictionaries: Apache License 2.0. Their versions and licences: "
+                  "native/rime/SOURCES.md and licences/Rime-*.txt.")
+
+
+def build_chinese(data, ident):
+    name, english, label, locale, schema, source = CHINESE[ident]
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    rules = {"capitalise": False, "sentenceEnd": "。？！.?!", "openingMarks": "", "apostrophes": False}
+    write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Hani",
+                      "keys": "qwerty", "accents": {}, "words": None, "variants": None, "rules": rules,
+                      "engine": {"rime": schema}, "source": {"words": source}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
+        notice([CHINESE_NOTICE.format(source=source)]))
+
 def build_national(data, ident):
     name, english, label, locale, file, source, layout, holds = NATIONAL[ident]
     folder = os.path.join(ASSETS, ident)
@@ -304,7 +332,7 @@ def write_index_and_list():
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine)})
-    order = list(LATIN) + list(NATIONAL)
+    order = list(LATIN) + list(NATIONAL) + list(CHINESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(entries, f, ensure_ascii=False, indent=1)
@@ -340,13 +368,15 @@ def escape(text):
 
 def main():
     data = sys.argv[1]
-    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL)
+    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(CHINESE)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
         if ident in LATIN:
             build_latin(data, ident)
         elif ident in NATIONAL:
             build_national(data, ident)
+        elif ident in CHINESE:
+            build_chinese(data, ident)
         else:
             raise SystemExit("unknown input method " + ident)
         print("built", ident)

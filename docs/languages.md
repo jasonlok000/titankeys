@@ -209,20 +209,21 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
 
 ## How Rime plugs in
 
-- **The library:** librime with OpenCC, built from source with Trime's CMake files, without plugins, as
-  `android/jniLibs/arm64-v8a/librime_tk.so` (4.5 MB). It builds in WSL with `native/rime/build.sh`, like the swipe library,
-  and is checked in prebuilt, so a normal build doesn't need the NDK. The study's build is in `~/build/lang/rime-build`.
-- **JNI:** a thin layer (`native/rime/rime_jni.cc`, `com.atlas.engine.Rime`), with: `start(sharedDir, userDir)`,
-  `select(schema)`, `setOption(name, on)`, `key(code)`, `state()` (the code typed so far, the choices on this page, the page
-  number, the text to commit), `pick(index)`, `page(down)`, `clear()`. Trime's `rime_jni` is the reference, and only what
-  the picker needs is copied.
+- **The library:** librime with OpenCC, built from source with Trime's CMake files and pins, without plugins, as
+  `android/jniLibs/arm64-v8a/librime_tk.so` (3.1 MB, sharing the app's `libc++_shared.so` from NDK r27c). It builds in WSL
+  with `native/rime/build.sh`, and is checked in prebuilt, so a normal build doesn't need the NDK. Two runs give the same
+  bytes. The sources, versions and licences: `native/rime/SOURCES.md`.
+- **JNI:** a thin layer, `native/rime/rime_jni.cc`, registered on `com.atlas.rime.RimeNative`: `start(sharedDir, userDir)`,
+  `selectSchema`, `setOption`, `key(keysym, mask)`, `state()` (the text to commit, the code, how Rime spells it, the page and
+  its choices), `pick(index)`, `clear()`. Paging is Rime's Page Up and Page Down keys. Trime's `rime_jni` is the reference.
+- **The engine:** `com.atlas.rime.RimeEngine`, made by name with a `(Context)` constructor (`InputEngines`).
 - **Data:** `android/assets/rime/` holds the schemas (`tk_yale`, `tk_jyutping`, `tk_pinyin`, `tk_variants`), Rime's shared
-  files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC. On the first use of a
-  Chinese input method, the app copies them to `files/rime/shared` (40 MB; Rime opens its tables as files) in the
-  background, and the bar says it's getting ready. The user's learned words go to `files/rime/user`, which TitanKeys' backup
-  includes.
-- **Variants:** the app sets exactly one of `zh_hk`, `zh_tw`, `zh_hans` on the Rime session whenever it starts or the
-  setting changes.
+  files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 10 choices a page.
+  `android/assets/rime.sha256` lists them. On the first use of a Chinese input method, `RimeEngine.start()` copies them to
+  `files/engines/rime/shared` (40 MB; Rime opens its tables as files) and checks each file, in the background. The
+  user's learned words go to `files/engines/rime/user`.
+- **Variants:** the app sets exactly one of `zh_hk`, `zh_tw`, `zh_hans` on the engine whenever it starts or the setting
+  changes. With none on, the code still builds, but the only choice says to pick one, and nothing Chinese is typed.
 - **Keys:** a letter goes to Rime, which returns the code and the choices for the picker. Space picks the first choice.
   Enter types the code as typed letters. Backspace deletes from the code, or from the text when the code is empty.
   Punctuation goes through Rime's punctuator, which gives Chinese marks (，。).
@@ -282,7 +283,7 @@ Paths are under `android/kotlin/com/atlas/`. Line numbers are from 2026-11-16's 
 | --- | --- | --- |
 | Today | about 116 MB | |
 | 43 data-only input methods, 100k words each at most | about 22 MB | read from the APK |
-| Rime library | 4.5 MB | 4.5 MB |
+| Rime library | 3.1 MB | 3.1 MB |
 | Chinese data (three schemas, three variants) | 17.2 MB | 40 MB after the first use |
 | **Total** | **about 160 MB** | |
 

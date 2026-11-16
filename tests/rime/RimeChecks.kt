@@ -5,7 +5,7 @@ import com.atlas.keyboard.InputMethod
 import java.io.File
 import java.security.MessageDigest
 
-fun main() {
+fun main(args: Array<String>) {
     eachVariantSetsExactlyOneOption()
     aMissingSettingIsNoVariant()
     theVariantIsSetAgainAfterASchemaSwitch()
@@ -20,6 +20,9 @@ fun main() {
     nothingBeforeStart()
     onlyARimeInputMethodStarts()
     theDataInstallsBeforeRimeOpens()
+    withNoVariantNothingChineseIsTyped()
+    switchingInputMethodsKeepsRimeOpen()
+    theChineseInputMethodsAreRimes(args.firstOrNull())
     theDataCopiesOnceAndChecksEachFile()
     aBadCopyKeepsTheOldData()
     aManifestCannotLeaveItsFolder()
@@ -275,6 +278,63 @@ fun theDataInstallsBeforeRimeOpens() {
     val opened = RimeEngine(rime) { true }
     check(opened.start(method("tk_yale"), dataDir), "with the data there, it starts")
     same("open", rime.calls.first(), "Rime opens")
+}
+
+fun withNoVariantNothingChineseIsTyped() {
+    val rime = FakeRime()
+    val engine = RimeEngine(rime) { true }
+    // The keyboard sets every variant off until one is picked.
+    for (option in listOf("zh_hk", "zh_tw", "zh_hans")) engine.option(option, false)
+    check(engine.start(method("tk_yale"), dataDir), "it starts with no variant")
+    check(!engine.variantPicked, "no variant is picked")
+    val typed = type(engine, "nei")
+    same("nei", typed.code, "the code still builds")
+    same(listOf(RimeEngine.NO_VARIANT), typed.choices, "and the only choice says to pick a variant")
+    val space = engine.space()
+    check(space.handled, "Space is taken")
+    same("", space.commit, "but types nothing")
+    same("", engine.pick(0).commit, "nor does picking the choice")
+    same("", engine.key('1').commit, "nor a digit")
+    same("", engine.page(true).commit, "and there are no pages")
+    same("nei", engine.enter().commit, "Enter still types the code as letters")
+    engine.variant(ChineseVariant.Taiwan)
+    check(engine.variantPicked, "once one is picked")
+    type(engine, "nei")
+    same("NEI0", engine.space().commit, "Space types the first choice again")
+}
+
+fun switchingInputMethodsKeepsRimeOpen() {
+    val rime = FakeRime()
+    val yale = RimeEngine(rime) { true }
+    check(yale.start(method("tk_yale"), dataDir), "Yale starts")
+    // The keyboard starts the next engine, then stops the last one.
+    val pinyin = RimeEngine(rime) { true }
+    pinyin.variant(ChineseVariant.Simplified)
+    check(pinyin.start(method("tk_pinyin"), dataDir), "Pinyin starts")
+    yale.stop()
+    same(0, rime.calls.count { it == "close" }, "Rime stays open for Pinyin")
+    same("SIK0", type(pinyin, "sik").choices.first(), "and Pinyin types")
+    pinyin.stop()
+    same(1, rime.calls.count { it == "close" }, "it closes when the last engine stops")
+    same(1, rime.calls.count { it == "open" }, "having opened once")
+}
+
+/** The input method files the keyboard reads: each Chinese one names a schema RimeEngine knows, Yale first. */
+fun theChineseInputMethodsAreRimes(folder: String?) {
+    val root = File(folder ?: return)
+    val schemas = RimeEngine.Schema.entries.map { it.id }
+    val chinese = root.listFiles()!!.filter { File(it, "im.json").isFile }.map { InputMethod.parse(File(it, "im.json").readText()) }
+        .filter { it.engine == RimeEngine.ENGINE }
+    same(schemas.sorted(), chinese.map { it.engineArg }.sortedBy { it }, "one input method per schema")
+    for (im in chinese) {
+        same("Hani", im.script, "${im.id} is in Chinese characters")
+        same(null, im.words, "${im.id} has no word list of its own")
+        check(!im.hasAccents, "${im.id} holds no accents")
+    }
+    val order = Regex("\"id\": \"([^\"]+)\"").findAll(File(root, "index.json").readText()).map { it.groupValues[1] }.toList()
+    val ids = chinese.associate { it.engineArg to it.id }
+    check(order.indexOf(ids["tk_yale"]) < order.indexOf(ids["tk_jyutping"]), "Yale comes before Jyutping")
+    check(order.indexOf(ids["tk_jyutping"]) < order.indexOf(ids["tk_pinyin"]), "and Jyutping before Pinyin")
 }
 
 private fun sha(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }

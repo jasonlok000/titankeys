@@ -1,0 +1,24 @@
+{
+  "id": "yue-yale",
+  "name": "粵語耶魯",
+  "nameEnglish": "Cantonese, Yale",
+  "label": "耶",
+  "locale": "yue",
+  "script": "Hani",
+  "keys": "qwerty",
+  "accents": {},
+  "words": null,
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": "。？！.?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": {
+    "rime": "tk_yale"
+  },
+  "source": {
+    "words": "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"
+  }
+}

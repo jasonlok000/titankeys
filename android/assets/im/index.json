@@ -277,5 +277,32 @@
   "locale": "el",
   "script": "Grek",
   "engine": null
+ },
+ {
+  "id": "yue-yale",
+  "name": "粵語耶魯",
+  "nameEnglish": "Cantonese, Yale",
+  "label": "耶",
+  "locale": "yue",
+  "script": "Hani",
+  "engine": "rime"
+ },
+ {
+  "id": "yue-jyutping",
+  "name": "粵拼",
+  "nameEnglish": "Cantonese, Jyutping",
+  "label": "粵",
+  "locale": "yue",
+  "script": "Hani",
+  "engine": "rime"
+ },
+ {
+  "id": "zh-pinyin",
+  "name": "漢語拼音",
+  "nameEnglish": "Mandarin, Pinyin",
+  "label": "拼",
+  "locale": "zh",
+  "script": "Hani",
+  "engine": "rime"
  }
 ]

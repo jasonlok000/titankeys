@@ -455,6 +455,17 @@ More calls get added here as the night goes.
 
 ## Later, after the languages work on the phone (owner, 2026-11-16)
 
+- **Proposal for Chinese choices (and any engine with choices), waiting for the owner:**
+  - Today: choices sit over E to P; letters go on building the code; Space picks the one a resting finger marks, or the
+    first; swiping up or down on the keys pages; , and . page too. Marking by resting a finger isn't discoverable, so in
+    practice only the first choice gets picked.
+  - Proposed, as function (now): hold a letter key to pick the choice above it (holding is free in Chinese, which has no
+    accents; symbols stay on Alt and the Sym panel). Sym while choices show opens all of them in a Sym-panel grid (about 28
+    a page, a press picks, swipes page), and Sym again closes it. Enter types the code as letters. Space keeps the marked or
+    first choice. With no code typed, Chinese punctuation through Rime (，。？！：；、「」, Hong Kong style quotes).
+  - Not proposed now: a flick up on a key to pick. Swipe up already pages, and its accuracy needs the touch feed first.
+  - The look, later: the marked choice and the switcher both get the word menu's hover pill, with the full name.
+
 - **Engines study, on main (`docs/studies/56-engines.md`), waiting for the owner:**
   - Japanese: Mozc (BSD-3, maintained, builds an Android library), about 2 weeks and 20–25 MB. Rime with jaroomaji
     (Apache-2.0) was tried on the PC: single words right, sentences break (no Japanese grammar), 26 MB.

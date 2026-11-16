@@ -1,4 +1,4 @@
-import type { State } from "./atlas";
+import type { State } from "./titankeys";
 
 /** What the front page decides from: setup's parts, the guide, the release notes and the phone. */
 export type FrontState = Pick<State, "enabled" | "selected" | "overlay" | "scrollAssistant" | "backService" | "backDeclined"

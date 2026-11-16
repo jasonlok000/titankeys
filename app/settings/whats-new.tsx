@@ -1,5 +1,5 @@
 import { Screen, useSnapshot } from "ink";
-import { state } from "../../lib/atlas";
+import { state } from "../../lib/titankeys";
 import { WhatsNew } from "../../lib/whats-new";
 
 export default function WhatsNewPage() {

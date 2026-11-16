@@ -1,6 +1,6 @@
 import { Canvas, CanvasIcon, CanvasPath, CanvasText, type IconAsset } from "ink";
 import { arrowBack, backspace, circle, keyboardReturn, shift, spaceBar, square } from "ink/icons";
-import type { Point } from "./atlas";
+import type { Point } from "./titankeys";
 import { CREAM, MUTED, useAccent } from "./brand";
 import { RADIUS } from "./radii";
 import { RoundedOutline } from "./rounded";

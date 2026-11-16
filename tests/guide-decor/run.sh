@@ -10,7 +10,7 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 out=$(realpath -m "${1:-$(mktemp -d)/guide-decor}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
+keyboard=android/kotlin/com/titankeys/keyboard
 # The decoration's colours must still be the guide's.
 # The orange is Accent's alone, which Orange accents turns to cream.
 grep -qF "private const val ORANGE = 0xFFEF804E.toInt()" "$keyboard/Accent.kt" || { echo "Accent.kt's orange changed"; exit 1; }
@@ -23,4 +23,4 @@ mkdir -p "$work/fake" "$work/classes"
 javac -nowarn -d "$work/fake" tests/guide-decor/fake/android/graphics/*.java
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work/fake:$stdlib:$sdk/platforms/android-36/android.jar" -d "$work/classes" \
   "$keyboard/GuideDecor.kt" "$keyboard/Accent.kt" tests/guide-decor/GuideDecorRender.kt
-java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib" com.atlas.keyboard.GuideDecorRenderKt "$out" android/src/main/res/font
+java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib" com.titankeys.keyboard.GuideDecorRenderKt "$out" android/src/main/res/font

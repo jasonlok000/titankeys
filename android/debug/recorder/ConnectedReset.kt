@@ -1,21 +1,21 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.atlas.connected.Connected
-import com.atlas.connected.Contributions
-import com.atlas.connected.TouchSizes
+import com.titankeys.connected.Connected
+import com.titankeys.connected.Contributions
+import com.titankeys.connected.TouchSizes
 
 /**
  * TitanKeys Debug only (tools/debug.sh adds it): resets the connected features for phone tests, without clearing data.
  * Only adb can send to it, as it needs the DUMP permission that the shell holds.
  *
- *   adb shell am broadcast -n com.titankeys.debug/com.atlas.keyboard.ConnectedReset -a com.titankeys.debug.RESET_SHARE
+ *   adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.ConnectedReset -a com.titankeys.debug.RESET_SHARE
  *     Contributions off, the waiting swipes deleted, and the offer unanswered, so the guide's last slide asks again.
- *   adb shell am broadcast -n com.titankeys.debug/com.atlas.keyboard.ConnectedReset -a com.titankeys.debug.RESET_NEWS
+ *   adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.ConnectedReset -a com.titankeys.debug.RESET_NEWS
  *     Every news entry can show again: nothing notified, snoozed or hidden, and the next job run checks the feed.
  */
 class ConnectedReset : BroadcastReceiver() {

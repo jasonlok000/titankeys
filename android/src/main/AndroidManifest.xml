@@ -35,12 +35,12 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <activity
-            android:name="com.atlas.keyboard.ShareDisclosureActivity"
+            android:name="com.titankeys.keyboard.ShareDisclosureActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <activity
-            android:name="com.atlas.keyboard.BackDisclosureActivity"
+            android:name="com.titankeys.keyboard.BackDisclosureActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
@@ -51,39 +51,39 @@
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <!-- The Haptics lab's graph. Only TitanKeys Debug opens it, and it closes at once in any other build. -->
         <activity
-            android:name="com.atlas.keyboard.HapticsLabActivity"
+            android:name="com.titankeys.keyboard.HapticsLabActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <!-- Key calibration, which lines the drawn keys up with the real ones. Only TitanKeys Debug opens it, and it closes at once in any other build. -->
         <activity
-            android:name="com.atlas.keyboard.KeyCalibrationActivity"
+            android:name="com.titankeys.keyboard.KeyCalibrationActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <!-- One still frame of the new guide, for review. Not exported here: tools/debug.sh exports it in TitanKeys Debug only, so
              that adb can open it, and it closes at once outside TitanKeys Debug anyway. -->
         <activity
-            android:name="com.atlas.keyboard.GuideFrameActivity"
+            android:name="com.titankeys.keyboard.GuideFrameActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <!-- Reset literally everything restarts TitanKeys through this, in a process of its own: see FreshStart.kt. -->
         <activity
-            android:name="com.atlas.keyboard.FreshStartActivity"
+            android:name="com.titankeys.keyboard.FreshStartActivity"
             android:exported="false"
             android:process=":restart"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
-            android:name="com.atlas.keyboard.GuideActivity"
+            android:name="com.titankeys.keyboard.GuideActivity"
             android:exported="false"
             android:theme="@style/GuideTheme"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <service
-            android:name="com.atlas.keyboard.AtlasIme"
+            android:name="com.titankeys.keyboard.TitanKeysIme"
             android:label="TitanKeys Keyboard"
             android:exported="true"
             android:permission="android.permission.BIND_INPUT_METHOD">
@@ -93,7 +93,7 @@
             <meta-data android:name="android.view.im" android:resource="@xml/input_method" />
         </service>
         <service
-            android:name="com.atlas.keyboard.BackService"
+            android:name="com.titankeys.keyboard.BackService"
             android:label="TitanKeys Keyboard"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
@@ -103,25 +103,25 @@
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/back_service" />
         </service>
         <service
-            android:name="com.atlas.connected.ConnectedJob"
+            android:name="com.titankeys.connected.ConnectedJob"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
         <receiver
-            android:name="com.atlas.connected.NewsReceiver"
+            android:name="com.titankeys.connected.NewsReceiver"
             android:exported="false" />
         <!-- Record a bug (#64): the notification's Stop, and the read-only file lent to the app picked in the share sheet. -->
         <receiver
-            android:name="com.atlas.keyboard.BugStopReceiver"
+            android:name="com.titankeys.keyboard.BugStopReceiver"
             android:exported="false" />
         <!-- The crash offer (#74): keeps the last crash's report on the phone from the moment the process starts, and lends it
              read-only to the mail app when the user emails it. -->
         <provider
-            android:name="com.atlas.keyboard.CrashKeeper"
+            android:name="com.titankeys.keyboard.CrashKeeper"
             android:authorities="${applicationId}.crashkeeper"
             android:exported="false"
             android:grantUriPermissions="true" />
         <provider
-            android:name="com.atlas.keyboard.BugRecordingProvider"
+            android:name="com.titankeys.keyboard.BugRecordingProvider"
             android:authorities="${applicationId}.bugrecording"
             android:exported="false"
             android:grantUriPermissions="true" />

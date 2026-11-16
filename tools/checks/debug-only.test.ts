@@ -34,14 +34,14 @@ test("Settings > Setup and the boring guide name the list entries TitanKeys Keyb
 });
 
 test("release has no way to reach the raw log copy", () => {
-  expect(existsSync(join(root, "android/kotlin/com/atlas/keyboard/RawLogPull.kt"))).toBe(false);
+  expect(existsSync(join(root, "android/kotlin/com/titankeys/keyboard/RawLogPull.kt"))).toBe(false);
   expect(read("android/src/main/AndroidManifest.xml")).not.toContain("RawLogPull");
   expect(read("android/src/main/AndroidManifest.xml")).not.toContain("EXPORT_RAWLOG");
 });
 
 test("only the Debug build adds it, and only adb can send to it", () => {
   const manifest = read("android/debug/recorder/manifest.xml");
-  const entry = manifest.match(/<receiver\s+android:name="com\.atlas\.keyboard\.RawLogPull"[^>]*\/>/)?.[0];
+  const entry = manifest.match(/<receiver\s+android:name="com\.titankeys\.keyboard\.RawLogPull"[^>]*\/>/)?.[0];
   expect(entry).toBeDefined();
   expect(entry).toContain('android:permission="android.permission.DUMP"');
   expect(read("tools/debug.sh")).toContain('cp "$recorder"/*.kt "$keyboard/"');
@@ -51,7 +51,7 @@ test("only the Debug build adds it, and only adb can send to it", () => {
 
 test("the panel check for screenshots is only in the Debug build's package", () => {
   // It opens panel pages, marks keys and holds modifiers from adb, so it must never answer in a release.
-  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   const gate = ime.indexOf("if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {");
   const register = ime.indexOf("registerReceiver(panelTrigger, IntentFilter(PANEL_ACTION), RECEIVER_EXPORTED)");
   expect(gate).toBeGreaterThan(0);
@@ -83,24 +83,24 @@ test("the release manifest has exactly the expected components", () => {
   expect(components(manifest())).toEqual([
     { tag: "activity", name: "com.vandam.ink.BackupActivity", exported: "false" },
     { tag: "activity", name: "com.vandam.ink.ContactsPermissionActivity", exported: "false" },
-    { tag: "activity", name: "com.atlas.keyboard.ShareDisclosureActivity", exported: "false" },
-    { tag: "activity", name: "com.atlas.keyboard.BackDisclosureActivity", exported: "false" },
+    { tag: "activity", name: "com.titankeys.keyboard.ShareDisclosureActivity", exported: "false" },
+    { tag: "activity", name: "com.titankeys.keyboard.BackDisclosureActivity", exported: "false" },
     { tag: "activity", name: "com.vandam.ink.RawLogExportActivity", exported: "false" },
-    { tag: "activity", name: "com.atlas.keyboard.HapticsLabActivity", exported: "false" },
-    { tag: "activity", name: "com.atlas.keyboard.KeyCalibrationActivity", exported: "false" },
-    { tag: "activity", name: "com.atlas.keyboard.GuideFrameActivity", exported: "false" },
-    { tag: "activity", name: "com.atlas.keyboard.FreshStartActivity", exported: "false" },
-    { tag: "activity", name: "com.atlas.keyboard.GuideActivity", exported: "false" },
-    { tag: "service", name: "com.atlas.keyboard.AtlasIme", exported: "true" },
-    { tag: "service", name: "com.atlas.keyboard.BackService", exported: "true" },
-    { tag: "service", name: "com.atlas.connected.ConnectedJob", exported: "false" },
-    { tag: "receiver", name: "com.atlas.connected.NewsReceiver", exported: "false" },
-    { tag: "receiver", name: "com.atlas.keyboard.BugStopReceiver", exported: "false" },
-    { tag: "provider", name: "com.atlas.keyboard.CrashKeeper", exported: "false" },
-    { tag: "provider", name: "com.atlas.keyboard.BugRecordingProvider", exported: "false" },
+    { tag: "activity", name: "com.titankeys.keyboard.HapticsLabActivity", exported: "false" },
+    { tag: "activity", name: "com.titankeys.keyboard.KeyCalibrationActivity", exported: "false" },
+    { tag: "activity", name: "com.titankeys.keyboard.GuideFrameActivity", exported: "false" },
+    { tag: "activity", name: "com.titankeys.keyboard.FreshStartActivity", exported: "false" },
+    { tag: "activity", name: "com.titankeys.keyboard.GuideActivity", exported: "false" },
+    { tag: "service", name: "com.titankeys.keyboard.TitanKeysIme", exported: "true" },
+    { tag: "service", name: "com.titankeys.keyboard.BackService", exported: "true" },
+    { tag: "service", name: "com.titankeys.connected.ConnectedJob", exported: "false" },
+    { tag: "receiver", name: "com.titankeys.connected.NewsReceiver", exported: "false" },
+    { tag: "receiver", name: "com.titankeys.keyboard.BugStopReceiver", exported: "false" },
+    { tag: "provider", name: "com.titankeys.keyboard.CrashKeeper", exported: "false" },
+    { tag: "provider", name: "com.titankeys.keyboard.BugRecordingProvider", exported: "false" },
   ]);
   // The two exported services answer only the system: binding them needs its own permission.
-  expect(manifest()).toMatch(/AtlasIme"[\s\S]*?android:permission="android\.permission\.BIND_INPUT_METHOD"/);
+  expect(manifest()).toMatch(/TitanKeysIme"[\s\S]*?android:permission="android\.permission\.BIND_INPUT_METHOD"/);
   expect(manifest()).toMatch(/BackService"[\s\S]*?android:permission="android\.permission\.BIND_ACCESSIBILITY_SERVICE"/);
   // And the permissions, no more.
   expect([...manifest().matchAll(/<uses-permission android:name="([^"]+)"/g)].map(match => match[1])).toEqual([
@@ -117,14 +117,14 @@ test("the release manifest has exactly the expected components", () => {
 
 test("the guide's still frames are exported only in TitanKeys Debug, for adb", () => {
   expect(read("tools/debug.sh")).toContain(
-    `'/android:name="com.atlas.keyboard.GuideFrameActivity"/{n;s/android:exported="false"/android:exported="true"/;}'`);
-  expect(read("android/kotlin/com/atlas/keyboard/GuideFrameActivity.kt")).toMatch(/if \(!HapticsLab\.available\(this\)\) \{\s+finish\(\)/);
+    `'/android:name="com.titankeys.keyboard.GuideFrameActivity"/{n;s/android:exported="false"/android:exported="true"/;}'`);
+  expect(read("android/kotlin/com/titankeys/keyboard/GuideFrameActivity.kt")).toMatch(/if \(!HapticsLab\.available\(this\)\) \{\s+finish\(\)/);
 });
 
 test("the Haptics lab and Key calibration close at once, and refuse every call, outside TitanKeys Debug", () => {
-  expect(read("android/kotlin/com/atlas/keyboard/HapticsLab.kt")).toContain(`fun available(context: Context) = context.${DEBUG}`);
+  expect(read("android/kotlin/com/titankeys/keyboard/HapticsLab.kt")).toContain(`fun available(context: Context) = context.${DEBUG}`);
   for (const screen of ["HapticsLabActivity", "KeyCalibrationActivity"])
-    expect(read(`android/kotlin/com/atlas/keyboard/${screen}.kt`)).toMatch(/if \(!HapticsLab\.available\(this\)\) \{\s+finish\(\)/);
+    expect(read(`android/kotlin/com/titankeys/keyboard/${screen}.kt`)).toMatch(/if \(!HapticsLab\.available\(this\)\) \{\s+finish\(\)/);
   const adapters = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   expect(adapters).toContain('check(HapticsLab.available(activity)) { "Key calibration is only in TitanKeys Debug" }');
   expect(adapters).toContain('check(HapticsLab.available(activity)) { "The Haptics lab is only in TitanKeys Debug" }');
@@ -140,14 +140,14 @@ test("the Haptics lab and Key calibration close at once, and refuse every call, 
   expect(settings).toContain('{settings.hapticsLab && <Field label="Key calibration"');
   expect(settings).toContain('{settings.hapticsLab && <Field label="Haptics lab"');
   // Patterns tried in the lab play only in Debug: a release plays the rulebook's.
-  expect(read("android/kotlin/com/atlas/keyboard/Haptics.kt")).toContain(`private fun debug(context: Context) = context.${DEBUG}`);
+  expect(read("android/kotlin/com/titankeys/keyboard/Haptics.kt")).toContain(`private fun debug(context: Context) = context.${DEBUG}`);
 });
 
 test("the full typing log, its export and its screen are only in TitanKeys Debug", () => {
-  const gate = read("android/kotlin/com/atlas/keyboard/RawLogGate.kt");
+  const gate = read("android/kotlin/com/titankeys/keyboard/RawLogGate.kt");
   expect(gate).toContain("fun allows(packageName: String): Boolean = packageName.endsWith(DEBUG_SUFFIX)");
   expect(gate).toContain('const val DEBUG_SUFFIX = ".debug"');
-  expect(read("android/kotlin/com/atlas/keyboard/RawLog.kt")).toContain("fun on(context: Context) = available(context) && TypingSettings.rawLog(context)");
+  expect(read("android/kotlin/com/titankeys/keyboard/RawLog.kt")).toContain("fun on(context: Context) = available(context) && TypingSettings.rawLog(context)");
   expect(read("android/kotlin/com/vandam/ink/RawLogExportActivity.kt")).toContain("if (!RawLog.available(this)) {");
   expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain('check(RawLog.available(activity)) { "The typing log is only in TitanKeys Debug" }');
   expect(read("app/settings/index.tsx")).toContain('{settings.rawLogAvailable && <Field label="Typing log"');
@@ -157,11 +157,11 @@ test("Record a bug ships, but nothing outside TitanKeys can reach it", () => {
   const xml = manifest();
   expect(xml).toMatch(/BugStopReceiver"\s+android:exported="false"/);
   expect(xml).toMatch(/BugRecordingProvider"\s+android:authorities="\$\{applicationId\}\.bugrecording"\s+android:exported="false"/);
-  expect(read("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain("It never holds the text around the cursor");
+  expect(read("android/kotlin/com/titankeys/keyboard/BugRecording.kt")).toContain("It never holds the text around the cursor");
 });
 
 test("the adb broadcasts, the idle bar's and the panel check's, are registered only in TitanKeys Debug", () => {
-  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   const gate = ime.indexOf("if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {");
   expect(gate).toBeGreaterThan(0);
   const block = ime.slice(gate, ime.indexOf("\n        }\n", gate));
@@ -174,14 +174,14 @@ test("the adb broadcasts, the idle bar's and the panel check's, are registered o
     if (!["idleBarTrigger", "panelTrigger"].includes(match[1])) expect(match[0]).toContain("RECEIVER_NOT_EXPORTED");
   // None of the debug build's own code is in the main source.
   for (const file of ["RawLogPull", "RecorderActivity", "RecorderWords", "ReplayRunner", "SpaceGestureActivity", "TouchSizeActivity", "ConnectedReset"])
-    expect(existsSync(join(root, `android/kotlin/com/atlas/keyboard/${file}.kt`))).toBe(false);
+    expect(existsSync(join(root, `android/kotlin/com/titankeys/keyboard/${file}.kt`))).toBe(false);
 });
 
 test("no log line can print what was typed", () => {
   // Exact typing's lines hold key codes and states only, and only Debug writes them.
-  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   expect(ime).toContain('private val exactLogging by lazy { packageName.endsWith(".debug") }');
-  expect(ime).toContain('if (exactLogging) Log.i("AtlasExact", line)');
+  expect(ime).toContain('if (exactLogging) Log.i("TitanKeysExact", line)');
   // No log line anywhere puts the field's text, a typed word, a suggestion or a clip into the log.
   const sources = (dir: string): string[] => readdirSync(join(root, dir), { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory() ? sources(`${dir}/${entry.name}`) : /\.(kt|java)$/.test(entry.name) ? [`${dir}/${entry.name}`] : []);

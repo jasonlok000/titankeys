@@ -1,6 +1,6 @@
-package com.atlas.engine;
+package com.titankeys.engine;
 
-import com.atlas.keyboard.Layout;
+import com.titankeys.keyboard.Layout;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

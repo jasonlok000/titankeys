@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // The clipboard page (Sym, then A), read from its Kotlin source: the panel's views need a phone to run.
-const keyboard = join(import.meta.dir, "../../android/kotlin/com/atlas/keyboard");
+const keyboard = join(import.meta.dir, "../../android/kotlin/com/titankeys/keyboard");
 const panel = readFileSync(join(keyboard, "SymPanel.kt"), "utf8");
 const marquee = readFileSync(join(keyboard, "BandMarquee.kt"), "utf8");
 

@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.graphics.Canvas
 import java.awt.image.BufferedImage

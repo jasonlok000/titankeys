@@ -166,16 +166,16 @@ Everything below runs in the keyboard's process on the phone. Typing never touch
 
 | Piece | What it does | Where |
 | --- | --- | --- |
-| Touchpad and overlay | Reads the sensor, keeps it on the keys, and turns touches into swipes, taps, flicks and Space gestures | `android/kotlin/com/atlas/keyboard` (`Touchpad.kt`, `TouchpadOverlay.kt`, `DeleteSwipe.kt`, `CursorGesture.kt`) |
+| Touchpad and overlay | Reads the sensor, keeps it on the keys, and turns touches into swipes, taps, flicks and Space gestures | `android/kotlin/com/titankeys/keyboard` (`Touchpad.kt`, `TouchpadOverlay.kt`, `DeleteSwipe.kt`, `CursorGesture.kt`) |
 | Stroke joining | Decides whether a new touch carries on a broken swipe | `engine/Swipe.java` |
 | FUTO Swipe | Native swipe decoder with its own models and dictionary: three readings of each stroke | `engine/SwipeRecognizer.java`, `swipe/` assets |
 | Shape matcher | Compares the swipe with about 12,400 word outlines | `engine/SwipeShapes.java` |
 | Engine 2.0 | CleverKeys encoder and word search, DistilGPT-2, LightGBM ranker | `engine/SwipeModels.java`, `CtcReader.java`, `CtcWords.java`, `NextWordModel.java`, `ByteBpe.java`, `SwipeRanker.java` |
 | Suggestions | Next words before a letter, completions after letters | `engine/TypedPredictions.java`, `NextWordPredictor.java` |
-| Autocorrect | Typed corrections, the second look, apostrophes, shorthand | `android/kotlin/com/atlas/autocorrect` |
+| Autocorrect | Typed corrections, the second look, apostrophes, shorthand | `android/kotlin/com/titankeys/autocorrect` |
 | The bar | Three words, the word menu, the modifier bar, idle games | `keyboard/Strip.kt`, `StripFit.kt`, `Corners.kt`, `ModifierBar.kt`, `IdleGames.kt` |
 | Haptics | One rulebook and one gate for every vibration | `keyboard/Haptics.kt`, `HapticGate` |
-| Connected | The signed news feed and consented swipe contributions | `android/kotlin/com/atlas/connected` |
+| Connected | The signed news feed and consented swipe contributions | `android/kotlin/com/titankeys/connected` |
 
 ### 3.2 A swipe, end to end
 
@@ -1206,7 +1206,7 @@ Paths starting with `docs/`, `android/`, `site/`, `tools/` or `licences/` are in
 | 1, 4.1 | Atlas / 1.2 / 2.0 on the 126 sentence words and the 300 recorded words (86, 106, 115; 108, 111, 121; 171, 229, 275; 202, 260, 286; 39, 72, 86; 132, 157, 189); 540 held back, 78.9 / 85.7 against 72.6 / 81.5 | Former write-up; held-back figures also in Baseline `ENGINE-2.0.md` ("Engine 2.0 as built") and `report/ranker-train-final.json`, `report/fullstack-distilgpt2-model-int8pc.json` |
 | 4.1 | Held back by set, FUTO order in the branch, 89.6 ceiling | Baseline `ENGINE-2.0.md`; `report/ranker-train-final.json` |
 | 1, 2.1, 2.2 | Sensor size, coverage, reach, sampling, P strokes, letter misses, offsets, speed, breaks (188, 156, 67/146 ms, 848/248 ms) | Baseline `BASELINE.md` ("Touchpad size", "Raw stroke detail", "Edge blind spots" in `ENGINE-2.0.md`) |
-| 2.1, 8.3 | 100 px corner radius | `android/kotlin/com/atlas/keyboard/Corners.kt`; `docs/owner-decisions-2.1.md` |
+| 2.1, 8.3 | 100 px corner radius | `android/kotlin/com/titankeys/keyboard/Corners.kt`; `docs/owner-decisions-2.1.md` |
 | 2.1, 8.2 | 22 dp border, 56 dp bar, 39 dp line, 11 dp, 17 dp | `keyboard/StripFit.kt`; `docs/owner-decisions-2.1.md` |
 | 2.1, 8.1 | 1076 px, 688.6 dp, 1.5625 px, 250 dpi | `keyboard/FixedScale.kt`; `docs/design-v2.md` |
 | 2.3 | Baseline accuracy table, stroke classes, decoder depth (305, 50, 49; 48 of 95), rerank (66, 18, 14, 34, net 4), score gap table, rarity, 1.25 attempts, 71%, 99.3%, 25-30 wpm, 393 of 404 | Baseline `BASELINE.md` |

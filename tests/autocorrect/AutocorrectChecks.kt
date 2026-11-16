@@ -1,21 +1,21 @@
-package com.atlas.autocorrect
+package com.titankeys.autocorrect
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
-import com.atlas.engine.EnglishSpelling
-import com.atlas.engine.NextWordModel
-import com.atlas.engine.PhoneWords
-import com.atlas.engine.Swipe
-import com.atlas.engine.SwipeTyping
-import com.atlas.engine.TypingSettings
-import com.atlas.keyboard.Composer
-import com.atlas.keyboard.Editor
-import com.atlas.keyboard.EnterKey
-import com.atlas.keyboard.Expansions
-import com.atlas.keyboard.Favourites
-import com.atlas.keyboard.Field
-import com.atlas.keyboard.Haptic
-import com.atlas.keyboard.Words
+import com.titankeys.engine.EnglishSpelling
+import com.titankeys.engine.NextWordModel
+import com.titankeys.engine.PhoneWords
+import com.titankeys.engine.Swipe
+import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypingSettings
+import com.titankeys.keyboard.Composer
+import com.titankeys.keyboard.Editor
+import com.titankeys.keyboard.EnterKey
+import com.titankeys.keyboard.Expansions
+import com.titankeys.keyboard.Favourites
+import com.titankeys.keyboard.Field
+import com.titankeys.keyboard.Haptic
+import com.titankeys.keyboard.Words
 import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -996,8 +996,8 @@ private fun composerFlow(world: Realistic) {
         // The owner's rule, with the app labels that this phone has, against the real base list: an ordinary word never takes
         // a name's capitals ("toggle" became "Toggle" from an app named Toggle), and a brand's capitals wait for the whole word.
         val plain = File("android/assets/swipe/english.combined").useLines { lines ->
-            lines.mapNotNull { com.atlas.engine.TypedPredictions.lowercaseOn(it) }.toHashSet() }
-        val labels = com.atlas.engine.PhoneNames.words(listOf("Toggle", "Spotify", "WhatsApp", "Netflix", "Instagram", "Chrome", "Clock"),
+            lines.mapNotNull { com.titankeys.engine.TypedPredictions.lowercaseOn(it) }.toHashSet() }
+        val labels = com.titankeys.engine.PhoneNames.words(listOf("Toggle", "Spotify", "WhatsApp", "Netflix", "Instagram", "Chrome", "Clock"),
             { world.words.frequency(it).toDouble() }, { it in plain })
         val phone = Lists(world.words, phoneNames = labels)
         must(listOf("toggle", "chrome", "clock").none { it in labels }, "Ordinary words from app names give no capitals: $labels")
@@ -1007,13 +1007,13 @@ private fun composerFlow(world: Realistic) {
         same(typed("watch netflix later", phone), "watch Netflix later", "\"netflix\" gets its capital")
         same(typed("my instagram", phone), "my Instagram", "\"instagram\" gets its capital")
         // #91: the dictionary's spelling wins over a phone name's, and a word saved in lowercase wins over both.
-        val shouting = com.atlas.engine.PhoneNames.words(listOf("AUTO", "IKEA", "WhatsApp"),
+        val shouting = com.titankeys.engine.PhoneNames.words(listOf("AUTO", "IKEA", "WhatsApp"),
             { world.words.frequency(it).toDouble() }, { it in plain })
         must("auto" !in shouting, "An app \"AUTO\" gives \"auto\" no capitals: $shouting")
         same(typed("the auto setting", Lists(world.words, phoneNames = shouting)), "the auto setting",
             "\"auto\" stays lowercase beside an app named AUTO")
         same(typed("open whatsapp", Lists(world.words, phoneNames = shouting)), "open WhatsApp", "\"WhatsApp\" still gets its capitals")
-        val contactNames = com.atlas.engine.PhoneNames.words(listOf("JOHN", "AUTO"),
+        val contactNames = com.titankeys.engine.PhoneNames.words(listOf("JOHN", "AUTO"),
             { world.words.frequency(it).toDouble() }, { it in plain }, true)
         must(contactNames["john"] != "JOHN" && "auto" !in contactNames, "A contact in capitals keeps the dictionary's spelling: $contactNames")
         val lowSaved = Lists(world.words, phoneNames = mapOf("auto" to "AUTO"))
@@ -1030,7 +1030,7 @@ private fun composerFlow(world: Realistic) {
         tapping.type("t")
         tapping.choose(tapping.bar.indexOf("toggle"))
         same(tapping.text, "hi WhatsApp toggle ", "A tapped \"toggle\" stays lowercase")
-        same(typed("rose and bill came", Lists(world.words, phoneNames = com.atlas.engine.PhoneNames.words(listOf("Rose Bill"),
+        same(typed("rose and bill came", Lists(world.words, phoneNames = com.titankeys.engine.PhoneNames.words(listOf("Rose Bill"),
             { world.words.frequency(it).toDouble() }, { it in plain }))), "rose and bill came",
             "A contact's name made of ordinary words gives them no capitals")
         val undone = Typist(world, world.autocorrect(saved), lists = saved).type("titankeys ").backspace().type(" ")
@@ -2646,7 +2646,7 @@ private fun bugHunt(world: Realistic) {
     retry.loaded()
     retry.failed(5_000_000)
     must(retry.mayLoad(5_000_000 + LoadRetry.FIRST_MILLIS), "#39: a load that worked starts the waits over")
-    val loader = java.io.File("android/kotlin/com/atlas/keyboard/AutocorrectLoader.kt").readText()
+    val loader = java.io.File("android/kotlin/com/titankeys/keyboard/AutocorrectLoader.kt").readText()
     must("failed = true" !in loader && loader.contains("retry.failed(SystemClock.uptimeMillis())") &&
         loader.split("!retry.mayLoad(SystemClock.uptimeMillis())").size == 3, "#39: the loader waits on the retry, and never gives up")
 }

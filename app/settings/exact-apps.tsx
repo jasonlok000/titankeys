@@ -1,6 +1,6 @@
 import { Section, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
-import { type State, state, update } from "../../lib/atlas";
+import { type State, state, update } from "../../lib/titankeys";
 import { AppListPage, appsLabel } from "../../lib/app-list";
 
 export const exactAppsLabel = ({ exactApps }: State) => appsLabel(exactApps);

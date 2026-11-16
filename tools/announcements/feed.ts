@@ -1,4 +1,4 @@
-// The announcement feed's rules, the same as the app's (android/kotlin/com/atlas/connected/Feed.kt). The signing tool
+// The announcement feed's rules, the same as the app's (android/kotlin/com/titankeys/connected/Feed.kt). The signing tool
 // refuses a feed that breaks them, so that the app never throws away a feed that was published.
 
 export type Action = { label: string; url?: string; page?: string };
@@ -90,7 +90,7 @@ export async function open(envelope: Envelope, spki: Uint8Array): Promise<Feed> 
 
 /** The public key that the app holds, read from the app's source, so the tools always check against the real one. */
 export async function appKey(root: URL): Promise<Uint8Array> {
-  const source = await Bun.file(new URL("android/kotlin/com/atlas/connected/Connected.kt", root)).text();
+  const source = await Bun.file(new URL("android/kotlin/com/titankeys/connected/Connected.kt", root)).text();
   const match = source.match(/FEED_KEY = "([A-Za-z0-9+/=]+)"/);
   if (!match) throw new Error("FEED_KEY is missing from Connected.kt");
   return new Uint8Array(Buffer.from(match[1], "base64"));

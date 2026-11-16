@@ -1,6 +1,6 @@
 /**
  * Settings that show in more than one place, by the one name each has everywhere: Settings, the keyboard's quick settings
- * (android/kotlin/com/atlas/keyboard/QuickSetting.kt), the fun guide (GuideSteps.kt) and the boring guide.
+ * (android/kotlin/com/titankeys/keyboard/QuickSetting.kt), the fun guide (GuideSteps.kt) and the boring guide.
  * tools/checks/setting-names.test.ts keeps them the same.
  */
 

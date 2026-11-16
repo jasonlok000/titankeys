@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.awt.BasicStroke
 import java.awt.Color

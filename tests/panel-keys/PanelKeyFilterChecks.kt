@@ -1,7 +1,7 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.view.KeyEvent
-import com.atlas.keyboard.Modifiers.Panel
+import com.titankeys.keyboard.Modifiers.Panel
 
 private const val ENTER = KeyEvent.KEYCODE_ENTER
 private const val BACKSPACE = KeyEvent.KEYCODE_DEL

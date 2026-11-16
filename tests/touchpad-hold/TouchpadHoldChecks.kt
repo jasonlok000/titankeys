@@ -1,6 +1,6 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.keyboard.TouchpadHold.Back
+import com.titankeys.keyboard.TouchpadHold.Back
 
 fun main() {
     holdsOnlyWithTheSettingAndNoField()

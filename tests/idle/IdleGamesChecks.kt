@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import kotlin.math.abs
 import kotlin.math.min
@@ -87,7 +87,7 @@ fun main() {
     clock.input(3_000_000)
     clock.stop()
     check(!clock.roll(3_000_000 + IdleClock.MILLIS), "Hidden or with the screen off, no period runs")
-    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val ime = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     check(ime.contains("main.postDelayed(idleBar, IDLE_BAR_MILLIS)") && ime.contains("IDLE_BAR_MILLIS = IdleClock.MILLIS"),
         "The keyboard posts its roll for exactly 3:00, with no random extra")
     check(!ime.contains("idleEnded"), "A game that ends by itself starts no new wait")
@@ -219,7 +219,7 @@ fun main() {
     // letter's ink, the figure, the rope, the sparks and the finish line keep inside the bar: under its top, and over its floor, 2.56
     // dp over the screen's edge. This is by each letter's box; tests/idle-render checks the letters' real outlines and the screen's
     // corners too, every frame at 60 fps.
-    val stripFit = java.io.File("android/kotlin/com/atlas/keyboard/StripFit.kt").readText()
+    val stripFit = java.io.File("android/kotlin/com/titankeys/keyboard/StripFit.kt").readText()
     for (line in listOf("const val BAR_DP = 56f", "const val BORDER_DP = 22f", "const val LINE_DP = (BAR_DP + BORDER_DP) / 2", "const val EDGE_DP = 2.56f"))
         check(line in stripFit, "Idle.LINE and Idle.FLOOR are StripFit's: $line")
     check(abs(Idle.LINE - 88f * 39 / 56) < .001f && abs(Idle.FLOOR - 88f * (56 - 2.56f) / 56) < .001f,
@@ -296,7 +296,7 @@ fun main() {
     // Strip draws it under the game, its bottom at the game's floor, 80% of the room between the corners, which it keeps clear of by
     // the edge's distance, centred; 1 dp high, solid to its hard ends; in the text's cream at 55% on the dark bar and the ink at 55%
     // on the light one, never orange. The games get the same span.
-    val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val strip = java.io.File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     for (line in listOf("val floorBottom = Idle.FLOOR * idleScale", "val floorLeft = floorLeft()",
         "idleDrawing.floor(canvas, player.floor, floorLeft, width - floorLeft, floorBottom, floorThick, look)",
         "private val floorThick = FixedScale.fixedPx(context, 1f)",
@@ -307,14 +307,14 @@ fun main() {
     // Its width is one share of the room between the corners, centred: the owner's 80%.
     check(Idle.FLOOR_SHARE == .8f, "The floor spans 80% of the room between the corners")
     check(Idle.floorLeft(1076f, 100f) == 100f + 876f * (1 - Idle.FLOOR_SHARE) / 2, "and is centred")
-    val look = java.io.File("android/kotlin/com/atlas/keyboard/Look.kt").readText()
+    val look = java.io.File("android/kotlin/com/titankeys/keyboard/Look.kt").readText()
     // The keyboard is always dark (owner, 2026-11-14), so the floor is always the text's cream.
     check("val floorLine = (Accent.TEXT_CREAM and 0xFFFFFF) or (FLOOR_ALPHA shl 24)" in look &&
         "private const val FLOOR_ALPHA = 140" in look, "The floor is the text's cream at 55%")
-    val drawing = java.io.File("android/kotlin/com/atlas/keyboard/IdleDrawing.kt").readText()
+    val drawing = java.io.File("android/kotlin/com/titankeys/keyboard/IdleDrawing.kt").readText()
     check("canvas.drawRect(left, bottom - thick, right, bottom, floorPaint)" in drawing, "The line's bottom is the floor, so things stand on it")
     // Bug hunt #19: a selected word, a clip offer or a notice that arrives mid-game ends it, as each keeps a game from starting.
-    val stripSource = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val stripSource = java.io.File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     val render = stripSource.substringAfter("    private fun render() {").substringBefore("        look = Look.of(context)")
     check("if (idle != null && (selected != null || clip != null || notice != null)) idle = null" in render,
         "#19: the bar ends a game when a selected word, a clip offer or a notice arrives")
@@ -322,7 +322,7 @@ fun main() {
 
     // Bug hunt #33: a period that started with the Sym panel open never got its roll, as the roll was posted only if the bar could
     // play right then. It's always posted, and asks as it comes.
-    val imeSource = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val imeSource = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     val wait = imeSource.substringAfter("    private fun waitIdleBar() {").substringBefore("    }")
     check("main.postDelayed(idleBar, IDLE_BAR_MILLIS)" in wait && "idleBarAllowed()" !in wait, "#33: every period posts its roll")
     val roll = imeSource.substringAfter("    private val idleBar = Runnable {").substringBefore("    private val idleClock")
@@ -339,7 +339,7 @@ fun main() {
     check(restartClock.running, "#34: and it runs on after its roll")
     restartClock.stop()
     check(!restartClock.running, "#34: hiding the keyboard stops it")
-    val startView = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val startView = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
         .substringAfter("override fun onStartInputView(info: EditorInfo, restarting: Boolean) {").substringBefore("offerClip()")
     check("if (!restarting || !idleClock.running) main.post { wakeIdleBar() }" in startView, "#34: a restart wakes the bar only when no period runs")
 

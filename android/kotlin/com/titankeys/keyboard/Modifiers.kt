@@ -1,0 +1,410 @@
+package com.titankeys.keyboard
+
+import android.view.KeyEvent
+
+/**
+ * Sticky Shift and Alt, and the Sym panel. One press of Shift or Alt applies to the next character. A second press within
+ * [DOUBLE_PRESS_MILLIS] leaves the key on for exactly that next character, or with [doublePressLocks] locks it until a
+ * third press. A slower second press turns the key off. A key held for a character ends with the release, and a push that typed
+ * nothing stays on for the next key, however long it lasted. Shift and Alt follow the same rules.
+ * Each press of Sym moves the panel to its next step, and the panel stays open after Sym is let go.
+ * Only one of them is on at a time. While the panel is open, Alt opens the quick settings page and goes back from it.
+ *
+ * Ctrl is separate from those: it has no sticky state and applies only while it is held.
+ *
+ * Two shortcuts count only while a modifier is physically held, so they work with Key Mapper off (owner, 2026-11-12):
+ * Shift + Backspace deletes a word ([backspaceDoes]), and Alt + Sym switches to the next keyboard ([keyboardSwitch]). Each has its
+ * own switch in Settings, on to start (owner, 2026-11-13): off, the keys do what they would without the shortcut.
+ * A tapped or automatic Shift, or a tapped Alt, doesn't count for those. Alt + Backspace, tapped or held, deletes forward, the
+ * character after the cursor, like Delete on a PC, or with that setting off goes to the app as Android's own Alt + Backspace,
+ * which deletes the line (owner, 2026-11-13). A word delete wins over it when both apply.
+ *
+ * Where a sentence starts, Shift comes on by itself, the same as one push, so the first letter is a capital: see [autoShift].
+ * Pushing Shift while it is on by itself turns it off, and it stays off until the cursor leaves that place, so the letter there
+ * can be lowercase.
+ */
+class Modifiers {
+    enum class Level { Off, Once, Locked }
+    enum class Key { Shift, Alt }
+    enum class Panel { Closed, Symbols, Emoji, Settings, Clipboard }
+
+    var shift = Level.Off
+        private set
+    var alt = Level.Off
+        private set
+    var panel = Panel.Closed
+        private set
+    /** The page that Alt goes back to from the quick settings page. */
+    private var beforeSettings = Panel.Symbols
+    private val last = LongArray(Key.entries.size)
+    /** Each physical modifier that is down, with the time it was pressed. */
+    private val held = HashMap<Int, Long>()
+    private val usedWhileHeld = HashSet<Int>()
+    private var symHeld = false
+    /** Each key that counts as Ctrl and is down. Key Mapper's Ctrl and fn together are still one Ctrl. */
+    private val ctrlKeys = HashSet<Int>()
+
+    /** Shift is on for one key because a sentence starts here, not because of a push. */
+    var autoShifted = false
+        private set
+    /** Shift was pushed off where it had come on by itself. It stays off until the place is no longer a sentence start. */
+    private var autoDeclined = false
+
+    /** fn counts as a Ctrl key, for the Use fn as Ctrl setting. */
+    var fnIsCtrl = false
+
+    /** A quick second press locks Shift or Alt, for the setting of the same name. */
+    var doublePressLocks = false
+    /** A held Alt + Sym switches to the next keyboard. Off, Sym does what it would without it. See [down]. */
+    var altSymSwitches = true
+
+    /**
+     * Sym was pushed while Alt was held and the panel was closed: switch to the next keyboard. The panel stays as it was, and
+     * Alt counts as used, so it goes off when it's let go. The keyboard takes this with [takeKeyboardSwitch].
+     */
+    var keyboardSwitch = false
+        private set
+
+    /** Returns [keyboardSwitch] and clears it, so one push of Sym switches once. */
+    fun takeKeyboardSwitch() = keyboardSwitch.also { keyboardSwitch = false }
+
+    /** What a press of Backspace does. */
+    enum class Backspace { Letter, Word, Forward, AltToApp }
+
+    /**
+     * What a press of Backspace does, from the key's own meta state [meta] and the modifiers now. With Ctrl, or with Shift
+     * physically held, it deletes the previous word. With Alt, tapped or held, it deletes forward if [altForward], or goes to
+     * the app as Android's own Alt + Backspace. Otherwise it deletes one character. A word delete wins over Alt.
+     *
+     * Shift counts as held when its press reached the keyboard and is still down, or when the Backspace says so itself: Android
+     * marks every key with the modifiers physically down on the keyboard, whatever happened to their own key events. On the
+     * owner's phone, a held Shift's press didn't reach [held], so held Shift + Backspace deleted one letter (2026-11-13).
+     * A tapped Shift, or one that came on by itself at a sentence start, is neither, and leaves Backspace a plain Backspace.
+     */
+    fun backspaceDoes(meta: Int, altForward: Boolean, shiftWord: Boolean = true): Backspace = when {
+        meta and KeyEvent.META_CTRL_ON != 0 -> Backspace.Word
+        // A held Shift deletes a word, unless its switch is off: then Backspace is plain, as if the shortcut weren't there.
+        shiftWord && (holding(Key.Shift) || meta and KeyEvent.META_SHIFT_ON != 0) -> Backspace.Word
+        alt != Level.Off || meta and KeyEvent.META_ALT_ON != 0 -> if (altForward) Backspace.Forward else Backspace.AltToApp
+        else -> Backspace.Letter
+    }
+
+    /** What the Backspace press now going does, decided at its first event. See [backspacePress]. */
+    private var pressDoes: Backspace? = null
+
+    /**
+     * What a Backspace event does. A press decides once, at its first event, so its repeats go on the same way after a tapped Alt
+     * is used up. A press whose first event was lost decides at the first one that arrives, never with the last press's choice.
+     */
+    fun backspacePress(repeat: Int, meta: Int, altForward: Boolean, shiftWord: Boolean = true): Backspace =
+        pressDoes.takeIf { repeat > 0 } ?: backspaceDoes(meta, altForward, shiftWord).also { pressDoes = it }
+
+    /** Backspace was let go, so the next press decides afresh even if its first event is lost (bug hunt #38). */
+    fun backspaceReleased() {
+        pressDoes = null
+    }
+
+    /** After a Backspace: with Alt on, Backspace deleted forward or went to the app as Alt + Backspace, and uses Alt up, as a
+     * character would. Otherwise only held modifiers count as used. */
+    fun afterBackspace() {
+        if (alt != Level.Off) consume() else useHeld()
+    }
+
+    /** A key that counts as Ctrl is down. The modifier bar shows this at once. */
+    val ctrlHeld get() = ctrlKeys.isNotEmpty()
+
+    /** The automatic Shift waits while Ctrl is down: Ctrl's shortcuts take no Shift from it, and it is back when Ctrl lets go. */
+    val autoShiftWaits get() = autoShifted && ctrlHeld
+
+    val metaState: Int
+        get() {
+            var meta = 0
+            if (shift != Level.Off && !autoShiftWaits) meta = meta or KeyEvent.META_SHIFT_ON
+            if (shift == Level.Locked) meta = meta or KeyEvent.META_CAPS_LOCK_ON
+            if (alt != Level.Off) meta = meta or KeyEvent.META_ALT_ON
+            return KeyEvent.normalizeMetaState(meta)
+        }
+
+    /**
+     * The modifiers that go with a key that the app handles: a shortcut, Tab, an arrow, or a steer of the cursor. A [textKey]
+     * types, so it takes them all. Otherwise a Shift that came on by itself, Caps, or a tapped Shift on a [steer] is for the next
+     * letter: an arrow must not become a selection that the letter then replaces, nor Ctrl + Z a redo (bug hunt #4). A Shift held
+     * down still goes with any key, as on a PC, and a tapped Shift still goes with the next shortcut, as Ctrl + Shift + Z.
+     */
+    fun commandMeta(textKey: Boolean, steer: Boolean = false): Int {
+        val shifted = shift != Level.Off && !autoShiftWaits
+        val keepShift = textKey || holding(Key.Shift) || shift == Level.Once && !autoShifted && !steer
+        var meta = 0
+        if (shifted && keepShift) meta = meta or KeyEvent.META_SHIFT_ON
+        if (shift == Level.Locked && textKey) meta = meta or KeyEvent.META_CAPS_LOCK_ON
+        if (alt != Level.Off) meta = meta or KeyEvent.META_ALT_ON
+        return meta
+    }
+
+    private fun level(key: Key) = when (key) {
+        Key.Shift -> shift
+        Key.Alt -> alt
+    }
+
+    /** A finger holds the physical key down now, as opposed to a push that has ended and still applies. */
+    fun holding(key: Key) = held.keys.any { keyOf(it) == key }
+
+    /**
+     * Turns the automatic Shift on or off. [sentenceStart] is true where the next letter starts a sentence. Shift comes on as one
+     * push would, unless the user pushed it off here, or Shift, Alt, Ctrl or the panel is already on. Away from a sentence start,
+     * a Shift that came on by itself goes off, and one that the user pushed stays.
+     */
+    fun autoShift(sentenceStart: Boolean) {
+        if (!sentenceStart) {
+            autoDeclined = false
+            if (autoShifted) shift = Level.Off
+            autoShifted = false
+            return
+        }
+        if (autoShifted || autoDeclined || shift != Level.Off || alt != Level.Off || panel != Panel.Closed
+            || held.isNotEmpty() || ctrlKeys.isNotEmpty()) return
+        shift = Level.Once
+        autoShifted = true
+    }
+
+    /** Pressing Shift or Alt on the touchpad or the keyboard. With the panel open, Alt is the quick settings key. */
+    fun press(key: Key, time: Long) {
+        if (key == Key.Alt && panel != Panel.Closed) {
+            toggleSettings()
+            return
+        }
+        if (autoShifted) {
+            autoShifted = false
+            // A push of Shift on a Shift that came on by itself turns it off for this letter. The next push starts afresh.
+            if (key == Key.Shift) {
+                shift = Level.Off
+                autoDeclined = true
+                last[key.ordinal] = time - DOUBLE_PRESS_MILLIS
+                return
+            }
+        }
+        val level = level(key)
+        val quick = time - last[key.ordinal] < DOUBLE_PRESS_MILLIS
+        val next = when (level) {
+            Level.Off -> Level.Once
+            Level.Once -> if (!quick) Level.Off else if (doublePressLocks) Level.Locked else Level.Once
+            Level.Locked -> Level.Off
+        }
+        shift = if (key == Key.Shift) next else Level.Off
+        alt = if (key == Key.Alt) next else Level.Off
+        panel = Panel.Closed
+        // A quick second press that stays on ends the double press, so the next press turns the key off.
+        last[key.ordinal] = if (level == Level.Once && next == Level.Once) time - DOUBLE_PRESS_MILLIS else time
+    }
+
+    /** From the symbols or emoji to the quick settings page, or back to the page that it came from. The clipboard goes back too. */
+    fun toggleSettings() {
+        if (panel == Panel.Closed) return
+        if (panel == Panel.Settings || panel == Panel.Clipboard) panel = beforeSettings
+        else {
+            beforeSettings = panel
+            panel = Panel.Settings
+        }
+    }
+
+    /** Pressing Sym moves the panel on: symbols, then emoji, then closed. From the quick settings page it closes the panel. */
+    fun pressSym() {
+        shift = Level.Off
+        autoShifted = false
+        alt = Level.Off
+        panel = when (panel) {
+            Panel.Closed -> Panel.Symbols
+            Panel.Symbols -> Panel.Emoji
+            Panel.Emoji, Panel.Settings, Panel.Clipboard -> Panel.Closed
+        }
+    }
+
+    /**
+     * To the clipboard, from A on the symbols or emoji, or X on the quick settings page. Alt then goes back to the symbols or
+     * emoji, as from the quick settings.
+     */
+    fun openClipboard() {
+        when (panel) {
+            Panel.Settings -> panel = Panel.Clipboard
+            Panel.Symbols, Panel.Emoji -> {
+                beforeSettings = panel
+                panel = Panel.Clipboard
+            }
+            Panel.Closed, Panel.Clipboard -> Unit
+        }
+    }
+
+    /** Back to normal typing, after an item is picked or the keyboard is hidden. */
+    fun closePanel() {
+        panel = Panel.Closed
+    }
+
+    /** Puts the panel at [target] at once, for the guide that sets up a step. Shift and Alt go off, as a push of Sym does. */
+    fun openPanel(target: Panel) {
+        shift = Level.Off
+        autoShifted = false
+        alt = Level.Off
+        if (target == Panel.Settings) beforeSettings = Panel.Symbols
+        panel = target
+    }
+
+    fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || fnIsCtrl && code == FN
+
+    fun key(event: KeyEvent) {
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime, event.metaState)
+        else if (event.action == KeyEvent.ACTION_UP) up(event.keyCode, event.eventTime)
+    }
+
+    /**
+     * A key's press. [meta] is the press's own meta state, which Android sets from the keys physically down: Alt + Sym switches
+     * keyboards even when Alt's own press never reached the keyboard, as Key Mapper took a Shift press once (bug hunt #24).
+     */
+    fun down(code: Int, time: Long, meta: Int = 0) {
+        if (isCtrl(code)) {
+            ctrlKeys += code
+            return
+        }
+        if (code == KeyEvent.KEYCODE_SYM) {
+            if (!symHeld) {
+                if (panel == Panel.Closed && (holding(Key.Alt) || meta and KeyEvent.META_ALT_ON != 0) && altSymSwitches) {
+                    useHeld()
+                    keyboardSwitch = true
+                } else pressSym()
+            }
+            symHeld = true
+            return
+        }
+        val key = keyOf(code) ?: return
+        val earlier = held[code]
+        if (earlier == time) return
+        // A new press of a key that is still down means its release was lost. That press ends now, so this one counts.
+        if (earlier != null) up(code, time)
+        held[code] = time
+        usedWhileHeld -= code
+        press(key, time)
+    }
+
+    fun up(code: Int, time: Long) {
+        if (isCtrl(code)) {
+            ctrlKeys.remove(code)
+            return
+        }
+        if (code == KeyEvent.KEYCODE_SYM) symHeld = false
+        val key = keyOf(code) ?: return
+        held.remove(code) ?: return
+        val used = usedWhileHeld.remove(code)
+        if (held.keys.any { keyOf(it) == key }) return
+        // Holding the modifier for a character releases it with the key, like a regular keyboard. A push that typed
+        // nothing stays on, so a slow push of the key is still one push, and a lock stays locked.
+        if (used && level(key) == Level.Once) when (key) {
+            Key.Shift -> shift = Level.Off
+            Key.Alt -> alt = Level.Off
+        }
+    }
+
+    /** A character was typed with the current modifiers. */
+    fun consume() {
+        if (autoShifted) {
+            autoShifted = false
+            shift = Level.Off
+        }
+        if (held.isNotEmpty()) {
+            useHeld()
+            return
+        }
+        if (shift == Level.Once) shift = Level.Off
+        if (alt == Level.Once) alt = Level.Off
+    }
+
+    /** A command or shortcut used a physically held modifier, leaving sticky state alone. */
+    fun useHeld() {
+        usedWhileHeld += held.keys
+    }
+
+    fun isHeld(code: Int) = code in held || code == KeyEvent.KEYCODE_SYM && symHeld
+
+    /** An app can restart its field after a shortcut. With [keepCtrl], Ctrl stays down through that so that another can follow. */
+    fun clear(keepCtrl: Boolean = false) {
+        shift = Level.Off
+        autoShifted = false
+        autoDeclined = false
+        alt = Level.Off
+        panel = Panel.Closed
+        held.clear()
+        usedWhileHeld.clear()
+        pressDoes = null
+        symHeld = false
+        keyboardSwitch = false
+        if (keepCtrl) return
+        ctrlKeys.clear()
+    }
+
+    /**
+     * A field has started. Ctrl stays down through a restart only when the field can still be typed in. The keyboard
+     * does not follow Ctrl in a field that can't, so it would miss the release and leave Ctrl on for every later key.
+     */
+    fun fieldStarted(restarting: Boolean, editing: Boolean) = clear(keepCtrl = restarting && editing)
+
+    companion object {
+        const val DOUBLE_PRESS_MILLIS = 300L
+        /** The key code that the Use fn as Ctrl setting listens for. */
+        const val FN = KeyEvent.KEYCODE_FUNCTION
+
+        /** What Ctrl does with each letter that the keyboard treats as a field shortcut. */
+        val CTRL_ACTIONS = mapOf("A" to "Select all", "C" to "Copy", "X" to "Cut", "V" to "Paste", "Z" to "Undo", "Y" to "Redo")
+
+        /**
+         * What a key does to the pages of the open [panel], in rows down. On the symbol and emoji pages Backspace does what a swipe
+         * down does, and Enter what a swipe up does. On the quick settings page they return 0, which changes nothing. Returns null
+         * for other keys and for a closed panel. These two keys never reach the text while the panel is open.
+         */
+        fun panelScroll(code: Int, panel: Panel): Float? {
+            val rows = when (code) {
+                KeyEvent.KEYCODE_DEL -> 1f
+                KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> -1f
+                else -> return null
+            }
+            return when (panel) {
+                Panel.Closed -> null
+                Panel.Symbols, Panel.Emoji -> rows
+                Panel.Settings, Panel.Clipboard -> 0f
+            }
+        }
+
+        /**
+         * Whether a key held with Ctrl or Meta keeps acting while it is held. Moving and deleting do, as the keys do by themselves,
+         * but a shortcut such as Ctrl + V acts once for each press: holding it pasted over and over (owner, 2026-11-12).
+         */
+        fun shortcutRepeats(code: Int) = code in REPEATING_SHORTCUTS
+
+        private val REPEATING_SHORTCUTS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME, KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP,
+            KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_FORWARD_DEL)
+
+        /** The meta state of a key pushed while Ctrl is held. Ctrl takes the place of fn, so the key acts as a held shortcut does. */
+        fun withCtrl(meta: Int) = meta and KeyEvent.META_FUNCTION_ON.inv() or KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
+
+        private fun keyOf(code: Int) = when (code) {
+            KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT -> Key.Shift
+            KeyEvent.KEYCODE_ALT_LEFT, KeyEvent.KEYCODE_ALT_RIGHT -> Key.Alt
+            else -> null
+        }
+
+        fun isModifier(code: Int) = code == KeyEvent.KEYCODE_SYM || keyOf(code) != null
+
+        fun isShiftOrAlt(code: Int) = keyOf(code) != null
+
+        /** Dropped typing must not take a Shift, Alt or Sym press with it, or their state would no longer match the keys. */
+        fun survivesDiscard(code: Int, down: Boolean) = !down || isModifier(code)
+
+        /**
+         * Whether a key press that typing dropped uses up the Shift or Alt it came with, as if it had been typed: a typing key's
+         * first press. Its repeats, and keys such as Ctrl that are not typing, leave them as they are.
+         */
+        fun dropUsesModifiers(code: Int, repeat: Int) = repeat == 0 && !isModifier(code) && code !in OTHER_MODIFIERS
+
+        private val OTHER_MODIFIERS = setOf(KeyEvent.KEYCODE_CTRL_LEFT, KeyEvent.KEYCODE_CTRL_RIGHT, KeyEvent.KEYCODE_META_LEFT,
+            KeyEvent.KEYCODE_META_RIGHT, KeyEvent.KEYCODE_FUNCTION, KeyEvent.KEYCODE_CAPS_LOCK, KeyEvent.KEYCODE_NUM_LOCK,
+            KeyEvent.KEYCODE_SCROLL_LOCK)
+    }
+}

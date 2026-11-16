@@ -1,7 +1,7 @@
 /**
  * The words of Record a bug (#64), in one place for other languages (#56). The owner's voice (#54, voice.md), except the
  * warning about what the file shows and the delete text: those are a clean zone, plain and without jokes. The notification's
- * words are in android/kotlin/com/atlas/keyboard/BugRecording.kt (BugText).
+ * words are in android/kotlin/com/titankeys/keyboard/BugRecording.kt (BugText).
  */
 export const bugText = {
   title: "Record a bug",

@@ -5,7 +5,7 @@ import { join } from "node:path";
 // Shift + Backspace and Alt + Sym are built in, so they work with Key Mapper off (owner, 2026-11-12). tests/modifiers checks
 // the held, tapped and automatic modifiers; these check how the keyboard uses them.
 const root = join(import.meta.dir, "../..");
-const ime = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/AtlasIme.kt"), "utf8");
+const ime = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt"), "utf8");
 
 test("Backspace asks the modifiers what it does, once a press, after exact typing has taken its keys", () => {
   // The press's choice lives in the modifiers, and Backspace's release clears it (bug hunt #38).
@@ -20,7 +20,7 @@ test("Alt + Backspace deletes forward without Alt, or goes to the app with its A
   expect(ime).toContain("Modifiers.Backspace.AltToApp -> command(withMeta(event, KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON))");
   const start = ime.indexOf("KeyEvent.KEYCODE_DEL -> {");
   expect(ime.slice(start, ime.indexOf("modifiers.afterBackspace()", start))).not.toContain("haptics.play");
-  const typing = readFileSync(join(root, "android/kotlin/com/atlas/engine/TypingSettings.java"), "utf8");
+  const typing = readFileSync(join(root, "android/kotlin/com/titankeys/engine/TypingSettings.java"), "utf8");
   expect(typing).toContain('getBoolean("alt_backspace_forward", true)');
   const names = readFileSync(join(root, "lib/setting-names.ts"), "utf8");
   expect(names).toContain('altBackspaceLabel = "Alt + Backspace deletes forward"');
@@ -41,14 +41,14 @@ test("Alt + Sym goes to the next keyboard, never the picker, and never from the 
 
 test("each has its switch, on to start, read by the keyboard and reset with the rest", () => {
   // Owner, 2026-11-13: "why is delete a word shift backspace and next keyboard alt sym not toggleable?"
-  const typing = readFileSync(join(root, "android/kotlin/com/atlas/engine/TypingSettings.java"), "utf8");
+  const typing = readFileSync(join(root, "android/kotlin/com/titankeys/engine/TypingSettings.java"), "utf8");
   expect(typing).toContain('getBoolean("shift_backspace_word", true)');
   expect(typing).toContain('getBoolean("alt_sym_next_keyboard", true)');
   expect(ime).toContain("modifiers.altSymSwitches = TypingSettings.altSymNextKeyboard(this)");
-  const modifiers = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/Modifiers.kt"), "utf8");
+  const modifiers = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/Modifiers.kt"), "utf8");
   expect(modifiers).toContain("if (panel == Panel.Closed && (holding(Key.Alt) || meta and KeyEvent.META_ALT_ON != 0) && altSymSwitches) {");
   expect(modifiers).toContain("shiftWord && (holding(Key.Shift) || meta and KeyEvent.META_SHIFT_ON != 0) -> Backspace.Word");
-  const reset = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/SettingsReset.kt"), "utf8");
+  const reset = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/SettingsReset.kt"), "utf8");
   expect(reset).toContain('"shift_backspace_word"');
   expect(reset).toContain('"alt_sym_next_keyboard"');
   const adapters = readFileSync(join(root, "android/kotlin/com/vandam/ink/AppNativeAdapters.kt"), "utf8");

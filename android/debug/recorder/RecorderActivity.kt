@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.app.Activity
 import android.content.Intent
@@ -18,7 +18,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.atlas.engine.TypingSettings
+import com.titankeys.engine.TypingSettings
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

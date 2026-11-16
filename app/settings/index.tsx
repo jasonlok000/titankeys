@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Field, Screen, Section, replace, setRouteParents, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
 import { close } from "ink/icons";
-import { showKeyCalibration, state, update } from "../../lib/atlas";
+import { showKeyCalibration, state, update } from "../../lib/titankeys";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";

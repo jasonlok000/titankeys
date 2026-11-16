@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # The playground's hint, read from the app so that a new wording can't leave this check looking for the old one.
-GUIDE = Path(__file__).resolve().parents[2] / "android/kotlin/com/atlas/keyboard/GuideActivity.kt"
+GUIDE = Path(__file__).resolve().parents[2] / "android/kotlin/com/titankeys/keyboard/GuideActivity.kt"
 HINT = re.search(r'FIELD_HINT = "([^"]+)"', GUIDE.read_text(encoding="utf-8")).group(1)
 APP = os.environ.get("APP", "com.titankeys")
 
@@ -24,8 +24,8 @@ def shell(*args):
 
 
 def hierarchy():
-    shell("uiautomator", "dump", "/sdcard/atlas-home-focus-check.xml")
-    return ET.fromstring(shell("cat", "/sdcard/atlas-home-focus-check.xml"))
+    shell("uiautomator", "dump", "/sdcard/titankeys-home-focus-check.xml")
+    return ET.fromstring(shell("cat", "/sdcard/titankeys-home-focus-check.xml"))
 
 
 def editor():

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A port of CursorGesture (android/kotlin/com/atlas/keyboard/CursorGesture.kt) with a choice of tap area, to compare the
+"""A port of CursorGesture (android/kotlin/com/titankeys/keyboard/CursorGesture.kt) with a choice of tap area, to compare the
 owner's proposal against today's rule. It replays a stream of touches and key presses and reports each drag it starts
 (steer or select) and each double tap. Used by space_compare.py on the Space gestures export and the raw logs."""
 import math

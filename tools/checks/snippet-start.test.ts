@@ -1,13 +1,13 @@
 // Checks that Settings offers the same snippet starts as the keyboard takes, and that the page gets the keys to type them.
 import { expect, test } from "bun:test";
-import { oldSnippetStarts, snippetStarts } from "../../lib/atlas";
+import { oldSnippetStarts, snippetStarts } from "../../lib/titankeys";
 
 const root = new URL("../../", import.meta.url);
 const read = (path: string) => Bun.file(new URL(path, root)).text();
 
 /** A Java string constant from TypingSettings, with its escapes undone. */
 async function javaString(name: string) {
-  const settings = await read("android/kotlin/com/atlas/engine/TypingSettings.java");
+  const settings = await read("android/kotlin/com/titankeys/engine/TypingSettings.java");
   const found = settings.match(new RegExp(`String ${name} = "((?:[^"\\\\]|\\\\.)*)";`));
   expect(found, name).not.toBeNull();
   return found![1].replace(/\\(.)/g, "$1");

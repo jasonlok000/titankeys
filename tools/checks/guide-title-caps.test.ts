@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 // TextView.setSingleLine replaces the text's transformation, so an isAllCaps set before it is wiped: the guide's titles showed in
 // sentence case on the phone while every render showed them upper case (2026-11-13). The capitals must come after it.
-const activity = readFileSync(join(import.meta.dir, "../../android/kotlin/com/atlas/keyboard/GuideActivity.kt"), "utf8");
+const activity = readFileSync(join(import.meta.dir, "../../android/kotlin/com/titankeys/keyboard/GuideActivity.kt"), "utf8");
 
 test("the title's capitals are set after its single line, in every look", () => {
   const looks = activity.split(/\n    private fun /).filter((body) => body.includes("title.isSingleLine"));

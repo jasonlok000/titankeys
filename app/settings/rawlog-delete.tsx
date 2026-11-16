@@ -1,5 +1,5 @@
 import { Field, Screen, back } from "ink";
-import { deleteRawLog } from "../../lib/atlas";
+import { deleteRawLog } from "../../lib/titankeys";
 import { playHaptic } from "../../lib/app-haptics";
 
 export default function DeleteRawLog() {

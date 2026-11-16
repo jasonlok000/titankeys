@@ -1,5 +1,5 @@
 import { back, navigate, replace } from "ink";
-import { backup } from "./atlas";
+import { backup } from "./titankeys";
 
 const failed = { backup: "/settings/data/backup-failed", restore: "/settings/data/restore-failed" } as const;
 

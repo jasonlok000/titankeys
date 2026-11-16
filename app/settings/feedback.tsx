@@ -1,5 +1,5 @@
 import { Field, Row, Screen, Section, navigate, useSnapshot } from "ink";
-import { forceCrash, state } from "../../lib/atlas";
+import { forceCrash, state } from "../../lib/titankeys";
 
 /**
  * Settings > Send feedback: Report a bug and Suggest an idea open the report form (#97), which sends straight to us and

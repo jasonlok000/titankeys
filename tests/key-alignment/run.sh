@@ -7,7 +7,7 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
+keyboard=android/kotlin/com/titankeys/keyboard
 # The checks copy the guide's zones and the calibration screen's words: they must still be the real ones.
 for pair in "GuideKeyboardView.kt:const val AREA_LEFT = .05f" "GuideKeyboardView.kt:const val AREA_RIGHT = .95f" \
   "GuideKeyboardView.kt:const val AREA_TOP = .5f / 4" "GuideKeyboardView.kt:const val AREA_BOTTOM = 3.54f / 4" \
@@ -20,4 +20,4 @@ for pair in "GuideKeyboardView.kt:const val AREA_LEFT = .05f" "GuideKeyboardView
 done
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" \
   "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/Layout.kt" tests/key-alignment/KeyAlignmentChecks.kt
-java -Djava.awt.headless=true -cp "$work:$stdlib" com.atlas.keyboard.KeyAlignmentChecksKt
+java -Djava.awt.headless=true -cp "$work:$stdlib" com.titankeys.keyboard.KeyAlignmentChecksKt

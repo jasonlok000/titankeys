@@ -9,7 +9,7 @@ for v in control shift edges both; do
   T=$TK_OUT/tk-exp/$v
   rm -rf "$T"; mkdir -p "$T/android"
   cp -r "$SRC/android/kotlin" "$T/android/"
-  python3 -I - "$T/android/kotlin/com/atlas/engine/SwipeRecognizer.java" "$v" <<'PY'
+  python3 -I - "$T/android/kotlin/com/titankeys/engine/SwipeRecognizer.java" "$v" <<'PY'
 import sys
 path, variant = sys.argv[1:3]
 text = open(path, encoding='utf-8').read()

@@ -12,10 +12,10 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 cd "$TREE"
 root=android/kotlin
-engine=$root/com/atlas/engine
-keyboard=$root/com/atlas/keyboard
+engine=$root/com/titankeys/engine
+keyboard=$root/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android:$ort" -d "$work" \
-  "$root/com/atlas/autocorrect" "$keyboard/Layout.kt" tests/autocorrect/PhoneWords.java "$BASE/tools/AutocorrectEval.kt" \
+  "$root/com/titankeys/autocorrect" "$keyboard/Layout.kt" tests/autocorrect/PhoneWords.java "$BASE/tools/AutocorrectEval.kt" \
   $(find "$engine" "$root/org" -name '*.java') 2>&1 | grep -v '^warning' | head -20 || true
 javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" tests/autocorrect/PhoneWords.java $(find "$engine" "$root/org" -name '*.java')
-java -cp "$work:$stdlib:$android:$ort" com.atlas.autocorrect.AutocorrectEvalKt "$CASES"
+java -cp "$work:$stdlib:$android:$ort" com.titankeys.autocorrect.AutocorrectEvalKt "$CASES"

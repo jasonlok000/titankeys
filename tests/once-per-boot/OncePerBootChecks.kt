@@ -1,6 +1,6 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.keyboard.OncePerBoot.Boot
+import com.titankeys.keyboard.OncePerBoot.Boot
 
 fun main() {
     showsTheFirstTime()

@@ -1,4 +1,4 @@
-import type { Spelling, State } from "../../lib/atlas";
+import type { Spelling, State } from "../../lib/titankeys";
 import { ChoicePage } from "../../lib/choice";
 
 const labels: Record<Spelling, string> = { british: "British", american: "American", canadian: "Canadian" };

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, back, navigate, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
-import { cancelPlayground, markNotesSeen, markPhoneWarningSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
+import { cancelPlayground, markNotesSeen, markPhoneWarningSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/titankeys";
 import { INK, useAccent } from "../lib/brand";
 import { connectedState, declineContributions, setContribute } from "../lib/connected";
 import { Disclosure } from "../lib/contribute";

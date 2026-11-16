@@ -23,9 +23,9 @@ trap 'rm -rf "$work"' EXIT
 mkdir -p dist "$work/classes" "$work/dex"
 
 "$tools/aapt2" compile --dir "$app/res" -o "$work/resources.zip"
-"$tools/aapt2" compile android/src/main/res/drawable/atlas_icon_foreground.xml -o "$work"
+"$tools/aapt2" compile android/src/main/res/drawable/titankeys_icon_foreground.xml -o "$work"
 "$tools/aapt2" link -I "$platform" --manifest "$app/AndroidManifest.xml" -o "$work/unsigned.apk" \
-  "$work/resources.zip" "$work/drawable_atlas_icon_foreground.xml.flat"
+  "$work/resources.zip" "$work/drawable_titankeys_icon_foreground.xml.flat"
 
 # android.jar has no LambdaMetafactory that javac can compile a lambda against. d8 replaces these calls anyway.
 javac -Xlint:-options -source 8 -target 8 -bootclasspath "$tools/core-lambda-stubs.jar:$platform" \

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Row, Screen, Section, back, useAction, useSnapshot } from "ink";
 import { add, close } from "ink/icons";
 import { Note } from "./note";
-import { type App, type AppList, type State, installedApps, setListedApp, state } from "./atlas";
+import { type App, type AppList, type State, installedApps, setListedApp, state } from "./titankeys";
 
 /** The apps on a list, as Settings shows them on its row. Apps that are not on this phone do not count. */
 export const appsLabel = (apps: readonly App[]) => {

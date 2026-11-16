@@ -36,8 +36,8 @@ export const connectedState = resource({
 })();
 
 // The app comes back to the front after the notification prompt or Android's settings; read the state again then.
-onNativeMessage("atlas-state", () => void connectedState.refresh());
-onNativeMessage("atlas-window", () => void connectedState.refresh());
+onNativeMessage("titankeys-state", () => void connectedState.refresh());
+onNativeMessage("titankeys-window", () => void connectedState.refresh());
 
 async function run(operation: string, payload: object = {}) {
   try {

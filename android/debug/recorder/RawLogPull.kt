@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -15,7 +15,7 @@ import java.util.Locale
  * owner to export it by hand. The copy is the same as Settings > Your data > Typing log > Export: every part, oldest first.
  * Only adb can send to it, as it needs the DUMP permission that the shell holds, and it does nothing outside the Debug build.
  *
- *   adb shell am broadcast -n com.titankeys.debug/com.atlas.keyboard.RawLogPull -a com.titankeys.debug.EXPORT_RAWLOG
+ *   adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.RawLogPull -a com.titankeys.debug.EXPORT_RAWLOG
  *     The result data names the file, in Android/data/com.titankeys.debug/files/rawlog/. Then:
  *   adb pull /sdcard/Android/data/com.titankeys.debug/files/rawlog/
  *

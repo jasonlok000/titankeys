@@ -1,17 +1,17 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.util.PriorityQueue
 
 /**
- * The bar's word menu as AtlasIme drives it, without Android or a phone: the touchpad's touches and lifts (followRestingKey), the
+ * The bar's word menu as TitanKeysIme drives it, without Android or a phone: the touchpad's touches and lifts (followRestingKey), the
  * keys going down and up (onKeyDown's menu keys and onKeyUp), and the main looper's expireHover posts, all in time order. It makes
- * the same calls on the real [SteadyKey] and [MenuKeys] that AtlasIme makes, and tests/word-menu checks that AtlasIme still makes
+ * the same calls on the real [SteadyKey] and [MenuKeys] that TitanKeysIme makes, and tests/word-menu checks that TitanKeysIme still makes
  * them. [mark] is the strip's menuMark, and [pill] is what the strip's pill shows from it (Strip.drawMenu).
  *
  * Times are the events' own, in milliseconds. Every event runs the posts that fell due before it, as the looper would.
  */
 /**
- * What a press under a resting finger reaches, as AtlasIme hears it: the touchpad's touches and lifts, and the keys, at their times.
+ * What a press under a resting finger reaches, as TitanKeysIme hears it: the touchpad's touches and lifts, and the keys, at their times.
  * The word menu ([MenuBar]) and the quick settings page ([QuickSettingsPage]) both take it, so one set of event orders drives both.
  */
 interface Fingers {
@@ -137,7 +137,7 @@ class MenuBar(state: MenuKeys.Step) : Fingers {
         mark = value
     }
 
-    /** AtlasIme.menuAction: I's button, O's, or Back, for the key pressed. */
+    /** TitanKeysIme.menuAction: I's button, O's, or Back, for the key pressed. */
     private fun menuAction(key: String): String? {
         val choices = MenuKeys.choices(state)
         return when (MenuKeys.hovered(key)) {
@@ -148,7 +148,7 @@ class MenuBar(state: MenuKeys.Step) : Fingers {
         }
     }
 
-    /** AtlasIme.stripAction: every step of the ladder keeps the menu open; Back closes it. */
+    /** TitanKeysIme.stripAction: every step of the ladder keeps the menu open; Back closes it. */
     private fun stripAction(action: String) {
         picked += action
         if (action == "Back") close() else state = MenuKeys.press(state, MenuKeys.Button.valueOf(action))

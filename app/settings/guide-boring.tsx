@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Screen, Section, Stack, Text, useSnapshot } from "ink";
-import { markNerdSeen, state } from "../../lib/atlas";
+import { markNerdSeen, state } from "../../lib/titankeys";
 import { nerdSplash } from "../../lib/nerd";
 import { Topic } from "../../lib/topic";
 

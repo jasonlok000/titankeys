@@ -5,7 +5,7 @@ import { RADIUS } from "../../lib/radii";
 
 // The keyboard and the app must round their corners the same, so Radii.kt and lib/radii.ts hold the same numbers.
 test("the keyboard's radii match the app's", () => {
-  const kotlin = readFileSync(join(import.meta.dir, "../../android/kotlin/com/atlas/keyboard/Radii.kt"), "utf8");
+  const kotlin = readFileSync(join(import.meta.dir, "../../android/kotlin/com/titankeys/keyboard/Radii.kt"), "utf8");
   const read = (name: string) => Number(kotlin.match(new RegExp(`const val ${name} = (\\d+)`))?.[1]);
   expect({ small: read("SMALL"), medium: read("MEDIUM"), large: read("LARGE") }).toEqual({ ...RADIUS });
 });

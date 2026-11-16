@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Field, Screen, Section, SettingsChoices, Stack, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
 import { Toggle, playHaptic } from "../../lib/app-haptics";
-import { FEEDBACK_ADDRESS, copyText } from "../../lib/atlas";
+import { FEEDBACK_ADDRESS, copyText } from "../../lib/titankeys";
 import { Note } from "../../lib/note";
 import { type ReportKind, emailReport, reportKinds, reportState, sendReport } from "../../lib/report";
 

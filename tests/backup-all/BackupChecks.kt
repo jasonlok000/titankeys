@@ -1,7 +1,7 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.keyboard.BackupFile.Merge
-import com.atlas.keyboard.BackupFile.Picked
+import com.titankeys.keyboard.BackupFile.Merge
+import com.titankeys.keyboard.BackupFile.Picked
 
 /** Back up everything (#65): a round trip of every part, old words and snippets files, a newer file, and how restore merges. */
 fun main() {
@@ -95,7 +95,7 @@ fun main() {
     same(restored["blocked_words"]!!["words"], setOf("ducking", "shirt"), "Blocked words merge")
     same(restored["autocorrect_learning"]!!["kept_once_words"], setOf("teh|20400", "yall|20401", "gonna|20390"),
         "Autocorrect learning merges, the backup's day winning")
-    same(restored["snippets"]!!["list"].toString().let { (com.atlas.connected.Json.parse(it) as Map<*, *>)["snippets"] },
+    same(restored["snippets"]!!["list"].toString().let { (com.titankeys.connected.Json.parse(it) as Map<*, *>)["snippets"] },
         listOf(mapOf("shortcut" to "addr", "text" to "New St"), mapOf("shortcut" to "home", "text" to "H"), mapOf("shortcut" to "sig", "text" to "J")),
         "Snippets merge, the backup's text winning")
     same(restored["emoji"]!!["recent"], "🔥 😀 🍑", "Emoji recents: the backup's first")
@@ -122,8 +122,8 @@ fun main() {
     same(report.startsWith("java.lang.IllegalStateException\n\tat "), true, "A crash report names the exception and where")
     same(report.contains("Caused by: java.lang.IllegalArgumentException"), true, "A crash report names the cause")
     val trace = sequenceOf("----- pid 1 -----", "\"Signal Catcher\" daemon", "  at x", "", "\"main\" prio=5 tid=1 Sleeping",
-        "  at java.lang.Thread.sleep", "  at com.atlas.keyboard.AtlasIme.onKey", "", "\"other\"", "  at y")
-    same(CrashReport.mainThread(trace), "\"main\" prio=5 tid=1 Sleeping\n  at java.lang.Thread.sleep\n  at com.atlas.keyboard.AtlasIme.onKey",
+        "  at java.lang.Thread.sleep", "  at com.titankeys.keyboard.TitanKeysIme.onKey", "", "\"other\"", "  at y")
+    same(CrashReport.mainThread(trace), "\"main\" prio=5 tid=1 Sleeping\n  at java.lang.Thread.sleep\n  at com.titankeys.keyboard.TitanKeysIme.onKey",
         "A freeze's report is the main thread's stack")
 
     if (failures.isNotEmpty()) {

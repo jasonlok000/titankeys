@@ -1,7 +1,7 @@
 plugins { id("com.android.library") }
 
 android {
-    namespace = "com.atlas.keyboard"
+    namespace = "com.titankeys.keyboard"
     compileSdk = 36
     defaultConfig {
         minSdk = 34

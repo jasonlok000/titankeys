@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.app.Activity
 import android.app.Instrumentation
@@ -11,10 +11,10 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
-import com.atlas.engine.EnglishSpelling
-import com.atlas.engine.Swipe
-import com.atlas.engine.SwipeTyping
-import com.atlas.engine.TypingSettings
+import com.titankeys.engine.EnglishSpelling
+import com.titankeys.engine.Swipe
+import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypingSettings
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

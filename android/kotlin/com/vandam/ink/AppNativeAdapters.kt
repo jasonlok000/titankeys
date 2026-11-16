@@ -19,40 +19,40 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import com.atlas.autocorrect.FixKind
-import com.atlas.autocorrect.Shorthand
-import com.atlas.engine.EnglishSpelling
-import com.atlas.engine.SwipeTyping
-import com.atlas.engine.TypingSettings
-import com.atlas.keyboard.Accent
-import com.atlas.keyboard.AppBuild
-import com.atlas.keyboard.BackDisclosureActivity
-import com.atlas.keyboard.BackService
-import com.atlas.keyboard.EnterKey
-import com.atlas.keyboard.CrashReport
-import com.atlas.keyboard.ExactTyping
-import com.atlas.keyboard.FixedScale
-import com.atlas.keyboard.GuideActivity
-import com.atlas.keyboard.Haptic
-import com.atlas.keyboard.HapticGroup
-import com.atlas.keyboard.Haptics
-import com.atlas.keyboard.HapticsLab
-import com.atlas.keyboard.InkPress
-import com.atlas.keyboard.KeyCalibrationActivity
-import com.atlas.keyboard.KeyCapture
-import com.atlas.keyboard.Keys
-import com.atlas.keyboard.Layout
-import com.atlas.keyboard.PhoneNameSource
-import com.atlas.keyboard.PhoneChecks
-import com.atlas.keyboard.PhoneSetup
-import com.atlas.keyboard.RawLog
-import com.atlas.keyboard.FreshStart
-import com.atlas.keyboard.SettingsReset
-import com.atlas.keyboard.SetupPart
-import com.atlas.keyboard.Expansions
-import com.atlas.keyboard.Snippets
-import com.atlas.keyboard.Trace
-import com.atlas.keyboard.TouchpadPreview
+import com.titankeys.autocorrect.FixKind
+import com.titankeys.autocorrect.Shorthand
+import com.titankeys.engine.EnglishSpelling
+import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypingSettings
+import com.titankeys.keyboard.Accent
+import com.titankeys.keyboard.AppBuild
+import com.titankeys.keyboard.BackDisclosureActivity
+import com.titankeys.keyboard.BackService
+import com.titankeys.keyboard.EnterKey
+import com.titankeys.keyboard.CrashReport
+import com.titankeys.keyboard.ExactTyping
+import com.titankeys.keyboard.FixedScale
+import com.titankeys.keyboard.GuideActivity
+import com.titankeys.keyboard.Haptic
+import com.titankeys.keyboard.HapticGroup
+import com.titankeys.keyboard.Haptics
+import com.titankeys.keyboard.HapticsLab
+import com.titankeys.keyboard.InkPress
+import com.titankeys.keyboard.KeyCalibrationActivity
+import com.titankeys.keyboard.KeyCapture
+import com.titankeys.keyboard.Keys
+import com.titankeys.keyboard.Layout
+import com.titankeys.keyboard.PhoneNameSource
+import com.titankeys.keyboard.PhoneChecks
+import com.titankeys.keyboard.PhoneSetup
+import com.titankeys.keyboard.RawLog
+import com.titankeys.keyboard.FreshStart
+import com.titankeys.keyboard.SettingsReset
+import com.titankeys.keyboard.SetupPart
+import com.titankeys.keyboard.Expansions
+import com.titankeys.keyboard.Snippets
+import com.titankeys.keyboard.Trace
+import com.titankeys.keyboard.TouchpadPreview
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -82,9 +82,9 @@ internal fun appPressHaptic(view: android.view.View): Boolean {
 private var inkPress: InkPress? = null
 
 internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
-    mapOf("atlas" to AtlasAdapter(activity), "connected" to ConnectedAdapter(activity))
+    mapOf("titankeys" to TitanKeysAdapter(activity), "connected" to ConnectedAdapter(activity))
 
-private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, Application.ActivityLifecycleCallbacks {
+private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapter, Application.ActivityLifecycleCallbacks {
     private val typing by lazy { SwipeTyping.get(activity) }
     private var stopWatching: (() -> Unit)? = null
     private val previewController = lazy { TouchpadPreview(activity) }
@@ -93,7 +93,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     // Adapters can be created before the live activity's window gains focus.
     private var visible = true
     private var transferring = false
-    private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "atlas-key").put("key", key).toString()) } }
+    private val keyCapture = lazy { KeyCapture(activity) { key -> activity.emit(JSONObject().put("type", "titankeys-key").put("key", key).toString()) } }
     private var keyCaptureRequested = false
     private val appNames = HashMap<String, String>()
     private val hapticsLab = lazy { HapticsLab(activity) }
@@ -112,10 +112,10 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             // The front page opens the playground whenever the app's own window is in front, as when the playground was closed.
-            if (visible && activity.hasWindowFocus()) activity.emit(JSONObject().put("type", "atlas-window").toString())
+            if (visible && activity.hasWindowFocus()) activity.emit(JSONObject().put("type", "titankeys-window").toString())
             if (visible && watchingRequested && activity.hasWindowFocus()) {
                 // Ink may have blurred the field while the window was away; ask the page to autofocus again.
-                activity.emit(JSONObject().put("type", "atlas-focus").toString())
+                activity.emit(JSONObject().put("type", "titankeys-focus").toString())
                 val editor = previewEditor(activity.window.decorView)
                 if (editor != null && !editor.hasFocus()) {
                     editor.requestFocus()
@@ -130,7 +130,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         override fun onChange(selfChange: Boolean) = publishState()
     }
 
-    private fun publishState() = activity.emit(JSONObject().put("type", "atlas-state").toString())
+    private fun publishState() = activity.emit(JSONObject().put("type", "titankeys-state").toString())
 
     private fun previewEditor(view: View): EditText? = when {
         view is EditText && view.isShown -> view
@@ -169,7 +169,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                         "nothing you typed. It's only sent if you send it.")
                     .setPositiveButton("Send it") { _, _ ->
                         CrashReport.offered(activity)
-                        activity.startActivity(com.atlas.connected.Connected.pageIntent(activity, REPORT_PAGE))
+                        activity.startActivity(com.titankeys.connected.Connected.pageIntent(activity, REPORT_PAGE))
                     }
                     .setNegativeButton("No thanks") { _, _ -> CrashReport.clear(activity) }
                     .setOnCancelListener { CrashReport.clear(activity) }
@@ -180,7 +180,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 
     private fun syncPreview() {
         if (visible && watchingRequested) {
-            if (stopWatching == null) stopWatching = Trace.listen { activity.emit(it.put("type", "atlas-trace").toString()) }
+            if (stopWatching == null) stopWatching = Trace.listen { activity.emit(it.put("type", "titankeys-trace").toString()) }
         } else {
             stopWatching?.invoke()
             stopWatching = null
@@ -409,7 +409,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 "playground", "playgroundFromEnd" -> {
                     // The answer comes as a message when the playground closes. A request held open that long would time out.
                     GuideActivity.playground(activity, fromEnd = operation == "playgroundFromEnd") { action ->
-                        activity.emit(JSONObject().put("type", "atlas-playground").put("action", action).toString())
+                        activity.emit(JSONObject().put("type", "titankeys-playground").put("action", action).toString())
                     }
                     "null"
                 }
@@ -505,7 +505,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     press.meaning()
                     "null"
                 }
-                else -> throw IllegalArgumentException("Unknown Atlas operation: $operation")
+                else -> throw IllegalArgumentException("Unknown TitanKeys operation: $operation")
             }
             if (result != null) complete(NativeResult.Success(result))
         } catch (error: Exception) {
@@ -739,7 +739,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 activity.applyAccent()
             }
             // A pick sticks, even one that matches the phone's text size. A keyboard that is up makes its bar again at once
-            // (AtlasIme.followBarSize); one that isn't takes it the next time it shows.
+            // (TitanKeysIme.followBarSize); one that isn't takes it the next time it shows.
             "barTextSize" -> FixedScale.size(activity, FixedScale.Size.of(value as String))
             "enterKey" -> TypingSettings.enterKey(activity, value as String)
             "snippetStart" -> TypingSettings.snippetStart(activity, value as String)

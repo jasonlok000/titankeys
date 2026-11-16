@@ -98,4 +98,6 @@
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=yue-jyutping" android:subtypeId="621138676" />
     <subtype android:label="@string/im_zh_pinyin" android:imeSubtypeLocale="zh" android:languageTag="zh"
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=zh-pinyin" android:subtypeId="631032624" />
+    <subtype android:label="@string/im_ja" android:imeSubtypeLocale="ja" android:languageTag="ja"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=ja" android:subtypeId="-38894187" />
 </input-method>

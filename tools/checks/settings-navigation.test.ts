@@ -49,6 +49,10 @@ test("deep links land under the right parents", () => {
   expect(parentOf("/settings/guide-boring")).toBe("/settings/guide");
   expect(parentOf("/settings/data/reset")).toBe("/settings/data");
   expect(parentOf("/settings/snippets/edit")).toBe("/settings/snippets");
+  // A language's page, and its options, go back to the Languages list, not to the top of Settings.
+  expect(parentOf("/settings/languages/language")).toBe("/settings/languages");
+  expect(parentOf("/settings/spelling")).toBe("/settings/languages");
+  expect(parentOf("/settings/chinese")).toBe("/settings/languages");
 });
 
 test("only the top of Settings has ×; every other page gets Ink's ← alone", () => {

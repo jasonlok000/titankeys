@@ -14,12 +14,14 @@ PATH=$sdk/platform-tools:$PATH
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/classes" "$work/src"
+ort=$TK_ORT/onnxruntime-android-1.20.0-classes.jar
+[ -f "$ort" ] || { echo "no ONNX Runtime jar at $ort: set TK_ORT (tools/dev/env.sh)" >&2; exit 1; }
 cp "$TREE/android/kotlin/com/titankeys/keyboard/Layout.kt" "$work/src/"
-"$kotlin/bin/kotlinc" -language-version 2.2 -no-stdlib -no-reflect -classpath "$stdlib" -d "$work/classes" "$work/src/Layout.kt" 2>/dev/null
-javac -nowarn --release 17 -cp "$work/classes:$android:$stdlib:$TK_ORT/onnxruntime-android-1.20.0-classes.jar" -d "$work/classes" \
-  "$TREE"/android/kotlin/com/titankeys/engine/*.java "$TREE"/android/kotlin/org/futo/ml/inference/*.java "$BASE/tools/BaselineRunner.java" 2>&1 | grep -v '^Note' || true
+tk_compile Kotlin "$kotlin/bin/kotlinc" -language-version 2.2 -no-stdlib -no-reflect -classpath "$stdlib" -d "$work/classes" "$work/src/Layout.kt"
+tk_compile javac javac -nowarn --release 17 -cp "$work/classes:$android:$stdlib:$ort" -d "$work/classes" \
+  "$TREE"/android/kotlin/com/titankeys/engine/*.java "$TREE"/android/kotlin/org/futo/ml/inference/*.java "$BASE/tools/BaselineRunner.java"
 jar cf "$work/classes.jar" -C "$work/classes" .
-"$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/checks.zip" "$work/classes.jar" "$stdlib" 2>&1 | grep -v 'warning\|Warning' | head -5 || true
+tk_compile d8 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/checks.zip" "$work/classes.jar" "$stdlib"
 device=/data/local/tmp/tk-baseline
 TK_PHONE_LOCK_WAIT=900 . "$TK_REPO/tools/phone-lock.sh"
 tk_adb shell mkdir -p "$device/models"

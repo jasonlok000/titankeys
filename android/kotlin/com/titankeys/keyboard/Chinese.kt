@@ -45,24 +45,28 @@ object ChineseRow {
     fun keys(text: String): Int = maxOf(1, (units(text) + 3) / 4)
 
     /**
-     * The key columns of each choice that fits, in order, from [first] to [last]: as many as fit, each as wide as it needs.
-     * A choice that doesn't fit ends the row, so the order stays the engine's. A first choice wider than the whole row takes
-     * the whole row, its text shrunk to fit.
+     * Each choice's key columns, from [first] to [last], in the engine's order, each as wide as it needs; null for a choice
+     * that doesn't fit the room left, which waits for the bigger menu while shorter ones after it still take the row (a
+     * Japanese sentence is wide, and its parts come after it). A first choice wider than the whole row takes the whole row,
+     * its text shrunk to fit.
      */
-    fun place(choices: List<String>, first: Int = FIRST, last: Int = LAST): List<IntRange> {
-        val placed = ArrayList<IntRange>()
+    fun place(choices: List<String>, first: Int = FIRST, last: Int = LAST): List<IntRange?> {
+        val placed = ArrayList<IntRange?>()
         var at = first
         for (choice in choices) {
-            val keys = if (placed.isEmpty()) minOf(keys(choice), last - first + 1) else keys(choice)
-            if (at + keys - 1 > last) break
+            val keys = if (at == first) minOf(keys(choice), last - first + 1) else keys(choice)
+            if (at + keys - 1 > last) {
+                placed += null
+                continue
+            }
             placed += at until at + keys
             at += keys
         }
         return placed
     }
 
-    /** The choice over key column [column], given each choice's columns, or -1. */
-    fun choiceAt(column: Int, columns: List<IntRange>) = columns.indexOfFirst { column in it }
+    /** The choice over key column [column], given each choice's columns (null for one not in the row), or -1. */
+    fun choiceAt(column: Int, columns: List<IntRange?>) = columns.indexOfFirst { it != null && column in it }
 
     /** The column of letter [key] in the rows that pick, or -1: Q and A and P are columns too, but have no choice. */
     fun column(key: String) = Picker.column(key, ROWS)
@@ -142,6 +146,10 @@ object ChineseKeys {
     fun isChinese(method: InputMethod) = method.engine == ENGINE
     /** Rime's engine name in im.json, as RimeEngine.ENGINE. */
     const val ENGINE = "rime"
+    /** The engines whose input methods use this bar and its keys: Chinese's Rime and Japanese's Mozc (MozcEngine.ENGINE). */
+    val BAR_ENGINES = setOf(ENGINE, "mozc")
+    /** Whether [method] types through the bar of choices: Chinese and Japanese. The English word is Chinese's alone. */
+    fun usesBar(method: InputMethod) = method.engine in BAR_ENGINES
 
     /** Rime's option for plain (ASCII) punctuation, the setting's. */
     const val PLAIN_PUNCTUATION = "ascii_punct"

@@ -1,0 +1,6 @@
+f14fca7c5e9357bdbff2382eb5454896866569b5aec7ece20e9d4b9796705ac8  native/mozc/tk/BUILD.bazel
+bca55d21bcdad6ec60e81f36c03b8e777b793778f621eac0b092cd577362708a  native/mozc/tk/tk.map
+012ee0360ec9333beeea9a3ed42fe7c6b285979a4b7e08aaddb55eba41572c99  native/mozc/tk/tk_core.h
+a3fcf90526ade93bcfda131bbc00bb784684836dfd6151242767fec1ba2711dd  native/mozc/tk/tk_core.cc
+e76a517c561237a74ec07fd44a46d88494c31fb9475078e85d0f18d9ee3ee34b  native/mozc/tk/tk_jni.cc
+e3684186672d8555a5e5afd1dc8a791a7769aec626e87f9b13b69edbdeec838a  android/jniLibs/arm64-v8a/libmozc_tk.so

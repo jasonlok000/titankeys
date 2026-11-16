@@ -797,5 +797,22 @@
    "script": "Hani",
    "experimental": false
   }
+ },
+ {
+  "id": "ja",
+  "name": "日本語",
+  "nameEnglish": "Japanese",
+  "label": "あ",
+  "locale": "ja",
+  "script": "Jpan",
+  "engine": "mozc",
+  "language": {
+   "id": "ja",
+   "name": "日本語",
+   "nameEnglish": "Japanese",
+   "label": "あ",
+   "script": "Jpan",
+   "experimental": true
+  }
  }
 ]

@@ -1,0 +1,25 @@
+{
+  "id": "ja",
+  "name": "日本語",
+  "nameEnglish": "Japanese",
+  "label": "あ",
+  "locale": "ja",
+  "script": "Jpan",
+  "keys": "qwerty",
+  "accents": {},
+  "words": null,
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": "。？！.?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": {
+    "mozc": "oss"
+  },
+  "source": {
+    "name": "CLDR 49 localeDisplayNames: 日本語",
+    "words": "Mozc's open-source dictionary"
+  }
+}

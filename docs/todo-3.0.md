@@ -94,6 +94,18 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - `bun run check` (228) and all 41 suites pass, and the Debug build is
     `~/build/m1-apks/main-rename-debug.apk`.
   - Not yet run: the phone update test.
+- **main at 4f3278f (06:05) has the language framework,** with 36 input methods:
+  - Latin script: es fr de pt it nl pl tr sv da nb nn fi cs sk ro hu id hr sl lv lt ca gl et is af eo az ga eu;
+  - national layouts: ru uk be bg el.
+
+  It brings Settings > Languages with American spelling first (#80), one keyboard-list entry per input method (#76), the
+  held-Sym overlay, accents on hold shown on the bar, and the engine interface and choice picker for Rime. Also the
+  review's follow-up fixes and the setup-loop fix.
+  - `bun run check` (242) and all 41 suites pass. The Debug build is 135 MB.
+  - The build needed a clean Ink folder: Gradle's incremental build kept stale classes across the rename. The shared
+    verify copy (`~/build/tk-overnight/.ink`) may need the same once it's free.
+  - Skipped languages: Serbian Cyrillic (layout mapping), Serbian Latin, Macedonian and Georgian (licence unclear), Bosnian
+    (list didn't parse), Kazakh (no Android layout).
 - **Review of M1 and M2 (05:50), merged at 3084dd0 with the Worker redeployed.** Seven bugs fixed, each with a test:
   - a flick took two words in web fields, whose spaces are non-breaking;
   - reports over 20 parts couldn't upload;

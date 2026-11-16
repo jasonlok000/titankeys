@@ -71,6 +71,8 @@ tk_touch_check() {
   while true; do
     why=$(tk_touch_check_once) && return 0
     status=$?
+    # Whatever is wrong, release TitanKeys is the keyboard again first: the owner may be in another app.
+    tk_ime_release >/dev/null
     [ $status = 2 ] && { echo "$why"; return 1; }
     # Never take the screen over from a finance or maps app (the Master's rule, 2026-11-16): stop, and send nothing.
     [ $status = 4 ] && { echo "STOP: $why"; return 1; }
@@ -89,6 +91,40 @@ tk_touch_check() {
   done
 }
 
+# The keyboard (the Master's rule, 2026-11-16): TitanKeys Debug is the keyboard only while a check types in Debug's own field,
+# and release TitanKeys goes back right after, read back each time. If the front stops being Debug while Debug is the keyboard,
+# release goes back at once, before anything else (tk_touch_check does it). A runner that keeps Debug on for a whole check, like
+# checks.py, sets TK_IME_HELD=1, and touch.sh and guarded.sh then leave the keyboard to it.
+TK_RELEASE_IME="${TK_RELEASE_IME:-com.titankeys/com.atlas.keyboard.AtlasIme}"
+TK_DEBUG_IME="${TK_DEBUG_IME:-$TK_APP/com.titankeys.keyboard.TitanKeysIme}"
+tk_ime_now() { tk_adb shell settings get secure default_input_method | tr -d '\r'; }
+tk_ime_release() {
+  local now
+  now=$(tk_ime_now)
+  [ "$now" = "$TK_RELEASE_IME" ] && { echo "keyboard: release TitanKeys"; return 0; }
+  tk_adb shell ime set "$TK_RELEASE_IME" >/dev/null 2>&1
+  now=$(tk_ime_now)
+  if [ "$now" = "$TK_RELEASE_IME" ]; then echo "keyboard: release TitanKeys"; else echo "WARNING: the keyboard is $now, not release TitanKeys"; return 1; fi
+}
+# Debug as the keyboard, read back. Only call it after the gate has passed.
+tk_ime_debug() {
+  local now
+  tk_adb shell ime enable "$TK_DEBUG_IME" >/dev/null 2>&1
+  tk_adb shell ime set "$TK_DEBUG_IME" >/dev/null 2>&1
+  now=$(tk_ime_now)
+  [ "$now" = "$TK_DEBUG_IME" ] || { echo "the keyboard is $now, not $TK_DEBUG_IME"; tk_ime_release; return 1; }
+  # The field takes a moment to connect to the new keyboard.
+  sleep 1
+}
+
+# What every tool does on its way out: release TitanKeys back as the keyboard unless a runner holds Debug on, then the lock.
+tk_touch_exit() {
+  # TK_NO_PHONE=1: the offline tests, which never reach a phone.
+  [ "${TK_IME_HELD:-}" = 1 ] || [ "${TK_NO_PHONE:-}" = 1 ] || tk_ime_release >/dev/null
+  [ "${TK_LOCK_MINE:-}" = 1 ] && { flock -u 9 2>/dev/null; exec 9>&-; }
+}
+trap tk_touch_exit EXIT
+
 # Holds the shared phone lock until this process ends. A tool started by one that holds it (TK_PHONE_LOCKED=1) doesn't take it
 # again, which would wait for itself.
 tk_touch_lock() {
@@ -99,7 +135,7 @@ tk_touch_lock() {
   exec 9>"$TK_BUILD/tk-tools/.lock"
   flock -n 9 || { echo "waiting for the phone lock (another phone run holds it)"; flock 9; }
   export TK_PHONE_LOCKED=1
-  trap 'flock -u 9 2>/dev/null; exec 9>&-' EXIT
+  TK_LOCK_MINE=1
 }
 
 # Puts the injector on the phone, unless the same one is there. Builds it first if needed.
@@ -113,11 +149,19 @@ tk_touch_install() {
   fi
 }
 
+# The gate, then Debug as the keyboard (unless a runner holds it on), then the gate again with it. On the way out, release.
+tk_touch_ready() {
+  tk_touch_check || return 1
+  [ "${TK_IME_HELD:-}" = 1 ] && return 0
+  tk_ime_debug || return 1
+  tk_touch_check
+}
+
 # tk_touch_play SCRIPT [DELAY_MS SHOT_NAME]: checks, then plays SCRIPT. With DELAY_MS and SHOT_NAME, it also takes a screenshot
 # (DELAY_MS counts from the script's start, after the injector's 800 ms for its uinput twins to be added: TK_TOUCH_SETTLE_MS)
 # DELAY_MS after the start, while the gesture is still on screen (see tk_touch_shot).
 tk_touch_play() {
-  tk_touch_check || return 1
+  tk_touch_ready || return 1
   tk_adb push -q "$1" "$TK_PHONE_SCRIPT" >/dev/null || return 3
   if [ -n "${3:-}" ]; then
     local raw="$TK_TOUCH_DIR/shots/raw-$3.png"

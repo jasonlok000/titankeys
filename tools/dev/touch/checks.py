@@ -55,6 +55,14 @@ def guarded(*args):
     time.sleep(.3)
 
 
+def keyboard(which):
+    """TitanKeys Debug ("debug", after the gate) or release TitanKeys ("release") as the keyboard, read back."""
+    result = subprocess.run(["bash", os.path.join(HERE, "ime.sh"), which], capture_output=True, text=True)
+    out = (result.stdout + result.stderr).strip()
+    if result.returncode != 0 or "WARNING" in out:
+        raise Stop(f"keyboard {which}: {out}")
+
+
 def field():
     """The focused text field of TK_APP, read from the window's hierarchy: its text. The dump is deleted at once."""
     path = "/data/local/tmp/tk-touch-ui.xml"
@@ -187,7 +195,14 @@ def main():
         held = lock()  # noqa: F841 (kept open until the end)
     try:
         for name in names or CHECKS:
-            CHECKS[name]()
+            # Debug is the keyboard only for the check itself, and release TitanKeys goes back right after, read back.
+            keyboard("debug")
+            os.environ["TK_IME_HELD"] = "1"
+            try:
+                CHECKS[name]()
+            finally:
+                os.environ.pop("TK_IME_HELD", None)
+                keyboard("release")
     except Stop as stop:
         print(f"STOP: the run ended: {stop}", flush=True)
         sys.exit(1)

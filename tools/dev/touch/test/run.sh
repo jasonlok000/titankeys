@@ -12,6 +12,7 @@ python3 tools/dev/touch/test/test_touch.py "$work/alignment.txt" "$work/tk-injec
 # The phone lock: a tool holds it for its whole run and gives it back at the end, and one it starts doesn't wait for it.
 # On a lock file of its own, never the real one.
 export TK_BUILD="$work/build"
+export TK_NO_PHONE=1
 lock="$TK_BUILD/tk-tools/.lock"
 held() { mkdir -p "$TK_BUILD/tk-tools"; ! flock -n "$lock" true; }
 bash -c '. tools/dev/env.sh; . tools/dev/phone/safety.sh; . tools/dev/touch/touchlib.sh; tk_touch_lock

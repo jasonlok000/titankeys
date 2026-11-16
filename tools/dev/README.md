@@ -75,7 +75,8 @@ fields has the keyboard. Otherwise nothing is sent. The owner may use the phone 
 no Debug field has the keyboard, TitanKeys Debug's Space gestures screen comes back with `am start` (twice at most) and
 everything is checked again first. A screen that's off or locked, or a navigation app, stops the run after a second try. The
 release app is never a target: `TK_APP` must end in `.debug`. If the injector stops part way, it lets go of every key and lifts
-the finger. Every tool holds the shared phone lock, `~/build/tk-tools/.lock`, for its whole run, so no other phone run overlaps.
+the finger. TitanKeys Debug is the keyboard only while a check types in its field: release TitanKeys goes back right after,
+read back each time, and at once whenever the front stops being Debug. Every tool holds the shared phone lock, `~/build/tk-tools/.lock`, for its whole run, so no other phone run overlaps.
 
 | Tool | Does | Needs |
 |---|---|---|

@@ -29,7 +29,9 @@ From the study's ranking:
   Mandarin in Pinyin, with the Chinese variant setting.
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
 - **Thai** waits for a third layer of keys ("To check while building").
-- **Not in 3.0:** right-to-left scripts, Indic scripts, Japanese, handwriting, swiping and a next-word model in other
+- **Japanese through Mozc,** experimental, on Chinese's bar ("Japanese" below; owner, 2026-11-16: "starting with japanese
+  hindi thai etc, yes go ahead").
+- **Not in 3.0:** right-to-left scripts, Indic scripts, handwriting, swiping and a next-word model in other
   languages, and translating the app, the guide and the playground.
 
 The order: Spanish, French and German first to prove the framework; the other big Latin languages; Chinese alongside; then
@@ -190,7 +192,8 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
   today, while the choices are on the bar.
 - **The choices sit over W to O,** from the left, each as wide as it needs: one key for one or two characters, two keys for
   three or four (屌你老母 over two), and so on (`ChineseRow.keys`: a Chinese character counts two, a Latin letter one, four to
-  a key). They fill W to O in order; a choice that doesn't fit, and everything after it, waits for the bigger menu. There's
+  a key). They fill W to O in order; a choice too wide for the room left waits for the bigger menu, and shorter ones after it
+  still take the row (a Japanese sentence is wide, and its parts follow it). There's
   no paging in the row.
 - **P has no choice.** It shows a small "more" cue (`⋯`) when the engine has more choices than the row shows.
 
@@ -328,6 +331,57 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   or Backspace gives an `EngineState` with the text to commit, the text being built (floating above the bar) and the
   picker's choices. A state that isn't `handled` may still commit: the keyboard writes that first, then handles the key as
   usual (Korean's syllable before a space, Rime's code before a capital). Data-only input methods use no engine.
+
+## Japanese
+
+Japanese types through Mozc, Google's open-source engine (BSD-3-Clause), as the engines study recommends
+([docs/studies/56-engines.md](studies/56-engines.md)): 20 of 22 first choices right on the PC, against 12 for Rime with a
+Japanese schema. One input method, 日本語, its mark あ, marked experimental like every language but Chinese.
+
+**On the bar, exactly as Chinese** ("Chinese on the bar"), through `InputEngine`: the text being built floats above the bar
+(hiragana, with the romaji not yet a kana at its end), the mark sits over Q, the choices over W to O as wide as they need,
+the five ways to pick, and hold P for the bigger menu. `ChineseKeys.usesBar` names the engines that type this way: Rime and
+Mozc. The English word is Chinese's alone: Mozc offers the letters as they are among its own choices.
+
+**Mozc's Android way:** choices as you type, whole sentences first, and the parts of a sentence among them. A pick of a
+part types it and leaves the rest to convert, so a sentence that's wrong in one place is fixed there. Mozc learns what's
+picked.
+
+**Keys:**
+- Letters are romaji through Mozc's QWERTY table (`kyou` → きょう, `nn` → ん, `-` → ー inside a word). No capitals: Shift
+  picks, as in Chinese.
+- **Space** types the first choice. **Enter** types the romaji as typed. **Backspace** takes off the last romaji letter:
+  Mozc starts again from the letters left, so it never takes a whole kana.
+- **Punctuation** is Japanese, full-width (、。「」・〜, and ？！ and the rest in their full-width forms), like Chinese's;
+  with text being built, its first choice goes first. **Digits stay plain.**
+
+**The bridge:**
+- `native/mozc/tk/`: TitanKeys' own small layer in Mozc's tree. `tk_core` drives Mozc's `SessionHandler` in its Android way
+  with the QWERTY romaji table; `tk_jni` registers `com.titankeys.mozc.MozcNative` (`start`, `stop`, `key`, `pickAt`,
+  `clear`, `state`); `mozc_tool` is the same core on the PC, for the checks. Kotlin never sees Mozc's protobuf, and the
+  library exports only `JNI_OnLoad` (`tk.map`), keeping Mozc's own libc++ inside.
+- `native/mozc/build.sh` builds it in WSL from the pinned Mozc commit, with Mozc's own pinned dependencies (NDK r29, Bazel
+  through bazelisk), into `android/jniLibs/arm64-v8a/libmozc_tk.so` and `android/assets/mozc/mozc.data`, listed in
+  `android/assets/mozc.sha256`. Sources and licences: `native/mozc/SOURCES.md`.
+- `com.titankeys.mozc.MozcEngine` copies `mozc.data` out once on the first use (Mozc opens it by path), through Rime's checked,
+  all-or-nothing copy (`RimeData`), into `files/engines/mozc/shared`; the user's history is in `files/engines/mozc/user`.
+
+**Checks:** `tests/japanese` (the engine's keys with a stand-in for Mozc, and the romaji readings turn into);
+`tests/japanese/corpus.sh`, Tatoeba's reviewed Japanese sentences (CC BY 2.0 FR) typed as romaji through this path, against
+the sentence as written and Mozc's own desktop conversion. On 2,000 of them (seed 56, 2026-11-16):
+
+| | Exactly as written | Characters right |
+| --- | ---: | ---: |
+| TitanKeys (Android's way, the first choice of each part between marks) | 66.6% | 95.3% |
+| Mozc's own desktop conversion (the whole reading, Space) | 66.9% | 95.4% |
+
+TitanKeys gives the same text as Mozc's desktop for 98.1% of them: Mozc's own quality. The rest of "exactly as written" is
+mostly spelling style that's right either way (子ども for 子供, 来る for くる) and Mozc's open dictionary's homophones (変える
+for 買える, 景観 for 警官), the second choice or a pick away.
+
+**Size** (measured in this build's APK, 2026-11-16): `libmozc_tk.so` 2.83 MB, stored as it is (the study's 5.33 MB before
+only `JNI_OnLoad` was exported), and `mozc.data` 18.96 MB, 13.19 MB compressed: 16.0 MB in the APK, and 19 MB copied out on
+the phone on the first use. The whole debug APK is 167.4 MB, under Google Play's 200 MB.
 
 ## Korean and Vietnamese
 

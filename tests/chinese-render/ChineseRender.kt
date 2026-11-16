@@ -91,8 +91,10 @@ private fun bar(out: File, name: String, mark: String, code: String, listed: Lis
     val line = top + px(StripFit.LINE_DP)
     val word = px(20f)
     val items = EnglishOffer.withWord(listed.take(ChineseRow.ASK), english)
-    val columns = ChineseRow.place(items)
-    val more = listed.size > columns.size - (if (english != null && columns.size > EnglishOffer.PLACE) 1 else 0)
+    val placed = ChineseRow.place(items)
+    val shown = items.indices.filter { placed[it] != null }
+    val columns = shown.map { placed[it]!! }
+    val more = listed.size > shown.count { !(english != null && it == EnglishOffer.PLACE) }
     // The code: a thin line floating just above the bar's left edge, over the app.
     if (code.isNotEmpty()) {
         val height = px(22f)
@@ -106,7 +108,7 @@ private fun bar(out: File, name: String, mark: String, code: String, listed: Lis
         g.drawMixed(code, left + pad, box.y + height / 2 + textSize * StripFit.X_HEIGHT / 2, textSize)
     }
     if (mark.isNotEmpty()) g.centred(mark, column(ChineseRow.MARK).first, column(ChineseRow.MARK).second, line, word, ORANGE)
-    val hovered = if (hover.isEmpty()) -1 else ChineseRow.choiceAt(ChineseRow.column(hover), columns)
+    val hovered = if (hover.isEmpty()) -1 else shown.indexOf(ChineseRow.choiceAt(ChineseRow.column(hover), placed))
     for ((index, cols) in columns.withIndex()) {
         val left = column(cols.first).first
         val right = column(cols.last).second
@@ -115,7 +117,7 @@ private fun bar(out: File, name: String, mark: String, code: String, listed: Lis
             g.color = Color(ORANGE.red, ORANGE.green, ORANGE.blue, (255 * .24f).toInt())
             g.fill(RoundRectangle2D.Float(left + px(2f), line - pill / 2, right - left - px(4f), pill, pill, pill))
         }
-        g.centred(items[index], left, right, line, word, if (index == hovered) ORANGE else INK)
+        g.centred(items[shown[index]], left, right, line, word, if (index == hovered) ORANGE else INK)
     }
     if (more) g.centred(ChineseRow.MORE_CUE, column(ChineseRow.MORE).first, column(ChineseRow.MORE).second, line, word, MUTED)
     g.dispose()
@@ -189,5 +191,11 @@ fun main(args: Array<String>) {
     menu(out, "menu-1.png", "nei", nei, 0, hover = "D")
     menu(out, "menu-2.png", "nei", nei, 1)
     menu(out, "menu-wide.png", "diu nei lou mou", diu + nei.take(14), 0)
-    println("Chinese renders in $out")
+    // Japanese on the same bar: what Mozc gave on the PC through mozc_tool, the app's own path (2026-11-16).
+    val kyou = "今日はいい天気ですね 今日は良い天気ですね 今日 今日は きょう キョウハイイテンキデスネ きょうは 教は 強は 凶は 経は 教派 キョウ キョ 凶 叶 共 匡 叫 交 向 杏 亨 狂 劫 享 京 供 協 況".split(" ")
+    bar(out, "ja-row-sentence.png", "あ", "きょうはいいてんきですね", kyou, null)
+    val nihon = "日本 にほん 二本 ２本 2本 ニホン 日本語 日本海 日本橋 二 荷 似 弐 ２ 2 Ⅱ ⅱ ② ² ₂ 丹 煮 仁保 煎 薫 尼 而 爾 餌 迩".split(" ")
+    bar(out, "ja-row-words.png", "あ", "にほん", nihon, null, hover = "T")
+    menu(out, "ja-menu.png", "きょうはいいてんきですね", kyou, 0, hover = "E")
+    println("Chinese and Japanese renders in $out")
 }

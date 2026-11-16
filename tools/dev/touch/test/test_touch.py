@@ -138,6 +138,14 @@ def main():
     crunch = next((t for t, x, y in read if math.hypot((x - x0) * 10, (y - y0) * 4) >= 1.5), None)
     check(crunch is not None and crunch - t0 <= 60, f"flick: 1.5 keys after {None if crunch is None else crunch - t0} ms")
 
+    # A flick up starts on its key and goes straight up a row: ChineseKeys.flickColumn wants up more than across.
+    [touch] = touches(build("flickup:f"))
+    read = [(t, *read_back(alignment, rx, ry)) for t, rx, ry, _ in touch]
+    (t0, x0, y0), (t1, x1, y1) = read[0], read[-1]
+    check(.3 <= x0 < .4 and .25 <= y0 < .5, f"flickup:f: starts at {x0:.3f},{y0:.3f}, not on F")
+    check((y1 - y0) * 4 <= -.8 and abs(x1 - x0) * 10 < abs(y1 - y0) * 4 / 4, f"flickup:f: to {x1:.3f},{y1:.3f}, not straight up")
+    check(t1 - t0 <= 150, f"flickup:f: {t1 - t0:.0f} ms")
+
     # Space taps: in CursorGesture's zone, each tap short and still, the gaps inside its window.
     for count in (1, 2, 3):
         taps = touches(build(f"space:{count}"))

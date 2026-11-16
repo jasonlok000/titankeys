@@ -72,6 +72,12 @@ test("a flick up picks, and the row never pages", () => {
   expect(swipes).not.toContain("engine.page(");
 });
 
+test("the menu's P counts its pages from the first", () => {
+  const menu = read("android/kotlin/com/titankeys/keyboard/ChoicesMenu.kt");
+  expect(menu).toContain("val want = maxOf(starts.last() + 2 * PER_PAGE, COUNTED)");
+  expect(menu).toContain("val COUNTED = 10 * PER_PAGE");
+});
+
 test("only holding P opens the bigger menu", () => {
   const callers = [...ime.matchAll(/openChoicesMenu\(\)/g)].length;
   // Its definition and the one call, in P's hold.
@@ -97,6 +103,12 @@ test("the menu: a press picks, Enter and Backspace turn pages, Sym is the ✕, B
 });
 
 test("Enter types the code as letters, Backspace takes the last letter", () => {
+  // Enter with a code pending is the engine's, before the field's own Enter (phone check, 2026-11-16: a new line went in).
+  const keys = body(ime, "key");
+  expect(keys.indexOf("if (enteringCode(event))")).toBeGreaterThan(-1);
+  expect(keys.indexOf("if (enteringCode(event))")).toBeLessThan(keys.indexOf("enter(event)) return true"));
+  expect(body(ime, "enteringCode")).toContain("openPicker() is LanguagePicker.Choices");
+  expect(read("android/kotlin/com/titankeys/rime/RimeEngine.kt")).not.toContain("send(RimeKeys.RETURN)");
   const key = body(ime, "engineKey");
   expect(key).toContain("KeyEvent.KEYCODE_DEL -> if (alt) return false else engine.backspace()");
   expect(key).toContain("KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (alt) return false else engine.enter()");

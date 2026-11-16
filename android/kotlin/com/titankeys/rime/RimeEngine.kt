@@ -160,7 +160,13 @@ class RimeEngine(
         else -> send(RimeKeys.SPACE)
     }
 
-    override fun enter(): EngineState = if (composing()) send(RimeKeys.RETURN) else EngineState.UNHANDLED
+    /** Types the code as letters, as typed (Rime's input), and clears it. With no code, Enter is the keyboard's. */
+    override fun enter(): EngineState {
+        if (!composing()) return EngineState.UNHANDLED
+        val letters = rime.read()?.input.orEmpty()
+        rime.reset()
+        return read(handled = true).let { it.copy(commit = it.commit + letters) }
+    }
 
     override fun backspace(): EngineState = if (composing()) send(RimeKeys.BACKSPACE) else EngineState.UNHANDLED
 

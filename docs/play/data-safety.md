@@ -120,3 +120,26 @@ TitanKeys never uses an IP address to find where someone is, and never keeps one
 3. **Contributions in the Play build:** yes, off by default, as in the GitHub build. Everything in 2.1 ships in both builds. The form is filled in as above before the first upload.
 4. **Typing log (#16) in the Play build:** left out. It stays in the GitHub build.
 5. **Purpose:** Analytics only. Google's Analytics covers "future performance improvements", which is what training the swipe models is.
+
+## 3.0: one sharing toggle with daily counts (#96, draft, not yet in effect)
+
+Draft for the owner. The design is in [docs/analytics.md](../analytics.md). Fill these in on the form **before** the first Play release that sends counts, not earlier: the form must match the release on Play.
+
+Share swipes becomes **Sharing**: one opt-in that sends swipe examples and once-a-day totals. All of it fits data types already declared above, so the top-level answers stay the same (collected, not shared, optional, encrypted in transit, deletion on request).
+
+| Data type | Change | Answers for the new part |
+|---|---|---|
+| App interactions | Adds the daily feature counts (joins, autocorrect and apostrophe fixes, swipes by word length, bar picks, Chinese picking, gestures), guide progress, and which settings differ from their defaults (changed or not only) | Collected; not shared; not ephemeral (kept 1 year); optional; Analytics |
+| Diagnostics | Adds speed bands (keyboard open time, swipe read time) and the Android version | Same as the row |
+| Crash logs | Adds daily crash and freeze counts, without details, through Sharing. Today Crash logs come only from the report form. | Collected; not shared; not ephemeral (1 year); optional; Analytics |
+| Device or other IDs | Adds the counts ID: random, made on the phone, replaced every 30 days, never sent with the contributor ID | Same as the row |
+
+**The envelope and this form.** Counts that fit the kinds in analytics.md §1 (K2 to K6) fall under App interactions, Diagnostics and Crash logs. Adding one needs no change here. A count that needs a new data type or a purpose other than Analytics needs this form changed before that release, as well as the policy and the user's consent.
+
+**Things the 3.0 code must keep true for these answers:**
+- Nothing is counted for sending, or sent, before the user taps "Turn on sharing" for the current envelope.
+- Nothing comes from the Accessibility service, so its declaration stays "No".
+- There is no advertising ID: no `AD_ID` permission in the merged manifest.
+
+**Not verified:**
+- The 2026 form's exact names and examples for Crash logs, Diagnostics and App interactions. Check them on the live form when filling it in.

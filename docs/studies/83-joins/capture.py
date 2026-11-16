@@ -47,7 +47,8 @@ UNSURE = 1.6           # a run matched worse than this, in keys, is left out of 
 FLICKER = 90           # the keyboard's lift-off grace, ms (JoinReplay's default)
 
 
-def touches(path):
+def touches(path, lifts=None):
+    """Each touch's samples (pad x, pad y, ms, size). With [lifts], also appends each touch's BTN_TOUCH UP time."""
     out, cur, frame = [], None, {}
     for line in open(path):
         if not line.startswith('['):
@@ -63,6 +64,8 @@ def touches(path):
             elif cur is not None:
                 if cur:
                     out.append(cur)
+                    if lifts is not None:
+                        lifts.append(t)
                 cur = None
         elif code.startswith('ABS_MT_'):
             frame[code] = int(val, 16)
@@ -265,8 +268,8 @@ def line_for(name, gap, size, a, b):
     return ' '.join(f)
 
 
-def main():
-    path, repo, out = sys.argv[1:4]
+def label(path, repo, out):
+    """Touches in letter space, their lift times, and every labelled gap with TitanKeys' decision and its measures."""
     os.makedirs(out, exist_ok=True)
     engine = os.path.join(repo, 'android/kotlin/com/titankeys/engine')
     classes = os.path.join(out, 'classes')
@@ -274,7 +277,8 @@ def main():
     subprocess.run(['javac', '--release', '17', '-d', classes, os.path.join(engine, 'Swipe.java'), os.path.join(engine, 'TouchAlignment.java'),
                     os.path.join(repo, 'docs/studies/83-joins/JoinReplay.java'), os.path.join(repo, 'docs/studies/83-joins/CaptureAlign.java')],
                    check=True)
-    T = calibrated(touches(path), classes, os.path.join(repo, 'android/assets/calibration/titan-2-saved.profile'))
+    lifts = []
+    T = calibrated(touches(path, lifts), classes, os.path.join(repo, 'android/assets/calibration/titan-2-saved.profile'))
     runs = runs_of(T)
     match = align(T, runs)
     # For checking the alignment by eye. It names the script's words, so it stays in the output folder.
@@ -355,6 +359,12 @@ def main():
     with open(os.path.join(out, 'capture-gaps.jsonl'), 'w') as f:
         for g in gaps:
             f.write(json.dumps(g) + '\n')
+    return T, lifts, gaps
+
+
+def main():
+    path, repo, out = sys.argv[1:4]
+    T, lifts, gaps = label(path, repo, out)
     report(gaps)
     veto(gaps, sys.argv[4] if len(sys.argv) > 4 else None)
 

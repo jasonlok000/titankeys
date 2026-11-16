@@ -17,8 +17,7 @@ javac -nowarn --release 17 -cp "$ORT/classes.jar:$android" -d "$work/classes" "$
 jar cf "$work/bench.jar" -C "$work/classes" .
 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/bench.zip" "$work/bench.jar" "$ORT/classes.jar" 2>&1 | grep -v 'warning\|Warning' | head -5 || true
 device=/data/local/tmp/tk-ort
-mkdir -p "$TK_BUILD/tk-tools"; exec 9>"$TK_BUILD/tk-tools/.lock"
-flock -w 900 9 || { echo "phone busy"; exit 3; }
+TK_PHONE_LOCK_WAIT=900 . "$TK_REPO/tools/phone-lock.sh"
 tk_adb shell mkdir -p "$device/lib"
 tk_adb push -q "$work/bench.zip" "$device/" >/dev/null
 tk_adb shell "ls $device/lib/libonnxruntime.so >/dev/null 2>&1" || tk_adb push -q "$ORT/jni/arm64-v8a/." "$device/lib/" >/dev/null

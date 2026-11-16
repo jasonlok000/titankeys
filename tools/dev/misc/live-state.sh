@@ -2,6 +2,7 @@
 # Read-only snapshot of the keyboard's state on the phone: keyboards, focus, the input method service, the keyboard's windows
 # and recent keyboard log lines. Changes nothing on the phone.
 . "$(dirname "$0")/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 echo "--- replay or instrumentation running on the phone"
 tk_adb shell ps -A -o PID,STIME,TIME,ARGS | grep -E 'com\.titankeys|com\.atlas|instrument' | grep -v grep | cut -c1-90
 echo "--- keyboards"

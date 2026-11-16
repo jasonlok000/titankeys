@@ -1,4 +1,6 @@
-# Safety checks shared by the phone tools. Sourced after ../env.sh.
+# Safety checks shared by the phone tools. Sourced after ../env.sh. Sourcing it also takes the phone lock
+# (tools/phone-lock.sh), held until the tool ends: no two phone runs overlap. Builds use another lock.
+. "$TK_REPO/tools/phone-lock.sh"
 # The rules every phone tool keeps:
 # - Stop if a navigation app is running in the foreground: the phone may be in use in a car.
 # - Check the front window before every key or tap, so input never lands in another app.

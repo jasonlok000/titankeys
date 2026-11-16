@@ -23,8 +23,7 @@ jar cf "$work/classes.jar" -C "$work/classes" .
 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/s.zip" "$work/classes.jar" "$stdlib" 2>&1 | grep -iv 'warning' | head -5 || true
 python3 -I "$BASE/tools/make_readings.py" "$CORPUS" "$work/readings.jsonl" plain
 device=/data/local/tmp/tk-baseline
-mkdir -p "$TK_BUILD/tk-tools"; exec 9>"$TK_BUILD/tk-tools/.lock"
-flock -w 3600 9 || { echo "phone busy"; exit 3; }
+TK_PHONE_LOCK_WAIT=3600 . "$TK_REPO/tools/phone-lock.sh"
 tk_adb push -q "$work/s.zip" "$device/s.zip" >/dev/null
 tk_adb push -q "$work/readings.jsonl" "$device/sweep-in.jsonl" >/dev/null
 tk_adb shell "ls $device/models/en_triples.txt >/dev/null 2>&1" || { echo "models missing on the phone"; exit 4; }

@@ -3,6 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 # Joining swipes needs no phone, so it runs first.
 bash tests/swipe/joins.sh
+# The rest uses the phone: the maintainer's phone lock, if there is one (tools/phone-lock.sh).
+. tools/phone-lock.sh
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}

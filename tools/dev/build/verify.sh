@@ -14,7 +14,8 @@ W="${TK_WORKTREE:-$TK_REPO}"
 # The build copy and the seed it takes node_modules, .ink and signing from. The seed is a checkout that has built once.
 B="${TK_VERIFY_COPY:-$TK_BUILD/tk-overnight}"
 SEED="${TK_SEED:-$TK_BUILD/titankeys}"
-# One build at a time on this machine: the lock and logs live beside the build toolchain, not in the repo.
+# One build at a time on this machine: the build lock and logs live beside the build toolchain, not in the repo. The phone has
+# a lock of its own (tools/phone-lock.sh), taken only for the phone steps, so a phone run elsewhere doesn't hold up a build.
 S="$TK_BUILD/tk-tools"
 L="$S/logs"
 mkdir -p "$L" "$B"
@@ -69,6 +70,8 @@ if [ "$MODE" != phone ] || [ "$failed" != 0 ]; then
   exit "$failed"
 fi
 
+# From here on the phone: its lock, after the build lock, never the other way round.
+. "$TK_REPO/tools/phone-lock.sh"
 # The phone tests use plain adb, so pick the phone for them.
 [ -n "$TK_ADB_SERIAL" ] && export ANDROID_SERIAL="$TK_ADB_SERIAL"
 if ! timeout 20 adb get-state >/dev/null 2>&1 && [ -n "$TK_ADB_SERIAL" ]; then

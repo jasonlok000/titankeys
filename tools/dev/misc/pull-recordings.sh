@@ -4,6 +4,7 @@
 # Sessions can hold typed text, so they stay in $TK_DATA and never go in the repo. TK_APP picks the package (default the debug build).
 set -u
 . "$(dirname "$0")/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 app=${TK_APP:-com.titankeys.debug}
 prefix=${1:-}
 dir=/sdcard/Android/data/$app/files/recordings

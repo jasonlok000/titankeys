@@ -9,7 +9,6 @@ shared phone lock from start to end.
 Usage: checks.py [NAME...]   (default: all; see --list)
 Screenshots go to $TK_OUT/touch/shots, without the status bar, for what only the eye can judge (the dots, the trail, the pill).
 """
-import fcntl
 import os
 import re
 import subprocess
@@ -179,19 +178,10 @@ CHECKS = {
 
 
 def lock():
-    """Holds the shared phone lock for the whole run, as every phone tool does; the tools this starts see TK_PHONE_LOCKED."""
-    subprocess.run(["adb", "start-server"], capture_output=True)
-    folder = os.path.join(os.environ.get("TK_BUILD", os.path.expanduser("~/build")), "tk-tools")
-    os.makedirs(folder, exist_ok=True)
-    handle = open(os.path.join(folder, ".lock"), "w")
-    try:
-        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        print("waiting for the phone lock (another phone run holds it)", flush=True)
-        fcntl.flock(handle, fcntl.LOCK_EX)
-    os.environ["TK_PHONE_LOCKED"] = "1"
-    # Python opens it so that no program started from here inherits it: the lock goes when this process ends.
-    return handle
+    """Holds the phone lock for the whole run (tools/phone_lock.py); the tools this starts see TK_PHONE_LOCKED."""
+    sys.path.insert(0, os.path.join(HERE, "../.."))
+    import phone_lock
+    phone_lock.hold()
 
 
 def main():

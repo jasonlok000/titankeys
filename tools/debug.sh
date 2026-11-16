@@ -42,4 +42,4 @@ cp android/debug/colors.xml android/src/main/res/values/titankeys_debug.xml
 bash tools/release.sh
 apk=$(ls -t dist/*.apk | head -1)
 echo "Built $apk"
-if [[ "${1:-}" == "--install" ]]; then adb install -r "$apk"; fi
+if [[ "${1:-}" == "--install" ]]; then . "$(dirname "$0")/phone-lock.sh"; adb install -r "$apk"; fi

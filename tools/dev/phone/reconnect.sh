@@ -4,6 +4,7 @@
 # Settings > Developer options > Wireless debugging and run this again.
 H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$H/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 [ -n "$TK_ADB_HOST" ] || { echo "Set TK_ADB_HOST in tools/dev/local.env"; exit 1; }
 P="$TK_ADB_HOST:${1:?Wireless debugging port}"
 timeout 15 adb connect "$P"

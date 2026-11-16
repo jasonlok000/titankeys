@@ -2,6 +2,8 @@
 # Runs the preview check on TitanKeys Debug (com.titankeys.debug), so the real TitanKeys is never touched.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+# It uses the phone: the maintainer's phone lock, if there is one (tools/phone-lock.sh).
+. tools/phone-lock.sh
 sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 adb="$sdk/platform-tools/adb"
 app=com.titankeys.debug

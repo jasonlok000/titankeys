@@ -13,6 +13,20 @@ They run in WSL (Ubuntu) on Windows, or any Linux. The phone tools need the Tita
 
 Every tool loads `env.sh`, which reads `local.env` and fills in the defaults. Python tools read the same variables, so run them from a shell that ran `. tools/dev/env.sh`.
 
+## Locks
+
+The phone and the builds have a lock each, in `~/build/tk-tools`, so a long phone run doesn't hold up a build, nor a build a
+phone run:
+
+- `.lock`, the build lock: one `verify.sh` or `play-bundle.sh` at a time, as they share a build copy.
+- `.phone.lock`, the phone lock: anything that talks to the phone. Scripts take it with `tools/phone-lock.sh`, or
+  `tools/phone_lock.py`, and `phone/safety.sh` takes it for every phone tool. It does nothing where `~/build/tk-tools` doesn't
+  exist, so contributors never wait for it.
+- `verify.sh phone` and `phone/preview-test.sh` take the build lock first, then the phone lock for their phone steps. Nothing takes
+  them the other way round.
+
+`tools/checks/locks.test.ts` fails when a script that talks to the phone doesn't take the phone lock, or takes the build lock.
+
 ## build
 
 | Tool | Does | Needs |
@@ -25,7 +39,7 @@ Every tool loads `env.sh`, which reads `local.env` and fills in the defaults. Py
 | `compat.py` | Removes the few options that only the private Ink has, in a build copy. `verify.sh`, `try.sh` and `play-bundle.sh` run it. Never run it in the repo. | |
 | `rg` | Stands in for ripgrep where it isn't installed. | |
 
-`verify.sh` and `try.sh` build the checkout they sit in. Set `TK_WORKTREE=<path>` for `verify.sh` to build another one, such as a git worktree. Only one `verify.sh` or `play-bundle.sh` runs at a time on a machine: they share a lock in `~/build/tk-tools`.
+`verify.sh` and `try.sh` build the checkout they sit in. Set `TK_WORKTREE=<path>` for `verify.sh` to build another one, such as a git worktree. Only one `verify.sh` or `play-bundle.sh` runs at a time on a machine: they share the build lock (see Locks).
 
 The Play bundle needs Julian's private Ink SDK, which isn't public and never goes in this repo. `play-bundle.sh` expects it at `TK_PLAY_INK` (default `~/build/play/ink`), patched with `tools/ink-bundle.patch`.
 
@@ -78,7 +92,7 @@ no Debug field has the keyboard, TitanKeys Debug's Space gestures screen comes b
 everything is checked again first. A screen that's off or locked, or a navigation app, stops the run after a second try. The
 release app is never a target: `TK_APP` must end in `.debug`. If the injector stops part way, it lets go of every key and lifts
 the finger. TitanKeys Debug is the keyboard only while a check types in its field: release TitanKeys goes back right after,
-read back each time, and at once whenever the front stops being Debug. Every tool holds the shared phone lock, `~/build/tk-tools/.lock`, for its whole run, so no other phone run overlaps.
+read back each time, and at once whenever the front stops being Debug. Every tool holds the phone lock for its whole run, so no other phone run overlaps (see Locks).
 
 | Tool | Does | Needs |
 |---|---|---|

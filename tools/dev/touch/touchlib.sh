@@ -10,7 +10,8 @@
 # again before anything is sent. A screen that is off or locked, or a navigation app, is never worked around: after a second
 # try a second apart, the run stops. So does a field that two am starts didn't bring back.
 #
-# Every tool also holds the shared phone lock, $TK_BUILD/tk-tools/.lock, for its whole run, so no other phone run overlaps it.
+# Every tool also holds the phone lock (tools/phone-lock.sh, through ../phone/safety.sh) for its whole run, so no other phone
+# run overlaps it. Builds use their own lock, never this one.
 TK_APP="${TK_APP:-com.titankeys.debug}"
 # TitanKeys Debug's Space gestures screen: its field holds only sample text, and it opens with the field focused.
 TK_TOUCH_ACTIVITY="${TK_TOUCH_ACTIVITY:-com.titankeys.keyboard.SpaceGestureActivity}"
@@ -117,26 +118,16 @@ tk_ime_debug() {
   sleep 1
 }
 
-# What every tool does on its way out: release TitanKeys back as the keyboard unless a runner holds Debug on, then the lock.
+# What every tool does on its way out: release TitanKeys back as the keyboard unless a runner holds Debug on. The phone lock goes
+# by itself when the tool ends.
 tk_touch_exit() {
   # TK_NO_PHONE=1: the offline tests, which never reach a phone.
   [ "${TK_IME_HELD:-}" = 1 ] || [ "${TK_NO_PHONE:-}" = 1 ] || tk_ime_release >/dev/null
-  [ "${TK_LOCK_MINE:-}" = 1 ] && { flock -u 9 2>/dev/null; exec 9>&-; }
 }
 trap tk_touch_exit EXIT
 
-# Holds the shared phone lock until this process ends. A tool started by one that holds it (TK_PHONE_LOCKED=1) doesn't take it
-# again, which would wait for itself.
-tk_touch_lock() {
-  [ "${TK_PHONE_LOCKED:-}" = 1 ] && return 0
-  # The adb server is started first: one started while the lock is open would inherit it, and hold it after this run.
-  command -v adb >/dev/null && adb start-server >/dev/null 2>&1
-  mkdir -p "$TK_BUILD/tk-tools"
-  exec 9>"$TK_BUILD/tk-tools/.lock"
-  flock -n 9 || { echo "waiting for the phone lock (another phone run holds it)"; flock 9; }
-  export TK_PHONE_LOCKED=1
-  TK_LOCK_MINE=1
-}
+# The phone lock is already held: ../phone/safety.sh took it (tools/phone-lock.sh). Kept as a name the tools call.
+tk_touch_lock() { tk_phone_lock; }
 
 # Puts the injector on the phone, unless the same one is there. Builds it first if needed.
 tk_touch_install() {

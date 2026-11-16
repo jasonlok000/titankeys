@@ -143,6 +143,14 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **The Rime test program on the phone (08:45, Wi-Fi):** the three variants convert right (軟件/軟體, 打印機/印表機,
   Simplified throughout), 24 lookups in 3 s. Findings, with tk-gestures (`claude/m3-chinese-2`): Rime compiled its own prisms
   instead of using the shipped ones; Yale ranks 月餘 before 粵語 and 我地 before 我哋; 対 shows as a sixth choice.
+- **#73: the apostrophe fixes apply to swiped words too** (`claude/m3-apostrophe-swipes`, tk-typing, on the owner's word).
+  On the saved log: 18 swiped words the fix looks at, 13 scorable, 1 right change and 0 wrong at every margin from 0 to 3;
+  the highest score for a word that should stay was −8.4. A small sample, and no swiped "were" in it. All suites and a clean
+  build pass. tk-typing's calls, to confirm:
+  - Swipes use the same margins as typed words (1.0; 2.0 with Only fix when sure; "were" +1.0).
+  - The bar's other-form offer stays in typing only.
+  - A swipe that goes on into a longer word is read again, and the old word stops waiting.
+  - For F: `docs/paper.md` §6.4 still says the fix never turns "were" into "we're".
 - **M3: Korean and Vietnamese on main** (`claude/m3-korean-vietnamese`, tk-languages): Korean as a Hangul engine on the
   2-set layout, Vietnamese as a Telex engine with its 11k word list. 47 input methods. All suites and a clean build pass:
   `~/build/m1-apks/main-m3-kv-debug.apk`. Also fixed: a capital typed mid-code dropped Rime's code. Thai waits: about 27%

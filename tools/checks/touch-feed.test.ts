@@ -31,3 +31,24 @@ test("TitanKeys never sets the hook: only TitanKeys Debug's block does, and the 
   expect(files("android/kotlin").filter(path => read(path).includes("TouchpadFeedHook")).sort()).toEqual([
     "android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt", "android/kotlin/com/titankeys/keyboard/TouchpadFeedHook.kt"]);
 });
+
+test("the feed shifts its events as the firmware shifts real ones, by Touchpad.kt's own rule", () => {
+  const feed = read("android/debug/recorder/TouchFeed.kt");
+  const touchpad = read("android/kotlin/com/titankeys/keyboard/Touchpad.kt");
+  for (const part of ['"persist.sys.touchpad_forcescroll"', "1200 -> 240f", "1440 -> 360f", "Surface.ROTATION_0", '"Titan_2"'])
+    for (const source of [feed, touchpad]) expect(source).toContain(part);
+  expect(feed).toContain("y = at.y * yScale + yOffset");
+});
+
+test("only TitanKeys Debug opens the guide at a slide from adb; TitanKeys always starts at the first", () => {
+  expect(existsSync(join(root, "android/kotlin/com/titankeys/keyboard/GuideStart.kt"))).toBe(false);
+  expect(read("android/src/main/AndroidManifest.xml")).not.toContain("GuideStart");
+  const entry = read("android/debug/recorder/manifest.xml").match(/<receiver\s+android:name="com\.titankeys\.keyboard\.GuideStart"[^>]*\/>/)?.[0];
+  expect(entry).toContain('android:permission="android.permission.DUMP"');
+  expect(read("android/debug/recorder/GuideStart.kt")).toContain('packageName.endsWith(".debug")');
+  const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
+  expect(guide).toMatch(/private fun debugStartStep\(\): String\? =\s+if \(!packageName\.endsWith\("\.debug"\)\) null/);
+  // The one place the guide starts afresh uses it, and nothing else reads the extra.
+  expect(guide.match(/DEBUG_START_STEP/g)?.length).toBe(2);
+  expect(guide).toContain("flow.start(debugStartStep())");
+});

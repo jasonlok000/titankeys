@@ -150,6 +150,16 @@ def main():
             gap = b[0][0] - a[-1][0]
             check(30 <= gap <= 150, f"space:{count}: gap {gap} ms")
 
+    # Space held: the taps, then the last one stays past the double-tap window and slides as far as asked.
+    taps = touches(build("spacehold:2:-3"))
+    check(len(taps) == 2 and taps[0][-1][0] - taps[0][0][0] < 130, f"spacehold: {len(taps)} touches")
+    held = taps[1]
+    x0, _ = read_back(alignment, held[0][1], held[0][2])
+    x1, _ = read_back(alignment, held[-1][1], held[-1][2])
+    check(abs((x0 - x1) * 10 - 3) < .3, f"spacehold slid {(x0 - x1) * 10:.2f} keys, not 3")
+    check(held[-1][0] - held[0][0] > 150 + 500, "spacehold: the last tap isn't held, then slid")
+    check(len(touches(build("spacehold:3"))) == 3, "spacehold:3 isn't three touches")
+
     # Keys: the finger lands first, the key goes down and up, then the finger does as asked.
     keymap = os.path.join(tempfile.mkdtemp(), "keys.txt")
     with open(keymap, "w") as out:

@@ -732,6 +732,13 @@ class GuideActivity : Activity() {
      * suggests words, and the drawing of the keys still follows your finger. See [playground].
      */
     private val playground by lazy { intent.getBooleanExtra(PLAYGROUND, false) }
+    /**
+     * TitanKeys Debug only: the slide the touch simulator's checks open at, so a check of one slide needn't pass all the ones
+     * before it. TitanKeys always starts at the first slide (owner, 2026-11-13), and never reads the extra.
+     */
+    private fun debugStartStep(): String? =
+        if (!packageName.endsWith(".debug")) null
+        else intent.getStringExtra(DEBUG_START_STEP)?.takeIf { id -> GUIDE_STEPS.any { it.id == id } }
     /** Opened straight at the end screen, as it was left: Back from a page the end opened came back here. See [openFromEnd]. */
     private val opensAtEnd by lazy { !playground && intent.getBooleanExtra(AT_END, false) }
     /** The playground that the end's Go type something opened: its Back goes back to the end, not out of the app. */
@@ -1040,7 +1047,7 @@ class GuideActivity : Activity() {
         // The guide always starts from its first slide, never where it was left (owner, 2026-11-13: "everytime I click on the guide,
         // i shd start from the beginning. no saved slide."). A place kept by an older build is cleared.
         preferences.edit().remove(RESUME).apply()
-        flow.start(null)
+        flow.start(debugStartStep())
         applyTone(GuideTone.Ink)
         backdrop.show(backgroundOf(tone))
         for (view in listOf(title, body, hint, offer, next, previous, chapter, again, close, segments, script, field, keys)) view.alpha = 0f
@@ -4829,6 +4836,8 @@ class GuideActivity : Activity() {
         private const val PREFERENCES = "app"
         private const val SHOWN = "guide_shown"
         private const val RESUME = "guide_resume"
+        /** TitanKeys Debug only: the slide to open at, for the touch simulator's checks (android/debug/recorder/GuideStart.kt). */
+        const val DEBUG_START_STEP = "com.titankeys.debug.GUIDE_STEP"
         /** The slides passed, kept across restarts; every chapter finished; and the guide left before its end. */
         private const val PASSED = "guide_passed"
         private const val ALL_FINISHED = "guide_all_finished"

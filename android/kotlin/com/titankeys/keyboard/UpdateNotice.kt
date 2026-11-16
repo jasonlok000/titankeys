@@ -24,12 +24,12 @@ internal object UpdateNotice {
     private const val NOTIFICATION = 0x5100001
     const val PAGE = "/settings/setup"
 
-    // F: draft, the channel's name and description in Android's notification settings.
+    // The channel's name and description in Android's notification settings.
     const val CHANNEL_NAME = "Setup"
-    const val CHANNEL_TEXT = "Tells you when TitanKeys needs turning back on. Silent."
-    // F: draft, the notification itself.
+    const val CHANNEL_TEXT = "Says when TitanKeys needs turning back on. Silent."
+    // The notification itself.
     const val TITLE = "Turn TitanKeys back on"
-    const val TEXT = "This update switched TitanKeys off as your keyboard, and Back too if you had it on. Your words and " +
+    const val TEXT = "This update turned TitanKeys off as your keyboard, and Back too if you used it. Your words and " +
         "settings are all still here. Tap to turn them back on."
 
     /** The app or the keyboard started on the new names: this install needs no notice on its next update. */

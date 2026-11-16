@@ -69,7 +69,7 @@ export default function BoringGuide() {
       {/* The keys named in pairs, I/K, O/L and P/Backspace (#67). F (docs/words-m1.md). */}
       <Topic title="The word menu">{"Hold a word on the bar for its menu. I/K moves the word up a step and O/L moves it down: Blocked, Not saved, Saved, Favourite. Saved means TitanKeys knows the word: it's in the dictionary, you typed it twice, or you saved it. Unsave takes a word out without blocking it, so typing it twice brings it back. Block keeps it out until you unblock it. Rest a finger on I/K or O/L to see what the press will do, then press. P/Backspace closes the menu."}</Topic>
       <Topic title="A selected word">{"Pick a word in your text and the bar shows it alone in the middle. Touch it for the same menu."}</Topic>
-      {/* F: drafts (#90): key steps one action each, here and in The clipboard. */}
+      {/* Key steps one action each, here and in The clipboard (#90). F (docs/words-m1.md). */}
       <Topic title="Your newest copy">{"Right after you copy something, the bar offers it. Touch it to paste. It goes away once you type on. Older copies are in the clipboard: press Sym, let go, then press A."}</Topic>
       <Topic title="Shift, Alt and Ctrl">{"When you press or hold Shift, Alt or Ctrl, the bar shows it in place of your words. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. Rest your finger on a key to see what it types. The only exception is the capital at the start of a sentence: that one keeps your words."}</Topic>
       <Topic title="Ctrl shortcuts">{"Hold Ctrl and the bar shows what each shortcut does. Press a key while you hold Ctrl to use it."}</Topic>

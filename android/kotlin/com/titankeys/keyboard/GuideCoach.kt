@@ -56,23 +56,21 @@ private fun count(n: Int) = when (n) {
  * The line for a miss on a slide of [taps] Space taps, the last one held (owner, #90: "that's an X, not a Y"). [landed] is how
  * many taps came, for [GuideMiss.Extra] and [GuideMiss.Short].
  */
-// F: drafts (#90), every line here.
 internal fun tapMissLine(miss: GuideMiss, taps: Int, landed: Int = taps): String = when (miss) {
-    GuideMiss.Press -> "That's a press, not a tap. Touch Space lightly."
-    GuideMiss.Typing -> "That's typing, not a tap. Touch Space lightly."
-    GuideMiss.Swipe -> "That's a swipe, not a tap. Touch Space lightly."
+    GuideMiss.Press -> "That's a press, not a tap. Barely touch Space."
+    GuideMiss.Typing -> "That's typing, not a tap. Barely touch Space."
+    GuideMiss.Swipe -> "That's a swipe, not a tap. Keep your finger still."
     GuideMiss.Lift -> "That's a lift, not a hold. Keep the ${ordinal(taps)} down."
     GuideMiss.Beside -> "That's beside the patch, not on it. Tap the shade."
     GuideMiss.Single -> "That's one tap, not ${count(taps)}. Hold the ${ordinal(taps)} one."
     GuideMiss.Extra -> "That's ${count(landed)} taps, not ${count(taps)}. Hold the ${ordinal(taps)} one."
     GuideMiss.Short -> "That's ${count(landed)} taps, not ${count(taps)}. Hold the ${ordinal(taps)} one."
-    GuideMiss.NoSlide -> "That's a lift, not a slide. Hold, then slide."
+    GuideMiss.NoSlide -> "That's a lift, not a slide. Stay down and slide."
     else -> "That's not this slide's move."
 }
 
 /** The line after a swipe far from its word, under the drawing of both paths (#90). */
-// F: draft (#90).
-internal const val SWIPE_COACH = "That's off the path. Glide through each letter."
+internal const val SWIPE_COACH = "That's a detour, not the path. Pass every letter."
 
 /**
  * How many taps have landed on a Space-tap slide, and whether the last one is held, as the drawing lights them: 1, 2, held

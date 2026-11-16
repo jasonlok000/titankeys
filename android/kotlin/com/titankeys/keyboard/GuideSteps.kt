@@ -1049,7 +1049,6 @@ internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
 
 /** Slide 15's line: the clip that's nice to you pastes the end of it. */
 // One action each, so nobody holds Sym and presses A (#90): Sym, let go, then A. It keeps its first letter W.
-// F: draft (#90).
 internal const val CLIP_LEAD = "Wait. Sym, let go, A. "
 // After a thread of digs you expect one more roast, and the nice clip pastes something kind, and means it (owner, 2026-11-13: "make
 // this wholesome instead so its not what the user thought").
@@ -1821,8 +1820,8 @@ internal val GUIDE_STEPS = listOf(
             }
         }),
         done = "Pasted. Honest, at least.",
-        // F: draft (#90), one action each: fn is held, V is pressed.
-        praise = "Hold fn, press V: paste. C copies.",
+        // One action each: fn is held, V is pressed (#90).
+        praise = "Hold fn, press V to paste. C copies.",
         line = PASTE_LINE,
         seed = PASTE_SEED,
         needs = GuideNeed.FnAsCtrl,
@@ -1865,7 +1864,7 @@ internal val GUIDE_STEPS = listOf(
         ),
         // The nice clip pastes something kind instead of the roast you expected, and the slide insists (owner, #69).
         done = "No, seriously. I mean it.",
-        // F: draft (#90), one action each.
+        // One action each (#90).
         praise = "It keeps what you copy. Sym, let go, then A.",
         line = CLIP_LINE,
         seed = CLIP_LEAD.trimEnd(),
@@ -1906,7 +1905,7 @@ internal fun groupsPraise(used: Int) = when {
  * (owner, v5): each says that it's blocked, and why or what to do instead. [lessons] is what the slide lets through now.
  */
 /** What the word menu slide's lock says for [lesson]: blocked, then hold TitanKeys. Null for the usual words. */
-// F: drafts (#90): what it was, and that it wants a tap on TitanKeys.
+// What it was, and that it wants a tap on TitanKeys (#90).
 private fun menuBlocked(lesson: String): String? = when (lesson) {
     GuideLesson.Typing.name -> "That's typing, not a tap on TitanKeys."
     GuideLesson.Swipe.name -> "That's a swipe, not a tap on TitanKeys."
@@ -2112,7 +2111,6 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         }
     }
     // Every line says what it was, and what the slide wants instead: "that's an X, not a Y" (owner, #90).
-    // F: drafts (#90), every line below.
     return when (lesson) {
         GuideLesson.Typing.name -> when {
             step.chapter in NOT_TYPING -> "That's typing, not deleting. Typing's done."

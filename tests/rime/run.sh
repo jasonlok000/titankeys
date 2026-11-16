@@ -12,6 +12,6 @@ rime=android/kotlin/com/titankeys/rime
 keyboard=android/kotlin/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$rime/RimeCalls.kt" "$rime/ChineseVariant.kt" "$rime/RimeEngine.kt" "$rime/RimeData.kt" "$rime/RimeNative.kt" \
-  "$rime/RimeAssets.kt" "$rime/RimeBackup.kt" "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" android/kotlin/com/titankeys/connected/Json.kt \
+  "$rime/RimeAssets.kt" "$rime/RimeBackup.kt" "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" "$keyboard/ChineseSetup.kt" android/kotlin/com/titankeys/connected/Json.kt \
   tests/rime/RimeChecks.kt
 java -cp "$work:$stdlib" com.titankeys.rime.RimeChecksKt android/assets/im

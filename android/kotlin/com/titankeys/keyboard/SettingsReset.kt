@@ -19,7 +19,7 @@ internal object SettingsReset {
 
     /** The settings in [TYPING]: every switch, stepper and choice. Scroll assistant then follows the phone's own again. */
     val TYPING_SETTINGS = setOf(
-        "alt_backspace_forward", "alt_sym_next_keyboard", "auto_capitalise", "auto_punctuation", "autocorrect", "chinese_variant", "comma_space", "contact_names", "current_input_method", "cursor_control",
+        "alt_backspace_forward", "alt_sym_next_keyboard", "auto_capitalise", "auto_punctuation", "autocorrect", "chinese_variant", "chinese_variant_shown", "comma_space", "contact_names", "current_input_method", "cursor_control",
         "double_press_locks", "enter_key", "exact_real_alt", "expand_shorthand", "fix_only_when_sure", "fn_as_ctrl",
         "hold_symbol_ms", "hold_symbols", "input_methods", "launcher_hides_bar", "lift_off_duration_ms", "lift_off_grace", "orange_accents",
         "raw_log", "sentence_spaces", "shift_backspace_word", "shortcodes", "shorthand_off", "spelling", "suggestion_bar", "swipe_typing", "tap_keys",

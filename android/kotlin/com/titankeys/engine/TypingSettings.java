@@ -542,5 +542,14 @@ public final class TypingSettings {
         preferences(context).edit().putString("chinese_variant", variant).apply();
     }
 
+    /** Whether the keyboard has opened Settings' Chinese page because no variant was picked: it does that once (ChineseSetup). */
+    public static boolean chineseVariantShown(Context context) {
+        return preferences(context).getBoolean("chinese_variant_shown", false);
+    }
+
+    public static void chineseVariantShown(Context context, boolean shown) {
+        preferences(context).edit().putBoolean("chinese_variant_shown", shown).apply();
+    }
+
     private TypingSettings() {}
 }

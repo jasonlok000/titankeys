@@ -132,10 +132,10 @@ The rest of the wrong joins (the ones inside 150 ms with an unclear first word) 
 
 ## Built
 
-The Master took the issue's default, "lose none of the right joins", so the build has two rules:
+The Master took the issue's default, "lose none of the right joins". The build keeps one rule:
 
-- **Join more (A1).** A touch that lands still moving (0.004 keys/ms or more over its first 40 ms), under 150 ms after the last swipe and 2 keys or less from where it ended, joins wherever it is on the pad. In `Swipe.couldContinue` (where it lands and when) and `Swipe.sameStroke` (how it moves).
 - **Join less (C6).** Over 150 ms after the last swipe, a swipe that ended with a full-size touch doesn't join: a mean of 2 sensor steps or more over its last 60 ms. The size comes from `Sample.step`, the same `round(getSize() × 255)` the study read from the log. `Composer` and `SwipePieces` pass it to `Swipe.sameStroke`. When the size isn't known, it's left out.
+- **Join more (A1), taken back after review.** It was built first: a touch landing still moving, under 150 ms after the last swipe and 2 keys or less from where it ended, joined at once wherever it was on the pad. The review below found that 5 of the 9 pairs it joined were kept by the owner as two words, so those touches now go to Composer's 150 ms check of both readings, as they did before #83.
 - Left out: the "over 150 ms after a clear word" half of C7. It loses 4 right joins.
 
 On every saved pair, run with the final `Swipe.java` against the one before (`confirm.py`):
@@ -145,14 +145,37 @@ On every saved pair, run with the final `Swipe.java` against the one before (`co
 | Right joins lost | 1 of 380 (it hadn't changed the word) |
 | Wrong joins cut | 7 of 64 (7 of 46 episodes), all in the 2.0 and 2.1 logs |
 | Unclear joins cut | 2 of 58 |
-| Missed joins found | 4 of 18 |
+| Missed joins found by shape | 0 of 18 (the 150 ms check may still find some: only the phone can tell) |
 | Pairs the owner kept apart, now joined | 0 of 1,120 |
-| Other pairs now joined (one word was corrected) | 5 of 666 |
-| Headline, rough | +9 prompted first tries (a ceiling: it assumes each change gets the word right) |
+| Other pairs now joined (one word was corrected) | 0 of 666 |
+| Headline, rough | +6 prompted first tries (a ceiling: it assumes each change gets the word right) |
 
-`tests/swipe/joins.sh` checks the rules on hand-made swipes, and pins these counts on `tests/swipe/join-pairs.txt`: the 614 pairs either version could join, every logged join and every missed join. Each pair keeps only the last 100 ms of the first swipe and the first 100 ms of the second, which is all the joining checks read, and gives the same decision as the whole pair. No words are in it.
+`tests/swipe/joins.sh` checks the rule on hand-made swipes, including the review's examples, and pins these counts on `tests/swipe/join-pairs.txt`: the 645 pairs either version could join, every logged join, every missed join and every pair within 150 ms. Each pair keeps only the last 100 ms of the first swipe and the first 100 ms of the second, plus one point either side, which is all the joining checks read, and gives the same decision as the whole pair. No words are in it.
 
-Only the phone can show whether the joins it adds and cuts give the word the owner kept. `83-joins/phone-replay.sh` reads every one of those pairs three ways with the app's recogniser and scores them.
+Only the phone can show whether the joins it cuts, and the ones the 150 ms check makes, give the word the owner kept. `83-joins/phone-replay.sh` reads every one of those pairs three ways with the app's recogniser and scores them.
+
+## Review: quick separate swipes
+
+A reviewer asked whether two quick separate words can be glued into one. Both risks were checked on the saved logs.
+
+**1. The 150 ms check of both readings (`Composer`, older than #83).** Within 150 ms, a pair is read both ways and joined when the joined reading leads its runner-up by more than the first word leads its own. The worry: a longer path may lead by more just for being longer, so "in" then "to" becomes "into".
+
+- 525 of the 2,306 saved pairs came within 150 ms. 89 were kept apart, 38 of them two words of 3 letters or less. The check came in with 2.0.0; 1.2.0 had none.
+- The fair test is a replay of both readings. The one from 9 November (`.dev/swipe-baseline/tools/join_gate.py`) read 24 pairs within 150 ms both ways. The check joined 11 and fixed 8; of the 11 pairs where the first word alone was right, it glued **none**. 18 of the 24 had a first word of 3 letters or less; there too it glued none and fixed 8.
+- Every stricter version tried loses 2 of those 8 fixes and stops no glue: a lead of 1 to 8 more, 1.25 to 2 times the first word's lead, or the leads per letter.
+- In the 2.0 and 2.1 logs, 15 joins came about some other way than their shape (most through the check): 5 right, 2 wrong, 8 unclear. The 2 wrong ones led by 0.15 and 3.6 more than the first word. A lead of 2 more would cut one of them and lose none of the 5 logged right joins, but it loses 2 of 8 in the replay.
+
+So the check stays as it is. The phone replay below now runs the check on every pair within 150 ms (as before #83, now, and with a lead of 2) to settle it with more pairs.
+
+**2. Joining a quick touch that lands moving (A1).** The worry: almost every swipe moves at its first point, so "go" then "on" from beside O becomes one word.
+
+- Most new words land still. 16% of the second swipes the owner kept apart moved 0.004 keys/ms or more over their first 40 ms (median 0.0004), against 29% of all second swipes.
+- Within 150 ms and 2 keys, the 16 pairs the owner kept apart all landed still (0.0012 keys/ms at most), so A1 joined none of them.
+- But A1 also joined 5 "other" pairs: the owner kept two words and corrected one. 4 of those 5 are two words of 2 or 3 letters. Nothing in the logs tells them from the 4 missed joins A1 found: start speed, direction and distance overlap, and only 2 of the 9 have sizes.
+
+So A1 no longer joins at once. Those touches go to the 150 ms check, which glued no separate words in its replay. 3 of the 4 missed joins are from 1.2.0, which had no check, so the check may still find them; the phone replay counts it.
+
+**An older case the review's example shows.** If "on" lands already moving beside O, the top-edge rule from before #83 joins it: it left the top row, came back at the top edge nearby, and heads back the other way while moving. The logs don't show it: of 35 kept top-row pairs inside that window, none joined, because their second swipe landed still. A touch within 90 ms and 1.5 keys joins as a flicker whatever it does, by design.
 
 ## Reproduce it
 
@@ -162,7 +185,7 @@ In WSL `atlas-build` as `dev`:
 OLD_SWIPE=old-Swipe.java bash docs/studies/83-joins/run.sh ~/tk-data/rawlog-20261111-1548/rawlog/raw-log-20261111-154845.jsonl
 ```
 
-`old-Swipe.java` is `Swipe.java` from before the rule, saved on Windows with `git show 93eb16d:android/kotlin/com/titankeys/engine/Swipe.java`. Add `FIXTURE=tests/swipe/join-pairs.txt` to write the fixture again.
+`old-Swipe.java` is `Swipe.java` from before the rule, saved on Windows with `git show 93eb16d:android/kotlin/com/atlas/engine/Swipe.java`, with its first line changed to `package com.titankeys.engine;`. Add `FIXTURE=tests/swipe/join-pairs.txt` to write the fixture again.
 
 | File | Does |
 |---|---|
@@ -171,7 +194,7 @@ OLD_SWIPE=old-Swipe.java bash docs/studies/83-joins/run.sh ~/tk-data/rawlog-2026
 | `83-joins/JoinReplay.java` | Runs the app's `Swipe.couldContinue` and `Swipe.sameStroke` on each pair |
 | `83-joins/rules.py` | Replays the rules and writes the counts |
 | `83-joins/confirm.py` | Compares the final `Swipe.java` with the one before on every pair, and writes the test fixture |
-| `83-joins/replay_pairs.py`, `83-joins/phone-replay.sh` | The phone replay of every pair that could join |
+| `83-joins/replay_pairs.py`, `83-joins/phone-replay.sh` | The phone replay of every pair that could join, with the 150 ms check |
 | `83-joins/report.json` | The counts from the run above |
 
 The scripts live here, not with the baseline tools in `.dev/swipe-baseline/tools`, because that folder isn't in the repo and the Master reviews this branch. They read the baseline's `rawlog.py` and `build.py` from there (set `BASELINE_TOOLS` to move it).

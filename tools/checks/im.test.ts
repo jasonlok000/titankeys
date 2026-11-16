@@ -71,3 +71,27 @@ test("the index lists every input method, and Android's keyboard list has Englis
   expect(strings).toContain('<string name="im_en" translatable="false">English</string>');
   for (const id of ids) expect(strings).toContain(`name="im_${id.replace(/-/g, "_")}"`);
 });
+
+test("each entry in Android's keyboard list is whole: an id of its own, a valid locale that is its input method's, a label", () => {
+  // Android keeps the enabled entries by id (its hash), so an id shared or out of range would lose one; a locale it can't
+  // read would show the entry under the wrong language.
+  const list = read("android/src/main/res/xml/input_method.xml");
+  const strings = read("android/src/main/res/values/strings_im.xml");
+  const entries = [...list.matchAll(/<subtype ([^>]*)\/>/g)].map(m => Object.fromEntries([...m[1]!.matchAll(/android:(\w+)="([^"]*)"/g)]
+    .map(a => [a[1]!, a[2]!])));
+  const locales = new Map(ims.map(im => [im.id, im.locale]));
+  locales.set("en", "en-US");
+  for (const e of entries) {
+    const id = e.imeSubtypeExtraValue?.replace(/^im=/, "") ?? "";
+    const subtypeId = Number(e.subtypeId);
+    const tag = e.languageTag ?? "";
+    const label = new RegExp(`<string name="${(e.label ?? "").replace("@string/", "")}"[^>]*>([^<]+)</string>`).exec(strings)?.[1];
+    expect({
+      id, mode: e.imeSubtypeMode, idInRange: Number.isInteger(subtypeId) && subtypeId !== 0 && Math.abs(subtypeId) < 2 ** 31,
+      tagValid: Intl.getCanonicalLocales(tag)[0] === tag, localeIsTag: e.imeSubtypeLocale?.replace(/_/g, "-") === tag,
+      sameLanguage: tag.split("-")[0] === locales.get(id)?.split("-")[0], label: Boolean(label?.trim()),
+    }).toEqual({ id, mode: "keyboard", idInRange: true, tagValid: true, localeIsTag: true, sameLanguage: true, label: true });
+  }
+  expect(new Set(entries.map(e => e.subtypeId)).size).toBe(entries.length);
+  expect(new Set(entries.map(e => e.imeSubtypeExtraValue)).size).toBe(entries.length);
+});

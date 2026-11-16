@@ -106,6 +106,27 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
     verify copy (`~/build/tk-overnight/.ink`) may need the same once it's free.
   - Skipped languages: Serbian Cyrillic (layout mapping), Serbian Latin, Macedonian and Georgian (licence unclear), Bosnian
     (list didn't parse), Kazakh (no Android layout).
+- **#85's baseline day started at 07:30:13:** battery stats reset, release TitanKeys the keyboard, the phone at 100% and
+  unplugged. The phone is left alone until the owner says the day is done, or 21:00.
+- **Merged into main at 07:28: Rime, and the join-risk fix.** `bun run check` (248), all 42 suites, the join checks and a
+  clean Debug build pass. The Debug APK is 156 MB (135 MB before Rime): `~/build/m1-apks/main-m2-rime-debug.apk`.
+  - **Rime** (`claude/m2-rime`, tk-gestures): Cantonese Yale and Jyutping, Mandarin Pinyin, the three variants, on the
+    renamed packages (`com.titankeys.rime`), with a reproducible 3.1 MB library. Rime's learned words are in the backup
+    (#65), and the bar says "Getting 粵語耶魯 ready…" if a Chinese input method takes over half a second to start. 39
+    input methods in all.
+  - **#83's review, risk 2** (`claude/m1-joins-risks`, tk-joins): a quick touch landing moving mid-pad no longer joins by
+    its shape. 5 of the 9 pairs it would join were kept by the owner as two words, mostly two short words. Those touches go
+    back to the 150 ms check of both readings, as before #83. Missed joins found by shape: 0 of 18 (was 4); kept-apart
+    pairs joined: 0 of 1,120.
+  - **Risk 1, the 150 ms check:** unchanged. The 9 November phone replay shows it glued none of the 11 separate-word pairs,
+    and every stricter version tried loses 2 of its 8 fixes.
+- **More of the Orchestrator's calls, to confirm (07:28):**
+  - A restored Rime snapshot waits until its input method is next used, then merges.
+  - "Getting … ready" shows after 500 ms, every time it's slow.
+  - Rime's learned words merge Rime's way on restore, adding counts from both sides; the other lists take the file's.
+  - A backup syncs Rime first, which drops any half-typed Chinese code at that moment.
+  - The 4 missed joins are left to the 150 ms check, not joined outright, and the check gets no extra lead, so no right join
+    is lost.
 - **Review of M1 and M2 (05:50), merged at 3084dd0 with the Worker redeployed.** Seven bugs fixed, each with a test:
   - a flick took two words in web fields, whose spaces are non-breaking;
   - reports over 20 parts couldn't upload;

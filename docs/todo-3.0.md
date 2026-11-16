@@ -135,6 +135,14 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - Kazakh uses Russian's keys, with its nine extra letters held on the nearest Russian letter (і on ы).
   - Georgian's Shift gives a key's own second letter, and Georgian has no sentence capitals.
   - Bosnian's and Macedonian's word lists come from film subtitles, so they lean towards everyday speech.
+- **#85's baseline ended at 08:42 on the owner's word** ("my phone is ready now"): 1 h 12 min on battery from the 07:30
+  reset, 100% to 89%, 431 mAh drained with the screen on 62 min. Release TitanKeys (2.1, uid 10335): 2.83 mAh, the vibrator
+  891 times (19 s), its foreground service the whole screen-on time. The screen-off phone runs (07:55–08:09) fall inside it.
+  Saved: the Orchestrator's scratchpad, `baseline/batterystats-baseline-end.*`. Short, but it's what the day gave; the "after"
+  comes with the 3.0 pre-release.
+- **The Rime test program on the phone (08:45, Wi-Fi):** the three variants convert right (軟件/軟體, 打印機/印表機,
+  Simplified throughout), 24 lookups in 3 s. Findings, with tk-gestures (`claude/m3-chinese-2`): Rime compiled its own prisms
+  instead of using the shipped ones; Yale ranks 月餘 before 粵語 and 我地 before 我哋; 対 shows as a sixth choice.
 - **M3: the Chinese page opens on the first switch** (`claude/m3-chinese`, tk-gestures): the first switch to a Chinese input
   method with no variant picked opens Settings > Chinese characters, once. All suites pass; the build needed a clean Ink
   folder again (stale classes), then passed: `~/build/m1-apks/main-m3-chinese-debug.apk`. tk-gestures' calls, to confirm:

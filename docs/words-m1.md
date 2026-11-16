@@ -235,15 +235,9 @@ It keeps its first letter S and its & gap. The rest stand alone as they are, inc
 even reading this?", a jab that works without "Read the fine print" above it). The cursor slide's new line is in #66 above, and its
 target is inside it.
 
-### The ∞ slide says Enter
+### The ∞ slide names both ways
 
-↓ sits on Enter and steps to the next page.
-
-| Place | Today | New |
-| --- | --- | --- |
-| `symgroups` stage 1 | Press Sym, then swipe up for the next page. | Press Sym, then Enter for the next page. |
-| `WEIRD_HUNT` hint | It's not on the first page. Swipe up. | It's not on the first page. Press Enter. |
-| `symgroups` praise | Up or down turns pages. The bottom row, groups. | Enter turns pages, and so does swiping on the keys. |
+Replaced by the ∞ slide in "Every page says where you are" below: it names swiping up on the keys and Enter, not Enter alone.
 
 ### Swipes on a panel happen on the keys
 
@@ -263,3 +257,88 @@ clown, paste and clipboard slides don't mention swiping, so they stay.
 
 The boring guide's "Move the cursor" topic says "Slide left or right" after two taps on Space. That slide is on the keys already,
 since the finger stays on Space, so it stays.
+
+## Every page says where you are
+
+Owner: name both ways to the next page, and give instructions for each page, so nobody gets lost. One line per page state, for
+every guide slide that opens a panel. The slide shows the line for the state it's in, in place of its stage line.
+
+How the panels work, which these lines follow (SymPanel.kt, Modifiers.panelScroll):
+- Symbols and emoji: swipe up on the keys or press Enter for the next page; swipe down on the keys or press Backspace for the one
+  before. Swipe left or right on the keys, or slide along the bottom row, to change group.
+- Clipboard: swipe up or down on the keys for more clips, left or right for Pinned. Enter pins and Backspace clears there, so they
+  don't turn pages.
+- Sym from the symbols opens the emoji; from the emoji or the clipboard it closes the panel. Alt goes back to the symbols from the
+  clipboard and quick settings. Picking a symbol or emoji types it and closes the panel.
+
+### Add the & (`symmain`)
+
+The & is the first symbol of the first group, on its first page.
+
+| State | Line |
+| --- | --- |
+| Panel closed | Press Sym. |
+| Symbols, first group, first page | It's on this page. Find & and press its key. |
+| Symbols, first group, a later page | Too far. Swipe down on the keys or press Backspace. |
+| Symbols, another group | Wrong group. The & leads the first one. Swipe left or right on the keys, or slide along the bottom row. |
+| Emoji | Emoji already? Patience. Sym again closes them. |
+| Clipboard or quick settings | Wrong page. Alt goes back to the symbols. |
+| Leaving without picking | Sym twice closes it. |
+
+### Answer honestly, the ∞ hunt (`symgroups`)
+
+The ∞ is on the first group's second page. These replace the stage line, the hunt's hint and the praise.
+
+| Place or state | Line |
+| --- | --- |
+| Stage 1 (panel closed) | Press Sym, then swipe up on the keys or press Enter for the next page. |
+| Symbols, first group, first page | Not on this page. Swipe up on the keys or press Enter. |
+| Symbols, first group, second page | It's on this page. Find ∞ and press its key. |
+| Symbols, first group, a later page | Too far. Swipe down on the keys or press Backspace. |
+| Symbols, another group | Wrong group. The ∞ is in the first one. Swipe left or right on the keys, or slide along the bottom row. |
+| Emoji | Not emoji. Sym closes them. Then press Sym once. |
+| Clipboard or quick settings | Wrong page. Alt goes back to the symbols. |
+| Leaving without picking | Sym twice closes it. |
+| `WEIRD_HUNT` hint | It's not on the first page. Swipe up on the keys, or press Enter. |
+| `WEIRD_HUNT` skip | Page two, near √ and ≈. Or skip it. It's ok. (stays) |
+| Praise | Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups. |
+
+### Sign it with 🤡, the clown hunt (`clown`)
+
+The 🤡 is in the Smileys group (the skip line says near 💩). Recent comes first once you've used some emoji.
+
+| State | Line |
+| --- | --- |
+| Panel closed | Press Sym twice for the emoji. |
+| Symbols | That's symbols. Press Sym again for the emoji. |
+| Emoji, Recent | That's Recent. Swipe left or right on the keys, or slide along the bottom row, to Smileys. |
+| Emoji, Smileys, before the clown's page | Not on this page. Swipe up on the keys or press Enter. |
+| Emoji, Smileys, the clown's page | It's on this page. Find 🤡 and press its key. |
+| Emoji, Smileys, past the clown's page | Too far. Swipe down on the keys or press Backspace. |
+| Emoji, another group | Wrong group. The clown's in Smileys. Swipe left or right on the keys, or slide along the bottom row. |
+| Clipboard or quick settings | Wrong page. Alt goes back to the symbols, then Sym for the emoji. |
+| Leaving without picking | Sym closes the emoji. |
+
+### Paste the one nice clip (`clipboard`)
+
+| State | Line |
+| --- | --- |
+| Panel closed | Press Sym. |
+| Symbols | Press A for the clipboard. |
+| Emoji | Emoji? Sure, A works from there too. (stays) |
+| Clipboard, the nice clip's page | It's on this page. Rest on each clip to read it, then press the key under the nice one. |
+| Clipboard, another page of clips | Not on this page. Swipe up or down on the keys for the others. |
+| Clipboard, Pinned | That's Pinned. Swipe left or right on the keys to get back to your clips. |
+| Clipboard, any page (a reminder, once) | Enter pins and Backspace clears here, so swipe on the keys to turn pages. |
+| Quick settings | Wrong page. Alt goes back, then press A. |
+| Leaving without pasting | Sym closes the clipboard. Alt goes back to the symbols. |
+
+### Paste over the orange words (`paste`)
+
+This slide pastes with fn and V and needs no panel. If one opens anyway:
+
+| State | Line |
+| --- | --- |
+| Symbols | No panel needed here. Sym twice closes it. Then hold fn and press V. |
+| Emoji or clipboard | No panel needed here. Sym closes it. Then hold fn and press V. |
+| Quick settings | No panel needed here. Alt, then Sym twice, closes it. Then hold fn and press V. |

@@ -190,6 +190,13 @@ each generic language types its letters and accents over adb.
 
 More calls get added here as the night goes.
 
+## For the owner in the morning
+
+- **Your personal email address was public in the repo:** wrangler's cache file
+  `server/contributions/.wrangler/cache/wrangler-account.json` held it in the Cloudflare account's name, from commit 54473ca
+  (2026-11-10). It's removed from main (c842d50), and `.wrangler/` is ignored now, but it's still in the git history.
+  Taking it out of history means rewriting main and force-pushing, which only you can decide.
+
 ## Needs clearing before the go
 
 - **Downloads** into the WSL build machine:

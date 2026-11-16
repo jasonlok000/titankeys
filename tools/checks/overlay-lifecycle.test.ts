@@ -26,7 +26,7 @@ test("onDestroy marks the keyboard gone before anything else, and lets go of onl
   expect(back).toMatch(/fun releaseTouchpad\(handler: \(MotionEvent\) -> Boolean\) \{\s+if \(touchpad === handler\) touchpad\(null\)/);
 });
 
-test("at each field start the keyboard's windows go back on top of other apps' leftovers, new before old", () => {
+test("at each field start the keyboard's own overlay goes back on top of other apps' leftovers, new before old", () => {
   const overlay = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/TouchpadOverlay.kt"), "utf8");
   const raise = overlay.slice(overlay.indexOf("fun raise()"), overlay.indexOf("private fun added()"));
   // The new window is added before the old one goes: never none, never two.
@@ -35,5 +35,16 @@ test("at each field start the keyboard's windows go back on top of other apps' l
   const start = ime.slice(ime.indexOf("override fun onStartInput("), ime.indexOf("override fun onStartInput(") + 6000);
   expect(start).toContain("updateOverlay(raise = editing)");
   expect(ime).toContain("if (wanted && raise) overlay.raise()");
-  expect(back).toContain("if (window.up && raise) window.raise() else window.show()");
+  // The Back service's window isn't raised: Android stacks it by when the service connected, so adding it again does nothing.
+  expect(back).not.toContain("raise()");
+});
+
+test("the Accessibility screens say the service keeps the touchpad from other keyboards' leftovers, and what goes without it", () => {
+  const strings = readFileSync(join(root, "android/src/main/res/values/strings.xml"), "utf8");
+  const line = (name: string) => strings.match(new RegExp(`<string name="${name}">([^<]*)</string>`))?.[1] ?? "";
+  expect(line("back_disclosure_touchpad")).toContain("another keyboard left a layer behind");
+  expect(line("back_service_description")).toContain("another keyboard left a layer behind");
+  expect(line("back_disclosure_no")).toContain("leftover layer can take the touchpad");
+  const disclosure = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/BackDisclosureActivity.kt"), "utf8");
+  expect(disclosure).toContain("R.string.back_disclosure_more_touchpad");
 });

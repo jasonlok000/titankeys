@@ -1098,7 +1098,7 @@ class TitanKeysIme : InputMethodService() {
         if (wanted && raise) overlay.raise()
         main.removeCallbacks(releaseHighTouchpad)
         when {
-            wanted -> BackService.touchpad(overlayEvent, raise)
+            wanted -> BackService.touchpad(overlayEvent)
             // Gone now, not after the grace: and only its own, never a newer keyboard's.
             destroyed -> BackService.releaseTouchpad(overlayEvent)
             else -> main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)

@@ -42,6 +42,9 @@ class TouchpadOverlay(
      * firmware gives the touchpad to the topmost window titled "InputMethod": another app's leftover window of the same kind
      * added later would take it (2.1 left some on the owner's phone, 2026-11-16). The new window comes first and the old one goes
      * after, so the touchpad is never without one, and never two are left.
+     *
+     * For the keyboard's own overlay only. An Accessibility service's windows stack by when the service connected, so adding the
+     * Back service's window again leaves it where it was (BackService.touchpad).
      */
     fun raise() {
         val old = view ?: return

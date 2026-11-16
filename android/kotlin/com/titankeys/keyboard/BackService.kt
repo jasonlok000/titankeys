@@ -74,12 +74,11 @@ class BackService : AccessibilityService() {
     }
 
     /** The screen on and the lock screen are read now, so a broadcast that never came can't leave the window down. */
-    private fun updateTouchpad(raise: Boolean = false) {
+    private fun updateTouchpad() {
         val window = window ?: return
         val screenOn = getSystemService(PowerManager::class.java).isInteractive
         val lockScreenShows = getSystemService(KeyguardManager::class.java).isKeyguardLocked
-        if (!HighTouchpad.up(touchpad != null, screenOn, lockScreenShows)) return window.hide()
-        if (window.up && raise) window.raise() else window.show()
+        if (HighTouchpad.up(touchpad != null, screenOn, lockScreenShows)) window.show() else window.hide()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
@@ -132,11 +131,13 @@ class BackService : AccessibilityService() {
          * It goes on the lock screen, where the touchpad goes where it went before. Returns false when the service is off;
          * the keyboard's own overlay still catches the touchpad then, below the shade. The handler runs on the main thread.
          */
-        fun touchpad(handler: ((MotionEvent) -> Boolean)?, raise: Boolean = false): Boolean {
+        fun touchpad(handler: ((MotionEvent) -> Boolean)?): Boolean {
             touchpad = handler
-            // The keyboard calls this at every field start, so the window is checked again there even with the same handler, and
-            // put back on top of any other app's window of its kind ([TouchpadOverlay.raise]).
-            current?.updateTouchpad(raise)
+            // The keyboard calls this at every field start, so the window is checked again there even with the same handler.
+            // It isn't added again to go on top, as the keyboard's own overlay is (TouchpadOverlay.raise): Android stacks an
+            // Accessibility service's windows by when the service connected, not when the window came (the owner's phone,
+            // 2026-11-16), so a new window stays where the old one was.
+            current?.updateTouchpad()
             return current != null
         }
 

@@ -205,8 +205,12 @@ Languages
   capitalised (Français, Русский, Indonesia); `tools/im/make.py` stops if one differs, and `tests/languages` checks the
   files. Chinese input methods are named for their spelling (漢語拼音, 粵拼, 耶魯拼音). Ink draws the page with the app's
   text fonts (`assets/fonts`, built by `tools/im/fonts.py`): Inter with Latin and its extensions, Greek and Cyrillic, and
-  Noto Sans Georgian's letters. Hangul and Chinese come from Android's CJK font; a letter none of them has is left blank,
-  which is why Русский was blank while the fonts were Latin-1 only.
+  Noto Sans Georgian's letters, and the few Hangul and Chinese characters the app's text uses, from Noto Sans CJK (Ink's
+  fallback to Android's CJK font didn't reach the Titan 2 Elite, so 한국어 and the Chinese names were blank). A letter
+  none of them has is left blank, which is why Русский was blank while the fonts were Latin-1 only; `tests/languages`
+  fails on a name with a letter the fonts lack, and `tools/im/fonts.py` adds it.
+- **Headers:** each script has a header (Latin letters, Cyrillic, Greek, Georgian, Korean, Chinese); `tools/checks/im.test.ts`
+  fails on a script without one, which would show its four-letter code.
 - At most 8 on, the overlay's places. The 9th switch says why it won't turn on: "Eight at a time. Turn one off first."
 - Each input method's page shows its name, its source and licence, its variants when it has them (Portuguese), and
   "Fix typos as you type" for it, off by default.
@@ -235,6 +239,11 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   `selectSchema`, `setOption`, `key(keysym, mask)`, `state()` (the text to commit, the code, how Rime spells it, the page and
   its choices), `pick(index)`, `clear()`. Paging is Rime's Page Up and Page Down keys. Trime's `rime_jni` is the reference.
 - **The engine:** `com.titankeys.rime.RimeEngine`, made by name with a `(Context)` constructor (`InputEngines`).
+- **Every engine by name:** `EngineClasses` (`InputEngine.kt`) names each engine's class: Rime's, Korean's and Telex's.
+  R8 can't see a class made by name, and left Korean's and Telex's out of the APK, so they typed English on the phone;
+  `android/proguard-rules.pro` keeps every `InputEngine` and its `(Context)` constructor. `tests/languages` checks that each
+  engine an `im.json` names is in `EngineClasses`, and `bash tests/languages/apk.sh <apk>` that a built APK has each class
+  and constructor, read from its minified dex.
 - **Data:** `android/assets/rime/` holds the schemas (`tk_yale`, `tk_jyutping`, `tk_pinyin`, `tk_variants`), Rime's shared
   files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 8 choices a page.
   `android/assets/rime.sha256` lists them. On the first use of a Chinese input method, `RimeEngine.start()` copies them to

@@ -151,7 +151,10 @@ internal class Languages(
                 InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
             }
             main.post {
-                if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded: ${words?.size ?: 0} words, engine ${method?.engine ?: "none"}")
+                if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded: ${
+                    if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
+                    else "${words?.size ?: 0} words, no engine"
+                }")
                 if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, engine)
                 else {
                     engine?.stop()

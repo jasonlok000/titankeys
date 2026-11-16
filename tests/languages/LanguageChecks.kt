@@ -401,8 +401,8 @@ private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
 
 /**
  * An input method's own name, as Settings > Input methods shows it: there, the same in the index, CLDR's name for the
- * language in that language (accents and all), and in the app's fonts. Chinese input methods are named for their spelling;
- * Hangul and Chinese characters come from Android's CJK font, which the app's fonts fall back to.
+ * language in that language (accents and all), and in the app's fonts, Hangul and Chinese included: Android's CJK font
+ * didn't reach Ink on the phone (tools/im/fonts.py). Chinese input methods are named for their spelling.
  */
 private fun theNameShows(method: InputMethod, inIndex: String?) {
     val name = method.name
@@ -411,10 +411,7 @@ private fun theNameShows(method: InputMethod, inIndex: String?) {
     same("${method.id}: its name is NFC", java.text.Normalizer.isNormalized(name, java.text.Normalizer.Form.NFC), true)
     same("${method.id}: the index has the same name", inIndex, name)
     if (method.script != "Hani") same("${method.id}: its name is CLDR's", method.source["name"], CLDR_NAME + name)
-    val missing = name.codePoints().toArray().filter { code ->
-        val script = Character.UnicodeScript.of(code)
-        script != Character.UnicodeScript.HAN && script != Character.UnicodeScript.HANGUL && textFonts.any { !it.canDisplay(code) }
-    }
+    val missing = name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
     check("${method.id}: the app's fonts have its name's letters", missing.isEmpty()) {
         missing.joinToString(" ") { String(Character.toChars(it)) }
     }
@@ -435,6 +432,9 @@ private fun everyInputMethodInTheFolder(folder: File) {
             continue
         }
         same("${dir.name}: the folder is its id", method.id, dir.name)
+        method.engine?.let { engine ->
+            check("${method.id}: the app has its engine, $engine", engine in EngineClasses.BY_NAME) { EngineClasses.BY_NAME.keys.toString() }
+        }
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         theNameShows(method, index[method.id])

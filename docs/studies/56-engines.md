@@ -3,19 +3,25 @@
 M3's engine study, 2026-11-16. No app code, no phone. The owner: "for the languages, if it needs a new engine, like
 Japanese, we could find open source engines like how we adapt rime for chinese, as a shortcut." Everything downloaded sits
 in WSL under `~/build/lang/ja/`, and nothing downloaded is in the repo. It follows [56-languages.md](56-languages.md),
-which put Japanese, Indic and right-to-left scripts outside 3.0.
+which put Japanese, Indic and right-to-left scripts outside 3.0. Mozc was then built and measured with the owner's go to
+download what it needs ("Yes please download whatever you need").
 
 ## In short
 
-- **Japanese: Mozc.** Google's engine, BSD-3-Clause, with permissive dictionary data (IPAdic's terms). It still keeps an
-  Android build of its native library (`libmozc.so`), checked by its own CI on every push. Its conversion understands
-  Japanese grammar, which matters on every sentence. About 2 weeks of work and about 20 to 25 MB in the APK. Not built
-  here: the build needs Bazel, which this session wasn't allowed to download and run (see "What wasn't tried").
-- **Rime with a Japanese schema is not the shortcut it looks like.** It was the cheapest to try, and it was tried: the
-  maintained schema (rime-jaroomaji, Apache-2.0) runs on TitanKeys' own librime with no plugins, and gets single words
-  right (会社, 記者, 新幹線, 電話番号, コンピューター). But Rime has no Japanese grammar, so sentences break: "kyou ha ii tenki
-  desu ne" gives 教派いい天気ですね instead of 今日はいい天気ですね, and "toukyou ni ikimasu" gives 東京新木ます. Its table is also
-  bigger than Mozc's data: 26 MB in the APK.
+- **Japanese: Mozc. Yes.**
+  - It's Google's engine, BSD-3-Clause. Its dictionary data is under permissive terms too (IPAdic's, BSD, MIT, public domain).
+  - Its Android library was built here the way its CI builds it. That took 8.5 minutes for four ABIs.
+  - **The library:** 5.3 MB for arm64, stripped. It carries its own libc++ and already aligns to 16 KB pages.
+  - **The data:** 19.0 MB, 13.2 MB compressed in the APK.
+  - **In all, about 18.5 MB in the APK, plus the 19 MB of data copied out on the phone.**
+  - **On the PC test, with a fresh profile, 20 of 22 first choices were right.** Rime's Japanese got 12 of 22.
+  - Both of Mozc's misses (古そう for 降る, 機能は for 昨日は) are the second choice of their part. Mozc learns them once
+    picked.
+  - **Work: about 8 to 10 days.**
+- **Rime with a Japanese schema is not the shortcut it looks like.**
+  - It was tried: the maintained schema, rime-jaroomaji (Apache-2.0), runs on TitanKeys' own librime with no plugins.
+  - It gets single words right, but has no Japanese grammar, so sentences break: 教派いい天気ですね, 東京新木ます.
+  - Its table is 26 MB in the APK, more than Mozc's data.
 - **Hindi: a port of Wikimedia's transliteration rules (jquery.ime) to Kotlin.** They're short regex tables (GPL-3.0 for
   Hindi's, which ships), so it's days of work and a few KB. Word suggestions then come from the word list, as for other
   languages.
@@ -27,15 +33,17 @@ which put Japanese, Indic and right-to-left scripts outside 3.0.
 
 ## 1. Japanese
 
-What a Japanese engine does on the Titan: romaji typed on QWERTY becomes kana as you type (`nihongo` → にほんご), and the
-engine offers kanji conversions on the bar (日本語, 日本後, ニホンゴ...), as Rime does for Chinese. A sentence is converted in
-segments (今日は / いい / 天気ですね), and a good engine picks the segments and their kanji from grammar and word costs.
+What a Japanese engine does on the Titan:
+- Romaji typed on QWERTY becomes kana as you type (`nihongo` → にほんご).
+- The engine offers kanji conversions on the bar (日本語, ニホンゴ...), as Rime does for Chinese.
+- A sentence is converted in parts (今日は / いい天気ですね). A good engine picks the parts and their kanji from grammar
+  and word costs.
 
 ### The candidates
 
 | Engine | Code licence | Data licence | Ships in GPL-3.0? | Language | Maintained | Android |
 | --- | --- | --- | --- | --- | --- | --- |
-| [Mozc](https://github.com/google/mozc) | BSD-3-Clause | IPAdic (NAIST/ICOT terms: free to use, copy, change and distribute, keeping the notices), Okinawa dictionary (public domain), Google's own additions | Yes | C++, Bazel 9 | Yes: commits most days, last 2026-11-09 | `libmozc.so` built by its own Android CI; the APK client was removed |
+| [Mozc](https://github.com/google/mozc) | BSD-3-Clause | IPAdic (NAIST/ICOT terms), Okinawa dictionary (public domain), Japanese Usage Dictionary (BSD-2), Tamachi Phonetic Kanji Alphabet (MIT), Google's own additions | Yes | C++, Bazel 9 | Yes: commits most days | `libmozc.so` built by its own Android CI; the APK client was removed |
 | Rime + [rime-jaroomaji](https://github.com/lazyfoxchan/rime-jaroomaji) | Apache-2.0 (schema) | Mozc's (as above), JMdict and KANJIDIC2 (CC BY-SA 4.0), Mozc's emoji | Yes. CC BY-SA 4.0 is one-way compatible with GPL-3.0 | YAML on librime | Yes: dictionaries updated weekly, last 2026-11-12 | Any librime host, TitanKeys' included |
 | Rime + [gkovacs/rime-japanese](https://github.com/gkovacs/rime-japanese) | None (its issue #6 asks for one) | Mozc and JMdict | **No**: no licence | YAML | No: last 2023-08 | |
 | [anthy-unicode](https://github.com/fujiwarat/anthy-unicode) | LGPL-2.1+ | alt-cannadic, GPL-2.0+ | Yes, if "or later" holds | C | Fixes only, last 2026-09-10 | A plugin of fcitx5-android |
@@ -56,122 +64,161 @@ Not candidates:
 Kotlin keyboards built on Mozc's data exist and are active: Zinna (Apache-2.0) and Nacre (Apache-2.0, young). Sumire (MIT)
 uses its own engine.
 
-### Rime, tried on the PC
+### Mozc and Rime, side by side
 
-Both Rime schemas were compiled by TitanKeys' own `rime_tool` (`native/rime`, the same librime as the app), with
-rime-prelude's shared files and 8 choices a page, then typed key by key the way `data.sh` tries Chinese.
+Each phrase was typed into a fresh profile, so nothing was learned between phrases.
+- **Mozc:** Mozc's own `session_handler_main`, which drives the same `SessionHandler` the Android library does. It ran in
+  two modes:
+  - **Space:** the desktop way. Type, press Space, and Mozc shows the sentence in parts.
+  - **As you type:** Android's mobile mode, with the QWERTY-to-hiragana table. The bar shows whole-sentence choices
+    before any key is pressed.
+- **Rime:** jaroomaji compiled by TitanKeys' own `rime_tool` (`native/rime`, the same librime as the app). It ran with
+  rime-prelude's shared files, 8 choices a page, and set to start in Japanese, as the app would set it.
 
-- **Both run on TitanKeys' librime with no plugins.** jaroomaji's engine list is Rime's built-in processors, segmentors and
-  translators only.
-- **jaroomaji starts in English mode** (`ascii_mode` reset 1, so the PC can switch with Shift). The app would set it off,
-  as it sets the Chinese variant. The test copy was changed to start in Japanese.
-- **Compiling:** jaroomaji 9 s on the PC, rime-japanese 19 s.
+First choices; the parts Mozc split a sentence into are shown with `|`:
 
-First choices (jaroomaji, the one that can ship). The right answer is in bold where it isn't first:
+| Romaji | Mozc, Space | Mozc, as you type | Rime (jaroomaji) |
+| --- | --- | --- | --- |
+| watashi | 私 | 私 | わたし (私 2nd) |
+| nihongo | 日本語 | 日本語 | 日本語 |
+| kaisha | 会社 | 会社 | 会社 |
+| hashi | 橋 (箸, 端 next) | 橋 | 派し |
+| kisha | 記者 | 記者 | 記者 |
+| konnichiha | こんにちは | こんにちは | 今イチは |
+| arigatougozaimasu | ありがとうございます | ありがとうございます | ありがとうございます |
+| denwabangou | 電話番号 | 電話番号 | 電話番号 |
+| shinkansen | 新幹線 | 新幹線 | 新幹線 |
+| tabemashita | 食べました | 食べました | 食べました |
+| yomitai | 読みたい | 読みたい | よみたい |
+| kawaikatta | 可愛かった | 可愛かった | 可愛かった |
+| konpyu-ta- | コンピューター | コンピューター | コンピューター |
+| suma-tofon | スマートフォン | スマートフォン | スマートフォン |
+| moushiwakegozaimasen | 申し訳ございません | 申し訳ございませ (ん comes with the next key) | 申し訳ございません |
+| watashihagakuseidesu | 私は\|学生です | 私は学生です | ワタシハ学生デス |
+| toukyouniikimasu | 東京に\|行きます | 東京に行きます | 東京新木ます |
+| kyouhaiitenkidesune | 今日は\|いい天気ですね | 今日はいい天気ですね | 教派いい天気ですね |
+| ekimadearukimasu | 駅まで\|歩きます | 駅まで歩きます | 駅ま出歩きます |
+| ashitanoasanikaigigaarimasu | 明日の朝に\|会議が\|あります | 明日の朝に会議があります | 明日の朝二階ギガアリマス |
+| ashitaamegafurusoudesu | 明日\|雨が\|**古そうです** | 明日雨が**古そうです** | 明日雨が降るそうです |
+| kinouhatomodachitoeigawomimashita | **機能は**\|友達と\|映画を\|見ました | **機能は**友達と映画を見ました | 機能は友達都営合御三間下 |
+| **Right** | **20 of 22** | **20 of 22** | **12 of 22** |
 
-| Romaji | First choices |
-| --- | --- |
-| watashi | わたし **私** 渡し 渡 ワタシ |
-| nihongo | 日本語 ニホンゴ 日本 にほん |
-| kaisha | 会社 かいしゃ 会しゃ |
-| kisha | 記者 帰しゃ 貴社 キシャ 汽車 |
-| hashi | 派し ハシ はし **橋 箸** |
-| shinkansen | 新幹線 新感線 新感染 |
-| denwabangou | 電話番号 電話番 電話 |
-| arigatougozaimasu | ありがとうございます 有難う御座います |
-| tabemashita | 食べました 食べ たべ |
-| kawaikatta | 可愛かった かわいかった |
-| yomitai | よみたい 読み ヨミ (no 読みたい) |
-| konnichiha | 今イチは 今イチ 坤為地 (no こんにちは) |
-| konpyu-ta- | コンピューター ⌨️ 💻️ |
-| suma-tofon | スマートフォン 📱 |
-| watashihagakuseidesu | ワタシハ学生デス (expected 私は学生です) |
-| toukyouniikimasu | 東京新木ます (expected 東京に行きます) |
-| kyouhaiitenkidesune | 教派いい天気ですね (expected 今日はいい天気ですね) |
-| ashitaameganrusoudesu | 明日あメガンるそうです (expected 明日雨が降るそうです) |
+- **Mozc's misses are one part each, with the right word next.**
+  - In Mozc's mode where choices show as you type, picking 明日 types it and leaves あめがふるそうです, now offering 雨が古そうです,
+    雨が, and so on.
+  - After 昨日は is picked once, the whole sentence comes out 昨日は友達と映画を見ました. Mozc learns from what's picked.
+- **Rime's misses are whole sentences,** because Rime has no Japanese grammar. Mozc has a connection matrix for exactly
+  that: costs for which words may follow which. Rime's one sentence win, 降るそうです, is weights, not grammar.
+- **Speed:** each Mozc run, starting the engine and loading its data included, took 30 to 45 ms on the PC.
 
-rime-japanese did about the same: 私, こんにちは and 可愛かった right, 食べました wrong (食べ増田), and the same broken sentences.
+The earlier version of this study had "ashitaameganrusoudesu" for 明日雨が降るそうです: the romaji was mistyped. The table above
+uses "ashitaamegafurusoudesu".
 
-Why: Rime builds a sentence from dictionary words by their weights, which works for Chinese, where most syllables are
-words. Japanese needs grammar: particles (は, に, が), verb endings and okurigana, and costs for which words may follow
-which. Mozc has a connection matrix for exactly that (`connection_single_column.txt`), and Rime has nothing like it.
-Typing word by word, with a choice after each, would work, but that's slow on a phone.
-
-Sizes of jaroomaji's compiled table, the bulk of it:
+Rime's sizes (jaroomaji's compiled table is nearly all of it):
 
 | File | Raw | Deflated (APK) | xz -9 |
 | --- | ---: | ---: | ---: |
 | `jaroomaji.table.bin` | 70.4 MB | 26.4 MB | 17.7 MB |
 | `jaroomaji.prism.bin` and `reverse.bin` | 0.07 MB | 0.02 MB | 0.02 MB |
 
-That's bigger than Chinese's three schemas together (17.2 MB). Dropping JMdict, KANJIDIC2 and the emoji list would shrink
-it, since Mozc's data is most of the words, but it wouldn't fix the sentences.
+### Mozc, built
 
-### Mozc
-
-**Licence.** The code is BSD-3-Clause. The open-source dictionary (`src/data/dictionary_oss`, 93 MB of text) is IPAdic's
-words plus the Okinawa dictionary and Google's additions. IPAdic's terms allow use, copying, changes and distribution,
-provided the notice and ICOT's "no warranty" section travel with it. That fits a GPL-3.0 app as BSD does; the notices go
-in `licences/`, as Rime's did. Google's own additions name no separate licence and ship under the repository's.
-
-**The Android build.** Mozc dropped its Android app but kept the library: `docs/build_mozc_for_android.md`, and a CI job
-on every push ("CI for Android") that builds `native_libs.zip` for arm64, arm32 and x86:
+Mozc `a4541df29db443b49f81cf54665873b68fde9efa` (2026-11-09), built in WSL atlas-build exactly as its CI does
+(`.github/workflows/android.yaml`):
 
 ```bash
-python3 build_tools/update_deps.py      # downloads its pinned dependencies, NDK r29 among them
-bazelisk build package --config oss_android --config release_build
+python3 build_tools/update_deps.py      # its pinned dependencies, NDK r29 among them
+bazelisk build --config oss_android package --config release_build
 ```
 
-- **Bazel 9.0.2** (`src/.bazeliskrc`), Python 3.12+, Linux or macOS. WSL atlas-build is Linux.
-- **The JNI layer is Mozc's own** (`src/android/jni/mozcjni.cc`). It has three methods:
-  - `evalCommand(byte[]) → byte[]`: everything goes through it as Mozc's protobuf `commands.proto`, a key in and a
-    candidate list out.
-  - `onPostLoad(...)` loads the data file.
-  - `getDataVersion()`.
-- **Its JNI class name is Google's** (`com.google.android.apps.inputmethod.libs.mozc.session.MozcJni`). So TitanKeys
-  either has a class of that name or patches the name, as Zinna does (Zinna applies 4 small patches to upstream).
-- **The NDK:** Mozc downloads its own NDK r29. TitanKeys' `libc++_shared.so` is from r27c. Rime's rule applies: share it
-  only when the NDKs match, else link `c++_static`.
-- **Data:** a single `mozc.data` file, compiled on the PC by Mozc's own tool. Zinna's is about 18 MB (from its F-Droid
-  listing; not measured here). Mozc opens it from a path, so the app copies it out once, as it does Rime's tables.
+**Build:**
 
-**Input on the Titan's keys.** Mozc takes key events (letters, Space, Enter, arrows, Backspace) and returns the
-composition and a candidate list, so it fits the model Rime already uses:
-- Letters type romaji.
-- Space converts.
-- The bar shows the choices.
-- Left and Right move between segments.
-- Shift+Left and Shift+Right resize a segment, which Mozc does itself.
-- Mozc also predicts the next word after a commit.
+| What | Time |
+| --- | ---: |
+| `update_deps.py` | 28 s |
+| `libmozc.so` for arm64, arm32, x86-64 and x86 | 512 s |
+| `mozc.data` and the PC test programs | about 120 s each |
 
-Mozc's docs point to a removed keyboard layout file for physical Japanese keyboards; the Titan's QWERTY needs none, since
-romaji is plain letters.
+- **Tools:** bazelisk 1.25.0, which fetched Bazel 9.0.2 as Mozc pins it, and Python 3.12.3.
+- **Disk:** the build takes 4.4 GB, all in `~/build/lang/ja`: 2.4 GB of dependencies (the NDK r29 included) and 1.9 GB of
+  Bazel's cache.
 
-**Quality.** Mozc is the open-source version of Google Japanese Input. Its open dictionary lacks the web vocabulary of
-Google's own, but the grammar and segmenting are the same engine. Fcitx, IBus and several Android keyboards use it as
-their Japanese engine.
+**Sizes:**
 
-**What it would take (estimate):**
+| File | Raw | Deflated | xz -9 |
+| --- | ---: | ---: | ---: |
+| `libmozc.so`, arm64, as built (with debug info) | 16.1 MB | 4.0 MB | |
+| `libmozc.so`, arm64, stripped | **5.33 MB** | 1.85 MB | |
+| `mozc.data` (`//data_manager/oss:mozc_dataset_for_oss`) | **18.96 MB** | **13.18 MB** | 11.73 MB |
+
+- **In the APK:**
+  - TitanKeys stores native libraries uncompressed, so the library is 5.3 MB.
+  - The data, compressed, is 13.2 MB.
+  - **About 18.5 MB in all.**
+- **On the phone:**
+  - Mozc opens its data by path (`DataManager::CreateFromFile`), so the app copies it out once, as it does Rime's tables:
+    19 MB in the app's files.
+  - Mozc's user history is small, in its profile folder.
+  - The library stays in the APK, as Rime's does, uncompressed and not extracted.
+- **The library needs only Android's own libraries** (`liblog`, `libc`, `libm`, `libdl`). It links libc++ statically, so
+  NDK r29 against the app's r27c `libc++_shared.so` doesn't matter.
+- **It aligns to 16 KB pages,** as Android 15+ wants.
+- **It exports 7,750 symbols,** about 550 of them from libc++. TitanKeys' build exports only `JNI_OnLoad`, with a version
+  script, as Rime's library does. That also keeps its libc++ from clashing with the app's.
+
+**Licences:** everything Mozc credits for the data and library it ships (`data/installer/credits_en.html`) is permissive.
+- **Mozc:** BSD-3.
+- **Abseil:** Apache-2.0.
+- **Protocol Buffers:** BSD-3.
+- **IPAdic:** free use, copying and changing, keeping NAIST's notice and ICOT's "no warranty".
+- **Okinawa dictionary:** public domain.
+- **Japanese Usage Dictionary:** BSD-2.
+- **Tamachi Phonetic Kanji Alphabet:** MIT.
+
+Their texts go in `licences/`, as Rime's did. Qt, the Windows library and the zip-code data are credited but not in the
+Android build.
+
+### How it plugs into `InputEngine`
+
+Mozc's mobile mode fits `InputEngine` as Rime does:
+- `code` is the hiragana being typed.
+- `choices` are Mozc's candidates.
+- `space` picks the first.
+- `pick(index)` picks one.
+- `enter` types the hiragana as it is.
+- `backspace` deletes from the hiragana.
+- `reset` drops it.
+
+A part picked commits that part and leaves the rest, which Mozc handles itself (tested above). No segments or arrow keys
+are needed in `InputEngine`. The bar's pages, word menu and settings work as they do for Chinese.
+
+**The JNI layer: TitanKeys' own, not Mozc's.**
+- **Why not Mozc's own `mozcjni.cc`:**
+  - It passes everything as protobuf bytes (`evalCommand(byte[]) → byte[]`, Mozc's `commands.proto`, 1,466 lines). The
+    Kotlin side would need protobuf too.
+  - Its class name is Google's (`com.google.android.apps.inputmethod.libs.mozc.session.MozcJni`).
+- **Instead, a `mozc_jni.cc` like `native/rime/rime_jni.cc`:**
+  - It's built inside Mozc's Bazel tree as one more target, from a small overlay copied in by the build script, with no
+    patches to Mozc.
+  - It builds the protobuf commands in C++ and gives Kotlin the same shape of calls as `RimeNative`:
+    - `start(dataFile, profileDir)` creates the `SessionHandler` from `mozc.data`, then a session with the mobile request
+      and the QWERTY-to-hiragana table.
+    - `key(char)`, `special(space | enter | backspace)`, `pick(id)`, `clear()` and `stop()`.
+    - `state()` returns the hiragana, the candidates and whether a commit happened.
+  - Kotlin keeps no protobuf, and the library exports only `JNI_OnLoad`.
+- **Options:** Katakana and half-width come as candidates already (アメガフルソウデス, nihongo). So the variant switch's place
+  needs no option at first.
+
+### What it would take
 
 | Step | Days |
 | --- | ---: |
-| Mozc's Android library in WSL with Bazel 9, pinned to a commit, as `native/rime/build.sh` does for Rime; `mozc.data` from the same build | 2–3 |
-| JNI glue: the class name, and `commands.proto` from Kotlin (protobuf-lite, or a small hand-written encoder for the few messages used) | 2–3 |
-| The Japanese input method: composition on the bar, segments, choices, Space and arrows, the variant switch's place for Hiragana/Katakana/English | 3–5 |
-| Copying the data out, Settings, the guide, tests (`tests/` and a `data.sh`-style check: romaji in, first choice out) | 2–3 |
-| **Total** | **about 2 weeks** |
-
-**Size:** `libmozc.so` (arm64, not measured; Zinna's whole APK is 36 MB) plus about 18 MB of data. Estimated 20 to 25 MB
-in the APK and about 25 to 30 MB on the phone. With the language study's total (about 160 MB), that's still under Google
-Play's 200 MB.
-
-### What wasn't tried
-
-- **Building Mozc.** Its build downloads and runs Bazel (bazelisk) and its own pinned dependencies. This session's
-  permission check refused that, so neither the Android library nor a PC build for testing was made. The evidence that it
-  builds is Mozc's own Android CI and Zinna's F-Droid builds from upstream. The next step is a session allowed to run
-  Bazel in WSL: build `libmozc.so` and a PC helper (`mozc_emacs_helper`), then type the table above through it.
-- **Mozc's quality on the sentences above.** It can't be measured until it's built.
+| `native/mozc/build.sh`, as `native/rime/build.sh`: Mozc pinned to a commit, `update_deps.py`, Bazel for arm64 only, the JNI overlay, the version script, stripping, `library.sha256`; `mozc.data` and its hash from the same build | 2 |
+| `mozc_jni.cc` and `MozcNative`/`MozcEngine` in Kotlin, after Rime's | 2–3 |
+| The data copied out once (`MozcData`, as `RimeData`), the input method in Settings > Languages, the licences | 2 |
+| Tests: a `tests/mozc/` suite like `tests/rime/`, and a data check, romaji in and first choice out, from the table above | 1–2 |
+| Phone checks: speed of first load, typing, learning, Back up everything for its history | 1 |
+| **Total** | **8 to 10 days** |
 
 ## 2. The other scripts
 
@@ -214,14 +261,32 @@ Hebrew first: 27 letters on 26 keys, and an AOSP word list.
 
 1. **Thai** (keymap, Shift layer, word breaking): no engine, the smallest step.
 2. **Hindi** (the jquery.ime rule runner): about a week; the runner opens the other Indic scripts.
-3. **Japanese with Mozc:** about 2 weeks and 20 to 25 MB, after a build in WSL proves the size and quality. Not Rime: it's
-   free to add but fails at sentences and is larger.
+3. **Japanese with Mozc: yes.** 8 to 10 days, about 18.5 MB in the APK and 19 MB copied out on the phone. Not Rime: it's
+   free to add, but fails at sentences and is larger.
 4. **Right to left, Hebrew first:** UI work across the bar, the menus and steering.
 
 ## Calls to confirm
 
-- **Mozc over Rime for Japanese,** though Rime is already in the app. Rime's Japanese gets words but breaks sentences.
-- **Permission to run Bazel in WSL** for the Mozc build: it downloads bazelisk, Bazel 9 and Mozc's pinned dependencies
-  (NDK r29, Abseil, protobuf) from their official sources.
+- **Mozc for Japanese,** at 18.5 MB in the APK. That brings the language study's total to about 180 MB, under Google
+  Play's 200 MB.
+- **Mozc's Android mode** (choices as you type, whole sentences first) rather than its desktop mode (Space converts and
+  shows parts). It fits the bar and `InputEngine` as they are.
+- **Our own JNI layer** rather than Mozc's protobuf one.
 - **jquery.ime's rules for Hindi** instead of m17n's, because the regex tables port directly to Kotlin.
 - **The order:** Thai and Hindi before Japanese, as smaller steps, or Japanese first if it matters more to the owner.
+
+## How to rebuild (study only)
+
+In WSL, under `~/build/lang/ja/` (nothing in the repo):
+
+```bash
+git clone --depth 1 https://github.com/google/mozc.git && cd mozc/src
+python3 build_tools/update_deps.py
+bazelisk build --config oss_android package --config release_build             # bazel-bin/android/jni/native_libs.zip
+bazelisk build --config oss_linux --config release_build //data_manager/oss:mozc_dataset_for_oss //session:session_handler_main
+```
+
+The side-by-side table feeds each phrase to `session_handler_main --input <file> --profile <fresh folder> --dictionary oss`
+with `SEND_KEY ON`, `SEND_KEYS <romaji>`, `SEND_KEY Space`, `SHOW` (Space). For choices as you type, it adds
+`SET_MOBILE_REQUEST`, `UPDATE_MOBILE_KEYBOARD QWERTY_MOBILE_TO_HIRAGANA COMMIT` and `SWITCH_COMPOSITION_MODE HIRAGANA`
+before the keys.

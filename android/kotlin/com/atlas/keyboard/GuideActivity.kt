@@ -2198,6 +2198,10 @@ class GuideActivity : Activity() {
         }
         if (said != null) main.postDelayed({ if (!passed && flow.step === step) showChip(said) }, ENTER_MILLIS)
         hideHint()
+        // The Space-tap slides count their taps from nothing; the raw log notes the slide (#90).
+        tapMeter = (step.cue as? GuideCue.Taps)?.let { TapMeter(it.count) }
+        keys.taps(0, false)
+        logMark(GuideLog.SLIDE, step.id)
         liveShown = null
         panelHintShown = null
         if (missing == GuideNeed.FnAsCtrl) offerDecline()
@@ -3460,10 +3464,85 @@ class GuideActivity : Activity() {
             lastPoint = point
         }
         keys.trace(points, reset, lifted)
+        if (!playground) followContact(points, reset, lifted)
         waitForHelp()
         if (lifted) freezeRegrets()
         acted()
         if (!busy && ready) judge(KeyboardEvent.Moved(travel, lifted))
+    }
+
+    // The guide for people new to the phone (#90): the Space taps light the drawing as they land, a tap beside the patch or a
+    // lone tap says so, a swipe far from its word shows the word's path, and the raw log notes each slide and miss.
+
+    /** The Space-tap slides' taps, as the touchpad's traces show them: see [TapMeter]. Null on other slides. */
+    private var tapMeter: TapMeter? = null
+    /** When the finger in the trace came down, where, and the trail it made, in the touchpad's space. */
+    private var contactAt = -1L
+    private var contactFirst: FloatArray? = null
+    private val contactTrail = ArrayList<FloatArray>()
+    /** The grey word when the swipe began, which a far swipe is measured against. */
+    private var contactWord = ""
+    /** When the last tap lifted, and when Space was last pressed down, to tell a lone tap from a press. */
+    private var tapLiftedAt = -1L
+    private var spacePushedAt = -1L
+
+    /** A finger came down or lifted, from [trace]: the tap meter, and a tap beside the patch. */
+    private fun followContact(points: List<FloatArray>, reset: Boolean, lifted: Boolean) {
+        val now = SystemClock.uptimeMillis()
+        if (reset) {
+            contactAt = now
+            contactFirst = points.firstOrNull()
+            contactTrail.clear()
+            contactWord = expectedWord()
+            tapMeter?.down(now)
+        }
+        contactTrail += points
+        val meter = tapMeter
+        if (lifted && meter != null) {
+            val first = contactFirst
+            val tap = contactAt >= 0 && now - contactAt < TapMeter.TAP_MILLIS && travel < TapMeter.TAP_TRAVEL
+            meter.up(now, tap)
+            if (tap) tapLiftedAt = now
+            // A tap that landed beside the patch, where the touchpad doesn't count it (#90).
+            if (tap && first != null && !CursorGesture.inZone(first[0], first[1]) && flow.stage == 0 && !passed && !settingUp)
+                missed(GuideMiss.Beside, tapMissLine(GuideMiss.Beside, meter.taps))
+        }
+        meter?.let { keys.taps(it.landed, it.held) }
+    }
+
+    /** Says what a miss was, as a chip, and notes it in the raw log. */
+    private fun missed(miss: GuideMiss, line: String, detail: String? = null) {
+        haptics.play(Haptic.GuideBlocked)
+        showChip(line, force = true)
+        logMark(GuideLog.MISS, GuideLog.missLabel(flow.step.id, miss, detail))
+    }
+
+    /**
+     * A swipe recognised on the swipe slide: if it went far from the grey word's path ([SWIPE_FAR_KEYS]), the drawing shows the
+     * word's path next to the finger's, and a line on how to swipe, even when the slide passes (#90).
+     */
+    private fun coachSwipe() {
+        if (flow.step.id != "swipe" || contactTrail.size < 2 || contactWord.isEmpty()) return
+        val distance = swipeDistance(contactTrail, contactWord)
+        if (!swipeFar(distance)) return
+        keys.compare(wordPath(contactWord), contactTrail.toList())
+        missed(GuideMiss.FarSwipe, SWIPE_COACH, "%.1f".format(java.util.Locale.ROOT, distance))
+    }
+
+    /**
+     * A line for the raw log, on the phone only, as the log keeps everything today: the keyboard takes it as a mark, in TitanKeys
+     * Debug's full log only ([RawLog.MARK_ACTION]).
+     */
+    private fun logMark(kind: String, label: String) {
+        if (playground) return
+        try {
+            input.sendAppPrivateCommand(field, RawLog.MARK_ACTION, Bundle().apply {
+                putString("kind", kind)
+                putString("label", label)
+            })
+        } catch (error: RuntimeException) {
+            // The log is a debugging aid: a refused mark changes nothing in the guide.
+        }
     }
 
     // The playground's speed: while you type, the name turns into words a minute, the screen warms towards orange, and from 40
@@ -3697,6 +3776,7 @@ class GuideActivity : Activity() {
         }
         when (event) {
             is KeyboardEvent.Pushed -> keyName(event.code)?.let {
+                if (event.code == KeyEvent.KEYCODE_SPACE) spacePushedAt = SystemClock.uptimeMillis()
                 lastKey = it
                 // The right Shift is the second ⇧ of the drawing; every other key has one.
                 keys.press(it, if (event.code == KeyEvent.KEYCODE_SHIFT_RIGHT) 1 else 0)
@@ -3722,6 +3802,12 @@ class GuideActivity : Activity() {
             }
             // The drawing of the keys doesn't copy the panel: the real panel is on the screen. See ModifierState above.
             is KeyboardEvent.PanelFace -> Unit
+            // The last tap stayed down: the drawing lights every step (#90).
+            is KeyboardEvent.CursorStarted -> tapMeter?.let {
+                it.hold()
+                keys.taps(it.landed, it.held)
+            }
+            is KeyboardEvent.Recognised -> if (!playground && event.words.isNotEmpty()) coachSwipe()
             // On the slide about the bar, every swipe comes out wrong, so that there is always something to fix with one tap.
             else -> Unit
         }
@@ -3812,7 +3898,20 @@ class GuideActivity : Activity() {
         if (event is KeyboardEvent.Blocked) {
             // Nothing is blocked silently: each try says so, and the phone says no. A chip that shows already isn't said twice.
             haptics.play(Haptic.GuideBlocked)
-            showChip(blockedChip(step, event.lesson, flow.lessons), force = true)
+            val now = SystemClock.uptimeMillis()
+            val taps = (step.cue as? GuideCue.Taps)?.count
+            // On the Space-tap slides a lone tap types a space too: it says one tap, not a press (#90).
+            val lone = taps != null && event.lesson == GuideLesson.Space.name && now - spacePushedAt > PRESS_OR_TAP_MILLIS &&
+                tapLiftedAt >= 0 && now - tapLiftedAt < PRESS_OR_TAP_MILLIS
+            showChip(if (lone) tapMissLine(GuideMiss.Single, taps!!) else blockedChip(step, event.lesson, flow.lessons), force = true)
+            val miss = when {
+                lone -> GuideMiss.Single
+                taps != null && event.lesson == GuideLesson.Space.name -> GuideMiss.Press
+                taps != null && event.lesson == GuideLesson.Typing.name -> GuideMiss.Typing
+                taps != null && event.lesson == GuideLesson.Swipe.name -> GuideMiss.Swipe
+                else -> GuideMiss.Blocked
+            }
+            logMark(GuideLog.MISS, GuideLog.missLabel(step.id, miss, event.lesson.lowercase()))
         }
         // A copy on the paste slide put something else on the clipboard: the slide's clip goes back on it, so fn and V still
         // pastes the slide's words. The slide's own chip says it was a copy.
@@ -3908,6 +4007,9 @@ class GuideActivity : Activity() {
 
     private fun judge(event: KeyboardEvent) {
         val verdict = flow.event(event, expectedWord())
+        // Each miss the slide has words for goes in the raw log, with its kind (#90).
+        if (verdict is GuideVerdict.Hint && !verdict.passes)
+            logMark(GuideLog.MISS, GuideLog.missLabel(flow.step.id, verdict.miss ?: GuideMiss.Other))
         // The slide made the next one unneeded: the bar at the top counts one slide fewer.
         if (verdict != GuideVerdict.Wait) paintSegments(flow.stepIndex)
         when (verdict) {
@@ -3986,6 +4088,8 @@ class GuideActivity : Activity() {
 
     /** The slide moved on, or back, to another instruction: only that one shows, and the ghost follows it. */
     private fun showStage() {
+        tapMeter?.reset()
+        keys.taps(0, false)
         startHunt()
         hideHint()
         hideChip(now = true)
@@ -4865,6 +4969,8 @@ class GuideActivity : Activity() {
         private const val DISCLOSURE_REQUEST = 8
         private const val SHARE_REQUEST = 9
         private const val CONTACTS_REQUEST = 10
+        /** A blocked space this soon after a tap lifted, with no press of Space, was the tap: a lone tap, not a press (#90). */
+        private const val PRESS_OR_TAP_MILLIS = 600L
         /** How long "Android said no" stays before setup moves on. */
         private const val CONTACTS_NO_MILLIS = 2500L
         /** How often the guide looks at the part whose page is open. Reading these settings is cheap. */

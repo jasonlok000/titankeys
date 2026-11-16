@@ -1,0 +1,89 @@
+package com.atlas.keyboard
+
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import com.atlas.engine.TypingSettings
+
+/**
+ * The keyboard's input methods while it runs (docs/languages.md): which are on, which one types now, and its word list,
+ * loaded off the main thread when it's switched to. English is always ready: its own code loads as it always has.
+ *
+ * [words] is what the composer asks for words: English's own while English types, the current input method's list otherwise.
+ */
+internal class Languages(private val context: Context, english: Words, private val changed: (InputMethod) -> Unit) {
+    private val main = Handler(Looper.getMainLooper())
+    private var list: WordList? = null
+    val words = LanguageWords(english) { list }
+
+    /** The input method typing now. English until the settings say otherwise. */
+    var current: InputMethod = InputMethod.ENGLISH
+        private set
+    /** The input methods that are on, in the overlay's order. */
+    var on: List<InputMethodIndex.Entry> = listOf(InputMethodIndex.ENGLISH)
+        private set
+    /** Counts loads, so a slow one that's been overtaken by another is dropped. */
+    private var loading = 0
+    /** The input method being switched to, which may still be loading. */
+    private var target = InputMethod.ENGLISH_ID
+
+    /** Whether holding Sym opens the overlay: only with two or more on. */
+    val switching get() = on.size > 1
+
+    /** Reads which input methods are on and which types now, as a field starts: Settings may have changed them. */
+    fun refresh() {
+        val index = InputMethodList.index(context)
+        val setting = TypingSettings.inputMethods(context)
+        on = index.on(setting)
+        val wanted = index.current(setting, TypingSettings.currentInputMethod(context)).id
+        if (wanted != target) use(wanted)
+    }
+
+    /** Switches to input method [id], saved for next time. Its files load in the background; English is at once. */
+    fun switchTo(id: String) {
+        if (on.none { it.id == id }) return
+        TypingSettings.currentInputMethod(context, id)
+        if (id != target) use(id)
+    }
+
+    private fun use(id: String) {
+        target = id
+        val ticket = ++loading
+        if (id == InputMethod.ENGLISH_ID) {
+            apply(InputMethod.ENGLISH, null, ticket)
+            return
+        }
+        Thread({
+            val method = InputMethodList.load(context, id)
+            val words = method?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
+            main.post { if (method != null) apply(method, words, ticket) else apply(InputMethod.ENGLISH, null, ticket) }
+        }, "InputMethod $id").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
+    }
+
+    private fun apply(method: InputMethod, words: WordList?, ticket: Int) {
+        if (ticket != loading) return
+        current = method
+        list = words
+        this.words.other = !method.isEnglish
+        changed(method)
+    }
+}
+
+/** What the bar's picker is showing, and so what a key picks. */
+internal sealed interface LanguagePicker {
+    val notice: Strip.Notice.Picker
+
+    /** A held letter's accents. Picking one replaces the letter it typed. */
+    class Accents(val accents: List<String>, held: String) : LanguagePicker {
+        private val columns = Picker.accentColumns(accents.size, Picker.anyColumn(held))
+        override val notice = Strip.Notice.Picker(accents.take(columns.size), columns.map { it..it })
+        fun choice(key: String) = Picker.choice(key, columns)
+    }
+
+    /** The switch overlay on a held Sym: each input method that's on, the current one marked. */
+    class Switch(val entries: List<InputMethodIndex.Entry>, current: String) : LanguagePicker {
+        override val notice = Strip.Notice.Picker(entries.map { it.label }, SwitchOverlay.columns(entries.size),
+            entries.indexOfFirst { it.id == current })
+        fun choice(key: String) = SwitchOverlay.choice(key, entries.size)
+    }
+}

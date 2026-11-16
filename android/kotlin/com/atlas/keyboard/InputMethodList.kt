@@ -64,6 +64,9 @@ internal object InputMethodList {
         }.onFailure { Log.w(TAG, "Android's keyboard list didn't take the input methods", it) }
     }
 
+    /** TitanKeys' own id in Android's keyboard list. */
+    fun ownId(context: Context): String? = own(context)?.id
+
     private fun own(context: Context) = context.getSystemService(InputMethodManager::class.java)?.inputMethodList
         ?.firstOrNull { it.packageName == context.packageName }
 

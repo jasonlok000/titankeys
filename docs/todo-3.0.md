@@ -244,6 +244,13 @@ More calls get added here as the night goes.
 
 ## For the owner in the morning
 
+- **were/we're's bigger test set needs your yes in its own session:**
+  - The typing worker (tk-typing, branch `claude/m2-were`) can't download Tatoeba's English sentences without the owner's
+    own yes in that session; a go from the Orchestrator doesn't count.
+  - It's using what's on the machine instead: the triples at every position, Tatoeba's held-out file, and the owner's
+    judged cases.
+  - To widen it, say yes to the download in that session.
+
 - **Your personal email address was public in the repo:** wrangler's cache file
   `server/contributions/.wrangler/cache/wrangler-account.json` held it in the Cloudflare account's name, from commit 54473ca
   (2026-11-10). It's removed from main (c842d50), and `.wrangler/` is ignored now, but it's still in the git history.

@@ -2461,8 +2461,37 @@ private fun apostrophes(world: Realistic) {
             lines.append("  $typed | $expected | $got${if (got == expected) "" else "  <-- DIFFERS"}\n")
             same(got, expected, "Owner's report with the real model: $typed")
         }
+        // #73: "were" becomes "we're" only when the model is very sure, at 2.0 nats. The meant "were" here scored -13 to 0.7.
+        val weres = listOf(
+            "Were almost there." to "We're almost there.", "Great. Were done here." to "Great. We're done here.",
+            "Were going to be late." to "We're going to be late.",
+            "Were you at home last night?" to null, "Were the kids asleep?" to null, "Were there any problems?" to null,
+            "they came and were going to stay" to null, "the cats ate and were happy" to null, "if we were there" to null,
+            "We were going to call you." to null, "ok were going now" to null,
+        )
+        for ((typed, expected) in weres) {
+            val got = typist().type("$typed ").text.trimEnd()
+            lines.append("  $typed | ${expected ?: typed} | $got${if (got == (expected ?: typed)) "" else "  <-- DIFFERS"}\n")
+            same(got, expected ?: typed, "were/we're with the real model: $typed")
+        }
         println(lines)
     }
+
+    // #73: "were" waits like the other context words, but needs 1.0 nats more: 2.0, or 3.0 when only sure.
+    val onlySure = Lists(world.words, sure = true)
+    fun scoring(margin: Double) = ContinuationScorer { _, texts -> DoubleArray(texts.size) { if (it == 0) 0.0 else margin } }
+    same(typist(with = scoring(2.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "+2.5: were becomes we're")
+    same(typist(with = scoring(1.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "+1.5 isn't enough for were")
+    same(typist(with = scoring(1.5)).type("Sorry, its going to be late. ").text, "Sorry, it's going to be late. ", "though it is for its")
+    same(typist(onlySure, scoring(2.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "Only when sure: +2.5 isn't")
+    same(typist(onlySure, scoring(3.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "Only when sure: +3.5 is")
+    same(typist(with = scoring(5.0)).type("Sorry, were going to ").backspace().text, "Sorry, were going to ",
+        "Backspace right after puts \"were\" back")
+    same(typist(with = scoring(5.0)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, were going to ", "A swiped were never changes")
+    same(typist(Lists(world.words, off = setOf(FixKind.CONTEXT_APOSTROPHES)), scoring(5.0)).type("Sorry, were going to ").text,
+        "Sorry, were going to ", "Switched off, \"were\" stays")
+    same(typist(with = scoring(5.0)).type("so were, ").text, "so were, ", "Too few words: \"were\" stays")
+    same(typist(with = scoring(5.0)).type("Sorry, we're going to ").text, "Sorry, we're going to ", "\"we're\" never loses its apostrophe")
 
     // Always fixed at the word's end, though "whats", "cant", "wont", "hes" and "shes" are in the word lists.
     val always = listOf("whats" to "what's", "wheres" to "where's", "hes" to "he's", "shes" to "she's", "cant" to "can't",
@@ -2479,8 +2508,8 @@ private fun apostrophes(world: Realistic) {
     // "lets" is a context word now: alone it stays.
     same(typist(with = null).type("so lets ").text, "so lets ", "\"lets\" isn't always fixed")
 
-    // Never: "were" to "we're", "their" and "there" swapped, an apostrophe taken out, or a swiped word.
-    same(typist().type("We were going to call you. ").text, "We were going to call you. ", "\"were\" never becomes \"we're\"")
+    // Never: a meant "were" changed, "their" and "there" swapped, an apostrophe taken out, or a swiped word.
+    same(typist().type("We were going to call you. ").text, "We were going to call you. ", "\"We were\" stays")
     for (text in listOf("put it there for now ", "their dog is here ", "the dog wagged it's tail ", "it was it's own thing "))
         same(typist().type(text).text, text, "Never changed: $text")
     same(typist().type("Bring a coat, ").swipe("its").type("going to ").text, "Bring a coat, its going to ", "A swiped word never changes")

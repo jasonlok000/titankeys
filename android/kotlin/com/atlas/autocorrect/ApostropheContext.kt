@@ -75,7 +75,7 @@ class ApostropheContext(
      * each with the space before it: " going to".
      */
     fun decide(before: String, typed: String, after: String): String? =
-        judge(before, typed, after)?.takeIf { it.margin > margin() }?.form
+        judge(before, typed, after)?.takeIf { it.margin > margin() + (EXTRA_MARGIN[typed.lowercase()] ?: 0.0) }?.form
 
     /** The best apostrophe form for [typed] with its margin, or null when there is none or too little to go on. */
     fun judge(before: String, typed: String, after: String): Verdict? {
@@ -100,13 +100,20 @@ class ApostropheContext(
         private const val MIN_OTHER_WORDS = 2
 
         /**
-         * Typed forms that are real words, with the forms with an apostrophe they may be meant as. Never "were" for "we're": the
-         * model can't tell them apart. Never "their" for "there": that's a word swap, not an apostrophe.
+         * More margin for words that are right far more often than not. "were" is a very common right word, so it becomes "we're"
+         * only at 2.0, or 3.0 when only sure: the #73 study's highest margin for a meant "were" was 0.68 (docs/studies/73-were.md).
+         */
+        val EXTRA_MARGIN = mapOf("were" to 1.0)
+
+        /**
+         * Typed forms that are real words, with the forms with an apostrophe they may be meant as. "were" takes a higher margin:
+         * see [EXTRA_MARGIN]. Never "their" for "there": that's a word swap, not an apostrophe.
          */
         val CANDIDATES = mapOf(
             "its" to listOf("it's"), "lets" to listOf("let's"), "ill" to listOf("i'll"), "well" to listOf("we'll"),
             "id" to listOf("i'd"), "hell" to listOf("he'll"), "shed" to listOf("she'd"), "wed" to listOf("we'd"),
             "shell" to listOf("she'll"), "your" to listOf("you're"), "their" to listOf("they're"), "there" to listOf("they're"),
+            "were" to listOf("we're"),
         )
 
         /** Whether only the words around [word] can say if it's missing an apostrophe. */
@@ -114,10 +121,10 @@ class ApostropheContext(
 
         /**
          * The other form of each pair, both ways, that the bar offers while the word is being typed (#73). Offered only: a tap is
-         * the user's choice. "were" and "we're" are here, though the model never changes them. "they're" offers "their".
+         * the user's choice. "they're" offers "their".
          */
         val OTHER_FORMS: Map<String, String> = run {
-            val pairs = CANDIDATES.flatMap { (plain, forms) -> forms.map { plain to it } } + ("were" to "we're")
+            val pairs = CANDIDATES.flatMap { (plain, forms) -> forms.map { plain to it } }
             val other = LinkedHashMap<String, String>()
             for ((plain, form) in pairs) {
                 other.putIfAbsent(plain, form)

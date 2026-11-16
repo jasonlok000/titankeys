@@ -25,6 +25,8 @@ CAP = 32
 START = 50256
 WANTED = 2
 MIN_OTHER_WORDS = 2
+# The stricter rule: at least this many words before "were" in the window. The word before, its subject, is what tells them apart.
+NEED_BEFORE = 0
 
 
 # GPT-2 byte-level BPE, as ByteBpe.java. Python's re has no \p{L}, so letters are [^\W\d_].
@@ -172,7 +174,7 @@ def margin(before, typed, rest):
     if after is None:
         return None
     ctx = window(before)
-    if count_words(ctx) + count_words(after) < MIN_OTHER_WORDS:
+    if count_words(ctx) + count_words(after) < MIN_OTHER_WORDS or count_words(ctx) < NEED_BEFORE:
         return None
     opening = ctx == ""
     lead = "" if opening else " "
@@ -195,25 +197,42 @@ def text_cases(texts):
     return cases
 
 
-def report(name, cases):
-    scored = [(meant, m) for meant, m in cases if m is not None]
-    thin = len(cases) - len(scored)
-    meant = Counter(x for x, _ in cases)
+def report(name, cases, weights=None):
+    """Counts by margin and threshold. With [weights], each case also counts that many times, in a second column."""
+    weights = weights or [1] * len(cases)
+    rows = [(meant, m, w) for (meant, m), w in zip(cases, weights)]
+    scored = [(meant, m, w) for meant, m, w in rows if m is not None]
+    weighted = any(w != 1 for w in weights)
+    meant = Counter(x for x, _, _ in rows)
     were, wer_e = meant["were"], meant["we're"]
-    print(f"\n== {name}: {len(cases)} cases (were {were}, we're {wer_e}), too thin {thin}")
+    print(f"\n== {name}: {len(cases)} cases (were {were}, we're {wer_e}), too thin {len(rows) - len(scored)}")
+    if weighted:
+        total = Counter()
+        for x, _, w in rows:
+            total[x] += w
+        weighted_were, weighted_wer_e = total["were"], total["we're"]
+        print(f"   weighted by count: were {weighted_were}, we're {weighted_wer_e}")
+
+    def count(test, use):
+        return sum(w if use else 1 for x, m, w in scored if test(x, m))
+
     bins = [(-1e9, -4), (-4, -2), (-2, 0), (0, 1), (1, 2), (2, 3), (3, 5), (5, 1e9)]
-    print("margin bin        were  we're   (meant)")
+    print("margin bin        were  we're   (meant)" + ("   weighted were  we're" if weighted else ""))
     for lo, hi in bins:
-        w = sum(1 for x, m in scored if x == "were" and lo <= m < hi)
-        r = sum(1 for x, m in scored if x != "were" and lo <= m < hi)
-        print(f"  [{lo:>5}, {hi:>5})  {w:5}  {r:5}")
-    for t in (0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8):
-        wrong = sum(1 for x, m in scored if x == "were" and m > t)
-        right = sum(1 for x, m in scored if x != "were" and m > t)
-        print(f"  threshold {t:>4}: right changes {right:3}, wrong changes {wrong:3}")
-    top_were = max((m for x, m in scored if x == "were"), default=None)
+        cells = [count(lambda x, m: x == "were" and lo <= m < hi, False), count(lambda x, m: x != "were" and lo <= m < hi, False)]
+        if weighted:
+            cells += [count(lambda x, m: x == "were" and lo <= m < hi, True), count(lambda x, m: x != "were" and lo <= m < hi, True)]
+        print(f"  [{lo:>5}, {hi:>5})  " + "  ".join(f"{c:5}" for c in cells))
+    for t in (0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8):
+        line = (f"  threshold {t:>4}: right changes {count(lambda x, m: x != 'were' and m > t, False):4}, "
+                f"wrong changes {count(lambda x, m: x == 'were' and m > t, False):4}")
+        if weighted:
+            line += (f"   weighted: right {count(lambda x, m: x != 'were' and m > t, True):5}, "
+                     f"wrong {count(lambda x, m: x == 'were' and m > t, True):5}")
+        print(line)
+    top_were = max((m for x, m, _ in scored if x == "were"), default=None)
     print(f"  highest margin of a meant 'were': {top_were if top_were is None else round(top_were, 2)}")
-    return scored
+    return [(x, m) for x, m, _ in scored]
 
 
 def main():
@@ -224,16 +243,24 @@ def main():
                if l.strip() and not l.startswith("#")]
     allscored += report("Tatoeba held-out sentences (tests/autocorrect)", text_cases(tatoeba))
 
-    # en_triples.txt: common three-word runs, each counted once (so the counts weigh nothing): were or we're in the middle.
-    triples = []
+    # en_triples.txt: word-triple counts from Tatoeba's whole English corpus (CC BY 2.0 FR), so real use with its frequency.
+    # Each triple with were or we're anywhere becomes a short text: <s> is the start, and </s> the end, written as a full stop.
+    triples, counts = [], []
     for line in open(ROOT + "/android/assets/autocorrect/en_triples.txt", encoding="utf-8"):
-        words = line.split("\t")[0].split(" ")
-        if len(words) != 3 or "</s>" in words:
+        key, _, count = line.rstrip("\n").partition("\t")
+        words = key.split(" ")
+        if len(words) != 3 or not any(w.lower().replace("’", "'") in ("were", "we're") for w in words):
             continue
-        if words[1].lower().replace("’", "'") in ("were", "we're"):
-            before = "" if words[0] == "<s>" else words[0] + " "
-            triples.append(before + words[1] + " " + words[2])
-    report("en_triples.txt runs with were or we're in the middle", text_cases(triples))
+        # A triple that doesn't start a sentence lost the words before it: "[they] were going to". A "were" first in it would read
+        # as opening a sentence, which it didn't, so it's left out. A "were" last has nothing after it, so it's too thin anyway.
+        if words[0].lower().replace("’", "'") in ("were", "we're"):
+            continue
+        kept = [w for w in words if w not in ("<s>", "</s>")]
+        text = " ".join(kept) + ("." if words[-1] == "</s>" else "")
+        found = text_cases([text])
+        triples += found
+        counts += [int(count or 1)] * len(found)
+    report("en_triples.txt: every three-word run with were or we're (Tatoeba's whole corpus)", triples, counts)
 
     if len(sys.argv) > 4:
         labels = dict(l.rstrip("\n").split("\t") for l in open(sys.argv[2], encoding="utf-8"))
@@ -251,4 +278,9 @@ def main():
 
 
 if __name__ == "__main__":
+    print("#### The keyboard's rule: 2 words besides the target, before and after together")
+    main()
+    NEED_BEFORE = 1
+    print()
+    print("#### Stricter: also at least 1 word before it, so a sentence-opening were is never changed")
     main()

@@ -492,8 +492,12 @@ public final class SwipeTyping {
      * the earlier ones, so turning contacts off clears theirs at once. The engines take them before the next swipe.
      */
     public void phoneNames(Map<String, String> contacts, Map<String, String> apps) {
-        phoneNames = Map.copyOf(PhoneNames.merged(apps, contacts));
-        phoneNameOrder = PhoneNames.order(contacts, apps);
+        Map<String, String> names = Map.copyOf(PhoneNames.merged(apps, contacts));
+        List<String> order = PhoneNames.order(contacts, apps);
+        // The engines take the names again only when they changed: an edit to a contact's number changes none (#85).
+        if (names.equals(phoneNames) && order.equals(phoneNameOrder)) return;
+        phoneNames = names;
+        phoneNameOrder = order;
         namesRevision++;
     }
 

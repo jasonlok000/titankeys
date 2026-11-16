@@ -186,6 +186,9 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
         if (hapticsLab.isInitialized()) hapticsLab.value.stop()
         activity.contentResolver.unregisterContentObserver(keyboardSettings)
         activity.application.unregisterActivityLifecycleCallbacks(this)
+        // The static press holds this screen's haptics and so the activity: it goes with it (#85). A newer screen's stays.
+        if (inkPress === press) inkPress = null
+        pressHandler.removeCallbacksAndMessages(null)
     }
 
     override fun onActivityCreated(target: Activity, state: Bundle?) = Unit

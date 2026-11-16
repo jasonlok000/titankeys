@@ -3755,6 +3755,9 @@ class AtlasIme : InputMethodService() {
         GuideHooks.clipSeeds = null
         GuideHooks.barHolds = null
         GuideHooks.clipDismissals = null
+        // They hold this keyboard, which must go with it (#85).
+        GuideHooks.menuOpen = null
+        GuideHooks.menuCloses = null
         // A held status must not outlive the keyboard.
         if (hold.held) hideHeldWindow()
         unregisterReceiver(screenOn)

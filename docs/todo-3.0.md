@@ -135,6 +135,20 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - Kazakh uses Russian's keys, with its nine extra letters held on the nearest Russian letter (і on ы).
   - Georgian's Shift gives a key's own second letter, and Georgian has no sentence capitals.
   - Bosnian's and Macedonian's word lists come from film subtitles, so they lean towards everyday speech.
+- **Fixes from the phone checks on main (4658247), all suites and a clean build pass (258), APK
+  `~/build/m1-apks/main-m3-fixes-debug.apk`; phone re-tests next:**
+  - #74: the crash offer shows on top, wherever the app opens (tk-data).
+  - Reset literally everything starts as a fresh install, the guide, Back's disclosure and release notes included, with a
+    check listing everything a fresh install doesn't have (tk-data).
+  - #56: a restored or Settings-chosen input method is the one that types; Android's keyboard-list choice wins only when it
+    changed since the keyboard last set it (tk-languages). Calls: a switch in Android's list made while TitanKeys wasn't
+    running still wins; the new `keyboard_list` store stays out of backups.
+  - #85: a static in the guide held the last app screen after it closed; it's cleared now. A Debug-only leak check
+    (`am broadcast -n com.titankeys.debug/com.titankeys.keyboard.LeakCheck`) lists any guide or playground still in memory
+    after a forced collection (tk-typing). Call: its weak list of guides is in every build, costing almost nothing.
+  - Still coming: #97's overlap is an Ink bug (a focused field's text isn't clipped under a pinned header, on every Ink
+    screen); tk-data is patching Ink. #66's title and #87's App info (tk-guide). Chinese prisms, ranking and 正體
+    (tk-gestures).
 - **Phone checks, section 1 (tk-screens, Debug from 95f2778), judged by the Orchestrator:**
   - **Closed, proven by an objective test:** #70, #71, #75, #77, #86, #91, #76, #80, #65. #67 was closed, then reopened:
     its triple Space slide wasn't checked.

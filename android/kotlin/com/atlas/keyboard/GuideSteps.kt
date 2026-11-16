@@ -1792,8 +1792,8 @@ internal val GUIDE_STEPS = listOf(
                 }
             },
         ),
-        // The nice clip pastes something kind instead of the roast you expected.
-        done = "Didn't see that coming, did you?",
+        // The nice clip pastes something kind instead of the roast you expected, and the slide insists (owner, #69).
+        done = "No, seriously. I mean it.",
         praise = "It keeps what you copy. Sym, then A, any time.",
         line = CLIP_LINE,
         seed = CLIP_LEAD.trimEnd(),

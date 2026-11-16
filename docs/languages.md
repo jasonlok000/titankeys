@@ -157,8 +157,8 @@ data-only language is one command plus a check by eye. Where the data comes from
 - It takes a list and a page: accents fit on one page; Chinese gets pages.
 - **Chinese, and any engine with choices:** the code you've typed shows over Q and W, muted, with the page after it in the
   accent ("2›", or "1/3" when the engine knows the count). The choices sit over E to P, eight a page. Letters go on building
-  the code, so a choice is picked with Space: the one a resting finger marks, or else the first. Swiping down on the keys
-  turns to the next page and up to the one before, like the Sym panel; Rime's own , and . paging keys work too. Back closes
+  the code, so a choice is picked with Space: the one a resting finger marks, or else the first. Swiping up on the keys
+  turns to the next page and down to the one before, the Sym panel's own direction; Rime's own , and . paging keys work too. Back closes
   the choices.
 
 **Accents from the word list** (input methods with a word list):

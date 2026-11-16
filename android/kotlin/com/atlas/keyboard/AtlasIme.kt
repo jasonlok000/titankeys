@@ -3344,8 +3344,8 @@ class AtlasIme : InputMethodService() {
     private val choicesOpen get() = picker is LanguagePicker.Choices
 
     /**
-     * A swipe on the keys with an engine's choices on the bar turns their page: down for the next, up for the one before, as the
-     * Sym panel's pages. True if it was taken.
+     * A swipe on the keys with an engine's choices on the bar turns their page: up for the next, down for the one before, the
+     * Sym panel's own direction ([EmojiPages.forward]). True if it was taken.
      */
     private fun pageChoices(points: List<Sample>): Boolean {
         if (openPicker() !is LanguagePicker.Choices) return false
@@ -3355,7 +3355,7 @@ class AtlasIme : InputMethodService() {
         // Mostly sideways is no page: a slip, or a swipe meant for something else.
         if (kotlin.math.abs(down) * 10 < kotlin.math.abs(across) * 4 || kotlin.math.abs(down) < Contact.PAGE_KEYS / 2f) return true
         val before = (openPicker() as? LanguagePicker.Choices)?.state
-        val state = engine.page(forward = down > 0)
+        val state = engine.page(forward = EmojiPages.forward(down))
         if (state.page != before?.page) haptics.play(Haptic.PanelPage)
         engineState(state)
         return true

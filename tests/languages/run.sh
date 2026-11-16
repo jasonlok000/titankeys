@@ -8,7 +8,9 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/atlas/keyboard
-"$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" \
+# The Sym panel's paging direction, which the choices share.
+javac --release 17 -d "$work" android/kotlin/com/atlas/engine/EmojiPages.java
+"$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work:$stdlib" -d "$work" \
   "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" "$keyboard/InputMethods.kt" "$keyboard/WordList.kt" "$keyboard/Layout.kt" \
   android/kotlin/com/atlas/connected/Json.kt tests/languages/LanguageChecks.kt
 java -cp "$work:$stdlib" com.atlas.keyboard.LanguageChecksKt android/assets/im

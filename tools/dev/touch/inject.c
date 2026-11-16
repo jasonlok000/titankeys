@@ -107,6 +107,14 @@ static int open_named(const char *name, int flags) {
 // which the shell may read. Android then gives the twin the real one's configuration (touchPad.idc, TitanKey.kl and .kcm),
 // and TitanKeys knows the touchpad by its name. The kernel removes the twin when its file closes, even if this is killed.
 static int open_twin(const char *name) {
+  // Never the touchpad's. The Titan 2's input reader (libinputreader.so, TouchInputMapper::configureInputDevice) sets the
+  // touchpad's height for any device called touchPad from that device's display size before it knows it, and keeps it in
+  // globals that the real touchpad shares: a new twin writes a height of 0 there (-50/600, its flipped and squeezed range), which
+  // the real touchpad then takes as well whenever it next works out its transforms. Touches go through TitanKeys Debug's touch feed.
+  if (strcmp(name, "touchPad") == 0) {
+    fprintf(stderr, "no twin of touchPad: it would upset the real touchpad's height; use the touch feed (TK_TOUCH_FEED=1)\n");
+    return -1;
+  }
   int real = open_named(name, O_RDONLY);
   if (real < 0) return -1;
   struct input_id id;

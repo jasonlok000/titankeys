@@ -1,0 +1,10 @@
+# TitanKeys' changes to rime-cantonese's word weights (essay-cantonese.txt), which data.sh applies before compiling, for
+# Yale and Jyutping alike. One word, a tab, its weight: it replaces the word's weight, or adds the word. Keep it short:
+# each line fixes a ranking a Cantonese speaker would trip over, and says why.
+#
+# 粵語 (Cantonese) came after 月餘 (just over a month): essay-cantonese has 355 to 564. rime-essay's own weight, 4340.
+粵語	4340
+# 我哋 (we) had no weight, so Rime's own sentence of 我 + 地 came first as 我地 (55260), the casual spelling. 哋 first.
+我哋	55261
+# 対 is the Japanese form of 對. It's in the character list with a weight of 657, on the first page for deui. Last instead.
+対	1

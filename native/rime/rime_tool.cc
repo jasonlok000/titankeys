@@ -32,6 +32,11 @@ static RimeApi* open(const char* shared, const char* user, bool prebuilt) {
   traits.log_dir = "";
   rime->setup(&traits);
   rime->initialize(&traits);
+  // As the app opens Rime (rime_jni.cc): no deploy, only the deployer's tasks, which sync needs, and the installation.
+  if (prebuilt) {
+    rime->deployer_initialize(&traits);
+    rime->run_task("installation_update");
+  }
   return rime;
 }
 
@@ -48,7 +53,6 @@ int main(int argc, char** argv) {
     std::string code = argv[6];
     int count = argc > 7 ? atoi(argv[7]) : 6;
     RimeApi* rime = open(argv[2], argv[3], true);
-    if (rime->start_maintenance(False)) rime->join_maintenance_thread();
     RimeSessionId s = rime->create_session();
     if (!rime->select_schema(s, schema)) {
       fprintf(stderr, "schema %s not found\n", schema);
@@ -71,7 +75,6 @@ int main(int argc, char** argv) {
   if (argc >= 7 && strcmp(argv[1], "learn") == 0) {
     // Types the code and picks choice <index>, as a user would, so Rime learns it.
     RimeApi* rime = open(argv[2], argv[3], true);
-    if (rime->start_maintenance(False)) rime->join_maintenance_thread();
     RimeSessionId s = rime->create_session();
     if (!rime->select_schema(s, argv[4])) return 1;
     for (const char* c = argv[5]; *c; ++c) rime->process_key(s, *c == ' ' ? '\'' : (unsigned char)*c, 0);
@@ -83,7 +86,6 @@ int main(int argc, char** argv) {
   if (argc >= 4 && strcmp(argv[1], "sync") == 0) {
     // As the app's backup: merges every snapshot in <user>/sync/ and writes this install's own.
     RimeApi* rime = open(argv[2], argv[3], true);
-    if (rime->start_maintenance(False)) rime->join_maintenance_thread();
     Bool ok = rime->sync_user_data();
     rime->join_maintenance_thread();
     rime->finalize();

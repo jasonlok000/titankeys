@@ -56,6 +56,15 @@ cp "$SRC/rime-essay/essay.txt" .
 cp "$SRC/rime-luna-pinyin/luna_pinyin.dict.yaml" "$SRC/rime-luna-pinyin/pinyin.yaml" .
 cp "$SRC"/rime-cantonese/jyut6ping3*.dict.yaml "$SRC/rime-cantonese/essay-cantonese.txt" \
   "$SRC/rime-cantonese/symbols_cantonese.yaml" .
+# TitanKeys' few changes to the Cantonese word weights (cantonese-weights.tsv says why): a word's weight replaced, or the
+# word added at the end, in the file's order.
+awk -F'\t' -v OFS='\t' '
+  NR == FNR { if ($0 !~ /^#/ && NF == 2) { weight[$1] = $2; order[++n] = $1 }; next }
+  ($1 in weight) { $2 = weight[$1]; seen[$1] = 1 }
+  { print }
+  END { for (i = 1; i <= n; i++) if (!(order[i] in seen)) print order[i], weight[order[i]] }
+' "$HERE/cantonese-weights.tsv" essay-cantonese.txt > essay-cantonese.new
+mv essay-cantonese.new essay-cantonese.txt
 cp "$HERE"/schemas/*.yaml .
 
 # OpenCC: the three variants' configs, and only the dictionaries they use, compiled.
@@ -66,9 +75,8 @@ for n in CJK_Compatibility_Ideographs TSPhrases TSCharacters TWVariantsPhrases T
 (cd "$D/occ" && python3 -I "$OCC/scripts/extract_tofu_risk.py" TSCharacters.txt TSCharactersExt.txt)
 for f in "$D"/occ/*.txt; do "$OPENCC_DICT" -i "$f" -o "opencc/$(basename "$f" .txt).ocd2" -f text -t ocd2; done
 
-# Rime records each source file's time in what it compiles, and compiles again when a file is newer. Every file gets one
-# fixed time, so two runs give the same bytes, and the app gives its copies the same time (RimeData.SOURCE_TIME), so Rime on
-# the phone finds nothing changed.
+# Rime records each source file's time in what it compiles. Every file gets one fixed time, so two runs give the same bytes.
+# On the phone Rime never deploys (rime_jni.cc), so the copies' own times don't matter.
 SOURCE_TIME=1763251200
 find "$D/shared" -type f -exec touch -h -d "@$SOURCE_TIME" {} +
 
@@ -89,21 +97,24 @@ OUT="$REPO/android/assets/rime"
 rm -rf "$OUT"; mkdir -p "$OUT"
 cp -r "$D/shared/." "$OUT/"
 
-# The shipped data, tried as the phone uses it: copied with every file at SOURCE_TIME, as RimeData copies it, and a fresh
-# user folder. Rime must use the shipped tables and compile nothing of its own.
+# The shipped data, tried as the phone uses it: copied with new file times, as RimeData copies it, opened as the app opens
+# Rime (rime_tool does as rime_jni.cc), with a fresh user folder. Rime must use the shipped tables and compile nothing.
 rm -rf "$D/phone"; cp -r "$OUT" "$D/phone"
-find "$D/phone" -type f -exec touch -h -d "@$SOURCE_TIME" {} +
 check() { # schema variant code first-choice
   local got
   rm -rf "$D/try"; mkdir -p "$D/try"
   got="$("$TOOL" try "$D/phone" "$D/try" "$1" "$2" "$3" 1 2>/dev/null | sed 's/^[^:]*: //')"
   [ "$got" = "$4" ] || { echo "FAIL $1 $2 '$3': '$got', expected '$4'" >&2; exit 1; }
-  local compiled; compiled="$(ls "$D/try/build" 2>/dev/null | grep -E '\.(bin)$' || true)"
+  local compiled; compiled="$(ls "$D/try/build" 2>/dev/null || true)"
   [ -z "$compiled" ] || { echo "FAIL Rime compiled again on first use: $compiled" >&2; exit 1; }
 }
 check tk_yale zh_hk "nei hou" 你好
 check tk_yale zh_hans "jung man" 中文
 check tk_yale zh_hk "deui m jyu" 對唔住
+check tk_yale zh_hk "yut yu" 粵語
+check tk_yale zh_hk "ngo dei" 我哋
+check tk_jyutping zh_hk "jyut jyu" 粵語
+check tk_jyutping zh_hk "ngo dei" 我哋
 check tk_jyutping zh_hk "gwong dung waa" 廣東話
 check tk_jyutping zh_hans "gwong dung waa" 广东话
 check tk_jyutping zh_hk "neixxhoux" 你好
@@ -112,6 +123,12 @@ check tk_pinyin zh_hk "ruan jian" 軟件
 check tk_pinyin zh_tw "ruan jian" 軟體
 check tk_pinyin zh_hans "da yin ji" 打印机
 check tk_pinyin zh_tw "da yin ji" 印表機
+# 対, the Japanese form of 對, is off deui's first page in every variant.
+for v in zh_hk zh_tw zh_hans; do
+  rm -rf "$D/try"; mkdir -p "$D/try"
+  page="$("$TOOL" try "$D/phone" "$D/try" tk_yale "$v" "deui" 8 2>/dev/null)"
+  [[ "$page" != *対* ]] || { echo "FAIL 対 on deui's first page, $v: $page" >&2; exit 1; }
+done
 
 # Learned words in Back up everything (RimeBackup): a word learned on one phone goes out in Rime's snapshot, and a fresh
 # phone merges that snapshot in from sync/restored/ with its own name, titankeys, as the app sets it.

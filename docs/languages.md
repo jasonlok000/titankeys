@@ -208,6 +208,9 @@ Languages
 **Chinese characters** (`app/settings/chinese.tsx`), a ChoicePage like English spelling:
 - Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China).
 - One setting for every Chinese input method.
+- **Traditional is 正體 (owner, 2026-11-16: "For traditional chinese, call it 正體中文 instead of 繁體中文").** Wherever
+  TitanKeys names Traditional characters in Chinese, it's 正體中文 (香港正體, 臺灣正體 on Rime's variant switch), never
+  繁體中文. The Settings page's English labels stay.
 - **No default (owner, 2026-11-16): you choose.** The first time the keyboard switches to a Chinese input method with no
   variant picked, it opens this page, once (`ChineseSetup`; Reset most things clears the once with the variant). Until a
   variant is picked, the bar's only choice says to pick one. Nothing is guessed from the phone's region.
@@ -229,7 +232,8 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
 - **Data:** `android/assets/rime/` holds the schemas (`tk_yale`, `tk_jyutping`, `tk_pinyin`, `tk_variants`), Rime's shared
   files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 8 choices a page.
   `android/assets/rime.sha256` lists them. On the first use of a Chinese input method, `RimeEngine.start()` copies them to
-  `files/engines/rime/shared` (40 MB; Rime opens its tables as files) and checks each file, in the background. The
+  `files/engines/rime/shared` (40 MB; Rime opens its tables as files) and checks each file, in the background. Rime
+  never deploys on the phone: it opens the shipped tables as they are and compiles nothing. The
   user's learned words go to `files/engines/rime/user`. Back up everything takes them as Rime's own text snapshots
   (`RimeBackup`), and a restore leaves them in Rime's sync folder, merged in the next time a Chinese input method starts.
   While an engine's input method takes over half a second to start, the bar says it's getting ready.

@@ -22,6 +22,15 @@ if ! ../ink/scripts/ink build --help 2>/dev/null | grep -q -- '--bundle'; then
   exit 2
 fi
 
+# TitanKeys' own Ink edits (tools/ink/titankeys.patch) must be in this Ink too, as release.sh checks: without them the bundle
+# loses the accent, autoCapitalise, the press haptic, the scroll fade and the text field's clip under the header.
+patch="$PWD/tools/ink/titankeys.patch"
+if [[ -f "$patch" ]] && ! git -C ../ink apply --reverse --check "$patch" 2>/dev/null; then
+  echo "../ink doesn't carry tools/ink/titankeys.patch. Apply it on top of tools/ink-bundle.patch, then build again:" >&2
+  echo "  cd ../ink && git apply \"$patch\"" >&2
+  exit 2
+fi
+
 code=$(sed -n 's/^version_code = \([0-9]*\)$/\1/p' ink.toml)
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' ink.toml)
 if [[ -z "$code" || $((code % 2)) -ne 1 ]]; then

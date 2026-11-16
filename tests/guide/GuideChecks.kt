@@ -329,6 +329,8 @@ fun main() {
     theFrontPageKeepsAllFourRows()
     wrongEventsDoNotFinish()
     chapterOne()
+    everyTitleFitsItsLine()
+    thePlaygroundKeepsItsText()
     scenarios()
     everyWayToFailIsAnswered()
     everyPassShowsNext()
@@ -1035,6 +1037,85 @@ private fun chapterOne() {
     }
 }
 
+/**
+ * Every title fits its lines in pixels, not just in letters (#66: "Put the cursor in the underlined word." was 38 letters, inside
+ * the old count, but upper case in Display at 80% it took 100.5% of the line here, and the phone, which measures a little
+ * differently, wrapped it into a second line it doesn't have and cut its last word). Measured as the renders draw them ([V2]):
+ * Inter Bold, upper case, the phone's width less the side margins, at 80% of Display, the least a title shrinks to, and with
+ * [TITLE_SPARE] of the line left over so the phone's measure can't tip it. The phone's font size can't change this:
+ * GuideActivity's sizes are FixedScale's, font scale 1 at any setting, Android's largest (2.0) included.
+ */
+private fun everyTitleFitsItsLine() {
+    val g = V2.image().second
+    val inner = V2.W - 2 * V2.dp(V2.SIDE)
+    val least = g.getFontMetrics(V2.display().let { it.deriveFont(it.size2D * .8f) })
+    /** How much of [width] [text] takes, upper case, at the least size. */
+    fun share(text: String, width: Int) = least.stringWidth(text.uppercase()).toFloat() / width
+    /** How many lines [text] takes at the least size in [width] less the spare, wrapped at its spaces as a TextView wraps it. */
+    fun lines(text: String, width: Int): Int {
+        var count = 1
+        var line = ""
+        for (word in text.split(' ')) {
+            val longer = if (line.isEmpty()) word else "$line $word"
+            if (share(longer, width) <= 1 - TITLE_SPARE || line.isEmpty()) line = longer else { count++; line = word }
+        }
+        return count
+    }
+    for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End }) {
+        same(share(step.title, inner) <= 1 - TITLE_SPARE, true,
+            "The title \"${step.title}\" fits its one line on the phone (${"%.3f".format(share(step.title, inner))} of it)")
+        // Once passed, the check sits after the title, in the same line.
+        val done = inner - V2.dp(28)
+        same(share(step.done, done) <= 1 - TITLE_SPARE, true,
+            "The pass line \"${step.done}\" fits its one line with the check (${"%.3f".format(share(step.done, done))} of it)")
+    }
+    // Setup wraps its titles over two lines (GuideActivity.SETUP_TITLE_LINES), in the same type.
+    for (title in SetupPart.entries.map { it.title } + SetupPart.KEYS_WARN_TITLE)
+        same(lines(title, inner) <= 2, true, "The setup title \"$title\" fits its two lines")
+    same(lines("Put the cursor in the underlined word.", inner), 2, "The title the phone cut takes two lines here too")
+    // The phone's sizes ignore the font size, and a title that still runs over shrinks further rather than lose a word.
+    val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    same("override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))" in guide, true,
+        "The guide's sizes are fixed, at any font size")
+    same("fontScale = 1f" in File("android/kotlin/com/titankeys/keyboard/FixedScale.kt").readText(), true,
+        "and FixedScale sets font scale 1")
+    same(Regex("""shrinkToFit\(title, \(titlePx \* SHRINK\)""").containsMatchIn(guide), false, "Slide titles no longer stop at 80%")
+    same("shrinkToFit(title, (titlePx * TITLE_FLOOR).toInt(), titlePx.toInt())" in guide, true,
+        "they shrink past it as a last resort, never cut")
+}
+
+/**
+ * The playground keeps what you typed across Home and back (Master's phone checks: tools/checks/home-focus.py typed "hello",
+ * pressed Home, came back through the launcher, and the field was empty every time). The launcher brings the app's own screen to
+ * the front, which is singleTask and so closes the playground over it, and the front page opens a new one: the old one hands its
+ * text, cursor and type-along line to the new one. Back leaves the app, and the next playground starts empty.
+ */
+private fun thePlaygroundKeepsItsText() {
+    val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
+    same(body("override fun onPause()").contains("if (playground && started && !settingUp && !leftByBack)\n            playgroundKept = PlaygroundKept(" +
+        "field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource, this)"), true,
+        "Out of sight, the playground keeps its text, its cursor and its line")
+    val show = body("private fun showPlayground()")
+    same(show.contains("if (kept != null) keepPlayground(kept) else startPassage(PlaygroundText.make("), true,
+        "The next playground puts it back, or starts a new line when there's nothing kept")
+    same(show.indexOf("playgroundKept = null") in 0 until show.indexOf("keepPlayground(kept)"), true, "and takes it only once")
+    val keep = body("private fun keepPlayground(kept: PlaygroundKept)")
+    same(listOf("seeding = true", "field.setText(kept.text)", "seeding = false", "passage = kept.passage", "passageFrom = kept.passageFrom")
+        .all { it in keep }, true, "The text goes back quietly, and the line follows on from where it was")
+    same(body("override fun onResume()").contains("if (playgroundKept?.from === this) playgroundKept = null"), true,
+        "The same playground back in sight has its own text still, so its copy is let go")
+    val back = body("override fun onBackPressed()")
+    same(back.indexOf("leftByBack = true") in 0 until back.indexOf("finishAffinity()") &&
+        back.indexOf("playgroundKept = null") in 0 until back.indexOf("finishAffinity()"), true, "Back leaves the app with nothing kept")
+    // The check on the phone expects exactly this.
+    same("keeps its text\nwhen you leave the app and come back" in File("tools/checks/home-focus.py").readText(), true,
+        "tools/checks/home-focus.py checks the same")
+}
+
+/** How much of a title's line stays free in the renders' measure, for the phone's (#66). */
+private const val TITLE_SPARE = .05f
+
 /** The chapters rebuilt in the new layout so far. */
 private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideChapter.Steering, GuideChapter.Symbols,
     GuideChapter.Clipboard)
@@ -1175,7 +1256,7 @@ private fun steeringToAWord() {
     same(STEER_LINE.contains("steer", ignoreCase = true), false, "No steering in the line")
     // No steering anywhere the guide talks (owner, #90: "change out the steering term"): titles, lines, stages, chips, chapters.
     val slide = GUIDE_STEPS.find { it.id == "steer" }!!
-    same(slide.title to slide.chapter.label, "Put the cursor in the underlined word." to "Cursor", "The slide's title and chapter")
+    same(slide.title to slide.chapter.label, "Land in the underlined word." to "Cursor", "The slide's title and chapter")
     val said = GUIDE_STEPS.flatMap { step ->
         listOfNotNull(step.title, step.body, step.done, step.praise, step.help, step.helpTitle, step.line, step.seed) +
             step.stages.map { it.text } + GuideLesson.entries.map { blockedChip(step, it.name) }
@@ -1370,6 +1451,49 @@ private fun theContactsPart() {
     same(ask(answered = true), emptyList<SetupPart>(), "and never again once it is")
     same(SetupPart.Contacts.skip, "Not now", "Not now moves on")
     same("never leave your phone" in SetupPart.Contacts.body, true, "It says the names stay on the phone before Android asks")
+    contactsAskOnlySendsToSettingsWhenAndroidStopped()
+}
+
+/**
+ * A second "Don't allow" is the answer, and nothing opens after it (#87: App info opened by itself, because Android stops showing
+ * its reason right after the second no). Played against Android as it behaves: it asks until it has two noes, shows its reason
+ * after one, and a question dismissed without an answer counts for nothing.
+ */
+private fun contactsAskOnlySendsToSettingsWhenAndroidStopped() {
+    var noes = 0
+    var asked = false
+    /** One press of the row: what the user answers if Android asks (null to dismiss it), and whether App info opens. */
+    fun press(answer: Boolean?): Boolean {
+        val reasonBefore = noes == 1
+        val askedBefore = asked
+        asked = true
+        val shown = noes < 2
+        val granted = shown && answer == true
+        if (shown && answer == false) noes++
+        return ContactsAsk.toSettings(granted, questionShown = shown, askedBefore = askedBefore, reasonBefore = reasonBefore)
+    }
+    same(press(false), false, "The first Don't allow: nothing opens")
+    same(press(false), false, "The second Don't allow: nothing opens either, though Android has stopped showing its reason")
+    same(press(null), true, "Pressed again after that, Android doesn't ask: App info opens, where Contacts can be allowed")
+    same(press(null), true, "and every press after")
+    noes = 0; asked = false
+    same(press(null) to press(null), false to false, "A question dismissed comes up again, so nothing opens")
+    same(press(true), false, "Allowed: nothing opens")
+    // The first press ever, even if the pause were missed, never sends anyone away.
+    same(ContactsAsk.toSettings(false, questionShown = false, askedBefore = false, reasonBefore = false), false, "The first press asks")
+    same(ContactsAsk.toSettings(false, questionShown = false, askedBefore = true, reasonBefore = true), false,
+        "and a press while Android still shows its reason asks too")
+    // Settings > Setup's row and the guide's contacts part both go through the one activity, which decides by ContactsAsk.
+    val activity = File("android/kotlin/com/vandam/ink/ContactsPermissionActivity.kt").readText()
+    same("if (ContactsAsk.toSettings(granted, questionShown, askedBefore, reasonBefore)) {" in activity, true, "The activity decides by it")
+    same(Regex("""!granted && !shouldShowRequestPermissionRationale""").containsMatchIn(activity), false, "and no longer by the reason alone")
+    same("if (asking) questionShown = true" in activity, true, "Android's question is seen as the activity pauses under it")
+    same("reasonBefore = shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)" in activity &&
+        activity.indexOf("reasonBefore = should") < activity.indexOf("requestPermissions("), true, "The reason is read before asking")
+    same("startActivityForResult(Intent(this, ContactsPermissionActivity::class.java), CONTACTS_REQUEST)" in
+        File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText(), true, "The guide's part asks through it")
+    same("ContactsPermissionActivity.start(activity)" in File("android/kotlin/com/vandam/ink/AppNativeAdapters.kt").readText(), true,
+        "and so does Settings > Setup's row")
 }
 
 private fun grabbingABunch() {

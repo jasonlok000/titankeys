@@ -41,6 +41,8 @@ internal object FreshStart {
         "back_disclosure",
         // What the keyboard last set Android's keyboard list to: with it gone, the setting decides again.
         "keyboard_list",
+        // Whether Android was asked for Contacts, #87: wiped, the next press asks, and only goes to App info if Android won't.
+        "contacts_permission",
     )
 
     /** Files kept whole: the key calibration, which only TitanKeys Debug has. */

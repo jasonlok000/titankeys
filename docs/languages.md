@@ -201,6 +201,12 @@ Languages
 - A list of every input method, grouped by script, each with a switch. The ones that are on sit at the top in the
   overlay's order, which for now is the order they were turned on (moving them comes later).
 - English can't be turned off while it's the only one.
+- **Names:** each row shows the input method's own name, which is CLDR's name for its language in that language,
+  capitalised (Français, Русский, Indonesia); `tools/im/make.py` stops if one differs, and `tests/languages` checks the
+  files. Chinese input methods are named for their spelling (漢語拼音, 粵拼, 耶魯拼音). Ink draws the page with the app's
+  text fonts (`assets/fonts`, built by `tools/im/fonts.py`): Inter with Latin and its extensions, Greek and Cyrillic, and
+  Noto Sans Georgian's letters. Hangul and Chinese come from Android's CJK font; a letter none of them has is left blank,
+  which is why Русский was blank while the fonts were Latin-1 only.
 - At most 8 on, the overlay's places. The 9th switch says why it won't turn on: "Eight at a time. Turn one off first."
 - Each input method's page shows its name, its source and licence, its variants when it has them (Portuguese), and
   "Fix typos as you type" for it, off by default.
@@ -208,6 +214,9 @@ Languages
 **Chinese characters** (`app/settings/chinese.tsx`), a ChoicePage like English spelling:
 - Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China).
 - One setting for every Chinese input method.
+- **Traditional is 正體 (owner, 2026-11-16: "For traditional chinese, call it 正體中文 instead of 繁體中文").** Wherever
+  TitanKeys names Traditional characters in Chinese, it's 正體中文 (香港正體, 臺灣正體 on Rime's variant switch), never
+  繁體中文. The Settings page's English labels stay.
 - **No default (owner, 2026-11-16): you choose.** The first time the keyboard switches to a Chinese input method with no
   variant picked, it opens this page, once (`ChineseSetup`; Reset most things clears the once with the variant). Until a
   variant is picked, the bar's only choice says to pick one. Nothing is guessed from the phone's region.
@@ -229,7 +238,8 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
 - **Data:** `android/assets/rime/` holds the schemas (`tk_yale`, `tk_jyutping`, `tk_pinyin`, `tk_variants`), Rime's shared
   files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 8 choices a page.
   `android/assets/rime.sha256` lists them. On the first use of a Chinese input method, `RimeEngine.start()` copies them to
-  `files/engines/rime/shared` (40 MB; Rime opens its tables as files) and checks each file, in the background. The
+  `files/engines/rime/shared` (40 MB; Rime opens its tables as files) and checks each file, in the background. Rime
+  never deploys on the phone: it opens the shipped tables as they are and compiles nothing. The
   user's learned words go to `files/engines/rime/user`. Back up everything takes them as Rime's own text snapshots
   (`RimeBackup`), and a restore leaves them in Rime's sync folder, merged in the next time a Chinese input method starts.
   While an engine's input method takes over half a second to start, the bar says it's getting ready.

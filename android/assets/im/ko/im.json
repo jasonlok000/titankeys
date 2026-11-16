@@ -17,6 +17,7 @@
   },
   "engine": "hangul",
   "source": {
+    "name": "CLDR 49 localeDisplayNames: 한국어",
     "keys": "hangul",
     "words": null
   }

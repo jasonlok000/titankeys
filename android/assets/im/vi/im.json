@@ -17,6 +17,7 @@
   },
   "engine": "telex",
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Tiếng Việt",
     "keys": "telex",
     "words": "main_vi__experimental.combined"
   }

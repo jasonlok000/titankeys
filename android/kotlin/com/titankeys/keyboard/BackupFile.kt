@@ -99,6 +99,8 @@ internal object BackupFile {
         "back_disclosure" to Store.Left("Google Play wants the Accessibility disclosure answered on each phone"),
         "phone_checks" to Store.Left("they describe this phone"),
         "keyboard_list" to Store.Left("it follows this phone's own keyboard list"),
+        // Whether TitanKeys asked Android for Contacts on this phone (#87): Android's answer stays with the phone too.
+        "contacts_permission" to Store.Left("it follows what Android was asked on this phone"),
         "easter_egg" to Store.Left("it counts this phone's boots"),
     )
 

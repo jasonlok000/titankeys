@@ -135,6 +135,17 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - Kazakh uses Russian's keys, with its nine extra letters held on the nearest Russian letter (і on ы).
   - Georgian's Shift gives a key's own second letter, and Georgian has no sentence capitals.
   - Bosnian's and Macedonian's word lists come from film subtitles, so they lean towards everyday speech.
+- **Phone re-tests before the owner's pause (tk-screens, Debug from 4658247):**
+  - #74: YES, the crash offer shows on top of the playground within 3 s. Closed.
+  - Reset literally everything: YES, it leads to Quick setup and Setup, as a fresh install does.
+  - Language restore: NO. After a restore with Russian current, the bar still showed English words. Back with
+    tk-languages, with a Debug log line to prove the choice next time.
+  - `home-focus.py`: NO, an app finding: text typed in the playground is gone after Home and back (6 of 6). With tk-guide,
+    to check against the owner's decisions first.
+  - `check:phone`: about.sh and feedback.sh pass (feedback.sh now finds the #97 form by its label; merged at 35ca070).
+  - Idle check and `tests/preview`: UNSURE. The idle runs were cut short, and the phone was charging, so batterystats
+    didn't count; the preview printed one PASS before adb dropped.
+  - Left on Debug: English and Russian, maybe Russian current. Two test backups sit in the phone's Download folder.
 - **Fixes from the phone checks on main (4658247), all suites and a clean build pass (258), APK
   `~/build/m1-apks/main-m3-fixes-debug.apk`; phone re-tests next:**
   - #74: the crash offer shows on top, wherever the app opens (tk-data).
@@ -443,6 +454,10 @@ More calls get added here as the night goes.
   - The 07:30 battery reset.
 
 ## Later, after the languages work on the phone (owner, 2026-11-16)
+
+- **Next after the basic phone tests: switching languages inside TitanKeys** with the held-Sym overlay, never Android's
+  picker (owner, 2026-11-16). Today a held Sym opens the Sym panel instead; the Sym log now works on the phone (with
+  `log.tag.TitanKeysSym`) to show why. Alt+Sym stays as it is: it opens Android's list for other keyboards (owner).
 
 - **Refine the languages** once the owner has seen them working: a context model like English's next-word model to help
   autocorrect and suggestions in other languages (maybe in 3.0), and other optimizing.

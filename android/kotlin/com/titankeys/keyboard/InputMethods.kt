@@ -160,6 +160,22 @@ object Picker {
     }
 }
 
+/** Which input method types as a field starts, and why: the keyboard logs it (Languages.refresh). */
+data class InputMethodChoice(val id: String, val why: String) {
+    companion object {
+        /**
+         * From the input methods' [setting], the [current] one saved (Settings, the overlay or a restore), and [picked], one picked
+         * in Android's keyboard list since the keyboard last set it ([KeyboardListSync.heard]), or null.
+         */
+        fun atFieldStart(index: InputMethodIndex, setting: String?, current: String?, picked: String?): InputMethodChoice {
+            val on = index.on(setting)
+            if (picked != null && on.any { it.id == picked }) return InputMethodChoice(picked, "picked in Android's keyboard list")
+            if (on.any { it.id == current }) return InputMethodChoice(current!!, "the saved setting")
+            return InputMethodChoice(on.first().id, "the saved $current isn't on, so the first that is")
+        }
+    }
+}
+
 /**
  * Which input method Android's keyboard list picked, if any. Android keeps its own current entry, and it isn't in TitanKeys'
  * backup: after a restore, or a change in Settings > Languages while the keyboard was off, Android still has the old one and

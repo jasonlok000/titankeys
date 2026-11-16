@@ -43,10 +43,13 @@ test("the shipped Chinese data is exactly the list data.sh wrote, and the list i
   const data = read("android/kotlin/com/titankeys/rime/RimeData.kt");
   expect(data).toContain('const val MANIFEST = "rime.sha256"');
   expect(data).toContain('const val ASSETS = "rime"');
-  // The copies get the time the data was compiled with, so Rime on the phone compiles nothing again.
-  const time = read("native/rime/data.sh").match(/^SOURCE_TIME=(\d+)$/m)?.[1];
-  expect(time).toBeDefined();
-  expect(data).toContain(`const val SOURCE_TIME = ${time}L`);
+  // Rime on the phone never deploys, so it never compiles the shipped tables again, whatever the copies' times: only the
+  // deployer's tasks (sync needs them) and the installation's name. rime_tool opens Rime the same way for data.sh's checks.
+  for (const source of ["native/rime/rime_jni.cc", "native/rime/rime_tool.cc"]) {
+    expect(read(source)).toContain("rime->deployer_initialize(&traits);");
+    expect(read(source)).toContain('rime->run_task("installation_update");');
+  }
+  expect(read("native/rime/rime_jni.cc")).not.toContain("start_maintenance");
 });
 
 test("the schemas the data ships are the repo's own, and the three the engine uses", () => {

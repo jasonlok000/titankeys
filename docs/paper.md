@@ -200,7 +200,7 @@ key press
   -> the letter goes in; the bar shows completions of the letters so far
   -> Space
   -> autocorrect on the finished word: shorthand, apostrophes, typos (noisy channel + model push)
-  -> the word waits for the next words: the second look, and "its" / "it's" after two more words
+  -> the word waits for the next words: the second look, and "its" / "it's" or "were" / "we're" after two more words
   -> Backspace right after a fix puts your word back
 ```
 
@@ -696,7 +696,7 @@ Candidates are dictionary words within two edits, with a cost of at most 1.4.
 **When it fixes:**
 
 - **A made-up word** is fixed if the best candidate scores over -8.0 and leads the next by at least 2.0.
-- **A real word** is changed only if the candidate beats the typed word by 3.0 more, and still leads the next by 2.0. A real word is never swapped for a contraction ("were" never becomes "we're").
+- **A real word** is changed only if the candidate beats the typed word by 3.0 more, and still leads the next by 2.0. This step never swaps a real word for a contraction. "were" to "we're" is left to the sentence (section 6.4).
 - **Words with no vowel** ("lmk", "smh") are shorthand and never a slip.
 - **A favourite wins a tie:** within 2.0 of the best, a favourite goes first.
 - **Only fix when sure** raises the lead to 3.0 and the real-word margin by 1.0 more.
@@ -724,15 +724,20 @@ On the Titan, the apostrophe needs Alt, so people skip it. TitanKeys sorts the m
 
 **2. The 's family.** "todays" becomes "today's", "whats" becomes "what's". This came out of a typo audit, which found the typo step dropping the extra s before anything tried an apostrophe: "todays plan" became "today plan". The rule: a typed word ending in s, which the word list lacks, whose `X's` spelling the full list has, becomes `X's`, before any other fix. Plurals that are words ("days") stay as typed.
 
-**3. Decided by the sentence.** "its", "lets", "your", "their", "there", "ill", "well", "id", "hell", "shed", "wed" and "shell" are real words. Only the words around them can tell you which one was meant. TitanKeys waits for the next two words, then asks the model.
+**3. Decided by the sentence.** "its", "lets", "your", "their", "there", "ill", "well", "id", "hell", "shed", "wed", "shell" and "were" are real words. Only the words around them can tell you which one was meant. TitanKeys waits for the next two words, then asks the model.
 
 How the third group works (`ApostropheContext.kt`):
 
 1. The window is the text back to the last `.`, `!`, `?` or line break, or the start of the field, at most 10 words, plus the next 2 words as written, with any mark stuck to the last one.
 2. If the window holds fewer than 2 other words, the word stays as typed.
 3. The model scores the typed form and each apostrophe form, as the sum of each token's log chance, in nats (`NextWordModel.continuations`).
-4. An apostrophe form wins only if it beats the typed form by more than 1.0 nat (2.0 with Only fix when sure).
-5. It only ever adds an apostrophe. It never takes one out, and never turns "were" into "we're", since the model can't tell those two apart.
+4. An apostrophe form wins only if it beats the typed form by more than 1.0 nat (2.0 with Only fix when sure). "were" needs 1.0 more: "we're" wins only above 2.0 nats (3.0 with Only fix when sure).
+5. It only ever adds an apostrophe. It never takes one out, so "we're" never becomes "were".
+6. Swiped words wait too, at the same margins, but only the swipe's own pick. A word chosen from the bar, or fixed by hand, never changes.
+
+**"were" and "we're."** "were" joined the third group after its own study ([73-were.md](studies/73-were.md)). No meant "were" scored above 0.68 nats, in 42 full sentences or in 535 three-word runs from Tatoeba. So at 2.0 there's a gap of 1.3 nats, and no wrong change on any set. In full sentences, 2.0 fixes 13 of 15 meant "we're".
+
+**Swiped words.** A swipe picks its word from the words before it only, so "its going" can't be settled when it's swiped. A study of 112 swiped words ([73-swipes.md](studies/73-swipes.md)) found 1 right change and 0 wrong ones at every margin from 0 to 3. The highest margin for a word that should stay was −8.4, so swipes need no extra margin. None of the 18 words the fix looked at was a swiped "were".
 
 **The apostrophe study.** Before this was built, a study read the logged typing for every case. It judged the right form by reading the context, not by what was kept, because wrong apostrophes usually get left in place.
 

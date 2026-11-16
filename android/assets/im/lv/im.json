@@ -29,6 +29,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Latviešu",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_lv.combined"
   }

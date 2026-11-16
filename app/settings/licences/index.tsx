@@ -23,6 +23,8 @@ const licences = [
   { title: "AOSP dictionary", subtitle: "Apache 2.0", url: "https://codeberg.org/Helium314/aosp-dictionaries" },
   { title: "Ink", subtitle: "MIT", url: "https://github.com/No-Scrolling/ink" },
   { title: "Inter", subtitle: "SIL Open Font Licence. Regular, Medium and Bold.", url: "https://github.com/rsms/inter" },
+  // F: draft. The Georgian letters in the app's text fonts (tools/im/fonts.py).
+  { title: "Noto Sans Georgian", subtitle: "SIL Open Font Licence. The Georgian letters in Settings.", url: "https://github.com/notofonts/georgian" },
   { title: "Remix Icon", subtitle: "Apache 2.0", url: "https://github.com/Remix-Design/RemixIcon" },
   { title: "Unicode data", subtitle: "Unicode License 3.0", url: "https://www.unicode.org/license.txt" },
   { title: "gemoji", subtitle: "MIT. Emoji names, such as :smile:.", url: "https://github.com/github/gemoji" },

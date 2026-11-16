@@ -41,8 +41,12 @@ Their licences: `licences/Rime-librime-BSD-3-Clause.txt`, `licences/Rime-OpenCC-
 TitanKeys' three schemas, in [`schemas/`](schemas), compiled on the PC by the same librime, with the compiled tables
 shipped and the word lists' sources left out. The app copies them to its files on the first use of a Chinese input
 method (`RimeData`), since Rime opens its tables as files. Rime records its sources' file times in what it compiles, so
-`data.sh` gives every file one fixed time before compiling, and `RimeData` gives its copies the same time: two runs give
-the same bytes, and Rime on the phone uses the shipped tables without compiling anything again.
+`data.sh` gives every file one fixed time before compiling, and two runs give the same bytes. On the phone Rime never
+deploys (`rime_jni.cc`): it uses the shipped tables as they are, whatever times the copies have.
+
+**Changed from rime-cantonese:** before compiling, `data.sh` changes a few word weights in `essay-cantonese.txt`, listed
+with the reason for each in [`cantonese-weights.tsv`](cantonese-weights.tsv) (粵語 before 月餘, 我哋 before 我地, 対, the
+Japanese form of 對, last). Nothing else in rime-cantonese is changed.
 
 | Part | Version | Licence |
 | --- | --- | --- |

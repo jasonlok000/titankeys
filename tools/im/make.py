@@ -6,6 +6,7 @@
 <data dir> holds the downloaded sources, as the study left them in WSL (~/build/lang/gen):
   aosp-dictionaries/   HeliBoard's word lists (https://codeberg.org/Helium314/aosp-dictionaries)
   cldr/x/package/      CLDR's cldr-misc-full (characters.json per locale)
+  cldr-names/package/  CLDR's cldr-localenames-full (languages.json per locale), for each input method's own name
   kcm/                 Android's keyboard_layout_*.kcm files
   frequencywords/      Hermit Dave's FrequencyWords, content/2018/<lang>/<lang>_full.txt (commit 525f9b5)
   leipzig/             Leipzig Corpora Collection words files (<corpus>/<corpus>-words.txt)
@@ -71,7 +72,7 @@ LATIN = {
     "cs": ("Čeština", "Czech", "CS", "cs", "main_cs", AOSP, {"apostrophes": False}),
     "ro": ("Română", "Romanian", "RO", "ro", "main_ro", AOSP, {"apostrophes": False}),
     "hu": ("Magyar", "Hungarian", "HU", "hu", "main_hu__experimental", LEIPZIG, {"apostrophes": False}),
-    "id": ("Bahasa Indonesia", "Indonesian", "ID", "id", "main_id__experimental", LEIPZIG, {"apostrophes": False}),
+    "id": ("Indonesia", "Indonesian", "ID", "id", "main_id__experimental", LEIPZIG, {"apostrophes": False}),
     "hr": ("Hrvatski", "Croatian", "HR", "hr", "main_hr", AOSP, {"apostrophes": False}),
     "sl": ("Slovenščina", "Slovenian", "SL", "sl", "main_sl", AOSP, {"apostrophes": False}),
     "lv": ("Latviešu", "Latvian", "LV", "lv", "main_lv", AOSP, {"apostrophes": False}),
@@ -121,6 +122,15 @@ BELARUSIAN = ("Belarusian word forms from GrammarDB (https://github.com/Belarus/
 
 CLDR_NOTICE = "Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. Copyright Unicode, Inc."
 KCM_NOTICE = "Key layout: Android's {file} (platform/frameworks/base, InputDevices), Apache License 2.0."
+
+
+def cldr_name(data, locale):
+    """CLDR's name for [locale]'s language in that language (its autonym), as it would start a list: capitalised."""
+    path = os.path.join(data, "cldr-names", "package", "main", locale, "languages.json")
+    names = json.load(open(path, encoding="utf-8"))["main"][locale]["localeDisplayNames"]["languages"]
+    name = names.get(locale) or names[locale.split("-")[0]]
+    # Title case, not upper case: Georgian has no capitals in running text, and its upper case is another alphabet.
+    return name[:1].title() + name[1:]
 
 
 def cldr_letters(data, locale):
@@ -452,7 +462,18 @@ def build_national(data, ident):
         notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
 
 
+# The data folder, for CLDR's names as each input method is written.
+DATA = None
+
+
 def write_im(folder, im):
+    # Every input method of a language is named as CLDR names it in that language, accents included; Chinese input methods are
+    # named for their spelling (Pinyin, Jyutping, Yale), not the language.
+    if im["script"] != "Hani":
+        cldr = cldr_name(DATA, im["locale"])
+        if im["name"] != cldr:
+            sys.exit("%s: its name %r isn't CLDR's %r" % (im["id"], im["name"], cldr))
+        im["source"] = {"name": "CLDR 49 localeDisplayNames: " + cldr, **im["source"]}
     with open(os.path.join(folder, "im.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(im, f, ensure_ascii=False, indent=2)
         f.write("\n")
@@ -504,7 +525,8 @@ def escape(text):
 
 
 def main():
-    data = sys.argv[1]
+    global DATA
+    data = DATA = sys.argv[1]
     wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:

@@ -221,9 +221,7 @@ private fun anEngineFitsTheInterface() {
  * [android] is Android's entry as the keyboard starts and [synced] the one it last left Android on.
  */
 private fun startsWith(index: InputMethodIndex, setting: String, current: String, android: String?, synced: String?): String {
-    val sync = KeyboardListSync(synced)
-    val picked = sync.heard(android)?.takeIf { id -> index.on(setting).any { it.id == id } }
-    return index.current(setting, picked ?: current).id
+    return InputMethodChoice.atFieldStart(index, setting, current, KeyboardListSync(synced).heard(android)).id
 }
 
 private fun aRestoredInputMethodTypes() {
@@ -238,6 +236,19 @@ private fun aRestoredInputMethodTypes() {
     same("Picked in Android's list while the keyboard was off: Android's", startsWith(index, "en,ru", "en", "ru", "en"), "ru")
     same("Android's pick of one that's off changes nothing", startsWith(index, "en,ru", "en", "de", "en"), "en")
     same("A current that's off: the first on", startsWith(index, "en,ru", "de", "en", "en"), "en")
+    // The phone re-test's exact path: Reset literally everything (nothing synced), a restore of en,ru with ru current, then the
+    // keyboard starts with Android still on English's entry, or on none of TitanKeys' entries, and Android says it before the
+    // first field and again as that field starts.
+    val afterReset = KeyboardListSync(null)
+    same("After Reset, Android's entry said as the keyboard starts is no pick", afterReset.heard("en"), null)
+    same("Said again as the first field starts, still no pick", afterReset.heard("en"), null)
+    same("The first field after the restore types the restored one, and says why",
+        InputMethodChoice.atFieldStart(index, "en,ru", "ru", null), InputMethodChoice("ru", "the saved setting"))
+    same("With none of TitanKeys' entries in Android's list", startsWith(index, "en,ru", "ru", null, null), "ru")
+    same("A restored current that isn't on: the first that is",
+        InputMethodChoice.atFieldStart(index, "en,ru", "de", null), InputMethodChoice("en", "the saved de isn't on, so the first that is"))
+    same("A pick in Android's list says so", InputMethodChoice.atFieldStart(index, "en,ru", "en", "ru"),
+        InputMethodChoice("ru", "picked in Android's keyboard list"))
     val sync = KeyboardListSync("en")
     same("Android's old entry, said again as the keyboard starts", sync.heard("en"), null)
     sync.told("ru")
@@ -380,9 +391,41 @@ private fun telexTypesTheList(method: InputMethod, list: File) {
 }
 
 /** Every `im.json` in [folder]: it reads, its label is unique, its word list reads, and its accents' letters are in it or held. */
+/** The app's text fonts (theme.ts), which Settings > Input methods draws the names with. */
+private val textFonts by lazy {
+    listOf("assets/fonts/Inter-Regular.otf", "assets/fonts/Inter-Medium.otf").map { java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, File(it)) }
+}
+
+/** What CLDR's own name for an input method's language is recorded as, by tools/im/make.py, which checks it against CLDR. */
+private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
+
+/**
+ * An input method's own name, as Settings > Input methods shows it: there, the same in the index, CLDR's name for the
+ * language in that language (accents and all), and in the app's fonts. Chinese input methods are named for their spelling;
+ * Hangul and Chinese characters come from Android's CJK font, which the app's fonts fall back to.
+ */
+private fun theNameShows(method: InputMethod, inIndex: String?) {
+    val name = method.name
+    check("${method.id}: has a name", name.isNotBlank())
+    check("${method.id}: has an English name", method.nameEnglish.isNotBlank())
+    same("${method.id}: its name is NFC", java.text.Normalizer.isNormalized(name, java.text.Normalizer.Form.NFC), true)
+    same("${method.id}: the index has the same name", inIndex, name)
+    if (method.script != "Hani") same("${method.id}: its name is CLDR's", method.source["name"], CLDR_NAME + name)
+    val missing = name.codePoints().toArray().filter { code ->
+        val script = Character.UnicodeScript.of(code)
+        script != Character.UnicodeScript.HAN && script != Character.UnicodeScript.HANGUL && textFonts.any { !it.canDisplay(code) }
+    }
+    check("${method.id}: the app's fonts have its name's letters", missing.isEmpty()) {
+        missing.joinToString(" ") { String(Character.toChars(it)) }
+    }
+}
+
 private fun everyInputMethodInTheFolder(folder: File) {
     val methods = folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }
     val labels = HashMap<String, String>()
+    @Suppress("UNCHECKED_CAST")
+    val index = (com.titankeys.connected.Json.parse(File(folder, "index.json").readText()) as List<Map<String, Any?>>)
+        .associate { it["id"] as String to it["name"] as String? }
     for (dir in methods) {
         val file = File(dir, "im.json")
         val parsed = runCatching { InputMethod.parse(file.readText()) }
@@ -394,6 +437,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         same("${dir.name}: the folder is its id", method.id, dir.name)
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
+        theNameShows(method, index[method.id])
         if (method.keys != null) same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
         val words = method.words ?: continue
         if (method.engine == "telex") {

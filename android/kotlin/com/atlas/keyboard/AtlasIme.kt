@@ -774,7 +774,8 @@ class AtlasIme : InputMethodService() {
         }
         composer.commaSpace = { TypingSettings.commaSpace(this) }
         composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) }
-        composer.fixOn = { kind -> TypingSettings.fixOn(this, kind.id) }
+        // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
+        composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
         composer.onStroke = Trace::stroke
         // Backspace putting a word back plays nothing: the key press is felt already.
         composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }

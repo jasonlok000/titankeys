@@ -1015,6 +1015,7 @@ class GuideActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        opened(this)
         GuideFonts.load(this)
         overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
         overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
@@ -5215,6 +5216,7 @@ class GuideActivity : Activity() {
          */
         fun playground(activity: Activity, fromEnd: Boolean = false, exit: (String) -> Unit) {
             playgroundExit = exit
+            playgroundAsker = activity
             // The front page asks each time its window is in front, so one that is open, or that a button just closed, is enough.
             // A playground that Android is closing counts as closed: it can close after the app's window is in front. And with
             // the app's window in front, no playground is: the app's window is at the bottom of the app's screens.
@@ -5234,6 +5236,40 @@ class GuideActivity : Activity() {
         /** The front page went away, so a playground that waits for a guide to close is no longer wanted. */
         fun cancelPlayground() {
             waitingPlayground = null
+        }
+
+        /**
+         * The app's screen [activity] is gone. What it left here for the playground goes too: both hold it, with all its views, and
+         * it was kept until the next ask (#85). A newer screen's ask stays.
+         */
+        fun appScreenClosed(activity: Activity) {
+            if (playgroundAsker !== activity) return
+            playgroundAsker = null
+            playgroundExit = null
+            waitingPlayground = null
+        }
+
+        /** The app screen that [playgroundExit] and [waitingPlayground] answer to. Main thread only. */
+        private var playgroundAsker: Activity? = null
+
+        /** Every guide and playground made in this process, as weak references, for TitanKeys Debug's leak check (#85). */
+        private val made = ArrayList<java.lang.ref.WeakReference<GuideActivity>>()
+
+        private fun opened(guide: GuideActivity) {
+            made.removeAll { it.get() == null }
+            made += java.lang.ref.WeakReference(guide)
+        }
+
+        /**
+         * The guides and playgrounds still in memory, one line each: a playground or a guide, and whether Android has destroyed it.
+         * After a full collection, a destroyed one here is held by something: a leak. Main thread only.
+         */
+        fun inMemory(): List<String> {
+            made.removeAll { it.get() == null }
+            return made.mapNotNull { it.get() }.map { guide ->
+                "${if (guide.playground) "playground" else "guide"} ${Integer.toHexString(System.identityHashCode(guide))}: " +
+                    if (guide.isDestroyed) "destroyed, still held" else if (guide.isFinishing) "finishing" else "open"
+            }
         }
 
         /** Playgrounds that are open now. Main thread only. */

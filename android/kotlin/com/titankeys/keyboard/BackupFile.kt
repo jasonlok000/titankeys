@@ -98,6 +98,7 @@ internal object BackupFile {
         "clipboard" to Store.Left("the clipboard can hold passwords and codes"),
         "back_disclosure" to Store.Left("Google Play wants the Accessibility disclosure answered on each phone"),
         "phone_checks" to Store.Left("they describe this phone"),
+        "keyboard_list" to Store.Left("it follows this phone's own keyboard list"),
         "easter_egg" to Store.Left("it counts this phone's boots"),
     )
 
@@ -114,6 +115,7 @@ internal object BackupFile {
         "rawlog" to "recordings stay on the phone",
         "bug-recording" to "recordings stay on the phone",
         "crash-" to "a crash report belongs to this phone",
+        "backup-words" to "the words on their way through a backup or restore, which are in the backup themselves",
         "report-outbox" to "a bug report waiting to be sent belongs to this phone",
         // Rime's folder: its learned words go in through its own snapshots (RimeBackup); its data comes with the app.
         "engines" to null,

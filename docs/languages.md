@@ -137,6 +137,10 @@ data-only language is one command plus a check by eye. Where the data comes from
     disagree.
   - When the input method changes, the keyboard calls `InputMethodService.switchInputMethod(id, subtype)`, so apps see the
     language in `getCurrentInputMethodSubtype()` and pick their own spell checker and hints from it. This is #76's label.
+  - Which types as the keyboard starts: the `current_input_method` setting, unless Android's list was switched to
+    another entry since the keyboard last set it (`KeyboardListSync`, kept in `keyboard_list`, which isn't backed up).
+    Android keeps its own entry and says it as the keyboard starts, so after a restore, or a change in Settings while the
+    keyboard was off, its old entry would otherwise undo the setting.
   - To check on the phone first: that switching subtypes this way doesn't restart the input view or flash the keyboard.
     If it does, the keyboard switches inside itself and only updates the subtype.
   - English's entry follows its spelling: `en_GB`, `en_US` or `en_CA`.

@@ -11,8 +11,15 @@ import com.titankeys.engine.TypingSettings
  *
  * [words] is what the composer asks for words: English's own while English types, the current input method's list otherwise.
  */
-internal class Languages(private val context: Context, english: Words, private val changed: (InputMethod) -> Unit) {
+internal class Languages(
+    private val context: Context,
+    english: Words,
+    /** Android's current entry in its keyboard list, as an input method's id. */
+    private val android: () -> String?,
+    private val changed: (InputMethod) -> Unit,
+) {
     private val main = Handler(Looper.getMainLooper())
+    private val sync = KeyboardListSync(syncStore().getString(SYNCED, null))
     private var list: WordList? = null
     private var loadedEngine: InputEngine? = null
 
@@ -54,13 +61,42 @@ internal class Languages(private val context: Context, english: Words, private v
     /** Whether holding Sym opens the overlay: only with two or more on. */
     val switching get() = on.size > 1 && !englishOnly
 
-    /** Reads which input methods are on and which types now, as a field starts: Settings may have changed them. */
+    /**
+     * Reads which input methods are on and which types now, as a field starts: Settings or a restore may have changed them.
+     * The setting decides, unless Android's keyboard list picked another since the keyboard last set it ([KeyboardListSync]).
+     */
     fun refresh() {
         val index = InputMethodList.index(context)
         val setting = TypingSettings.inputMethods(context)
         on = index.on(setting)
+        androidSays(android())
         val wanted = index.current(setting, TypingSettings.currentInputMethod(context)).id
         if (wanted != target) use(wanted)
+    }
+
+    /**
+     * Android says its keyboard list's entry is [id]: as the keyboard starts, or when it was picked there. A pick of an input
+     * method that's on types from now on; Android's old entry, still there after a restore, changes nothing.
+     */
+    fun androidSays(id: String?) {
+        val picked = sync.heard(id)
+        saveSync()
+        if (picked == null) return
+        on = InputMethodList.index(context).on(TypingSettings.inputMethods(context))
+        switchTo(picked)
+    }
+
+    /** The keyboard set Android's keyboard list to [id], to match the input method typing. */
+    fun toldAndroid(id: String) {
+        sync.told(id)
+        saveSync()
+    }
+
+    private fun syncStore() = context.getSharedPreferences(KEYBOARD_LIST, Context.MODE_PRIVATE)
+
+    private fun saveSync() {
+        val synced = sync.synced
+        if (synced != syncStore().getString(SYNCED, null)) syncStore().edit().putString(SYNCED, synced).apply()
     }
 
     /** The Chinese variant: exactly one of zh_hk, zh_tw and zh_hans on, from Settings. None until the user picks one. */
@@ -119,6 +155,10 @@ internal class Languages(private val context: Context, english: Words, private v
         changed(method)
     }
 }
+
+/** Where [KeyboardListSync]'s entry is kept: Android's list is this phone's, so it isn't in the backup. */
+internal const val KEYBOARD_LIST = "keyboard_list"
+private const val SYNCED = "synced"
 
 /** How long an engine's input method may take to start before the bar says it's getting ready. */
 internal const val PREPARING_MILLIS = 500L

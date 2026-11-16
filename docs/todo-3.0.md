@@ -135,6 +135,31 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - Kazakh uses Russian's keys, with its nine extra letters held on the nearest Russian letter (і on ы).
   - Georgian's Shift gives a key's own second letter, and Georgian has no sentence capitals.
   - Bosnian's and Macedonian's word lists come from film subtitles, so they lean towards everyday speech.
+- **Fixes from the phone checks on main (4658247), all suites and a clean build pass (258), APK
+  `~/build/m1-apks/main-m3-fixes-debug.apk`; phone re-tests next:**
+  - #74: the crash offer shows on top, wherever the app opens (tk-data).
+  - Reset literally everything starts as a fresh install, the guide, Back's disclosure and release notes included, with a
+    check listing everything a fresh install doesn't have (tk-data).
+  - #56: a restored or Settings-chosen input method is the one that types; Android's keyboard-list choice wins only when it
+    changed since the keyboard last set it (tk-languages). Calls: a switch in Android's list made while TitanKeys wasn't
+    running still wins; the new `keyboard_list` store stays out of backups.
+  - #85: a static in the guide held the last app screen after it closed; it's cleared now. A Debug-only leak check
+    (`am broadcast -n com.titankeys.debug/com.titankeys.keyboard.LeakCheck`) lists any guide or playground still in memory
+    after a forced collection (tk-typing). Call: its weak list of guides is in every build, costing almost nothing.
+  - Still coming: #97's overlap is an Ink bug (a focused field's text isn't clipped under a pinned header, on every Ink
+    screen); tk-data is patching Ink. #66's title and #87's App info (tk-guide). Chinese prisms, ranking and 正體
+    (tk-gestures).
+- **Phone checks, section 1 (tk-screens, Debug from 95f2778), judged by the Orchestrator:**
+  - **Closed, proven by an objective test:** #70, #71, #75, #77, #86, #91, #76, #80, #65. #67 was closed, then reopened:
+    its triple Space slide wasn't checked.
+  - **Open with a status comment:** #73 (swiped words), #97 (Record a bug's Stop; a text overlap), #87 (App info opens
+    after a second denial), #74 (the crash offer hides behind the playground), #79, #69, #72, #90 and #66 (the owner's
+    judgement or hands; #66's title also loses its last word), #81 (the notice: Debug's notifications are off; the folder).
+  - **Fixes assigned:** tk-guide (`claude/m3-guide-fixes`): #66's cut title at the owner's largest font, #87's App info.
+    tk-data (`claude/m3-data-fixes`): #74's hidden offer, #97's overlap, and Reset literally everything leaving setup state
+    behind (it lands on the playground, not Setup).
+  - **Noted:** the guide's paste slide writes the real clipboard, which the owner's clipboard-sync app picked up. Debug's
+    contacts permission is now denied, from the #87 test.
 - **#85's baseline ended at 08:42 on the owner's word** ("my phone is ready now"): 1 h 12 min on battery from the 07:30
   reset, 100% to 89%, 431 mAh drained with the screen on 62 min. Release TitanKeys (2.1, uid 10335): 2.83 mAh, the vibrator
   891 times (19 s), its foreground service the whole screen-on time. The screen-off phone runs (07:55–08:09) fall inside it.
@@ -416,6 +441,12 @@ More calls get added here as the night goes.
   - Pushing to main, issue comments, and closing done issues.
   - The WSL distro export and import.
   - The 07:30 battery reset.
+
+## Later, after the languages work on the phone (owner, 2026-11-16)
+
+- **Refine the languages** once the owner has seen them working: a context model like English's next-word model to help
+  autocorrect and suggestions in other languages (maybe in 3.0), and other optimizing.
+- **Download on demand** stays a future option, only if the app's size ever passes Play's limit.
 
 ## Blocked, or not the Orchestrator's to finish
 

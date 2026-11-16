@@ -51,6 +51,7 @@ import android.widget.TextView
 import com.atlas.connected.Connected
 import com.atlas.connected.Contributions
 import com.atlas.engine.TypingSettings
+import com.vandam.ink.ContactsPermissionActivity
 import org.json.JSONObject
 import kotlin.math.hypot
 import kotlin.math.max
@@ -1050,7 +1051,7 @@ class GuideActivity : Activity() {
         openedPart?.let { part ->
             openedPart = null
             main.removeCallbacks(watchSetup)
-            if (!PhoneSetup.done(this, part)) part.help?.let(::showHint)
+            if (!PhoneSetup.done(this, part)) if (part.skip != null) showSetupSkip(part) else part.help?.let(::showHint)
         }
         if (autoPart != null) {
             main.removeCallbacks(openAuto)
@@ -2191,6 +2192,15 @@ class GuideActivity : Activity() {
         if (said != null) main.postDelayed({ if (!passed && flow.step === step) showChip(said) }, ENTER_MILLIS)
         hideHint()
         if (missing == GuideNeed.FnAsCtrl) offerDecline()
+        // Sym or fn isn't Programmable key, as setup's part for them was skipped: the slide can't work, so one line says to skip
+        // it, and Skip shows at once. No button (owner, #72).
+        keyOff(step)?.let { key ->
+            keepHint = true
+            showHint(keyOffLine(key))
+            keepHint = false
+            main.removeCallbacks(revealSkip)
+            main.postDelayed(revealSkip, ENTER_MILLIS)
+        }
 
         if (step.offersShare) Contributions.guideEnded(this)
         // The keyboard starts the step in the menu that it needs: the Sym panel for Alt and the emoji, closed for typing.
@@ -3051,6 +3061,7 @@ class GuideActivity : Activity() {
         swapIn(title, part.title, 0)
         swapIn(body, part.body, ENTER_STAGGER_MILLIS)
         showOffer(part.action)
+        showSetupSkip(part)
         main.removeCallbacks(openAuto)
         autoPart = part.takeIf { auto }
         if (auto && visible) main.postDelayed(openAuto, SETUP_AUTO_MILLIS)
@@ -3064,6 +3075,13 @@ class GuideActivity : Activity() {
         if (part == SetupPart.Back && !BackDisclosureActivity.agreed(this)) {
             @Suppress("DEPRECATION")
             startActivityForResult(BackDisclosureActivity.forGuide(this), DISCLOSURE_REQUEST)
+            return
+        }
+        // Android asks for the contacts itself, from an app screen, which turns Names from my contacts on only if it's allowed.
+        // The part has said what it's for first (owner, #87).
+        if (part == SetupPart.Contacts) {
+            @Suppress("DEPRECATION")
+            startActivityForResult(Intent(this, ContactsPermissionActivity::class.java), CONTACTS_REQUEST)
             return
         }
         if (PhoneSetup.pages(this, part).isEmpty()) {
@@ -3080,6 +3098,29 @@ class GuideActivity : Activity() {
         awaitingAccessibility = part == SetupPart.Back
         main.removeCallbacks(watchSetup)
         main.postDelayed(watchSetup, SETUP_POLL_MILLIS)
+    }
+
+    /**
+     * A part that can be passed over has its line under the button: Skip with what won't work for Sym and fn (owner, #72:
+     * "skippable with a warning"), Not now for contact names (owner, #87). A press passes it over, and the guide doesn't ask again.
+     */
+    private fun showSetupSkip(part: SetupPart) {
+        hint.setOnClickListener(null)
+        val skip = part.skip ?: return
+        showHint(skip)
+        hint.onPress(haptics) {
+            if (setupPart != part || setupChanging) return@onPress
+            hint.setOnClickListener(null)
+            main.removeCallbacks(watchSetup)
+            openedPart = null
+            PhoneSetup.skip(this, part)
+            checkKeyboard()
+        }
+    }
+
+    /** The key [step] needs that isn't Programmable key, after setup's Keys part was skipped, or null. See [programmableKeys]. */
+    private fun keyOff(step: GuideStep): String? = keyOff(step, PhoneSetup.skipped(this, SetupPart.Keys)) { name ->
+        PhoneChecks.programmable(this, if (name == SYM_KEY) PhoneChecks.Key.Sym else PhoneChecks.Key.Fn)
     }
 
     /** A part of setup is done: a pulse and a line, then the [next] part, which opens by itself. After the last, the story starts. */
@@ -3105,6 +3146,12 @@ class GuideActivity : Activity() {
         // Back from Share swipes' policy, however it was left: the end screen shows the answer, or still offers it.
         if (requestCode == SHARE_REQUEST) {
             showEndChoices()
+            return
+        }
+        // Android has answered about the contacts, yes or no: the guide doesn't ask again, and setup moves on (owner, #87).
+        if (requestCode == CONTACTS_REQUEST) {
+            PhoneSetup.skip(this, SetupPart.Contacts)
+            checkKeyboard()
             return
         }
         if (requestCode != DISCLOSURE_REQUEST) return
@@ -4759,6 +4806,7 @@ class GuideActivity : Activity() {
         private const val SETUP_REQUEST = 7
         private const val DISCLOSURE_REQUEST = 8
         private const val SHARE_REQUEST = 9
+        private const val CONTACTS_REQUEST = 10
         /** How often the guide looks at the part whose page is open. Reading these settings is cheap. */
         private const val SETUP_POLL_MILLIS = 400L
         /** How long the guide waits to be in front again after it closes a page, before it sends for itself. */

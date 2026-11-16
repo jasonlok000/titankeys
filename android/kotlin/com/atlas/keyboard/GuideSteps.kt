@@ -50,7 +50,7 @@ internal enum class GuideChapter(val label: String, val roast: String? = null) {
  * opens the page for each part, sees the switch go on, and comes back by itself, so that each part takes a touch or two.
  * [title] and [body] follow the same rules as a step's words. [help] shows if you come back with the part still not done.
  */
-internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null) {
+internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null, val skip: String? = null) {
     Enable("Turn the keyboard on.", "Flip TitanKeys Keyboard on in the list. You'll come straight back.", "Open the keyboard list",
         "Can't see it? Scroll down. Flip its switch, then press OK twice."),
     Choose("Make it your keyboard.", "Pick TitanKeys Keyboard in the list. That's it.", "Pick TitanKeys"),
@@ -62,6 +62,16 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
         "The switch is at the top of that page."),
     Back("Let TitanKeys handle Back.", "Turn TitanKeys Keyboard on in Accessibility, so Back takes one press.", "Open Accessibility",
         "Switch greyed out? Android is being careful. In App info, open the menu and allow restricted settings."),
+    // Sym and fn as Programmable key, both on the phone's one Shortcut keys page (owner, #72: in the guide's setup only, after
+    // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.
+    // F: draft (#72): the title, body, button and the skip line, which says what won't work.
+    Keys("Make Sym and fn programmable.", "Set both to Programmable key in Shortcut keys. Sym's panels need it.", "Open Shortcut keys",
+        skip = "Skip. Sym's panels and fn's paste won't work without it."),
+    // Names from contacts, last (owner, #87). It says what it's for and that the names stay on the phone before Android asks.
+    // Not now moves on, and the guide never asks again.
+    // F: draft (#87).
+    Contacts("Swipe names from your contacts.", "Names swipe and get fixed like any word. They stay on this phone.", "Use my contacts",
+        skip = "Not now"),
     ;
 
     companion object {
@@ -1861,6 +1871,41 @@ private fun menuBlocked(lesson: String): String? = when (lesson) {
     GuideLesson.BarTap.name -> "Other words are blocked. Tap TitanKeys."
     else -> null
 }
+
+/** Sym and fn, as setup's Keys part names them and [PhoneChecks.Key] has them. */
+internal const val SYM_KEY = "Sym"
+internal const val FN_KEY = "fn"
+
+/**
+ * The keys a slide needs as Programmable key (owner, #72): Sym for the Sym panel's slides (symbols, the ∞, emoji, the clipboard),
+ * fn for the paste slide.
+ */
+internal fun programmableKeys(step: GuideStep): List<String> = listOfNotNull(
+    SYM_KEY.takeIf { GuideLesson.Sym in step.lessons.orEmpty() },
+    FN_KEY.takeIf { GuideLesson.Ctrl in step.lessons.orEmpty() },
+)
+
+/**
+ * The one line on a slide that needs [key] after setup's Keys part was skipped and the key still isn't Programmable key: the
+ * slide can't work, so it says to skip it. No button (owner, #72).
+ */
+// F: draft (#72).
+internal fun keyOffLine(key: String) = "$key isn't a Programmable key yet. Skip this one."
+
+/**
+ * The key [step] needs that isn't Programmable key, so its line shows ([keyOffLine]), or null. Only after setup's Keys part was
+ * [skipped]: until then setup asks for the keys first. [programmable] says whether Sym or fn is set.
+ */
+internal fun keyOff(step: GuideStep, skipped: Boolean, programmable: (String) -> Boolean): String? =
+    if (!skipped) null else programmableKeys(step).firstOrNull { !programmable(it) }
+
+/**
+ * The parts of setup still to ask, in order (PhoneSetup.missing reads the phone for it): each that isn't [done], except Back
+ * after "No thanks" on its disclosure ([backDeclined]), and Sym and fn once [skipped] (owner, #72). Contact names count as done
+ * once answered either way, or on already (owner, #87).
+ */
+internal fun setupToAsk(done: (SetupPart) -> Boolean, backDeclined: Boolean, skipped: (SetupPart) -> Boolean) =
+    SetupPart.entries.filterNot { done(it) || it == SetupPart.Back && backDeclined || it == SetupPart.Keys && skipped(it) }
 
 internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLesson>? = step.lessons): String {
     val open = lessons.orEmpty()

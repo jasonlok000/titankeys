@@ -336,6 +336,8 @@ fun main() {
     runThroughFixes()
     theCursorHasToMove()
     steeringToAWord()
+    theKeysPart()
+    theContactsPart()
     grabbingABunch()
     settingsThatStepsNeed()
     goingBack()
@@ -1197,6 +1199,51 @@ private fun steeringToAWord() {
     steer.event(CursorStarted(false))
     steer.event(FieldChanged("x".repeat(60), 32, 32))
     same(steer.event(Moved(20f, lifted = true)), GuideVerdict.Done, "In the word as the finger lifts passes")
+}
+
+/**
+ * Sym and fn as Programmable key (owner, #72): a part of the guide's setup after Back, shown only while a key isn't set, and
+ * skippable with a warning. Once skipped, the slides that need a key say so in one line.
+ */
+private fun theKeysPart() {
+    val parts = SetupPart.entries
+    same(parts.indexOf(SetupPart.Keys), parts.indexOf(SetupPart.Back) + 1, "The keys come right after Back")
+    fun ask(keysSet: Boolean, skipped: Set<SetupPart> = emptySet()) =
+        setupToAsk({ it != SetupPart.Keys || keysSet }, backDeclined = false) { it in skipped }
+    same(ask(keysSet = false), listOf(SetupPart.Keys), "It shows while Sym or fn isn't Programmable key")
+    same(ask(keysSet = true), emptyList<SetupPart>(), "and hides once both are, or on a phone without them")
+    same(ask(keysSet = false, skipped = setOf(SetupPart.Keys)), emptyList<SetupPart>(), "Skipped, it isn't asked again")
+    same(setupToAsk({ false }, backDeclined = true) { false }.contains(SetupPart.Back), false, "Back's No thanks still counts")
+    same(setupToAsk({ false }, backDeclined = false) { false }, SetupPart.entries.toList(), "Nothing done: every part, in order")
+    val skip = SetupPart.Keys.skip.orEmpty()
+    same(skip.startsWith("Skip") && "won't work" in skip, true, "Its skip says what won't work: \"$skip\"")
+    same(SetupPart.Keys.body.contains("Programmable key") && SetupPart.Keys.action.contains("Shortcut keys"), true, "It names the mode and the page")
+
+    // The slides that need a key, and their one line once the part was skipped.
+    val needs = GUIDE_STEPS.associate { it.id to programmableKeys(it) }.filterValues { it.isNotEmpty() }
+    same(needs, mapOf("symmain" to listOf(SYM_KEY), "symgroups" to listOf(SYM_KEY), "clown" to listOf(SYM_KEY),
+        "paste" to listOf(FN_KEY), "clipboard" to listOf(SYM_KEY)), "The Sym, ∞, emoji and clipboard slides need Sym; paste needs fn")
+    val clipboard = GUIDE_STEPS.first { it.id == "clipboard" }
+    val paste = GUIDE_STEPS.first { it.id == "paste" }
+    same(keyOff(clipboard, skipped = false) { false }, null, "Not skipped: no line, setup asks for it first")
+    same(keyOff(clipboard, skipped = true) { false }, SYM_KEY, "Skipped and Sym not set: the clipboard slide says so")
+    same(keyOff(clipboard, skipped = true) { it == SYM_KEY }, null, "Set by hand since: no line")
+    same(keyOff(paste, skipped = true) { it == SYM_KEY }, FN_KEY, "The paste slide is about fn")
+    for (step in GUIDE_STEPS.filter { it.id !in needs }) same(keyOff(step, skipped = true) { false }, null, "${step.id} needs neither")
+    for (key in listOf(SYM_KEY, FN_KEY)) {
+        val line = keyOffLine(key)
+        same(line.startsWith(key) && "Skip" in line && line.length <= LINE_MOST, true, "One line that says to skip: \"$line\"")
+    }
+}
+
+/** Names from contacts (owner, #87): the last part, asked once, Yes or Not now. */
+private fun theContactsPart() {
+    same(SetupPart.entries.last(), SetupPart.Contacts, "Contact names come last in setup, after the keys")
+    fun ask(answered: Boolean) = setupToAsk({ it != SetupPart.Contacts || answered }, backDeclined = false) { false }
+    same(ask(answered = false), listOf(SetupPart.Contacts), "It shows until it's answered")
+    same(ask(answered = true), emptyList<SetupPart>(), "and never again once it is")
+    same(SetupPart.Contacts.skip, "Not now", "Not now moves on")
+    same("stay on this phone" in SetupPart.Contacts.body, true, "It says the names stay on the phone before Android asks")
 }
 
 private fun grabbingABunch() {

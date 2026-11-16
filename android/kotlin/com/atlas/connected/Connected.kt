@@ -15,11 +15,12 @@ import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
 /**
- * TitanKeys' only ways to use the internet, both strictly limited:
+ * TitanKeys' only ways to use the internet, each strictly limited:
  *
  * - **Announcements** ([Announcements]): once a day at most, it downloads one signed file from the TitanKeys website.
  *   It sends nothing about the user: no identifier, no cookie, and a plain user agent.
  * - **Contributions** ([Contributions]): only if the user agrees, sealed swipe examples go to the project, on Wi-Fi.
+ * - **Bug reports** ([ReportUpload]): only when the user presses Send in the report form (#97), sealed the same way.
  *
  * The privacy policy at [PRIVACY_URL] says the same, and must change whenever this does.
  */

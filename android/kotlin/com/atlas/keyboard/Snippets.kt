@@ -8,7 +8,8 @@ import org.json.JSONObject
 
 /**
  * The user's snippets (issue 50): pairs of a shortcut and its text, kept on this phone only. They are never learned as words,
- * never part of a contribution, and never put in a password field. A backup file holds them as JSON:
+ * never part of a contribution, and never put in a password field. They're kept, and Export snippets' file from before
+ * 3.0 held them, as JSON:
  * `{"snippets":[{"shortcut":"addr","text":"..."}]}`, with each shortcut written without its start character.
  */
 object Snippets {
@@ -41,13 +42,7 @@ object Snippets {
         if (snippets.remove(shortcut.lowercase()) != null) save(context, snippets)
     }
 
-    /** Writes every snippet to [uri]. */
-    fun export(context: Context, uri: Uri) {
-        val stream = context.contentResolver.openOutputStream(uri, "wt") ?: error("Couldn't open that file.")
-        stream.bufferedWriter().use { it.write(write(load(context))) }
-    }
-
-    /** Adds the snippets in [uri]. A shortcut that is already here takes the file's text. Returns how many it read. */
+    /** Adds the snippets in an old Export snippets file at [uri], for Restore. A shortcut already here takes the file's text. */
     fun import(context: Context, uri: Uri): Int {
         val stream = context.contentResolver.openInputStream(uri) ?: error("Couldn't open that file.")
         val text = stream.bufferedReader().use { it.readText() }

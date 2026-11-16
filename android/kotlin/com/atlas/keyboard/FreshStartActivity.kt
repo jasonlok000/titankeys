@@ -19,12 +19,14 @@ class FreshStartActivity : Activity() {
         super.onCreate(savedInstanceState)
         val old = intent.getIntExtra(PID, -1)
         if (old > 0 && old != Process.myPid()) Process.killProcess(old)
-        startActivity(Connected.pageIntent(this, "/").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        startActivity(Connected.pageIntent(this, intent.getStringExtra(PAGE) ?: "/").addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
         finish()
         Process.killProcess(Process.myPid())
     }
 
     companion object {
         const val PID = "pid"
+        /** The page to open, if not the front page: Restore opens its own result page (#65). */
+        const val PAGE = "page"
     }
 }

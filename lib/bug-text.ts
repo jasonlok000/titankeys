@@ -12,7 +12,8 @@ export const bugText = {
     "Press Record a bug.",
     "Go and do the thing that broke.",
     "Come back here and press Stop. It stops by itself after 3 minutes.",
-    "Check what's in it, then share it wherever you like.",
+    // F: draft, was "Check what's in it, then share it wherever you like."
+    "Check what's in it, then send it to us or share it wherever you like.",
   ],
   // Clean zone: plain, no jokes. The privacy policy says the same (site/privacy/index.html).
   beforeRecord: "It doesn't save your text, but the keys and word choices it records can show most of what you typed while it ran. Only share it with people you'd show that to.",
@@ -35,9 +36,12 @@ export const bugText = {
     "The file has every touch and key press you made while it was on. From those, someone can work out what you typed, including the words above.",
     "Only share it with people you'd show that text to.",
     "Password and private fields are never recorded, and neither is the text that was already in a field.",
-    "TitanKeys doesn't upload it. It goes only where you send it.",
+    // F: draft (#97), was "TitanKeys doesn't upload it. It goes only where you send it."
+    "TitanKeys sends it only if you press Send in the report form, sealed so only we can read it. Otherwise it stays on your phone.",
   ],
-  share: "Share it",
+  // F: "Send it" opens the report form (#97), a draft; "Share elsewhere" is F's (#74).
+  send: "Send it",
+  share: "Share elsewhere",
   shareSubject: "TitanKeys bug recording",
   shareText: "What went wrong:\n\n",
   again: "Record again",

@@ -2,6 +2,8 @@ package com.vandam.ink
 
 import android.app.Activity
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,6 +29,7 @@ import com.atlas.keyboard.AppBuild
 import com.atlas.keyboard.BackDisclosureActivity
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.CrashReport
 import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.FixedScale
 import com.atlas.keyboard.GuideActivity
@@ -145,6 +148,34 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             activity.contentResolver.registerContentObserver(Settings.Secure.getUriFor(setting), false, keyboardSettings)
         // Settings load without waiting for the swipe engine; tell them when it finishes loading.
         typing.whenReady { _, _, _ -> publishState() }
+        offerCrashReport()
+    }
+
+    /**
+     * The crash offer (#74, #97), once, as the app opens after a crash or freeze: send the report through the form, where it's
+     * attached, or let it go. Nothing is ever sent by itself.
+     */
+    private fun offerCrashReport() {
+        Thread {
+            CrashReport.forgetLent(activity)
+            val report = CrashReport.pending(activity) ?: return@Thread
+            activity.runOnUiThread {
+                if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                val froze = CrashReport.froze(report)
+                // F's titles (docs/words-m1.md, #74). F: the body's "Email us" and the button became the form's (#97): drafts.
+                android.app.AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle(if (froze) "TitanKeys froze last time." else "TitanKeys crashed last time.")
+                    .setMessage("Sorry about that. Send us the report so we can fix it? It has the error and the versions, " +
+                        "nothing you typed. It's only sent if you send it.")
+                    .setPositiveButton("Send it") { _, _ ->
+                        CrashReport.offered(activity)
+                        activity.startActivity(com.atlas.connected.Connected.pageIntent(activity, REPORT_PAGE))
+                    }
+                    .setNegativeButton("No thanks") { _, _ -> CrashReport.clear(activity) }
+                    .setOnCancelListener { CrashReport.clear(activity) }
+                    .show()
+            }
+        }.start()
     }
 
     private fun syncPreview() {
@@ -263,23 +294,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     Snippets.remove(activity, data.getString("shortcut"))
                     "null"
                 }
-                "transferSnippets" -> {
-                    check(!transferring) { "A transfer is already open." }
-                    val mode = data.getString("mode")
-                    require(mode == "import" || mode == "export")
-                    transferring = true
-                    try {
-                        LearningTransferActivity.start(activity, mode == "export", snippets = true) { transferred, error ->
-                            transferring = false
-                            if (error == null) complete(NativeResult.Success(transferred.toString()))
-                            else operationResult(error, complete)
-                        }
-                    } catch (error: Exception) {
-                        transferring = false
-                        throw error
-                    }
-                    null
-                }
                 "addWord" -> {
                     typing.addWord(data.getString("word")) { error -> operationResult(error, complete) }
                     null
@@ -296,15 +310,16 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     typing.clearDictionary { error -> operationResult(error, complete) }
                     null
                 }
-                "transferLearning" -> {
-                    check(!transferring) { "An export or import is already open." }
+                // Settings > Your words > Back up everything and Restore (#65). A whole restore restarts TitanKeys, so it never answers.
+                "backup" -> {
+                    check(!transferring) { "A backup or restore is already open." }
                     val mode = data.getString("mode")
-                    require(mode == "import" || mode == "export")
+                    require(mode == "backup" || mode == "restore")
                     transferring = true
                     try {
-                        LearningTransferActivity.start(activity, mode == "export") { transferred, error ->
+                        BackupActivity.start(activity, mode == "backup") { done, error ->
                             transferring = false
-                            if (error == null) complete(NativeResult.Success(transferred.toString()))
+                            if (error == null) complete(NativeResult.Success(JSONObject.quote(done ?: "")))
                             else operationResult(error, complete)
                         }
                     } catch (error: Exception) {
@@ -312,6 +327,17 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                         throw error
                     }
                     null
+                }
+                "copyText" -> {
+                    activity.getSystemService(ClipboardManager::class.java)
+                        .setPrimaryClip(ClipData.newPlainText(data.getString("label"), data.getString("text")))
+                    "null"
+                }
+                // Send feedback's Crash TitanKeys, so the crash offer can be tested. TitanKeys Debug only.
+                "crash" -> {
+                    check(HapticsLab.available(activity)) { "Crash TitanKeys is only in TitanKeys Debug" }
+                    pressHandler.post { throw IllegalStateException("Crash TitanKeys, from Send feedback in TitanKeys Debug") }
+                    "null"
                 }
                 "exportRawLog" -> {
                     check(RawLog.available(activity)) { "The typing log is only in TitanKeys Debug" }
@@ -736,6 +762,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 }
 
 private const val SEEN_NOTES = "seen_release_notes"
+/** The report form (#97), which attaches a kept crash report by itself. */
+private const val REPORT_PAGE = "/settings/report"
 /** The boring guide's nerd screen has shown once. Only clearing the app's data brings it back. */
 private const val NERD_SEEN = "nerd_screen_seen"
 /** The other-phone warning has shown once (#75). */

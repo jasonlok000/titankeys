@@ -712,9 +712,9 @@ private fun theLadderOnTitanKeys() {
     same(menuTarget("$MENU_LINE ")?.let { "$MENU_LINE ".substring(it.first, it.last + 1) }, "TitanKeys", "TitanKeys is the box's selected word")
     same(menuSelected("$MENU_LINE ", 0, MENU_WORD.length), true, "Selected from its first letter to its last")
     same(step.lessons, setOf(GuideLesson.BarHold), "Only the selected word's menu: typing, swiping, Space and Backspace are blocked")
-    same(step.stages.map { it.text }, listOf("Tap TitanKeys on the bar. Nothing gets saved.", "Press I to save it.",
-        "Press I again to favourite it."), "Tap, I, then I again")
-    same(step.done to step.praise, "Favourited. Good taste." to "O steps it back down. P closes the menu.", "Done and praise")
+    same(step.stages.map { it.text }, listOf("Tap TitanKeys on the bar. Nothing gets saved.", "Press I/K to save it.",
+        "Press I/K again to favourite it."), "Tap, I/K, then I/K again: the keys named in pairs (owner, #67)")
+    same(step.done to step.praise, "Favourited. Good taste." to "O/L steps it back down. P/Backspace closes it.", "Done and praise")
     // The show-only menu opens at not saved: the ladder's I is Save, then Favourite.
     same(MenuKeys.choices(MenuKeys.Step.New).i to MenuKeys.choices(MenuKeys.Step.Saved).i, MenuKeys.Button.Save to MenuKeys.Button.Favourite,
         "Not saved, I saves; saved, I favourites")
@@ -723,17 +723,17 @@ private fun theLadderOnTitanKeys() {
     menu.start("menu")
     same(menu.event(MenuPicked("Save")), GuideVerdict.Wait, "A pick before the menu opens means nothing")
     same(menu.event(WordMenu(MENU_WORD)), GuideVerdict.Stage(1), "The menu opens, so Save is next")
-    same(menu.labels to menu.cue, MENU_SAVE to GuideCue.Spot(listOf("I"), rounds = 1), "I lights once: Save")
+    same(menu.labels to menu.cue, MENU_SAVE to GuideCue.Spot(listOf("I", "K"), rounds = 1, together = true), "I and K light once, together: Save")
     same(MENU_SAVE["K"] to MENU_SAVE[Layout.BACKSPACE], "Save" to "Back", "K works as I, and Backspace as P, and they say so")
     fun said(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }
-    same(said(menu.event(MenuPicked("Block"))), "Blocked TitanKeys? Rude. I brings it back.", "O at not saved blocks it")
+    same(said(menu.event(MenuPicked("Block"))), "Blocked TitanKeys? Rude. I/K brings it back.", "O at not saved blocks it")
     same(menu.stage, 1, "and it still waits for the save")
     menu.event(MenuPicked("Unblock"))
     same(menu.event(MenuPicked("Save")), GuideVerdict.Stage(2), "Saved, so the favourite is next")
-    same(menu.labels to menu.cue, MENU_FAVOURITE to GuideCue.Spot(listOf("I"), rounds = 1), "I lights once again: Favourite")
+    same(menu.labels to menu.cue, MENU_FAVOURITE to GuideCue.Spot(listOf("I", "K"), rounds = 1, together = true), "I and K light once again, together: Favourite")
     same(MENU_FAVOURITE["K"] to MENU_FAVOURITE["P"], "Favourite" to "Back", "K works as I, and P is Back")
     val unsaved = menu.event(MenuPicked("Unsave"))
-    same(said(unsaved) to (unsaved as GuideVerdict.Hint).stage, "Unsaved. Cold. I, then I again." to 1, "O at saved unsaves it: back to the save")
+    same(said(unsaved) to (unsaved as GuideVerdict.Hint).stage, "Unsaved. Cold. I/K, then I/K again." to 1, "O at saved unsaves it: back to the save")
     menu.event(MenuPicked("Save"))
     same(menu.event(MenuPicked("Favourite")), GuideVerdict.Done, "I again: a favourite, and the slide passes")
 
@@ -775,7 +775,7 @@ private fun theMenuSlidesOffTrackMoves(step: GuideStep) {
         same(said(flow.event(FieldChanged(text, 10, 18))), "Not the box. Tap TitanKeys on the bar.", "Other text selected in the box, at $stage")
         same(said(flow.event(FieldChanged(text, 3, 3))), "Not the box. Tap TitanKeys on the bar.", "A moved cursor, at $stage")
         same(said(flow.event(FieldChanged(text, 0, 4))), "Not the box. Tap TitanKeys on the bar.", "Part of TitanKeys, at $stage")
-        same(said(flow.event(KeyboardEvent.MenuMissed)), "I or O. Nothing else does anything here.", "Another key in the menu, at $stage")
+        same(said(flow.event(KeyboardEvent.MenuMissed)), "I/K or O/L. Nothing else does anything here.", "Another key in the menu, at $stage")
         same(flow.stage, stage, "and none of them moves the slide, at $stage")
     }
     // The lock's words on this slide: each says it's blocked, then points at TitanKeys.
@@ -790,7 +790,7 @@ private fun theMenuSlidesOffTrackMoves(step: GuideStep) {
         GuideLesson.entries.map { blockedChip(step, it.name) } + listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MISSED)
     for (line in words) same(line.contains("Hold TitanKeys") || line.contains("Hold, ") || line.contains("don't tap"), false,
         "\"$line\" says nothing of holding TitanKeys")
-    for (line in listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MISSED, "Blocked TitanKeys? Rude. I brings it back."))
+    for (line in listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MISSED, MENU_BLOCKED))
         same(line.length <= 50, true, "\"$line\" is 50 or less")
     // Closed halfway, it keeps its step: held again after the save it opens saved, and I favourites it.
     val halfway = GuideFlow({ GuideSettings() })

@@ -586,10 +586,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * flashed; design v2: the slide's keys are orange).
      */
     private fun spotLight(spot: GuideCue.Spot, name: String, now: Long): Float {
-        val at = spot.keys.indexOf(name)
+        // A pair that lights together takes the first key's turn, both of them (owner, #67).
+        val at = spot.keys.indexOf(name).let { if (it > 0 && spot.together) 0 else it }
         if (at < 0) return 0f
         if (!GuideMotion.enabled) return 1f
-        val round = spot.keys.size * SPOT_STEP_MILLIS + SPOT_REST_MILLIS
+        val turns = spotTurns(spot)
+        val round = turns * SPOT_STEP_MILLIS + SPOT_REST_MILLIS
         val elapsed = now - cueStart
         if (elapsed < 0) return 0f
         // Once the rounds have shown the order, the slide's keys stay orange, steady (design v2): never blinking (owner, v5).
@@ -597,13 +599,16 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val local = (elapsed % round - at * SPOT_STEP_MILLIS).toFloat() / SPOT_STEP_MILLIS
         if (local < 0f) return 0f
         // Past its turn, in this round, a key stays softly lit: the hint reads in order, from the first key, in any frame.
-        if (local >= 1f) return if (elapsed % round < spot.keys.size * SPOT_STEP_MILLIS) SPOT_DONE else 0f
+        if (local >= 1f) return if (elapsed % round < turns * SPOT_STEP_MILLIS) SPOT_DONE else 0f
         return max(SPOT_DONE, sin(local * PI).toFloat()).takeIf { local > .5f } ?: sin(local * PI).toFloat()
     }
 
     /** The spot's rounds aren't over yet, so the drawing keeps going. */
     private fun spotRunning(spot: GuideCue.Spot, now: Long) =
-        GuideMotion.enabled && spot.keys.isNotEmpty() && now - cueStart < (spot.keys.size * SPOT_STEP_MILLIS + SPOT_REST_MILLIS) * spot.rounds
+        GuideMotion.enabled && spot.keys.isNotEmpty() && now - cueStart < (spotTurns(spot) * SPOT_STEP_MILLIS + SPOT_REST_MILLIS) * spot.rounds
+
+    /** How many turns a round of [spot] takes: one per key, or one for all of its keys together. */
+    private fun spotTurns(spot: GuideCue.Spot) = if (spot.together) 1 else spot.keys.size
 
     /**
      * The part of the keys that the touchpad feels stays bright, and the rest is dimmed: its sensor stops at the middle of the outer

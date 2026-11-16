@@ -2661,10 +2661,10 @@ class GuideActivity : Activity() {
             return
         }
         demo?.let { showPhantom(it, t) }
-        // Once the menu is really open, the demo presses I: the save, then the favourite.
+        // Once the menu is really open, the demo presses I/K, both keys lit as one: the save, then the favourite (owner, #67).
         if (flow.step.bar == GuideBar.Menu && flow.stage >= 1 && demoKeys == 0 && t > MENU_O_OPEN_AT) {
             demoKeys = 1
-            keys.light("I")
+            for (key in MENU_UP_KEYS) keys.light(key)
         }
         main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
     }

@@ -84,9 +84,9 @@ internal sealed interface GuideCue {
     data class Flick(val hold: Boolean) : GuideCue
     /**
      * These keys light one after the other, slowly, a few times, then stop. Keys in [held] stay lit, steady, as a modifier held
-     * down does: never flashing.
+     * down does: never flashing. With [together], they all light at once instead, as one key: a pair that does the same thing.
      */
-    data class Spot(val keys: List<String>, val held: List<String> = emptyList(), val rounds: Int = 3) : GuideCue
+    data class Spot(val keys: List<String>, val held: List<String> = emptyList(), val rounds: Int = 3, val together: Boolean = false) : GuideCue
     /** The keys of the word that the ghost has next light in order, then Space, once: the screen fills in which keys. */
     data object Spell : GuideCue
     /** A finger goes along the bottom row. */
@@ -1094,10 +1094,16 @@ internal val MENU_SAVE = mapOf("I" to "Save", "K" to "Save", "P" to "Back", Layo
 internal val MENU_FAVOURITE = mapOf("I" to "Favourite", "K" to "Favourite", "P" to "Back", Layout.BACKSPACE to "Back")
 /** The word menu slide's word, selected in the box, which it saves, then favourites (owner, 2026-11-13). */
 internal const val MENU_WORD = "TitanKeys"
+/** The pair of keys that steps a word up the menu: the drawing lights both at once (owner, #67). */
+internal val MENU_UP_KEYS = listOf("I", "K")
 internal const val MENU_CLOSED = "Closed it. Tap TitanKeys again."
-internal const val MENU_UNSAVED = "Unsaved. Cold. I, then I again."
+// F: the word menu's keys are named in pairs, I/K and O/L, and Back is P/Backspace (owner, #67). Drafts below.
+internal const val MENU_UNSAVED = "Unsaved. Cold. I/K, then I/K again."
 internal const val MENU_NOT_BOX = "Not the box. Tap TitanKeys on the bar."
-internal const val MENU_MISSED = "I or O. Nothing else does anything here."
+// F: draft (#67).
+internal const val MENU_MISSED = "I/K or O/L. Nothing else does anything here."
+// F: draft (#67).
+internal const val MENU_BLOCKED = "Blocked TitanKeys? Rude. I/K brings it back."
 
 /** The word menu slide's selected word in its line: TitanKeys, wherever [text] has it, or null. See [GuideStep.selected]. */
 internal fun menuTarget(text: String): IntRange? = text.indexOf(MENU_WORD).takeIf { it >= 0 }?.let { it until it + MENU_WORD.length }
@@ -1315,23 +1321,27 @@ internal val GUIDE_STEPS = listOf(
             GuideStage("Tap TitanKeys on the bar. Nothing gets saved.") { event ->
                 if (event is WordMenu) GuideVerdict.Done else menuOffTrack(event)
             },
-            // One key at a time: the drawing hints Save on I, then Favourite on I again.
-            // The hint lights I once, steady, and only once the menu is open: the screen waits for it (owner, v5.2).
-            GuideStage("Press I to save it.", GuideCue.Spot(listOf("I"), rounds = 1), MENU_SAVE) { event ->
+            // One step at a time: the drawing hints Save on I/K, then Favourite on I/K again. The keys are named in pairs, and both
+            // keys of the pair light together (owner, #67).
+            // The hint lights them once, steady, and only once the menu is open: the screen waits for it (owner, v5.2).
+            // F: draft (#67).
+            GuideStage("Press I/K to save it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_SAVE) { event ->
                 when {
                     event is MenuPicked && event.action == "Save" -> GuideVerdict.Done
                     // Held again after the save: it opens saved, and I on it favourites it, which is the whole slide.
                     event is MenuPicked && event.action == "Favourite" -> GuideVerdict.Finished
                     event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint(MENU_CLOSED, stage = 0)
                     // O on a word that isn't saved blocks it, for show; I takes it back off (ladder v4).
-                    event is MenuPicked && event.action == "Block" -> chip("Blocked TitanKeys? Rude. I brings it back.")
-                    event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I saves it.")
+                    event is MenuPicked && event.action == "Block" -> chip(MENU_BLOCKED)
+                    // F: draft (#67).
+                    event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I/K saves it.")
                     event is MenuPicked && event.action == "Unsave" -> chip(MENU_UNSAVED)
                     else -> menuOffTrack(event)
                 }
             },
             // The top of the ladder: I again on a saved word makes it a favourite, and the hearts burst.
-            GuideStage("Press I again to favourite it.", GuideCue.Spot(listOf("I"), rounds = 1), MENU_FAVOURITE) { event ->
+            // F: draft (#67).
+            GuideStage("Press I/K again to favourite it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_FAVOURITE) { event ->
                 when {
                     event is MenuPicked && event.action == "Favourite" -> GuideVerdict.Done
                     // O on a saved word unsaves it: back to the save.
@@ -1342,7 +1352,8 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Favourited. Good taste.",
-        praise = "O steps it back down. P closes the menu.",
+        // F: draft (#67).
+        praise = "O/L steps it back down. P/Backspace closes it.",
         line = MENU_LINE,
         seed = MENU_LINE,
         help = "Already selected. Tap TitanKeys on the bar.",

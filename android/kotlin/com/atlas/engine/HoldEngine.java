@@ -15,7 +15,7 @@ import java.util.Map;
  * Shift, Alt and Sym are not tracked here. The keyboard knows their state, and says a letter is not eligible while one is on.
  */
 public final class HoldEngine {
-    public static final int MIN_MILLIS = 200, MAX_MILLIS = 1000, DEFAULT_MILLIS = 300;
+    public static final int MIN_MILLIS = 200, MAX_MILLIS = 1000, DEFAULT_MILLIS = 400;
     private static final int KEYCODE_A = 29, KEYCODE_Z = 54;
     /**
      * A key's release reaches the keyboard through the app, and only after its press is handled. This is the time that a

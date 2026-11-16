@@ -109,7 +109,14 @@ private class Typist(autoCapitalise: Boolean = false) {
     val text get() = editor.text
 }
 
+/** #77: a fresh install, with no hold time stored, reads Medium, 400 ms, and so does the engine before settings load. */
+private fun freshInstallReadsMedium() {
+    same(com.atlas.engine.TypingSettings.DEFAULT_HOLD_SYMBOL_MILLIS, 400, "A fresh install's hold time")
+    same(com.atlas.engine.HoldEngine.DEFAULT_MILLIS, 400, "The engine's hold time before settings load")
+}
+
 fun main() {
+    freshInstallReadsMedium()
     quickPressTypesTheLetterOnly()
     heldPressReplacesOnce()
     onlyTheLastLetterIsReplaced()

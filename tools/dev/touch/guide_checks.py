@@ -54,7 +54,8 @@ def shot(name):
 
 def said(lines, *wanted):
     """The first of the wanted lines the guide shows, or None."""
-    return next((w for w in wanted if any(w in line for line in lines)), None)
+    # The guide sets its titles in capitals, so the comparison ignores case.
+    return next((w for w in wanted if any(w.casefold() in line.casefold() for line in lines)), None)
 
 
 def leave_guide():

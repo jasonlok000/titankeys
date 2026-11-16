@@ -158,6 +158,14 @@ def check_sym_fn():
         guarded("keyevent", "111")  # Escape closes a panel it opened
 
 
+def check_sym_log():
+    """Why a held Sym opens the panel: TitanKeys Debug logs each Sym it hears (TitanKeysSym, never any text). Prints them."""
+    play("key:sym:900:none", shot="sym-log", at=700)
+    lines = [line for line in adb("logcat", "-d", "-v", "brief").splitlines() if "TitanKeysSym" in line][-8:]
+    record("sym-log", None, "the keyboard's own words about the hold (see the shot for what opened):\n      "
+           + "\n      ".join(lines or ["(no TitanKeysSym lines in the log)"]), "sym-log")
+
+
 CHECKS = {
     "89-flick-end": check_89_flick_end,
     "89-long-word": check_89_long_word,
@@ -166,6 +174,7 @@ CHECKS = {
     "swiped-its": check_swiped_apostrophe,
     "84-pill": check_84_pill,
     "72-sym-fn": check_sym_fn,
+    "sym-log": check_sym_log,
 }
 
 

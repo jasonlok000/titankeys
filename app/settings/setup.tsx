@@ -1,19 +1,29 @@
-import { Field, Screen, Section, useSnapshot } from "ink";
-import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, openScrollAssistant, openShortcutKeys, state, type State } from "../../lib/atlas";
+import { useEffect } from "react";
+import { Field, Screen, Section, useAction, useSnapshot } from "ink";
+import { Toggle } from "../../lib/app-haptics";
+import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, fakeOtherPhone, onAppWindow, openScrollAssistant, openShortcutKeys, state, update, type State } from "../../lib/atlas";
+import { otherPhone } from "../../lib/front";
 import { Note } from "../../lib/note";
 
-const steps = ({ enabled, selected, overlay, scrollAssistant, backService }: State) =>
-  [enabled, selected, overlay, scrollAssistant, backService];
+/** Accessibility counts as done after "No thanks", as on the front page and in the guide (lib/front.ts, PhoneSetup.missing). */
+const steps = ({ enabled, selected, overlay, scrollAssistant, backService, backDeclined }: State) =>
+  [enabled, selected, overlay, scrollAssistant, backService || backDeclined];
 
 /** The phone's own settings, which TitanKeys reads but never changes (PhoneChecks.kt). */
 const phoneSteps = ({ symKey, fnKey, outsideSlidingMode }: State) => [symKey, fnKey, outsideSlidingMode.length === 0];
 
 const status = (done: boolean) => done ? "Done" : "To do";
 
+/** Optional steps show what they are, never Done or To do, so they never make setup look unfinished (#87). */
+const onOff = (on: boolean) => on ? "On" : "Off";
+
 /** The step names the mode (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1"). */
 export const scrollAssistantStep = "Turn on Scroll assistant, Sliding Mode 1";
 export const overlayListNote = "Android opened its whole list. Find TitanKeys Keyboard in it, open it and flip the switch.";
 export const backListNote = "Android opened its whole list. Find TitanKeys Keyboard in it and turn it on.";
+// F: draft, the line that stays at the top of Settings > Setup on phones other than the Titan 2 Elite (#75).
+export const otherPhoneNote = "This isn't a Titan 2 Elite, so swiping and the touch keys won't work. Everything else does.";
+export const contactsStep = "Names from my contacts";
 
 export const setupLabel = (settings: State) => status([...steps(settings), ...phoneSteps(settings)].every(Boolean));
 
@@ -22,10 +32,14 @@ const names = (list: readonly string[]) => list.length < 2 ? list.join("") : `${
 
 export default function Setup() {
   const result = useSnapshot(state);
+  const save = useAction(update);
+  // Each step opens a page elsewhere, such as Android's contacts prompt: read it all again as this page comes back.
+  useEffect(() => onAppWindow(() => void state.refresh()), []);
   if (result.status !== "ready") return <Screen title="Setup" />;
   const settings = result.data;
   const outside = settings.outsideSlidingMode;
   return <Screen title="Setup" subtitle="Make every step say Done. Each one opens the right page.">
+    {otherPhone(settings) && <Note>{otherPhoneNote}</Note>}
     <Section title="Steps">
       <Field label="Turn on TitanKeys Keyboard" onPress={enableKeyboard}>{status(settings.enabled)}</Field>
       <Field label="Make TitanKeys your keyboard" onPress={chooseKeyboard}>{status(settings.selected)}</Field>
@@ -46,5 +60,14 @@ export default function Setup() {
       <Field label="Set fn to Programmable key" onPress={openShortcutKeys}>{status(settings.fnKey)}</Field>
       {!settings.fnKey && <Note>Without it, fn can't work as Ctrl. In Shortcut keys, set fn key to Programmable key.</Note>}
     </Section>
+    {/* The guide's setup asks for it last, after saying what it's for. Here it flips the same setting as Settings > Your words:
+        turning it on asks Android first (ContactsPermissionActivity), and it's On only once Android allows it. */}
+    <Section title="Optional">
+      <Field label={contactsStep} onPress={() => void save.run({ contactNames: !settings.contactNames })}>{onOff(settings.contactNames)}</Field>
+    </Section>
+    {/* TitanKeys Debug only, never in a release: fake another phone so the warning (#75) can be checked on the Elite. */}
+    {settings.build === "debug" && <Section title="Debug">
+      <Toggle label="Fake another phone" value={settings.fakeOtherPhone} onChange={on => void fakeOtherPhone(on)} />
+    </Section>}
   </Screen>;
 }

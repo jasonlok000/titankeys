@@ -32,7 +32,13 @@ For #36. One short reason each, for the store listing, the app's own permission 
 
 **Short reason:** "Optional. If you turn on Names from my contacts, TitanKeys reads your contacts' first and last names so you can swipe and type them. They stay on your phone and are never sent."
 
-**Where it shows:** Settings > Your words > Names from my contacts. Android's prompt comes only when the user turns the switch on, from the app screen, never at first launch.
+**Where it shows:** Android's prompt comes only after the user says yes, never at first launch. It comes from three places:
+
+- The guide's setup, in an optional step after the others. The step first explains what the names are for and that they stay on the phone. Android's prompt shows only after Yes there. Not now moves on, and the guide doesn't ask again.
+- Settings > Setup > Optional > Names from my contacts.
+- Settings > Your words > Names from my contacts.
+
+The setting is on only once Android allows it.
 
 **Play:** a dangerous permission, but not a restricted one, so no declaration form. The Data safety form stays "Not collected" for Contacts, because nothing leaves the phone (`data-safety.md`).
 

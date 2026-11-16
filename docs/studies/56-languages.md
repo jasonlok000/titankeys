@@ -9,15 +9,16 @@ downloaded is in the repo. The framework that builds on this is in [docs/languag
   Georgian. Each needs a keymap, its accents and a word list. All 43 have a word list whose licence can ship in a GPL-3.0
   app, except three marked "to check" (Serbian Latin, Macedonian, Georgian).
 - **A word list costs about 0.5 MB in the APK** when cut to its 100,000 most common words. All 43 add about 22 MB.
-- **Chinese costs about 22 MB in the APK:** 4.5 MB of library (librime and OpenCC) and 17.2 MB of data for Jyutping, Yale
+- **Chinese costs about 22 MB in the APK:** 4.5 MB of library (librime and OpenCC) and 17.2 MB of data for Yale, Jyutping
   and Pinyin with all three variants. It unpacks to 40 MB on the phone. Dropping rime-cantonese's long-phrase list brings
   the data to 11.3 MB, with little change in the first choices.
 - **The total fits Google Play's 200 MB:** about 116 + 22 + 22 = 160 MB, with every data-only language included. Nothing
   needs downloading later.
 - **Rime works.** librime and OpenCC build for Android arm64 the way Trime does it. The test program types "nei hou" and
   "ni hao" and gets 你好 in every variant. Taiwan's phrases work: 软件 / 軟件 / 軟體, 打印机 / 打印機 / 印表機.
-- **Yale isn't its own schema** in rime-cantonese. It's a patch from CanCLID/rime-cantonese-schemes (LGPL-3.0) on top of
-  Jyutping. TitanKeys builds it as its own schema, `tk_yale`.
+- **Yale, the owner's input method, comes first.** The owner's Weasel setup is `yale.schema.yaml` from
+  [rime/rime-jyutping](https://github.com/rime/rime-jyutping), byte for byte (LGPL-3.0, so it can ship). TitanKeys' Yale
+  (`tk_yale`) uses its spelling rules on rime-cantonese's newer word list, which Jyutping shares, so Yale adds only 0.1 MB.
 
 ## 1. Generic languages
 
@@ -192,7 +193,7 @@ layout puts its extra letters on Shift (Shift+W types ჭ, Shift+T types თ); T
 | One data-only language (top 100k words) | 0.3 to 0.6 MB, 0.5 on average | the same, read from the APK |
 | All 43 (a) languages | about 22 MB | about 22 MB |
 | Rime library, arm64 (librime, OpenCC, their deps), sharing TitanKeys' `libc++_shared.so` | 4.5 MB (native libraries are stored uncompressed) | 4.5 MB |
-| Chinese data: Jyutping, Yale, Pinyin, three variants | 17.2 MB | 40.2 MB, unpacked once on first use |
+| Chinese data: Yale, Jyutping, Pinyin, three variants | 17.2 MB | 40.2 MB, unpacked once on first use |
 | Chinese data without rime-cantonese's long-phrase list | 11.3 MB | 23.9 MB |
 | **Total with everything** | **about 160 MB** | |
 
@@ -210,7 +211,7 @@ The word list's memory on the phone matters more than its size in the APK. Only 
 2. **The rest of the big Latin languages:** Portuguese (Brazil and Portugal, as one input method with two spellings, like
    English's), Italian, Dutch, Polish, Turkish, Swedish, Danish, Norwegian Bokmål, Finnish, Czech, Romanian, Hungarian,
    Indonesian.
-3. **Chinese through Rime:** Jyutping, Yale, Pinyin, with the three variants. It can run alongside 2, since it shares only the
+3. **Chinese through Rime:** Yale first, then Jyutping and Pinyin, with the three variants. It can run alongside 2, since it shares only the
    picker and the overlay.
 4. **Cyrillic and Greek:** Russian, Ukrainian, Greek, Bulgarian, Serbian, Belarusian.
 5. **The remaining data-only languages:** Slovak, Croatian, Slovenian, Bosnian, Catalan, Galician, Basque, Estonian, Latvian,
@@ -268,17 +269,29 @@ the app's build of Rime uses r27c, or `c++_static` (1 MB more). NDK 29 already l
 | Schema | Built from | Licence |
 | --- | --- | --- |
 | `tk_jyutping` | [rime-cantonese](https://github.com/rime/rime-cantonese) `jyut6ping3` (259f0e4, 2026-08-13): its dictionary, spelling rules and preedit | CC BY 4.0; `jyut6ping3.maps` (place names) ODbL 1.0 |
-| `tk_yale` | The same, plus the Yale patch from [CanCLID/rime-cantonese-schemes](https://github.com/CanCLID/rime-cantonese-schemes) (d2c53b0) | CC BY 4.0 + LGPL-3.0 |
+| `tk_yale` | The spelling rules of `yale.schema.yaml` from [rime/rime-jyutping](https://github.com/rime/rime-jyutping) (ee5e72b, 2025-12-30; author 幸延), the owner's own schema, on rime-cantonese's `jyut6ping3` word list | LGPL-3.0 + CC BY 4.0 |
 | `tk_pinyin` | [rime-luna-pinyin](https://github.com/rime/rime-luna-pinyin) (56b934b) with [rime-essay](https://github.com/rime/rime-essay) (d95eeae) for word counts | LGPL-3.0 |
 | shared | [rime-prelude](https://github.com/rime/rime-prelude) (082425e): punctuation, symbols, key bindings | LGPL-3.0 |
 
 What was found:
-- **rime-cantonese has no Yale schema.** It supports only Jyutping and points Yale users to CanCLID's patch, which adds Yale
-  spellings (ch, j, eu) to Jyutping's and shows the Jyutping beside each choice. TitanKeys builds Yale as its own schema
-  (`tk_yale`, with its own spelling index, or "prism") so both can be on at once. The patch's preedit rules, which show
-  Yale's capitals beside Jyutping, are left out for now.
-- **Tones are letters, not digits.** In rime-cantonese, v, x, q are tones 1, 2, 3 and vv, xx, qq are 4, 5, 6
-  (`neixxhoux` is nei5 hou2). Digits pick a choice. Tones are optional. The owner's own setup may use digits; to ask.
+- **Where the owner's Yale comes from.** The owner types with Weasel 0.16.1 and the schema list set to `yale` only. Their
+  files (`yale.schema.yaml`, `jyutping.schema.yaml`, `hkcantonese.schema.yaml` and the three `jyutping*.dict.yaml`) are
+  byte-identical to [rime/rime-jyutping](https://github.com/rime/rime-jyutping) at ee5e72b. That repository is
+  LGPL-3.0, so the Yale schema can ship. Its word list is rime-cantonese's older, toneless predecessor; rime-jyutping's
+  README points to rime-cantonese for the maintained one.
+- **How Yale works there.** The schema turns each Jyutping syllable into its Yale spelling (`xform`: jy → y, j → y, z → j,
+  c → ch, final aa → a, eu → iu, eo and oe → eu, em → im, ep → ip) and adds initials as abbreviations (ng, ch, gw, kw).
+  Only Yale spellings are accepted, and tones aren't typed. rime-cantonese itself has no Yale schema; it points to
+  [CanCLID/rime-cantonese-schemes](https://github.com/CanCLID/rime-cantonese-schemes)' patch (LGPL-3.0), which adds Yale
+  spellings to Jyutping's instead. The owner's schema was preferred, since it's what the owner types every day.
+- **TitanKeys' Yale** (`tk_yale`) is the owner's rules, with one rule added to drop rime-cantonese's tone digits first, on
+  rime-cantonese's word list. It shares Jyutping's table. Its reverse lookup (Mandarin) is dropped like the others.
+- **Compared on the PC** (Hong Kong variant, first choices), TitanKeys' Yale and the owner's exact setup agree on most codes.
+  Where they differ, it's the order: `yut yu` gives 月餘 粵語 against the owner's 粵語 月餘, and `ngo dei` gives 我地 first
+  against the owner's 我哋. `chin` gives 錢 against 前. The phone test carries both (`tk_yale` and `tk_yale_owner`), so the
+  owner can judge. Shipping the owner's exact word list as well would add 10.7 MB to the APK.
+- **Jyutping's tones are letters, not digits.** In rime-cantonese, v, x, q are tones 1, 2, 3 and vv, xx, qq are 4, 5, 6
+  (`neixxhoux` is nei5 hou2). Digits pick a choice. Tones are optional. Yale has no tones, as in the owner's setup.
 - **rime-cantonese already has variants.** Its schema switches between OpenCC Traditional, Hong Kong, Taiwan and Simplified.
   TitanKeys keeps that idea with one shared option set (below).
 - rime-cantonese's schema pulls in reverse lookups (Mandarin, stroke, Cangjie, loengfan). The TitanKeys schemas drop them
@@ -291,10 +304,11 @@ The three schema files and the shared files are in `~/build/lang/rime-test/tk-ri
 ### The variants
 
 One option set, shared by every Chinese schema (`tk_variants.yaml`): `zh_hk`, `zh_tw`, `zh_hans`. The app sets exactly
-one of them on every Rime session from Settings. Rime's word lists are Traditional, and each variant converts the choices
+one of them on every Rime session from Settings. There's no default (owner, 2026-11-16): the user picks the variant, the
+first time a Chinese input method is turned on. Rime's word lists are Traditional, and each variant converts the choices
 with OpenCC.
 
-| Variant | Cantonese (Jyutping, Yale) | Mandarin (Pinyin) |
+| Variant | Cantonese (Yale, Jyutping) | Mandarin (Pinyin) |
 | --- | --- | --- |
 | Simplified (mainland China) | OpenCC `t2s` | OpenCC `t2s` |
 | Traditional (Hong Kong) | rime-cantonese's own `t2hkf` (its Hong Kong set) | OpenCC `t2hk` |
@@ -321,7 +335,8 @@ Results on the PC, with the same data that goes to the phone (first choices):
 | Jyutping, neixxhoux (tones) | 你好 您好 | 你好 您好 | 你好 您好 |
 | Yale, nei hou | 你好 您好 | 你好 您好 | 你好 您好 |
 | Yale, jung man | 中文 仲问 | 中文 仲問 | 中文 仲問 |
-| Yale, chin | 钱 前 浅 | 錢 前 淺 | 錢 前 淺 |
+| Yale, deui m jyu | 对唔住 | 對唔住 | 對唔住 |
+| Yale, yau mou gaau cho | 有无搞错 有冇搞错 | 有無搞錯 有冇搞錯 | 有無搞錯 有冇搞錯 |
 | Pinyin, ni hao | 你好 妳好 | 你好 妳好 | 你好 妳好 |
 | Pinyin, ruan jian | 软件 | 軟件 | 軟體 |
 | Pinyin, xin xi | 信息 | 信息 | 資訊 |
@@ -342,7 +357,7 @@ Compiled data (`build/`), the same on the phone (little-endian, 64-bit):
 | `jyut6ping3.reverse.bin` | 0.19 MB | 0.08 MB | 0.07 MB |
 | `luna_pinyin.reverse.bin` | 0.25 MB | 0.09 MB | 0.08 MB |
 | `tk_jyutping.prism.bin` | 0.23 MB | 0.05 MB | 0.03 MB |
-| `tk_yale.prism.bin` | 0.27 MB | 0.05 MB | 0.03 MB |
+| `tk_yale.prism.bin` | 0.11 MB | 0.02 MB | 0.01 MB |
 | `tk_pinyin.prism.bin` | 0.03 MB | 0.01 MB | 0.01 MB |
 | compiled schemas and `default.yaml` | 0.18 MB | 0.05 MB | 0.03 MB |
 | OpenCC dictionaries (`.ocd2`) and configs, for all three variants | 0.15 MB | 0.06 MB | |
@@ -388,13 +403,17 @@ Calls made tonight, for the owner to confirm or change:
 8. **Rime without plugins** (no Lua, no grammar model, no prediction), to keep it small.
 9. **Rime's C++ runtime shared** with TitanKeys' `libc++_shared.so` (saves 1 MB), if the NDK versions allow.
 10. **Chinese schemas trimmed:** no reverse lookups (Mandarin inside Cantonese, stroke, Cangjie), no emoji choices.
-11. **Yale as its own input method** (`tk_yale`), from CanCLID's patch, without the patch's extra preedit display.
+11. **Yale is the owner's schema** (rime-jyutping's rules) on rime-cantonese's newer word list, sharing Jyutping's table,
+    rather than the owner's exact older word list (+10.7 MB). The phone test has both to compare.
 12. **Variants:** Cantonese Hong Kong uses rime-cantonese's own set; Taiwan uses Taiwan characters for Cantonese and Taiwan
     characters plus phrases for Mandarin.
 13. **rime-cantonese's long-phrase list kept** (6 MB more in the APK than without it).
 14. **Compiled tables ship** and are copied out on first use (40 MB on the phone), rather than compiled on the phone.
 15. **Simplified Mandarin uses luna_pinyin converted to Simplified** for now; rime-ice or rime-frost (GPL-3.0) are the
     candidates for its own list if the owner finds the choices off.
+16. **Yale first:** the first Chinese input method, in the docs, the order of work and Settings' list.
+17. **No default variant:** turning on the first Chinese input method opens the variant page, and it stays off until one
+    is picked.
 
 ## How to rebuild
 

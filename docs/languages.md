@@ -25,7 +25,8 @@ From the study's ranking:
   languages, Polish, Czech, Slovak, Hungarian, Romanian, Croatian, Slovenian, Bosnian, Serbian Latin, Turkish, Catalan,
   Galician, Basque, Estonian, Latvian, Lithuanian, Icelandic, Irish, Afrikaans, Indonesian, Esperanto, Azerbaijani), and
   Cyrillic, Greek and Georgian (Russian, Ukrainian, Belarusian, Bulgarian, Serbian, Macedonian, Greek, Kazakh, Georgian).
-- **Chinese through Rime:** Cantonese (Jyutping, Yale) and Mandarin (Pinyin), with the Chinese variant setting.
+- **Chinese through Rime:** Cantonese in Yale, the owner's input method and the first Chinese one, then Jyutping, and
+  Mandarin in Pinyin, with the Chinese variant setting.
 - **If time allows:** Korean and Vietnamese, which need a little code each.
 - **Not in 3.0:** right-to-left scripts, Indic scripts, Japanese, handwriting, swiping and a next-word model in other
   languages, and translating the app, the guide and the playground.
@@ -200,8 +201,9 @@ Languages
 **Chinese characters** (`app/settings/chinese.tsx`), a ChoicePage like English spelling:
 - Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China). <!-- F: draft labels -->
 - One setting for every Chinese input method.
-- The default follows the phone's region: Taiwan gives Taiwan; mainland China, Singapore and Malaysia give Simplified;
-  anything else, Hong Kong and Macau included, gives Hong Kong.
+- **No default (owner, 2026-11-16): you choose.** The first time a Chinese input method is turned on, its switch opens
+  this page, and it stays off until a variant is picked. Nothing is guessed from the phone's region.
+  <!-- F: draft subtitle "Pick how your characters come out. You can change it any time." -->
 
 The settings live in `typing_settings` with the others: `inputMethods` (the ordered list of ids that are on),
 `imVariant.<id>`, `imAutocorrect.<id>` and `chineseVariant` (`zh_hk`, `zh_tw`, `zh_hans`).
@@ -215,7 +217,7 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   `select(schema)`, `setOption(name, on)`, `key(code)`, `state()` (the code typed so far, the choices on this page, the page
   number, the text to commit), `pick(index)`, `page(down)`, `clear()`. Trime's `rime_jni` is the reference, and only what
   the picker needs is copied.
-- **Data:** `android/assets/rime/` holds the schemas (`tk_jyutping`, `tk_yale`, `tk_pinyin`, `tk_variants`), Rime's shared
+- **Data:** `android/assets/rime/` holds the schemas (`tk_yale`, `tk_jyutping`, `tk_pinyin`, `tk_variants`), Rime's shared
   files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC. On the first use of a
   Chinese input method, the app copies them to `files/rime/shared` (40 MB; Rime opens its tables as files) in the
   background, and the bar says it's getting ready. The user's learned words go to `files/rime/user`, which TitanKeys' backup

@@ -207,9 +207,9 @@ class Composer(
     private var endedBeforeSwipe: EndedWord? = null
     /** A word that Backspace put back, until the next word shows whether the user kept it. */
     private var restoredWord: String? = null
-    /** A typed word that only the words after it can give its apostrophe ("its" for "it's"). It starts at [start] in the field. */
+    /** A typed or swiped word that only the words after it can give its apostrophe ("its" for "it's"), from [start] in the field. */
     private class ApostropheTarget(val word: String, var start: Int)
-    /** Typed words waiting for the words after them, oldest first. */
+    /** Typed and swiped words waiting for the words after them, oldest first. */
     private val apostropheTargets = ArrayList<ApostropheTarget>()
     /** An unknown typed word. The next word can still change it, so it is learned after that. */
     private var heldWord: String? = null
@@ -548,6 +548,8 @@ class Composer(
             val resumed = previous.takeIf { resumes }
             val context = resumed?.context ?: before
             val replaced = resumed?.inserted?.length ?: 0
+            // The word the swipe goes on from is read again, so it no longer waits as it was.
+            if (resumed != null) apostropheTargets.removeAll { it.start >= anchor.selection.end - replaced }
             val leadingSpace = resumed?.leadingSpace ?: if (anchor.selected) "" else wordSpace(context)
             // Mid-sentence the next character may already be a space or punctuation, so another space would double up.
             val trailingSpace = resumed?.trailingSpace ?: (!anchor.selected && !closesWord(anchor.after?.firstOrNull()))
@@ -596,6 +598,10 @@ class Composer(
                             checkLookAlike()
                             words.prepare(context + inserted, AtomicBoolean(false))
                             reviewBeforeSwipe(swiped)
+                            // The swiped word may wait for its apostrophe, and may be the word that an earlier one waited for.
+                            (composition as? Composition.Swiped)?.takeIf { it.recognition === recognition }
+                                ?.let { awaitSwipedApostrophe(it, snapshot()) }
+                            checkApostrophes()
                         }
                     }
                     return@finish
@@ -1101,6 +1107,8 @@ class Composer(
             is Composition.Swiped -> {
                 if (anchor != current.snapshot || !before.endsWith(current.inserted) || anchor.selected) return
                 invalidate(false)
+                // A word chosen from the bar is the user's, so it no longer waits for its apostrophe.
+                apostropheTargets.removeAll { it.start >= anchor.selection.end - current.tail.length }
                 val tail = chosen + if (current.trailingSpace) " " else ""
                 if (!edit(EditCause.Choose, current.tail.length, tail)) return
                 val accepted = snapshot()
@@ -1267,6 +1275,9 @@ class Composer(
         invalidate(false)
         val previous = remembered.lastOrNull { it.start == start && it.word == earlier.word }
         if (!edit(EditCause.LookAlike, earlier.tail.length + following.length, "$replacement $following")) return
+        // The changed word no longer waits as it was, and the words after it move.
+        apostropheTargets.removeAll { it.start == start }
+        for (later in apostropheTargets) if (later.start > start) later.start += replacement.length - earlier.word.length
         previous?.let { add(it.copy(word = replacement)) }
         lookAlikeChangedAt = start
         val accepted = snapshot()
@@ -1609,16 +1620,29 @@ class Composer(
 
     /**
      * The typed [word] that [mark] just ended may wait for the words after it: "its" is "it's" in "its going", which only the
-     * next-word model can tell once those words are in (owner's apostrophe study, 2026-11-11). Typed words only: a swiped word picks
-     * its own form.
+     * next-word model can tell once those words are in (owner's apostrophe study, 2026-11-11).
      */
     private fun awaitApostrophe(word: String, mark: String) {
-        val corrector = corrector() ?: return
         val anchor = snapshot()
         val before = anchor.before ?: return
-        if (!anchor.available || anchor.selected || !anchor.knownSelection || !before.endsWith(mark)) return
-        val end = before.length - mark.length
-        val start = end - word.length
+        if (before.endsWith(mark)) awaitApostropheAt(word, before.length - mark.length - word.length, anchor)
+    }
+
+    /**
+     * A swiped word waits too, as a typed one does: the swipe picked it from the words before it only, and the words after often
+     * tell ("its going"). Only the swipe's own pick: a word chosen from the bar is the user's (owner, 2026-11-16).
+     */
+    private fun awaitSwipedApostrophe(swiped: Composition.Swiped, anchor: Snapshot) {
+        val before = anchor.before ?: return
+        if (swiped.chosen || !swiped.trailingSpace || anchor != swiped.snapshot || !before.endsWith(swiped.tail)) return
+        awaitApostropheAt(swiped.word, before.length - swiped.tail.length, anchor)
+    }
+
+    /** Sets [word], at [start] in [anchor]'s text before the cursor, to wait for the words after it, if it's one that may. */
+    private fun awaitApostropheAt(word: String, start: Int, anchor: Snapshot) {
+        val corrector = corrector() ?: return
+        val before = anchor.before ?: return
+        if (!anchor.available || anchor.selected || !anchor.knownSelection) return
         if (start < 0 || !before.regionMatches(start, word, 0, word.length) || start > 0 && !before[start - 1].isWhitespace()) return
         val textBefore = before.substring(0, start)
         if (intended(textBefore) != null || !corrector.awaitsApostrophe(word, textBefore)) return

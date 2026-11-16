@@ -21,5 +21,8 @@ It adds:
 - `autoCapitalise={false}` on `TextInput`: the field asks the keyboard for no capitals. Ink always asked for a capital at each
   sentence, so the prop did nothing before.
 - `appPressHaptic`, beside it: the app can play its own haptic for a press, or none, in place of Android's stock click.
+- A focused field clipped under the header: Android draws a focused field with its own text box over Ink's page, and Ink
+  placed it with no clip, so typed text drew over a pinned title once the field scrolled under it. The editor now shows only
+  what's inside the scrolling area, as the page's own text does, and hides its cursor once none of it is.
 - No Light Phone receiver: Ink adds `InkLightSdkReceiver`, the Light Phone SDK's marker, exported behind a permission named
   "normal" that nothing defines. TitanKeys runs on the Titan, not a Light Phone, so the patch takes it out of the manifest.

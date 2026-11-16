@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Guide Keyboard Size</title>
+<style>
+  :root { --cream:#FFF1E6; --muted:#99918A; --orange:#EF804E; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:#000; color:var(--cream); font-family:system-ui, sans-serif; overflow:hidden; touch-action:manipulation; }
+  #top { position:absolute; inset:0 0 auto 0; padding:12px 16px; }
+  h1 { font-size:20px; margin:4px 0 4px; }
+  p { color:var(--muted); font-size:13px; line-height:1.3; margin:0 0 8px; }
+  .card { background:#161210; border-radius:14px; padding:8px 12px; }
+  .row { display:flex; justify-content:space-between; align-items:baseline; }
+  .val { color:var(--orange); font-variant-numeric:tabular-nums; }
+  .ctl { display:flex; align-items:center; gap:10px; margin:4px 0 2px; }
+  .ctl input { flex:1; accent-color:var(--orange); }
+  button { font:inherit; color:var(--orange); background:none; border:1.5px solid var(--orange); border-radius:999px; min-width:40px; height:40px; font-size:15px; padding:0 14px; }
+  button.on { background:var(--orange); color:#000; }
+  #modes { display:flex; gap:8px; margin:8px 0; flex-wrap:wrap; }
+  #info { color:var(--orange); font-size:13px; margin-top:6px; font-variant-numeric:tabular-nums; }
+  canvas { position:absolute; left:0; top:0; width:100%; height:100%; display:block; }
+  #marks { position:absolute; left:0; right:0; bottom:0; height:6px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top">
+  <h1>Guide keyboard size</h1>
+  <p>Your keys at 1:1 fill nearly half the screen. Try both ways of making it smaller. The orange ticks at the bottom edge are where your real keys meet, to show what still lines up.</p>
+  <div id="modes">
+    <button id="shorter" class="on">Same width, shorter</button>
+    <button id="smaller">Same shape, smaller</button>
+    <button id="full">Full screen</button>
+  </div>
+  <div class="card">
+    <div class="row"><span>Size</span><span class="val" id="sizeVal"></span></div>
+    <div class="ctl"><button data-d="-5">−</button><input id="size" type="range" min="40" max="100" step="1"><button data-d="5">+</button></div>
+  </div>
+  <div id="info"></div>
+</div>
+<script>
+// The owner's 1:1 recreation (2026-11-12): a key every 107.5 px on the 1076 px screen, centred, square keys with no gap
+// between them, and 10.5 px between rows.
+const CAL_PITCH = 107.5, CAL_WIDTH = 1076, COL_GAP = 0, ROW_GAP = 10.5;
+const ROWS = [
+  ["Q","W","E","R","T","Y","U","I","O","P"],
+  ["A","S","D","F","G","H","J","K","L","⌫"],
+  ["alt","Z","X","C","V","B","N","M","sym","↵"],
+  ["⇧","○","◁","space","▦","fn","⇧"],
+];
+const BOTTOM = [1.2, 1.2, 1.2, 2.8, 1.2, 1.2, 1.2];
+let state = { mode: "shorter", size: 70 };
+try { const s = JSON.parse(localStorage.getItem("guide-size") || "null"); if (s) state = s; } catch (e) {}
+
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+let W = 0, H = 0;
+
+function draw() {
+  const dpr = devicePixelRatio, s = W / CAL_WIDTH, f = state.size / 100;
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+  const across = state.mode === "smaller" ? f : 1;
+  const pitch = CAL_PITCH * s * across, gap = COL_GAP * s * across, key = pitch - gap;
+  const keyH = CAL_PITCH * s * f - gap * (state.mode === "smaller" ? 1 : f), row = keyH + ROW_GAP * s * f;
+  const span = 10 * pitch - gap, left = (W - span) / 2;
+  const height = 3 * row + keyH, top = H - height - Math.round(10 * dpr);
+  // Where the real keys meet, along the bottom edge: what the drawing should line up with.
+  ctx.fillStyle = "#EF804E";
+  const realPitch = CAL_PITCH * s, realLeft = (W - (10 * realPitch - COL_GAP * s)) / 2;
+  for (let c = 0; c <= 10; c++) ctx.fillRect(Math.round(realLeft + c * realPitch - 0.5), H - Math.round(8 * dpr), 1, Math.round(8 * dpr));
+  ctx.lineWidth = Math.max(1, Math.round(dpr * 0.75));
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const inset = Math.max(1, key * 0.03);
+  ROWS.forEach((names, r) => {
+    const y = top + r * row;
+    let boxes;
+    if (r < 3) boxes = names.map((n, c) => [n, left + c * pitch, key]);
+    else {
+      const room = span - (names.length - 1) * gap; let at = left;
+      boxes = names.map((n, i) => { const w = room * BOTTOM[i] / 10; const b = [n, at, w]; at += w + gap; return b; });
+    }
+    for (const [name, x, w] of boxes) {
+      const radius = Math.min(w, keyH) * 0.14;
+      ctx.beginPath(); ctx.roundRect(x + inset, y, w - 2 * inset, keyH, radius);
+      ctx.fillStyle = "rgba(239,128,78,0.06)"; ctx.fill();
+      ctx.strokeStyle = "rgba(239,128,78,0.55)"; ctx.stroke();
+      const letter = name.length === 1;
+      ctx.fillStyle = "rgba(255,241,230,0.85)";
+      ctx.font = `800 ${Math.round(Math.min(w, keyH) * (letter ? 0.5 : 0.34))}px system-ui, sans-serif`;
+      ctx.fillText(name, x + w / 2, y + keyH / 2);
+    }
+  });
+  document.getElementById("sizeVal").textContent = `${state.size}%`;
+  document.getElementById("size").value = state.size;
+  document.getElementById("shorter").classList.toggle("on", state.mode === "shorter");
+  document.getElementById("smaller").classList.toggle("on", state.mode === "smaller");
+  document.getElementById("info").textContent =
+    `${Math.round(key / s)} × ${Math.round(keyH / s)} px keys, ${Math.round(height / s)} px tall` +
+    (state.mode === "smaller" ? `, Q is ${Math.round((left - realLeft) / s)} px in from your real Q` : `, every key over its real key`);
+}
+
+function save() {
+  try { localStorage.setItem("guide-size", JSON.stringify(state)); } catch (e) {}
+  fetch("/save", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ page: "guide-size", mode: state.mode, size: state.size }) }).catch(() => {});
+}
+function set(changes) { Object.assign(state, changes); state.size = Math.max(40, Math.min(100, state.size)); draw(); save(); }
+
+function resize(entries) {
+  const e = entries && entries[0];
+  if (e && e.devicePixelContentBoxSize) { W = e.devicePixelContentBoxSize[0].inlineSize; H = e.devicePixelContentBoxSize[0].blockSize; }
+  else { W = Math.round(canvas.clientWidth * devicePixelRatio); H = Math.round(canvas.clientHeight * devicePixelRatio); }
+  canvas.width = W; canvas.height = H; draw();
+}
+try { new ResizeObserver(resize).observe(canvas, { box: "device-pixel-content-box" }); } catch (e) { new ResizeObserver(resize).observe(canvas); }
+
+document.getElementById("size").addEventListener("input", e => set({ size: +e.target.value }));
+for (const b of document.querySelectorAll("button[data-d]")) b.addEventListener("click", () => set({ size: state.size + +b.dataset.d }));
+document.getElementById("shorter").onclick = () => set({ mode: "shorter" });
+document.getElementById("smaller").onclick = () => set({ mode: "smaller" });
+document.getElementById("full").onclick = () => document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+document.addEventListener("fullscreenchange", () => { document.getElementById("full").style.display = document.fullscreenElement ? "none" : ""; });
+</script>
+</body>
+</html>

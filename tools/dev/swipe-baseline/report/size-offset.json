@@ -1,0 +1,259 @@
+{
+ "strokes": 440,
+ "G1 read point minus intended key, by touch size": {
+  "all": {
+   "step 1": {
+    "n": 375,
+    "x offset (keys, + right)": -0.206,
+    "y offset (rows, + down)": -0.021
+   },
+   "step 2": {
+    "n": 1094,
+    "x offset (keys, + right)": -0.19,
+    "y offset (rows, + down)": 0.142
+   },
+   "step 3": {
+    "n": 374,
+    "x offset (keys, + right)": -0.096,
+    "y offset (rows, + down)": 0.18
+   },
+   "step 4+": {
+    "n": 74,
+    "x offset (keys, + right)": -0.09,
+    "y offset (rows, + down)": 0.279
+   }
+  },
+  "edge key a": {
+   "step 1": {
+    "n": 16,
+    "x offset (keys, + right)": 2.366,
+    "y offset (rows, + down)": -0.453
+   },
+   "step 2": {
+    "n": 61,
+    "x offset (keys, + right)": 1.477,
+    "y offset (rows, + down)": -0.019
+   },
+   "step 3": {
+    "n": 48,
+    "x offset (keys, + right)": 0.718,
+    "y offset (rows, + down)": 0.107
+   },
+   "step 4+": {
+    "n": 10,
+    "x offset (keys, + right)": 0.998,
+    "y offset (rows, + down)": 0.224
+   }
+  },
+  "edge key l": {
+   "step 1": {
+    "n": 18,
+    "x offset (keys, + right)": -1.701,
+    "y offset (rows, + down)": -0.436
+   },
+   "step 2": {
+    "n": 52,
+    "x offset (keys, + right)": -1.583,
+    "y offset (rows, + down)": -0.149
+   },
+   "step 3": {
+    "n": 8,
+    "x offset (keys, + right)": -1.91,
+    "y offset (rows, + down)": 0.055
+   },
+   "step 4+": {
+    "n": 6,
+    "x offset (keys, + right)": -2.481,
+    "y offset (rows, + down)": 0.173
+   }
+  },
+  "edge key m": {
+   "step 1": {
+    "n": 2,
+    "x offset (keys, + right)": -0.163,
+    "y offset (rows, + down)": -1.013
+   },
+   "step 2": {
+    "n": 43,
+    "x offset (keys, + right)": -0.756,
+    "y offset (rows, + down)": -0.43
+   },
+   "step 3": {
+    "n": 4,
+    "x offset (keys, + right)": -0.345,
+    "y offset (rows, + down)": -0.328
+   },
+   "step 4+": {
+    "n": 2,
+    "x offset (keys, + right)": -0.367,
+    "y offset (rows, + down)": 0.082
+   }
+  },
+  "edge key p": {
+   "step 1": {
+    "n": 17,
+    "x offset (keys, + right)": -1.51,
+    "y offset (rows, + down)": 0.085
+   },
+   "step 2": {
+    "n": 19,
+    "x offset (keys, + right)": -2.513,
+    "y offset (rows, + down)": 0.46
+   },
+   "step 3": {
+    "n": 2,
+    "x offset (keys, + right)": -3.357,
+    "y offset (rows, + down)": 0.868
+   }
+  },
+  "edge key z": {
+   "step 3": {
+    "n": 3,
+    "x offset (keys, + right)": 0.467,
+    "y offset (rows, + down)": -0.312
+   }
+  },
+  "first letter": {
+   "step 1": {
+    "n": 80,
+    "x offset (keys, + right)": -0.202,
+    "y offset (rows, + down)": -0.022
+   },
+   "step 2": {
+    "n": 245,
+    "x offset (keys, + right)": -0.012,
+    "y offset (rows, + down)": 0.024
+   },
+   "step 3": {
+    "n": 103,
+    "x offset (keys, + right)": 0.15,
+    "y offset (rows, + down)": 0.108
+   },
+   "step 4+": {
+    "n": 12,
+    "x offset (keys, + right)": 0.035,
+    "y offset (rows, + down)": 0.12
+   }
+  },
+  "inner letter": {
+   "step 1": {
+    "n": 175,
+    "x offset (keys, + right)": -0.254,
+    "y offset (rows, + down)": -0.121
+   },
+   "step 2": {
+    "n": 595,
+    "x offset (keys, + right)": -0.431,
+    "y offset (rows, + down)": 0.126
+   },
+   "step 3": {
+    "n": 214,
+    "x offset (keys, + right)": -0.267,
+    "y offset (rows, + down)": 0.194
+   },
+   "step 4+": {
+    "n": 53,
+    "x offset (keys, + right)": -0.119,
+    "y offset (rows, + down)": 0.325
+   }
+  },
+  "last letter": {
+   "step 1": {
+    "n": 120,
+    "x offset (keys, + right)": -0.139,
+    "y offset (rows, + down)": 0.125
+   },
+   "step 2": {
+    "n": 254,
+    "x offset (keys, + right)": 0.2,
+    "y offset (rows, + down)": 0.293
+   },
+   "step 3": {
+    "n": 57,
+    "x offset (keys, + right)": 0.104,
+    "y offset (rows, + down)": 0.259
+   },
+   "step 4+": {
+    "n": 9,
+    "x offset (keys, + right)": -0.085,
+    "y offset (rows, + down)": 0.223
+   }
+  },
+  "top row": {
+   "step 1": {
+    "n": 295,
+    "x offset (keys, + right)": -0.293,
+    "y offset (rows, + down)": 0.154
+   },
+   "step 2": {
+    "n": 595,
+    "x offset (keys, + right)": -0.334,
+    "y offset (rows, + down)": 0.448
+   },
+   "step 3": {
+    "n": 95,
+    "x offset (keys, + right)": -0.571,
+    "y offset (rows, + down)": 0.77
+   },
+   "step 4+": {
+    "n": 17,
+    "x offset (keys, + right)": -0.408,
+    "y offset (rows, + down)": 0.981
+   }
+  }
+ },
+ "G2 size correction, fitted on the earlier half": {
+  "(0, 0, 0)": [
+   64.5,
+   72.3
+  ],
+  "(-0.15, -0.15, 0)": [
+   64.1,
+   71.4
+  ],
+  "(-0.15, 0.15, 0)": [
+   62.7,
+   70.9
+  ],
+  "(0.15, -0.15, 0)": [
+   64.1,
+   71.8
+  ],
+  "(0.15, 0.15, 0)": [
+   63.2,
+   69.5
+  ],
+  "(0, 0, 0.15)": [
+   64.1,
+   72.3
+  ],
+  "(0, 0, 0.3)": [
+   63.6,
+   72.7
+  ],
+  "(0.15, -0.15, 0.15)": [
+   63.6,
+   70.9
+  ]
+ },
+ "G2 judged on the later half": {
+  "chosen (x per step, y per step, end push per step)": [
+   0,
+   0,
+   0
+  ],
+  "n": 220,
+  "plain first / top3": [
+   70.5,
+   78.2
+  ],
+  "corrected first / top3": [
+   70.5,
+   78.2
+  ],
+  "first-choice wins / losses": [
+   0,
+   0
+  ]
+ }
+}

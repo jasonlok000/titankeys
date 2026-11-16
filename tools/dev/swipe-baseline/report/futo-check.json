@@ -1,0 +1,50 @@
+{
+ "stroke_shape": {
+  "length_ratio_p50": 1.058,
+  "length_ratio_p10": 0.911,
+  "start_over_1key_pct": 0.6,
+  "end_over_1key_pct": 6.3,
+  "letter_missed_over_1key_pct": 1.0,
+  "speed_p50": 13.6,
+  "duration_p50": 752.0,
+  "sample_ms_p50": 11.0
+ },
+ "sim": {
+  "as recorded on phones": {
+   "n": 900,
+   "first": 95.4,
+   "top3": 98.9,
+   "found": 99.8
+  },
+  "+ sensor edges": {
+   "n": 900,
+   "first": 95.6,
+   "top3": 98.9,
+   "found": 99.8
+  },
+  "+ shortened strokes": {
+   "n": 900,
+   "first": 72.1,
+   "top3": 83.9,
+   "found": 89.9
+  },
+  "+ right side reads left": {
+   "n": 900,
+   "first": 67.6,
+   "top3": 80.2,
+   "found": 86.2
+  },
+  "+ hand offset": {
+   "n": 900,
+   "first": 63.9,
+   "top3": 76.9,
+   "found": 83.6
+  },
+  "+ top-row dropouts": {
+   "n": 900,
+   "first": 64.8,
+   "top3": 76.6,
+   "found": 84.2
+  }
+ }
+}

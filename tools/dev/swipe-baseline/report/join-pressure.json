@@ -1,0 +1,25 @@
+{
+ "right join": {
+  "n": 100,
+  "end fade (steps)": -0.241,
+  "gap (ms)": 79.5,
+  "share with a fade of 0.5 step or more": 0.25
+ },
+ "right separate": {
+  "n": 6,
+  "end fade (steps)": -0.039,
+  "gap (ms)": 280.8,
+  "share with a fade of 0.5 step or more": 0.167
+ },
+ "wrong join": {
+  "n": 3,
+  "end fade (steps)": -0.387,
+  "gap (ms)": 85.7,
+  "share with a fade of 0.5 step or more": 0.333
+ },
+ "fade against \"should have been joined\"": {
+  "rho": -0.088,
+  "z": -0.9,
+  "n": 109
+ }
+}

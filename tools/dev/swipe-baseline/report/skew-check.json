@@ -1,0 +1,62 @@
+{
+ "all": {
+  "calibrated stroke, grid keys (today)": {
+   "prompted": {
+    "n": 404,
+    "first": 70.8,
+    "top3": 82.4,
+    "found": 87.1
+   },
+   "hand": {
+    "n": 344,
+    "first": 49.1,
+    "top3": 64.8,
+    "found": 77.9
+   }
+  },
+  "raw sensor stroke, measured skewed keys": {
+   "prompted": {
+    "n": 404,
+    "first": 68.6,
+    "top3": 80.9,
+    "found": 85.9
+   },
+   "hand": {
+    "n": 344,
+    "first": 48.3,
+    "top3": 63.4,
+    "found": 78.2
+   }
+  }
+ },
+ "held_back": {
+  "calibrated, grid keys": {
+   "prompted": {
+    "n": 136,
+    "first": 69.9,
+    "top3": 80.9,
+    "found": 86.0
+   },
+   "hand": {
+    "n": 112,
+    "first": 53.6,
+    "top3": 67.9,
+    "found": 79.5
+   }
+  },
+  "calibrated, keys learned from your strokes": {
+   "prompted": {
+    "n": 136,
+    "first": 61.0,
+    "top3": 76.5,
+    "found": 80.9
+   },
+   "hand": {
+    "n": 112,
+    "first": 50.9,
+    "top3": 65.2,
+    "found": 79.5
+   }
+  }
+ }
+}

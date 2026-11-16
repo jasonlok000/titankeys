@@ -1,0 +1,39 @@
+{
+ "0.25": {
+  "catch_pct": 25.6,
+  "genuine_words_hit_pct": 3.5,
+  "genuine_words_hit": 35
+ },
+ "0.5": {
+  "catch_pct": 50.0,
+  "genuine_words_hit_pct": 16.8,
+  "genuine_words_hit": 168
+ },
+ "0.75": {
+  "catch_pct": 75.6,
+  "genuine_words_hit_pct": 40.6,
+  "genuine_words_hit": 405
+ },
+ "0.9": {
+  "catch_pct": 90.7,
+  "genuine_words_hit_pct": 55.5,
+  "genuine_words_hit": 554
+ },
+ "0.95": {
+  "catch_pct": 95.3,
+  "genuine_words_hit_pct": 65.4,
+  "genuine_words_hit": 653
+ },
+ "auc": 0.767,
+ "cut_short": {
+  "next stroke over 1.5 s": 8,
+  "ended on top row": 14,
+  "duration under 200 ms": 14,
+  "next stroke 0.4-1.5 s": 12,
+  "next stroke within 150 ms": 11,
+  "duration 200 ms or more": 21,
+  "ended on another row": 21,
+  "next stroke 150-400 ms": 4,
+  "n": 35
+ }
+}

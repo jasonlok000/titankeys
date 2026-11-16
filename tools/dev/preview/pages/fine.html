@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Fine calibration</title>
+<style>
+  :root { --ink:#000; --card:#161210; --cream:#FFF1E6; --muted:#99918A; --orange:#EF804E; --divider:#2A2623; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; background:var(--ink); color:var(--cream); font-family:system-ui, sans-serif; overflow:hidden; touch-action:manipulation; }
+  #top { position:absolute; inset:0 0 auto 0; padding:12px 16px; z-index:2; }
+  h1 { font-size:22px; margin:8px 0 6px; }
+  p { color:var(--muted); font-size:14px; line-height:1.35; margin:0 0 12px; }
+  .card { background:rgba(22,18,16,.88); border-radius:14px; padding:8px 14px; }
+  .row { display:flex; justify-content:space-between; align-items:baseline; margin-top:6px; }
+  .name { font-size:16px; }
+  .val { color:var(--orange); font-size:16px; font-variant-numeric:tabular-nums; }
+  .ctl { display:flex; align-items:center; gap:10px; margin:4px 0 8px; }
+  .ctl input { flex:1; accent-color:var(--orange); }
+  button { font:inherit; color:var(--orange); background:none; border:1.5px solid var(--orange); border-radius:999px; min-width:44px; height:44px; font-size:20px; }
+  button.solid { background:var(--orange); color:#000; font-size:15px; padding:0 16px; }
+  #buttons { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  #saved { color:var(--muted); font-size:12px; margin-top:8px; min-height:1em; }
+  canvas { position:fixed; inset:0; width:100%; height:100%; display:block; z-index:1; }
+</style>
+</head>
+<body>
+<div id="top">
+  <h1>Fine calibration</h1>
+  <p>Full-height lines. Orange: the middle of each gap. Faint: each key's edges. Steps of a quarter pixel. Spacing grows the row from its centre; Shift moves it all.</p>
+  <div class="card">
+    <div class="row"><span class="name">Spacing</span><span class="val" id="pitchVal"></span></div>
+    <div class="ctl"><button data-k="pitch" data-d="-0.25">−</button><input id="pitch" type="range"><button data-k="pitch" data-d="0.25">+</button></div>
+    <div class="row"><span class="name">Shift</span><span class="val" id="shiftVal"></span></div>
+    <div class="ctl"><button data-k="shift" data-d="-0.25">−</button><input id="shift" type="range"><button data-k="shift" data-d="0.25">+</button></div>
+  </div>
+  <div id="buttons">
+    <button class="solid" id="full">Full screen</button>
+    <button class="solid" id="reset">Reset to measured</button>
+  </div>
+  <div id="saved"></div>
+</div>
+<canvas id="grid"></canvas>
+<script>
+// Unihertz's face-on drawing of the Titan 2 Elite: keys 84 wide, gaps 24, ten keys spanning the screen's width.
+const KEY = 84, GAP = 24, COLS = 10, SPAN = COLS * KEY + (COLS - 1) * GAP;
+const LETTERS = "QWERTYUIOP".split("");
+const BAND_CSS = 72;          // how far the lines rise from the bottom edge, in CSS px
+const PITCH_REACH = 16, SHIFT_REACH = 40, STEP = 0.25;
+
+const canvas = document.getElementById("grid");
+const ctx = canvas.getContext("2d");
+let devW = 0, devH = 0;
+let state = null;
+
+function measured(w) { return { pitch: (KEY + GAP) / SPAN * w, shift: 0 }; }
+
+function load(w) {
+  try {
+    const s = JSON.parse(localStorage.getItem("cal") || "null");
+    if (s && s.width === w) return { pitch: s.pitch, shift: s.shift };
+  } catch (e) {}
+  return measured(w);
+}
+
+function setupSliders() {
+  const m = measured(devW);
+  const p = document.getElementById("pitch"), s = document.getElementById("shift");
+  p.min = m.pitch - PITCH_REACH; p.max = m.pitch + PITCH_REACH; p.step = STEP;
+  s.min = -SHIFT_REACH; s.max = SHIFT_REACH; s.step = STEP;
+}
+
+function fmt(v) { return String(Math.round(v * 4) / 4); }
+
+function show() {
+  const m = measured(devW);
+  document.getElementById("pitch").value = state.pitch;
+  document.getElementById("shift").value = state.shift;
+  const off = state.pitch - m.pitch;
+  document.getElementById("pitchVal").textContent = `${fmt(state.pitch)} px` + (Math.abs(off) < 0.125 ? ", measured" : `, ${off > 0 ? "+" : "−"}${fmt(Math.abs(off))}`);
+  document.getElementById("shiftVal").textContent = Math.abs(state.shift) < 0.125 ? "0 px, centred" : `${state.shift > 0 ? "+" : "−"}${fmt(Math.abs(state.shift))} px ${state.shift > 0 ? "right" : "left"}`;
+  draw();
+}
+
+function save() {
+  try { localStorage.setItem("cal", JSON.stringify({ width: devW, pitch: state.pitch, shift: state.shift })); } catch (e) {}
+  const body = JSON.stringify({ width: devW, height: devH, dpr: devicePixelRatio, pitch: state.pitch, shift: state.shift,
+    fullscreen: !!document.fullscreenElement, screen: [screen.width, screen.height] });
+  fetch("/save", { method: "POST", body: body.replace("{", "{\"page\":\"fine\","), headers: { "Content-Type": "application/json" } })
+    .then(r => { document.getElementById("saved").textContent = r.ok ? "Saved" : ""; })
+    .catch(() => { document.getElementById("saved").textContent = ""; });
+}
+
+// One device pixel wide, on the whole pixel whose centre is nearest x, kept on the screen.
+function line(x, colour) {
+  const px = Math.min(devW - 1, Math.max(0, Math.round(x - 0.5)));
+  ctx.fillStyle = colour;
+  ctx.fillRect(px, 0, 1, devH);
+}
+
+function draw() {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, devW, devH);
+  const pitch = state.pitch, centre = devW / 2 + state.shift;
+  const gap = pitch * GAP / (KEY + GAP), key = pitch - gap;
+  // The gaps' centres sit at whole pitches from the row's centre: the middle one, between T and Y, is the row's centre.
+  for (let c = -4; c <= 4; c++) line(centre + c * pitch, "#EF804E");
+  // The outer edges, Q's left and P's right, fainter, each on the pixel just inside the row.
+  const left = centre - (COLS * key + (COLS - 1) * gap) / 2, right = centre + (COLS * key + (COLS - 1) * gap) / 2;
+  ctx.fillStyle = "#7A4027";
+  ctx.fillRect(Math.max(0, Math.floor(left)), 0, 1, devH);
+  ctx.fillRect(Math.min(devW - 1, Math.ceil(right) - 1), 0, 1, devH);
+  // Each key's own edges, faint.
+  for (let c = 0; c < COLS; c++) { line(left + c * pitch, "#3A2A22"); line(left + c * pitch + key, "#3A2A22"); }
+  for (let c = -4; c <= 4; c++) line(centre + c * pitch, "#EF804E");
+  // The keys' names, faint, near the bottom, one line per row.
+  ctx.fillStyle = "#99918A";
+  ctx.font = `${Math.round(13 * devicePixelRatio)}px system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  const rows = ["QWERTYUIOP", "ASDFGHJKL⌫", "⌥ZXCVBNM◆↵"], lineH = Math.round(20 * devicePixelRatio);
+  rows.forEach((row, r) => [...row].forEach((ch, c) =>
+    ctx.fillText(ch, left + c * pitch + key / 2, devH - Math.round(8 * devicePixelRatio) - (rows.length - 1 - r) * lineH)));
+}
+
+function resize(entries) {
+  let w, h;
+  const e = entries && entries[0];
+  if (e && e.devicePixelContentBoxSize) { w = e.devicePixelContentBoxSize[0].inlineSize; h = e.devicePixelContentBoxSize[0].blockSize; }
+  else { w = Math.round(canvas.clientWidth * devicePixelRatio); h = Math.round(canvas.clientHeight * devicePixelRatio); }
+  if (w === devW && h === devH) return;
+  canvas.width = devW = w; canvas.height = devH = h;
+  if (!state || state.width !== devW) { state = load(devW); state.width = devW; }
+  setupSliders();
+  show();
+}
+
+
+try { new ResizeObserver(resize).observe(canvas, { box: "device-pixel-content-box" }); }
+catch (e) { new ResizeObserver(resize).observe(canvas); }
+resize();
+
+function set(k, v) {
+  const m = measured(devW);
+  if (k === "pitch") v = Math.min(m.pitch + PITCH_REACH, Math.max(m.pitch - PITCH_REACH, v));
+  else v = Math.min(SHIFT_REACH, Math.max(-SHIFT_REACH, v));
+  state[k] = Math.round(v * 4) / 4;
+  show(); save();
+}
+document.getElementById("pitch").addEventListener("input", e => set("pitch", +e.target.value));
+document.getElementById("shift").addEventListener("input", e => set("shift", +e.target.value));
+for (const b of document.querySelectorAll("button[data-k]")) b.addEventListener("click", () => set(b.dataset.k, state[b.dataset.k] + +b.dataset.d));
+document.getElementById("reset").addEventListener("click", () => { state = measured(devW); state.width = devW; show(); save(); });
+document.getElementById("full").addEventListener("click", () => {
+  const el = document.documentElement;
+  (el.requestFullscreen ? el.requestFullscreen({ navigationUI: "hide" }) : Promise.reject()).catch(() => {});
+});
+document.addEventListener("fullscreenchange", () => { document.getElementById("full").style.display = document.fullscreenElement ? "none" : ""; save(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Held delete orange</title>
+<style>
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:Inter, system-ui, sans-serif; color:#EDE6E0; }
+  #top { position:absolute; left:0; right:0; top:0; bottom:56px; padding:14px 16px; box-sizing:border-box; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  button { font:600 15px Inter, sans-serif; padding:10px 14px; border-radius:20px; border:1px solid #EF804E; background:transparent; color:inherit; }
+  button.on { background:#EF804E; color:#160A04; }
+  #big { font:700 26px Inter, sans-serif; margin:8px 0 6px; }
+  #note { font:500 14px Inter, sans-serif; opacity:.7; line-height:1.4; }
+  canvas { position:absolute; left:0; bottom:0; width:100vw; height:56px; display:block; }
+</style>
+</head>
+<body>
+<div id="top">
+  <div class="row"><button id="prev">◀ previous</button><button id="next">next ▶</button><button id="full">Full screen</button></div>
+  <div id="big"></div>
+  <div class="row" id="picks"></div>
+  <div id="note">The held delete in the bar, as in your screenshot: the words it is eating are the pills, the caret is where the
+    text ends. Tap Full screen first.</div>
+</div>
+<canvas id="bar"></canvas>
+<script>
+const BAR = 56, LINE = 39, H = 12.8, ORANGE = "#EF804E";
+// From the screenshot, in dp: each pill's start and end. The last two are the light ones.
+const PILLS = [[91.5, 134.4], [182.4, 206.7], [238, 313.6], [329.6, 385.3], [410.9, 467.2], [492.8, 549.1], [577.9, 611.2]];
+const CARET = 619.5;
+const STYLES = [
+  ["Today", i => i >= 5 ? "#C9C5C1" : "#4A4644", false],
+  ["Orange: the words it's eating", i => i >= 5 ? ORANGE : "#4A4644", false],
+  ["Orange: only the word going now", i => i === 6 ? ORANGE : i === 5 ? "#C9C5C1" : "#4A4644", false],
+  ["Paused (in the pause zone)", i => i >= 5 ? "#C9C5C1" : "#4A4644", true],
+];
+let pick = +(new URLSearchParams(location.search).get("pick") ?? 1);
+const cv = document.getElementById("bar"), dpr = devicePixelRatio || 1;
+function pill(c, x0, x1, colour) {
+  const r = H / 2, y = LINE - r;
+  c.fillStyle = colour; c.beginPath();
+  c.moveTo(x0 + r, y); c.lineTo(x1 - r, y); c.arc(x1 - r, LINE, r, -Math.PI / 2, Math.PI / 2); c.lineTo(x0 + r, y + H);
+  c.arc(x0 + r, LINE, r, Math.PI / 2, Math.PI * 1.5); c.fill();
+}
+function draw() {
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(BAR * dpr);
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = innerWidth, k = W / 688.6;
+  c.fillStyle = "#000"; c.fillRect(0, 0, W, BAR);
+  const [name, colour, paused] = STYLES[pick];
+  // The corner glow, as in the screenshot (dimmer while paused).
+  const g = c.createRadialGradient(W * .9, BAR + 6, 2, W * .9, BAR + 6, 70);
+  g.addColorStop(0, `rgba(239,128,78,${paused ? .12 : .32})`); g.addColorStop(1, "rgba(239,128,78,0)");
+  c.fillStyle = g; c.fillRect(0, 0, W, BAR);
+  PILLS.forEach(([a, b], i) => pill(c, a * k, b * k, colour(i)));
+  c.fillStyle = ORANGE; c.globalAlpha = paused ? .55 : 1; c.fillRect(CARET * k - 1, LINE - 12, 2, 24); c.globalAlpha = 1;
+  document.getElementById("big").textContent = `${pick + 1}: ${name}`;
+  document.querySelectorAll("#picks button").forEach((b, i) => b.classList.toggle("on", i === pick));
+  history.replaceState(null, "", `?pick=${pick}`);
+  fetch("/save", { method: "POST", body: JSON.stringify({ page: "heldelete", pick, name }) }).catch(() => {});
+}
+STYLES.forEach(([n], i) => { const b = document.createElement("button"); b.textContent = String(i + 1); b.onclick = () => { pick = i; draw(); };
+  document.getElementById("picks").appendChild(b); });
+document.getElementById("prev").onclick = () => { pick = (pick + STYLES.length - 1) % STYLES.length; draw(); };
+document.getElementById("next").onclick = () => { pick = (pick + 1) % STYLES.length; draw(); };
+document.getElementById("full").onclick = () => document.documentElement.requestFullscreen?.().then(() => setTimeout(draw, 300));
+addEventListener("resize", draw); draw();
+</script>
+</body>
+</html>

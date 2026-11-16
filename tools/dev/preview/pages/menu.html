@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Word Menu Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --orange:#EF804E; --cream:#FFF1E6; --muted:#99918A; --divider:#2A2623; }
+  html, body { margin:0; height:100%; background:#000; color:var(--cream); font-family:Inter, system-ui, sans-serif; overflow:hidden; touch-action:manipulation; }
+  #ui { position:absolute; left:0; right:0; top:0; padding:12px 14px; }
+  h1 { font-size:19px; margin:2px 0 4px; }
+  p { color:var(--muted); font-size:13px; line-height:1.3; margin:0 0 8px; }
+  .row { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; align-items:center; }
+  .row span { color:var(--muted); font-size:12px; width:56px; }
+  button { font:500 13px Inter, sans-serif; height:34px; padding:0 11px; border-radius:999px; border:1.5px solid var(--orange); background:#000; color:var(--orange); }
+  button.on { background:var(--orange); color:#000; }
+  #state { color:var(--orange); font-size:13px; margin-top:4px; min-height:1.2em; }
+  canvas { position:absolute; left:0; bottom:0; width:100%; display:block; }
+  #keys { position:absolute; left:0; right:0; bottom:0; display:flex; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>Word menu mockup</h1>
+  <p>The real bar at the bottom, with your calibrated keys. Press I, O and Back below, as if pushing the keys. Hover stays on the key you pressed and shows its next step, as on the Sym panel.</p>
+  <div class="row"><span>Save as</span><button data-opt="check" class="on">A · Check</button><button data-opt="pin">B · Pin</button><button data-opt="line">C · Underline</button></div>
+  <div class="row"><span>Press</span><button id="pI">I</button><button id="pO">O</button><button id="pBack">⌫ Back</button><button id="lift">Lift finger</button></div>
+  <div class="row"><span>Rest on</span><button data-hover="7">I</button><button data-hover="8">O</button><button data-hover="9">⌫</button></div>
+  <div class="row"><span>Word</span><button data-word="and" class="on">and</button><button data-word="titankeys">titankeys</button><button data-word="supercalifragilistic">long word</button></div>
+  <div id="state"></div>
+</div>
+<canvas id="c"></canvas>
+<script>
+// Screen pixels: 1076 wide. A key every 107.5 px, centred; the bar is 94 px tall, as on the phone.
+const W = 1076, PITCH = 107.5, BAR = 94, LEFT = (W - 10 * PITCH) / 2;
+const colX = c => LEFT + (c + 0.5) * PITCH;      // the middle of key column c: I is 7, O is 8, P and Backspace are 9
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+let s = 1, word = "and", option = "check";
+let step = "new", learned = false;            // new, saved, favourite
+let hover = -1;                               // the column a finger rests on, or -1
+let anims = [];                               // running animations
+let shownStep = "new", iconMorph = { col: -1, t0: 0 };
+
+const NAMES = { save: "Save", fav: "Favourite", spent: "Favourite", unfav: "Unfavourite", unsave: "Unsave", forget: "Forget", back: "Back" };
+function buttons() {
+  const i = step === "new" ? "save" : step === "saved" ? "fav" : "spent";
+  const o = step === "new" ? (learned ? "forget" : null) : step === "saved" ? "unsave" : "unfav";
+  return { 7: i, 8: o, 9: "back" };
+}
+
+function press(col) {
+  const b = buttons()[col];
+  if (!b) return;
+  hover = col;                                 // the finger is on this key: its pill stays, and shows the next step
+  const now = performance.now();
+  if (b === "save") { step = "saved"; anims.push({ kind: "save", t0: now }); }
+  else if (b === "fav") { step = "favourite"; anims.push({ kind: "fav", t0: now }); }
+  else if (b === "spent") { anims.push({ kind: "spent", t0: now }); }
+  else if (b === "unfav") { step = "saved"; anims.push({ kind: "unfav", t0: now }); }
+  else if (b === "unsave") { step = "new"; anims.push({ kind: "unsave", t0: now }); }
+  else if (b === "forget") { anims.push({ kind: "forget", t0: now }); }
+  else if (b === "back") { anims.push({ kind: "close", t0: now }); }
+  iconMorph = { col, t0: now };
+  showState();
+}
+
+function showState() {
+  const b = buttons();
+  document.getElementById("state").textContent =
+    `${word}: ${step === "new" ? "not saved" : step}. I is ${NAMES[b[7]]}${b[7] === "spent" ? " (spent)" : ""}, O is ${b[8] ? NAMES[b[8]] : "nothing"}, ⌫ is Back.`;
+}
+
+// Icons, drawn in screen pixels at (x, y), size r.
+function icon(name, x, y, r, colour, alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const heart = (fill) => { ctx.beginPath(); ctx.moveTo(x, y + r * .75);
+    ctx.bezierCurveTo(x - r * 1.3, y - r * .1, x - r * .7, y - r * 1.05, x, y - r * .35);
+    ctx.bezierCurveTo(x + r * .7, y - r * 1.05, x + r * 1.3, y - r * .1, x, y + r * .75); fill ? ctx.fill() : ctx.stroke(); };
+  if (name === "fav") heart(false);
+  else if (name === "spent") heart(true);
+  else if (name === "unfav") { heart(false); ctx.beginPath(); ctx.moveTo(x - 2, y - r * .4); ctx.lineTo(x + 3, y); ctx.lineTo(x - 2, y + r * .35); ctx.stroke(); }
+  else if (name === "back") { ctx.beginPath(); ctx.moveTo(x + r * .8, y); ctx.lineTo(x - r * .8, y); ctx.moveTo(x - r * .2, y - r * .6); ctx.lineTo(x - r * .8, y); ctx.lineTo(x - r * .2, y + r * .6); ctx.stroke(); }
+  else if (name === "forget") { ctx.strokeRect(x - r * .55, y - r * .45, r * 1.1, r * 1.2); ctx.beginPath(); ctx.moveTo(x - r * .8, y - r * .45); ctx.lineTo(x + r * .8, y - r * .45); ctx.moveTo(x - r * .25, y - r * .7); ctx.lineTo(x + r * .25, y - r * .7); ctx.stroke(); }
+  else if (name === "save" || name === "unsave") {
+    if (option === "check") { ctx.beginPath(); ctx.arc(x, y, r * .85, 0, 7); ctx.stroke(); ctx.beginPath();
+      if (name === "save") { ctx.moveTo(x - r * .4, y); ctx.lineTo(x + r * .4, y); ctx.moveTo(x, y - r * .4); ctx.lineTo(x, y + r * .4); }
+      else { ctx.moveTo(x - r * .4, y); ctx.lineTo(x + r * .4, y); }
+      ctx.stroke(); }
+    else if (option === "pin") { ctx.beginPath(); ctx.arc(x, y - r * .35, r * .42, 0, 7); name === "save" ? ctx.stroke() : ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x, y + .07 * r); ctx.lineTo(x, y + r * .85); ctx.stroke();
+      if (name === "unsave") { ctx.beginPath(); ctx.moveTo(x - r * .7, y + r * .7); ctx.lineTo(x + r * .7, y - r * .9); ctx.stroke(); } }
+    else { ctx.font = `700 ${r * 1.5}px Inter`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("U", x, y - r * .15);
+      ctx.beginPath(); ctx.moveTo(x - r * .6, y + r * .75); ctx.lineTo(x + r * .6, y + r * .75); if (name === "unsave") ctx.setLineDash([3, 4]); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
+function draw(now) {
+  const top = 0, mid = BAR / 2;
+  ctx.setTransform(s, 0, 0, s, 0, 0);
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, BAR + 40);
+  ctx.fillStyle = "#2A2623"; ctx.fillRect(0, 0, W, 1);
+  const b = buttons();
+  // The word, white, centred in the room left of the buttons; it pops on a burst.
+  let pop = 1;
+  for (const a of anims) { const t = (now - a.t0) / 620; if ((a.kind === "save" || a.kind === "fav") && t < .3) pop = 1 + .06 * Math.sin(Math.PI * t / .3); }
+  const roomRight = colX(7) - PITCH / 2 - 10 - (hover === 7 || hover === 8 ? 120 : 0);
+  ctx.save();
+  ctx.font = `600 ${17 * 1.5625 * 1.15}px Inter`; ctx.textBaseline = "middle"; ctx.textAlign = "center";
+  const wx = Math.min(roomRight / 2 + 20, roomRight - ctx.measureText(word).width / 2 - 10);
+  ctx.translate(wx, mid); ctx.scale(pop, pop); ctx.fillStyle = "#FFF1E6"; ctx.fillText(word, 0, 0); ctx.restore();
+  const wordW = (() => { ctx.font = `600 ${17 * 1.5625 * 1.15}px Inter`; return ctx.measureText(word).width; })();
+  // The saved state, quietly: a small mark, a pin or an underline, as the chosen Save is.
+  if (step !== "new") {
+    const k = step === "favourite" ? 1 : 1;
+    if (option === "line") { ctx.fillStyle = "rgba(239,128,78,.55)"; ctx.fillRect(wx - wordW / 2, mid + 20, wordW, 3); }
+    else if (option === "pin") icon("unsave", wx + wordW / 2 + 16, mid - 16, 7, "rgba(239,128,78,.6)");
+    else { ctx.save(); ctx.strokeStyle = "rgba(239,128,78,.6)"; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(wx + wordW / 2 + 8, mid - 18); ctx.lineTo(wx + wordW / 2 + 13, mid - 13); ctx.lineTo(wx + wordW / 2 + 22, mid - 24); ctx.stroke(); ctx.restore(); }
+    if (step === "favourite") icon("spent", wx - wordW / 2 - 18, mid - 16, 7, "rgba(239,128,78,.6)");
+  }
+  // The pill: the hovered key's button grows to the left into a pill with its name, and stays while the finger rests there.
+  // Buttons under the pill hide while it shows.
+  let pill = null;
+  if (hover >= 0 && b[hover] && b[hover] !== "back") {
+    ctx.font = `600 ${15 * 1.5625}px Inter`; const label = NAMES[b[hover]]; const tw = ctx.measureText(label).width;
+    const x = colX(hover), pw = tw + 64; pill = [x + 24 - pw, x + 24];
+    ctx.fillStyle = "rgba(239,128,78,.16)"; ctx.beginPath(); ctx.roundRect(pill[0], mid - 24, pw, 48, 24); ctx.fill();
+    ctx.fillStyle = "#EF804E"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, pill[0] + 18, mid + 1);
+    const m = iconMorph.col === hover ? Math.min(1, (now - iconMorph.t0) / 220) : 1;
+    icon(b[hover], x, mid, 11 * (0.6 + 0.4 * m), "#EF804E", 0.4 + 0.6 * m);
+  }
+  for (const col of [7, 8, 9]) {
+    const name = b[col]; if (!name || col === hover && pill) continue;
+    const x = colX(col);
+    if (pill && x > pill[0] - 12 && x < pill[1] + 12) continue;
+    // An icon that changed morphs in: it grows from small, never snaps.
+    const m = iconMorph.col === col ? Math.min(1, (now - iconMorph.t0) / 220) : 1;
+    const colour = name === "spent" ? "#EF804E" : hover === col ? "#EF804E" : "#FFF1E6";
+    icon(name, x, mid, 11 * (0.6 + 0.4 * m), colour, 0.4 + 0.6 * m);
+  }
+  // Animations.
+  anims = anims.filter(a => now - a.t0 < 900);
+  for (const a of anims) {
+    const t = (now - a.t0) / 620;
+    if (a.kind === "fav") burst(t, wx, wordW, mid, "heart");
+    else if (a.kind === "save") {
+      if (option === "check") { // a ring pulses out from the word and a check draws itself in, sparks to both sides
+        ring(t, wx, mid, wordW); burst(t, wx, wordW, mid, "spark"); }
+      else if (option === "pin") { pinDrop(t, wx + wordW / 2 + 16, mid - 16); burst(t, wx, wordW, mid, "spark"); }
+      else { sweep(t, wx, wordW, mid); burst(t, wx, wordW, mid, "spark"); }
+    }
+    else if (a.kind === "unsave") {
+      if (option === "check") implode(t, wx, mid, wordW);
+      else if (option === "pin") pinPop(t, wx + wordW / 2 + 16, mid - 16);
+      else crumble(t, wx, wordW, mid);
+    }
+    else if (a.kind === "unfav") crack(t, wx - wordW / 2 - 18, mid - 16);
+  }
+}
+
+// Particles from behind the word, up and out to both sides, the same burst as Favourite's.
+function burst(t, wx, wordW, mid, shape) {
+  if (t > 1) return;
+  for (let i = 0; i < 8; i++) {
+    const right = i % 2 === 0, delay = (i >> 1) * .06, own = Math.min(1, Math.max(0, (t - delay) / (1 - delay)));
+    if (own <= 0) continue;
+    const out = 1 - (1 - own) * (1 - own);
+    const from = wx + (right ? wordW * .3 : -wordW * .3), to = from + (right ? 1 : -1) * (60 + 22 * (i >> 1));
+    const x = from + (to - from) * out + 2 * Math.sin(own * 7 + i), y = mid - (14 + 7 * (i % 3)) * out;
+    const alpha = Math.min(1, own / .12) * (own < .55 ? 1 : 1 - (own - .55) / .45);
+    if (shape === "heart") icon("spent", x, y, 6 + (i % 3), "#EF804E", alpha);
+    else { ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = "#EF804E"; ctx.translate(x, y); ctx.rotate(own * 2 + i);
+      ctx.fillRect(-1.5, -5, 3, 10); ctx.fillRect(-5, -1.5, 10, 3); ctx.restore(); }
+  }
+}
+function ring(t, x, mid, wordW) { if (t > 1) return; const r = wordW / 2 + 10 + 40 * t; ctx.save(); ctx.globalAlpha = (1 - t) * .8; ctx.strokeStyle = "#EF804E"; ctx.lineWidth = 3 * (1 - t) + 1;
+  ctx.beginPath(); ctx.ellipse(x, mid, r, r * .45, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+function implode(t, x, mid, wordW) { if (t > 1) return; const r = (wordW / 2 + 50) * (1 - t) + 6; ctx.save(); ctx.globalAlpha = .7 * (1 - t); ctx.strokeStyle = "#EF804E"; ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.ellipse(x, mid, r, r * .45, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+function pinDrop(t, x, y) { if (t > 1) return; const fall = Math.min(1, t / .35), yy = y - 40 * (1 - fall * fall) + (t > .35 && t < .55 ? -4 * Math.sin((t - .35) / .2 * Math.PI) : 0);
+  icon("unsave", x, yy, 9, "#EF804E", 1); }
+function pinPop(t, x, y) { if (t > 1) return; ctx.save(); ctx.translate(x + 30 * t, y - 30 * t + 60 * t * t); ctx.rotate(t * 4); icon("unsave", 0, 0, 9, "#EF804E", 1 - t); ctx.restore(); }
+function sweep(t, x, wordW, mid) { if (t > 1) return; const w = wordW * Math.min(1, t / .4); ctx.fillStyle = "#EF804E"; ctx.fillRect(x - wordW / 2, mid + 19, w, 4); }
+function crumble(t, x, wordW, mid) { if (t > 1) return; for (let i = 0; i < 12; i++) { const px = x - wordW / 2 + wordW * i / 11, py = mid + 21 + 30 * t * t * (1 + (i % 3) * .4);
+  ctx.save(); ctx.globalAlpha = 1 - t; ctx.fillStyle = "#EF804E"; ctx.fillRect(px, py, 4, 3); ctx.restore(); } }
+function crack(t, x, y) { if (t > 1) return; for (const side of [-1, 1]) { ctx.save(); ctx.translate(x + side * 10 * t, y + 40 * t * t); ctx.rotate(side * t * 1.5);
+  ctx.globalAlpha = 1 - t; icon("spent", 0, 0, 7, "#EF804E"); ctx.restore(); } }
+
+function loop(now) { draw(now); requestAnimationFrame(loop); }
+function resize() { const cssW = canvas.clientWidth; s = cssW * devicePixelRatio / W; canvas.width = Math.round(cssW * devicePixelRatio);
+  canvas.height = Math.round((BAR) * s); canvas.style.height = (BAR * s / devicePixelRatio) + "px"; }
+window.addEventListener("resize", resize); resize(); requestAnimationFrame(loop);
+
+document.getElementById("pI").onclick = () => press(7);
+document.getElementById("pO").onclick = () => press(8);
+document.getElementById("pBack").onclick = () => { press(9); setTimeout(() => { step = step; }, 0); };
+document.getElementById("lift").onclick = () => { hover = -1; };
+for (const b of document.querySelectorAll("[data-hover]")) b.onclick = () => { hover = +b.dataset.hover; };
+for (const b of document.querySelectorAll("[data-opt]")) b.onclick = () => { option = b.dataset.opt;
+  document.querySelectorAll("[data-opt]").forEach(x => x.classList.toggle("on", x === b)); };
+for (const b of document.querySelectorAll("[data-word]")) b.onclick = () => { word = b.dataset.word; step = "new"; learned = word === "titankeys"; hover = -1;
+  document.querySelectorAll("[data-word]").forEach(x => x.classList.toggle("on", x === b)); showState(); };
+showState();
+</script>
+</body>
+</html>

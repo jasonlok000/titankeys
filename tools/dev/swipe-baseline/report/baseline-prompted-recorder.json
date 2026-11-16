@@ -1,0 +1,74 @@
+{
+ "prompted": {
+  "n": 404,
+  "top1": 309,
+  "top1_pct": 76.5,
+  "top3": 335,
+  "top3_pct": 82.9,
+  "in_decoder_list": 355,
+  "in_decoder_list_pct": 87.9
+ },
+ "prompted_held_back": {
+  "n": 136,
+  "top1": 104,
+  "top1_pct": 76.5,
+  "top3": 111,
+  "top3_pct": 81.6,
+  "in_decoder_list": 117,
+  "in_decoder_list_pct": 86.0
+ },
+ "hand": {
+  "n": 0,
+  "top1": 0,
+  "top1_pct": null,
+  "top3": 0,
+  "top3_pct": null,
+  "in_decoder_list": 0,
+  "in_decoder_list_pct": null
+ },
+ "recorder": {
+  "n": 300,
+  "top1": 202,
+  "top1_pct": 67.3,
+  "top3": 225,
+  "top3_pct": 75.0,
+  "in_decoder_list": 240,
+  "in_decoder_list_pct": 80.0
+ },
+ "prompted: Swipe only": {
+  "n": 134,
+  "top1": 107,
+  "top1_pct": 79.9,
+  "top3": 114,
+  "top3_pct": 85.1,
+  "in_decoder_list": 123,
+  "in_decoder_list_pct": 91.8
+ },
+ "prompted: Left swipe": {
+  "n": 97,
+  "top1": 68,
+  "top1_pct": 70.1,
+  "top3": 78,
+  "top3_pct": 80.4,
+  "in_decoder_list": 79,
+  "in_decoder_list_pct": 81.4
+ },
+ "prompted: Index finger": {
+  "n": 130,
+  "top1": 101,
+  "top1_pct": 77.7,
+  "top3": 108,
+  "top3_pct": 83.1,
+  "in_decoder_list": 116,
+  "in_decoder_list_pct": 89.2
+ },
+ "prompted: Random": {
+  "n": 43,
+  "top1": 33,
+  "top1_pct": 76.7,
+  "top3": 35,
+  "top3_pct": 81.4,
+  "in_decoder_list": 37,
+  "in_decoder_list_pct": 86.0
+ }
+}

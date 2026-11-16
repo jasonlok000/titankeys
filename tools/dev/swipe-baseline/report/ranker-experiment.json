@@ -1,0 +1,215 @@
+{
+ "prompted": {
+  "n": 404,
+  "futo_plain_top48": 355,
+  "futo_12_readings_top48": 372,
+  "cleverkeys_top80": 352,
+  "futo_readings_or_cleverkeys": 373,
+  "outline_top30": 343,
+  "shape_matcher_top1": 217,
+  "shape_matcher_top3": 274,
+  "shape_matcher_top60": 339,
+  "all_combined": 377
+ },
+ "hand": {
+  "n": 344,
+  "futo_plain_top48": 282,
+  "futo_12_readings_top48": 296,
+  "cleverkeys_top80": 268,
+  "futo_readings_or_cleverkeys": 298,
+  "outline_top30": 256,
+  "shape_matcher_top1": 125,
+  "shape_matcher_top3": 176,
+  "shape_matcher_top60": 271,
+  "all_combined": 302
+ },
+ "recorder": {
+  "n": 300,
+  "futo_plain_top48": 240,
+  "futo_12_readings_top48": 250,
+  "cleverkeys_top80": 224,
+  "futo_readings_or_cleverkeys": 250,
+  "outline_top30": 235,
+  "shape_matcher_top1": 113,
+  "shape_matcher_top3": 162,
+  "shape_matcher_top60": 225,
+  "all_combined": 255
+ },
+ "ranker": {
+  "prompted": {
+   "n": 404,
+   "first": 78.2,
+   "top3": 87.4
+  },
+  "hand": {
+   "n": 344,
+   "first": 67.4,
+   "top3": 79.9
+  },
+  "recorder": {
+   "n": 300,
+   "first": 70.7,
+   "top3": 80.0
+  },
+  "prompted_held_back": {
+   "n": 136,
+   "first": 78.7,
+   "top3": 87.5
+  }
+ },
+ "current": {
+  "prompted": {
+   "n": 404,
+   "first": 76.5,
+   "top3": 82.9
+  },
+  "hand": {
+   "n": 344,
+   "first": 64.5,
+   "top3": 76.7
+  },
+  "recorder": {
+   "n": 300,
+   "first": 67.3,
+   "top3": 75.0
+  }
+ },
+ "leave_one_set_out": {
+  "prompted": {
+   "n": 404,
+   "first": 79.2,
+   "top3": 85.9
+  },
+  "hand": {
+   "n": 344,
+   "first": 62.8,
+   "top3": 74.4
+  },
+  "recorder": {
+   "n": 300,
+   "first": 70.0,
+   "top3": 78.7
+  }
+ },
+ "personal": {
+  "current engine, later 40%": {
+   "n": 138,
+   "first": 71.0,
+   "top3": 80.4
+  },
+  "ranker no personal": {
+   "n": 138,
+   "first": 66.7,
+   "top3": 79.0
+  },
+  "ranker personal": {
+   "n": 138,
+   "first": 68.8,
+   "top3": 79.7
+  }
+ },
+ "ideas": {
+  "current engine": {
+   "all": {
+    "n": 420,
+    "first": 73.3,
+    "top3": 81.4
+   },
+   "prompted": {
+    "n": 275,
+    "first": 75.3,
+    "top3": 82.2
+   },
+   "hand": {
+    "n": 145,
+    "first": 69.7,
+    "top3": 80.0
+   }
+  },
+  "ranker": {
+   "all": {
+    "n": 420,
+    "first": 74.8,
+    "top3": 84.0
+   },
+   "prompted": {
+    "n": 275,
+    "first": 78.2,
+    "top3": 87.3
+   },
+   "hand": {
+    "n": 145,
+    "first": 68.3,
+    "top3": 77.9
+   }
+  },
+  "ranker + strong language model": {
+   "all": {
+    "n": 420,
+    "first": 77.4,
+    "top3": 86.4
+   },
+   "prompted": {
+    "n": 275,
+    "first": 81.8,
+    "top3": 90.5
+   },
+   "hand": {
+    "n": 145,
+    "first": 69.0,
+    "top3": 78.6
+   }
+  },
+  "ranker + shape memory and use counts": {
+   "all": {
+    "n": 420,
+    "first": 75.0,
+    "top3": 84.0
+   },
+   "prompted": {
+    "n": 275,
+    "first": 78.9,
+    "top3": 86.9
+   },
+   "hand": {
+    "n": 145,
+    "first": 67.6,
+    "top3": 78.6
+   }
+  },
+  "ranker + all": {
+   "all": {
+    "n": 420,
+    "first": 77.4,
+    "top3": 86.9
+   },
+   "prompted": {
+    "n": 275,
+    "first": 82.5,
+    "top3": 90.9
+   },
+   "hand": {
+    "n": 145,
+    "first": 67.6,
+    "top3": 79.3
+   }
+  },
+  "plain rule": {
+   "all": {
+    "n": 420,
+    "first": 73.6,
+    "top3": 81.4
+   },
+   "prompted": {
+    "n": 275,
+    "first": 75.3,
+    "top3": 82.2
+   },
+   "hand": {
+    "n": 145,
+    "first": 70.3,
+    "top3": 80.0
+   }
+  }
+ }
+}

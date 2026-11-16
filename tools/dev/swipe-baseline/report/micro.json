@@ -1,0 +1,182 @@
+{
+ "offsets": {
+  "start": {
+   "Swipe only": {
+    "row1": {
+     "dx": -0.08,
+     "dy": 0.09,
+     "n": 62
+    },
+    "row2": {
+     "dx": 0.07,
+     "dy": -0.02,
+     "n": 50
+    },
+    "row3": {
+     "dx": 0.06,
+     "dy": -0.05,
+     "n": 22
+    }
+   },
+   "Left swipe": {
+    "row1": {
+     "dx": -0.62,
+     "dy": 0.26,
+     "n": 41
+    },
+    "row2": {
+     "dx": -0.36,
+     "dy": -0.04,
+     "n": 34
+    },
+    "row3": {
+     "dx": -0.98,
+     "dy": 0.01,
+     "n": 22
+    }
+   },
+   "Index finger": {
+    "row1": {
+     "dx": -0.02,
+     "dy": 0.18,
+     "n": 58
+    },
+    "row2": {
+     "dx": 0.17,
+     "dy": 0.11,
+     "n": 53
+    },
+    "row3": {
+     "dx": -0.08,
+     "dy": 0.06,
+     "n": 19
+    }
+   },
+   "Random": {
+    "row1": {
+     "dx": -0.57,
+     "dy": 0.19,
+     "n": 22
+    },
+    "row2": {
+     "dx": 0.02,
+     "dy": -0.02,
+     "n": 13
+    },
+    "row3": {
+     "dx": 0.34,
+     "dy": -0.14,
+     "n": 8
+    }
+   }
+  },
+  "end": {
+   "Swipe only": {
+    "row1": {
+     "dx": 0.28,
+     "dy": 0.16,
+     "n": 77
+    },
+    "row2": {
+     "dx": 0.42,
+     "dy": 0.03,
+     "n": 40
+    },
+    "row3": {
+     "dx": -0.44,
+     "dy": 0.05,
+     "n": 17
+    }
+   },
+   "Left swipe": {
+    "row1": {
+     "dx": -0.37,
+     "dy": 0.4,
+     "n": 52
+    },
+    "row2": {
+     "dx": -0.41,
+     "dy": 0.14,
+     "n": 36
+    },
+    "row3": {
+     "dx": -1.19,
+     "dy": -0.16,
+     "n": 9
+    }
+   },
+   "Index finger": {
+    "row1": {
+     "dx": 0.08,
+     "dy": 0.28,
+     "n": 74
+    },
+    "row2": {
+     "dx": 0.36,
+     "dy": 0.16,
+     "n": 42
+    },
+    "row3": {
+     "dx": -0.63,
+     "dy": 0.43,
+     "n": 14
+    }
+   },
+   "Random": {
+    "row1": {
+     "dx": 0.16,
+     "dy": 0.34,
+     "n": 24
+    },
+    "row2": {
+     "dx": 0.15,
+     "dy": 0.15,
+     "n": 16
+    },
+    "row3": {
+     "dx": -0.12,
+     "dy": 0.19,
+     "n": 3
+    }
+   }
+  }
+ },
+ "start_dx_by_key": {},
+ "top_edge": {
+  "y_min": 0.11583,
+  "share_of_points_at_edge": 2.6
+ },
+ "points_by_row": {
+  "middle": 30566,
+  "top": 24209,
+  "bottom": 8840,
+  "bottom row": 722
+ },
+ "chain_lengths": {
+  "1": 437,
+  "2": 60,
+  "3": 13,
+  "4": 3
+ },
+ "break_columns": {
+  "0": 6,
+  "1": 4,
+  "2": 10,
+  "3": 21,
+  "4": 10,
+  "5": 29,
+  "6": 42,
+  "7": 43,
+  "8": 16,
+  "9": 7
+ },
+ "lost_contacts": {
+  "no key near it": 181,
+  "key pressed during contact": 27,
+  "started within 600 ms of a key press": 4
+ },
+ "delete_targets": {
+  "deleted a word that was wrong": 64,
+  "deleted a word that was already right": 8
+ }
+}

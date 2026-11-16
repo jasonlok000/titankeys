@@ -135,6 +135,9 @@ If you want to do the work, write this in the issue. Wait until I give the issue
    bun run check
    ```
 
+The maintainer's own build and phone tools are in [tools/dev](tools/dev/README.md). You don't need them to contribute.
+<!-- F: draft line for the tools/dev link (#82). -->
+
 ## Writing
 
 TitanKeys talks like a person: casual, direct, a bit cheeky. This goes for every text the user sees, including the guide, settings, release notes, the README and the website.

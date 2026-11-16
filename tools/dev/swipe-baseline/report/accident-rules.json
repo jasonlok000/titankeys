@@ -1,0 +1,54 @@
+{
+ "n_gone": 50,
+ "n_kept": 956,
+ "rules": {
+  "under 60 ms and under 1.5 keys": {
+   "caught": 5,
+   "caught_pct": 10.0,
+   "genuine_hit": 3,
+   "genuine_pct": 0.3
+  },
+  "under 100 ms and under 2 keys": {
+   "caught": 6,
+   "caught_pct": 12.0,
+   "genuine_hit": 9,
+   "genuine_pct": 0.9
+  },
+  "under 150 ms and under 2.5 keys": {
+   "caught": 8,
+   "caught_pct": 16.0,
+   "genuine_hit": 21,
+   "genuine_pct": 2.2
+  },
+  "under 2 keys": {
+   "caught": 10,
+   "caught_pct": 20.0,
+   "genuine_hit": 56,
+   "genuine_pct": 5.9
+  },
+  "score gap under 2": {
+   "caught": 13,
+   "caught_pct": 26.0,
+   "genuine_hit": 149,
+   "genuine_pct": 15.6
+  },
+  "score gap under 5": {
+   "caught": 24,
+   "caught_pct": 48.0,
+   "genuine_hit": 285,
+   "genuine_pct": 29.8
+  },
+  "under 150 ms and gap under 10": {
+   "caught": 5,
+   "caught_pct": 10.0,
+   "genuine_hit": 10,
+   "genuine_pct": 1.0
+  },
+  "under 2.5 keys and gap under 10": {
+   "caught": 7,
+   "caught_pct": 14.0,
+   "genuine_hit": 45,
+   "genuine_pct": 4.7
+  }
+ }
+}

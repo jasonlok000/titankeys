@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Not saved, alternatives</title>
+<style>
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  html, body { margin:0; background:#000; color:#FFF1E6; font:15px/1.4 Inter, system-ui, sans-serif; }
+  .wrap { padding:16px 16px 40px; }
+  h1 { font-size:22px; margin:4px 0 6px; } p { color:#99918A; margin:0 0 10px; }
+  .opt { margin:16px -16px 0; }
+  .label { padding:0 16px 6px; font-size:15px; } .label b { color:#EF804E; font-weight:500; }
+  canvas { display:block; width:100vw; height:56px; background:#000; border-top:1px solid #161210; border-bottom:1px solid #161210; }
+</style>
+</head>
+<body><div class="wrap">
+<h1>Not saved: three ways that stay readable</h1>
+<p>Each bar: Blocked on the left, Not saved in the middle, Saved on the right. Inter at 20 dp on the bar's black.</p>
+<div id="opts"></div>
+</div>
+<script>
+const host = document.getElementById("opts");
+const W = () => innerWidth, H = 56, dpr = devicePixelRatio || 1;
+function bar(label) {
+  const box = document.createElement("div"); box.className = "opt";
+  box.innerHTML = `<div class="label">${label}</div>`;
+  const cv = document.createElement("canvas"); box.appendChild(cv); host.appendChild(box);
+  cv.width = Math.round(W() * dpr); cv.height = Math.round(H * dpr);
+  const c = cv.getContext("2d"); c.scale(dpr, dpr); c.textAlign = "center"; c.textBaseline = "middle";
+  return c;
+}
+function word(c, text, x, font, colour) { c.font = font; c.fillStyle = colour; c.fillText(text, x, H / 2); return c.measureText(text).width; }
+function strike(c, x, w, colour) { c.strokeStyle = colour; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x - w / 2 - 2, H / 2 + 1); c.lineTo(x + w / 2 + 2, H / 2 + 1); c.stroke(); }
+function dotted(c, x, w, colour) {
+  c.fillStyle = colour; const y = H / 2 + 13;
+  for (let d = x - w / 2; d <= x + w / 2; d += 5) { c.beginPath(); c.arc(d, y, 1.2, 0, 7); c.fill(); }
+}
+document.fonts.load("700 20px Inter").then(() => document.fonts.load("500 20px Inter")).then(() => {
+  const L = () => W() * 0.17, M = () => W() / 2, R = () => W() * 0.84;
+  let c = bar("<b>A</b> · Dotted underline: the word stays white; dots under it mean not kept yet");
+  let w = word(c, "blocked", L(), "700 20px Inter", "#99918A"); strike(c, L(), w, "#99918A");
+  w = word(c, "whatever", M(), "700 20px Inter", "#FFFFFF"); dotted(c, M(), w, "#FFFFFF");
+  word(c, "saved", R(), "700 20px Inter", "#FFFFFF");
+
+  c = bar("<b>B</b> · Grey word: solid, in the muted grey");
+  w = word(c, "blocked", L(), "700 20px Inter", "#5E5853"); strike(c, L(), w, "#99918A");
+  word(c, "whatever", M(), "700 20px Inter", "#99918A");
+  word(c, "saved", R(), "700 20px Inter", "#FFFFFF");
+
+  c = bar("<b>C</b> · Lighter weight: Inter Medium, Saved stays Bold");
+  w = word(c, "blocked", L(), "500 20px Inter", "#99918A"); strike(c, L(), w, "#99918A");
+  word(c, "whatever", M(), "500 20px Inter", "#FFFFFF");
+  word(c, "saved", R(), "700 20px Inter", "#FFFFFF");
+
+  c = bar("<b>A + C</b> · Dotted underline and the lighter weight together");
+  w = word(c, "blocked", L(), "500 20px Inter", "#99918A"); strike(c, L(), w, "#99918A");
+  w = word(c, "whatever", M(), "500 20px Inter", "#FFFFFF"); dotted(c, M(), w, "#FFFFFF");
+  word(c, "saved", R(), "700 20px Inter", "#FFFFFF");
+});
+</script>
+</body>
+</html>

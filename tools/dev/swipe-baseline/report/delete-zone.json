@@ -1,0 +1,169 @@
+{
+ "swipes": 20977,
+ "by_kind": {
+  "flick": 5990,
+  "word": 12317,
+  "removed": 2670
+ },
+ "new_rectangle": [
+  0.68,
+  0.175,
+  0.92,
+  0.62
+ ],
+ "today_zone": [
+  0.76,
+  0.175,
+  1.0,
+  0.62
+ ],
+ "rules": {
+  "today": {
+   "fires": {
+    "flick": 4921,
+    "word": 19,
+    "removed": 34
+   },
+   "added_vs_today": {},
+   "lost_vs_today": {},
+   "added_kept_words_by_start_key": {}
+  },
+  "A: replace today with the new rectangle (edge rules)": {
+   "fires": {
+    "flick": 2934,
+    "removed": 87,
+    "word": 210
+   },
+   "added_vs_today": {
+    "removed": 64,
+    "word": 206,
+    "flick": 98
+   },
+   "lost_vs_today": {
+    "flick": 2085,
+    "word": 15,
+    "removed": 11
+   },
+   "added_kept_words_by_start_key": {
+    "I": 67,
+    "O": 47,
+    "K": 33,
+    "M": 33,
+    "N": 14,
+    "J": 9,
+    "U": 3
+   }
+  },
+  "B: today OR new rectangle (edge rules)": {
+   "fires": {
+    "flick": 5019,
+    "removed": 98,
+    "word": 225
+   },
+   "added_vs_today": {
+    "removed": 64,
+    "word": 206,
+    "flick": 98
+   },
+   "lost_vs_today": {},
+   "added_kept_words_by_start_key": {
+    "I": 67,
+    "O": 47,
+    "K": 33,
+    "M": 33,
+    "N": 14,
+    "J": 9,
+    "U": 3
+   }
+  },
+  "C: today OR new rectangle, level (tilt <= .1, wander <= 1.1)": {
+   "fires": {
+    "flick": 5004,
+    "word": 88,
+    "removed": 61
+   },
+   "added_vs_today": {
+    "word": 69,
+    "removed": 27,
+    "flick": 83
+   },
+   "lost_vs_today": {},
+   "added_kept_words_by_start_key": {
+    "I": 41,
+    "K": 13,
+    "J": 9,
+    "O": 6
+   }
+  },
+  "D: C, and not starting on I or O": {
+   "fires": {
+    "flick": 5004,
+    "word": 41,
+    "removed": 51
+   },
+   "added_vs_today": {
+    "word": 22,
+    "removed": 17,
+    "flick": 83
+   },
+   "lost_vs_today": {},
+   "added_kept_words_by_start_key": {
+    "K": 13,
+    "J": 9
+   }
+  },
+  "E: D, and at most 6 keys and 400 ms": {
+   "fires": {
+    "flick": 5004,
+    "word": 41,
+    "removed": 44
+   },
+   "added_vs_today": {
+    "word": 22,
+    "removed": 10,
+    "flick": 83
+   },
+   "lost_vs_today": {},
+   "added_kept_words_by_start_key": {
+    "K": 13,
+    "J": 9
+   }
+  }
+ },
+ "start_in_new_not_today": {
+  "word": 501,
+  "removed": 131,
+  "flick": 132
+ },
+ "start_in_new_not_today_by_key": {
+  "I": {
+   "word": 115,
+   "removed": 13
+  },
+  "J": {
+   "word": 82,
+   "removed": 45,
+   "flick": 62
+  },
+  "K": {
+   "word": 99,
+   "removed": 58,
+   "flick": 49
+  },
+  "M": {
+   "word": 112,
+   "flick": 10,
+   "removed": 6
+  },
+  "N": {
+   "word": 79,
+   "flick": 5,
+   "removed": 6
+  },
+  "U": {
+   "flick": 6,
+   "word": 14,
+   "removed": 3
+  }
+ }
+}

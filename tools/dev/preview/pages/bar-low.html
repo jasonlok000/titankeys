@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bar: how low</title>
+<style>
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:Inter, system-ui, sans-serif; }
+  #app { position:absolute; left:0; right:0; top:0; bottom:56px; padding:14px 16px; box-sizing:border-box; }
+  #app.light { background:#F2F0EE; color:#1A1714; }
+  #app.dark { background:#1B1918; color:#EDE6E0; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  button { font:600 15px Inter, sans-serif; padding:10px 14px; border-radius:20px; border:1px solid #EF804E; background:transparent;
+           color:inherit; }
+  button.on { background:#EF804E; color:#160A04; }
+  #big { font:700 30px Inter, sans-serif; margin:6px 0 4px; }
+  #note { font:500 14px Inter, sans-serif; opacity:.7; line-height:1.4; }
+  .bubble { margin-top:12px; padding:10px 12px; border-radius:14px; max-width:70%; font:500 16px Inter, sans-serif; }
+  #app.light .bubble { background:#fff; } #app.dark .bubble { background:#2A2725; }
+  .bubble.me { margin-left:auto; } #app.light .bubble.me { background:#FCE3D6; } #app.dark .bubble.me { background:#3A2A22; }
+  canvas { position:absolute; left:0; bottom:0; width:100vw; height:56px; display:block; }
+</style>
+</head>
+<body>
+<div id="app" class="dark">
+  <div class="row">
+    <button id="down">▲ higher</button><button id="up">▼ lower</button><button id="full">Full screen</button>
+  </div>
+  <div id="big"></div>
+  <div class="row" id="sizes"></div>
+  <div class="row"><button id="theme">Light app above</button><button id="words">Words with tails</button><button id="guides">Hide guides</button></div>
+  <div id="note">The bar is the black strip at the very bottom, 56 dp like the real one. 0 is today: the small letters' middle on
+    the bar's middle. Each step moves every word down 1 dp. Guides: blue dashes, the bar's middle; orange, the letters'
+    middle; dotted grey, the small letters' top and the baseline; "above" and "below" are the gaps in dp. Tap Full screen first so Chrome's bars are out of the way.</div>
+  <div class="bubble">see you at 7?</div>
+  <div class="bubble me">yeah sounds good</div>
+</div>
+<canvas id="bar"></canvas>
+<script>
+const X_HEIGHT = 1118 / 2048, BAR = 56;
+const q = new URLSearchParams(location.search);
+let offset = +(q.get("offset") ?? 0), size = +(q.get("size") ?? 1.2), tails = q.get("tails") === "1", guides = q.get("guides") !== "0";
+function report() { fetch("/save", { method: "POST", body: JSON.stringify({ page: "bar-low", offset, size, tails, guides }) }).catch(() => {}); }
+const SIZES = [["Normal", 1], ["Bigger", 1.2], ["Biggest", 1.4]];
+const cv = document.getElementById("bar"), dpr = devicePixelRatio || 1;
+function draw() {
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(BAR * dpr);
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.fillStyle = "#000"; c.fillRect(0, 0, innerWidth, BAR);
+  const words = tails ? ["typing", "you", "going"] : ["What", "Is", "How"];
+  const px = 20 * size, baseline = BAR / 2 + offset + X_HEIGHT * px / 2;
+  c.textAlign = "center"; c.textBaseline = "alphabetic"; c.fillStyle = "#fff";
+  [[.17, 500], [.5, 700], [.84, 500]].forEach(([x, w], i) => {
+    c.font = `${w} ${px}px Inter`; c.fillText(words[i], innerWidth * x, baseline);
+  });
+  if (guides) {
+    const xTop = baseline - X_HEIGHT * px, mid = BAR / 2 + offset;
+    const line = (y, colour, dash, label) => {
+      c.save(); c.strokeStyle = colour; c.lineWidth = 1 / dpr; c.setLineDash(dash);
+      c.beginPath(); c.moveTo(0, y); c.lineTo(innerWidth, y); c.stroke(); c.restore();
+      if (label) { c.font = "500 9px Inter"; c.fillStyle = colour; c.textAlign = "right"; c.fillText(label, innerWidth - 4, y - 2); }
+    };
+    line(0.5 / dpr, "#5E5853", [], "bar top");
+    line(BAR / 2, "#4FC3F7", [3, 3], "bar middle");
+    line(mid, "#EF804E", [], offset ? "letters' middle" : "");
+    line(xTop, "#99918A", [1, 2], ""); line(baseline, "#99918A", [1, 2], "");
+    c.font = "500 9px Inter"; c.textAlign = "left"; c.fillStyle = "#99918A";
+    c.fillText(`above ${xTop.toFixed(1)}`, 4, Math.max(10, xTop / 2 + 3));
+    c.fillText(`below ${(BAR - baseline).toFixed(1)}`, 4, Math.min(BAR - 2, baseline + (BAR - baseline) / 2 + 3));
+  }
+  document.getElementById("big").textContent = offset === 0 ? "0 dp (today)" : `${offset} dp lower`;
+  document.getElementById("guides").textContent = guides ? "Hide guides" : "Show guides";
+  history.replaceState(null, "", `?offset=${offset}&size=${size}&tails=${tails ? 1 : 0}&guides=${guides ? 1 : 0}`);
+  report();
+  document.querySelectorAll("#sizes button").forEach(b => b.classList.toggle("on", +b.dataset.f === size));
+}
+for (const [name, f] of SIZES) {
+  const b = document.createElement("button"); b.textContent = name; b.dataset.f = f;
+  b.onclick = () => { size = f; draw(); }; document.getElementById("sizes").appendChild(b);
+}
+document.getElementById("up").onclick = () => { offset = Math.min(offset + 1, 14); draw(); };
+document.getElementById("down").onclick = () => { offset = Math.max(offset - 1, -4); draw(); };
+document.getElementById("full").onclick = () => document.documentElement.requestFullscreen?.().then(() => setTimeout(draw, 300));
+document.getElementById("theme").onclick = e => {
+  const app = document.getElementById("app"); const light = app.classList.toggle("light"); app.classList.toggle("dark", !light);
+  e.target.textContent = light ? "Dark app above" : "Light app above";
+};
+document.getElementById("words").onclick = e => { tails = !tails; e.target.textContent = tails ? "Plain words" : "Words with tails"; draw(); };
+document.getElementById("guides").onclick = () => { guides = !guides; draw(); };
+addEventListener("resize", draw);
+document.fonts.load("700 24px Inter").then(() => document.fonts.load("500 24px Inter")).then(draw);
+</script>
+</body>
+</html>

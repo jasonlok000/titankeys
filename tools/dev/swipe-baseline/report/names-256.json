@@ -1,0 +1,29 @@
+{
+ "nothing saved": {
+  "name": {
+   "strokes": 5,
+   "first": 0,
+   "top 3": 0
+  },
+  "other": {
+   "strokes": 550,
+   "first": 385,
+   "top 3": 422
+  }
+ },
+ "saved, boost 0.0": {
+  "name": {
+   "strokes": 5,
+   "first": 0,
+   "top 3": 0
+  },
+  "other": {
+   "strokes": 550,
+   "first": 387,
+   "top 3": 423,
+   "wins against nothing saved": 2,
+   "losses against nothing saved": 0,
+   "saved word shown first where another was meant": 0
+  }
+ }
+}

@@ -1,0 +1,269 @@
+{
+ "conversion_max_difference": 0.01653003692626953,
+ "cleverkeys as shipped": {
+  "prompted": {
+   "n": 136,
+   "first": 69.9,
+   "top3": 80.9,
+   "found": 86.0
+  },
+  "hand": {
+   "n": 299,
+   "first": 59.9,
+   "top3": 74.9,
+   "found": 84.6
+  },
+  "recorder": {
+   "n": 100,
+   "first": 71.0,
+   "top3": 81.0,
+   "found": 83.0
+  },
+  "all": {
+   "n": 535,
+   "first": 64.5,
+   "top3": 77.6,
+   "found": 84.7
+  },
+  "never seen in tuning": {
+   "n": 231,
+   "first": 62.3,
+   "top3": 77.1,
+   "found": 83.5
+  },
+  "seen in tuning": {
+   "n": 304,
+   "first": 66.1,
+   "top3": 78.0,
+   "found": 85.5
+  }
+ },
+ "pilot as trained": {
+  "prompted": {
+   "n": 136,
+   "first": 66.9,
+   "top3": 77.2,
+   "found": 85.3
+  },
+  "hand": {
+   "n": 299,
+   "first": 57.5,
+   "top3": 68.9,
+   "found": 80.9
+  },
+  "recorder": {
+   "n": 100,
+   "first": 62.0,
+   "top3": 73.0,
+   "found": 77.0
+  },
+  "all": {
+   "n": 535,
+   "first": 60.7,
+   "top3": 71.8,
+   "found": 81.3
+  },
+  "never seen in tuning": {
+   "n": 231,
+   "first": 57.1,
+   "top3": 68.0,
+   "found": 78.4
+  },
+  "seen in tuning": {
+   "n": 304,
+   "first": 63.5,
+   "top3": 74.7,
+   "found": 83.6
+  }
+ },
+ "cleverkeys fine-tuned lr 3e-05": {
+  "prompted": {
+   "n": 136,
+   "first": 72.8,
+   "top3": 83.8,
+   "found": 87.5
+  },
+  "hand": {
+   "n": 299,
+   "first": 66.9,
+   "top3": 80.9,
+   "found": 88.0
+  },
+  "recorder": {
+   "n": 100,
+   "first": 77.0,
+   "top3": 85.0,
+   "found": 87.0
+  },
+  "all": {
+   "n": 535,
+   "first": 70.3,
+   "top3": 82.4,
+   "found": 87.7
+  },
+  "never seen in tuning": {
+   "n": 231,
+   "first": 67.1,
+   "top3": 80.5,
+   "found": 87.4
+  },
+  "seen in tuning": {
+   "n": 304,
+   "first": 72.7,
+   "top3": 83.9,
+   "found": 87.8
+  }
+ },
+ "cleverkeys fine-tuned lr 0.0001": {
+  "prompted": {
+   "n": 136,
+   "first": 75.0,
+   "top3": 83.8,
+   "found": 86.8
+  },
+  "hand": {
+   "n": 299,
+   "first": 70.9,
+   "top3": 80.6,
+   "found": 88.3
+  },
+  "recorder": {
+   "n": 100,
+   "first": 75.0,
+   "top3": 83.0,
+   "found": 86.0
+  },
+  "all": {
+   "n": 535,
+   "first": 72.7,
+   "top3": 81.9,
+   "found": 87.5
+  },
+  "never seen in tuning": {
+   "n": 231,
+   "first": 68.4,
+   "top3": 80.1,
+   "found": 85.7
+  },
+  "seen in tuning": {
+   "n": 304,
+   "first": 76.0,
+   "top3": 83.2,
+   "found": 88.8
+  }
+ },
+ "cleverkeys fine-tuned lr 0.0003": {
+  "prompted": {
+   "n": 136,
+   "first": 73.5,
+   "top3": 82.4,
+   "found": 87.5
+  },
+  "hand": {
+   "n": 299,
+   "first": 69.6,
+   "top3": 80.3,
+   "found": 87.0
+  },
+  "recorder": {
+   "n": 100,
+   "first": 71.0,
+   "top3": 83.0,
+   "found": 86.0
+  },
+  "all": {
+   "n": 535,
+   "first": 70.8,
+   "top3": 81.3,
+   "found": 86.9
+  },
+  "never seen in tuning": {
+   "n": 231,
+   "first": 64.5,
+   "top3": 77.9,
+   "found": 84.4
+  },
+  "seen in tuning": {
+   "n": 304,
+   "first": 75.7,
+   "top3": 83.9,
+   "found": 88.8
+  }
+ },
+ "pilot fine-tuned lr 0.0004": {
+  "prompted": {
+   "n": 136,
+   "first": 65.4,
+   "top3": 78.7,
+   "found": 81.6
+  },
+  "hand": {
+   "n": 299,
+   "first": 66.6,
+   "top3": 78.9,
+   "found": 86.3
+  },
+  "recorder": {
+   "n": 100,
+   "first": 71.0,
+   "top3": 79.0,
+   "found": 84.0
+  },
+  "all": {
+   "n": 535,
+   "first": 67.1,
+   "top3": 78.9,
+   "found": 84.7
+  },
+  "never seen in tuning": {
+   "n": 231,
+   "first": 61.5,
+   "top3": 73.6,
+   "found": 81.0
+  },
+  "seen in tuning": {
+   "n": 304,
+   "first": 71.4,
+   "top3": 82.9,
+   "found": 87.5
+  }
+ },
+ "pilot fine-tuned lr 0.001": {
+  "prompted": {
+   "n": 136,
+   "first": 62.5,
+   "top3": 75.0,
+   "found": 82.4
+  },
+  "hand": {
+   "n": 299,
+   "first": 66.6,
+   "top3": 78.6,
+   "found": 83.9
+  },
+  "recorder": {
+   "n": 100,
+   "first": 61.0,
+   "top3": 72.0,
+   "found": 77.0
+  },
+  "all": {
+   "n": 535,
+   "first": 64.5,
+   "top3": 76.4,
+   "found": 82.2
+  },
+  "never seen in tuning": {
+   "n": 231,
+   "first": 52.8,
+   "top3": 68.4,
+   "found": 77.5
+  },
+  "seen in tuning": {
+   "n": 304,
+   "first": 73.4,
+   "top3": 82.6,
+   "found": 85.9
+  }
+ }
+}

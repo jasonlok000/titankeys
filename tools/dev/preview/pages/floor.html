@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Idle floor options</title>
+<style>
+  @font-face { font-family:Inter; font-weight:700; src:url(inter_bold.otf); }
+  @font-face { font-family:Inter; font-weight:500; src:url(inter_medium.otf); }
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; font-family:Inter, system-ui, sans-serif; color:#EDE6E0; }
+  #top { position:absolute; left:0; right:0; top:0; bottom:56px; padding:14px 16px; box-sizing:border-box; background:#1B1918; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  button { font:600 15px Inter, sans-serif; padding:10px 14px; border-radius:20px; border:1px solid #EF804E; background:transparent; color:inherit; }
+  button.on { background:#EF804E; color:#160A04; }
+  #big { font:700 30px Inter, sans-serif; margin:8px 0 6px; }
+  #note { font:500 14px Inter, sans-serif; opacity:.7; line-height:1.4; }
+  canvas { position:absolute; left:0; bottom:0; width:100vw; height:56px; display:block; }
+</style>
+</head>
+<body>
+<div id="top">
+  <div class="row"><button id="prev">◀ previous</button><button id="next">next ▶</button><button id="full">Full screen</button></div>
+  <div id="big"></div>
+  <div class="row" id="picks"></div>
+  <div class="row" id="widths"></div>
+  <div class="row"><input id="slider" type="range" min="20" max="100" step="5" style="width:100%"></div>
+  <div class="row"><button id="scene">Show the figure walking in</button></div>
+  <div id="note">A still from Bowling at Normal size, in the real bar at the bottom of your screen. The floor is where things land:
+    4 px above the screen's edge. Each option is a 1 dp line, centred, as wide as the % says of the room between the curved corners, with soft ends, and would only show
+    while a game plays. Tap Full screen first.</div>
+</div>
+<canvas id="bar"></canvas>
+<script>
+const BAR = 56, DP = 1, FLOOR = BAR - 2.56;   // CSS px are dp here (Chrome's pixel ratio is the phone's density)
+const OPTIONS = [
+  ["No line (today)", null],
+  ["Cream, faint (30%)", "rgba(255,241,230,0.30)"],
+  ["Cream, medium (55%)", "rgba(255,241,230,0.55)"],
+  ["Cream, full", "rgba(255,241,230,1)"],
+  ["White, full", "rgba(255,255,255,1)"],
+];
+const q = new URLSearchParams(location.search);
+let pick = +(q.get("pick") ?? 2), walking = false, width = +(q.get("width") ?? 100);
+const cv = document.getElementById("bar"), dpr = devicePixelRatio || 1;
+const ORANGE = "#EF804E";
+function figure(c, x, alpha) {
+  c.save(); c.globalAlpha = alpha; c.strokeStyle = ORANGE; c.lineWidth = 1.6; c.lineCap = "round";
+  const foot = FLOOR, hip = foot - 13, neck = hip - 13, head = neck - 4.5;
+  c.beginPath(); c.arc(x, head, 4.5, 0, 7); c.stroke();
+  c.beginPath(); c.moveTo(x, neck); c.lineTo(x, hip); c.moveTo(x, hip); c.lineTo(x - 4, foot); c.moveTo(x, hip); c.lineTo(x + 4, foot);
+  c.moveTo(x, neck + 3); c.lineTo(x + 9, neck + 5); c.moveTo(x, neck + 3); c.lineTo(x - 6, neck + 9); c.stroke(); c.restore();
+}
+function letter(c, ch, x, rot, size, bold) {
+  c.save(); c.font = `${bold ? 700 : 500} ${size}px Inter`; c.fillStyle = "#fff";
+  const m = c.measureText(ch), h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  c.translate(x, FLOOR - h / 2); c.rotate(rot);
+  c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(ch, 0, 0); c.restore();
+}
+function draw() {
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(BAR * dpr);
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = innerWidth;
+  c.fillStyle = "#000"; c.fillRect(0, 0, W, BAR);
+  const [name, colour] = OPTIONS[pick];
+  if (colour) {
+    // Stops before the corners: the curve (100 px radius) reaches about 46 dp in at this height; 16 dp soft ends inside that.
+    const inset = 46, fade = 16, span = (W - 2 * inset) * width / 100, from = (W - span) / 2, to = from + span;
+    const g = c.createLinearGradient(from, 0, to, 0);
+    const f = Math.min(.45, fade / span);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(f, colour); g.addColorStop(1 - f, colour); g.addColorStop(1, "rgba(0,0,0,0)");
+    c.strokeStyle = g; c.lineWidth = DP; c.beginPath(); c.moveTo(from, FLOOR + DP / 2); c.lineTo(to, FLOOR + DP / 2); c.stroke();
+  }
+  figure(c, W * (walking ? 0.12 : 0.19), walking ? 0.55 : 1);
+  // The ball rolling and the knocked-over letters lying on the floor.
+  c.save(); c.strokeStyle = ORANGE; c.lineWidth = 1.6; c.beginPath(); c.arc(W * 0.50, FLOOR - 4, 4, 0, 7); c.stroke(); c.restore();
+  const px = 24;
+  [["h", .70, 0, true], ["3", .735, 1.57, false], ["o", .765, 0, false], ["o", .79, 0, false], ["e", .83, .9, false],
+   ["t", .86, -1.57, true], ["g", .895, 2.2, false], ["y", .925, 1.2, false]].forEach(([ch, x, rot, bold]) => letter(c, ch, W * x, rot, px, bold));
+  document.getElementById("big").textContent = `${pick + 1}: ${name}, ${width}% wide`;
+  document.querySelectorAll("#widths button").forEach(b => b.classList.toggle("on", +b.dataset.w === width));
+  document.getElementById("slider").value = width;
+  document.querySelectorAll("#picks button").forEach((b, i) => b.classList.toggle("on", i === pick));
+  history.replaceState(null, "", `?pick=${pick}&width=${width}`);
+  fetch("/save", { method: "POST", body: JSON.stringify({ page: "floor", pick, name, width }) }).catch(() => {});
+}
+OPTIONS.forEach(([name], i) => {
+  const b = document.createElement("button"); b.textContent = String(i + 1); b.onclick = () => { pick = i; draw(); };
+  document.getElementById("picks").appendChild(b);
+});
+[100, 80, 60, 45, 30].forEach(w => {
+  const b = document.createElement("button"); b.textContent = `${w}%`; b.dataset.w = w; b.onclick = () => { width = w; draw(); };
+  document.getElementById("widths").appendChild(b);
+});
+document.getElementById("slider").oninput = e => { width = +e.target.value; draw(); };
+document.getElementById("prev").onclick = () => { pick = (pick + OPTIONS.length - 1) % OPTIONS.length; draw(); };
+document.getElementById("next").onclick = () => { pick = (pick + 1) % OPTIONS.length; draw(); };
+document.getElementById("scene").onclick = e => { walking = !walking; e.target.textContent = walking ? "Show the figure standing" : "Show the figure walking in"; draw(); };
+document.getElementById("full").onclick = () => document.documentElement.requestFullscreen?.().then(() => setTimeout(draw, 300));
+addEventListener("resize", draw);
+document.fonts.load("700 24px Inter").then(() => document.fonts.load("500 24px Inter")).then(draw);
+</script>
+</body>
+</html>

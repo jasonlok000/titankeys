@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# For a WSL distro without ripgrep: tools/checks only needs "rg -q PATTERN" on piped input. verify.sh and try.sh put
+# this folder on PATH, so this stands in when the real rg is missing.
+args=()
+quiet=""
+for arg in "$@"; do
+  case "$arg" in
+    -q) quiet="-q" ;;
+    *) args+=("$arg") ;;
+  esac
+done
+exec grep -E $quiet -- "${args[@]}"

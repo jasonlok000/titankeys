@@ -70,3 +70,13 @@ test("the two locks are two files", () => {
   expect(lock).not.toMatch(BUILD_LOCK);
   expect(read("tools/phone_lock.py")).toContain('".phone.lock"');
 });
+
+test("every Python script that uses sys or os imports it (the lock split once dropped them from tests/ime-window/run.py)", () => {
+  // The swipe baseline's *_append.py are pieces appended to a script that imports them, not scripts of their own.
+  const missing = all.filter(path => path.endsWith(".py") && !path.endsWith("_append.py")).flatMap(path => {
+    const text = code(path);
+    return ["sys", "os"].filter(name => new RegExp(`(^|[^\\w.])${name}\\.\\w`, "m").test(text)
+      && !new RegExp(`^\\s*(import ([\\w, ]+, )?${name}\\b|from ${name} import)`, "m").test(text)).map(name => `${path}: ${name}`);
+  });
+  expect(missing).toEqual([]);
+});

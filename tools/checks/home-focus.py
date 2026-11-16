@@ -41,9 +41,9 @@ def text_of(field):
 
 
 def centre(text):
-    """The middle of the first view of the app's that shows [text]."""
+    """The middle of the first view of the app's that shows [text], whatever its case: buttons may set their labels in capitals."""
     for node in hierarchy().iter("node"):
-        if node.attrib.get("text") == text and node.attrib.get("package") == APP:
+        if node.attrib.get("text", "").casefold() == text.casefold() and node.attrib.get("package") == APP:
             x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.attrib["bounds"]))
             return (x1 + x2) // 2, (y1 + y2) // 2
     raise SystemExit(f"FAIL: nothing on screen shows {text!r}")

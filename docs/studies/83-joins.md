@@ -177,6 +177,34 @@ So A1 no longer joins at once. Those touches go to the 150 ms check, which glued
 
 **An older case the review's example shows.** If "on" lands already moving beside O, the top-edge rule from before #83 joins it: it left the top row, came back at the top edge nearby, and heads back the other way while moving. The logs don't show it: of 35 kept top-row pairs inside that window, none joined, because their second swipe landed still. A touch within 90 ms and 1.5 keys joins as a flicker whatever it does, by design.
 
+## Phone replay
+
+The Orchestrator ran `83-joins/phone-replay.sh` on main, with the review's fix, on 16 November, screen off. It read 645 pairs three ways with the app's whole recogniser: joined, first alone and second alone. The first word comes out right in:
+
+| | Pairs (645) | First word right |
+|---|---|---|
+| Before #83 | 525 joined | 308 |
+| **Now** | 515 joined | **314** |
+| Now, with an extra lead of 2 in the 150 ms check | 508 joined | 311 |
+
+The 150 ms check of both readings, on the pairs it alone decides:
+
+| | Before #83 | Now | Lead 2 |
+|---|---|---|---|
+| Missed joins found | 6 | 6 | 4 |
+| Pairs the owner kept apart, glued | 2 | 2 | 2 |
+| Wrong joins made | 1 | 1 | 1 |
+
+So #83 as built gains 6 first words, and a stricter lead loses 2 of the missed joins the check finds and stops no glue. The check stays as it is.
+
+**The 2 glued pairs.** What they share:
+- the first word was unsure: it led its runner-up by only 1.0 and 1.2;
+- the second word has 2 letters, and the joined reading 5;
+- the second swipe landed still (0.001 keys/ms or less);
+- the first ended mid-pad (y about 0.5), not on the top row.
+
+What they don't share: one came 10 ms after the first, 7.8 keys away (1.2.0); the other came 132 ms after, 1.5 keys away (2.0.0). The joined reading led by 2.2 and 3.6 more than the first word, so a lead of 2 lets both through, and only a lead of 4 or more would stop them. Two pairs are too few to build a rule on.
+
 ## Reproduce it
 
 In WSL `atlas-build` as `dev`:

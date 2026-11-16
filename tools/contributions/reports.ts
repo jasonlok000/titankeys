@@ -6,7 +6,7 @@
 //   bun tools/contributions/reports.ts open <contributions-x25519.pem> <folder>
 //
 // download writes each sealed part as <report>-<part>-of-<count>.tkr. With --confirm, it then asks the server to delete
-// what it downloaded, but only up to the first report that hasn't arrived whole, so a report still on its way stays.
+// the whole reports it downloaded, so a report still on its way stays, and one that never arrives whole holds back nothing.
 // open joins each whole report's parts, opens them, and writes <report>.zip beside them. The app makes them with
 // android/kotlin/com/titankeys/connected/Reports.kt: one ZIP, split into parts, each sealed as a contribution batch is.
 import { mkdir, readdir } from "node:fs/promises";
@@ -38,14 +38,10 @@ export async function download(address: string, tokenFile: string, folder: strin
     const mine = parts.filter(part => part.report === report);
     return new Set(mine.map(part => part.part)).size === mine[0].count;
   }));
-  let through = 0;
-  for (const part of parts) {
-    if (!whole.has(part.report)) break;
-    through = part.id;
-  }
+  const through = parts.reduce((most, part) => whole.has(part.report) ? Math.max(most, part.id) : most, 0);
   if (confirm && through > 0) {
     const confirmed = await fetch(`${base}/v1/export/reports/confirm`, {
-      method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ through }),
+      method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ through, reports: [...whole] }),
     });
     if (!confirmed.ok) throw new Error(`Deleting reports on the server failed: ${confirmed.status}`);
   }

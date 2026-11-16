@@ -4,7 +4,7 @@ import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { appKey, type Envelope, type Feed, open, problems, sign } from "../announcements/feed";
 import worker, {
-  Cap, CLIENT_DELETES_PER_MINUTE, CLIENT_UPLOADS_PER_MINUTE, DAILY_UPLOADS, folder, KEEP_MILLIS, MAX_BATCH_BYTES, MAX_SHARD_BYTES,
+  Cap, CLIENT_DELETES_PER_MINUTE, CLIENT_REPORT_PARTS_PER_MINUTE, CLIENT_UPLOADS_PER_MINUTE, DAILY_UPLOADS, folder, KEEP_MILLIS, MAX_BATCH_BYTES, MAX_SHARD_BYTES,
   MAX_REPORT_PARTS, MAX_STORED_BYTES, Reports, Shard, SHARDS,
 } from "../../server/contributions/src/worker.js";
 
@@ -307,6 +307,8 @@ describe("bug reports and ideas from the form (#97)", () => {
     expect((await part(env, 1, 2, sealed(300))).status).toBe(204);
     expect(parts(env)).toEqual([{ report: id, part: 0, count: 2, size: 200 }, { report: id, part: 1, count: 2, size: 300 }]);
     expect(env.REPORTS.entry("reports").storage.values.get("bytes")).toBe(500);
+    // The Cap counts what is stored, not what was sent: the replaced part's bytes went back.
+    expect(Object.values(cap(env).storage.values.get("months") as Record<string, number>).reduce((a, b) => a + b, 0)).toBe(500);
     expect(env.REPORTS.entry("reports").storage.alarmAt).not.toBeNull();
     // Reports take places in the same caps as batches.
     expect(cap(env).storage.values.get("uploads")).toBe(3);
@@ -323,10 +325,29 @@ describe("bug reports and ideas from the form (#97)", () => {
     expect(parts(env)).toEqual([]);
   });
 
-  test("the same per-client limit as contributions", async () => {
+  test("a per-client limit of its own, that a report of the most parts fits in twice", async () => {
     const env = server();
-    for (let i = 0; i < CLIENT_UPLOADS_PER_MINUTE; i++) expect((await part(env, i % MAX_REPORT_PARTS, MAX_REPORT_PARTS)).status).toBe(204);
+    // Batches sent in the same minute take nothing from it.
+    const contributor = await folder("2b7e1516-28ae-4d2a-a6d2-abf7158809cf");
+    for (let i = 0; i < CLIENT_UPLOADS_PER_MINUTE; i++) expect((await worker.fetch(post("/v1/batch", sealed(), { "X-Contributor": contributor }), env)).status).toBe(204);
+    expect(CLIENT_REPORT_PARTS_PER_MINUTE).toBeGreaterThanOrEqual(2 * MAX_REPORT_PARTS);
+    for (let i = 0; i < CLIENT_REPORT_PARTS_PER_MINUTE; i++) expect((await part(env, i % MAX_REPORT_PARTS, MAX_REPORT_PARTS)).status).toBe(204);
     expect((await part(env, 0, 1)).status).toBe(429);
+  });
+
+  test("confirming named reports deletes only their parts, so one that never arrives whole holds back nothing", async () => {
+    const env = server();
+    const other = "f".repeat(32);
+    await part(env, 0, 2);
+    await part(env, 0, 2, sealed(), other);
+    await part(env, 1, 2);
+    const confirm = (body: unknown) => worker.fetch(new Request(`${URL_BASE}/v1/export/reports/confirm`, {
+      method: "POST", body: JSON.stringify(body), headers: { Authorization: `Bearer ${TOKEN}` },
+    }), env);
+    expect((await confirm({ through: 3, reports: ["not-an-id"] })).status).toBe(400);
+    expect(await (await confirm({ through: 3, reports: [id] })).json()).toEqual({ deleted: 2 });
+    expect(parts(env)).toEqual([{ report: other, part: 0, count: 2, size: 200 }]);
+    expect(env.REPORTS.entry("reports").storage.values.get("bytes")).toBe(200);
   });
 
   test("the owner exports them, still sealed, and deletes them once exported; nobody else can", async () => {

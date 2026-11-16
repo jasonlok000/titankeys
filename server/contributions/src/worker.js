@@ -33,6 +33,11 @@ const EXPORT_PAGE = 500;
 const DAY_MILLIS = 24 * 60 * 60 * 1000;
 /** A report is split into parts of at most MAX_BATCH_BYTES each, at most this many: a recording zips to a few MB. */
 export const MAX_REPORT_PARTS = 24;
+/**
+ * Report parts a minute from one client, counted apart from batches: a whole report, and one more after a send that broke off,
+ * since Try again sends every part again. Within the uploads limit alone, a report over 20 parts could never arrive.
+ */
+export const CLIENT_REPORT_PARTS_PER_MINUTE = 2 * MAX_REPORT_PARTS;
 /** All reports, together, in their one storage object: under the Free plan's 1 GB per object. */
 export const MAX_REPORT_BYTES = 800 * 1024 * 1024;
 /** Report parts that one export page lists. */
@@ -109,10 +114,11 @@ async function report(request, env) {
   if (body.length > MAX_BATCH_BYTES) return answer(413, { error: "too large" });
   if (body.length <= HEADER_BYTES + TAG_BYTES || MAGIC.some((byte, i) => body[i] !== byte)) return answer(400, { error: "not a sealed report" });
   const now = Date.now();
-  const room = await call(counter(env), "take", { client: await clientKey(request, env), bytes: body.length, now });
+  const room = await call(counter(env), "take", { client: await clientKey(request, env), kind: "report", bytes: body.length, now });
   if (room.result === "busy") return answer(429, { error: "too many requests" });
   if (room.result !== "ok") return answer(503, { error: room.result === "day" ? "daily limit reached" : "storage full" });
   const stored = await call(reports(env), "put", { report: id, part: index, count, now }, body);
+  if (Object.keys(stored.replaced ?? {}).length) await call(counter(env), "free", { months: stored.replaced });
   if (stored.result !== "ok") {
     await call(counter(env), "free", { months: { [monthOf(now)]: body.length } });
     return answer(503, { error: "storage full" });
@@ -161,7 +167,8 @@ async function exporting(request, env, pathname) {
   if (!await owner(request, env)) return answer(404, { error: "not found" });
   const url = new URL(request.url);
   // Reports (#97): GET /v1/export/reports?after=ID lists parts as {id, report, part, count, month, size}; GET
-  // /v1/export/report?id=ID returns one sealed part; POST /v1/export/reports/confirm {through} deletes them up to that ID.
+  // /v1/export/report?id=ID returns one sealed part; POST /v1/export/reports/confirm {through, reports} deletes the
+  // parts of those reports up to that ID; without reports, every part up to it.
   if (request.method === "GET" && pathname === "/v1/export/reports")
     return answer(200, await call(reports(env), "list", { after: Number(url.searchParams.get("after") ?? "0") }));
   if (request.method === "GET" && pathname === "/v1/export/report") {
@@ -169,9 +176,10 @@ async function exporting(request, env, pathname) {
     return new Response(response.body, { status: response.status, headers: { "Content-Type": "application/octet-stream" } });
   }
   if (request.method === "POST" && pathname === "/v1/export/reports/confirm") {
-    const { through } = await request.json();
+    const { through, reports: whole } = await request.json();
     if (!Number.isInteger(through)) return answer(400, { error: "bad request" });
-    const { deleted, months } = await call(reports(env), "delete-through", { through });
+    if (whole !== undefined && !(Array.isArray(whole) && whole.every(report => REPORT_ID.test(report)))) return answer(400, { error: "bad request" });
+    const { deleted, months } = await call(reports(env), "delete-through", { through, reports: whole });
     if (deleted) await call(counter(env), "free", { months });
     return answer(200, { deleted });
   }
@@ -232,7 +240,7 @@ export class Cap {
     const key = `${kind}:${client}`;
     const count = (this.clients.get(key) ?? 0) + 1;
     this.clients.set(key, count);
-    return count <= (kind === "delete" ? CLIENT_DELETES_PER_MINUTE : CLIENT_UPLOADS_PER_MINUTE);
+    return count <= (kind === "delete" ? CLIENT_DELETES_PER_MINUTE : kind === "report" ? CLIENT_REPORT_PARTS_PER_MINUTE : CLIENT_UPLOADS_PER_MINUTE);
   }
 
   async fetch(request) {
@@ -252,7 +260,7 @@ export class Cap {
       return Response.json({ result: "ok" });
     }
     // "take": room for one upload.
-    if (!this.allow(body.client, "upload", now)) return Response.json({ result: "busy" });
+    if (!this.allow(body.client, body.kind === "report" ? "report" : "upload", now)) return Response.json({ result: "busy" });
     const stored = Object.values(recent).reduce((sum, value) => sum + value, 0);
     const day = await this.storage.get("day");
     const uploads = day === today ? (await this.storage.get("uploads")) ?? 0 : 0;
@@ -368,21 +376,25 @@ export class Reports {
       const meta = JSON.parse(request.headers.get("X-Meta") ?? "{}");
       const body = new Uint8Array(await request.arrayBuffer());
       // A part sent again, after a lost answer, takes the place of the first.
-      await this.removeWhere("report = ? AND part = ?", meta.report, meta.part);
+      // Its bytes go back to the Cap too (replaced), which counted them when the first came.
+      const replaced = (await this.removeWhere("report = ? AND part = ?", meta.report, meta.part)).months;
       const used = (await this.storage.get("bytes")) ?? 0;
-      if (used + body.length > MAX_REPORT_BYTES) return Response.json({ result: "full" });
+      if (used + body.length > MAX_REPORT_BYTES) return Response.json({ result: "full", replaced });
       try {
         this.sql.exec("INSERT INTO parts (report, part, count, created, month, size, body) VALUES (?, ?, ?, ?, ?, ?, ?)",
           meta.report, meta.part, meta.count, meta.now, monthOf(meta.now), body.length, body);
       } catch {
-        return Response.json({ result: "full" });
+        return Response.json({ result: "full", replaced });
       }
       await this.storage.put("bytes", used + body.length);
       if (await this.storage.getAlarm() === null) await this.storage.setAlarm(meta.now + DAY_MILLIS);
-      return Response.json({ result: "ok" });
+      return Response.json({ result: "ok", replaced });
     }
     const body = await request.json();
-    if (pathname === "/delete-through") return Response.json(await this.removeWhere("id <= ?", body.through));
+    // A report that never arrives whole (its sender gave up) no longer holds back the ones after it: only the named reports go.
+    if (pathname === "/delete-through") return Response.json(body.reports === undefined
+      ? await this.removeWhere("id <= ?", body.through)
+      : await this.removeWhere("id <= ? AND report IN (SELECT value FROM json_each(?))", body.through, JSON.stringify(body.reports)));
     if (pathname === "/list") {
       const items = this.sql.exec("SELECT id, report, part, count, month, size FROM parts WHERE id > ? ORDER BY id LIMIT ?",
         body.after, REPORT_PAGE + 1).toArray();

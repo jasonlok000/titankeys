@@ -243,15 +243,38 @@ class Script:
     def wait(self, ms):
         self.t += ms
 
-    def text(self):
+    def text(self, touches=True):
+        """The tk-inject script. touches=False leaves the touchpad's events out, for the feed to play (feed_text)."""
+        lines = [line for line in self.lines if touches or line[1] != TOUCHPAD]
         out = ["# tk-inject script, from tools/dev/touch/gestures.py"]
         # Only the devices it uses: where the injector makes twins (see inject.c), an unused one would come and go for nothing.
-        if any(dev == TOUCHPAD for _, dev, *_ in self.lines) or not self.uses_keys:
+        if any(dev == TOUCHPAD for _, dev, *_ in lines) or not self.uses_keys:
             out.append("dev 0 touchPad")
         if self.uses_keys:
             out.append("dev 1 TitanKey")
-        out += [f"{t:.3f} {d} {ty} {c} {v}" for t, d, ty, c, v in self.lines]
+        out += [f"{t:.3f} {d} {ty} {c} {v}" for t, d, ty, c, v in lines]
         return "\n".join(out) + "\n"
+
+    def feed_text(self):
+        """The touchpad's frames for TitanKeys Debug's touch feed (android/debug/recorder/TouchFeed.kt): "D ms x y size" as a
+        finger lands, "M ..." as it moves, "U ms" as it lifts, separated by ";"."""
+        out, frame, down, landing = [], {}, False, False
+        for t, dev, type_, code, value in self.lines:
+            if dev != TOUCHPAD:
+                continue
+            if type_ == EV_KEY and code == BTN_TOUCH:
+                if value:
+                    down, landing = True, True
+                else:
+                    out.append(f"U {t:.1f}")
+                    down = False
+            elif type_ == EV_ABS:
+                frame[code] = value
+            elif type_ == EV_SYN and code == SYN_REPORT and down and ABS_MT_POSITION_X in frame:
+                out.append(f"{'D' if landing else 'M'} {t:.1f} {frame[ABS_MT_POSITION_X]} {frame[ABS_MT_POSITION_Y]} "
+                           f"{frame.get(ABS_MT_TOUCH_MAJOR, 2)}")
+                landing, frame = False, {}
+        return ";".join(out)
 
     # --- Gestures. ---
 
@@ -526,9 +549,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--keymap", help="key=code lines from keymap.sh")
     parser.add_argument("--out", help="where to write the script (default: standard output)")
+    parser.add_argument("--feed-out", help="write the touches here for TitanKeys Debug's touch feed, and only the keys to --out")
     parser.add_argument("gestures", nargs="+")
     args = parser.parse_args()
-    text = build(args).text()
+    script = build(args)
+    text = script.text(touches=not args.feed_out)
+    if args.feed_out:
+        with open(args.feed_out, "w", encoding="utf-8") as out:
+            out.write(script.feed_text())
     if args.out:
         with open(args.out, "w", encoding="utf-8") as out:
             out.write(text)

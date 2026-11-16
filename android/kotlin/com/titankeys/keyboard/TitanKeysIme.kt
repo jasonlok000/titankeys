@@ -865,6 +865,8 @@ class TitanKeysIme : InputMethodService() {
             registerReceiver(idleBarTrigger, IntentFilter(IDLE_BAR_ACTION), RECEIVER_EXPORTED)
             registerReceiver(panelTrigger, IntentFilter(PANEL_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
+            // The touch simulator's events enter where the firmware's do: this window's touchpad path (TouchpadFeedHook).
+            TouchpadFeedHook.dispatch = { event -> window.callback?.dispatchGenericMotionEvent(event) == true }
         }
         updateOverlay()
         loadEmoji()
@@ -4160,6 +4162,8 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onDestroy() {
         editing = false
+        // It holds this keyboard, which must go with it (#85).
+        TouchpadFeedHook.dispatch = null
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null

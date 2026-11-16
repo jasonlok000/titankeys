@@ -168,6 +168,31 @@ tk_touch_play() {
   tk_adb shell "$TK_PHONE_INJECT $TK_PHONE_SCRIPT; s=\$?; rm -f $TK_PHONE_SCRIPT; exit \$s"
 }
 
+# tk_touch_feed KEYS_SCRIPT FEED LAST_MS: the gate, then the touches through TitanKeys Debug's touch feed and the keys through the
+# injector, started together. The feed waits as long as the injector's keyboard twin takes to come (TK_TOUCH_SETTLE_MS) when there
+# are keys, so the two stay in step. TK_TOUCH_SHOT=NAME (TK_TOUCH_SHOT_AT=MS) takes a screenshot meanwhile.
+tk_touch_feed() {
+  local keys_script="$1" events delay=0 keys sleep_s shot_cmd=""
+  events=$(cat "$2")
+  tk_touch_ready || return 1
+  keys=$(grep -c '^[0-9]' "$keys_script")
+  [ "$keys" -gt 0 ] && delay="${TK_TOUCH_SETTLE_MS:-800}"
+  sleep_s=$(awk "BEGIN{print ($3 + $delay)/1000 + .4}")
+  if [ -n "${TK_TOUCH_SHOT:-}" ]; then
+    shot_cmd="sleep $(awk "BEGIN{print (${TK_TOUCH_SHOT_AT:-200} + $delay)/1000}"); screencap -p /data/local/tmp/tk-touch.png;"
+  fi
+  [ "$keys" -gt 0 ] && { tk_adb push -q "$keys_script" "$TK_PHONE_SCRIPT" >/dev/null || return 3; }
+  tk_adb shell "$( [ "$keys" -gt 0 ] && echo "$TK_PHONE_INJECT $TK_PHONE_SCRIPT > /data/local/tmp/tk-touch.log 2>&1 &" ) \
+    am broadcast -n $TK_APP/com.titankeys.keyboard.TouchFeed --es events '$events' --el delay $delay | grep -o 'data=.*'; \
+    $shot_cmd sleep $sleep_s; wait; cat /data/local/tmp/tk-touch.log 2>/dev/null; rm -f /data/local/tmp/tk-touch.log $TK_PHONE_SCRIPT"
+  if [ -n "${TK_TOUCH_SHOT:-}" ]; then
+    mkdir -p "$TK_TOUCH_DIR/shots"
+    tk_adb pull -q /data/local/tmp/tk-touch.png "$TK_TOUCH_DIR/shots/raw-$TK_TOUCH_SHOT.png" >/dev/null
+    tk_adb shell rm -f /data/local/tmp/tk-touch.png
+    tk_touch_shot "$TK_TOUCH_DIR/shots/raw-$TK_TOUCH_SHOT.png"
+  fi
+}
+
 # tk_touch_play through serve.sh's injector, whose twins already exist (so no settle time). Waits for its "played" line.
 tk_serve_play() {
   local in=/data/local/tmp/tk-serve.in log=/data/local/tmp/tk-serve.log path="/data/local/tmp/tk-serve-$$.tki"

@@ -237,6 +237,20 @@ def main():
         result = inject(bad)
         check(result.returncode != 0 and why in result.stderr, f"injector should refuse ({why}): {result.stderr!r}")
 
+    # The feed's frames: one D as the finger lands, M as it moves, U as it lifts, with the same times and positions.
+    script = build("swipe:go", "+120", "key:f:70:rest", keymap=keymap)
+    feed = script.feed_text().split(";")
+    taps = touches(script)
+    want = []
+    for tap in taps:
+        want += ["D"] + ["M"] * (len(tap) - 1) + ["U"]
+    check([f[0] for f in feed] == want, f"feed frames: {[f[0] for f in feed]}")
+    first = feed[0].split()
+    check([float(first[1]), int(first[2]), int(first[3])] == [round(taps[0][0][0], 1), taps[0][0][1], taps[0][0][2]],
+          f"feed's first frame: {first}")
+    keys_only = script.text(touches=False)
+    check("dev 0 touchPad" not in keys_only and "dev 1 TitanKey" in keys_only, "the keys' script still has the touchpad")
+
     serve = subprocess.run([injector, "--serve", "gpio-keys"], capture_output=True, text=True, input="quit\n")
     check(serve.returncode != 0 and "only touchPad and TitanKey" in serve.stderr, f"--serve took another device: {serve.stderr!r}")
 

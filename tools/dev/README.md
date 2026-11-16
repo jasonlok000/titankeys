@@ -85,7 +85,14 @@ What works today and what doesn't (phone run, 2026-11-16):
   sets it again at its next reconfiguration (screen off and on). Until then the twin's heights come out upside down and squeezed,
   so no touch lands on a key. A brief screen recording didn't trigger the reconfiguration. `serve.sh start` keeps one twin of
   each device alive for the whole session instead; after the owner turns the screen off and on once (the tools never do),
-  `serve.sh status` shows whether the twin's height is right, and `touch.sh` plays through it until `serve.sh stop`. Untried.
+  `serve.sh status` shows whether the twin's height is right, and `touch.sh` plays through it until `serve.sh stop`. Tried on
+  2026-11-16: the owner's screen off and on didn't fix the twin's height, so this route is parked.
+- The touch feed is the touchpad route instead: `TK_TOUCH_FEED=1 bash tools/dev/touch/touch.sh ...`. TitanKeys Debug (only;
+  `android/debug/recorder/TouchFeed.kt`, behind the DUMP permission, so only adb can use it) builds the touchpad events a finger
+  makes, with the real `touchPad` device's id and ranges, and hands them to the keyboard's window the way the firmware does. So
+  everything from `Touchpad.accepts` on runs as for a finger: calibration, contacts, swipes and joining, flicks, Space taps,
+  hover and the trail. Keys still come through the keyboard twin, started together. What it skips is only the hardware and the
+  firmware's routing to the keyboard's window. `tools/checks/touch-feed.test.ts` checks that TitanKeys never gets it.
 
 The keys are real, so they type in whatever is in front. Before every gesture and every setup key, `touchlib.sh` checks that
 the screen is awake and unlocked, no navigation app is running, TitanKeys Debug's window is in front and one of its own text

@@ -7,8 +7,10 @@ touch.sh or guarded.sh, which check the front window and the focused field first
 shared phone lock from start to end.
 
 Usage: checks.py [NAME...]   (default: all; see --list)
+       checks.py --batch NAME  (a whole batch unattended, Debug the keyboard throughout; see BATCHES)
 Screenshots go to $TK_OUT/touch/shots, without the status bar, for what only the eye can judge (the dots, the trail, the pill).
 """
+import importlib
 import os
 import re
 import subprocess
@@ -20,6 +22,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.environ.get("TK_APP", "com.titankeys.debug")
 SERIAL = os.environ.get("TK_ADB_SERIAL", "")
 results = []
+# Each result in full, for a batch's report: (name, verdict, detail, shot).
+details = []
 
 
 class Stop(Exception):
@@ -88,6 +92,7 @@ def set_text(text):
 def record(name, ok, detail, shot=None):
     verdict = "YES" if ok is True else "NO" if ok is False else "LOOK"
     results.append((name, verdict))
+    details.append((name, verdict, detail, shot))
     print(f"{verdict:4} {name}: {detail}" + (f" (shots/{shot}.png)" if shot else ""), flush=True)
 
 
@@ -187,6 +192,58 @@ CHECKS = {
 }
 
 
+# Named batches: a module whose BATCH is its checks in order, and optional HANDS (what only the owner's hands can check) and
+# finish() (a tidy end).
+BATCHES = {"chinese-ui": "chinese_checks"}
+
+
+def report(name, stamp, hands):
+    """One file with every result, its shot and what's left for hands: $TK_OUT/touch/report-NAME-STAMP.md."""
+    out = os.path.join(os.environ.get("TK_OUT", os.path.expanduser("~/tk-out")), "touch")
+    os.makedirs(out, exist_ok=True)
+    path = os.path.join(out, f"report-{name}-{stamp}.md")
+    counts = {v: sum(1 for _, each, _, _ in details if each == v) for v in ("YES", "NO", "LOOK")}
+    lines = [f"# {name}, {stamp}", "", f"{counts['YES']} YES, {counts['NO']} NO, {counts['LOOK']} to look at", ""]
+    for check, verdict, detail, shot in details:
+        lines.append(f"- **{verdict}** {check}: {detail}" + (f" (`shots/{shot}.png`)" if shot else ""))
+    if hands:
+        lines += ["", "For the owner's hands:"] + [f"- {each}" for each in hands]
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return path
+
+
+def run_batch(name):
+    """Runs a batch on its own: Debug is the keyboard from the start to the end, and release TitanKeys comes back only then.
+    The gates still run before every gesture. A check that breaks is a NO and the batch goes on; a STOP ends it. The report is
+    written either way."""
+    sys.path.insert(0, HERE)
+    module = importlib.import_module(BATCHES[name])
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    stopped = None
+    keyboard("debug")
+    os.environ["TK_IME_HELD"] = "1"
+    try:
+        for check in module.BATCH:
+            try:
+                check()
+            except Stop:
+                raise
+            except Exception as error:  # noqa: BLE001 (one broken check mustn't end the night's run)
+                record(check.__name__, False, f"the check broke: {error!r}")
+        if hasattr(module, "finish"):
+            module.finish()
+    except Stop as stop:
+        stopped = stop
+        record("batch", None, f"STOP, the run ended: {stop}")
+    finally:
+        os.environ.pop("TK_IME_HELD", None)
+        keyboard("release")
+        path = report(name, stamp, getattr(module, "HANDS", []))
+        print(f"report: {path}", flush=True)
+    return stopped
+
+
 def lock():
     """Holds the phone lock for the whole run (tools/phone_lock.py); the tools this starts see TK_PHONE_LOCKED."""
     sys.path.insert(0, os.path.join(HERE, "../.."))
@@ -200,6 +257,15 @@ def main():
     import guide_checks
     CHECKS.update(guide_checks.CHECKS)
     names = sys.argv[1:]
+    if names[:1] == ["--batch"]:
+        if len(names) != 2 or names[1] not in BATCHES:
+            sys.exit(f"--batch takes one of: {', '.join(BATCHES)}")
+        if os.environ.get("TK_PHONE_LOCKED") != "1":
+            held = lock()  # noqa: F841 (kept open until the end)
+        stopped = run_batch(names[1])
+        failed = sum(1 for _, v in results if v == "NO")
+        print(f"{sum(1 for _, v in results if v == 'YES')} YES, {failed} NO, {len(results)} in all")
+        sys.exit(1 if stopped or failed else 0)
     if names == ["--list"]:
         for name, check in CHECKS.items():
             print(f"{name:20} {check.__doc__.strip().splitlines()[0]}")

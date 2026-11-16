@@ -135,6 +135,17 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - Kazakh uses Russian's keys, with its nine extra letters held on the nearest Russian letter (і on ы).
   - Georgian's Shift gives a key's own second letter, and Georgian has no sentence capitals.
   - Bosnian's and Macedonian's word lists come from film subtitles, so they lean towards everyday speech.
+- **Phone checks, section 1 (tk-screens, Debug from 95f2778), judged by the Orchestrator:**
+  - **Closed, proven by an objective test:** #70, #71, #75, #77, #86, #91, #76, #80, #65. #67 was closed, then reopened:
+    its triple Space slide wasn't checked.
+  - **Open with a status comment:** #73 (swiped words), #97 (Record a bug's Stop; a text overlap), #87 (App info opens
+    after a second denial), #74 (the crash offer hides behind the playground), #79, #69, #72, #90 and #66 (the owner's
+    judgement or hands; #66's title also loses its last word), #81 (the notice: Debug's notifications are off; the folder).
+  - **Fixes assigned:** tk-guide (`claude/m3-guide-fixes`): #66's cut title at the owner's largest font, #87's App info.
+    tk-data (`claude/m3-data-fixes`): #74's hidden offer, #97's overlap, and Reset literally everything leaving setup state
+    behind (it lands on the playground, not Setup).
+  - **Noted:** the guide's paste slide writes the real clipboard, which the owner's clipboard-sync app picked up. Debug's
+    contacts permission is now denied, from the #87 test.
 - **#85's baseline ended at 08:42 on the owner's word** ("my phone is ready now"): 1 h 12 min on battery from the 07:30
   reset, 100% to 89%, 431 mAh drained with the screen on 62 min. Release TitanKeys (2.1, uid 10335): 2.83 mAh, the vibrator
   891 times (19 s), its foreground service the whole screen-on time. The screen-off phone runs (07:55–08:09) fall inside it.

@@ -158,9 +158,19 @@ def check_sym_fn():
 
 
 def check_sym_log():
-    """Why a held Sym opens the panel: TitanKeys Debug logs each Sym it hears (TitanKeysSym, never any text). Prints them."""
-    play("key:sym:900:none", shot="sym-log", at=700)
-    lines = [line for line in adb("logcat", "-d", "-v", "brief").splitlines() if "TitanKeysSym" in line][-8:]
+    """Why a held Sym opens the panel: TitanKeys Debug logs each Sym it hears (TitanKeysSym, never any text). Prints them.
+
+    This firmware keeps apps' info lines out of the log (log.tag is M). A tag's own property comes first, so log.tag.TitanKeysSym
+    lets that one tag through for the check: a debug property, not a setting, gone at the next restart, and cleared here after.
+    """
+    adb("shell", "setprop", "log.tag.TitanKeysSym", "I")
+    if adb("shell", "getprop", "log.tag.TitanKeysSym").strip() != "I":
+        return record("sym-log", None, "the shell may not set log.tag.TitanKeysSym: try a W line or the raw log instead")
+    try:
+        play("key:sym:900:none", shot="sym-log", at=700)
+        lines = [line for line in adb("logcat", "-d", "-v", "brief", "-s", "TitanKeysSym").splitlines() if "TitanKeysSym" in line][-8:]
+    finally:
+        adb("shell", "setprop", "log.tag.TitanKeysSym", "''")
     record("sym-log", None, "the keyboard's own words about the hold (see the shot for what opened):\n      "
            + "\n      ".join(lines or ["(no TitanKeysSym lines in the log)"]), "sym-log")
 

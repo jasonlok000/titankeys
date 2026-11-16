@@ -16,13 +16,12 @@ public final class Swipe {
     private static final float MAX_BREAK_KEYS = 3.5f;
     private static final float MOTION_MILLIS = 40;
     private static final int BREAK_CLUES = 2;
-    /**
-     * A sensor dropout can split a swipe anywhere on the touchpad, not only at its top edge. A touch this soon and this
-     * close that lands already moving is the same finger (#83: 4 of 18 slips found in the saved logs, no kept pair joined).
+    /*
+     * A sensor dropout can also split a swipe mid-pad, but its shape alone doesn't tell it from the next word: of the 9
+     * pairs that a touch landing moving within 150 ms and 2 keys would join, 5 were kept by the owner as two words, 4 of
+     * them two short words (#83 review). Those touches go to Composer's 150 ms check of both readings instead, which
+     * glued none of the 11 separate-word pairs in its replay.
      */
-    private static final long DROPOUT_MILLIS = 150;
-    private static final float DROPOUT_KEYS = 2f;
-    private static final float DROPOUT_SPEED = .004f;
     /**
      * A finger that slides off the edge thins out as it goes, while one that finished a word lifts at full size. After a
      * pause this long, a swipe that ended at this contact size or more was a whole word (#83: 7 of 23 wrong joins cut in
@@ -76,7 +75,6 @@ public final class Swipe {
         float jumpX = (next.x[0] - x[last]) * 10, jumpY = (next.y[0] - y[last]) * 3;
         float[] leaving = motion(false), entering = next.motion(true);
         float speed = (float) Math.sqrt(entering[0] * entering[0] + entering[1] * entering[1]);
-        if (dropout(next.x[0], next.y[0], gapMillis) && speed >= DROPOUT_SPEED) return true;
         if (!topBreak(next.x[0], next.y[0], gapMillis)) return false;
         boolean carriesOn = cosine(leaving[0], leaving[1], jumpX, jumpY) >= .7f;
         boolean reverses = cosine(leaving[0], leaving[1], entering[0], entering[1]) <= -.3f;
@@ -90,18 +88,13 @@ public final class Swipe {
     public boolean couldContinue(float nextX, float nextY, long gapMillis, long flickerMillis) {
         if (gapMillis < 0 || x.length == 0) return false;
         if (flicker(nextX, nextY, gapMillis, flickerMillis)) return true;
-        return topBreak(nextX, nextY, gapMillis) || dropout(nextX, nextY, gapMillis);
+        return topBreak(nextX, nextY, gapMillis);
     }
 
     /** Left the top row and came back at the top edge, nearby. */
     private boolean topBreak(float nextX, float nextY, long gapMillis) {
         int last = x.length - 1;
         return gapMillis <= MAX_BREAK_MILLIS && y[last] < TOP_ROW && nextY < TOP_EDGE && keysTo(nextX, nextY) <= MAX_BREAK_KEYS;
-    }
-
-    /** Landed close by and very soon, anywhere on the touchpad. It must also land moving. */
-    private boolean dropout(float nextX, float nextY, long gapMillis) {
-        return gapMillis < DROPOUT_MILLIS && keysTo(nextX, nextY) <= DROPOUT_KEYS;
     }
 
     private boolean flicker(float nextX, float nextY, long gapMillis, long flickerMillis) {

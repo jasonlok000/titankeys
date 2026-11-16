@@ -61,7 +61,7 @@ print(json.dumps(summary, indent=1))
 
 
 def fixture(path):
-    """The pairs either version could join, every logged join and every missed join, cut to the last 100 ms of the first
+    """The pairs either version could join, every logged join, every missed join and every pair within 150 ms, cut to the last 100 ms of the first
     swipe and the first 100 ms of the second: all the joining checks look at, and too little of a path to spell a word."""
     lines = {}
     for line in open(points_path):
@@ -72,18 +72,18 @@ def fixture(path):
            '# Tails of real swipe pairs from the saved logs (see docs/studies/83-joins.md). Built by confirm.py.']
     for pair, f in lines.items():
         r = by_pair[pair]
-        if not (r['joined'] or r['label'] == 'missed join' or old[pair][0] or new[pair][0]):
+        # Every pair within 150 ms too: those the keyboard leaves to its check of both readings, kept to show they
+        # aren't joined by their shape (#83 review).
+        if not (r['joined'] or r['label'] == 'missed join' or old[pair][0] or new[pair][0] or 0 <= r['gap'] <= 150):
             continue
         gap, end_contact, na, nb = f[1], f[2], int(f[3]), int(f[4])
         pts = [tuple(map(float, f[5 + i * 3:8 + i * 3])) for i in range(na + nb)]
         a, b = pts[:na], pts[na:]
+        # Swipe.motion reaches one point past its 40 ms window, which can be further back than 100 ms when the samples
+        # are sparse, so each tail keeps one point beyond its 100 ms.
         a_end = a[-1][2]
-        a = [p for p in a if a_end - p[2] <= 100] or a[-1:]
-        if len(a) < 2:
-            a = pts[max(0, na - 2):na]
-        b = [p for p in b if p[2] - b[0][2] <= 100] or b[:1]
-        if len(b) < 2:
-            b = pts[na:na + 2]
+        a = a[max(0, min(i for i, p in enumerate(a) if a_end - p[2] <= 100) - 1):]
+        b = b[:max(i for i, p in enumerate(b) if p[2] - b[0][2] <= 100) + 2]
         t0 = a[0][2]
         a = [(x, y, t - t0) for x, y, t in a]
         tb = b[0][2]

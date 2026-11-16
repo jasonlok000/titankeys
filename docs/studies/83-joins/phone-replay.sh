@@ -6,7 +6,9 @@
 #   bash /mnt/x/Atlas/.claude/worktrees/<this worktree>/docs/studies/83-joins/phone-replay.sh
 #
 # It's CPU only on the phone: it adds no input, doesn't touch the keyboard or its settings, and waits for the shared
-# phone lock (~/build/tk-tools/.lock) like the other replays. It runs about 1,800 readings; allow 10 to 20 minutes.
+# phone lock (~/build/tk-tools/.lock) like the other replays. It runs about 1,950 readings; allow 10 to 20 minutes.
+# The report also runs Composer's 150 ms check of both readings on every pair within 150 ms ("check joins ..."), as
+# before #83, now, and with a stricter lead of 2, so it shows whether the check glues quick separate words.
 # It leaves the runner's models in /data/local/tmp/tk-baseline, as the baseline replays do.
 # Output: ~/build/joins83/replay-report.json, numbers only. Paste that file's contents into the report.
 set -euo pipefail

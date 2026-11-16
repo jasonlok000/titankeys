@@ -29,7 +29,8 @@ test("Send feedback and Record a bug open the form, with no GitHub row", () => {
   expect(feedback).toContain("result.data.build === \"debug\"");
   expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt"))
     .toContain('check(HapticsLab.available(activity)) { "Crash TitanKeys is only in TitanKeys Debug" }');
-  expect(read("tools/checks/feedback.sh")).toContain("android.intent.action.SENDTO -d mailto:");
+  // The phone check follows: its rows open the form, not a mail app (tools/checks/feedback.py).
+  expect(read("tools/checks/feedback.py")).not.toContain("mailto");
 });
 
 test("the form has the owner's kinds, sends only on Send, and offers email when it can't send", () => {

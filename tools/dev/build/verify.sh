@@ -113,8 +113,9 @@ if grep -q 'com.titankeys.debug' <<<"$services"; then
   fi
 else
   echo "SKIP ime-window, preview and home-focus: TitanKeys Debug isn't turned on in Accessibility"
-  # Opening the browser depends on what else is on screen, so give this check a second try.
-  step screens bash -c 'export APP=com.titankeys.debug; (bash tools/checks/about.sh && bash tools/checks/feedback.sh) || (adb shell input keyevent HOME; sleep 4; bash tools/checks/about.sh && bash tools/checks/feedback.sh)'
+  # A page can open slowly behind whatever else is on screen, so give this check a second try. Home is pressed only while
+  # TitanKeys Debug is in front (tools/checks/phone.py), never into another app.
+  step screens bash -c 'export APP=com.titankeys.debug; (bash tools/checks/about.sh && bash tools/checks/feedback.sh) || (python3 tools/checks/phone.py home || true; sleep 4; bash tools/checks/about.sh && bash tools/checks/feedback.sh)'
 fi
 bash "$H/keyboard.sh" >/dev/null 2>&1
 

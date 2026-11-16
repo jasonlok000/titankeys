@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Checks the language framework without a phone: the input method file, the registry, the switch overlay, the accent picker,
+# the word lists and the engine interface, then every input method in android/assets/im (docs/languages.md).
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
+stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+keyboard=android/kotlin/com/atlas/keyboard
+"$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" \
+  "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" "$keyboard/InputMethods.kt" "$keyboard/WordList.kt" "$keyboard/Layout.kt" \
+  android/kotlin/com/atlas/connected/Json.kt tests/languages/LanguageChecks.kt
+java -cp "$work:$stdlib" com.atlas.keyboard.LanguageChecksKt android/assets/im

@@ -25,6 +25,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Türkçe",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_tr__legacy.combined"
   }

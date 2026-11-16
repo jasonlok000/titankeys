@@ -23,6 +23,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Deutsch",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_de__legacy.combined"
   }

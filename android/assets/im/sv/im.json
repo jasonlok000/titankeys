@@ -22,6 +22,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Svenska",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_sv.combined"
   }

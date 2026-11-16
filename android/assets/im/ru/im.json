@@ -49,6 +49,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Русский",
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_russian.kcm",
     "words": "main_ru.combined"

@@ -21,6 +21,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Norsk bokmål",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_nb.combined"
   }

@@ -3,6 +3,7 @@ package com.titankeys.keyboard
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.titankeys.engine.TypingSettings
 
 /**
@@ -69,10 +70,28 @@ internal class Languages(
         val index = InputMethodList.index(context)
         val setting = TypingSettings.inputMethods(context)
         on = index.on(setting)
-        androidSays(android())
-        val wanted = index.current(setting, TypingSettings.currentInputMethod(context)).id
-        if (wanted != target) use(wanted)
+        // A restore writes the setting but not Android's list of enabled entries, which only Settings kept the same: the
+        // keyboard does it too, once per process and after any change, so Android can switch to the restored one.
+        if (setting != enabledFor) {
+            enabledFor = setting
+            InputMethodList.enable(context, on.map { it.id })
+        }
+        val picked = sync.heard(android())
+        saveSync()
+        val choice = InputMethodChoice.atFieldStart(index, setting, TypingSettings.currentInputMethod(context), picked)
+        if (choice.id == picked) TypingSettings.currentInputMethod(context, picked)
+        val line = "Input method at field start: ${choice.id} (${choice.why})" +
+            if (englishOnly) "; this field types English: the guide or the playground" else ""
+        if (line != lastLogged) {
+            lastLogged = line
+            Log.i(LOG_TAG, line)
+        }
+        if (choice.id != target) use(choice.id)
     }
+
+    /** The input methods' setting Android's enabled entries were last made to match, in this process. */
+    private var enabledFor: String? = null
+    private var lastLogged: String? = null
 
     /**
      * Android says its keyboard list's entry is [id]: as the keyboard starts, or when it was picked there. A pick of an input
@@ -132,9 +151,11 @@ internal class Languages(
                 InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
             }
             main.post {
+                if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded: ${words?.size ?: 0} words, engine ${method?.engine ?: "none"}")
                 if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, engine)
                 else {
                     engine?.stop()
+                    Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
                     apply(InputMethod.ENGLISH, null, ticket)
                 }
             }
@@ -158,6 +179,9 @@ internal class Languages(
 
 /** Where [KeyboardListSync]'s entry is kept: Android's list is this phone's, so it isn't in the backup. */
 internal const val KEYBOARD_LIST = "keyboard_list"
+
+/** The log tag for which input method types and why: `adb logcat -s TitanKeysIM`. */
+internal const val LOG_TAG = "TitanKeysIM"
 private const val SYNCED = "synced"
 
 /** How long an engine's input method may take to start before the bar says it's getting ready. */

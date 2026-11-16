@@ -33,11 +33,17 @@
     <string name="im_ga" translatable="false">Gaeilge</string>
     <string name="im_eu" translatable="false">Euskara</string>
     <string name="im_nn" translatable="false">Norsk nynorsk</string>
+    <string name="im_bs" translatable="false">Bosanski</string>
+    <string name="im_sr_latn" translatable="false">Srpski</string>
     <string name="im_ru" translatable="false">Русский</string>
     <string name="im_uk" translatable="false">Українська</string>
     <string name="im_be" translatable="false">Беларуская</string>
     <string name="im_bg" translatable="false">Български</string>
     <string name="im_el" translatable="false">Ελληνικά</string>
+    <string name="im_sr" translatable="false">Српски</string>
+    <string name="im_mk" translatable="false">Македонски</string>
+    <string name="im_kk" translatable="false">Қазақ тілі</string>
+    <string name="im_ka" translatable="false">ქართული</string>
     <string name="im_yue_yale" translatable="false">耶魯拼音</string>
     <string name="im_yue_jyutping" translatable="false">粵拼</string>
     <string name="im_zh_pinyin" translatable="false">漢語拼音</string>

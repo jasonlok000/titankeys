@@ -279,6 +279,24 @@
   "engine": null
  },
  {
+  "id": "bs",
+  "name": "Bosanski",
+  "nameEnglish": "Bosnian",
+  "label": "BS",
+  "locale": "bs",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "sr-latn",
+  "name": "Srpski",
+  "nameEnglish": "Serbian, Latin",
+  "label": "SR",
+  "locale": "sr-Latn",
+  "script": "Latn",
+  "engine": null
+ },
+ {
   "id": "ru",
   "name": "Русский",
   "nameEnglish": "Russian",
@@ -321,6 +339,42 @@
   "label": "EL",
   "locale": "el",
   "script": "Grek",
+  "engine": null
+ },
+ {
+  "id": "sr",
+  "name": "Српски",
+  "nameEnglish": "Serbian, Cyrillic",
+  "label": "СР",
+  "locale": "sr",
+  "script": "Cyrl",
+  "engine": null
+ },
+ {
+  "id": "mk",
+  "name": "Македонски",
+  "nameEnglish": "Macedonian",
+  "label": "MK",
+  "locale": "mk",
+  "script": "Cyrl",
+  "engine": null
+ },
+ {
+  "id": "kk",
+  "name": "Қазақ тілі",
+  "nameEnglish": "Kazakh",
+  "label": "KK",
+  "locale": "kk",
+  "script": "Cyrl",
+  "engine": null
+ },
+ {
+  "id": "ka",
+  "name": "ქართული",
+  "nameEnglish": "Georgian",
+  "label": "KA",
+  "locale": "ka",
+  "script": "Geor",
   "engine": null
  },
  {

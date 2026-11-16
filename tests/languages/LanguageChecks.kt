@@ -87,6 +87,10 @@ private fun keysTypeTheirLetters() {
     same("Turkish capital i has its dot", tr.letter('i', shift = true), "İ")
     val ka = InputMethod.ENGLISH.copy(id = "ka", locale = "ka", keys = mapOf('w' to InputMethod.KeyLetters("წ", "ჭ")))
     same("Georgian Shift gives another letter", ka.letter('w', shift = true), "ჭ")
+    val kaRules = ka.copy(keys = mapOf('w' to InputMethod.KeyLetters("წ", "ჭ"), 'a' to InputMethod.KeyLetters("ა")),
+        rules = InputMethod.Rules(capitalise = false))
+    same("Georgian Shift keeps a letter with no Shift letter, never Mtavruli", kaRules.letter('a', shift = true), "ა")
+    same("Georgian Shift letter still typed", kaRules.letter('w', shift = true), "ჭ")
 }
 
 private fun accentsKeepTheirOrderAndCase() {
@@ -232,10 +236,11 @@ private fun everyInputMethodInTheFolder(folder: File) {
         check("${method.id}: its word list has words", read.size > 1000) { "${read.size}" }
         check("${method.id}: at most 100,000 words", read.size <= 100_000) { "${read.size}" }
         check("${method.id}: at most 4 MB", list.length() <= 4_000_000) { "${list.length()}" }
-        // Every letter the list uses often can be typed: from a key, or held on one.
+        // Every letter the list uses often can be typed: from a key, with Shift where Shift gives another (Georgian), or held on one.
         val typable = HashSet<String>()
         for (key in 'a'..'z') {
             typable += method.letter(key, false) ?: key.toString()
+            method.keys?.get(key)?.shift?.let { typable += it }
             typable += method.accentsOf(key, false)
         }
         val counts = HashMap<String, Int>()

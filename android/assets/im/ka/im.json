@@ -1,0 +1,51 @@
+{
+  "id": "ka",
+  "name": "ქართული",
+  "nameEnglish": "Georgian",
+  "label": "KA",
+  "locale": "ka",
+  "script": "Geor",
+  "keys": {
+    "a": "ა",
+    "b": "ბ",
+    "c": "ც/ჩ",
+    "d": "დ",
+    "e": "ე",
+    "f": "ფ",
+    "g": "გ",
+    "h": "ჰ",
+    "i": "ი",
+    "j": "ჯ/ჟ",
+    "k": "კ",
+    "l": "ლ",
+    "m": "მ",
+    "n": "ნ",
+    "o": "ო",
+    "p": "პ",
+    "q": "ქ",
+    "r": "რ/ღ",
+    "s": "ს/შ",
+    "t": "ტ/თ",
+    "u": "უ",
+    "v": "ვ",
+    "w": "წ/ჭ",
+    "x": "ხ",
+    "y": "ყ",
+    "z": "ზ/ძ"
+  },
+  "accents": {},
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "keys": "keyboard_layout_georgian.kcm",
+    "words": "kat_newscrawl_2016_1M-words.txt"
+  }
+}

@@ -156,6 +156,16 @@ class ConnectionEditor(
 
     override fun delete(word: Boolean, selectionStart: Int, selectionEnd: Int): Int? {
         val connection = connection() ?: return null
+        // One batch edit, so the app can't change the text between what the delete reads and what it takes away.
+        connection.beginBatchEdit()
+        return try {
+            deleteInBatch(connection, word, selectionStart, selectionEnd)
+        } finally {
+            connection.endBatchEdit()
+        }
+    }
+
+    private fun deleteInBatch(connection: InputConnection, word: Boolean, selectionStart: Int, selectionEnd: Int): Int? {
         connection.finishComposingText()
         val meta = if (word) KeyEvent.META_CTRL_ON else 0
         if (selectionStart >= 0 && selectionEnd >= 0 && selectionStart != selectionEnd) {

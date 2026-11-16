@@ -20,6 +20,12 @@ py=${PY:-$HOME/build/apostrophe-venv/bin/python3}
 for f in attempts.jsonl pairs.jsonl new-rule.txt replay-out.jsonl context-phone-pairs.jsonl; do
   [ -s "$P/$f" ] || { echo "Missing $P/$f: run run.sh, phone-replay.sh and phone_context.py first"; exit 2; }
 done
+# replay.sh compiles the engine against onnxruntime's classes from $TK_ORT and doesn't stop on a compile error: without
+# the jar it would push a broken runner to the phone. Check first. (On the maintainer's machine it's in .dev.)
+. "$repo/tools/dev/env.sh"
+[ -s "$TK_ORT/onnxruntime-android-1.20.0-classes.jar" ] || {
+  echo "Missing $TK_ORT/onnxruntime-android-1.20.0-classes.jar: set TK_ORT, e.g. TK_ORT=/mnt/x/Atlas/.dev/swipe-baseline/ort"; exit 2; }
+export TK_ORT
 mkdir -p "$C"
 # 1. The readings to make (no words: the session has no text).
 "$py" -I "$here/combine.py" export "$capture" "$repo" "$C"

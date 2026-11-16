@@ -241,7 +241,33 @@ For comparison, the down veto at its fixed 0.001 loses 0 and cuts 2: +0.47.
 - with weights and thresholds from the logs;
 - nested leave-one-out on the session alone.
 
-The session has no text before, so its context margin opens a sentence. *Pending the phone replay.*
+The session has no text before, so its context margin opens a sentence. It ran on 2026-11-16, CPU only, under the phone lock.
+
+**The session, with weights and thresholds from the logs:** the fair test, since nothing was fitted on the session. 39 breaks the rule joins, 24 false joins. Each cell gives breaks lost / false joins cut, then the net per 1,000 swipes at the logs' everyday rates.
+
+| model | 0% | 1% | 2% | 5% | 10% |
+|---|---|---|---|---|---|
+| down alone | 0 / 8, +2.88 | 0 / 10, **+3.60** | 1 / 12, +2.25 | 1 / 12, +2.25 | 1 / 12, +2.25 |
+| micro | 0 / 2, +0.72 | 1 / 8, +0.81 | 2 / 15, +1.26 | 6 / 18, −5.95 | 11 / 21, −15.24 |
+| micro + fit | 0 / 2, +0.72 | 1 / 10, +1.53 | 1 / 13, +2.61 | 5 / 18, −3.88 | 8 / 22, −8.66 |
+| micro + fit + context | 0 / 6, +2.16 | 0 / 8, +2.88 | 2 / 16, +1.62 | 5 / 20, −3.16 | 9 / 21, −11.09 |
+| fit + context | 0 / 3, +1.08 | 0 / 3, +1.08 | 0 / 3, +1.08 | 1 / 8, +0.81 | 3 / 12, −1.90 |
+
+**The session on its own** (nested leave-one-out on its 63 joins):
+
+- The richer models overfit so few gaps: micro + fit + context loses 6 of 39 breaks at every budget (−3.79).
+- Micro alone loses 2 and cuts 20 (+3.06).
+- Down alone loses 1 and cuts 10 (+1.53).
+- Fit + context alone loses 1 and cuts 8 (+0.81).
+
+**So the context model and the fit don't beat the down veto.**
+
+- **On the logs,** the best combination is +0.7 per 1,000 swipes better than the down veto at the same budget, which is 3 pairs.
+- **Carried to the session,** the down veto from the logs is as good as or better than every combination at every budget.
+- **On their own, without geometry,** the readings and the context cut few false joins: 3 to 8 of 24 here, 4 to 7 of 37 in the logs.
+- **The down veto is the only rule that comes out ahead in all three views.** At its fixed 0.001 it loses 0 of 39 breaks and cuts 7 of 24 false joins here, and loses 0 of 346 right joins and cuts 2 of 37 wrong joins in the logs.
+
+The recommendation stands: the down veto at 0.001, with no real break lost.
 
 ## Limits
 

@@ -29,6 +29,9 @@ const parents: Record<string, string> = {
   "/settings/guide-boring": "/settings/guide",
   "/settings/whats-new": "/settings/about",
   "/settings/licences": "/settings/about",
+  // English's spelling and Chinese's characters open from their language's page (app/settings/languages/language.tsx).
+  "/settings/spelling": "/settings/languages",
+  "/settings/chinese": "/settings/languages",
 };
 
 /**

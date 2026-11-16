@@ -1,7 +1,7 @@
 import { Row, Screen, Section, navigate, useSnapshot } from "ink";
 import { chevronRight } from "ink/icons";
-import { type InputMethodEntry, type Language, type State, state } from "../../lib/titankeys";
-import { Note } from "../../lib/note";
+import { type InputMethodEntry, type Language, type State, state } from "../../../lib/titankeys";
+import { Note } from "../../../lib/note";
 
 /** The most input methods on at once: the switcher's places, W to O (InputMethod.MAX_ON). */
 export const MAX_ON = 8;
@@ -54,7 +54,7 @@ export default function LanguagesPage() {
   if (result.status !== "ready") return <Screen title={title} subtitle={subtitle} />;
   const rows = languagesOf(result.data);
   const on = languagesOn(result.data);
-  const open = (row: LanguageRow) => navigate({ path: "/settings/language", params: { language: row.language.id } });
+  const open = (row: LanguageRow) => navigate({ path: "/settings/languages/language", params: { language: row.language.id } });
   const row = (each: LanguageRow) => <Row key={each.language.id} title={each.language.name}
     subtitle={each.on.length > 1 ? each.on.map(im => im.name).join(", ") : languageSubtitle(each.language)}
     endIcon={chevronRight} onPress={() => open(each)} />;

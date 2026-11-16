@@ -175,7 +175,8 @@ class TitanKeysIme : InputMethodService() {
      */
     private var symDown: KeyEvent? = null
     /** The held Sym opened the overlay, so its release does nothing more. */
-    private var symHeldOpen = false
+    /** Where the current Sym press is: waiting for a hold, or the switcher it opened or closes ([SymPress]). */
+    private val symPress = SymPress()
     private val symHeld = Runnable { openSwitchOverlay() }
     /** In Smart Launcher's search field the Back service hears the keys first and takes them for the keyboard. See [updateKeyWatch]. */
     private var watchingKeys = false
@@ -1361,7 +1362,7 @@ class TitanKeysIme : InputMethodService() {
         heldLetter = null
         main.removeCallbacks(symHeld)
         symDown = null
-        symHeldOpen = false
+        symPress.reset()
         closePicker()
         // Text an engine was building belongs to the field before.
         if (::languages.isInitialized) languages.engine?.reset()
@@ -3434,24 +3435,24 @@ class TitanKeysIme : InputMethodService() {
         if (keyCode == pickerKey && event.repeatCount > 0) return true
         val open = openPicker()
         if (keyCode == KeyEvent.KEYCODE_SYM) {
-            if (open is LanguagePicker.Switch) {
-                if (event.repeatCount == 0) closePicker()
-                pickerKey = keyCode
-                return true
+            // Sym is never the picker's key: a held Sym's repeats and its release belong to [symPress] (the next Sym stuck).
+            val press = symPress.press(event.repeatCount, open is LanguagePicker.Switch) {
+                val whyNot = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
+                    inGuide, field.exact, pendingInput.size)
+                if (whyNot != null) symLog("Sym won't wait for a hold: $whyNot")
+                whyNot == null
             }
-            if (symDown != null) return true
-            if (event.repeatCount > 0) return false
-            val whyNot = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
-                inGuide, field.exact, pendingInput.size)
-            if (whyNot != null) {
-                symLog("Sym won't wait for a hold: $whyNot")
-                return false
+            when (press) {
+                SymPress.Press.Close -> closePicker()
+                SymPress.Press.Swallow -> {}
+                SymPress.Press.Usual -> return false
+                SymPress.Press.Wait -> {
+                    symDown = KeyEvent(event)
+                    val millis = TypingSettings.holdSymbolMillis(this).toLong()
+                    symLog("Sym waits ${millis} ms for a hold, ${languages.on.size} input methods on")
+                    main.postDelayed(symHeld, millis)
+                }
             }
-            symDown = KeyEvent(event)
-            symHeldOpen = false
-            val millis = TypingSettings.holdSymbolMillis(this).toLong()
-            symLog("Sym waits ${millis} ms for a hold, ${languages.on.size} input methods on")
-            main.postDelayed(symHeld, millis)
             return true
         }
         if (open == null || event.repeatCount > 0 || Modifiers.isModifier(keyCode)) return false
@@ -3743,12 +3744,15 @@ class TitanKeysIme : InputMethodService() {
 
     /** Sym held for the hold time: the overlay, with every input method that's on over W to O. */
     private fun openSwitchOverlay() {
-        if (symDown == null || !editing) {
-            symLog("Sym held, but no overlay: ${if (symDown == null) "already let go" else "not editing"}")
+        if (!editing) {
+            symLog("Sym held, but no overlay: not editing")
+            return
+        }
+        if (!symPress.held()) {
+            symLog("Sym held, but no overlay: already let go")
             return
         }
         symLog("Sym held: the input method overlay opens")
-        symHeldOpen = true
         haptics.play(Haptic.HeldSymbol)
         val on = InputMethodIndex.group(languages.on)
         showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), languages.current.id))
@@ -3759,14 +3763,14 @@ class TitanKeysIme : InputMethodService() {
      * sooner, its press now goes on as Sym always does, and then its release.
      */
     private fun symReleased(): Boolean {
-        val down = symDown ?: return false
+        val release = symPress.release()
+        if (release == SymPress.Release.NotMine) return false
+        val down = symDown
         symDown = null
         main.removeCallbacks(symHeld)
-        symLog("Sym let go after ${SystemClock.uptimeMillis() - down.downTime} ms: ${if (symHeldOpen) "the overlay stays" else "Sym as usual"}")
-        if (symHeldOpen) {
-            symHeldOpen = false
-            return true
-        }
+        symLog("Sym let go${down?.let { " after ${SystemClock.uptimeMillis() - it.downTime} ms" }.orEmpty()}: " +
+            if (release == SymPress.Release.Kept) "the switcher's" else "Sym as usual")
+        if (release == SymPress.Release.Kept || down == null) return true
         // Taken as a key that the keyboard handled, so its release stays here too, as any Sym's does.
         consumedKeys += down.keyCode
         if (pendingInput.isNotEmpty()) enqueue(KeyEvent(down)) {
@@ -4001,12 +4005,13 @@ class TitanKeysIme : InputMethodService() {
         if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
         if (lockedKeys.remove(keyCode)) return true
         if (editing && chineseKeyUp(keyCode)) return true
+        // Sym's release always ends its press first, so the next Sym is never swallowed ([SymPress]).
+        if (keyCode == KeyEvent.KEYCODE_SYM && symReleased()) return true
         // The release of a key that picked from the picker, or closed it, belongs to that.
         if (keyCode == pickerKey) {
             pickerKey = -1
             return true
         }
-        if (keyCode == KeyEvent.KEYCODE_SYM && symReleased()) return true
         // Published before the take-back, so the guide hears the letter let go too soon.
         val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
         Recording.sink?.key(event, touchpad.isGestureKey(event))

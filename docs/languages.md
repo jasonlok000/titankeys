@@ -258,11 +258,11 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 Languages, then input methods, the Gboard way (owner, 2026-11-16). Settings' Languages section has one row, Languages,
 with the names of the ones that are on.
 
-**Languages** (`app/settings/languages.tsx`):
+**Languages** (`app/settings/languages/index.tsx`):
 - Every language, grouped by script; the ones that are on sit at the top in the switcher's order. Each row shows its
   English name, with "· experimental" for every language but English and Chinese (F: draft), or the input methods that
   are on when it has several.
-- **A language's page** (`app/settings/language.tsx`, the route's `language` parameter): its input methods, each with a
+- **A language's page** (`app/settings/languages/language.tsx`, the route's `language` parameter): its input methods, each with a
   switch, and its own options: English's Spelling, Chinese's Characters. An experimental language says once, under its
   name, what that means (F: draft).
 - English can't be turned off while it's the only one.

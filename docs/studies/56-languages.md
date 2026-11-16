@@ -260,7 +260,8 @@ Library sizes (arm64, stripped):
 | `rime_test` (test program, `c++_static`) | 3.36 MB | 1.38 MB |
 
 TitanKeys stores native libraries uncompressed in the APK (as the 1.2.0 APK shows), so the library adds 4.5 MB. Its
-`libc++_shared.so` must come from an NDK at least as new as Rime's; otherwise build Rime with `c++_static` (1 MB more).
+`libc++_shared.so` comes from NDK r27c (`native/build.sh`), and it must be at least as new as the NDK Rime is built with. So
+the app's build of Rime uses r27c, or `c++_static` (1 MB more). NDK 29 already links with 16 KB pages, as Android 15+ wants.
 
 ### The schemas
 
@@ -366,6 +367,34 @@ At `~/build/lang/rime-test/`, with a README and the exact adb commands for the M
 It runs from `/data/local/tmp/tk-rime-test` and is deleted afterwards. It wasn't run on the phone or under an emulator: an
 Android binary needs Android's linker and libraries, which qemu-user in WSL doesn't have, and WSL has no root to install an
 emulator. The PC build of the same program, with the same data, gives the results above.
+
+## Calls to confirm
+
+Calls made tonight, for the owner to confirm or change:
+1. **Word list source:** AOSP's own list wherever it has one (24 languages, Apache-2.0); HeliBoard's Leipzig lists (CC BY 4.0)
+   for the rest. Lists cut to their 100,000 most common words, without next-word pairs.
+2. **Accents:** CLDR's main letters for each language, plus any letter its word list uses often (Afrikaans' ê ë, for
+   instance), in CLDR's order.
+3. **Cyrillic and Greek:** each country's standard layout on the key positions, as Android does for a USB keyboard, with
+   the letters that don't fit on 26 keys on holds. Bulgarian uses the phonetic layout. Typing by sound (as the earlier plan
+   said) stays an option for later.
+4. **Ranking:** 43 languages in (a); Korean, Vietnamese and Thai in (b); right-to-left, Indic and Japanese in (c), not in
+   3.0.
+5. **Order:** Spanish, French, German first; then the big Latin languages; Chinese alongside; then Cyrillic and Greek; then
+   the rest of (a); Korean and Vietnamese if time allows.
+6. **Portuguese** is one input method with Brazil and Portugal as spellings, like English's. Norwegian Bokmål and Nynorsk
+   are two input methods, since they're two written languages.
+7. **Everything included in the app,** no downloads: about 160 MB against Play's 200 MB.
+8. **Rime without plugins** (no Lua, no grammar model, no prediction), to keep it small.
+9. **Rime's C++ runtime shared** with TitanKeys' `libc++_shared.so` (saves 1 MB), if the NDK versions allow.
+10. **Chinese schemas trimmed:** no reverse lookups (Mandarin inside Cantonese, stroke, Cangjie), no emoji choices.
+11. **Yale as its own input method** (`tk_yale`), from CanCLID's patch, without the patch's extra preedit display.
+12. **Variants:** Cantonese Hong Kong uses rime-cantonese's own set; Taiwan uses Taiwan characters for Cantonese and Taiwan
+    characters plus phrases for Mandarin.
+13. **rime-cantonese's long-phrase list kept** (6 MB more in the APK than without it).
+14. **Compiled tables ship** and are copied out on first use (40 MB on the phone), rather than compiled on the phone.
+15. **Simplified Mandarin uses luna_pinyin converted to Simplified** for now; rime-ice or rime-frost (GPL-3.0) are the
+    candidates for its own list if the owner finds the choices off.
 
 ## How to rebuild
 

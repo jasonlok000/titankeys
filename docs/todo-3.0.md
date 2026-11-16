@@ -74,6 +74,22 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **main at 58ce707 (03:50) has all of M1 and #83's rule.** It passes `bun run check` (222), all 41 test suites, the join
   checks and the Debug build. The phone checklist for the evening, or whenever the phone is free, is in the Orchestrator's
   scratchpad, `m1-phone-checks.md`.
+- **M2 merged into main at b6d042d (04:35):**
+  - F's words pass: every M1 draft replaced, and the overflowing guide lines shortened.
+  - #90:
+    - a flat thumb with steps 1, 2, HOLD replaces the ghost finger;
+    - misses say "That's X, not Y";
+    - one action per key step;
+    - a far swipe is shown against its word's path at 1.2 keys;
+    - slides and misses go in the raw log.
+  - were/we're: "were" becomes "we're" above 2.0 nats (3.0 with Only fix when sure). It makes no wrong change on any test
+    set, including Tatoeba's counts, and Backspace puts it back.
+  - The conflict between F's blocked-line wording and #90's "That's X, not Y" lines went to #90's, since the pattern is
+    the owner's. F polishes #90's new lines after the rename.
+  - Tests pass: check, guide, guide-decor, gesture-line, gesture-render, word-menu, back, key-alignment, autocorrect,
+    words, and the build.
+- **Next:** the #81 rename, brought up to date with main by tk-data. Then the language framework (tk-languages) and Rime
+  (tk-gestures) merge the renamed main into their branches.
 - **M2, started 03:50, on code that doesn't need the phone:**
   - tk-data: #81's code rename first, then each worker merges main in.
   - tk-languages: the language framework, generic Latin languages, Settings > Languages with English spelling inside

@@ -93,8 +93,11 @@ class BackupActivity : Activity() {
         val pairs = WordPairBackup.all(this).map { BackupFile.WordPair(it.first, it.next, it.count, it.lastUsed) }
         val contents = BackupFile.Contents(version(), AppBuild.kind(this), LocalDate.now().toString(),
             BackupFile.included(preferences, debug), words, pairs)
+        // The whole file is ready before the old one is opened, as "wt" empties it: a backup that fails to build never
+        // touches the file it would replace.
+        val bytes = BackupFile.write(contents).toByteArray()
         val output = contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Could not open the backup file")
-        output.use { it.write(BackupFile.write(contents).toByteArray()) }
+        output.use { it.write(bytes); it.flush() }
         runOnUiThread { complete(DONE_BACKUP) }
     }
 
@@ -161,7 +164,10 @@ class BackupActivity : Activity() {
             val file = File(cacheDir, WORDS_FILE)
             try {
                 file.writeText(BackupFile.jsonText(words))
-                engine { done -> typing.importConfig(Uri.fromFile(file), done) }?.let { throw BackupFile.Problem(it) }
+                // The words are saved even when the engine only failed to refresh its dictionary: the restart at the end does
+                // that, so the restore goes on.
+                engine { done -> typing.importConfig(Uri.fromFile(file), done) }
+                    ?.takeUnless { it == BackupFile.WORDS_NEED_RESTART }?.let { throw BackupFile.Problem(it) }
             } finally {
                 file.delete()
             }

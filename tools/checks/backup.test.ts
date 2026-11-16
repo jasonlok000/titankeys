@@ -110,3 +110,22 @@ test("everything restore writes is on disk before the restart: commit(), never a
   // TypingSettings.contactNames(context, value) writes with apply(), so restore doesn't call it.
   expect(restore).not.toMatch(/TypingSettings\.contactNames\(this,/);
 });
+
+test("a restore goes on when the words were saved and only the dictionary refresh failed (review)", () => {
+  // The engine's text and ours must stay the same, or a restore would stop after the words again.
+  const message = backup.match(/const val WORDS_NEED_RESTART = "([^"]+)"/)![1];
+  expect(read("android/kotlin/com/titankeys/engine/SwipeTyping.java")).toContain(`failure = "${message}";`);
+  const all = activity.slice(activity.indexOf("private fun restoreAll("));
+  expect(all).toMatch(/importConfig\(Uri\.fromFile\(file\), done\) \}\s+\?\.takeUnless \{ it == BackupFile\.WORDS_NEED_RESTART \}\?\.let \{ throw/);
+  // After the words come the settings, the pairs and the restart, in that order.
+  expect(all.indexOf("WORDS_NEED_RESTART")).toBeLessThan(all.indexOf("editor.commit()"));
+  expect(all.indexOf("editor.commit()")).toBeLessThan(all.indexOf("WordPairBackup.put("));
+  expect(all.indexOf("WordPairBackup.put(")).toBeLessThan(all.indexOf("restart()"));
+});
+
+test("a backup is built in full before the file it replaces is opened (review)", () => {
+  const backUp = activity.slice(activity.indexOf("private fun backUp("), activity.indexOf("private fun engineWords("));
+  expect(backUp.indexOf("val bytes = BackupFile.write(contents).toByteArray()")).toBeGreaterThan(-1);
+  expect(backUp.indexOf("val bytes = BackupFile.write(contents)")).toBeLessThan(backUp.indexOf('openOutputStream(uri, "wt")'));
+  expect(backUp).toContain("output.use { it.write(bytes); it.flush() }");
+});

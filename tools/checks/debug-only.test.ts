@@ -81,7 +81,7 @@ test("the release manifest has exactly the expected components", () => {
   // Ink adds one more when it builds: its MainActivity, exported as the launcher. Its com.vandam.ink.InkLightSdkReceiver, the
   // Light Phone SDK's marker, is taken out by tools/ink/titankeys.patch. See the audit and its re-audit.
   expect(components(manifest())).toEqual([
-    { tag: "activity", name: "com.vandam.ink.LearningTransferActivity", exported: "false" },
+    { tag: "activity", name: "com.vandam.ink.BackupActivity", exported: "false" },
     { tag: "activity", name: "com.vandam.ink.ContactsPermissionActivity", exported: "false" },
     { tag: "activity", name: "com.atlas.keyboard.ShareDisclosureActivity", exported: "false" },
     { tag: "activity", name: "com.atlas.keyboard.BackDisclosureActivity", exported: "false" },
@@ -96,6 +96,7 @@ test("the release manifest has exactly the expected components", () => {
     { tag: "service", name: "com.atlas.connected.ConnectedJob", exported: "false" },
     { tag: "receiver", name: "com.atlas.connected.NewsReceiver", exported: "false" },
     { tag: "receiver", name: "com.atlas.keyboard.BugStopReceiver", exported: "false" },
+    { tag: "provider", name: "com.atlas.keyboard.CrashKeeper", exported: "false" },
     { tag: "provider", name: "com.atlas.keyboard.BugRecordingProvider", exported: "false" },
   ]);
   // The two exported services answer only the system: binding them needs its own permission.

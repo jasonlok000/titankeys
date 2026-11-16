@@ -2,6 +2,8 @@ package com.vandam.ink
 
 import android.app.Activity
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,6 +29,7 @@ import com.atlas.keyboard.AppBuild
 import com.atlas.keyboard.BackDisclosureActivity
 import com.atlas.keyboard.BackService
 import com.atlas.keyboard.EnterKey
+import com.atlas.keyboard.CrashReport
 import com.atlas.keyboard.ExactTyping
 import com.atlas.keyboard.FixedScale
 import com.atlas.keyboard.GuideActivity
@@ -39,6 +42,7 @@ import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.Keys
 import com.atlas.keyboard.Layout
+import com.atlas.keyboard.Mail
 import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneChecks
 import com.atlas.keyboard.PhoneSetup
@@ -145,6 +149,44 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             activity.contentResolver.registerContentObserver(Settings.Secure.getUriFor(setting), false, keyboardSettings)
         // Settings load without waiting for the swipe engine; tell them when it finishes loading.
         typing.whenReady { _, _, _ -> publishState() }
+        offerCrashReport()
+    }
+
+    /**
+     * The crash offer (#74), once, as the app opens after a crash or freeze: email the report, or let it go. Either way the
+     * report is deleted, and nothing is ever sent by itself.
+     */
+    private fun offerCrashReport() {
+        Thread {
+            CrashReport.forgetLent(activity)
+            val report = CrashReport.pending(activity) ?: return@Thread
+            activity.runOnUiThread {
+                if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                val version = installedVersion()
+                val froze = CrashReport.froze(report)
+                // F's lines (docs/words-m1.md, #74).
+                android.app.AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle(if (froze) "TitanKeys froze last time." else "TitanKeys crashed last time.")
+                    .setMessage("Sorry about that. Email us the report so we can fix it? It has the error and the versions, " +
+                        "nothing you typed. It's only sent if you send it.")
+                    .setPositiveButton("Email it") { _, _ ->
+                        val (file, name) = CrashReport.lend(activity, report)
+                        val subject = if (froze) "TitanKeys freeze, $version" else "TitanKeys crash, $version"
+                        val body = (if (froze) "What were you doing when it froze?" else "What were you doing when it crashed?") +
+                            "\n\n\nThe report is attached. It has the error and the versions, nothing you typed."
+                        if (!Mail.attach(activity, subject, body, file, name, "text/plain")) {
+                            activity.getSystemService(ClipboardManager::class.java)
+                                .setPrimaryClip(ClipData.newPlainText("TitanKeys crash report", report))
+                            // F: draft, for a phone with no mail app.
+                            android.widget.Toast.makeText(activity, "No mail app here. The report is copied: send it to ${Mail.ADDRESS}.",
+                                android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .setNegativeButton("No thanks") { _, _ -> CrashReport.clear(activity) }
+                    .setOnCancelListener { CrashReport.clear(activity) }
+                    .show()
+            }
+        }.start()
     }
 
     private fun syncPreview() {
@@ -263,23 +305,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     Snippets.remove(activity, data.getString("shortcut"))
                     "null"
                 }
-                "transferSnippets" -> {
-                    check(!transferring) { "A transfer is already open." }
-                    val mode = data.getString("mode")
-                    require(mode == "import" || mode == "export")
-                    transferring = true
-                    try {
-                        LearningTransferActivity.start(activity, mode == "export", snippets = true) { transferred, error ->
-                            transferring = false
-                            if (error == null) complete(NativeResult.Success(transferred.toString()))
-                            else operationResult(error, complete)
-                        }
-                    } catch (error: Exception) {
-                        transferring = false
-                        throw error
-                    }
-                    null
-                }
                 "addWord" -> {
                     typing.addWord(data.getString("word")) { error -> operationResult(error, complete) }
                     null
@@ -296,15 +321,16 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     typing.clearDictionary { error -> operationResult(error, complete) }
                     null
                 }
-                "transferLearning" -> {
-                    check(!transferring) { "An export or import is already open." }
+                // Settings > Your words > Back up everything and Restore (#65). A whole restore restarts TitanKeys, so it never answers.
+                "backup" -> {
+                    check(!transferring) { "A backup or restore is already open." }
                     val mode = data.getString("mode")
-                    require(mode == "import" || mode == "export")
+                    require(mode == "backup" || mode == "restore")
                     transferring = true
                     try {
-                        LearningTransferActivity.start(activity, mode == "export") { transferred, error ->
+                        BackupActivity.start(activity, mode == "backup") { done, error ->
                             transferring = false
-                            if (error == null) complete(NativeResult.Success(transferred.toString()))
+                            if (error == null) complete(NativeResult.Success(JSONObject.quote(done ?: "")))
                             else operationResult(error, complete)
                         }
                     } catch (error: Exception) {
@@ -312,6 +338,19 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                         throw error
                     }
                     null
+                }
+                // Send feedback (#74): the mail app, with our address. "false" if the phone has none.
+                "mail" -> Mail.compose(activity, data.getString("subject"), data.getString("body")).toString()
+                "copyText" -> {
+                    activity.getSystemService(ClipboardManager::class.java)
+                        .setPrimaryClip(ClipData.newPlainText(data.getString("label"), data.getString("text")))
+                    "null"
+                }
+                // Send feedback's Crash TitanKeys, so the crash offer can be tested. TitanKeys Debug only.
+                "crash" -> {
+                    check(HapticsLab.available(activity)) { "Crash TitanKeys is only in TitanKeys Debug" }
+                    pressHandler.post { throw IllegalStateException("Crash TitanKeys, from Send feedback in TitanKeys Debug") }
+                    "null"
                 }
                 "exportRawLog" -> {
                     check(RawLog.available(activity)) { "The typing log is only in TitanKeys Debug" }

@@ -242,15 +242,6 @@ export async function removeSnippet(shortcut: string) {
   await state.refresh();
 }
 
-/** Opens the file picker. Returns false if the picker was cancelled. */
-export async function transferSnippets(mode: "import" | "export") {
-  try {
-    return await callNative("atlas", "transferSnippets", { mode }, { timeoutMs: 600_000 }) === "true";
-  } finally {
-    if (mode === "import") await state.refresh();
-  }
-}
-
 export async function addWord(word: string) {
   try {
     await atlas("addWord", { word });
@@ -291,14 +282,31 @@ export async function clearWords() {
   }
 }
 
-export async function transferLearning(mode: "import" | "export") {
+/**
+ * Settings > Your words > Back up everything and Restore (#65). Opens the file picker. Returns what was done: "backup", or for an
+ * old Export words or Export snippets file, "words" or "snippets"; "" if the picker was cancelled. A whole backup's restore
+ * restarts TitanKeys on its result page, so it never returns.
+ */
+export async function backup(mode: "backup" | "restore"): Promise<"backup" | "words" | "snippets" | ""> {
   try {
-    const result = await callNative("atlas", "transferLearning", { mode }, { timeoutMs: 600_000 });
-    return result === "true" ? mode : null;
+    return JSON.parse(await callNative("atlas", "backup", { mode }, { timeoutMs: 600_000 }));
   } finally {
-    if (mode === "import") await state.refresh();
+    if (mode === "restore") await state.refresh();
   }
 }
+
+/** Our address for feedback (#74). Every public contact address is this one. */
+export const FEEDBACK_ADDRESS = "titankeys@everyones-niche.com";
+
+/** Opens the mail app to FEEDBACK_ADDRESS. False if the phone has no mail app. */
+export async function sendMail(subject: string, body: string) {
+  return await atlas("mail", { subject, body }) === "true";
+}
+
+export const copyText = (label: string, text: string) => atlas("copyText", { label, text });
+
+/** Crashes TitanKeys on purpose, to test the crash offer. TitanKeys Debug only. */
+export const forceCrash = () => atlas("crash");
 
 /**
  * Opens the lab's screen: a practice field, the haptics the keyboard really plays as you type, and an editor and notes for each

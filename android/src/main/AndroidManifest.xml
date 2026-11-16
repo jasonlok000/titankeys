@@ -25,7 +25,7 @@
     <!-- Opted in, apps play their own keyboard-dismiss animation on back and never pass back on. -->
     <application android:enableOnBackInvokedCallback="false">
         <activity
-            android:name="com.vandam.ink.LearningTransferActivity"
+            android:name="com.vandam.ink.BackupActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
@@ -113,6 +113,13 @@
         <receiver
             android:name="com.atlas.keyboard.BugStopReceiver"
             android:exported="false" />
+        <!-- The crash offer (#74): keeps the last crash's report on the phone from the moment the process starts, and lends it
+             read-only to the mail app when the user emails it. -->
+        <provider
+            android:name="com.atlas.keyboard.CrashKeeper"
+            android:authorities="${applicationId}.crashkeeper"
+            android:exported="false"
+            android:grantUriPermissions="true" />
         <provider
             android:name="com.atlas.keyboard.BugRecordingProvider"
             android:authorities="${applicationId}.bugrecording"

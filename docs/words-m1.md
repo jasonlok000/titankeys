@@ -219,3 +219,47 @@ The address everywhere: titankeys@everyones-niche.com. No GitHub row (owner: "no
 | Body | Sorry about that. Email us the report so we can fix it? It has the error and the versions, nothing you typed. It's only sent if you send it. |
 | Button | Email it |
 | Second button | No thanks |
+
+## Owner's notes from the phone, 01:52
+
+### Every slide shows only its own line
+
+I read all 15 lines on their own. One leans on the slides before it:
+
+| Place | Today | New |
+| --- | --- | --- |
+| `SYM_LINE` | Sym has the rest, terms & conditions apply | Sym has all the symbols, terms & conditions apply |
+
+It keeps its first letter S and its & gap. The rest stand alone as they are, including the triple tap slide's
+`GRAB_LINE` ("Grab my whole heart with three taps", whose words to grab are in the line itself) and `HOLD_SYMBOL_LINE` ("Are you
+even reading this?", a jab that works without "Read the fine print" above it). The cursor slide's new line is in #66 above, and its
+target is inside it.
+
+### The ∞ slide says Enter
+
+↓ sits on Enter and steps to the next page.
+
+| Place | Today | New |
+| --- | --- | --- |
+| `symgroups` stage 1 | Press Sym, then swipe up for the next page. | Press Sym, then Enter for the next page. |
+| `WEIRD_HUNT` hint | It's not on the first page. Swipe up. | It's not on the first page. Press Enter. |
+| `symgroups` praise | Up or down turns pages. The bottom row, groups. | Enter turns pages, and so does swiping on the keys. |
+
+### Swipes on a panel happen on the keys
+
+Places I found that tell people to swipe on the Sym, emoji or clipboard pages, and the line for each. Quick settings and the
+clown, paste and clipboard slides don't mention swiping, so they stay.
+
+| Place | Today | New |
+| --- | --- | --- |
+| GuideSteps.kt, Sym praise (`used and 4 != 0`) | The bottom row works too. Up or down turns pages. | The bottom row works too. So does swiping up or down on the keys. |
+| GuideSteps.kt, Sym praise (`else`) | Up or down turns pages. The bottom row, groups. | Swipe up or down on the keys for pages. The bottom row, groups. |
+| GuideSteps.kt, Sym praise (`used and 2 == 0`) | Backspace and Enter turn pages too. | (stays) |
+| Boring guide, "The Sym panel" | …For more, swipe up or down on the keys, or press Backspace or Enter. Swipe left or right to change group, or put your finger on the bottom row and slide to one. | …For more, swipe up or down on the keys, or press Backspace or Enter. Swipe left or right on the keys to change group, or put your finger on the bottom row and slide to one. |
+| Boring guide, "Emoji" | …Swipe up or down for more, and left or right to change group… | …Swipe up or down on the keys for more, and left or right to change group… |
+| Boring guide, "The clipboard" (add after "a few to a page.") | | Swipe up or down on the keys for more, and left or right for Pinned. |
+| strings.xml, `clipboard_description` | …Swipe up or down for more, and left or right for Pinned… | …Swipe up or down on the keys for more, and left or right for Pinned… |
+| SymPanel.kt, the panel's spoken description | …Swipe left or right to change the group, or put a finger on the bottom row of keys. | …Swipe left or right on the keyboard to change the group, or put a finger on the bottom row of keys. |
+
+The boring guide's "Move the cursor" topic says "Slide left or right" after two taps on Space. That slide is on the keys already,
+since the finger stays on Space, so it stays.

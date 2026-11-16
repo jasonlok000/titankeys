@@ -1,5 +1,7 @@
 # TitanKeys 2.1: to-do list
 
+**2.1.0 has been the full release since 2026-11-16. This list is history now; the live one is [todo-3.0.md](todo-3.0.md).**
+
 What's done, what's in progress, what's waiting and on whom. The orchestrating session keeps this up to date, checked against
 test-2.1h's history and the workers' branches, not from memory. Decisions and their reasons are in
 [owner-decisions-2.1.md](owner-decisions-2.1.md). Last checked: 2026-11-13, 07:35.

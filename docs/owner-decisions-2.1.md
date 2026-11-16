@@ -725,3 +725,35 @@ What the owner asked for, what's decided and by whom, and what's still open. The
 - **Version numbers** (owner, 2026-11-14): 2.1 is where things stabilise, the first polished, designed and complete state. A big version brings core new features, a small version minor adjustments and tweaks, and X.Y.1 quick fixes. 3.0 is the launch version, and everything in it is done before launch. (Owner)
 - **Questions up front on every issue** (owner, 2026-11-14: "For every issue, write a comment for starting on questions and decisions that I have to answer before you can start and finish on your own unattended end to end. I'll ans straight on the issue itself."). (Owner) Each 3.0 issue gets a comment of questions, each with a default.
 
+
+## 3.0: the owner's answers on the issues (2026-11-16)
+
+The owner answered the questions on GitHub; anything skipped takes the issue's default. (Owner) unless marked.
+
+- **2.1.0 is the full release** (owner: "2.1.0 becomes full release now because I've tested it already. dailydrivable with the bugs to be fixed at 3.0"). Marked latest on GitHub, #55 closed. Everything left is 3.0: "study now for those that require study. code for those that you can already start", proposed as one overnight unattended job.
+- **#65 backup:** every default (word pairs in, clipboard out; a plain file; settings replaced, lists merged; Settings > Data gets Back up everything and Restore; no automatic backups).
+- **#66 steering target:** the field shows only the slide's own line. "Steer" is being replaced (#90), so the target is the word in its place, about one word left of the cursor, picked by the Orchestrator once F's line exists ("the master chat will decide").
+- **#67 the word menu's keys:** named "I/K" and "O/L", and Back "P/Backspace" (owner: "name it sth like I/K and O/L"), in the guide, the boring guide and the Haptics descriptions.
+- **#68 hunts:** 10 s, 20 s, 30 s, the same for the ∞ and the clown.
+- **#70 leaving the guide:** only the navigation bug ("It's just a navigation/UX bug rn. making me like i'm stuck unless I finish the guide"). Every way out lands on the playground once setup is done; no change to the end's lines and no share offer. Fixed together with #71.
+- **#72 Sym and fn:** a step in the setup before the guide only, skippable with a warning; not on the front page. A slide that needs a skipped key says so in one line, with no button.
+- **#73 its/it's:** every default, and were/we're is an offer only for now. Study whether the context model can change were/we're when it's very sure (owner: "investigate how we could possibly use the context model to change were/we're when we're highly certain").
+- **#74 feedback:** email only, no GitHub row ("just send a email... no need git"). The crash offer, yes. The address titankeys@everyones-niche.com is set up. Public addresses switch to it (default).
+- **#75 other phones:** the warning once, on first launch, in the guide's humour (F). The guide stays as it is.
+- **#76 language label:** waits for the languages work (#56).
+- **#77 hold default:** every default (Medium, 400 ms; untouched settings move too).
+- **#78 Save and capitals:** to discuss in chat first.
+- **#79 Accessibility disclosure:** every default; plain, no "Trust me bro".
+- **#80 American first:** yes, but after languages, as a new language menu may replace the page.
+- **#81 off Atlas:** every default (a clean rename; tell users in all four places; X:\TitanKeys; `titankeys-build`). The folder and WSL moves need a time with no session running.
+- **#82 tools into the repo:** every default.
+- **#83 joined swipes:** a study first: "do a deep dive in the logs to find out how we can join swipes more smartly and distinguish. discover more rules to join."
+- **#84 hover after a press:** (a), the pill stays until the touchpad next reports, one rule for the pill and the word's colour.
+- **#85 battery and leaks:** every default. The baseline day still needs the owner's phone off the charger.
+- **#86 bar text size:** every default.
+- **#87 contact names:** last in Quick setup; people already set up use Settings > Setup.
+- **#89 long flick:** it was a normal flick, cursor at the end, nothing selected. No cap anywhere; "take as long as it takes", keeping today's speed-up, since any real action stops the dots.
+- **#90 the guide for first-timers:** a refinement, not a rework. The instruction stays where it is. "Steer" goes from the guide, the chapter name and the drawings included. Clear from the first try, with no help that ramps up after misses. Timed help and Skip stay. A flat drawing of the Elite's keys and Space with a thumb replaces the ghost finger from the first try, the taps lighting 1, 2, held. No video. The rest of the issue's defaults stand, including "that's an X, not a Y" and one run with a first-time user before 3.0 ships.
+- **#91 AUTO:** "if it is already in the dictionary, it shd have priority": a phone name never changes a word the dictionary has, and only adds words it doesn't. The base list already writes WhatsApp, YouTube, IKEA and ESPN with their capitals. A word you saved beats both.
+- **#92, #94, #95:** "Not always happening, monitor." No work until they show again; then Record a bug, or the time.
+- **#93:** a new swipe takes priority over the delete's dots.

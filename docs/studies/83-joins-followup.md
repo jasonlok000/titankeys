@@ -90,6 +90,8 @@ Everything is leave-one-out, the threshold too. Each pair is judged by weights a
 
 ## 4. A recording session
 
+The owner swiped it on 2026-11-16, captured from the touchpad: [`83-joins-capture.md`](83-joins-capture.md).
+
 [`83-joins-recording.md`](83-joins-recording.md), about 10 minutes in TitanKeys Debug with the typing log on:
 
 - top-row pairs at a normal pace (elephant ontario, you were, type quite, write it and 11 more), three times each;

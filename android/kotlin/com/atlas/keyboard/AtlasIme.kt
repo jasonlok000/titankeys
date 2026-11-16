@@ -3124,7 +3124,7 @@ class AtlasIme : InputMethodService() {
                 // An engine that failed to load takes no swipe: the bar says why, instead of the swipe vanishing without a word.
                 showSwipeUnavailable()
                 composer.swipe(letterSpace(outcome.points).also { TouchSizes.attach(it, outcome.points) }, outcome.startedAt,
-                    outcome.endedAt, modifiers.metaState)
+                    outcome.endedAt, modifiers.metaState, endContact(outcome.points))
                 modifiers.consume()
             }
             is Contact.Outcome.Tap -> {

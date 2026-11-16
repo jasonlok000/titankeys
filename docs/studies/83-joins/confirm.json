@@ -1,0 +1,23 @@
+{
+ "pairs": 2306,
+ "pairs whose decision changes": 19,
+ "counts": {
+  "headline": 9,
+  "missed joins": 18,
+  "missed joins joined": 4,
+  "others": 666,
+  "others joined": 5,
+  "right joins": 380,
+  "right joins cut": 1,
+  "right joins cut 2.x": 1,
+  "right non-joins": 1120,
+  "unclears": 58,
+  "unclears cut": 2,
+  "unclears cut 2.x": 2,
+  "wrong join episodes": 46,
+  "wrong join episodes cut": 7,
+  "wrong joins": 64,
+  "wrong joins cut": 7,
+  "wrong joins cut 2.x": 7
+ }
+}

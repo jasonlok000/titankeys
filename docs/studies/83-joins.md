@@ -130,13 +130,39 @@ The rest of the wrong joins (the ones inside 150 ms with an unclear first word) 
 3. **The recorded set of top-row word pairs** from the issue ("you were", "type quite", "write it"), at normal pace. It checks the finding that today's window already keeps them apart, and it gives labelled pairs with no guessing.
 4. **Missed joins in the middle of the pad.** A1 rests on 4 cases. A short session swiping long words fast across the middle rows would show how often the sensor drops a finger there.
 
+## Built
+
+The Master took the issue's default, "lose none of the right joins", so the build has two rules:
+
+- **Join more (A1).** A touch that lands still moving (0.004 keys/ms or more over its first 40 ms), under 150 ms after the last swipe and 2 keys or less from where it ended, joins wherever it is on the pad. In `Swipe.couldContinue` (where it lands and when) and `Swipe.sameStroke` (how it moves).
+- **Join less (C6).** Over 150 ms after the last swipe, a swipe that ended with a full-size touch doesn't join: a mean of 2 sensor steps or more over its last 60 ms. The size comes from `Sample.step`, the same `round(getSize() × 255)` the study read from the log. `Composer` and `SwipePieces` pass it to `Swipe.sameStroke`. When the size isn't known, it's left out.
+- Left out: the "over 150 ms after a clear word" half of C7. It loses 4 right joins.
+
+On every saved pair, run with the final `Swipe.java` against the one before (`confirm.py`):
+
+| | Count |
+|---|---|
+| Right joins lost | 1 of 380 (it hadn't changed the word) |
+| Wrong joins cut | 7 of 64 (7 of 46 episodes), all in the 2.0 and 2.1 logs |
+| Unclear joins cut | 2 of 58 |
+| Missed joins found | 4 of 18 |
+| Pairs the owner kept apart, now joined | 0 of 1,120 |
+| Other pairs now joined (one word was corrected) | 5 of 666 |
+| Headline, rough | +9 prompted first tries (a ceiling: it assumes each change gets the word right) |
+
+`tests/swipe/joins.sh` checks the rules on hand-made swipes, and pins these counts on `tests/swipe/join-pairs.txt`: the 614 pairs either version could join, every logged join and every missed join. Each pair keeps only the last 100 ms of the first swipe and the first 100 ms of the second, which is all the joining checks read, and gives the same decision as the whole pair. No words are in it.
+
+Only the phone can show whether the joins it adds and cuts give the word the owner kept. `83-joins/phone-replay.sh` reads every one of those pairs three ways with the app's recogniser and scores them.
+
 ## Reproduce it
 
 In WSL `atlas-build` as `dev`:
 
 ```bash
-bash docs/studies/83-joins/run.sh ~/tk-data/rawlog-20261111-1548/rawlog/raw-log-20261111-154845.jsonl
+OLD_SWIPE=old-Swipe.java bash docs/studies/83-joins/run.sh ~/tk-data/rawlog-20261111-1548/rawlog/raw-log-20261111-154845.jsonl
 ```
+
+`old-Swipe.java` is `Swipe.java` from before the rule, saved on Windows with `git show 93eb16d:android/kotlin/com/atlas/engine/Swipe.java`. Add `FIXTURE=tests/swipe/join-pairs.txt` to write the fixture again.
 
 | File | Does |
 |---|---|
@@ -144,6 +170,8 @@ bash docs/studies/83-joins/run.sh ~/tk-data/rawlog-20261111-1548/rawlog/raw-log-
 | `83-joins/pairs.py` | Finds and labels every pair, and measures it |
 | `83-joins/JoinReplay.java` | Runs the app's `Swipe.couldContinue` and `Swipe.sameStroke` on each pair |
 | `83-joins/rules.py` | Replays the rules and writes the counts |
+| `83-joins/confirm.py` | Compares the final `Swipe.java` with the one before on every pair, and writes the test fixture |
+| `83-joins/replay_pairs.py`, `83-joins/phone-replay.sh` | The phone replay of every pair that could join |
 | `83-joins/report.json` | The counts from the run above |
 
 The scripts live here, not with the baseline tools in `.dev/swipe-baseline/tools`, because that folder isn't in the repo and the Master reviews this branch. They read the baseline's `rawlog.py` and `build.py` from there (set `BASELINE_TOOLS` to move it).

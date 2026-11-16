@@ -4,6 +4,7 @@
 - Run `bun run check`, then the tests for the parts that you changed:
   - Words and suggestions: `bash tests/words/run.sh`
   - Emoji: `bash tests/emoji/run.sh`
+  - Swipe joining (no phone needed): `bash tests/swipe/joins.sh`
   - Swipe recognition: `bash tests/swipe/run.sh`
   - Swipe preview: `bash tests/preview/run.sh`
   - Keyboard show and hide: `python3 tests/ime-window/run.py <app package>`

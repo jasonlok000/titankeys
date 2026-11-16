@@ -16,6 +16,20 @@ public final class Swipe {
     private static final float MAX_BREAK_KEYS = 3.5f;
     private static final float MOTION_MILLIS = 40;
     private static final int BREAK_CLUES = 2;
+    /**
+     * A sensor dropout can split a swipe anywhere on the touchpad, not only at its top edge. A touch this soon and this
+     * close that lands already moving is the same finger (#83: 4 of 18 slips found in the saved logs, no kept pair joined).
+     */
+    private static final long DROPOUT_MILLIS = 150;
+    private static final float DROPOUT_KEYS = 2f;
+    private static final float DROPOUT_SPEED = .004f;
+    /**
+     * A finger that slides off the edge thins out as it goes, while one that finished a word lifts at full size. After a
+     * pause this long, a swipe that ended at this contact size or more was a whole word (#83: 7 of 23 wrong joins cut in
+     * the 2.0 and 2.1 logs, and the 1 right join it lost had not changed the word). Sizes are the sensor's steps.
+     */
+    private static final long FULL_SIZE_AFTER_MILLIS = 150;
+    private static final float FULL_SIZE_STEPS = 2f;
     public final float[] x, y, time;
 
     public Swipe(float[] x, float[] y, float[] time) {
@@ -47,14 +61,26 @@ public final class Swipe {
      * edge, nearby, heading somewhere that fits the way it left. It is often still moving, while a new word lands still.
      */
     public boolean sameStroke(Swipe next, long gapMillis, long flickerMillis) {
+        return sameStroke(next, gapMillis, flickerMillis, Float.NaN);
+    }
+
+    /**
+     * As above, knowing [endContact]: this swipe's mean contact size, in sensor steps, over its last moments. NaN when
+     * the size is not known, which leaves the size out of the decision.
+     */
+    public boolean sameStroke(Swipe next, long gapMillis, long flickerMillis, float endContact) {
         if (next.x.length == 0 || !couldContinue(next.x[0], next.y[0], gapMillis, flickerMillis)) return false;
         if (flicker(next.x[0], next.y[0], gapMillis, flickerMillis)) return true;
+        if (gapMillis > FULL_SIZE_AFTER_MILLIS && endContact >= FULL_SIZE_STEPS) return false;
         int last = x.length - 1;
         float jumpX = (next.x[0] - x[last]) * 10, jumpY = (next.y[0] - y[last]) * 3;
         float[] leaving = motion(false), entering = next.motion(true);
+        float speed = (float) Math.sqrt(entering[0] * entering[0] + entering[1] * entering[1]);
+        if (dropout(next.x[0], next.y[0], gapMillis) && speed >= DROPOUT_SPEED) return true;
+        if (!topBreak(next.x[0], next.y[0], gapMillis)) return false;
         boolean carriesOn = cosine(leaving[0], leaving[1], jumpX, jumpY) >= .7f;
         boolean reverses = cosine(leaving[0], leaving[1], entering[0], entering[1]) <= -.3f;
-        boolean moving = Math.sqrt(entering[0] * entering[0] + entering[1] * entering[1]) >= .002f;
+        boolean moving = speed >= .002f;
         boolean quickSample = next.x.length > 1 && next.time[1] - next.time[0] <= 20;
         int clues = (carriesOn ? 1 : 0) + (reverses ? 1 : 0) + (moving ? 1 : 0) + (quickSample ? 1 : 0);
         return (carriesOn || reverses) && clues >= BREAK_CLUES;
@@ -64,8 +90,18 @@ public final class Swipe {
     public boolean couldContinue(float nextX, float nextY, long gapMillis, long flickerMillis) {
         if (gapMillis < 0 || x.length == 0) return false;
         if (flicker(nextX, nextY, gapMillis, flickerMillis)) return true;
+        return topBreak(nextX, nextY, gapMillis) || dropout(nextX, nextY, gapMillis);
+    }
+
+    /** Left the top row and came back at the top edge, nearby. */
+    private boolean topBreak(float nextX, float nextY, long gapMillis) {
         int last = x.length - 1;
         return gapMillis <= MAX_BREAK_MILLIS && y[last] < TOP_ROW && nextY < TOP_EDGE && keysTo(nextX, nextY) <= MAX_BREAK_KEYS;
+    }
+
+    /** Landed close by and very soon, anywhere on the touchpad. It must also land moving. */
+    private boolean dropout(float nextX, float nextY, long gapMillis) {
+        return gapMillis < DROPOUT_MILLIS && keysTo(nextX, nextY) <= DROPOUT_KEYS;
     }
 
     private boolean flicker(float nextX, float nextY, long gapMillis, long flickerMillis) {

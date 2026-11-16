@@ -219,7 +219,8 @@ for a, b in zip(rows, rows[1:]):
     }
     out.append(row)
     t0 = ca[0][2]
-    rp = [row['pair'], str(gap), str(len(ca)), str(len(pb))]
+    end_size = row['a_end_size']
+    rp = [row['pair'], str(gap), 'NaN' if end_size is None else f'{end_size:.4f}', str(len(ca)), str(len(pb))]
     rp += [f'{x:.5f} {y:.5f} {t - t0:.1f}' for x, y, t in ca]
     tb = pb[0][2]
     rp += [f'{x:.5f} {y:.5f} {t - tb:.1f}' for x, y, t in pb]

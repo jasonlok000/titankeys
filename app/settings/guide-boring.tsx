@@ -52,7 +52,7 @@ export default function BoringGuide() {
       <Topic title="Space after punctuation">{"Type a full stop and go straight on to the next word. The space goes in when you type its first letter. Same after , ; and :. Numbers, links and ... stay as you type them. Press Backspace right after to take the space back out. Pick one space, two or none in Settings > Space after a sentence, and turn off Space after , ; : there too."}</Topic>
       <Topic title="Shift and Alt">{"Press once for the next letter only. To cancel, press again after a pause. Want two quick presses to lock them? Turn on Press twice to lock Shift and Alt in Settings. When Shift is locked, the bar says Caps."}</Topic>
       <Topic title="Hold a letter for its symbol">{"Hold a letter and it turns into the symbol printed in its corner. Pick how long you hold in Settings > Hold a letter for its symbol, or turn it off there."}</Topic>
-      <Topic title="English spelling">{"Colour or color? Pick British, American or Canadian spelling for suggestions and typo fixes in Settings > English spelling."}</Topic>
+      <Topic title="English spelling">{"Colour or color? Pick British, American or Canadian spelling for suggestions and typo fixes in Settings > Languages > English."}</Topic>
       <Topic title="Password, email and number fields">{"These fields get no suggestions and no fixes, and swipes don't type there. The touchpad still moves the cursor, and the bar still shows Shift, Alt and Ctrl."}</Topic>
     </Section>
     <Section title="Touchpad">

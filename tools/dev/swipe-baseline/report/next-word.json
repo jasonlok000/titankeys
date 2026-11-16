@@ -1,0 +1,34 @@
+{
+ "prompted": {
+  "n": 392,
+  "best_weight_from_tuning_part": 3,
+  "held_back": {
+   "n": 129,
+   "first_before": 99,
+   "first_after": 99
+  },
+  "all": {
+   "n": 392,
+   "first_before": 300,
+   "first_after": 303,
+   "pct_before": 76.5,
+   "pct_after": 77.3
+  }
+ },
+ "hand": {
+  "n": 268,
+  "best_weight_from_tuning_part": 0.5,
+  "held_back": {
+   "n": 90,
+   "first_before": 60,
+   "first_after": 60
+  },
+  "all": {
+   "n": 268,
+   "first_before": 176,
+   "first_after": 178,
+   "pct_before": 65.7,
+   "pct_after": 66.4
+  }
+ }
+}

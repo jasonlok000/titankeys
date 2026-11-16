@@ -1,0 +1,318 @@
+{
+ "prompted": {
+  "n": 404,
+  "old": {
+   "1 letters": [
+    33.9,
+    60.1,
+    404
+   ],
+   "2 letters": [
+    38.5,
+    73.7,
+    327
+   ],
+   "3 letters": [
+    40.9,
+    86.2,
+    225
+   ],
+   "letters typed": 1.72,
+   "letters saved %": 58.3
+  },
+  "model": {
+   "1 letters": [
+    46.3,
+    75.5,
+    404
+   ],
+   "2 letters": [
+    49.8,
+    87.8,
+    327
+   ],
+   "3 letters": [
+    45.3,
+    95.6,
+    225
+   ],
+   "letters typed": 1.37,
+   "letters saved %": 66.8
+  },
+  "fuse5": {
+   "1 letters": [
+    40.8,
+    70.3,
+    404
+   ],
+   "2 letters": [
+    44.0,
+    83.2,
+    327
+   ],
+   "3 letters": [
+    42.2,
+    92.9,
+    225
+   ],
+   "letters typed": 1.47,
+   "letters saved %": 64.5
+  },
+  "fuse20": {
+   "1 letters": [
+    40.6,
+    68.8,
+    404
+   ],
+   "2 letters": [
+    43.7,
+    82.3,
+    327
+   ],
+   "3 letters": [
+    42.2,
+    92.0,
+    225
+   ],
+   "letters typed": 1.5,
+   "letters saved %": 63.6
+  }
+ },
+ "hand": {
+  "n": 342,
+  "old": {
+   "1 letters": [
+    25.7,
+    42.5,
+    339
+   ],
+   "2 letters": [
+    26.8,
+    57.9,
+    261
+   ],
+   "3 letters": [
+    36.1,
+    78.3,
+    180
+   ],
+   "letters typed": 2.09,
+   "letters saved %": 47.6
+  },
+  "model": {
+   "1 letters": [
+    29.2,
+    47.2,
+    339
+   ],
+   "2 letters": [
+    30.3,
+    59.4,
+    261
+   ],
+   "3 letters": [
+    37.2,
+    73.3,
+    180
+   ],
+   "letters typed": 2.08,
+   "letters saved %": 47.7
+  },
+  "fuse5": {
+   "1 letters": [
+    28.0,
+    47.2,
+    339
+   ],
+   "2 letters": [
+    29.5,
+    57.5,
+    261
+   ],
+   "3 letters": [
+    37.2,
+    76.7,
+    180
+   ],
+   "letters typed": 2.06,
+   "letters saved %": 48.3
+  },
+  "fuse20": {
+   "1 letters": [
+    27.7,
+    47.8,
+    339
+   ],
+   "2 letters": [
+    29.1,
+    57.9,
+    261
+   ],
+   "3 letters": [
+    37.2,
+    76.7,
+    180
+   ],
+   "letters typed": 2.05,
+   "letters saved %": 48.6
+  }
+ },
+ "recorder": {
+  "n": 300,
+  "old": {
+   "1 letters": [
+    0.7,
+    5.3,
+    300
+   ],
+   "2 letters": [
+    4.1,
+    14.8,
+    290
+   ],
+   "3 letters": [
+    10.7,
+    35.2,
+    261
+   ],
+   "letters typed": 4.06,
+   "letters saved %": 36.3
+  },
+  "model": {
+   "1 letters": [
+    0.7,
+    5.3,
+    300
+   ],
+   "2 letters": [
+    4.8,
+    16.6,
+    290
+   ],
+   "3 letters": [
+    11.5,
+    35.6,
+    261
+   ],
+   "letters typed": 3.94,
+   "letters saved %": 38.1
+  },
+  "fuse5": {
+   "1 letters": [
+    1.7,
+    7.0,
+    300
+   ],
+   "2 letters": [
+    6.2,
+    16.6,
+    290
+   ],
+   "3 letters": [
+    12.6,
+    34.5,
+    261
+   ],
+   "letters typed": 3.98,
+   "letters saved %": 37.5
+  },
+  "fuse20": {
+   "1 letters": [
+    1.7,
+    7.0,
+    300
+   ],
+   "2 letters": [
+    6.2,
+    16.9,
+    290
+   ],
+   "3 letters": [
+    12.6,
+    36.0,
+    261
+   ],
+   "letters typed": 3.96,
+   "letters saved %": 37.8
+  }
+ },
+ "all": {
+  "n": 1046,
+  "old": {
+   "1 letters": [
+    21.7,
+    38.6,
+    1043
+   ],
+   "2 letters": [
+    23.7,
+    49.5,
+    878
+   ],
+   "3 letters": [
+    27.8,
+    64.1,
+    666
+   ],
+   "letters typed": 2.51,
+   "letters saved %": 46.8
+  },
+  "model": {
+   "1 letters": [
+    27.6,
+    46.1,
+    1043
+   ],
+   "2 letters": [
+    29.2,
+    55.8,
+    878
+   ],
+   "3 letters": [
+    29.9,
+    66.1,
+    666
+   ],
+   "letters typed": 2.34,
+   "letters saved %": 50.4
+  },
+  "fuse5": {
+   "1 letters": [
+    25.4,
+    44.6,
+    1043
+   ],
+   "2 letters": [
+    27.2,
+    53.5,
+    878
+   ],
+   "3 letters": [
+    29.3,
+    65.6,
+    666
+   ],
+   "letters typed": 2.38,
+   "letters saved %": 49.6
+  },
+  "fuse20": {
+   "1 letters": [
+    25.2,
+    44.2,
+    1043
+   ],
+   "2 letters": [
+    27.0,
+    53.4,
+    878
+   ],
+   "3 letters": [
+    29.3,
+    65.9,
+    666
+   ],
+   "letters typed": 2.38,
+   "letters saved %": 49.5
+  }
+ }
+}

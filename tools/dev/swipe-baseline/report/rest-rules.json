@@ -1,0 +1,146 @@
+{
+ "resting read as input": 29,
+ "real swipes": 811,
+ "real taps": 85,
+ "rules": {
+  "held still 400+ ms before moving": {
+   "mistaps dropped": 1,
+   "real swipes dropped": 0,
+   "real taps dropped": 5
+  },
+  "held still 600+ ms before moving": {
+   "mistaps dropped": 1,
+   "real swipes dropped": 0,
+   "real taps dropped": 0
+  },
+  "longer than 1.5 s": {
+   "mistaps dropped": 11,
+   "real swipes dropped": 18,
+   "real taps dropped": 0
+  },
+  "longer than 2.5 s": {
+   "mistaps dropped": 11,
+   "real swipes dropped": 1,
+   "real taps dropped": 0
+  },
+  "landing 2+ steps over usual": {
+   "mistaps dropped": 10,
+   "real swipes dropped": 0,
+   "real taps dropped": 0
+  },
+  "landing 3+ steps over usual": {
+   "mistaps dropped": 3,
+   "real swipes dropped": 0,
+   "real taps dropped": 0
+  },
+  "largest step 6+": {
+   "mistaps dropped": 12,
+   "real swipes dropped": 0,
+   "real taps dropped": 0
+  },
+  "largest step 7+": {
+   "mistaps dropped": 7,
+   "real swipes dropped": 0,
+   "real taps dropped": 0
+  },
+  "flicker: under 80 ms and another touch within 1 s": {
+   "mistaps dropped": 10,
+   "real swipes dropped": 23,
+   "real taps dropped": 45
+  },
+  "burst: 3+ other touches within 1 s": {
+   "mistaps dropped": 5,
+   "real swipes dropped": 62,
+   "real taps dropped": 11
+  },
+  "still 400+ ms OR landing 3+ over usual OR burst 3+": {
+   "mistaps dropped": 8,
+   "real swipes dropped": 62,
+   "real taps dropped": 16
+  },
+  "still 600+ ms OR largest step 7+ OR burst 3+": {
+   "mistaps dropped": 13,
+   "real swipes dropped": 62,
+   "real taps dropped": 11
+  },
+  "step 6+ OR landing 2+ over usual": {
+   "mistaps dropped": 15,
+   "real swipes dropped": 0,
+   "real taps dropped": 0
+  },
+  "step 6+ OR longer than 2.5 s": {
+   "mistaps dropped": 14,
+   "real swipes dropped": 1,
+   "real taps dropped": 0
+  },
+  "step 6+ OR landing 2+ over usual OR longer than 2.5 s": {
+   "mistaps dropped": 15,
+   "real swipes dropped": 1,
+   "real taps dropped": 0
+  },
+  "step 5+ OR landing 2+ over usual": {
+   "mistaps dropped": 15,
+   "real swipes dropped": 22,
+   "real taps dropped": 0
+  },
+  "landing 1.5+ over usual": {
+   "mistaps dropped": 11,
+   "real swipes dropped": 6,
+   "real taps dropped": 0
+  }
+ },
+ "mistaps by phase": {
+  "1": 5,
+  "2": 2,
+  "4": 11,
+  "5": 7,
+  "6": 2,
+  "7": 2
+ },
+ "all resting by phase": {
+  "1": 16,
+  "2": 12,
+  "3": 3,
+  "4": 65,
+  "5": 20,
+  "6": 192,
+  "7": 36
+ },
+ "mistaps no clean rule catches, by phase": {
+  "4": 11,
+  "5": 1,
+  "7": 2
+ },
+ "medians": {
+  "duration": {
+   "mistaps": 342,
+   "real swipes": 456,
+   "real taps": 66
+  },
+  "still before moving": {
+   "mistaps": 56,
+   "real swipes": 86,
+   "real taps": 66
+  },
+  "largest step": {
+   "mistaps": 5,
+   "real swipes": 3,
+   "real taps": 2
+  },
+  "landing step over usual": {
+   "mistaps": 0.73,
+   "real swipes": 0.22999999999999998,
+   "real taps": -0.5
+  },
+  "touches within 1 s": {
+   "mistaps": 1,
+   "real swipes": 1,
+   "real taps": 1
+  },
+  "travel": {
+   "mistaps": 1.156076700377072,
+   "real swipes": 6.600934578264929,
+   "real taps": 0.0
+  }
+ }
+}

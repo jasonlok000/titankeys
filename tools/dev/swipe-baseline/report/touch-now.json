@@ -1,0 +1,33 @@
+{
+ "logged_to_now": {
+  "swipe->swipe": 1390,
+  "delete->delete": 401,
+  "swipe->nothing": 13,
+  "swipe->gone": 20,
+  "swipe->delete": 12,
+  "delete->gone": 1
+ },
+ "groups": {
+  "removed with nothing in its place (accidental candidates)": {
+   "n": 86,
+   "swipe": 83,
+   "gone": 2,
+   "nothing": 1
+  },
+  "kept words": {
+   "n": 551,
+   "swipe": 549,
+   "nothing": 2
+  }
+ },
+ "false_deletes": {
+  "n": 20,
+  "flick_now": {
+   "delete": 20
+  }
+ },
+ "new_outcomes": {
+  "new swipe": 125,
+  "new delete": 3
+ }
+}

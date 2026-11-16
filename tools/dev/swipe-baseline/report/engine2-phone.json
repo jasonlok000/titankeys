@@ -1,0 +1,68 @@
+{
+ "all": {
+  "n": 1608,
+  "engine 2.0": [
+   87.0,
+   88.5
+  ],
+  "FUTO order": [
+   70.0,
+   79.7
+  ]
+ },
+ "prompted": {
+  "n": 404,
+  "engine 2.0": [
+   91.6,
+   92.3
+  ],
+  "FUTO order": [
+   76.2,
+   83.7
+  ]
+ },
+ "hand": {
+  "n": 904,
+  "engine 2.0": [
+   86.4,
+   88.2
+  ],
+  "FUTO order": [
+   68.1,
+   79.1
+  ]
+ },
+ "recorder": {
+  "n": 300,
+  "engine 2.0": [
+   82.7,
+   84.3
+  ],
+  "FUTO order": [
+   67.0,
+   76.3
+  ]
+ },
+ "ms": {
+  "next-word model": {
+   "median": 36.1,
+   "slowest tenth from": 50.1
+  },
+  "FUTO engine": {
+   "median": 61.7,
+   "slowest tenth from": 66.7
+  },
+  "CleverKeys": {
+   "median": 8.3,
+   "slowest tenth from": 10.2
+  },
+  "ranker": {
+   "median": 8.3,
+   "slowest tenth from": 10.1
+  },
+  "whole swipe": {
+   "median": 77.3,
+   "slowest tenth from": 84.8
+  }
+ }
+}

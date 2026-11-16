@@ -1,0 +1,70 @@
+{
+ "11-09": {
+  "kept swipe": {
+   "contacts": 14,
+   "step 6+": 0,
+   "landing 2+ over usual": 0,
+   "rule (either)": 0,
+   "jump of 2+ keys inside the contact": 0,
+   "rule and jump": 0
+  },
+  "no input": {
+   "contacts": 1,
+   "step 6+": 0,
+   "landing 2+ over usual": 0,
+   "rule (either)": 0,
+   "jump of 2+ keys inside the contact": 0,
+   "rule and jump": 0
+  },
+  "tap": {
+   "contacts": 3,
+   "step 6+": 0,
+   "landing 2+ over usual": 0,
+   "rule (either)": 0,
+   "jump of 2+ keys inside the contact": 0,
+   "rule and jump": 0
+  }
+ },
+ "11-10": {
+  "other swipe": {
+   "contacts": 48,
+   "step 6+": 0,
+   "landing 2+ over usual": 0,
+   "rule (either)": 0,
+   "jump of 2+ keys inside the contact": 0,
+   "rule and jump": 0
+  },
+  "no input": {
+   "contacts": 774,
+   "step 6+": 1,
+   "landing 2+ over usual": 2,
+   "rule (either)": 2,
+   "jump of 2+ keys inside the contact": 0,
+   "rule and jump": 0
+  },
+  "kept swipe": {
+   "contacts": 797,
+   "step 6+": 0,
+   "landing 2+ over usual": 0,
+   "rule (either)": 0,
+   "jump of 2+ keys inside the contact": 0,
+   "rule and jump": 0
+  },
+  "tap": {
+   "contacts": 82,
+   "step 6+": 0,
+   "landing 2+ over usual": 0,
+   "rule (either)": 0,
+   "jump of 2+ keys inside the contact": 0,
+   "rule and jump": 0
+  }
+ },
+ "real touches the rule would catch": [],
+ "step histogram, kept swipes and taps": {
+  "1": 22,
+  "2": 179,
+  "3": 423,
+  "4": 165,
+  "5": 22
+ }
+}

@@ -1,0 +1,79 @@
+{
+ "today": {
+  "all": {
+   "n": 540,
+   "first": 71.7,
+   "top3": 81.5,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 75.7,
+   "top3": 81.6,
+   "found": 91.9
+  },
+  "hand": {
+   "n": 304,
+   "first": 69.7,
+   "top3": 81.2,
+   "found": 89.5
+  },
+  "recorder": {
+   "n": 100,
+   "first": 72.0,
+   "top3": 82.0,
+   "found": 88.0
+  }
+ },
+ "ranker": {
+  "all": {
+   "n": 540,
+   "first": 78.0,
+   "top3": 86.7,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 84.6,
+   "top3": 91.2,
+   "found": 91.9
+  },
+  "hand": {
+   "n": 304,
+   "first": 75.0,
+   "top3": 85.2,
+   "found": 89.5
+  },
+  "recorder": {
+   "n": 100,
+   "first": 78.0,
+   "top3": 85.0,
+   "found": 88.0
+  }
+ },
+ "features": [
+  "final",
+  "p_rank",
+  "p_ctc",
+  "p_score",
+  "lm",
+  "s_rank",
+  "s_score",
+  "ck_rank",
+  "ck_path",
+  "ck_final",
+  "lm_logp",
+  "lm_gap",
+  "freq",
+  "len",
+  "stroke_len",
+  "time",
+  "words_before",
+  "has_context"
+ ],
+ "lm": {
+  "file": "model-int8pc.onnx",
+  "cap": 32,
+  "ck": "scratch-crossfit.jsonl"
+ }
+}

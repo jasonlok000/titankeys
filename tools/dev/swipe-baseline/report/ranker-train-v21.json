@@ -1,0 +1,82 @@
+{
+ "today": {
+  "all": {
+   "n": 540,
+   "first": 71.3,
+   "top3": 81.5,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 75.7,
+   "top3": 81.6,
+   "found": 91.2
+  },
+  "hand": {
+   "n": 304,
+   "first": 69.1,
+   "top3": 81.2,
+   "found": 89.8
+  },
+  "recorder": {
+   "n": 100,
+   "first": 72.0,
+   "top3": 82.0,
+   "found": 88.0
+  }
+ },
+ "ranker": {
+  "all": {
+   "n": 540,
+   "first": 77.4,
+   "top3": 86.7,
+   "found": 89.8
+  },
+  "prompted": {
+   "n": 136,
+   "first": 85.3,
+   "top3": 89.7,
+   "found": 91.2
+  },
+  "hand": {
+   "n": 304,
+   "first": 74.7,
+   "top3": 86.2,
+   "found": 89.8
+  },
+  "recorder": {
+   "n": 100,
+   "first": 75.0,
+   "top3": 84.0,
+   "found": 88.0
+  }
+ },
+ "today, test": {
+  "all": {
+   "n": 283,
+   "first": 60.1,
+   "top3": 73.5,
+   "found": 82.3
+  },
+  "hand": {
+   "n": 283,
+   "first": 60.1,
+   "top3": 73.5,
+   "found": 82.3
+  }
+ },
+ "ranker, test": {
+  "all": {
+   "n": 283,
+   "first": 70.7,
+   "top3": 79.2,
+   "found": 82.3
+  },
+  "hand": {
+   "n": 283,
+   "first": 70.7,
+   "top3": 79.2,
+   "found": 82.3
+  }
+ }
+}

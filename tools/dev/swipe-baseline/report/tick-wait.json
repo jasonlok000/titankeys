@@ -1,0 +1,582 @@
+{
+ "contacts": 12979,
+ "not found in the replay": 0,
+ "by kind": {
+  "typed nothing (ignored)": {
+   "n": 4525,
+   "vibrated": 125
+  },
+  "real swipe": {
+   "n": 2042,
+   "vibrated": 1928
+  },
+  "delete flick": {
+   "n": 1460,
+   "vibrated": 1460
+  },
+  "typed nothing (tap)": {
+   "n": 1423,
+   "vibrated": 0
+  },
+  "typed nothing (none)": {
+   "n": 1330,
+   "vibrated": 20
+  },
+  "wrong word": {
+   "n": 1039,
+   "vibrated": 995
+  },
+  "swipe changed later": {
+   "n": 325,
+   "vibrated": 291
+  },
+  "swipe in replay, none in log": {
+   "n": 271,
+   "vibrated": 268
+  },
+  "MISTYPE": {
+   "n": 222,
+   "vibrated": 205
+  },
+  "swipe with no recognition": {
+   "n": 217,
+   "vibrated": 198
+  },
+  "swipe removed later": {
+   "n": 125,
+   "vibrated": 117
+  }
+ },
+ "MISTAPS (vibrated, typed nothing)": 145,
+ "MISTAPS per 100 swipes": 3.9,
+ "MISTAPS by outcome": {
+  "typed nothing (ignored)": 125,
+  "typed nothing (none)": 20
+ },
+ "MISTAPS with one tick": 141,
+ "MISTAPS whose first tick came before 0.6 keys (before it was a swipe)": 0,
+ "medians": {
+  "MISTAP": {
+   "n": 145,
+   "with sizes": 59,
+   "duration": 752,
+   "travel": 1.66,
+   "ticks": 1,
+   "time to first tick": 200,
+   "start row": 1.95,
+   "since key": 4335,
+   "since swipe": 58346,
+   "largest step": 4,
+   "landing over usual": 0.1
+  },
+  "vibrated and typed (meant)": {
+   "n": 4674,
+   "with sizes": 2068,
+   "duration": 304,
+   "travel": 4.04,
+   "ticks": 1,
+   "time to first tick": 85,
+   "start row": 1.31,
+   "since key": 9818,
+   "since swipe": 1124,
+   "largest step": 3,
+   "landing over usual": 0.28
+  },
+  "MISTYPE": {
+   "n": 222,
+   "with sizes": 106,
+   "duration": 334,
+   "travel": 3.09,
+   "ticks": 1,
+   "time to first tick": 94,
+   "start row": 1.24,
+   "since key": 11298,
+   "since swipe": 1443,
+   "largest step": 3,
+   "landing over usual": 0.23
+  },
+  "real swipe": {
+   "n": 2042,
+   "with sizes": 802,
+   "duration": 467,
+   "travel": 6.99,
+   "ticks": 1,
+   "time to first tick": 105,
+   "start row": 0.88,
+   "since key": 10245,
+   "since swipe": 743,
+   "largest step": 3,
+   "landing over usual": 0.23
+  }
+ },
+ "separation (AUC), MISTAP against vibrated and typed": {
+  "duration": 0.798,
+  "travel": 0.308,
+  "ticks": 0.354,
+  "time to first tick": 0.878,
+  "start row": 0.718,
+  "since key": 0.382,
+  "since swipe": 0.873,
+  "largest step": 0.763,
+  "landing over usual": 0.382
+ },
+ "separation (AUC), MISTYPE against real swipe": {
+  "duration": 0.394,
+  "travel": 0.338,
+  "ticks": 0.393,
+  "time to first tick": 0.433,
+  "start row": 0.521,
+  "since key": 0.53,
+  "since swipe": 0.586,
+  "largest step": 0.462,
+  "landing over usual": 0.512
+ },
+ "ignored MISTAPS with a key press during the contact": 117,
+ "MISTAPS with a key press during the contact": 118,
+ "first tick only from 0.8 keys": {
+  "MISTAPS silenced": "30 of 145",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "26 of 125",
+   "typed nothing (none)": "4 of 20"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "11 of 198",
+  "meant input silenced": "37 of 4674",
+  "meant input silenced, by kind": {
+   "wrong word": 19,
+   "real swipe": 11,
+   "swipe changed later": 7
+  },
+  "meant input: first tick later by (median ms)": 10,
+  "meant input: first tick later by (90th percentile ms)": 19,
+  "MISTYPES silenced": "6 of 205"
+ },
+ "first tick only from 1.0 keys": {
+  "MISTAPS silenced": "49 of 145",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "43 of 125",
+   "typed nothing (none)": "6 of 20"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "20 of 198",
+  "meant input silenced": "103 of 4674",
+  "meant input silenced, by kind": {
+   "wrong word": 48,
+   "swipe changed later": 22,
+   "real swipe": 33
+  },
+  "meant input: first tick later by (median ms)": 19,
+  "meant input: first tick later by (90th percentile ms)": 29,
+  "MISTYPES silenced": "29 of 205"
+ },
+ "first tick only from 1.25 keys": {
+  "MISTAPS silenced": "58 of 145",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "51 of 125",
+   "typed nothing (none)": "7 of 20"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "34 of 198",
+  "meant input silenced": "253 of 4674",
+  "meant input silenced, by kind": {
+   "delete flick": 80,
+   "real swipe": 73,
+   "wrong word": 69,
+   "swipe changed later": 31
+  },
+  "meant input: first tick later by (median ms)": 28,
+  "meant input: first tick later by (90th percentile ms)": 48,
+  "MISTYPES silenced": "41 of 205"
+ },
+ "first tick only from 1.5 keys": {
+  "MISTAPS silenced": "75 of 145",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "66 of 125",
+   "typed nothing (none)": "9 of 20"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "60 of 198",
+  "meant input silenced": "497 of 4674",
+  "meant input silenced, by kind": {
+   "delete flick": 223,
+   "real swipe": 140,
+   "wrong word": 97,
+   "swipe changed later": 37
+  },
+  "meant input: first tick later by (median ms)": 37,
+  "meant input: first tick later by (90th percentile ms)": 67,
+  "MISTYPES silenced": "50 of 205"
+ },
+ "first tick only from 1.75 keys": {
+  "MISTAPS silenced": "90 of 145",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "79 of 125",
+   "typed nothing (none)": "11 of 20"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "90 of 198",
+  "meant input silenced": "772 of 4674",
+  "meant input silenced, by kind": {
+   "delete flick": 412,
+   "real swipe": 191,
+   "wrong word": 118,
+   "swipe changed later": 51
+  },
+  "meant input: first tick later by (median ms)": 39,
+  "meant input: first tick later by (90th percentile ms)": 105,
+  "MISTYPES silenced": "60 of 205"
+ },
+ "first tick only from 2.0 keys": {
+  "MISTAPS silenced": "98 of 145",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "85 of 125",
+   "typed nothing (none)": "13 of 20"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "116 of 198",
+  "meant input silenced": "1108 of 4674",
+  "meant input silenced, by kind": {
+   "delete flick": 638,
+   "real swipe": 262,
+   "wrong word": 144,
+   "swipe changed later": 64
+  },
+  "meant input: first tick later by (median ms)": 48,
+  "meant input: first tick later by (90th percentile ms)": 162,
+  "MISTYPES silenced": "75 of 205"
+ },
+ "first tick only from 2.5 keys": {
+  "MISTAPS silenced": "107 of 145",
+  "MISTAPS silenced, by outcome": {
+   "typed nothing (ignored)": "92 of 125",
+   "typed nothing (none)": "15 of 20"
+  },
+  "uncertain (no recognition, maybe the panel) silenced": "142 of 198",
+  "meant input silenced": "1816 of 4674",
+  "meant input silenced, by kind": {
+   "delete flick": 1060,
+   "real swipe": 448,
+   "wrong word": 226,
+   "swipe changed later": 82
+  },
+  "meant input: first tick later by (median ms)": 67,
+  "meant input: first tick later by (90th percentile ms)": 238,
+  "MISTYPES silenced": "97 of 205"
+ },
+ "size rule (step 6+ or landing 2+ over usual)": {
+  "silence ticks: MISTAPS silenced": "9 of 59",
+  "silence ticks: meant input silenced": "12 of 2068",
+  "drop input: MISTYPES caught": "3 of 106",
+  "drop input: meant input lost": "17 of 2068"
+ },
+ "pause signal on MISTYPES": {
+  "pause 1000 ms": {
+   "MISTYPES": "130 of 222",
+   "real swipes": "829 of 2042"
+  },
+  "pause 1000 ms and travel under 3 keys": {
+   "MISTYPES": "54 of 222",
+   "real swipes": "126 of 2042"
+  },
+  "pause 1000 ms and travel under 2 keys": {
+   "MISTYPES": "41 of 222",
+   "real swipes": "53 of 2042"
+  },
+  "pause 1500 ms": {
+   "MISTYPES": "108 of 222",
+   "real swipes": "613 of 2042"
+  },
+  "pause 1500 ms and travel under 3 keys": {
+   "MISTYPES": "47 of 222",
+   "real swipes": "100 of 2042"
+  },
+  "pause 1500 ms and travel under 2 keys": {
+   "MISTYPES": "34 of 222",
+   "real swipes": "50 of 2042"
+  },
+  "pause 2000 ms": {
+   "MISTYPES": "89 of 222",
+   "real swipes": "443 of 2042"
+  },
+  "pause 2000 ms and travel under 3 keys": {
+   "MISTYPES": "40 of 222",
+   "real swipes": "80 of 2042"
+  },
+  "pause 2000 ms and travel under 2 keys": {
+   "MISTYPES": "29 of 222",
+   "real swipes": "44 of 2042"
+  },
+  "pause 3000 ms": {
+   "MISTYPES": "78 of 222",
+   "real swipes": "325 of 2042"
+  },
+  "pause 3000 ms and travel under 3 keys": {
+   "MISTYPES": "33 of 222",
+   "real swipes": "69 of 2042"
+  },
+  "pause 3000 ms and travel under 2 keys": {
+   "MISTYPES": "23 of 222",
+   "real swipes": "39 of 2042"
+  }
+ },
+ "MISTAPS: furthest step reached from landing (keys), count": {
+  "0.8": 19,
+  "0.6": 30,
+  "2.5": 38,
+  "2.0": 9,
+  "1.75": 8,
+  "1.25": 17,
+  "1.5": 15,
+  "1.0": 9
+ },
+ "meant input: furthest step reached (keys), count": {
+  "1.0": 150,
+  "1.75": 336,
+  "1.25": 244,
+  "2.5": 2858,
+  "2.0": 708,
+  "1.5": 275,
+  "0.8": 66,
+  "0.6": 37
+ },
+ "other rules": {
+  "delay 30 ms, a key press cancels": {
+   "MISTAPS silenced": "14 of 145",
+   "meant input losing every tick": "0 of 4674",
+   "by kind": {}
+  },
+  "delay 50 ms, a key press cancels": {
+   "MISTAPS silenced": "28 of 145",
+   "meant input losing every tick": "0 of 4674",
+   "by kind": {}
+  },
+  "delay 80 ms, a key press cancels": {
+   "MISTAPS silenced": "41 of 145",
+   "meant input losing every tick": "0 of 4674",
+   "by kind": {}
+  },
+  "delay 120 ms, a key press cancels": {
+   "MISTAPS silenced": "50 of 145",
+   "meant input losing every tick": "1 of 4674",
+   "by kind": {
+    "wrong word": 1
+   }
+  },
+  "0.6 keys within 80 ms, else 1.5 keys": {
+   "MISTAPS silenced": "69 of 145",
+   "meant input losing every tick": "233 of 4674",
+   "by kind": {
+    "delete flick": 32,
+    "real swipe": 110,
+    "wrong word": 61,
+    "swipe changed later": 30
+   }
+  },
+  "0.6 keys within 80 ms, else 2.0 keys": {
+   "MISTAPS silenced": "88 of 145",
+   "meant input losing every tick": "407 of 4674",
+   "by kind": {
+    "delete flick": 69,
+    "real swipe": 200,
+    "wrong word": 87,
+    "swipe changed later": 51
+   }
+  },
+  "0.6 keys within 100 ms, else 1.5 keys": {
+   "MISTAPS silenced": "64 of 145",
+   "meant input losing every tick": "169 of 4674",
+   "by kind": {
+    "wrong word": 50,
+    "swipe changed later": 24,
+    "real swipe": 82,
+    "delete flick": 13
+   }
+  },
+  "0.6 keys within 100 ms, else 2.0 keys": {
+   "MISTAPS silenced": "82 of 145",
+   "meant input losing every tick": "295 of 4674",
+   "by kind": {
+    "wrong word": 69,
+    "swipe changed later": 44,
+    "real swipe": 159,
+    "delete flick": 23
+   }
+  },
+  "0.6 keys within 130 ms, else 1.5 keys": {
+   "MISTAPS silenced": "54 of 145",
+   "meant input losing every tick": "89 of 4674",
+   "by kind": {
+    "wrong word": 32,
+    "real swipe": 37,
+    "swipe changed later": 19,
+    "delete flick": 1
+   }
+  },
+  "0.6 keys within 130 ms, else 2.0 keys": {
+   "MISTAPS silenced": "70 of 145",
+   "meant input losing every tick": "146 of 4674",
+   "by kind": {
+    "wrong word": 42,
+    "real swipe": 70,
+    "delete flick": 4,
+    "swipe changed later": 30
+   }
+  },
+  "0.6 keys within 160 ms, else 1.5 keys": {
+   "MISTAPS silenced": "44 of 145",
+   "meant input losing every tick": "48 of 4674",
+   "by kind": {
+    "real swipe": 19,
+    "wrong word": 17,
+    "swipe changed later": 12
+   }
+  },
+  "0.6 keys within 160 ms, else 2.0 keys": {
+   "MISTAPS silenced": "54 of 145",
+   "meant input losing every tick": "67 of 4674",
+   "by kind": {
+    "real swipe": 31,
+    "wrong word": 20,
+    "delete flick": 1,
+    "swipe changed later": 15
+   }
+  },
+  "delay 50 ms with key cancel, and 0.6 keys within 130 ms else 2.0": {
+   "MISTAPS silenced": "78 of 145",
+   "meant input losing every tick": "146 of 4674",
+   "by kind": {
+    "wrong word": 42,
+    "real swipe": 70,
+    "delete flick": 4,
+    "swipe changed later": 30
+   }
+  },
+  "delay 50 ms with key cancel, and 0.6 keys within 160 ms else 2.0": {
+   "MISTAPS silenced": "70 of 145",
+   "meant input losing every tick": "67 of 4674",
+   "by kind": {
+    "real swipe": 31,
+    "wrong word": 20,
+    "delete flick": 1,
+    "swipe changed later": 15
+   }
+  },
+  "delay 80 ms with key cancel, and 0.6 keys within 130 ms else 2.0": {
+   "MISTAPS silenced": "85 of 145",
+   "meant input losing every tick": "146 of 4674",
+   "by kind": {
+    "wrong word": 42,
+    "real swipe": 70,
+    "delete flick": 4,
+    "swipe changed later": 30
+   }
+  },
+  "delay 80 ms with key cancel, and 0.6 keys within 160 ms else 2.0": {
+   "MISTAPS silenced": "77 of 145",
+   "meant input losing every tick": "67 of 4674",
+   "by kind": {
+    "real swipe": 31,
+    "wrong word": 20,
+    "delete flick": 1,
+    "swipe changed later": 15
+   }
+  },
+  "after 1500 ms without a swipe or key, 1.5 keys": {
+   "MISTAPS silenced": "38 of 145",
+   "meant input losing every tick": "166 of 4674",
+   "by kind": {
+    "delete flick": 86,
+    "real swipe": 32,
+    "wrong word": 33,
+    "swipe changed later": 15
+   }
+  },
+  "after 1500 ms without a swipe or key, 1.5 keys; else 0.6 within 160 ms or 1.5": {
+   "MISTAPS silenced": "62 of 145",
+   "meant input losing every tick": "189 of 4674",
+   "by kind": {
+    "delete flick": 86,
+    "real swipe": 39,
+    "wrong word": 42,
+    "swipe changed later": 22
+   }
+  },
+  "after 1500 ms without a swipe or key, 2.0 keys": {
+   "MISTAPS silenced": "51 of 145",
+   "meant input losing every tick": "342 of 4674",
+   "by kind": {
+    "delete flick": 213,
+    "real swipe": 62,
+    "wrong word": 43,
+    "swipe changed later": 24
+   }
+  },
+  "after 1500 ms without a swipe or key, 2.0 keys; else 0.6 within 160 ms or 2.0": {
+   "MISTAPS silenced": "77 of 145",
+   "meant input losing every tick": "375 of 4674",
+   "by kind": {
+    "delete flick": 214,
+    "real swipe": 76,
+    "wrong word": 53,
+    "swipe changed later": 32
+   }
+  },
+  "after 3000 ms without a swipe or key, 1.5 keys": {
+   "MISTAPS silenced": "32 of 145",
+   "meant input losing every tick": "76 of 4674",
+   "by kind": {
+    "delete flick": 36,
+    "real swipe": 24,
+    "wrong word": 14,
+    "swipe changed later": 2
+   }
+  },
+  "after 3000 ms without a swipe or key, 1.5 keys; else 0.6 within 160 ms or 1.5": {
+   "MISTAPS silenced": "59 of 145",
+   "meant input losing every tick": "108 of 4674",
+   "by kind": {
+    "delete flick": 36,
+    "real swipe": 33,
+    "wrong word": 27,
+    "swipe changed later": 12
+   }
+  },
+  "after 3000 ms without a swipe or key, 2.0 keys": {
+   "MISTAPS silenced": "43 of 145",
+   "meant input losing every tick": "168 of 4674",
+   "by kind": {
+    "delete flick": 97,
+    "real swipe": 41,
+    "swipe changed later": 8,
+    "wrong word": 22
+   }
+  },
+  "after 3000 ms without a swipe or key, 2.0 keys; else 0.6 within 160 ms or 2.0": {
+   "MISTAPS silenced": "73 of 145",
+   "meant input losing every tick": "213 of 4674",
+   "by kind": {
+    "delete flick": 98,
+    "real swipe": 59,
+    "wrong word": 36,
+    "swipe changed later": 20
+   }
+  }
+ },
+ "MISTAPS with a key: key press after the tick (ms), quartiles": [
+  22,
+  55,
+  166,
+  804,
+  2859
+ ],
+ "time from landing to 0.6 keys (ms) quartiles: meant, mistaps": [
+  [
+   10,
+   20,
+   85,
+   114,
+   144
+  ],
+  [
+   94,
+   134,
+   200,
+   352,
+   875
+  ]
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "all": {
+  "n": 550,
+  "engine 2.0": [
+   70.0,
+   76.7
+  ],
+  "FUTO order": [
+   60.0,
+   72.5
+  ]
+ },
+ "hand": {
+  "n": 550,
+  "engine 2.0": [
+   70.0,
+   76.7
+  ],
+  "FUTO order": [
+   60.0,
+   72.5
+  ]
+ },
+ "ms": {
+  "next-word model": {
+   "median": 38.6,
+   "slowest tenth from": 58.9
+  },
+  "FUTO engine": {
+   "median": 61.4,
+   "slowest tenth from": 67
+  },
+  "CleverKeys": {
+   "median": 8.2,
+   "slowest tenth from": 10
+  },
+  "ranker": {
+   "median": 8.4,
+   "slowest tenth from": 10.3
+  },
+  "whole swipe": {
+   "median": 77.9,
+   "slowest tenth from": 84.1
+  }
+ }
+}

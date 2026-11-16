@@ -1,0 +1,22 @@
+{
+ "labelled": 722,
+ "accidental": 43,
+ "signals": {
+  "mean size": 0.528,
+  "largest size": 0.569,
+  "smallest size": 0.508,
+  "size spread": 0.568,
+  "size at the start": 0.516,
+  "size at the end": 0.502,
+  "length in keys": 0.594,
+  "time": 0.552
+ },
+ "time and length only": {
+  "auc": 0.513,
+  "caught at 1% of real words": 0.0
+ },
+ "with contact size": {
+  "auc": 0.593,
+  "caught at 1% of real words": 0.0
+ }
+}

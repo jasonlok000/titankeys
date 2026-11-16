@@ -1,0 +1,182 @@
+{
+ "cleverkeys phone-trained, same decoder": {
+  "prompted/all": {
+   "n": 404,
+   "first": 70.8,
+   "top3": 82.4,
+   "found": 87.1
+  },
+  "prompted/held": {
+   "n": 136,
+   "first": 69.9,
+   "top3": 80.9,
+   "found": 86.0
+  },
+  "hand/all": {
+   "n": 337,
+   "first": 50.1,
+   "top3": 66.2,
+   "found": 79.5
+  },
+  "hand/held": {
+   "n": 110,
+   "first": 54.5,
+   "top3": 69.1,
+   "found": 80.9
+  },
+  "recorder/all": {
+   "n": 300,
+   "first": 63.3,
+   "top3": 73.0,
+   "found": 74.7
+  },
+  "recorder/held": {
+   "n": 100,
+   "first": 71.0,
+   "top3": 81.0,
+   "found": 83.0
+  }
+ },
+ "A futo": {
+  "futo_clean": {
+   "n": 600,
+   "first": 92.2,
+   "top3": 96.5,
+   "found": 99.2
+  },
+  "futo_damaged": {
+   "n": 600,
+   "first": 61.8,
+   "top3": 68.2,
+   "found": 77.2
+  }
+ },
+ "A titan": {
+  "prompted/all": {
+   "n": 404,
+   "first": 65.8,
+   "top3": 79.2,
+   "found": 85.4
+  },
+  "prompted/held": {
+   "n": 136,
+   "first": 66.9,
+   "top3": 77.2,
+   "found": 85.3
+  },
+  "hand/all": {
+   "n": 337,
+   "first": 51.6,
+   "top3": 66.2,
+   "found": 80.1
+  },
+  "hand/held": {
+   "n": 110,
+   "first": 56.4,
+   "top3": 67.3,
+   "found": 79.1
+  },
+  "recorder/all": {
+   "n": 300,
+   "first": 59.7,
+   "top3": 68.3,
+   "found": 72.3
+  },
+  "recorder/held": {
+   "n": 100,
+   "first": 62.0,
+   "top3": 73.0,
+   "found": 77.0
+  }
+ },
+ "B futo": {
+  "futo_clean": {
+   "n": 600,
+   "first": 79.2,
+   "top3": 90.0,
+   "found": 95.8
+  },
+  "futo_damaged": {
+   "n": 600,
+   "first": 77.3,
+   "top3": 89.2,
+   "found": 96.7
+  }
+ },
+ "B titan": {
+  "prompted/all": {
+   "n": 404,
+   "first": 55.9,
+   "top3": 71.0,
+   "found": 80.9
+  },
+  "prompted/held": {
+   "n": 136,
+   "first": 55.1,
+   "top3": 69.1,
+   "found": 78.7
+  },
+  "hand/all": {
+   "n": 337,
+   "first": 44.5,
+   "top3": 57.9,
+   "found": 77.2
+  },
+  "hand/held": {
+   "n": 110,
+   "first": 48.2,
+   "top3": 60.0,
+   "found": 77.3
+  },
+  "recorder/all": {
+   "n": 300,
+   "first": 46.0,
+   "top3": 59.3,
+   "found": 65.0
+  },
+  "recorder/held": {
+   "n": 100,
+   "first": 42.0,
+   "top3": 59.0,
+   "found": 65.0
+  }
+ },
+ "C titan": {
+  "prompted/all": {
+   "n": 404,
+   "first": 79.7,
+   "top3": 89.9,
+   "found": 92.1
+  },
+  "prompted/held": {
+   "n": 136,
+   "first": 70.6,
+   "top3": 79.4,
+   "found": 82.4
+  },
+  "hand/all": {
+   "n": 337,
+   "first": 70.3,
+   "top3": 80.4,
+   "found": 89.9
+  },
+  "hand/held": {
+   "n": 110,
+   "first": 58.2,
+   "top3": 69.1,
+   "found": 82.7
+  },
+  "recorder/all": {
+   "n": 300,
+   "first": 70.7,
+   "top3": 78.3,
+   "found": 80.3
+  },
+  "recorder/held": {
+   "n": 100,
+   "first": 64.0,
+   "top3": 72.0,
+   "found": 78.0
+  }
+ }
+}

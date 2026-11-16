@@ -1,0 +1,89 @@
+{
+ "nothing saved": {
+  "name": {
+   "strokes": 5,
+   "first": 0,
+   "top 3": 0
+  },
+  "other": {
+   "strokes": 550,
+   "first": 385,
+   "top 3": 422
+  }
+ },
+ "saved, boost 0.0": {
+  "name": {
+   "strokes": 5,
+   "first": 1,
+   "top 3": 3
+  },
+  "other": {
+   "strokes": 550,
+   "first": 386,
+   "top 3": 423,
+   "wins against nothing saved": 1,
+   "losses against nothing saved": 0,
+   "saved word shown first where another was meant": 1
+  }
+ },
+ "saved, boost 0.5": {
+  "name": {
+   "strokes": 5,
+   "first": 1,
+   "top 3": 3
+  },
+  "other": {
+   "strokes": 550,
+   "first": 386,
+   "top 3": 424,
+   "wins against nothing saved": 1,
+   "losses against nothing saved": 0,
+   "saved word shown first where another was meant": 2
+  }
+ },
+ "saved, boost 1.0": {
+  "name": {
+   "strokes": 5,
+   "first": 1,
+   "top 3": 3
+  },
+  "other": {
+   "strokes": 550,
+   "first": 386,
+   "top 3": 424,
+   "wins against nothing saved": 1,
+   "losses against nothing saved": 0,
+   "saved word shown first where another was meant": 3
+  }
+ },
+ "saved, boost 2.0": {
+  "name": {
+   "strokes": 5,
+   "first": 1,
+   "top 3": 3
+  },
+  "other": {
+   "strokes": 550,
+   "first": 386,
+   "top 3": 424,
+   "wins against nothing saved": 1,
+   "losses against nothing saved": 0,
+   "saved word shown first where another was meant": 3
+  }
+ },
+ "saved, boost 4.0": {
+  "name": {
+   "strokes": 5,
+   "first": 3,
+   "top 3": 3
+  },
+  "other": {
+   "strokes": 550,
+   "first": 386,
+   "top 3": 424,
+   "wins against nothing saved": 1,
+   "losses against nothing saved": 0,
+   "saved word shown first where another was meant": 6
+  }
+ }
+}

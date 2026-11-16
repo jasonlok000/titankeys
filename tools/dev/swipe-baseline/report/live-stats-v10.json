@@ -1,0 +1,37 @@
+{
+ "after engine 2.0 data / hand": {
+  "n": 550,
+  "first": 70.0,
+  "top3": 77.3
+ },
+ "after engine 2.0 data / hand / engine 1.x order": {
+  "n": 41,
+  "first": 63.4,
+  "top3": 73.2
+ },
+ "after engine 2.0 data / hand / engine 2.0 ranked": {
+  "n": 509,
+  "first": 70.5,
+  "top3": 77.6
+ },
+ "nov 9 (training data) / hand": {
+  "n": 904,
+  "first": 69.6,
+  "top3": 80.0
+ },
+ "nov 9 (training data) / hand / engine 1.x order": {
+  "n": 904,
+  "first": 69.6,
+  "top3": 80.0
+ },
+ "nov 9 (training data) / prompted": {
+  "n": 404,
+  "first": 76.5,
+  "top3": 82.9
+ },
+ "nov 9 (training data) / prompted / engine 1.x order": {
+  "n": 404,
+  "first": 76.5,
+  "top3": 82.9
+ }
+}

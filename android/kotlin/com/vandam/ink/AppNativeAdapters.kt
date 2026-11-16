@@ -157,7 +157,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
 
     /** The crash or freeze report waiting for its offer, and the dialog showing it on the screen in front. */
     private var crashOffer: String? = null
-    private var crashDialog: android.app.AlertDialog? = null
+    private var crashDialog: android.app.Dialog? = null
 
     /**
      * The crash offer (#74, #97), once, as the app opens after a crash or freeze: send the report through the form, where it's
@@ -187,26 +187,17 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         if (host.isFinishing || host.isDestroyed || !CrashOfferHosts.shows(host)) return
         // Moving it to another screen isn't an answer: dismiss() keeps the report, only a choice or Back clears it.
         crashDialog?.dismiss()
-        val froze = CrashReport.froze(report)
-        // The words are F's (docs/words-m1.md, #74 and #97).
-        crashDialog = android.app.AlertDialog.Builder(host, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(if (froze) "TitanKeys froze last time." else "TitanKeys crashed last time.")
-            .setMessage("Sorry about that. Send us the report so we can fix it? It has the error and the versions, " +
-                "nothing you typed. Nothing goes unless you send it.")
-            .setPositiveButton("Send it") { _, _ ->
+        // TitanKeys' own card, big enough to read and tap (owner, 2026-11-16), with F's words (CrashOffer.kt).
+        crashDialog = com.titankeys.keyboard.CrashOffer.dialog(host, CrashReport.froze(report),
+            send = {
                 answeredCrashOffer()
                 CrashReport.offered(activity)
                 host.startActivity(com.titankeys.connected.Connected.pageIntent(activity, REPORT_PAGE))
-            }
-            .setNegativeButton("No thanks") { _, _ ->
+            },
+            no = {
                 answeredCrashOffer()
                 CrashReport.clear(activity)
-            }
-            .setOnCancelListener {
-                answeredCrashOffer()
-                CrashReport.clear(activity)
-            }
-            .create().apply { setOwnerActivity(host) }
+            })
         crashDialog!!.show()
     }
 

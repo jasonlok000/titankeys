@@ -68,8 +68,11 @@ test("the crash report holds no typed text, and is deleted once sent or dismisse
   const start = offer.indexOf("private fun showCrashOffer(");
   const body = offer.slice(start, offer.indexOf("private fun answeredCrashOffer(", start));
   expect(body).toContain("CrashReport.offered(activity)");
-  expect(body).toMatch(/\.setNegativeButton\("No thanks"\) \{ _, _ ->\s+answeredCrashOffer\(\)\s+CrashReport\.clear\(activity\)/);
-  expect(body).toMatch(/\.setOnCancelListener \{\s+answeredCrashOffer\(\)\s+CrashReport\.clear\(activity\)/);
+  // "No thanks" and Back both clear it (CrashOffer.kt calls `no` for each).
+  expect(body).toMatch(/no = \{\s+answeredCrashOffer\(\)\s+CrashReport\.clear\(activity\)/);
+  const card = read("android/kotlin/com/titankeys/keyboard/CrashOffer.kt");
+  expect(card).toContain("dialog.setOnCancelListener { no() }");
+  expect(card).toMatch(/onPress\(haptics\) \{\s+dialog\.dismiss\(\)\s+no\(\)/);
   // Sent: gone. Offered and not sent: gone at the next open.
   expect(read("android/kotlin/com/vandam/ink/ConnectedAdapter.kt")).toContain("if (crash != null) CrashReport.clear(activity)");
   expect(crash).toMatch(/if \(File\(context\.noBackupFilesDir, OFFERED\)\.isFile\) \{\s*clear\(context\)\s*return null/);
@@ -96,8 +99,31 @@ test("the crash offer shows on the screen in front, the playground included, and
   // Before the check for the app's own window, so every screen of the app counts.
   expect(resumed.indexOf("showCrashOffer(target)")).toBeLessThan(resumed.indexOf("if (target !== activity) return"));
   const show = offer.slice(offer.indexOf("private fun showCrashOffer("), offer.indexOf("private fun answeredCrashOffer("));
-  expect(show).toContain(".create().apply { setOwnerActivity(host) }");
+  expect(show).toContain("com.titankeys.keyboard.CrashOffer.dialog(host, CrashReport.froze(report),");
+  expect(read("android/kotlin/com/titankeys/keyboard/CrashOffer.kt")).toContain("dialog.setOwnerActivity(host)");
   // dismiss() moves it without clearing the report: only a button or Back clears it.
   expect(show).toContain("crashDialog?.dismiss()");
-  expect(show.match(/CrashReport\.clear\(activity\)/g)!.length).toBe(2);
+  expect(show.match(/CrashReport\.clear\(activity\)/g)!.length).toBe(1);
+});
+
+test("the crash offer is TitanKeys' own card, big enough to read and tap (owner: \"too small. make it bigger.\")", () => {
+  const card = read("android/kotlin/com/titankeys/keyboard/CrashOffer.kt");
+  const size = (name: string) => Number(card.match(new RegExp(`const val ${name} = (\\d+)f?`))![1]);
+  // Android's alert drew 20, 16 and 14 in TitanKeys' small dp. The body is at least a Settings row (29 dp, 45 px).
+  expect(size("TITLE")).toBeGreaterThanOrEqual(32);
+  expect(size("BODY")).toBeGreaterThanOrEqual(29);
+  expect(size("BUTTON")).toBeGreaterThanOrEqual(29);
+  // Full-width buttons, the pill at least Android's 48 dp touch size and then some.
+  expect(size("SEND_HEIGHT")).toBeGreaterThanOrEqual(72);
+  expect(size("NO_HEIGHT")).toBeGreaterThanOrEqual(56);
+  // Most of the screen wide, whatever the font size: its hosts are wrapped in FixedScale.
+  expect(card).toContain("setLayout(host.resources.displayMetrics.widthPixels - 2 * dp(Look.MARGIN), ViewGroup.LayoutParams.WRAP_CONTENT)");
+  expect(size("MARGIN")).toBeLessThanOrEqual(24);
+  expect(read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt")).toContain("override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))");
+  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain("internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)");
+  // No stock alert any more, and F's words stay as they were.
+  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).not.toContain("AlertDialog");
+  expect(card).toContain('"TitanKeys crashed last time."');
+  expect(card).toContain('"TitanKeys froze last time."');
+  expect(card).toContain('"Sorry about that. Send us the report so we can fix it? It has the error and the versions, nothing you " +');
 });

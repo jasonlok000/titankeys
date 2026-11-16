@@ -10,6 +10,8 @@ Usage: gestures.py [--keymap FILE] [--out FILE] GESTURE... with GESTUREs in orde
   swipe:WORD[:SPEED]      a swipe through WORD's keys, SPEED in keys a millisecond (default .012)
   flick[:KEYS[:MS]]       a level delete flick to the left from Backspace (default 3.2 keys in 90 ms)
   space:N                 N taps on Space's touch zone (1, 2 or 3)
+  spacehold:N[:KEYS[:MS]] N taps on Space, the last one held, then a slide of KEYS key widths sideways (negative: left) in MS
+                          (default 500), as steering (2) and selecting (3) do; KEYS 0 or none only holds
   key:NAME[:HOLD[:AFTER]] a key pressed with the finger on its spot: held HOLD ms (default 70); AFTER is what the finger then
                           does: lift (default), rest (stays 700 ms), slide (moves a key right, then lifts) or none (no touch)
   hold:LETTER[:MS]        a letter held down (default 800 ms)
@@ -345,6 +347,23 @@ class Script:
             self.still(x, y, 70)
             self.lift()
 
+    def space_hold(self, count, keys=0.0, ms=500.0):
+        # CursorGesture: taps under FIRST_TAP_MILLIS (130), gaps under MAX_GAP_MILLIS (150), the last held past it, then a slide.
+        x, y = key_centre("space")
+        for n in range(count - 1):
+            if n:
+                self.wait(90)
+            self.still(x, y, 70)
+            self.lift()
+        if count > 1:
+            self.wait(90)
+        self.still(x, y, 250)
+        if keys:
+            self.touch(x, y, MOVING_MAJOR[0])
+            self.move([(x, y), (min(1.0, max(0.0, x + keys / 10)), y)], abs(keys) / ms)
+            self.still(min(1.0, max(0.0, x + keys / 10)), y, 120)
+        self.lift()
+
     def press(self, name, hold=70.0, after="lift"):
         if after != "none":
             x, y = key_centre(name)
@@ -524,6 +543,11 @@ def build(args, alignment=None):
             if count not in (1, 2, 3):
                 raise SystemExit("space: 1, 2 or 3 taps")
             script.space_taps(count)
+        elif name == "spacehold":
+            count = int(parts[0]) if parts else 2
+            if count not in (1, 2, 3):
+                raise SystemExit("spacehold: 1, 2 or 3 taps")
+            script.space_hold(count, float(parts[1]) if len(parts) > 1 else 0.0, float(parts[2]) if len(parts) > 2 else 500.0)
         elif name == "key":
             script.press(parts[0], float(parts[1]) if len(parts) > 1 else 70.0, parts[2] if len(parts) > 2 else "lift")
         elif name == "hold":

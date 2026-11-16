@@ -195,6 +195,10 @@ def lock():
 
 
 def main():
+    # The guide's checks live in guide_checks.py, which uses this module's helpers: the same module, not a second copy of it.
+    sys.modules.setdefault("checks", sys.modules[__name__])
+    import guide_checks
+    CHECKS.update(guide_checks.CHECKS)
     names = sys.argv[1:]
     if names == ["--list"]:
         for name, check in CHECKS.items():

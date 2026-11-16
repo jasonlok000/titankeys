@@ -1,6 +1,6 @@
 import { Row, Screen, back, useAction, useSnapshot } from "ink";
 import { add } from "ink/icons";
-import { setEnterApp, state } from "../../lib/atlas";
+import { setEnterApp, state } from "../../lib/titankeys";
 import { Note } from "../../lib/note";
 
 const title = "Add app";

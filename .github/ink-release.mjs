@@ -38,7 +38,7 @@ switch (process.argv[2]) {
       .filter((subject) => subject && !/^release: v/.test(subject));
     await writeFile(
       "release-notes.txt",
-      `# ${version}\n\n${DRAFT_MARKER} rewrite these notes for people using Atlas, then delete this line. ` +
+      `# ${version}\n\n${DRAFT_MARKER} rewrite these notes for people using TitanKeys, then delete this line. ` +
         `Each line is "Title: what changed". Write skip instead to release without notes. -->\n\n` +
         `## New\n${subjects.map((subject) => `- ${subject}`).join("\n") || "- "}\n\n## Fixed\n- \n`,
     );

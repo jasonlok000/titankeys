@@ -71,7 +71,61 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
       bundle patch. That's for the owner, since only the owner makes Play builds.
   - **Waiting for the owner's hands:** #89, #93 and #84 by touch; #66's distance; #68's hunts; #72's Sym check; the panel
     page lines while paging.
-- **M2, started 03:40, on code that doesn't need the phone:**
+- **main at 58ce707 (03:50) has all of M1 and #83's rule.** It passes `bun run check` (222), all 41 test suites, the join
+  checks and the Debug build. The phone checklist for the evening, or whenever the phone is free, is in the Orchestrator's
+  scratchpad, `m1-phone-checks.md`.
+- **M2 merged into main at b6d042d (04:35):**
+  - F's words pass: every M1 draft replaced, and the overflowing guide lines shortened.
+  - #90:
+    - a flat thumb with steps 1, 2, HOLD replaces the ghost finger;
+    - misses say "That's X, not Y";
+    - one action per key step;
+    - a far swipe is shown against its word's path at 1.2 keys;
+    - slides and misses go in the raw log.
+  - were/we're: "were" becomes "we're" above 2.0 nats (3.0 with Only fix when sure). It makes no wrong change on any test
+    set, including Tatoeba's counts, and Backspace puts it back.
+  - The conflict between F's blocked-line wording and #90's "That's X, not Y" lines went to #90's, since the pattern is
+    the owner's. F polishes #90's new lines after the rename.
+  - Tests pass: check, guide, guide-decor, gesture-line, gesture-render, word-menu, back, key-alignment, autocorrect,
+    words, and the build.
+- **#81's code rename is on main at 161e0bc (05:15).**
+  - It covers `com.titankeys.*`, `TitanKeysIme`, `lib/titankeys.ts` and the native channel, plus a one-time quiet
+    notification after the update if the keyboard or Back is off.
+  - `bun run check` (228) and all 41 suites pass, and the Debug build is
+    `~/build/m1-apks/main-rename-debug.apk`.
+  - Not yet run: the phone update test.
+- **Review of M1 and M2 (05:50), merged at 3084dd0 with the Worker redeployed.** Seven bugs fixed, each with a test:
+  - a flick took two words in web fields, whose spaces are non-breaking;
+  - reports over 20 parts couldn't upload;
+  - one abandoned report blocked deleting the rest;
+  - a resent part kept its old bytes in the server's count;
+  - a damaged snippets list broke a restore;
+  - the Contacts switch could be lost on restore;
+  - a contact in capitals beat the dictionary's acronym.
+
+  Findings now being fixed:
+  - a front-page loop for 2.1.0 users with contacts unanswered (tk-guide);
+  - two quick-swipe join risks, checked against the logs first (tk-joins);
+  - restore stopping after the words;
+  - saving a backup over an older file;
+  - the flick's read and delete not in one batch edit;
+  - the recording switch being opt-out (tk-data).
+- **More of the Orchestrator's calls, to confirm:**
+  - The contacts question and the Sym/fn part show only in the guide's own setup, never in the playground or from the
+    front page. Settings > Setup has them.
+  - In the report form, the recording is on only when the form comes straight from Record a bug's Stop; otherwise it's
+    off. The crash file is always attached: class names and lines only.
+- **In flight at 05:15:**
+  - tk-languages merges the renamed main into the language framework and finishes Spanish, French, German and more.
+  - tk-gestures then merges Rime on top (`claude/m2-rime`: librime and OpenCC, 3.1 MB, reproducible; Yale, Jyutping,
+    Pinyin; the variants), rebuilds its library for the new names, and adds Rime's learned words to the backup and a
+    "getting ready" state.
+  - F polishes #90's lines and writes #81's notice and notes.
+  - tk-tools reviews M1 and M2 on main for correctness bugs: deleting too much, data loss, privacy, typing, joins, the
+    front page.
+- **Next (done):** the #81 rename, brought up to date with main by tk-data. Then the language framework (tk-languages) and Rime
+  (tk-gestures) merge the renamed main into their branches.
+- **M2, started 03:50, on code that doesn't need the phone:**
   - tk-data: #81's code rename first, then each worker merges main in.
   - tk-languages: the language framework, generic Latin languages, Settings > Languages with English spelling inside
     (#80), and one keyboard-list entry per input method (#76).
@@ -240,6 +294,13 @@ each generic language types its letters and accents over adb.
 More calls get added here as the night goes.
 
 ## For the owner in the morning
+
+- **were/we're's bigger test set needs your yes in its own session:**
+  - The typing worker (tk-typing, branch `claude/m2-were`) can't download Tatoeba's English sentences without the owner's
+    own yes in that session; a go from the Orchestrator doesn't count.
+  - It's using what's on the machine instead: the triples at every position, Tatoeba's held-out file, and the owner's
+    judged cases.
+  - To widen it, say yes to the download in that session.
 
 - **Your personal email address was public in the repo:** wrangler's cache file
   `server/contributions/.wrangler/cache/wrangler-account.json` held it in the Cloudflare account's name, from commit 54473ca

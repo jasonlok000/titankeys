@@ -1,0 +1,2343 @@
+package com.titankeys.keyboard
+
+import com.titankeys.keyboard.KeyboardEvent.Copied
+import com.titankeys.keyboard.KeyboardEvent.CursorStarted
+import com.titankeys.keyboard.KeyboardEvent.DeleteHoldStarted
+import com.titankeys.keyboard.KeyboardEvent.DoubleTapped
+import com.titankeys.keyboard.KeyboardEvent.EmptyKey
+import com.titankeys.keyboard.KeyboardEvent.Released
+import com.titankeys.keyboard.KeyboardEvent.TwoTapsAbove
+import com.titankeys.keyboard.KeyboardEvent.Moved
+import com.titankeys.keyboard.KeyboardEvent.DeletedWord
+import com.titankeys.keyboard.KeyboardEvent.FieldChanged
+import com.titankeys.keyboard.KeyboardEvent.GroupPicked
+import com.titankeys.keyboard.KeyboardEvent.MenuPicked
+import com.titankeys.keyboard.KeyboardEvent.PanelSwiped
+import com.titankeys.keyboard.KeyboardEvent.Resting
+import com.titankeys.keyboard.KeyboardEvent.HeldSymbol
+import com.titankeys.keyboard.KeyboardEvent.ModifierState
+import com.titankeys.keyboard.KeyboardEvent.Pushed
+import com.titankeys.keyboard.KeyboardEvent.Recognised
+import com.titankeys.keyboard.KeyboardEvent.Tapped
+import com.titankeys.keyboard.KeyboardEvent.WordMenu
+import com.titankeys.keyboard.Modifiers.Level
+import com.titankeys.keyboard.Modifiers.Panel
+import kotlin.math.abs
+
+/** The background of the guide: ink while you try a step, and orange once you have done it. */
+internal enum class GuideTone { Orange, Ink }
+
+/**
+ * One chapter of the guide, with the [label] that shows above its slides. Each chapter goes from what you already know, to how
+ * TitanKeys does it, to the more advanced stuff, one small slide at a time. The bar at the top shows the chapters, and how far into
+ * this one you are.
+ */
+internal enum class GuideChapter(val label: String, val roast: String? = null) {
+    Typing("Typing", "OK, you're not that dumb."),
+    Delete("Delete", "Fine, you're not useless. You delete stuff almost as fast as you screw it up."),
+    // The chapter is "Cursor", with no steering in it (owner, #66 and #90). F (docs/words-m1.md).
+    Steering("Cursor", "Wow, you moved a cursor. The bar was on the floor and you still needed a run-up."),
+    Symbols("Symbols and emoji",
+        "Holy shit, you found the clown. Took you long enough, and you see it in the mirror every day."),
+    Clipboard("Copy and paste",
+        "You can copy and paste now. Congrats, that's every skill of every plagiarist who ever failed a class."),
+    /** The name, the two big buttons, and the one boring thing: the offer to share swipes, until it has an answer. */
+    End("Built for Titan 2 Elite"),
+}
+
+/**
+ * Slide zero: the parts of setup that only the phone's Settings can change, in the order that the guide asks for them. The guide
+ * opens the page for each part, sees the switch go on, and comes back by itself, so that each part takes a touch or two.
+ * [title] and [body] follow the same rules as a step's words. [help] shows if you come back with the part still not done.
+ */
+internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null, val skip: String? = null,
+    /** Asked only in the guide's own setup, before the guide: never by the front page or the playground. See [setupToAsk]. */
+    val guideOnly: Boolean = false) {
+    Enable("Turn the keyboard on.", "Flip TitanKeys Keyboard on in the list. You'll come straight back.", "Open the keyboard list",
+        "Can't see it? Scroll down. Flip its switch, then press OK twice."),
+    Choose("Make it your keyboard.", "Pick TitanKeys Keyboard in the list. That's it.", "Pick TitanKeys"),
+    // TitanKeys' own page where Android allows it, or else a list of all apps (PhoneSetup.pages).
+    Overlay("Let it sit over other apps.", "Flip TitanKeys Keyboard's switch on. It keeps the touchpad on the keys.", "Open the page",
+        "On the whole list? Find TitanKeys Keyboard, open it and flip the switch."),
+    // The phone's own name for the mode, numbers and all (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1").
+    ScrollAssistant("Turn on Scroll assistant.", "Flip it on, and keep your apps on Sliding Mode 1. Swiping needs both.", "Open Scroll assistant",
+        "The switch is at the top of that page."),
+    Back("Let TitanKeys handle Back.", "Turn TitanKeys Keyboard on in Accessibility, so Back takes one press.", "Open Accessibility",
+        "Switch greyed out? Android is being careful. In App info, open the menu and allow restricted settings."),
+    // Sym and fn as Programmable key, both on the phone's one Shortcut keys page (owner, #72: in the guide's setup only, after
+    // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.
+    // Not now shows a warning first: see KEYS_WARN_TITLE. F (docs/words-m1.md).
+    Keys("Set up Sym and fn.", "Set both to Programmable key. Sym opens the panel, fn works as Ctrl.", "Open Shortcut keys",
+        "Sym key and fn key are both on that page. Pick Programmable key for each.", skip = "Not now", guideOnly = true),
+    // Names from contacts, last (owner, #87). It says what it's for and that the names stay on the phone before Android asks.
+    // Not now moves on, and the guide never asks again.
+    // Its help shows if Android says no. F (docs/words-m1.md).
+    Contacts("Teach it your contacts' names.", "Names swipe and get fixed right. They never leave your phone.", "Use my contacts",
+        "Android said no. You can turn it on later in Settings > Setup.", skip = "Not now", guideOnly = true),
+    ;
+
+    companion object {
+        /** The line above setup's title, as a chapter's label. */
+        const val LABEL = "Quick setup"
+        /** The line that lands when a part is done, and when all of them are. */
+        const val DONE = "Done."
+        const val ALL_DONE = "All set."
+        /** Not now on the Keys part asks first, with what won't work (owner, #72: "skippable with a warning"). F (docs/words-m1.md). */
+        const val KEYS_WARN_TITLE = "Skip Sym and fn?"
+        const val KEYS_WARN_BODY = "Then Sym won't open its panel, and that's where symbols, emoji and the clipboard live. And fn won't " +
+            "work as Ctrl, so fn + V won't paste. You can set them later in Settings > Setup."
+        const val KEYS_WARN_SKIP = "Skip anyway"
+        const val KEYS_WARN_BACK = "Set them up"
+    }
+}
+
+/** What the drawing of the keys shows as a ghost finger, so that the screen says what to do without words. */
+internal sealed interface GuideCue {
+    /** No ghost. The keys only light up under your own finger. */
+    data object Free : GuideCue
+    /** A finger goes through the letters of a word. */
+    data class Word(val word: String) : GuideCue
+    /** A finger goes through the next word of [GuideScript], which changes as you type. */
+    data object NextWord : GuideCue
+    /** A finger flicks left from Backspace, and stays there if [hold] is true. */
+    data class Flick(val hold: Boolean) : GuideCue
+    /**
+     * These keys light one after the other, slowly, a few times, then stop. Keys in [held] stay lit, steady, as a modifier held
+     * down does: never flashing. With [together], they all light at once instead, as one key: a pair that does the same thing.
+     */
+    data class Spot(val keys: List<String>, val held: List<String> = emptyList(), val rounds: Int = 3, val together: Boolean = false) : GuideCue
+    /** The keys of the word that the ghost has next light in order, then Space, once: the screen fills in which keys. */
+    data object Spell : GuideCue
+    /** A finger goes along the bottom row. */
+    data object SlideRow : GuideCue
+    /** A finger taps the bottom row, then if [drag] is true stays down, swipes up and leans to one side. */
+    data class Taps(val count: Int, val drag: Boolean) : GuideCue
+}
+
+/**
+ * What a slide shows by itself as soon as it opens, and again when nobody acts for a while: slowly, in grey over the field, without
+ * typing anything.
+ * The drawing of the keys acts it out at the same time.
+ */
+internal sealed interface GuideDemo {
+    /** The letters of the next word appear one by one, as if pushed, then its punctuation as the keyboard types it. */
+    data object TypeNext : GuideDemo
+    /** The next word appears whole, at the end of the ghost swipe, then its punctuation as the keyboard types it. */
+    data object SwipeNext : GuideDemo
+    /** The next word appears with a slip in it, then the right word takes its place, as a touch on the strip does. */
+    data object FixNext : GuideDemo
+    /** The last word fades away. */
+    data object DeleteLast : GuideDemo
+    /** Only the last letter goes, as one Backspace takes it. */
+    data object DeleteLetter : GuideDemo
+    /** The cursor walks back through the last word. */
+    data object MoveCursor : GuideDemo
+    /** The last word is selected. */
+    data object SelectLast : GuideDemo
+    /** The words the slide marks are selected, as three taps, the third held and slid, select them. */
+    data object SelectTarget : GuideDemo
+    /** A letter appears from a key that stays down, then becomes the symbol in that key's corner. */
+    data class HoldLetter(val key: String) : GuideDemo
+    /** These keys light one after the other, then [text] appears, as from the Sym panel. */
+    data class Insert(val keys: List<String>, val text: String) : GuideDemo
+    /** The next word is typed with a slip in it, then Space lights and the right word takes its place, as autocorrect does. */
+    data object TypeSlip : GuideDemo
+    /** Alt lights, then [key], and the symbol in that key's corner appears. */
+    data class AltLetter(val key: String) : GuideDemo
+    /** The last word is selected, then fn and C light, as a copy does. */
+    data object CopyLast : GuideDemo
+}
+
+/**
+ * What a slide shows on the keyboard's own bar at the same time as its demonstration, so that the bar itself shows what to do.
+ * See [GuideHooks.stripDemo].
+ */
+internal enum class GuideBar {
+    /** A word with a slip, then the fix swaps in, as Space does. */
+    Fix,
+    /**
+     * The word menu: once it's open, the drawing of the keys presses I. No ghost finger on the bar: the bar shows the selected word
+     * there, and the keyboard never plays a demo over a selected word.
+     */
+    Menu,
+}
+
+/**
+ * The text that the guide suggests you type, written out in the line above the field. It is one paragraph about TitanKeys, and the
+ * whole guide is one text in one field: each word that you swipe or type moves the line on to the next word, whatever the word was,
+ * so that nothing waits on one word. After the last word it starts again.
+ */
+// F (docs/words-m1.md), "move the cursor" in place of "steer" (#66).
+internal object GuideScript {
+    const val TEXT = "Nothing to unlearn: type with two hands or one, and TitanKeys fixes your typos as you go. Then swipe whole " +
+        "words on the same keys. Missed one? The right word is a tap away. Flick to delete, move the cursor from Space, and " +
+        "get every symbol and emoji without the screen. This is the ultimate keyboard, and these are the keys your Titan " +
+        "deserves."
+
+    val words = TEXT.split(' ')
+
+    /** The letters of a word that a swipe goes through. */
+    fun letters(word: String) = word.filter { it.isLetter() }.lowercase()
+
+    /**
+     * The script in steps: each word, and after a word that ends in marks, such as "unlearn:" or "go.", those marks as a step of
+     * their own, so that the line above waits for them and you get to type them.
+     */
+    val steps = words.flatMap { word ->
+        val marks = word.takeLastWhile { !it.isLetterOrDigit() }
+        listOfNotNull(word.dropLast(marks.length).takeIf { it.isNotEmpty() }, marks.takeIf { it.isNotEmpty() })
+    }
+
+    /** The step at [index], starting again after the end. */
+    fun stepAt(index: Int) = steps[index.mod(steps.size)]
+
+    /** Whether a step is marks to type, and not a word. */
+    fun isMarks(step: String) = step.isNotEmpty() && !step[0].isLetterOrDigit()
+
+    /** The word that comes next from step [index] on: the step itself, or the word after the marks. */
+    fun wordFrom(index: Int) = stepAt(index).takeUnless(::isMarks) ?: stepAt(index + 1)
+
+    /**
+     * How many steps of the script [text] has. It is lenient, so that nothing waits on you: each word counts, also one that came
+     * out different, and a word typed where marks are next counts for the marks too. A mark where a word is next is passed over.
+     * A last word that is still being typed, the start of the word that is next, does not count until it is whole.
+     */
+    fun progress(text: String): Int {
+        val pieces = PIECE.findAll(text).map { it.value }.toList()
+        var done = 0
+        for (piece in pieces) {
+            if (isMarks(piece)) {
+                if (isMarks(stepAt(done))) done++
+                continue
+            }
+            if (isMarks(stepAt(done))) done++
+            done++
+        }
+        val last = pieces.lastOrNull()
+        if (last != null && !isMarks(last) && !text.endsWith(' ') && !text.endsWith('\n')) {
+            val typed = letters(last)
+            val expected = letters(stepAt(done - 1))
+            if (typed != expected && expected.startsWith(typed)) done--
+        }
+        return done
+    }
+
+    /** The steps from [index] on for the line above: words with a space between them, and marks right after their word. */
+    fun lineFrom(index: Int, count: Int) = buildString {
+        for (at in index until index + count) {
+            val step = stepAt(at)
+            if (isNotEmpty() && !isMarks(step)) append(' ')
+            append(step)
+        }
+    }
+
+    /** The keys that type marks, in order: two pushes of Space for a full stop when that is on, and Alt and its key for others. */
+    fun markKeys(marks: String, autoPunctuation: Boolean, keyFor: (Char) -> String?): List<List<String>> = marks.map { mark ->
+        if (mark == '.' && autoPunctuation) listOf(Layout.SPACE, Layout.SPACE)
+        else listOfNotNull(keyFor(mark)?.let { Layout.ALT }, keyFor(mark))
+    }.flatMap { keys -> keys.map { listOf(it) } }
+
+    /**
+     * The pushes that put [word] in the field as the keyboard really does (#59). Typed, each letter is a push; swiped, the
+     * word lands at once with the space that a swipe adds. The marks after it come next: with [autoPunctuation] on, a full
+     * stop is two pushes of Space, and any other mark is Alt and the key that [keyFor] says has that mark, or nothing lit if
+     * no key has it. A mark after a swiped word takes the place of its space, as on the keyboard.
+     */
+    fun pushes(word: String, swiped: Boolean, autoPunctuation: Boolean, keyFor: (Char) -> String?): List<DemoPush> {
+        val marks = word.takeLastWhile { !it.isLetterOrDigit() }
+        val base = word.dropLast(marks.length)
+        val pushes = ArrayList<DemoPush>()
+        if (swiped) pushes += DemoPush(emptyList(), "$base ")
+        else for (i in 1..base.length) pushes += DemoPush(listOfNotNull(base[i - 1].takeIf { it.isLetter() }?.uppercase()), base.take(i))
+        var text = pushes.lastOrNull()?.text ?: ""
+        for (mark in marks) {
+            if (mark == '.' && autoPunctuation) {
+                // The first Space after a swipe only arms the full stop: the swipe's space is already there.
+                text = if (text.endsWith(' ')) text else "$text "
+                pushes += DemoPush(listOf(Layout.SPACE), text)
+                text = text.trimEnd() + ". "
+                pushes += DemoPush(listOf(Layout.SPACE), text)
+                continue
+            }
+            val key = keyFor(mark)
+            if (key != null) pushes += DemoPush(listOf(Layout.ALT), text)
+            text = text.trimEnd(' ') + mark
+            pushes += DemoPush(listOfNotNull(key), text)
+        }
+        return pushes
+    }
+
+    /** The word at [index], starting again after the end. */
+    fun wordAt(index: Int) = words[index.mod(words.size)]
+
+    /** [word] with a slip in it, two letters the wrong way round, for the demonstration of the strip. */
+    fun slip(word: String): String {
+        val at = word.indexOfFirst { it.isLetter() } + 1
+        if (at <= 0 || at + 1 >= word.length || !word[at].isLetter() || !word[at + 1].isLetter() || word[at] == word[at + 1])
+            return word + word.last()
+        return word.substring(0, at) + word[at + 1] + word[at] + word.substring(at + 2)
+    }
+
+    /**
+     * The script from step [index] on, at least [count] words and to the end of a sentence, to put in the field for a step that
+     * needs text to work on. It goes on from where the text is, so that the line above stays in step with the field. Marks that
+     * are next are passed over, as the text has a space after the word by then.
+     */
+    fun continueFrom(index: Int, count: Int): String {
+        var at = index
+        while (isMarks(stepAt(at))) at++
+        val start = at
+        var added = 0
+        while (added < count || stepAt(at - 1) != ".") if (!isMarks(stepAt(at++))) added++
+        return lineFrom(start, at - start)
+    }
+
+    /** Where each step is in [TEXT], from its first character to after its last, in the order of [steps]. */
+    val ranges: List<IntRange> = buildList {
+        var at = 0
+        for (word in words) {
+            val marks = word.takeLastWhile { !it.isLetterOrDigit() }
+            val base = word.length - marks.length
+            if (base > 0) add(at until at + base)
+            if (marks.isNotEmpty()) add(at + base until at + word.length)
+            at += word.length + 1
+        }
+    }
+
+    /**
+     * Where typing is in the script, for the passage above the field, as a typing race shows it: [next] is the step being typed
+     * now, counted on from the start like [progress], [wrong] the steps before it that came out different, and [typed] the
+     * letters of the word being typed, while it is not finished.
+     */
+    class Track(val next: Int, val wrong: Set<Int>, val typed: String)
+
+    fun track(text: String): Track {
+        val pieces = PIECE.findAll(text).map { it.value }.toList()
+        val open = text.isNotEmpty() && !text.endsWith(' ') && !text.endsWith('\n')
+        var done = 0
+        val wrong = HashSet<Int>()
+        for ((index, piece) in pieces.withIndex()) {
+            if (isMarks(piece)) {
+                if (isMarks(stepAt(done))) {
+                    if (piece != stepAt(done)) wrong += done
+                    done++
+                }
+                continue
+            }
+            // A word where marks were next leaves the marks out.
+            if (isMarks(stepAt(done))) {
+                wrong += done
+                done++
+            }
+            // The last word, still being typed, is the word in progress, right or wrong so far.
+            if (index == pieces.lastIndex && open) return Track(done, wrong, letters(piece))
+            if (letters(piece) != letters(stepAt(done))) wrong += done
+            done++
+        }
+        return Track(done, wrong, "")
+    }
+
+    /** A word, or a run of marks, in typed text. */
+    private val PIECE = Regex("[\\p{L}\\p{N}'’]+|[^\\s\\p{L}\\p{N}'’]+")
+}
+
+/**
+ * A text to type along to, in its own box above the field: each slide has its own, about what the slide teaches, and following the
+ * instructions perfectly means typing it. It starts again after its end. Words are matched by their letters only, so marks and
+ * capitals never hold anyone up, and a wrong word is skipped: see [track].
+ */
+internal class Passage(lead: String, loop: String = lead) {
+    /**
+     * The whole run of text: [lead], then [loop] again and again, so that the text never starts over in the box but goes on in
+     * new lines. A slide's text is its own lead and loop; once the slide is done, its after text follows on from the line you're on.
+     */
+    val text: String = buildString {
+        append(lead.trim())
+        val more = loop.trim()
+        var count = lead.split(' ').count { it.isNotEmpty() }
+        val step = more.split(' ').count { it.isNotEmpty() }
+        // Each time round carries straight on from the end, with no mark and no new line, as if the text went on forever.
+        while (step > 0 && count < MIN_WORDS) {
+            if (isNotEmpty()) append(' ')
+            append(more)
+            count += step
+        }
+    }
+    val words: List<String> = text.split(' ').filter { it.isNotEmpty() }
+
+    /** Where each word is in [text], from its first character to after its last. */
+    val ranges: List<IntRange> = buildList {
+        var at = 0
+        for (word in words) {
+            at = text.indexOf(word, at)
+            add(at until at + word.length)
+            at += word.length
+        }
+    }
+
+    fun wordAt(index: Int) = words[index.mod(words.size)]
+
+    /**
+     * Where typing is: [next] is the word to type now, counted on past the end as the text starts again, [done] the words typed
+     * right, and [typed] the letters of the word being typed while it is not finished.
+     */
+    class Track(val next: Int, val done: Set<Int>, val typed: String)
+
+    /**
+     * Follows [typed], the text typed since the passage began. A word that matches the next one is done. A word that matches one of
+     * the few after it is done there, and the ones before it are skipped. Any other word is ignored, so a slip never gets anyone
+     * stuck: for "type with two hands", "type with t two" leaves "hands" next.
+     */
+    fun track(typed: String): Track {
+        val pieces = WORD.findAll(typed).map { it.value }.toList()
+        val open = typed.isNotEmpty() && !typed.last().isWhitespace()
+        var next = 0
+        val done = HashSet<Int>()
+        // The dot between rounds has nothing to type, so it is passed over by itself.
+        fun pass() {
+            while (GuideScript.letters(wordAt(next)).isEmpty() && next < words.size * 2) done += next++
+        }
+        pass()
+        for ((index, piece) in pieces.withIndex()) {
+            val letters = GuideScript.letters(piece)
+            if (letters.isEmpty()) continue
+            if (index == pieces.lastIndex && open) return Track(next, done, letters)
+            val ahead = (0..LOOK_AHEAD).firstOrNull { GuideScript.letters(wordAt(next + it)) == letters } ?: continue
+            done += next + ahead
+            next += ahead + 1
+            pass()
+        }
+        return Track(next, done, "")
+    }
+
+    private companion object {
+        /** How many words past the next one a typed word may match. */
+        const val LOOK_AHEAD = 3
+        /** At least this many words in a run, far more than anyone types on one slide. */
+        const val MIN_WORDS = 400
+        val WORD = Regex("[\\p{L}\\p{N}'’]+")
+    }
+}
+
+/**
+ * The playground's own text, made for speed: common words, no capitals and no marks, and no apostrophes either, since autocorrect
+ * would put them back and the line would no longer match. It's in the owner's tone (owner, 2026-11-12: "offensive fun casual",
+ * "nothing off limits"), and long enough to type for about an hour: every line comes once, in a new order, before any comes again.
+ */
+internal object PlaygroundText {
+    internal val SENTENCES = listOf(
+        "your thumbs have more game than you do and even they get left on read",
+        "you bought a phone with a real keyboard in this economy and you call other people weird",
+        "touchscreen people tap glass like pigeons and think they are typing",
+        "this keyboard fixes your typos so your boss keeps thinking you went to school",
+        "somewhere a blackberry is crying because you finally moved on",
+        "you type faster than you think which explains a lot of your messages",
+        "if you are not dumb why did you buy a phone with a keyboard that is because you are dumb and proud of it",
+        "some of you bought this as a dumb phone to scroll less and some as a powerhouse and you are all still scrolling",
+        "swipe like you mean it and stop poking the keys like they owe you money",
+        "if you can read this you are already smarter than half your group chat",
+        "your ex had a touchscreen and look how that turned out",
+        "every typo you make here stays between you and god and also me",
+        "nobody asked for a phone this thick but here we are loving it",
+        "you spent more time picking this keyboard than picking your friends and it shows",
+        "the delete key has seen things it will never tell anyone about",
+        "you last longer typing this line than you do in bed and that is saying something",
+        "you could have bought an iphone but you wanted to feel something",
+        "type it like you are texting your crush and pretend they will reply this time",
+        "this text never ends just like your screen time report",
+        "your search history would get you arrested in three countries and your typos would get you deported",
+        "your mom liked this keyboard before it was cool",
+        "go outside after this line you absolute keyboard goblin",
+        "just kidding nobody goes outside keep typing",
+        "titankeys does not judge you but it does keep a list",
+        "your pocket stopped closing the day you bought this thing",
+        "your phone weighs more than your opinions and both are pretty dense",
+        "every time you swipe a word a touchscreen user loses their job",
+        "the guide called you dumb and honestly the guide was right",
+        "you are not typing fast you are just panicking with confidence",
+        "titankeys learned more words from you this week than you learned all year",
+        "if typing was a sport you would still be on the bench eating chips",
+        "your messages are long because your keyboard finally lets you be annoying",
+        "right now someone is typing on glass and every word is wrong and you feel great about it",
+        "this is the only workout your thumbs will get today",
+        "you paid money for a phone this thick and you would do it again",
+        "go ahead and make a typo titankeys is right there waiting to clean up after you again",
+        "autocorrect has seen how you really spell and it needs a minute",
+        "the best thing about this keyboard is that nobody can see you type this badly",
+        "one day your grandchildren will ask what a real keyboard was and you will cry",
+        "you type like a raccoon that found a laptop in a dumpster",
+        "your group chat muted you and you still typed a whole paragraph",
+        "typing this slow should be illegal but we are not the police",
+        "keep going you are almost as fast as a kid with a touchscreen",
+        "that was a joke you are nowhere close",
+        "your thumbs want a raise and you are not even paying them",
+        "titankeys is the only thing in your life that fixes your mistakes without a lecture",
+        "you hold your phone like it owes you rent",
+        "this phone survived a drop that would kill a normal phone and also your dignity",
+        "the keys click and your heart races and that is the most action you got this week",
+        "if you swiped that word perfectly do not tell anyone or they will expect it every time",
+        "the screen is for looking at and the keys are for everything else",
+        "hold a letter for its symbol like a wizard who never leaves the house",
+        "two taps on space and the cursor goes wherever you slide it like a little dog on a leash",
+        "flick left on the keys and the word is gone like your last relationship",
+        "every great writer started with a keyboard and most of them also had talent",
+        "your spelling is a crime scene and titankeys is the detective",
+        "type the next word and try not to think about how much this phone cost",
+        "people stare at your phone on the train and you pretend you do not love it",
+        "your phone has more buttons than your microwave and you use all of them",
+        "this keyboard has no idea what you are typing and it is better that way",
+        "tell your friends about titankeys or keep it a secret like everything else you do",
+        "nothing you type here leaves the phone so your spelling stays a secret",
+        "if your thumbs had a dating profile it would say good with their hands",
+        "you could be doing anything right now and you picked this",
+        "the faster you type the less time you have to regret what you said",
+        "this sentence is long on purpose to see if you give up and you probably will",
+        "you did not give up which is more than we can say for your diet",
+        "the keyboard is square the phone is square and so are you",
+        "your phone is warm from all this typing and your messages are still cold",
+        "every word you swipe is one less tap on glass",
+        "typing on glass is like dancing on ice in socks",
+        "your thumbs move like they are late for something and they are",
+        "the backspace key is your most loyal friend and it never asks how you are",
+        "nobody needs to know you practiced this for an hour",
+        "you said one more line an hour ago and here we are",
+        "this text is longer than your attention span so we will see who wins",
+        "type like nobody is watching because honestly nobody is",
+        "your phone is thick and your excuses are thin",
+        "titankeys fixed that word before you even noticed and it will never let you forget it",
+        "your typing speed is impressive for someone using their thumbs and a lot of hope",
+        "somewhere a teacher is proud of you and it is not your typing teacher",
+        "the sound of real keys is the only applause you will get today",
+        "slow down champ the words are not going anywhere",
+        "actually speed up we do not have all day",
+        "the keyboard has your back but your posture does not",
+        "sit up straight you look like a shrimp holding a brick",
+        "you type with the energy of someone who just found out about coffee",
+        "your typos have typos and titankeys has seen them all",
+        "swipe the word and leave the screen alone",
+        "every time you touch the screen a small part of titankeys dies inside",
+        "do not touch the screen we talked about this",
+        "your fingers know this keyboard better than you know your own family",
+        "the guide was short and this text is not so get comfortable",
+        "congrats on owning a phone you could use as a doorstop",
+        "this keyboard has more personality than most people you know including you",
+        "you thought this would be a quick test and now you live here",
+        "the only thing faster than your typing is how fast you change your mind",
+        "you would type better if you stopped laughing at these lines",
+        "do not laugh at the next one it is not that funny",
+        "your boss thinks you are working and technically you are practicing",
+        "you are the main character and this is the boring montage",
+        "type until your thumbs ache and then keep going because nobody is coming to save you",
+        "the titan is heavy because it carries the weight of your bad decisions",
+        "a real keyboard in your pocket and still you text like a caveman",
+        "titankeys suggests words because you clearly need suggestions",
+        "your vocabulary is small but your thumbs are mighty",
+        "if you get this whole line right you can call yourself a typing god for ten seconds",
+        "time is up and you are back to being a regular person",
+        "everyone else pokes glass and you click real keys like a person from the past",
+        "your phone is the last of its kind like a dinosaur that sends emails",
+        "nothing says i peaked in high school like loving real keyboards",
+        "but you are right and everyone else is wrong and that feels great",
+        "typing on real keys is like driving stick and you never let anyone forget it",
+        "your friends ask why your phone is so big and you start a twenty minute speech",
+        "they stopped asking and you kept talking",
+        "you are the reason this keyboard has a delete gesture",
+        "flick that mistake away and pretend it never happened like you do with everything",
+        "your thumbs are faster than your brain and that is a problem for everyone",
+        "the space bar is the biggest key because you hit it the most and think the least",
+        "every message you send is a little worse than you think and that is fine",
+        "titankeys will not tell your secrets but your typos might",
+        "this is a safe space for bad spelling and worse decisions",
+        "you made it this far and that is more than your new year resolutions",
+        "the clock is ticking and so are your keys",
+        "your phone could survive a war and you still put it in a case",
+        "you type like you are defusing a bomb and every word is the red wire",
+        "breathe in breathe out and type the next word you drama queen",
+        "nobody types like you and the world is grateful",
+        "if you are reading this out loud please stop people are looking",
+        "you would be a great writer if you had anything to say",
+        "titankeys loves you but it will still fix your grammar",
+        "the keyboard does not care about your feelings it cares about your spelling",
+        "your thumbs deserve a vacation and you deserve a better phone case",
+        "just kidding your phone case is perfect just like you",
+        "your case makes the phone even thicker and you said that was the point",
+        "you have been typing for so long your phone is starting to sweat",
+        "the battery is dying and so is your social life but at least you are fast now",
+        "the only thing smaller than these keys is the number of people who understand you",
+        "titankeys does not get you either but at least it fixes your spelling",
+        "type with one hand and pretend the other one is doing something important",
+        "everyone has a talent and yours is typing nonsense at high speed",
+        "you are not addicted to this keyboard you can stop any time you want",
+        "prove it and stop typing right now",
+        "we knew you could not do it",
+        "your thumbs called in sick but you made them work anyway you monster",
+        "a real keyboard makes you feel like a hacker in a movie from the nineties",
+        "you are not hacking anything you are typing silly sentences into a practice box",
+        "it still looks cool though and that is all that matters",
+        "every swipe is a love letter to a phone nobody else wanted",
+        "this line is here to make sure you are still awake",
+        "you blinked and missed the last word so go back",
+        "never mind keep going there is no going back in life or in this text",
+        "go drink some water after this line you look like a raisin",
+        "the water can wait one more line",
+        "titankeys was built by someone with too much free time and you are welcome",
+        "found a bug report it in settings and stop yelling at your phone",
+        "you are typing faster than your internet and that is not a compliment to your internet",
+        "the people next door can hear you clicking and they have opinions",
+        "click louder and let them know you have a real keyboard",
+        "when the zombies come you will survive because your phone doubles as a brick",
+        "you could stop now but then you would have to talk to people",
+        "keep typing because nobody bothers you while you look this busy",
+        "the end of this text is far away and so is your bedtime",
+        "and when you reach the end it starts again because you never learn",
+    )
+
+    /** All the lines' words, which is how long one round of the text is. */
+    val WORDS = SENTENCES.sumOf { it.split(' ').size }
+
+    /**
+     * Where each sentence of a [make] text starts, by word: the text has no marks, so the sentences are found by their words. The
+     * front page shows the whole sentence you're in, never a line cut out of the middle of one (owner, v5.3).
+     */
+    fun sentenceStarts(words: List<String>): List<Int> {
+        val known = SENTENCES.map { it.split(' ') }
+        val starts = ArrayList<Int>()
+        var at = 0
+        while (at < words.size) {
+            starts += at
+            val match = known.filter { at + it.size <= words.size && words.subList(at, at + it.size) == it }.maxOfOrNull { it.size }
+            at += match ?: 1
+        }
+        return starts
+    }
+
+    /** The words of the sentence that word [index] is in, from its first to after its last. */
+    fun sentenceAround(starts: List<Int>, count: Int, index: Int): IntRange {
+        val at = starts.indexOfLast { it <= index }.coerceAtLeast(0)
+        return (starts.getOrNull(at) ?: 0) until (starts.getOrNull(at + 1) ?: count)
+    }
+
+    /** At least [count] words: every line once in a random order, and then again in a new order, so nothing repeats early. */
+    fun make(random: kotlin.random.Random, count: Int = WORDS): String {
+        val lines = ArrayList<String>()
+        var words = 0
+        while (words < count) {
+            // In one paragraph, a line that starts with the word the line before ends with reads as a stutter ("a lot of your
+            // messages your messages are long", owner, 2026-11-13): each next line is the first in the shuffled round that doesn't.
+            val round = SENTENCES.shuffled(random).toMutableList()
+            while (round.isNotEmpty()) {
+                val before = lines.lastOrNull()
+                val at = round.indexOfFirst { before == null || !stutters(before, it) }
+                val line = round.removeAt(at.coerceAtLeast(0))
+                words += line.split(' ').size
+                // Only a round's last line can be left with no clean place at the end: it goes in earlier, where it fits.
+                val earlier = if (at >= 0) -1 else (lines.size - 1 downTo 1).firstOrNull {
+                    !stutters(lines[it - 1], line) && !stutters(line, lines[it])
+                } ?: -1
+                if (earlier > 0) lines.add(earlier, line) else lines += line
+            }
+        }
+        return lines.joinToString(" ")
+    }
+
+    /** Whether [next] starts with the word that [before] ends with. */
+    fun stutters(before: String, next: String) = before.substringAfterLast(' ') == next.substringBefore(' ')
+}
+
+/** One push in a demonstration: the keys that light, and the text that the word has become after it. */
+internal data class DemoPush(val keys: List<String>, val text: String)
+
+/** A setting that a step needs. If it is off, the step offers to turn it on. */
+internal enum class GuideNeed(val offer: String, val optional: Boolean = false) {
+    HoldSymbols("Turn on Hold a letter for its symbol"),
+    CursorControl("Turn on Space taps move and select"),
+    SwipeTyping("Turn on Swipe to type words"),
+    FnAsCtrl("Turn it on"),
+}
+
+/** The settings that change which steps show. */
+internal data class GuideSettings(
+    val holdSymbols: Boolean = false,
+    val cursorControl: Boolean = true,
+    val swipeTyping: Boolean = true,
+    val fnAsCtrl: Boolean = false,
+    /** The Sym panel is on the screen now. */
+    val panelOpen: Boolean = false,
+    /** The offer to share swipes has no answer yet, so its slide shows. */
+    val shareUnanswered: Boolean = false,
+) {
+    fun has(need: GuideNeed) = when (need) {
+        GuideNeed.HoldSymbols -> holdSymbols
+        GuideNeed.CursorControl -> cursorControl
+        GuideNeed.SwipeTyping -> swipeTyping
+        GuideNeed.FnAsCtrl -> fnAsCtrl
+    }
+}
+
+/** What a step makes of an event. */
+internal sealed interface GuideVerdict {
+    data object Wait : GuideVerdict
+    /**
+     * A scenario: something happened that the slide has words for. With a [title] it takes the place of the slide's title, and [text]
+     * of its instruction, until the user is back on track; without one, [text] shows as a hint. [stage] moves the slide to that stage
+     * too. [passes] means it counts: the slide is done, with [title] as the line that lands and [text] under it.
+     */
+    data class Hint(val text: String, val title: String? = null, val stage: Int? = null, val passes: Boolean = false,
+        /** What the miss was, for the raw log (#90). */
+        val miss: GuideMiss? = null) : GuideVerdict
+    /** A stage's check: this stage is done, so the slide shows the next instruction, or is done after its last one. */
+    data object Done : GuideVerdict
+    /** The slide moved to the stage at [index], forwards or back, so that it shows only the instruction needed now. */
+    data class Stage(val index: Int) : GuideVerdict
+    /** A stage's check: the whole slide is done, whatever stage it was at. */
+    data object Finished : GuideVerdict
+}
+
+/** A step's own memory. Each step starts with a new one. */
+internal class GuideMemory {
+    var count = 0
+    var armed = false
+    var mark = -1
+    /** The stage that the slide is at. */
+    var stage = 0
+    /** How long the field's text was when last heard of, and when this stage began. -1 until it is known. */
+    var length = -1
+    var stageLength = -1
+    /** The letters of the word that the text box has next, as the event happened. */
+    var expected = ""
+    /** A slide that this one makes unneeded, by its id: the guide passes over it. */
+    var skip: String? = null
+    /** The slide is done in a way that also does the next slide: the guide shows that one done. */
+    var jump = false
+    /** The Sym panel is open, as far as this slide has heard. */
+    var panelOpen = false
+    /** What the slide has seen used, across its stages, such as the ways the groups slide turned pages. */
+    var used = 0
+    /** The text in the field that the slide marks in orange as the thing to aim at, if any. The screen sets it. */
+    var target: IntRange? = null
+    /** Where the cursor was before this event, or -1 until it is known. */
+    var cursor = -1
+    /** The open panel's page, as the keyboard last drew it, or null with the panel closed. See [followPanel]. */
+    var page: PanelPage? = null
+    /** The page of the open group where the slide's symbol showed last, or null if it hasn't shown in this group. */
+    var seenOn: Int? = null
+    /** The open group is the slide's own, as its first page said, or null before a first page was seen. */
+    var home: Boolean? = null
+
+    /** The field's text is longer than when this stage began: something was typed or pasted. */
+    fun grew(event: KeyboardEvent) = event is FieldChanged && stageLength >= 0 && event.text.length > stageLength
+}
+
+/**
+ * One instruction of a slide. A slide teaches one thing at a time: it shows only the instruction that is needed now, and moves on,
+ * or back, as the keyboard changes. [cue] replaces the slide's own ghost while this instruction shows.
+ */
+internal class GuideStage(
+    val text: String,
+    val cue: GuideCue? = null,
+    /** What the drawing of the keys shows on some keys while this instruction shows, in place of their letters; the rest dim. */
+    val labels: Map<String, String>? = null,
+    /** What the keyboard lets through while this instruction shows, in place of the slide's own [GuideStep.lessons]. */
+    val lessons: Set<GuideLesson>? = null,
+    val check: GuideMemory.(KeyboardEvent) -> GuideVerdict,
+)
+
+/** The check of a slide made of [stages]: each stage's check runs while it shows, and Done moves to the next stage. */
+private fun staged(stages: List<GuideStage>): GuideMemory.(KeyboardEvent) -> GuideVerdict = check@{ event ->
+    if (stages.isEmpty()) return@check GuideVerdict.Wait
+    if (event is ModifierState) panelOpen = event.panel != Panel.Closed
+    val verdict = stages[stage.coerceIn(0, stages.lastIndex)].check(this, event)
+    if (event is FieldChanged) {
+        length = event.text.length
+        cursor = event.start
+    }
+    fun move(to: Int): GuideVerdict {
+        stage = to
+        stageLength = length
+        count = 0
+        armed = false
+        mark = -1
+        return GuideVerdict.Stage(to)
+    }
+    when {
+        verdict == GuideVerdict.Finished -> GuideVerdict.Done
+        verdict == GuideVerdict.Done && stage < stages.lastIndex -> move(stage + 1)
+        verdict is GuideVerdict.Stage -> if (verdict.index == stage) GuideVerdict.Wait else move(verdict.index.coerceIn(0, stages.lastIndex))
+        verdict is GuideVerdict.Hint && !verdict.passes && verdict.stage != null -> {
+            if (verdict.stage != stage) move(verdict.stage.coerceIn(0, stages.lastIndex))
+            verdict
+        }
+        else -> verdict
+    }
+}
+
+/**
+ * One slide. The words and the check are in one place, so that a gesture that changes is easy to change here.
+ * [title], [body] and [done] are what the user reads: the owner's approved text (v3.1).
+ */
+internal class GuideStep(
+    val id: String,
+    val chapter: GuideChapter,
+    val title: String,
+    /** The instructions, one at a time. A slide without stages shows [body] and has its own [check]. */
+    val stages: List<GuideStage> = emptyList(),
+    /** What the slide says first: its first instruction, unless it has no stages. */
+    val body: String = stages.firstOrNull()?.text.orEmpty(),
+    /** A short line that lands when the step is done. The step then stays, so you can try it more, until you push Next. */
+    val done: String,
+    /** Shows after a time with no success: as the title, with [help] as the instruction, if [helpTitle] is set. */
+    val help: String? = null,
+    val helpTitle: String? = null,
+    val cue: GuideCue = GuideCue.Free,
+    /** The setting that this step needs. */
+    val needs: GuideNeed? = null,
+    /** The step does not show when this is true. */
+    val skipWhen: (GuideSettings) -> Boolean = { false },
+    /** The step works with the Sym panel open, so an open panel is no mistake here. */
+    val usesPanel: Boolean = false,
+    /**
+     * The panel where the slide's work is: its symbol's on the Sym panel or the emoji, or its clip on the clipboard. While a panel
+     * is open, the instruction follows the page that's open: what to do here, how to get to the next page or back, and how to
+     * leave ([panelLine]; owner, M1: "specific instructions within the different pages so the user will never be lost").
+     */
+    val findIn: Panel? = null,
+    /** What the first page of the slide's own group shows, to tell it from the others: see [followPanel]. */
+    val homeMark: String? = null,
+    /** The slide's line for each place in the panels, in place of its stage's (owner, M1): see [panelLine]. */
+    val pageLines: Map<PanelSpot, String> = emptyMap(),
+    /** The line under the instruction while the slide's own panel is open: how to leave it. */
+    val leaveLine: String? = null,
+    /**
+     * The menu that the keyboard is put in when the step starts, so that the step starts in the right place: the Sym panel for
+     * the steps that need it, closed for the rest. Null leaves a step that uses the panel as it is.
+     */
+    val setup: Panel? = if (usesPanel) null else Panel.Closed,
+    /** The step works on text, so it needs at least this many words in the field. */
+    val needsWords: Int = 0,
+    /** A stop between the parts of the guide: it counts as done at once, and offers to start typing. */
+    val pause: Boolean = false,
+    /** A slide that only tells you something: it counts as done at once, quietly, with nothing to try. */
+    val info: Boolean = false,
+    /** The keyboard makes the next swipe its second guess, on purpose, so that the step can teach the strip. See [GuideHooks]. */
+    val nearMiss: Boolean = false,
+    /** What the slide shows by itself when it opens and when nobody acts. */
+    val demo: GuideDemo? = null,
+    /** What the keyboard's own bar acts out at the same time. */
+    val bar: GuideBar? = null,
+    /** Text that the slide puts in the field to practise on, once, if the field does not have it yet. */
+    val passage: String? = null,
+    /** Text that the slide puts on the clipboard as it opens, to paste. */
+    val clip: String? = null,
+    /** The slide starts with [PASTE_OVER] selected, so that what you paste goes in its place, if nothing is selected yet. */
+    val preselect: Boolean = false,
+    /**
+     * The clips that the keyboard's clipboard shows while this slide is open, in place of the user's own: a sandbox, never saved,
+     * never pinned, gone when the slide is. Empty shows the user's own.
+     */
+    val sandboxClips: List<String> = emptyList(),
+    /** What the slide rains down once it is done, if anything. */
+    val rain: String? = null,
+    /**
+     * The chapter's text box, the same on each of its slides. On the typing slides it's the text to type along to, and on the
+     * symbol slides it shows which symbol is next. See [Passage].
+     */
+    val text: String = "",
+    val after: String = "",
+    /** What the field starts with on this slide, or nothing. A chapter with one text box carries its field from slide to slide. */
+    val seed: String = "",
+    /**
+     * The symbol that this slide waits for, on the symbols chapter: once it's typed the guide types the rest of its sentence, then
+     * the slide is done. [ANY_SYMBOL] takes any.
+     */
+    val symbol: String? = null,
+    /** Where the cursor starts in the field that the slide seeds, from its text, or null for the end. */
+    val cursorAt: ((String) -> Int)? = null,
+    /** A line that shows in place of the instruction while the slide is tried, when it says something, such as a count. */
+    val live: (GuideMemory.() -> String?)? = null,
+    /** What the field's grey ghost shows ahead of the cursor in place of [text], word for word, such as a typo in every word. */
+    val ghost: String = "",
+    /** What this slide unlocks on the keyboard, in the guide's field only, besides letters, Backspace and Space. Null locks nothing. */
+    val lessons: Set<GuideLesson>? = null,
+    /** The bar shows its side words. False shows only the middle one. */
+    val sides: Boolean = true,
+    /**
+     * The word that the box keeps selected the whole slide, or null, as triple Space selects a word. The keyboard shows it as it
+     * shows any selected word, alone in the middle of the bar and underlined until its menu opens, where a tap or a hold opens that
+     * menu (show-only in the guide). Touches on the box change nothing, and any other selection or cursor goes back to it (owner,
+     * 2026-11-13: "selected as in highlighted literally selected"; "guide and the actual keyboard shd match in behavior").
+     */
+    val selected: String? = null,
+    /** What the line under the title says once the slide is done: about what you just did, never the next instruction. */
+    val praise: String = "",
+    /** The slide offers to share swipes: its offer opens the disclosure, and an answer finishes it. */
+    val offersShare: Boolean = false,
+    /**
+     * The line that the slide has you finish (v5): a real takeaway, as it reads once done. The summary at the end stacks them up,
+     * and their first letters spell [ACROSTIC].
+     */
+    val line: String = "",
+    /** What a slide with something to find says as time goes: see [Hunt]. */
+    val hunt: Hunt? = null,
+    /** Any word typed becomes the word the line has next, so there's no way to fail: see [GuideHooks.forceFix]. */
+    val forceFix: Boolean = false,
+    val check: GuideMemory.(KeyboardEvent) -> GuideVerdict = staged(stages),
+) {
+    /** Each slide has its own line and its own field (v5): nothing carries on from the slide before. */
+    val carriesField get() = false
+
+    /**
+     * The slide has the field and the keyboard. The finale and the end have neither, however they're reached (Next, Skip, Back
+     * from the share screen, coming back to the app): the field can't even take focus there, or the keyboard shows its bar again.
+     */
+    val keyboard get() = chapter != GuideChapter.End
+}
+
+/** From android.view.KeyEvent, so that the steps can be tested without Android. */
+private fun isLetter(code: Int) = code in 29..54
+private const val KEY_DEL = 67
+private const val KEY_SPACE = 62
+private const val KEY_ENTER = 66
+/** Left and right Alt. */
+private val ALT_KEYS = setOf(57, 58)
+/** A steer that moves the cursor this far is no nudge. */
+private const val CURSOR_TRAVEL = 3
+
+private val wait: GuideMemory.(KeyboardEvent) -> GuideVerdict = { GuideVerdict.Wait }
+
+private fun panel(event: KeyboardEvent, panel: Panel) = event is ModifierState && event.panel == panel
+
+/** A swipe or a touch that showed another group of the panel's symbols or emoji. */
+private fun otherGroup(event: KeyboardEvent) = event is GroupPicked || event is PanelSwiped && event.moved && abs(event.across) > abs(event.down)
+
+/** A scenario: [title] and [text] take the slide's place until the user is back on track. [stage] moves the slide too. */
+internal fun roast(title: String, text: String, stage: Int? = null) = GuideVerdict.Hint(text, title, stage)
+
+/** A chip over the instruction, for a real mistake: the slide's own title and instruction stay. */
+internal fun chip(text: String, miss: GuideMiss? = null) = GuideVerdict.Hint(text, miss = miss)
+
+/** A scenario that counts: the slide is done, with [title] as the line that lands and [text] under it. */
+internal fun counts(title: String, text: String) = GuideVerdict.Hint(text, title, passes = true)
+
+/**
+ * Every slide's line (guide v5): one short sentence that the slide has you finish, and that is a real takeaway. At the end they
+ * stack up as the summary you wrote yourself, and their first letters spell [ACROSTIC]. See [GuideStep.line].
+ */
+internal const val ACROSTIC = "GO TOUCH GRASS NOW"
+
+/** Slide 1's line, and the typo in each of its words that the ghost shows. Any word typed for one becomes it: see [GuideHooks.forceFix]. */
+internal const val TYPE_LINE = "Get it wrong and Space fixes it"
+internal const val TYPE_TYPOS = "Gte ti wrnog adn Sapce fxies ti"
+
+/** Slide 2's line: its first word is in already, and each word after it is one swipe, which always comes out right (v5.2). */
+internal const val SWIPE_LEAD = "One "
+internal const val SWIPE_LINE = "One swipe per word"
+
+/** Slide 3's line, in the field already, so the bar has words to hold. */
+// TitanKeys first, the slide's marked word, and still a T for the finale's GO TOUCH GRASS NOW (owner, 2026-11-13).
+internal const val MENU_LINE = "TitanKeys belongs in your favourites"
+
+/** Slide 4's line, and the field it starts with: one e too many, right before the cursor. */
+internal const val BACKSPACE_LINE = "Old school: one letter per Backspace"
+internal const val BACKSPACE_SEED = BACKSPACE_LINE + "e"
+
+/** Slide 5's line, and the field it starts with: the word to flick, right before the cursor. */
+internal const val FLICK_LINE = "Unwanted words go with a flick"
+internal const val FLICK_WORD = "stupid"
+internal const val FLICK_SEED = "Unwanted $FLICK_WORD words go with a flick"
+
+/** Where the flick slide's cursor starts: right after its stupid word. */
+internal fun flickCursor(text: String) = text.indexOf(FLICK_WORD).let { if (it < 0) text.length else it + FLICK_WORD.length }
+
+/** The flick slide's word to go, in orange, while it's there. */
+internal fun flickTarget(text: String) = text.indexOf(FLICK_WORD).takeIf { it >= 0 }?.let { it until it + FLICK_WORD.length }
+
+/** Slide 6's line, and the field it starts with: regrets in the middle of it, the cursor right after them. */
+internal const val HOLD_LEAD = "Clear "
+internal const val HOLD_LINE = "Clear it all with one held flick"
+internal const val HOLD_REGRETS = "typos, rants, reply-alls, 2am texts, drunk tweets, exes, that tattoo, "
+internal const val HOLD_SEED = HOLD_LEAD + HOLD_REGRETS + "it all with one held flick"
+
+/** Where the hold slide's cursor starts: right after the regrets. */
+internal fun holdCursor(text: String) = text.indexOf(HOLD_REGRETS).let { if (it < 0) text.length else it + HOLD_REGRETS.length }
+
+/** The regrets, in orange, while any of them are there: from after [HOLD_LEAD] to the cursor. */
+internal fun holdTarget(text: String, cursor: Int): IntRange? {
+    val from = HOLD_LEAD.length
+    if (!text.startsWith(HOLD_LEAD) || cursor <= from) return null
+    val end = text.substring(0, cursor.coerceAtMost(text.length)).trimEnd().length
+    return if (end > from) from until end else null
+}
+
+/**
+ * Slide 7's line, alone in the field (owner, #66: "we only show one line now"). It keeps its first letter H, as the lines spell GO
+ * TOUCH GRASS NOW. Its target is a word of its own, see [steerTarget].
+ */
+// F (docs/words-m1.md). It keeps its H. Its target is "cursor", the word before "follows": see [steerTarget].
+internal const val STEER_LINE = "Hold the second tap and the cursor follows"
+
+/** Slide 8's line, with the words to grab in it. */
+internal const val GRAB_LINE = "Grab my whole heart with three taps"
+
+/** Slides 9 to 13: each line is in the field, with a gap where the slide's symbol goes. The cursor waits in the gap. */
+internal const val ALT_SYMBOL = "*"
+internal const val ALT_LINE = "Read the fine print: Alt and A*"
+/** The held key's symbol: ? is V's, held (owner, v5.2). */
+internal const val HOLD_SYMBOL = "?"
+internal const val HOLD_SYMBOL_KEY = "V"
+internal const val HOLD_SYMBOL_LINE = "Are you even reading this?"
+// F (docs/words-m1.md): the line stands on its own, with no slide before it.
+internal const val SYM_LINE = "Sym has all the symbols, terms & conditions apply"
+/** The symbol that the weird-one hunt looks for. Its title doesn't name it, its hunt does (owner, 2026-11-13). */
+internal const val WEIRD = "∞"
+// The owner's joke (2026-11-13): the line asks how long, and the ∞ the user adds is the answer, then "Sure you do." It starts with
+// S for the finale's GO TOUCH GRASS NOW.
+internal const val GROUPS_LINE = "So how long do I last in bed with your mother? ∞"
+internal const val CLOWN = "🤡"
+internal const val CLOWN_LINE = "Need emoji? Press Sym twice. Signed, 🤡"
+
+/** A line with its [symbol] taken out: the text before the gap, and after it. A gap between two spaces keeps both. */
+internal fun gapped(line: String, symbol: String): Pair<String, String> {
+    val at = line.indexOf(symbol)
+    return line.substring(0, at) to line.substring(at + symbol.length)
+}
+
+/** What the field starts with on a symbol slide: its line with the gap, and where the cursor waits, in the gap. */
+internal fun gapSeed(line: String, symbol: String) = gapped(line, symbol).let { (before, after) -> before + after }
+internal fun gapCursor(line: String, symbol: String) = gapped(line, symbol).first.length
+
+/** The symbol is in its gap: the field reads the whole line, give or take spaces at its ends. */
+internal fun filledGap(text: String, line: String) = text.trim() == line
+
+/**
+ * What is in the gap of [line] now, if the field still reads the line around it: the text between the line's part before the
+ * symbol and its part after. Null if the field no longer fits the line.
+ */
+internal fun gapContent(text: String, line: String, symbol: String): String? {
+    val (before, after) = gapped(line, symbol)
+    val trimmed = text.trimEnd()
+    val end = after.trimEnd()
+    if (!trimmed.startsWith(before) || !trimmed.endsWith(end) || trimmed.length < before.length + end.length) return null
+    return trimmed.substring(before.length, trimmed.length - end.length)
+}
+
+/** The slide's symbol is in its gap, whatever else is there with it: it counts (owner, v5.2: & after a wrong one didn't pass). */
+internal fun symbolInGap(text: String, line: String, symbol: String) = gapContent(text, line, symbol)?.contains(symbol) == true
+
+/**
+ * Only other symbols are in the gap, which the screen takes back out at once: no letters, as a held key's letter shows for a
+ * moment before it turns into its symbol, and not the slide's own symbol.
+ */
+internal fun onlyWrongInGap(text: String, line: String, symbol: String) = gapContent(text, line, symbol)?.let { gap ->
+    gap.isNotBlank() && symbol !in gap && gap.none { it.isLetterOrDigit() }
+} == true
+
+/** A symbol typed in the gap that isn't the slide's: the field is the line with something else where the symbol goes. */
+internal fun wrongInGap(text: String, line: String, symbol: String): Boolean {
+    val (before, after) = gapped(line, symbol)
+    val trimmed = text.trimEnd()
+    val end = after.trimEnd()
+    return trimmed.startsWith(before) && trimmed.endsWith(end) && trimmed.length > before.length + end.length &&
+        !filledGap(text, line)
+}
+
+/** Slide 14's line, with the words the paste goes over selected, and what the paste puts there. */
+internal const val PASTE_LINE = "Only fn and V for me, since I can't type a thing myself"
+internal const val PASTE_OVER = "type everything myself"
+internal const val PASTE_SEED = "Only fn and V for me, since I $PASTE_OVER"
+internal const val PASTE_TEXT = "can't type a thing myself"
+
+/** A key under each of the clipboard page's five clip fields, newest first: see ClipboardHistory.slot. */
+internal val CLIP_FIELD_KEYS = listOf("R", "I", "F", "K", "C")
+
+/** Slide 15's line: the clip that's nice to you pastes the end of it. */
+// One action each, so nobody holds Sym and presses A (#90): Sym, let go, then A. It keeps its first letter W.
+internal const val CLIP_LEAD = "Wait. Sym, let go, A. "
+// After a thread of digs you expect one more roast, and the nice clip pastes something kind, and means it (owner, 2026-11-13: "make
+// this wholesome instead so its not what the user thought").
+internal const val PRANK_PASTE = "I hope you're doing great, genuinely"
+internal const val CLIP_LINE = CLIP_LEAD + PRANK_PASTE
+
+/** The clipboard lesson's clips, newest first: a thread of digs, and one nice one, which isn't what it pastes. */
+// Each fits its field on one line, so no dig ends in "…". The Next-is-not-a-personality one didn't land (owner, 2026-11-13).
+internal val GUIDE_CLIPS = listOf(
+    "Per my last message: just read.",
+    "Circling back: still can't read?",
+    "Reminder: read the manual.",
+    "Looping in your last brain cell.",
+    "I'm doing great.",
+)
+internal val PRANK_CLIP = GUIDE_CLIPS.last()
+/** Every clip that a guide ever put in the user's clipboard, this one's and older ones', to clear from it. */
+internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + setOf(
+    "I'm an idiot.", "Sorry, I was busy ignoring you.", "Per my last message, learn to read.",
+    "As I said in my last two messages, I'm still ignoring you.", "Just circling back to remind you I'm ignoring you.",
+    "Per my last four messages, please stop.", "Honestly, you're doing great.",
+    "Per my last message, the grey words were the instructions.", "Circling back, since reading isn't your thing.",
+    "Friendly reminder: nobody believes you read the manual.", "As discussed, Next is not a personality.",
+    "Next is not a personality.", "You're doing great.",
+)
+
+/**
+ * The word that the steer slide aims at has at least this many letters, so a short word like "the" or "to" is passed over and the
+ * target is the line's verb, about one word back from the cursor (owner, #66).
+ */
+internal const val STEER_TARGET_LETTERS = 4
+
+/** Swiped words that pass the swipe slide: the line's words after its first. */
+internal const val SWIPES_TO_PASS = 3
+
+/** Words that the mass deletion slide wants gone before it passes. */
+internal const val REGRETS_TO_PASS = 8
+
+/** The mass deletion slide's count, as it goes. */
+internal fun regretsLine(count: Int) = "Regrets deleted: $count"
+
+/** The count once the finger lifts after the slide passed: frozen on its last number, with the slide's praise. */
+internal fun regretsFinal(count: Int) = "$count gone. Backspace pauses, further out is faster."
+
+/** The swipe slide's instruction after a swipe: the same words, and how many are left. */
+internal fun swipesLeft(left: Int) = "Slide over the next grey word. $left to go."
+
+/** The key that types [ALT_SYMBOL] with Alt on the Titan 2 Elite: * is in A's corner. */
+internal const val ALT_SYMBOL_KEY = "A"
+
+/**
+ * The hunts on the weird-one and clown slides: when they mock, hint and say it's ok to skip, in seconds. Silent before that. A find
+ * before the mockery is fast; after it, slow (owner, v5.2). 10, 20 and 30 s, the same for both hunts (owner, #68).
+ */
+internal const val HUNT_DRAIN_SECONDS = 10
+internal const val HUNT_HINT_SECONDS = 20
+internal const val HUNT_SKIP_SECONDS = 30
+
+/**
+ * What a hunt says as time goes: its mockery, a subtle hint, then the hint and leave to skip. Once found, [fast] is a chip for a
+ * quick find, and [slow] the line under the success for a long one, with the seconds it took.
+ */
+internal class Hunt(val mock: String, val hint: String, val skip: String, val fast: String, val slow: (Int) -> String)
+
+internal val WEIRD_HUNT = Hunt(
+    "It goes on forever. Like this hunt.",
+    "Not on page one. Swipe up on the keys, or Enter.",
+    "Page two, near √ and ≈. Or skip it. It's ok.",
+    "Quick. Just like you in bed.",
+    // The seconds it really took (owner, 2026-11-13).
+    { seconds -> "That took $seconds ${if (seconds == 1) "second" else "seconds"}. Still longer than you claim to last." },
+)
+internal val CLOWN_HUNT = Hunt(
+    "You see it in the mirror every day. Come on.",
+    "It's a face. Red nose. Sound familiar?",
+    "Smileys, near 💩. Or skip. Clowns can't read.",
+    "Fast. Genuinely impressed. Practice in the mirror?",
+    { seconds -> "$seconds s to find your own face. Sym three times closes." },
+)
+
+/** A hunt found before its mockery: fast. */
+internal fun huntFast(seconds: Int) = seconds < HUNT_DRAIN_SECONDS
+
+/** A hunt's instruction once its bar has drained: the time, counting up. */
+internal fun huntLine(line: String, seconds: Int) = "$line $seconds s"
+
+/** The word menu's buttons, on the keys that pick them, as the drawing of the keys hints them one at a time. */
+// K and L work as I and O, and Backspace as P (see [MenuKeys.hovered]), so their keys say so too (owner, v5.2).
+internal val MENU_SAVE = mapOf("I" to "Save", "K" to "Save", "P" to "Back", Layout.BACKSPACE to "Back")
+internal val MENU_FAVOURITE = mapOf("I" to "Favourite", "K" to "Favourite", "P" to "Back", Layout.BACKSPACE to "Back")
+/** The word menu slide's word, selected in the box, which it saves, then favourites (owner, 2026-11-13). */
+internal const val MENU_WORD = "TitanKeys"
+/** The pair of keys that steps a word up the menu: the drawing lights both at once (owner, #67). */
+internal val MENU_UP_KEYS = listOf("I", "K")
+internal const val MENU_CLOSED = "Closed it. Tap TitanKeys again."
+// The word menu's keys are named in pairs, I/K and O/L, and Back is P/Backspace (owner, #67). F (docs/words-m1.md), here and below.
+internal const val MENU_UNSAVED = "Unsaved. Cold. I/K, then I/K again."
+internal const val MENU_NOT_BOX = "Not the box. Tap TitanKeys on the bar."
+internal const val MENU_MISSED = "I/K or O/L. Nothing else does anything here."
+internal const val MENU_BLOCKED = "Blocked TitanKeys? Rude. I/K brings it back."
+
+/** The word menu slide's selected word in its line: TitanKeys, wherever [text] has it, or null. See [GuideStep.selected]. */
+internal fun menuTarget(text: String): IntRange? = text.indexOf(MENU_WORD).takeIf { it >= 0 }?.let { it until it + MENU_WORD.length }
+
+/** Whether [start] to [end] is exactly the menu slide's TitanKeys in [text]: the selection the box keeps. */
+internal fun menuSelected(text: String, start: Int, end: Int) = menuTarget(text)?.let { it.first == start && it.last + 1 == end } == true
+
+/** The words that the Grab a bunch slide marks in orange to select. */
+internal const val GRAB_PHRASE = "my whole heart"
+/** Words past the marked ones that a selection may take and still count. */
+internal const val GRAB_EXTRA = 2
+internal const val GRAB_SHORT = 0
+internal const val GRAB_ALL = 1
+internal const val GRAB_GREEDY = 2
+
+/** Where the Grab a bunch slide's words are in [text]: the copy from [from] on, or the last one before it. */
+internal fun grabTarget(text: String, from: Int): IntRange? {
+    val at = text.indexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: text.lastIndexOf(GRAB_PHRASE, from).takeIf { it >= 0 } ?: return null
+    return at until at + GRAB_PHRASE.length
+}
+
+/**
+ * The word menu slide's off-track moves that every stage answers the same way (owner, 2026-11-13: "did not select the right word?
+ * or selected other stuff instead?"): any other selection or cursor in the box goes back to TitanKeys selected, and a key that
+ * isn't a menu button does nothing.
+ */
+internal fun menuOffTrack(event: KeyboardEvent): GuideVerdict = when {
+    event is FieldChanged && !menuSelected(event.text, event.start, event.end) -> chip(MENU_NOT_BOX)
+    event is KeyboardEvent.MenuMissed -> chip(MENU_MISSED)
+    else -> GuideVerdict.Wait
+}
+
+/**
+ * Where [demo] ends in [text]: the characters that it takes away or selects, as the real gesture would, or null if it does neither.
+ * [target] is what the slide marks, which [GuideDemo.SelectTarget] selects. The guide draws the demo from this, and the checks test
+ * that it ends where a pass does.
+ */
+internal fun demoRange(demo: GuideDemo, text: String, target: IntRange?): IntRange? {
+    val lastEnd = text.trimEnd().length
+    val lastStart = text.substring(0, lastEnd).lastIndexOf(' ') + 1
+    return when (demo) {
+        GuideDemo.DeleteLetter -> if (lastEnd > 0) lastEnd - 1 until lastEnd else null
+        GuideDemo.SelectTarget -> target ?: if (lastEnd > lastStart) lastStart until lastEnd else null
+        GuideDemo.DeleteLast, GuideDemo.SelectLast, GuideDemo.CopyLast -> if (lastEnd > lastStart) lastStart until lastEnd else null
+        else -> null
+    }
+}
+
+/** How a selection from [start] to [end] does on the marked words [aim]: short of them, all of them, or far too many. */
+internal fun grabbed(text: String, aim: IntRange, start: Int, end: Int): Int {
+    if (start > aim.first || end < aim.last + 1) return GRAB_SHORT
+    fun words(from: Int, to: Int) = if (to <= from) 0 else Regex("[A-Za-z']+").findAll(text.substring(from, to)).count()
+    return if (words(start, aim.first) + words(aim.last + 1, end) > GRAB_EXTRA) GRAB_GREEDY else GRAB_ALL
+}
+
+/**
+ * The steer slide's target, from the line's own words, so it follows the line if its words change (owner, #66): on the cursor's
+ * own line, [line], always to the left of [cursor], so the first move goes one way. It skips the word the cursor touches or is in,
+ * then takes the nearest word of [STEER_TARGET_LETTERS] letters or more: on "Hold the second tap to move the cursor", with the
+ * cursor at its end, that's "move". Only the word's letters are marked, not its marks. Null if the line has no such word.
+ */
+internal fun steerTarget(text: String, line: IntRange, cursor: Int): IntRange? =
+    Regex("\\S+").findAll(text).map { it.range }
+        .filter { it.first in line && it.last + 1 < cursor }
+        .mapNotNull { word ->
+            val first = (word.first..word.last).firstOrNull { text[it].isLetter() } ?: return@mapNotNull null
+            val last = (word.first..word.last).last { text[it].isLetter() }
+            (first..last).takeIf { last - first + 1 >= STEER_TARGET_LETTERS }
+        }
+        .lastOrNull()
+
+/** The steer slide, with a word marked: the cursor has to land in it, and the slide passes as the finger lifts there. */
+private fun GuideMemory.steerToward(aim: IntRange, event: KeyboardEvent): GuideVerdict = when {
+    // Where the cursor was as the slide began, to tell short of the word from past it.
+    event is FieldChanged -> {
+        if (mark < 0) mark = if (cursor >= 0) cursor else event.start
+        GuideVerdict.Wait
+    }
+    event is Moved && event.lifted -> when {
+        mark < 0 -> GuideVerdict.Hint(tapMissLine(GuideMiss.NoSlide, 2), stage = 0, miss = GuideMiss.NoSlide)
+        cursor in aim.first..aim.last + 1 -> GuideVerdict.Done
+        if (mark <= aim.first) cursor > aim.last + 1 else cursor < aim.first ->
+            GuideVerdict.Hint("Past it. Slide back a little.", stage = 0)
+        else -> GuideVerdict.Hint("Not there yet. Keep going.", stage = 0)
+    }
+    else -> GuideVerdict.Wait
+}
+
+/** What the field gets back on a delete slide that was emptied: its own seed, and a line about it. */
+internal val DELETE_RESETS = listOf(
+    "Deleted it all? Your regrets stay.",
+    "Twice? It keeps coming back. Like your ex.",
+)
+internal const val STEER_RESET = "The delete lesson is over, man."
+
+/** A line that goes on forever, as far as a cursor can tell: [text] again and again. */
+internal fun looping(text: String, times: Int = STEER_LOOPS) = List(times) { text }.joinToString(" ")
+/** How many times the steering line repeats: the cursor starts in the middle, far from either end. */
+internal const val STEER_LOOPS = 9
+
+/** The end's line in the field: the summary that the guide wrote with you. */
+internal const val END_TEXT = "You made it to the end. Now go type something real, with the keys your Titan deserves."
+
+/** Typed text ends with [symbol]. */
+internal fun endsWithSymbol(text: String, symbol: String) = text.trimEnd().endsWith(symbol)
+
+/** A typed thing that isn't a letter, digit, space or the slide's own symbol, in the gap of [line]. */
+private fun otherSymbol(event: KeyboardEvent, line: String, symbol: String) =
+    event is FieldChanged && wrongInGap(event.text, line, symbol)
+
+/** The line of a typing slide is typed through: its letters are all there, and its last word is finished. */
+internal fun lineTyped(text: String, line: String): Boolean {
+    val done = text.isNotEmpty() && (text.last().isWhitespace() || !text.last().isLetterOrDigit())
+    return done && GuideScript.letters(text).startsWith(GuideScript.letters(line))
+}
+
+/**
+ * Whether Next shows once [step] has passed (owner, 2026-11-13: "some next are missing after completion"): on every slide,
+ * however it passed. Only the end, with its own buttons, has none.
+ */
+internal fun showsNextWhenPassed(step: GuideStep) = step.chapter != GuideChapter.End
+
+/**
+ * The guide's one list (v5). Each title says what to do, and its instruction how; the jokes are in how it's said. Each slide has
+ * its own [GuideStep.line] to finish, and its own field. Each slide's words, scenarios and check are together.
+ */
+internal val GUIDE_STEPS = listOf(
+    // TYPING: each slide's line in grey in the field, typed over; chips for real mistakes; each slide locked to what it teaches.
+    GuideStep(
+        id = "type", chapter = GuideChapter.Typing,
+        title = "Make a typo. We'll fix it.",
+        // Whatever is typed for a word becomes that word: there's no way to fail. The keys light in order, once.
+        stages = listOf(GuideStage("Type the grey words, typos and all.") { event ->
+            when {
+                event is FieldChanged && lineTyped(event.text, TYPE_LINE) ->
+                    if (count > 0) GuideVerdict.Done else counts("No typos? Show-off.", "Space fixes them anyway. Next when ready.")
+                event is KeyboardEvent.Fixed && event.isRealFix -> {
+                    count++
+                    GuideVerdict.Wait
+                }
+                event is KeyboardEvent.Fixed && mark != 1 -> {
+                    mark = 1
+                    chip("Make a typo, bro. Learn to read.")
+                }
+                event is Pushed && event.code == KEY_SPACE && !armed -> chip("Letters first. Then Space fixes them.")
+                event is Pushed && isLetter(event.code) -> {
+                    armed = true
+                    GuideVerdict.Wait
+                }
+                event is Pushed && event.code == KEY_SPACE -> {
+                    armed = false
+                    GuideVerdict.Wait
+                }
+                else -> GuideVerdict.Wait
+            }
+        }),
+        done = "Fixed. Nobody saw a thing.",
+        praise = "Keep typing if you like, or press Next.",
+        line = TYPE_LINE,
+        text = TYPE_LINE,
+        ghost = TYPE_TYPOS,
+        cue = GuideCue.Spell,
+        lessons = setOf(GuideLesson.Typing, GuideLesson.Space, GuideLesson.Backspace),
+        forceFix = true,
+        sides = false,
+        demo = GuideDemo.TypeSlip,
+        bar = GuideBar.Fix,
+    ),
+    // The bar-pick slide is gone (owner, v5.2): no slide teaches picking a wrong word from the bar, and every slide is right on
+    // the first try. Whatever is swiped becomes the word the line has next.
+    GuideStep(
+        id = "swipe", chapter = GuideChapter.Typing,
+        title = "Swipe it. One hand, no questions.",
+        stages = listOf(GuideStage("Slide over the next grey word. Lift at the end.") { event ->
+            when {
+                event is Recognised && event.words.isNotEmpty() -> {
+                    armed = false
+                    if (++count >= SWIPES_TO_PASS) GuideVerdict.Done else GuideVerdict.Wait
+                }
+                event is Tapped -> chip("That's a tap. Slide, don't lift.")
+                event is Pushed && isLetter(event.code) -> {
+                    armed = true
+                    GuideVerdict.Wait
+                }
+                event is Pushed && event.code == KEY_SPACE && armed -> {
+                    armed = false
+                    chip("That's typing. Swipe this one.")
+                }
+                else -> GuideVerdict.Wait
+            }
+        }),
+        done = "One swipe, one word. Look at you.",
+        praise = "Swipe the next one, or press Next.",
+        // After the first swipe, the instruction counts down the swipes left.
+        live = { if (count in 1 until SWIPES_TO_PASS) swipesLeft(SWIPES_TO_PASS - count) else null },
+        line = SWIPE_LINE,
+        seed = SWIPE_LEAD.trimEnd(),
+        text = SWIPE_LINE.removePrefix(SWIPE_LEAD),
+        cue = GuideCue.NextWord,
+        needs = GuideNeed.SwipeTyping,
+        lessons = setOf(GuideLesson.Swipe, GuideLesson.Typing, GuideLesson.Backspace),
+        forceFix = true,
+        demo = GuideDemo.SwipeNext,
+    ),
+    GuideStep(
+        id = "menu", chapter = GuideChapter.Typing,
+        // The ladder, on TitanKeys alone (owner, 2026-11-13: "teach them the ladder system like only having titankeys as a
+        // option, maybe have it pre-highlighted, and then have them favorite TitanKeys"). Not saved, saved, then a favourite.
+        // Pre-highlighted means selected in the box (owner, 2026-11-13: "selected as in highlighted literally selected"), so the bar
+        // shows it as it shows any selected word, underlined until its menu opens, and a tap opens the menu as well as a hold.
+        title = "Make TitanKeys your favourite.",
+        stages = listOf(
+            // The guide's menu is only for show, and says so before anything is pressed (owner, 2026-11-13).
+            GuideStage("Tap TitanKeys on the bar. Nothing gets saved.") { event ->
+                if (event is WordMenu) GuideVerdict.Done else menuOffTrack(event)
+            },
+            // One step at a time: the drawing hints Save on I/K, then Favourite on I/K again. The keys are named in pairs, and both
+            // keys of the pair light together (owner, #67).
+            // The hint lights them once, steady, and only once the menu is open: the screen waits for it (owner, v5.2).
+                        GuideStage("Press I/K to save it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_SAVE) { event ->
+                when {
+                    event is MenuPicked && event.action == "Save" -> GuideVerdict.Done
+                    // Held again after the save: it opens saved, and I on it favourites it, which is the whole slide.
+                    event is MenuPicked && event.action == "Favourite" -> GuideVerdict.Finished
+                    event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint(MENU_CLOSED, stage = 0)
+                    // O on a word that isn't saved blocks it, for show; I takes it back off (ladder v4).
+                    event is MenuPicked && event.action == "Block" -> chip(MENU_BLOCKED)
+                                        event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I/K saves it.")
+                    event is MenuPicked && event.action == "Unsave" -> chip(MENU_UNSAVED)
+                    else -> menuOffTrack(event)
+                }
+            },
+            // The top of the ladder: I again on a saved word makes it a favourite, and the hearts burst.
+                        GuideStage("Press I/K again to favourite it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_FAVOURITE) { event ->
+                when {
+                    event is MenuPicked && event.action == "Favourite" -> GuideVerdict.Done
+                    // O on a saved word unsaves it: back to the save.
+                    event is MenuPicked && event.action == "Unsave" -> GuideVerdict.Hint(MENU_UNSAVED, stage = 1)
+                    event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint(MENU_CLOSED, stage = 0)
+                    else -> menuOffTrack(event)
+                }
+            },
+        ),
+        done = "Favourited. Good taste.",
+                praise = "O/L steps it down. P/Backspace closes the menu.",
+        line = MENU_LINE,
+        seed = MENU_LINE,
+        help = "Already selected. Tap TitanKeys on the bar.",
+        // Only the selected word's menu, which a tap or a hold opens (the keyboard's BarHold): typing, swiping, Space taps and
+        // Backspace are blocked, and say so, as typing would replace the selection. With the menu open, its keys work.
+        lessons = setOf(GuideLesson.BarHold),
+        // TitanKeys selected in the box the whole slide, after the pass too, so it's alone on the bar.
+        selected = MENU_WORD,
+        bar = GuideBar.Menu,
+    ),
+    // DELETE: each slide starts with its line in the field and the cursor where the deleting is; the thing to delete in orange.
+    GuideStep(
+        id = "backspace", chapter = GuideChapter.Delete,
+        title = "Delete the extra e. The old way.",
+        stages = listOf(GuideStage("Press Backspace once.", GuideCue.Spot(listOf(Layout.BACKSPACE))) { event ->
+            if (event is FieldChanged && event.text.trimEnd() == BACKSPACE_LINE) GuideVerdict.Done else GuideVerdict.Wait
+        }),
+        done = "One letter. Thrilling.",
+        praise = "That's how everyone deletes. Next, whole words.",
+        line = BACKSPACE_LINE,
+        seed = BACKSPACE_SEED,
+        // Right after the extra e, before the field's trailing space: one Backspace takes the e (owner's "Press Backspace once"),
+        // never the space first.
+        cursorAt = { it.trimEnd().length },
+        lessons = setOf(GuideLesson.Backspace),
+        // Only the extra e goes, as the one Backspace takes it (build #8 pass: the whole word went).
+        demo = GuideDemo.DeleteLetter,
+    ),
+    GuideStep(
+        id = "flick", chapter = GuideChapter.Delete,
+        title = "Flick away the stupid word.",
+        // A held delete is the next slide's: the keyboard blocks it here, and says so.
+        stages = listOf(GuideStage("Flick left from Backspace, and lift at once.") { event ->
+            when {
+                event is DeletedWord && event.held -> GuideVerdict.Wait
+                event is FieldChanged && FLICK_WORD !in event.text && event.text.trimEnd().endsWith(FLICK_LINE.substringAfterLast(' ')) ->
+                    GuideVerdict.Done
+                event is DeletedWord -> GuideVerdict.Done
+                else -> GuideVerdict.Wait
+            }
+        }),
+        done = "Gone. Like my patience.",
+        praise = "One flick, one word. Next, a lot of words.",
+        line = FLICK_LINE,
+        seed = FLICK_SEED,
+        cursorAt = ::flickCursor,
+        cue = GuideCue.Flick(hold = false),
+        needs = GuideNeed.SwipeTyping,
+        lessons = setOf(GuideLesson.Flick),
+        demo = GuideDemo.DeleteLast,
+    ),
+    GuideStep(
+        id = "hold", chapter = GuideChapter.Delete,
+        title = "Hold the flick. Delete in bulk.",
+        // A count of regrets deleted takes the instruction's place from the first word, and the slide passes at eight.
+        stages = listOf(GuideStage("Flick left from Backspace, then keep holding.") { event ->
+            when {
+                event is DeleteHoldStarted -> {
+                    mark = 1
+                    GuideVerdict.Wait
+                }
+                event is DeletedWord -> {
+                    count++
+                    when {
+                        count >= REGRETS_TO_PASS -> GuideVerdict.Done
+                        mark != 1 -> chip("That was one word. Hold it down.")
+                        else -> GuideVerdict.Wait
+                    }
+                }
+                // A hold let go too soon.
+                event is Moved && event.lifted && mark == 1 && count in 1 until REGRETS_TO_PASS -> {
+                    mark = -1
+                    chip("Therapy's not over. Hold longer.")
+                }
+                else -> GuideVerdict.Wait
+            }
+        }),
+        done = "Watch your regrets go.",
+        // After the count: see [regretsFinal]. The zones are on the drawing while the slide is tried.
+        praise = "Back on Backspace pauses. Further out is faster.",
+        live = { if (count > 0) regretsLine(count) else null },
+        line = HOLD_LINE,
+        seed = HOLD_SEED,
+        cursorAt = ::holdCursor,
+        cue = GuideCue.Flick(hold = true),
+        needs = GuideNeed.SwipeTyping,
+        lessons = setOf(GuideLesson.Flick, GuideLesson.DeleteHold),
+        // No demo in the field: its text stays still, and only the keyboard's drawing acts the held flick out (owner, 2026-11-13:
+        // "the text box doesn't need animation deleting").
+    ),
+    // STEERING: the slide's line again and again, with the cursor in the middle; the cursor gestures only.
+    GuideStep(
+        id = "steer", chapter = GuideChapter.Steering,
+        // F (docs/words-m1.md).
+        title = "Put the cursor in the underlined word.",
+        stages = listOf(
+            GuideStage("Tap Space twice, and hold the second tap.") { event ->
+                when {
+                    event is CursorStarted && !event.words -> GuideVerdict.Done
+                    // What the taps were, against two with the second held (#90).
+                    event is CursorStarted -> chip(tapMissLine(GuideMiss.Extra, 2, landed = 3), GuideMiss.Extra)
+                    event is DoubleTapped || event is TwoTapsAbove -> chip(tapMissLine(GuideMiss.Lift, 2), GuideMiss.Lift)
+                    else -> GuideVerdict.Wait
+                }
+            },
+            // The screen underlines a word left of the cursor, on its line, and the cursor has to land in it.
+            GuideStage("Now slide. Lift when the cursor's in it.") { event ->
+                val aim = target
+                when {
+                    aim != null -> steerToward(aim, event)
+                    // Nothing marked: a real steer passes as it goes.
+                    event is FieldChanged -> when {
+                        mark < 0 -> {
+                            mark = event.start
+                            GuideVerdict.Wait
+                        }
+                        abs(event.start - mark) >= CURSOR_TRAVEL || event.end != event.start -> GuideVerdict.Done
+                        else -> GuideVerdict.Wait
+                    }
+                    event is Moved && event.lifted -> GuideVerdict.Hint(tapMissLine(GuideMiss.NoSlide, 2), stage = 0, miss = GuideMiss.NoSlide)
+                    else -> GuideVerdict.Wait
+                }
+            },
+        ),
+        done = "Cursor moved. No screen harmed.",
+        praise = "Slide further out and it goes faster.",
+        help = "Tap in the shaded patch. Hold the second tap.",
+        line = STEER_LINE,
+        seed = STEER_LINE,
+        cue = GuideCue.Taps(2, drag = true),
+        needs = GuideNeed.CursorControl,
+        lessons = setOf(GuideLesson.Cursor),
+        demo = GuideDemo.MoveCursor,
+    ),
+    GuideStep(
+        id = "selectmore", chapter = GuideChapter.Steering,
+        title = "Grab my whole heart. Three taps.",
+        stages = listOf(
+            // The words to grab are marked in orange, and the cursor waits right before them.
+            GuideStage("Tap Space three times. Hold the third.") { event ->
+                when {
+                    event is CursorStarted && event.words -> GuideVerdict.Done
+                    event is CursorStarted -> chip(tapMissLine(GuideMiss.Short, 3, landed = 2), GuideMiss.Short)
+                    // Two taps that lifted: two, not three. Three that lifted pick a word first, below.
+                    event is DoubleTapped && event.taps < 3 || event is TwoTapsAbove -> chip(tapMissLine(GuideMiss.Short, 3, landed = 2), GuideMiss.Short)
+                    // The held third tap picks a word first, then the slide starts: only a word picked and let go is one word
+                    // (owner, v5.3: a right held third tap was told "One word?").
+                    event is FieldChanged && event.end > event.start -> {
+                        mark = 2
+                        GuideVerdict.Wait
+                    }
+                    event is Moved && event.lifted && mark == 2 -> {
+                        mark = -1
+                        chip(tapMissLine(GuideMiss.Lift, 3), GuideMiss.Lift)
+                    }
+                    else -> GuideVerdict.Wait
+                }
+            },
+            GuideStage("Slide to grab all of it. Don't be shy.") { event ->
+                val aim = target
+                when {
+                    // The marked words, and a word or two more, pass as the finger lifts. Many more is greedy.
+                    aim != null && event is FieldChanged && event.end > event.start -> {
+                        val was = mark
+                        mark = grabbed(event.text, aim, event.start, event.end)
+                        if (mark == GRAB_GREEDY && was != GRAB_GREEDY) chip("Easy. Just my heart. Slide back a bit.") else GuideVerdict.Wait
+                    }
+                    aim != null && event is Moved && event.lifted -> when (mark) {
+                        GRAB_ALL -> GuideVerdict.Done
+                        GRAB_GREEDY -> GuideVerdict.Hint("Easy. Just my heart. Slide back a bit.", stage = 0)
+                        else -> GuideVerdict.Hint("So close. Then you let go. Story of my life.", stage = 0)
+                    }
+                    // Nothing marked: any selection passes.
+                    event is FieldChanged && event.end > event.start -> GuideVerdict.Done
+                    event is Moved && event.lifted -> GuideVerdict.Hint("So close. Then you let go. Story of my life.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
+            },
+        ),
+        done = "You had me at the third tap.",
+        praise = "Three taps pick a word. Hold the third and slide.",
+        help = "Three taps, the third held, then slide.",
+        line = GRAB_LINE,
+        seed = GRAB_LINE,
+        cue = GuideCue.Taps(3, drag = true),
+        needs = GuideNeed.CursorControl,
+        lessons = setOf(GuideLesson.Cursor),
+        // The marked words, "my whole heart", as the real select takes them (build #8 pass: it selected the last word).
+        demo = GuideDemo.SelectTarget,
+    ),
+    // SYMBOLS AND EMOJI: each slide's line in the field with a gap, the cursor in it; the slide's symbol goes there, by its way.
+    GuideStep(
+        id = "alt", chapter = GuideChapter.Symbols,
+        title = "Add the *, the traditional way.",
+        stages = listOf(
+            GuideStage("Hold Alt.", GuideCue.Spot(emptyList(), held = listOf(Layout.ALT))) { event ->
+                when {
+                    event is FieldChanged && symbolInGap(event.text, ALT_LINE, ALT_SYMBOL) -> GuideVerdict.Finished
+                    event is ModifierState && event.alt != Level.Off && event.panel == Panel.Closed -> GuideVerdict.Done
+                    else -> GuideVerdict.Wait
+                }
+            },
+            // Alt stays lit, held; A lights, and the other corners fade.
+            GuideStage("Keep holding Alt and press A.", GuideCue.Spot(listOf(ALT_SYMBOL_KEY), held = listOf(Layout.ALT))) { event ->
+                when {
+                    event is FieldChanged && symbolInGap(event.text, ALT_LINE, ALT_SYMBOL) -> GuideVerdict.Done
+                    event is Pushed && isLetter(event.code) -> {
+                        armed = true
+                        GuideVerdict.Wait
+                    }
+                    // Alt let go before any key: it waits for one key, which works too.
+                    event is Released && event.code in ALT_KEYS && !armed -> chip("Fine, that works too. Alt waits for one key.")
+                    otherSymbol(event, ALT_LINE, ALT_SYMBOL) -> chip("That's not *. Fine print's not your thing, huh.")
+                    event is ModifierState && event.alt == Level.Locked -> chip("Locked it. Commitment, finally.")
+                    event is ModifierState && event.alt == Level.Off && event.panel == Panel.Closed ->
+                        GuideVerdict.Hint("On, off. Very decisive.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
+            },
+        ),
+        done = "*Terms and conditions apply.",
+        praise = "Alt types the symbol in a key's corner.",
+        line = ALT_LINE,
+        seed = gapSeed(ALT_LINE, ALT_SYMBOL),
+        cursorAt = { gapCursor(ALT_LINE, ALT_SYMBOL) },
+        symbol = ALT_SYMBOL,
+        usesPanel = true,
+        setup = Panel.Closed,
+        lessons = setOf(GuideLesson.Alt),
+        demo = GuideDemo.AltLetter(ALT_SYMBOL),
+    ),
+    GuideStep(
+        id = "holdsym", chapter = GuideChapter.Symbols,
+        title = "Add the ?. Hold V for it.",
+        stages = listOf(GuideStage("Hold V until it turns into ?.", GuideCue.Spot(listOf(HOLD_SYMBOL_KEY))) { event ->
+            when {
+                event is FieldChanged && symbolInGap(event.text, HOLD_SYMBOL_LINE, HOLD_SYMBOL) -> GuideVerdict.Done
+                event is HeldSymbol && event.symbol != HOLD_SYMBOL -> chip("Not ?. Took it back. V, held.")
+                // A letter let go before it turned into its symbol.
+                event is Pushed && isLetter(event.code) -> {
+                    mark = event.code
+                    GuideVerdict.Wait
+                }
+                event is Released && event.code == mark -> {
+                    mark = -1
+                    chip("Too quick. Hold it like a grudge.")
+                }
+                else -> GuideVerdict.Wait
+            }
+        }),
+        done = "Look at you, holding it together.",
+        praise = "Any letter, held, types its corner symbol.",
+        line = HOLD_SYMBOL_LINE,
+        seed = gapSeed(HOLD_SYMBOL_LINE, HOLD_SYMBOL),
+        cursorAt = { gapCursor(HOLD_SYMBOL_LINE, HOLD_SYMBOL) },
+        symbol = HOLD_SYMBOL,
+        needs = GuideNeed.HoldSymbols,
+        usesPanel = true,
+        setup = Panel.Closed,
+        lessons = setOf(GuideLesson.HoldSymbol),
+        demo = GuideDemo.HoldLetter(HOLD_SYMBOL),
+    ),
+    GuideStep(
+        id = "symmain", chapter = GuideChapter.Symbols,
+        title = "Add the &. It's behind Sym.",
+        stages = listOf(
+            GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+                when {
+                    // The symbol in, however it got there, passes at any stage (owner, v5.2).
+                    event is FieldChanged && symbolInGap(event.text, SYM_LINE, "&") -> GuideVerdict.Finished
+                    panel(event, Panel.Symbols) -> GuideVerdict.Done
+                    panel(event, Panel.Emoji) -> chip("Emoji already? Patience. Sym again closes them.")
+                    else -> GuideVerdict.Wait
+                }
+            },
+            GuideStage("Find & and press its key.", GuideCue.Free) { event ->
+                when {
+                    // & passes as soon as it's in, even after a wrong one, which the screen takes back out (owner, v5.2).
+                    event is FieldChanged && symbolInGap(event.text, SYM_LINE, "&") -> GuideVerdict.Done
+                    otherSymbol(event, SYM_LINE, "&") -> {
+                        mark = 1
+                        chip("Not &. Took it back. Read, then type.")
+                    }
+                    event is EmptyKey -> chip("That key's empty. Pick one with a symbol on it.")
+                    panel(event, Panel.Emoji) -> GuideVerdict.Hint("Emoji already? Patience. Sym again closes them.", stage = 0)
+                    // A symbol typed closes the panel: after a wrong one, that's no window shopping, so the chip stays.
+                    panel(event, Panel.Closed) && mark == 1 -> GuideVerdict.Stage(0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Just looking? Window shopper.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
+            },
+        ),
+        done = "& that's how it's done.",
+        praise = "Sym opens every symbol. One press, and it closes.",
+        line = SYM_LINE,
+        seed = gapSeed(SYM_LINE, "&"),
+        cursorAt = { gapCursor(SYM_LINE, "&") },
+        symbol = "&",
+        usesPanel = true,
+        findIn = Panel.Symbols,
+        homeMark = SYMBOLS_HOME,
+        pageLines = SYMMAIN_PAGES,
+        leaveLine = "Sym twice closes it.",
+        setup = Panel.Closed,
+        lessons = setOf(GuideLesson.Sym),
+        demo = GuideDemo.Insert(listOf(Layout.SYM), ""),
+    ),
+    GuideStep(
+        id = "symgroups", chapter = GuideChapter.Symbols,
+        // A three-beat joke (owner, 2026-11-13): answer honestly, add ∞, "Sure you do." The title leaves the ∞ to the hunt.
+        title = "Answer honestly.",
+        // used holds what was used: 1 a page by swiping up or down, 2 a page by the arrows (Backspace or Enter), 4 a group by the
+        // bottom row or a sideways swipe, which works too and says so.
+        stages = listOf(
+            // Both ways to the next page, on the keys (owner, M1: "swipe up on the keyboard or enter for the next page").
+            GuideStage("Press Sym. Then swipe up on the keys, or Enter.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+                when {
+                    event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Finished
+                    event is PanelSwiped && event.moved && abs(event.down) >= abs(event.across) -> {
+                        used = used or 1
+                        GuideVerdict.Done
+                    }
+                    event is Pushed && panelOpen && (event.code == KEY_DEL || event.code == KEY_ENTER) -> {
+                        used = used or 2
+                        GuideVerdict.Done
+                    }
+                    otherGroup(event) -> {
+                        used = used or 4
+                        GuideVerdict.Hint("Yeah, that works too.", stage = 1)
+                    }
+                    else -> GuideVerdict.Wait
+                }
+            },
+            // A symbol hunt, not a riddle (owner, 2026-11-13): it says ∞ outright.
+            GuideStage("Find ∞ and press its key. It's further in.", GuideCue.Free) { event ->
+                when {
+                    event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Done
+                    otherSymbol(event, GROUPS_LINE, WEIRD) -> {
+                        mark = 1
+                        chip("Not that one. Find ∞.")
+                    }
+                    otherGroup(event) && used and 4 == 0 -> {
+                        used = used or 4
+                        chip("Yeah, that works too.")
+                    }
+                    panel(event, Panel.Closed) && mark == 1 -> GuideVerdict.Stage(0)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed it. The ∞ is still in there.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
+            },
+        ),
+        done = "Sure you do.",
+        praise = "Swipe up or down on the keys to turn pages.",
+        line = GROUPS_LINE,
+        seed = gapSeed(GROUPS_LINE, WEIRD),
+        cursorAt = { gapCursor(GROUPS_LINE, WEIRD) },
+        symbol = WEIRD,
+        hunt = WEIRD_HUNT,
+        usesPanel = true,
+        findIn = Panel.Symbols,
+        homeMark = SYMBOLS_HOME,
+        pageLines = SYMGROUPS_PAGES,
+        leaveLine = "Sym twice closes it.",
+        setup = Panel.Closed,
+        lessons = setOf(GuideLesson.Sym),
+        demo = GuideDemo.Insert(listOf(Layout.SYM), ""),
+    ),
+    GuideStep(
+        id = "clown", chapter = GuideChapter.Symbols,
+        title = "Sign it with 🤡. Find yourself.",
+        stages = listOf(
+            GuideStage("Press Sym twice for the emoji.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+                when {
+                    event is FieldChanged && symbolInGap(event.text, CLOWN_LINE, CLOWN) -> GuideVerdict.Finished
+                    panel(event, Panel.Emoji) -> GuideVerdict.Done
+                    otherSymbol(event, CLOWN_LINE, CLOWN) -> chip("That's a symbol, not a clown.")
+                    else -> GuideVerdict.Wait
+                }
+            },
+            // A hunt: a bar drains, silent, then the time counts up, with mockery, a hint and leave to skip. It never fails.
+            GuideStage("Find 🤡 and press its key.", GuideCue.Free) { event ->
+                when {
+                    event is FieldChanged && symbolInGap(event.text, CLOWN_LINE, CLOWN) -> GuideVerdict.Done
+                    otherSymbol(event, CLOWN_LINE, CLOWN) -> GuideVerdict.Hint("Not you. The other clown. The one that's also you.", stage = 1)
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Closed? Your face is still in there.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
+            },
+        ),
+        done = "Hey, that's you.",
+        // Once found, a slow find says how long it took, and a quick one gets a chip: see [Hunt]. This shows otherwise.
+        praise = "Sym once: symbols. Twice: emoji. Three: closes.",
+        line = CLOWN_LINE,
+        seed = gapSeed(CLOWN_LINE, CLOWN),
+        cursorAt = { gapCursor(CLOWN_LINE, CLOWN) },
+        symbol = CLOWN,
+        hunt = CLOWN_HUNT,
+        usesPanel = true,
+        findIn = Panel.Emoji,
+        homeMark = SMILEYS_HOME,
+        pageLines = CLOWN_PAGES,
+        leaveLine = "Sym closes the emoji.",
+        setup = Panel.Closed,
+        lessons = setOf(GuideLesson.Sym),
+        rain = CLOWN,
+        demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.SYM), ""),
+    ),
+    // COPY AND PASTE: the field starts with the slide's line, the paste lesson's last words selected.
+    GuideStep(
+        id = "paste", chapter = GuideChapter.Clipboard,
+        title = "Paste over the orange words.",
+        // fn is held, steady; V lights.
+        stages = listOf(GuideStage("Hold fn and press V.", GuideCue.Spot(listOf("V"), held = listOf(Layout.FN))) { event ->
+            when {
+                event is FieldChanged && event.text.contains(PASTE_TEXT) -> GuideVerdict.Done
+                event is KeyboardEvent.Copied && event.text != PASTE_TEXT -> chip("That's copy. V for paste. Nobody knows why it's V.")
+                grew(event) && (event as FieldChanged).text.length - stageLength > 2 -> chip("That's not ours. Ours is better.")
+                // The slide starts with words selected: a cursor alone means they're not.
+                event is FieldChanged && event.start == event.end && mark != 1 -> {
+                    mark = 1
+                    chip("Lost the selection. Classic. Paste anyway.")
+                }
+                else -> GuideVerdict.Wait
+            }
+        }),
+        done = "Pasted. Honest, at least.",
+        // One action each: fn is held, V is pressed (#90).
+        praise = "Hold fn, press V to paste. C copies.",
+        line = PASTE_LINE,
+        seed = PASTE_SEED,
+        needs = GuideNeed.FnAsCtrl,
+        clip = PASTE_TEXT,
+        pageLines = PASTE_PAGES,
+        preselect = true,
+        rain = "🤪",
+        lessons = setOf(GuideLesson.Ctrl),
+        demo = GuideDemo.Insert(listOf(Layout.FN, "V", Layout.FN, "V"), ""),
+    ),
+    GuideStep(
+        id = "clipboard", chapter = GuideChapter.Clipboard,
+        title = "Paste the one nice clip.",
+        stages = listOf(
+            GuideStage("Press Sym.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+                when {
+                    panel(event, Panel.Symbols) -> GuideVerdict.Done
+                    panel(event, Panel.Emoji) -> GuideVerdict.Hint("Emoji? Sure, A works from there too.", stage = 1)
+                    panel(event, Panel.Clipboard) -> GuideVerdict.Stage(2)
+                    else -> GuideVerdict.Wait
+                }
+            },
+            GuideStage("Press A for the clipboard.", GuideCue.Spot(listOf(Layout.CLIPBOARD_KEY))) { event ->
+                when {
+                    panel(event, Panel.Clipboard) -> GuideVerdict.Done
+                    panel(event, Panel.Closed) -> GuideVerdict.Stage(0)
+                    else -> GuideVerdict.Wait
+                }
+            },
+            // Reading the clips is the skill: rest on one to read it. Only one is nice, and it's the prank. A rude one is taken
+            // back out at once, and the slide says so: see the screen.
+            // The drawing walks over the clips, one after another, as the finger should: a key in each clip's field.
+            GuideStage("Rest on each clip to read it. Paste the nice one.", GuideCue.Spot(CLIP_FIELD_KEYS)) { event ->
+                when {
+                    event is FieldChanged && event.text.contains(PRANK_PASTE) -> GuideVerdict.Done
+                    panel(event, Panel.Closed) -> GuideVerdict.Hint("Leaving? The nice one's still in there. Somewhere.", stage = 0)
+                    else -> GuideVerdict.Wait
+                }
+            },
+        ),
+        // The nice clip pastes something kind instead of the roast you expected, and the slide insists (owner, #69).
+        done = "No, seriously. I mean it.",
+        // One action each (#90).
+        praise = "It keeps what you copy. Sym, let go, then A.",
+        line = CLIP_LINE,
+        seed = CLIP_LEAD.trimEnd(),
+        usesPanel = true,
+        setup = Panel.Closed,
+        sandboxClips = GUIDE_CLIPS,
+        findIn = Panel.Clipboard,
+        pageLines = CLIPBOARD_PAGES,
+        // The reminder and the way out, under the instruction while the clipboard is open.
+        leaveLine = "$CLIP_KEYS_REMINDER Sym closes the clipboard. Alt goes back to the symbols.",
+        rain = "🫶",
+        lessons = setOf(GuideLesson.Sym),
+        demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
+    ),
+    GuideStep(
+        id = "end", chapter = GuideChapter.End,
+        title = "TitanKeys",
+        body = "Built for Titan 2 Elite.",
+        done = "The keys your Titan deserves.",
+        text = END_TEXT,
+        offersShare = true,
+        check = wait,
+    ),
+)
+
+/** The lines that the guide's slides have you finish, in order: the summary at the end. Their first letters spell [ACROSTIC]. */
+internal val SUMMARY_LINES get() = GUIDE_STEPS.filter { it.line.isNotEmpty() }.map { it.line }
+
+/** What the groups slide says once done, besides its own praise: a way that worked too. See [GuideMemory.used]. */
+internal fun groupsPraise(used: Int) = when {
+    used and 4 != 0 -> "The bottom row works too. So does swiping up or down on the keys."
+    used and 2 == 0 -> "Backspace and Enter turn pages too."
+    else -> "Swipe up or down on the keys for pages. The bottom row, groups."
+}
+
+/**
+ * The chip for something that [step]'s lock kept from the field, by its [GuideLesson] name. Nothing is ever blocked silently
+ * (owner, v5): each says that it's blocked, and why or what to do instead. [lessons] is what the slide lets through now.
+ */
+/** What the word menu slide's lock says for [lesson]: blocked, then hold TitanKeys. Null for the usual words. */
+// What it was, and that it wants a tap on TitanKeys (#90).
+private fun menuBlocked(lesson: String): String? = when (lesson) {
+    GuideLesson.Typing.name -> "That's typing, not a tap on TitanKeys."
+    GuideLesson.Swipe.name -> "That's a swipe, not a tap on TitanKeys."
+    GuideLesson.Space.name -> "That's a space, not a tap on TitanKeys."
+    GuideLesson.Cursor.name -> "That's a Space tap, not a tap on TitanKeys."
+    GuideLesson.Backspace.name -> "That's Backspace, not a tap on TitanKeys."
+    GuideLesson.Flick.name, GuideLesson.DeleteHold.name -> "That's deleting, not a tap on TitanKeys."
+    // Only another word on the bar: TitanKeys itself, selected, opens its menu at a tap.
+    GuideLesson.BarTap.name -> "That's another word, not TitanKeys. Tap TitanKeys."
+    else -> null
+}
+
+/**
+ * A page of the open panel, as the guide reads it from what the keyboard draws ([KeyboardEvent.PanelFace]): what its keys show,
+ * and where it is in its group, from the position on P ("2/9"). A group of one page shows no position.
+ */
+internal data class PanelPage(val panel: Panel, val shown: Set<String>, val page: Int = 1, val pages: Int = 1)
+
+internal fun panelPage(panel: Panel, labels: Map<String, String>): PanelPage? {
+    if (panel == Panel.Closed) return null
+    val position = labels[Layout.PAGE_POSITION]?.split('/')?.mapNotNull { it.trim().toIntOrNull() }?.takeIf { it.size == 2 }
+    return PanelPage(panel, labels.filterKeys { it != Layout.PAGE_POSITION }.values.toSet(), position?.get(0) ?: 1, position?.get(1) ?: 1)
+}
+
+/**
+ * Where the user is, for a slide's line for each page (owner, M1: "specific instructions within the different pages so the user
+ * will never be lost"). [Found], [Before] and [Past] are in the slide's own group: on the page with what it asks for, or before
+ * or after it. [Recent] is the guide's own Recent emoji. [Symbols] to [Settings] are a panel that isn't the slide's.
+ */
+internal enum class PanelSpot { Found, Before, Past, OtherGroup, Recent, Symbols, Emoji, Clipboard, Settings }
+
+/**
+ * The first item of the guide's own Recent emoji (TitanKeysIme's GUIDE_RECENT_EMOJI), which tells its page from the others. The
+ * guide checks that the list still starts with it.
+ */
+internal const val GUIDE_RECENT_MARK = "🍑"
+/** The first symbol of the first group, on its first page, and the first emoji of Smileys: they tell the slide's group. */
+internal const val SYMBOLS_HOME = "&"
+internal const val SMILEYS_HOME = "😀"
+
+/**
+ * Follows the panel: the page that's open, whether it's in the slide's group ([GuideMemory.home], told by [GuideStep.homeMark]
+ * on a group's first page, where every group opens), and the page of that group where [GuideStep.symbol] showed last.
+ */
+internal fun GuideMemory.followPanel(event: KeyboardEvent, step: GuideStep) {
+    if (event !is KeyboardEvent.PanelFace) return
+    val next = panelPage(event.panel, event.labels)
+    if (next == null || next.panel != page?.panel) {
+        seenOn = null
+        home = null
+    }
+    page = next
+    if (next == null) return
+    // A group opens on its first page: that page says whose group it is. Later pages are reached by turning from it.
+    if (next.page == 1) {
+        val mark = step.homeMark
+        val now = mark == null || mark in next.shown || step.symbol?.let { it in next.shown } == true
+        if (now != home) seenOn = null
+        home = now
+    }
+    if (step.symbol != null && step.symbol in next.shown) seenOn = next.page
+}
+
+/** Where the user is now, from [page], for [step]: see [PanelSpot]. Null with the panel closed. */
+internal fun panelSpot(step: GuideStep, page: PanelPage?, home: Boolean?, seenOn: Int?): PanelSpot? {
+    page ?: return null
+    val want = step.findIn
+    if (want == null || page.panel != want) return when (page.panel) {
+        Panel.Symbols -> PanelSpot.Symbols
+        Panel.Emoji -> PanelSpot.Emoji
+        Panel.Clipboard -> PanelSpot.Clipboard
+        else -> PanelSpot.Settings
+    }
+    if (want == Panel.Clipboard) {
+        // Clips show cut short on their keys: the guide's own clips tell its Clipboard from Pinned, and the nice one its page.
+        fun shows(clip: String) = page.shown.any { it.isNotEmpty() && (clip.startsWith(it.removeSuffix("…")) || it.startsWith(clip)) }
+        return when {
+            GUIDE_CLIPS.none(::shows) -> PanelSpot.OtherGroup
+            shows(PRANK_CLIP) -> PanelSpot.Found
+            else -> PanelSpot.Before
+        }
+    }
+    val symbol = step.symbol
+    return when {
+        GUIDE_RECENT_MARK in page.shown -> PanelSpot.Recent
+        symbol != null && symbol in page.shown -> PanelSpot.Found
+        home != true -> PanelSpot.OtherGroup
+        seenOn != null && page.page > seenOn -> PanelSpot.Past
+        else -> PanelSpot.Before
+    }
+}
+
+/**
+ * The instruction while a panel is open, in place of the stage's: the slide's line for where the user is ([GuideStep.pageLines]).
+ * Null with the panel closed, or where the slide has no line for it, so the stage's own instruction shows.
+ */
+internal fun panelLine(step: GuideStep, page: PanelPage?, home: Boolean?, seenOn: Int?): String? =
+    panelSpot(step, page, home, seenOn)?.let(step.pageLines::get)
+
+/** The line under the instruction while the slide's own panel is open: how to leave it ([GuideStep.leaveLine]). */
+internal fun panelHint(step: GuideStep, page: PanelPage?): String? =
+    step.leaveLine?.takeIf { page != null && page.panel == step.findIn }
+
+// The words for each page are F's (docs/words-m1.md, "Every page says where you are"). Paging is a swipe up or down on the keys,
+// or Enter for the next page and Backspace for the one before, on the symbols and the emoji (Modifiers.panelScroll). The clipboard
+// pages only by a swipe: there Enter pins and Backspace clears.
+private const val TOO_FAR = "Too far. Swipe down on the keys or press Backspace."
+private const val NOT_ON_PAGE = "Not on this page. Swipe up on the keys or press Enter."
+private const val SYM_WRONG_PAGE = "Wrong page. Alt goes back to the symbols."
+
+internal val SYMMAIN_PAGES get() = mapOf(
+    PanelSpot.Found to "It's on this page. Find & and press its key.",
+    PanelSpot.Past to TOO_FAR,
+    PanelSpot.Before to TOO_FAR,
+    PanelSpot.OtherGroup to "Wrong group. The &'s in the first. Swipe left or right on the keys.",
+    PanelSpot.Emoji to "Emoji already? Patience. Sym again closes them.",
+    PanelSpot.Clipboard to SYM_WRONG_PAGE,
+    PanelSpot.Settings to SYM_WRONG_PAGE,
+)
+internal val SYMGROUPS_PAGES get() = mapOf(
+    PanelSpot.Before to "Not on this page. Swipe up on the keys or press Enter.",
+    PanelSpot.Found to "It's on this page. Find ∞ and press its key.",
+    PanelSpot.Past to TOO_FAR,
+    PanelSpot.OtherGroup to "Wrong group. The ∞'s in the first. Swipe left or right on the keys.",
+    PanelSpot.Emoji to "Not emoji. Sym closes them. Then press Sym once.",
+    PanelSpot.Clipboard to SYM_WRONG_PAGE,
+    PanelSpot.Settings to SYM_WRONG_PAGE,
+)
+internal val CLOWN_PAGES get() = mapOf(
+    PanelSpot.Symbols to "That's symbols. Press Sym again for the emoji.",
+    PanelSpot.Recent to "That's Recent. Swipe left or right on the keys to Smileys.",
+    PanelSpot.Before to NOT_ON_PAGE,
+    PanelSpot.Found to "It's on this page. Find 🤡 and press its key.",
+    PanelSpot.Past to TOO_FAR,
+    PanelSpot.OtherGroup to "Wrong group. The clown's in Smileys. Swipe left or right on the keys.",
+    PanelSpot.Clipboard to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
+    PanelSpot.Settings to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
+)
+internal val CLIPBOARD_PAGES get() = mapOf(
+    PanelSpot.Symbols to "Press A for the clipboard.",
+    PanelSpot.Emoji to "Emoji? Sure, A works from there too.",
+    PanelSpot.Found to "It's on this page. Rest on each clip to read it, then press the key under the nice one.",
+    PanelSpot.Before to "Not on this page. Swipe up or down on the keys for the others.",
+    PanelSpot.OtherGroup to "That's Pinned. Swipe left or right on the keys to get back to your clips.",
+    PanelSpot.Settings to "Wrong page. Alt goes back, then press A.",
+)
+/** The paste slide needs no panel: if one opens anyway, how to close it and paste. */
+internal val PASTE_PAGES get() = mapOf(
+    PanelSpot.Symbols to "No panel needed here. Sym twice closes it. Then hold fn and press V.",
+    PanelSpot.Emoji to "No panel needed here. Sym closes it. Then hold fn and press V.",
+    PanelSpot.Clipboard to "No panel needed here. Sym closes it. Then hold fn and press V.",
+    PanelSpot.Settings to "No panel needed here. Alt, then Sym twice, closes it. Then hold fn and press V.",
+)
+/** The clipboard's reminder that its Enter and Backspace don't turn pages. */
+internal const val CLIP_KEYS_REMINDER = "Enter pins and Backspace clears here, so swipe on the keys to turn pages."
+
+/** Sym and fn, as setup's Keys part names them and [PhoneChecks.Key] has them. */
+internal const val SYM_KEY = "Sym"
+internal const val FN_KEY = "fn"
+
+/**
+ * The keys a slide needs as Programmable key (owner, #72): Sym for the Sym panel's slides (symbols, the ∞, emoji, the clipboard),
+ * fn for the paste slide.
+ */
+internal fun programmableKeys(step: GuideStep): List<String> = listOfNotNull(
+    SYM_KEY.takeIf { GuideLesson.Sym in step.lessons.orEmpty() },
+    FN_KEY.takeIf { GuideLesson.Ctrl in step.lessons.orEmpty() },
+)
+
+/**
+ * The one line on a slide that needs [key] after setup's Keys part was skipped and the key still isn't Programmable key: the
+ * slide can't work, so it says to skip it. No button (owner, #72).
+ */
+// F (docs/words-m1.md).
+internal fun keyOffLine(key: String) = "$key isn't set up, so skip this one."
+
+/**
+ * The key [step] needs that isn't Programmable key, so its line shows ([keyOffLine]), or null. Only after setup's Keys part was
+ * [skipped]: until then setup asks for the keys first. [programmable] says whether Sym or fn is set.
+ */
+internal fun keyOff(step: GuideStep, skipped: Boolean, programmable: (String) -> Boolean): String? =
+    if (!skipped) null else programmableKeys(step).firstOrNull { !programmable(it) }
+
+/**
+ * The parts of setup still to ask, in order (PhoneSetup.missing reads the phone for it): each that isn't [done], except Back
+ * after "Not now" on its disclosure ([backDeclined]), and Sym and fn once [skipped] (owner, #72). Contact names count as done
+ * once answered either way, or on already (owner, #87).
+ *
+ * The one definition of what setup needs, for the front page, the playground and the guide alike, so they can't disagree
+ * (review, M2: the front page said done while the playground asked for contacts, and ✕ looped back to it). Only the guide's own
+ * setup, before the guide, asks the [SetupPart.guideOnly] parts ([guide]); everywhere else they don't count, and Settings >
+ * Setup offers them.
+ */
+internal fun setupToAsk(done: (SetupPart) -> Boolean, backDeclined: Boolean, guide: Boolean = false, skipped: (SetupPart) -> Boolean) =
+    SetupPart.entries.filterNot {
+        it.guideOnly && !guide || done(it) || it == SetupPart.Back && backDeclined || it == SetupPart.Keys && skipped(it)
+    }
+
+internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLesson>? = step.lessons): String {
+    val open = lessons.orEmpty()
+    // The word menu slide: only TitanKeys on the bar counts, so every refusal says what it was, then points at it (owner,
+    // 2026-11-13: "selected other stuff instead?").
+    if (step.selected != null) menuBlocked(lesson)?.let { return it }
+    // The Space-tap slides say what the touch was, and that it wants a tap (#90).
+    (step.cue as? GuideCue.Taps)?.let { taps ->
+        when (lesson) {
+            GuideLesson.Space.name -> return tapMissLine(GuideMiss.Press, taps.count)
+            GuideLesson.Typing.name -> return tapMissLine(GuideMiss.Typing, taps.count)
+            GuideLesson.Swipe.name -> return tapMissLine(GuideMiss.Swipe, taps.count)
+        }
+    }
+    // Every line says what it was, and what the slide wants instead: "that's an X, not a Y" (owner, #90).
+    return when (lesson) {
+        GuideLesson.Typing.name -> when {
+            step.chapter in NOT_TYPING -> "That's typing, not deleting. Typing's done."
+            GuideLesson.Alt in open -> "That's a letter alone, not with Alt. Hold Alt."
+            GuideLesson.Ctrl in open -> "That's a letter alone, not with fn. Hold fn."
+            GuideLesson.HoldSymbol in open -> "That's a press, not a hold. Keep the key down."
+            GuideLesson.Sym in open -> "That's typing, not Sym. Press Sym first."
+            GuideLesson.BarTap in open -> "That's typing, not the bar. Tap the dancing word."
+            else -> "That's typing, not this slide's move."
+        }
+        // A space that would type, from the key or a light tap, on a slide with no typing (owner, 2026-11-13).
+        GuideLesson.Space.name -> when {
+            step.chapter in NOT_TYPING -> "That's a space, not a delete. Typing's done."
+            GuideLesson.Swipe in open -> "That's a space, not a swipe. Swipes add their own."
+            step.chapter == GuideChapter.Symbols -> "That's a space, not the symbol. Just the symbol."
+            step.chapter == GuideChapter.Clipboard -> "That's a space, not a paste. Just paste."
+            else -> "That's a space, not this slide's move."
+        }
+        GuideLesson.Backspace.name -> if (GuideLesson.Flick in open) "That's a press, not a flick. Flick from Backspace." else
+            "That's Backspace, not this slide's move."
+        // Each fits its own slide (owner, v5.3: the typing slide's line showed on the delete slides).
+        GuideLesson.Swipe.name -> when (step.chapter) {
+            GuideChapter.Typing -> "That's a swipe, not typing. Type this one."
+            GuideChapter.Delete -> if (GuideLesson.Flick in open) "That's a swipe, not a flick. Flick from Backspace." else
+                "That's a swipe, not Backspace. Press Backspace."
+            else -> "That's a swipe, not this slide's move."
+        }
+        GuideLesson.BarTap.name -> when {
+            step.id == "type" -> "That's the bar, not typing. Type it, typo and all."
+            else -> "That's the bar, not the keys. Do it on the keys."
+        }
+        GuideLesson.BarHold.name -> "That's a hold on the bar, not this slide's move."
+        GuideLesson.Flick.name -> when {
+            step.id == "backspace" -> "That's a flick, not a press. Press Backspace."
+            // The held delete's slide locks deleting once the regrets are gone.
+            step.id == "hold" -> "That's more deleting than needed. The rest stays."
+            else -> "That's a flick, not this slide's move."
+        }
+        GuideLesson.DeleteHold.name -> if (step.id == "flick") "That's a held flick, not a flick. Flick and lift." else
+            "That's a held flick, not this slide's move."
+        GuideLesson.Cursor.name -> "That's a Space tap, not this slide's move."
+        GuideLesson.Alt.name -> "That's Alt, not this slide's move."
+        GuideLesson.Sym.name -> "That's Sym, not this slide's move."
+        GuideLesson.HoldSymbol.name -> "That's a held key, not this slide's move."
+        GuideLesson.Enter.name -> "That's Enter, not this slide's move."
+        GuideLesson.Ctrl.name -> "That's a shortcut, not this slide's move."
+        else -> "That's not this slide's move."
+    }
+}
+
+/** The chapters that aren't about typing, where letters typed are a scenario of their own. */
+private val NOT_TYPING = setOf(GuideChapter.Delete, GuideChapter.Steering)
+
+/**
+ * Something that is easy to do by chance and stops a step from working, with the words for it. A step's own check comes first,
+ * so a step that wants one of these things gets it. [instruction] is the slide's instruction now, for a scenario that repeats it.
+ */
+internal fun commonMistake(step: GuideStep, event: KeyboardEvent, instruction: String): GuideVerdict.Hint? = when {
+    event is ModifierState && event.panel == Panel.Settings -> GuideVerdict.Hint("Press Sym to close them.", "Settings? Nobody asked.")
+    event is ModifierState && event.panel != Panel.Closed && !step.usesPanel ->
+        GuideVerdict.Hint("Press Sym until the panel closes.", "Easy, tiger. That's later.")
+    event is ModifierState && event.alt != Level.Off && !step.usesPanel ->
+        GuideVerdict.Hint("Press Alt to turn it off.", "Alt is on, so the touchpad won't type.")
+    step.chapter in NOT_TYPING && (event is Pushed && isLetter(event.code) || event is Recognised && event.words.isNotEmpty()) ->
+        GuideVerdict.Hint(instruction, "Typing's done. Keep up.")
+    event is CursorStarted && step.cue !is GuideCue.Taps ->
+        GuideVerdict.Hint("That's the cursor. Two quick taps on Space start it. Lift your finger to stop.")
+    event is HeldSymbol && step.chapter != GuideChapter.Symbols -> GuideVerdict.Hint("Holding a key types its symbol. Press quickly for letters.")
+    else -> null
+}
+
+/** Where the guide is and what happens next. It knows nothing of the screen, so a test can run it with no phone. */
+internal class GuideFlow(
+    private val settings: () -> GuideSettings,
+    private val steps: List<GuideStep> = GUIDE_STEPS,
+) {
+    private var position = 0
+    private var memory = GuideMemory()
+    /** Slides that another slide made unneeded, by id: the guide passes over them. */
+    private val skipped = HashSet<String>()
+
+    init {
+        position = firstFrom(0)
+    }
+
+    val step get() = steps[position]
+
+    /** The last step is the ending, which has no check to pass. */
+    val finished get() = position == steps.lastIndex
+
+    /** Which part of the guide this is. */
+    val chapterIndex get() = GuideChapter.entries.indexOf(step.chapter)
+    val chapterCount get() = GuideChapter.entries.size
+
+    /** This slide is the last of its chapter. */
+    val chapterEnds get() = steps.getOrNull(firstFrom(position + 1))?.chapter != step.chapter
+
+    /** The chapters that the bar at the top shows: all but the end. */
+    val barChapters get() = GuideChapter.entries.filter { it != GuideChapter.End }
+
+    /** Which slide of its chapter this is, from 0, and how many slides its chapter has that show. */
+    val stepInChapter get() = steps.subList(0, position).count { it.chapter == step.chapter && shows(it) }
+    val stepsInChapter get() = steps.count { it.chapter == step.chapter && shows(it) }
+
+    /** How far through the steps the guide is. The ending is not a step to do. */
+    val stepIndex get() = position
+    val stepCount get() = steps.size - 1
+
+    /** The slides of [chapter] that show, by id. */
+    fun idsOf(chapter: GuideChapter) = steps.filter { it.chapter == chapter && shows(it) }.map { it.id }
+
+    /**
+     * Where to come back to: this step, or for a step that takes the Sym panel as the step before left it, the first of those
+     * steps in a row, because the panel is closed after the guide is left. A step that sets up its own menu comes back to itself.
+     */
+    val resumeId: String get() {
+        var at = position
+        while (at > 0 && steps[at].setup == null && steps[at - 1].usesPanel) at--
+        return steps[at].id
+    }
+
+    /** The setting that this step needs and that is off now, if any. */
+    val missing get() = step.needs?.takeUnless { settings().has(it) }
+
+    /** The stage of the slide, and what it says and shows now: only the instruction that is needed. */
+    val stage get() = memory.stage
+    val instruction get() = step.stages.getOrNull(memory.stage)?.text ?: step.body
+    val cue get() = step.stages.getOrNull(memory.stage)?.cue ?: step.cue
+    /** What the drawing of the keys shows on its keys now, if anything. See [GuideStage.labels]. */
+    val labels get() = step.stages.getOrNull(memory.stage)?.labels
+    /** What the keyboard lets through now: the stage's own, or the slide's. */
+    val lessons get() = step.stages.getOrNull(memory.stage)?.lessons ?: step.lessons
+    /** What the slide counted, such as which ways the groups slide was used. */
+    val counted get() = memory.used
+
+    /** The slide was done in a way that does the next slide too, which then shows done. */
+    val jumps get() = memory.jump
+
+    /** Tells the step what the field holds as it starts, so that a stage can tell when something is typed or pasted. */
+    fun seed(text: String, cursor: Int = -1) {
+        memory.length = text.length
+        memory.stageLength = text.length
+        memory.cursor = cursor
+    }
+
+    /** Tells the step what the field marks in orange to aim at, or null for nothing. See [GuideMemory.target]. */
+    fun aim(range: IntRange?) {
+        memory.target = range
+    }
+
+    /** What the step has counted on this stage, such as words deleted. */
+    val tally get() = memory.count
+
+    /**
+     * The line that shows in place of the instruction now, if the step has one: see [GuideStep.live]. On a slide with
+     * [GuideStep.findIn], with a panel open, it's the page's own line ([panelLine]).
+     */
+    fun liveLine() = step.live?.invoke(memory) ?: panelLine(step, memory.page, memory.home, memory.seenOn)
+
+    /** The line under the instruction while the slide's panel is open: how to leave it. See [panelHint]. */
+    fun panelHint() = panelHint(step, memory.page)
+
+    /**
+     * What the step makes of [event], with [expected] the letters of the word that the text box has next. If it waits, a mistake
+     * that is easy to make gets a scenario that says what happened.
+     */
+    fun event(event: KeyboardEvent, expected: String = ""): GuideVerdict {
+        if (finished) return GuideVerdict.Wait
+        memory.expected = expected
+        memory.followPanel(event, step)
+        val verdict = step.check(memory, event)
+        memory.skip?.let {
+            skipped += it
+            memory.skip = null
+        }
+        if (verdict != GuideVerdict.Wait) return verdict
+        return commonMistake(step, event, instruction) ?: GuideVerdict.Wait
+    }
+
+    /** Moves to the next step that shows. Returns the step that was left. */
+    fun advance(): GuideStep {
+        val left = step
+        if (!finished) moveTo(firstFrom(position + 1))
+        return left
+    }
+
+    /** There is a step before this one that shows. */
+    val canGoBack get() = previous() != null
+
+    /** Moves back to the step before that shows. Returns false at the first step. */
+    fun back(): Boolean {
+        moveTo(previous() ?: return false)
+        return true
+    }
+
+    private fun shows(step: GuideStep) = !step.skipWhen(settings()) && step.id !in skipped
+
+    private fun previous(): Int? {
+        var at = position - 1
+        while (at >= 0 && !shows(steps[at])) at--
+        return at.takeIf { it >= 0 }
+    }
+
+    /** Starts from the first step, or from the step with this id. */
+    fun start(id: String? = null) {
+        skipped.clear()
+        moveTo(firstFrom(steps.indexOfFirst { it.id == id }.coerceAtLeast(0)))
+    }
+
+    /** A step that will not show moves the guide on to the first one after it. The ending always shows. */
+    private fun firstFrom(from: Int): Int {
+        var at = from.coerceAtMost(steps.lastIndex)
+        while (at < steps.lastIndex && !shows(steps[at])) at++
+        return at
+    }
+
+    private fun moveTo(next: Int) {
+        position = next
+        memory = GuideMemory()
+    }
+}

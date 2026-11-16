@@ -7,11 +7,11 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
-engine=android/kotlin/com/atlas/engine
+keyboard=android/kotlin/com/titankeys/keyboard
+engine=android/kotlin/com/titankeys/engine
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
   "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/DeleteSwipe.kt" \
   "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/WordSelection.kt" "$keyboard/GestureDisplay.kt" "$keyboard/TrailThickness.kt" \
   tests/gesture-display/GestureDisplayChecks.kt
-java -cp "$work:$stdlib" com.atlas.keyboard.GestureDisplayChecksKt
+java -cp "$work:$stdlib" com.titankeys.keyboard.GestureDisplayChecksKt

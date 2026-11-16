@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-engine=android/kotlin/com/atlas/engine
+engine=android/kotlin/com/titankeys/engine
 javac --release 17 -nowarn -d "$work" "$engine/ByteBpe.java" "$engine/CtcWords.java" "$engine/Swipe.java" "$engine/SwipeRanker.java" \
   android/kotlin/org/futo/ml/inference/SwipeDecoder.java tests/engine2/Engine2Checks.java
-java -cp "$work" com.atlas.engine.Engine2Checks
+java -cp "$work" com.titankeys.engine.Engine2Checks

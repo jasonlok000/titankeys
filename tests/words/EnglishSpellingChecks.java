@@ -1,10 +1,10 @@
-package com.atlas.engine;
+package com.titankeys.engine;
 
 import java.util.Arrays;
 
-import static com.atlas.engine.EnglishSpelling.Variant.AMERICAN;
-import static com.atlas.engine.EnglishSpelling.Variant.BRITISH;
-import static com.atlas.engine.EnglishSpelling.Variant.CANADIAN;
+import static com.titankeys.engine.EnglishSpelling.Variant.AMERICAN;
+import static com.titankeys.engine.EnglishSpelling.Variant.BRITISH;
+import static com.titankeys.engine.EnglishSpelling.Variant.CANADIAN;
 
 /** Settings > English spelling: what each choice writes. */
 public final class EnglishSpellingChecks {

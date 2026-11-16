@@ -14,10 +14,10 @@ PATH=$sdk/platform-tools:$PATH
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/classes" "$work/src"
-cp "$TREE/android/kotlin/com/atlas/keyboard/Layout.kt" "$work/src/"
+cp "$TREE/android/kotlin/com/titankeys/keyboard/Layout.kt" "$work/src/"
 "$kotlin/bin/kotlinc" -language-version 2.2 -no-stdlib -no-reflect -classpath "$stdlib" -d "$work/classes" "$work/src/Layout.kt" 2>/dev/null
 javac -nowarn --release 17 -cp "$work/classes:$android:$stdlib:$TK_ORT/onnxruntime-android-1.20.0-classes.jar" -d "$work/classes" \
-  "$TREE"/android/kotlin/com/atlas/engine/*.java "$TREE"/android/kotlin/org/futo/ml/inference/*.java "$BASE/tools/BaselineRunner.java" 2>&1 | grep -v '^Note' || true
+  "$TREE"/android/kotlin/com/titankeys/engine/*.java "$TREE"/android/kotlin/org/futo/ml/inference/*.java "$BASE/tools/BaselineRunner.java" 2>&1 | grep -v '^Note' || true
 jar cf "$work/classes.jar" -C "$work/classes" .
 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/checks.zip" "$work/classes.jar" "$stdlib" 2>&1 | grep -v 'warning\|Warning' | head -5 || true
 device=/data/local/tmp/tk-baseline
@@ -35,7 +35,7 @@ fi
 input=$work/corpus.jsonl
 if [ "$LIMIT" != 0 ]; then head -n "$LIMIT" "$CORPUS" > "$input"; else cp "$CORPUS" "$input"; fi
 tk_adb push -q "$input" "$device/corpus.jsonl" >/dev/null
-tk_adb shell "cd $device && LD_LIBRARY_PATH=$device/lib CLASSPATH=$device/checks.zip app_process -Djava.library.path=$device/lib $device com.atlas.engine.BaselineRunner $device/models $device/corpus.jsonl $device/out.jsonl" | tr -d '\r' | tail -3
+tk_adb shell "cd $device && LD_LIBRARY_PATH=$device/lib CLASSPATH=$device/checks.zip app_process -Djava.library.path=$device/lib $device com.titankeys.engine.BaselineRunner $device/models $device/corpus.jsonl $device/out.jsonl" | tr -d '\r' | tail -3
 tk_adb pull -q "$device/out.jsonl" "$OUT" >/dev/null
 tk_adb shell rm -f "$device/corpus.jsonl" "$device/out.jsonl"
 echo "wrote $OUT"

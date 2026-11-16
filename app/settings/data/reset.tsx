@@ -1,5 +1,5 @@
 import { Field, Screen, back } from "ink";
-import { clearWords } from "../../../lib/atlas";
+import { clearWords } from "../../../lib/titankeys";
 import { playHaptic } from "../../../lib/app-haptics";
 
 export default function Reset() {

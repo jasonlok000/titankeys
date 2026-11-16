@@ -1,7 +1,7 @@
-package com.atlas.rime
+package com.titankeys.rime
 
-import com.atlas.keyboard.EngineState
-import com.atlas.keyboard.InputMethod
+import com.titankeys.keyboard.EngineState
+import com.titankeys.keyboard.InputMethod
 import java.io.File
 import java.security.MessageDigest
 

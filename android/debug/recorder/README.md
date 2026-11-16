@@ -44,7 +44,7 @@ Replay runs a recording through the real touch handling, text logic and swipe en
 dir=/sdcard/Android/data/com.titankeys.debug/files/replay
 adb shell mkdir -p "$dir"
 adb push session.jsonl "$dir/in.jsonl"
-adb shell am instrument -w -e in in.jsonl -e out out.jsonl com.titankeys.debug/com.atlas.keyboard.ReplayRunner
+adb shell am instrument -w -e in in.jsonl -e out out.jsonl com.titankeys.debug/com.titankeys.keyboard.ReplayRunner
 adb pull "$dir/out.jsonl"
 ```
 
@@ -122,8 +122,8 @@ Hold back one third of the prompts (`index % 3 == 2`) if you tune anything again
 clearing data. Only adb can send to it:
 
 ```bash
-adb shell am broadcast -n com.titankeys.debug/com.atlas.keyboard.ConnectedReset -a com.titankeys.debug.RESET_SHARE
-adb shell am broadcast -n com.titankeys.debug/com.atlas.keyboard.ConnectedReset -a com.titankeys.debug.RESET_NEWS
+adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.ConnectedReset -a com.titankeys.debug.RESET_SHARE
+adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.ConnectedReset -a com.titankeys.debug.RESET_NEWS
 ```
 
 The first turns sharing off, deletes the waiting swipes and leaves the offer unanswered, so the guide's last slide asks

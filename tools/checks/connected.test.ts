@@ -4,7 +4,7 @@ import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { appKey, type Envelope, type Feed, open, problems, sign } from "../announcements/feed";
 import worker, {
-  Cap, CLIENT_DELETES_PER_MINUTE, CLIENT_UPLOADS_PER_MINUTE, DAILY_UPLOADS, folder, KEEP_MILLIS, MAX_BATCH_BYTES, MAX_SHARD_BYTES,
+  Cap, CLIENT_DELETES_PER_MINUTE, CLIENT_REPORT_PARTS_PER_MINUTE, CLIENT_UPLOADS_PER_MINUTE, DAILY_UPLOADS, folder, KEEP_MILLIS, MAX_BATCH_BYTES, MAX_SHARD_BYTES,
   MAX_REPORT_PARTS, MAX_STORED_BYTES, Reports, Shard, SHARDS,
 } from "../../server/contributions/src/worker.js";
 
@@ -282,7 +282,7 @@ describe("contributions server", () => {
 
   test("accepts the largest batch that the app makes", async () => {
     // Contributions.kt sends at most 256 KB of examples before gzip; sealing adds 64 bytes.
-    const source = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    const source = await text("android/kotlin/com/titankeys/connected/Contributions.kt");
     expect(source).toContain("BATCH_BYTES = 256 * 1024");
     expect(MAX_BATCH_BYTES).toBeGreaterThanOrEqual(256 * 1024 + 64);
   });
@@ -307,6 +307,8 @@ describe("bug reports and ideas from the form (#97)", () => {
     expect((await part(env, 1, 2, sealed(300))).status).toBe(204);
     expect(parts(env)).toEqual([{ report: id, part: 0, count: 2, size: 200 }, { report: id, part: 1, count: 2, size: 300 }]);
     expect(env.REPORTS.entry("reports").storage.values.get("bytes")).toBe(500);
+    // The Cap counts what is stored, not what was sent: the replaced part's bytes went back.
+    expect(Object.values(cap(env).storage.values.get("months") as Record<string, number>).reduce((a, b) => a + b, 0)).toBe(500);
     expect(env.REPORTS.entry("reports").storage.alarmAt).not.toBeNull();
     // Reports take places in the same caps as batches.
     expect(cap(env).storage.values.get("uploads")).toBe(3);
@@ -323,10 +325,29 @@ describe("bug reports and ideas from the form (#97)", () => {
     expect(parts(env)).toEqual([]);
   });
 
-  test("the same per-client limit as contributions", async () => {
+  test("a per-client limit of its own, that a report of the most parts fits in twice", async () => {
     const env = server();
-    for (let i = 0; i < CLIENT_UPLOADS_PER_MINUTE; i++) expect((await part(env, i % MAX_REPORT_PARTS, MAX_REPORT_PARTS)).status).toBe(204);
+    // Batches sent in the same minute take nothing from it.
+    const contributor = await folder("2b7e1516-28ae-4d2a-a6d2-abf7158809cf");
+    for (let i = 0; i < CLIENT_UPLOADS_PER_MINUTE; i++) expect((await worker.fetch(post("/v1/batch", sealed(), { "X-Contributor": contributor }), env)).status).toBe(204);
+    expect(CLIENT_REPORT_PARTS_PER_MINUTE).toBeGreaterThanOrEqual(2 * MAX_REPORT_PARTS);
+    for (let i = 0; i < CLIENT_REPORT_PARTS_PER_MINUTE; i++) expect((await part(env, i % MAX_REPORT_PARTS, MAX_REPORT_PARTS)).status).toBe(204);
     expect((await part(env, 0, 1)).status).toBe(429);
+  });
+
+  test("confirming named reports deletes only their parts, so one that never arrives whole holds back nothing", async () => {
+    const env = server();
+    const other = "f".repeat(32);
+    await part(env, 0, 2);
+    await part(env, 0, 2, sealed(), other);
+    await part(env, 1, 2);
+    const confirm = (body: unknown) => worker.fetch(new Request(`${URL_BASE}/v1/export/reports/confirm`, {
+      method: "POST", body: JSON.stringify(body), headers: { Authorization: `Bearer ${TOKEN}` },
+    }), env);
+    expect((await confirm({ through: 3, reports: ["not-an-id"] })).status).toBe(400);
+    expect(await (await confirm({ through: 3, reports: [id] })).json()).toEqual({ deleted: 2 });
+    expect(parts(env)).toEqual([{ report: other, part: 0, count: 2, size: 200 }]);
+    expect(env.REPORTS.entry("reports").storage.values.get("bytes")).toBe(200);
   });
 
   test("the owner exports them, still sealed, and deletes them once exported; nobody else can", async () => {
@@ -380,7 +401,7 @@ describe("privacy texts (#53)", () => {
     const url = "https://jasonlok000.github.io/titankeys/privacy/";
     expect(await text("lib/connected.ts")).toContain(url);
     expect(await text("README.md")).toContain(url);
-    const kotlin = await text("android/kotlin/com/atlas/connected/Connected.kt");
+    const kotlin = await text("android/kotlin/com/titankeys/connected/Connected.kt");
     expect(kotlin).toContain('SITE = "https://jasonlok000.github.io/titankeys"');
     expect(kotlin).toContain('PRIVACY_URL = "$SITE/privacy/"');
   });
@@ -388,7 +409,7 @@ describe("privacy texts (#53)", () => {
   test("the policy and the disclosure name the same limits as the code", async () => {
     const policy = await text("site/privacy/index.html");
     const disclosure = await text("lib/connected-text.ts");
-    const code = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    const code = await text("android/kotlin/com/titankeys/connected/Contributions.kt");
     expect(code).toContain("QUEUE_CAP_BYTES = 4L * 1024 * 1024");
     for (const words of [policy, disclosure]) {
       expect(words).toContain("4 MB");
@@ -401,19 +422,19 @@ describe("privacy texts (#53)", () => {
 describe("news on the phone", () => {
   test("turning News off takes down only news, never Record a bug's ongoing notification", async () => {
     // Bug hunt 2.1, #26: cancelAll() took Record a bug's notification and its Stop down too, while it went on recording.
-    const news = await text("android/kotlin/com/atlas/connected/Announcements.kt");
+    const news = await text("android/kotlin/com/titankeys/connected/Announcements.kt");
     expect(news).not.toContain("cancelAll(");
     expect(news).toContain("if (!on) cancelNews(context)");
     expect(news).toContain("if (shown.notification.channelId == CHANNEL) manager.cancel(shown.tag, shown.id)");
     expect(news).toContain('private const val CHANNEL = "news"');
-    expect(await text("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain('private const val CHANNEL = "bug-recording"');
+    expect(await text("android/kotlin/com/titankeys/keyboard/BugRecording.kt")).toContain('private const val CHANNEL = "bug-recording"');
   });
 });
 
 describe("contributions on the phone", () => {
   test("a deletion waits for any batch on its way, and sent examples leave the queue by content", async () => {
     // Bug hunt 2.1, #28. tests/connected checks the queue's removal; this checks the lock between the two jobs.
-    const code = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    const code = await text("android/kotlin/com/titankeys/connected/Contributions.kt");
     expect(code).toContain("repeat(BATCHES_PER_RUN) { synchronized(sending) {");
     expect(code).toContain("fun sendDeletion(context: Context): Boolean = synchronized(sending) {");
     expect(code).toContain("queue.removeSent(lines)");

@@ -148,7 +148,7 @@ data-only language is one command plus a check by eye. Where the data comes from
 - **Picking is the word menu's way:** rest a finger on a key to mark the accent above it, press the key to pick it. The
   accent replaces the typed letter. Releasing the held key without a press keeps the plain letter.
 - With Shift or Caps on, the accents show in capitals.
-- The first time an input method with accents is used, the bar says once: "Hold a letter for its accents." <!-- F: draft -->
+- The first time an input method with accents is used, the bar says once: "Hold a letter for its accents."
 - In an input method with accents, **hold for symbols is off on every key**, so a hold always means one thing. Symbols stay
   on Alt + key and the Sym panel. Input methods without accents keep hold for symbols.
 
@@ -157,8 +157,8 @@ data-only language is one command plus a check by eye. Where the data comes from
 - It takes a list and a page: accents fit on one page; Chinese gets pages.
 - **Chinese, and any engine with choices:** the code you've typed shows over Q and W, muted, with the page after it in the
   accent ("2›", or "1/3" when the engine knows the count). The choices sit over E to P, eight a page. Letters go on building
-  the code, so a choice is picked with Space: the one a resting finger marks, or else the first. Swiping down on the keys
-  turns to the next page and up to the one before, like the Sym panel; Rime's own , and . paging keys work too. Back closes
+  the code, so a choice is picked with Space: the one a resting finger marks, or else the first. Swiping up on the keys
+  turns to the next page and down to the one before, the Sym panel's own direction; Rime's own , and . paging keys work too. Back closes
   the choices.
 
 **Accents from the word list** (input methods with a word list):
@@ -177,8 +177,8 @@ The bar, its hover and the picking come from the word menu's code (see "Where it
   Sym press still opens the Sym panel, as today.
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
-- After a switch, the bar says for a moment which input method types now. A lasting mark on the bar, for anything but
-  English, comes later. <!-- F: draft for its accessibility text, "Typing in Spanish" -->
+- After a switch, the bar says for a moment which input method types now. A lasting mark on the bar for anything but English
+  comes later; its accessibility text says it in full: "Typing in Spanish".
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
@@ -196,16 +196,16 @@ Languages
 - A list of every input method, grouped by script, each with a switch. The ones that are on sit at the top in the
   overlay's order, which for now is the order they were turned on (moving them comes later).
 - English can't be turned off while it's the only one.
-- At most 8 on, the overlay's places. The 9th switch says why it won't turn on. <!-- F: draft "Eight at a time. Turn one off first." -->
+- At most 8 on, the overlay's places. The 9th switch says why it won't turn on: "Eight at a time. Turn one off first."
 - Each input method's page shows its name, its source and licence, its variants when it has them (Portuguese), and
   "Fix typos as you type" for it, off by default.
 
 **Chinese characters** (`app/settings/chinese.tsx`), a ChoicePage like English spelling:
-- Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China). <!-- F: draft labels -->
+- Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China).
 - One setting for every Chinese input method.
 - **No default (owner, 2026-11-16): you choose.** The first time a Chinese input method is turned on, its switch opens
   this page, and it stays off until a variant is picked. Nothing is guessed from the phone's region.
-  <!-- F: draft subtitle "Pick how your characters come out. You can change it any time." -->
+  The page's subtitle: "Pick how your characters come out. You can change it any time."
 
 The settings live in `typing_settings` with the others: `inputMethods` (the ordered list of ids that are on),
 `imVariant.<id>`, `imAutocorrect.<id>` and `chineseVariant` (`zh_hk`, `zh_tw`, `zh_hans`).
@@ -216,10 +216,10 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   `android/jniLibs/arm64-v8a/librime_tk.so` (3.1 MB, sharing the app's `libc++_shared.so` from NDK r27c). It builds in WSL
   with `native/rime/build.sh`, and is checked in prebuilt, so a normal build doesn't need the NDK. Two runs give the same
   bytes. The sources, versions and licences: `native/rime/SOURCES.md`.
-- **JNI:** a thin layer, `native/rime/rime_jni.cc`, registered on `com.atlas.rime.RimeNative`: `start(sharedDir, userDir)`,
+- **JNI:** a thin layer, `native/rime/rime_jni.cc`, registered on `com.titankeys.rime.RimeNative`: `start(sharedDir, userDir)`,
   `selectSchema`, `setOption`, `key(keysym, mask)`, `state()` (the text to commit, the code, how Rime spells it, the page and
   its choices), `pick(index)`, `clear()`. Paging is Rime's Page Up and Page Down keys. Trime's `rime_jni` is the reference.
-- **The engine:** `com.atlas.rime.RimeEngine`, made by name with a `(Context)` constructor (`InputEngines`).
+- **The engine:** `com.titankeys.rime.RimeEngine`, made by name with a `(Context)` constructor (`InputEngines`).
 - **Data:** `android/assets/rime/` holds the schemas (`tk_yale`, `tk_jyutping`, `tk_pinyin`, `tk_variants`), Rime's shared
   files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 8 choices a page.
   `android/assets/rime.sha256` lists them. On the first use of a Chinese input method, `RimeEngine.start()` copies them to
@@ -238,24 +238,24 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
 
 ## Where it goes in the code
 
-Paths are under `android/kotlin/com/atlas/`. Line numbers are from 2026-11-16's main.
+Paths are under `android/kotlin/com/titankeys/`. Line numbers are from 2026-11-16's main.
 
 - **`InputMethods`** (new, `keyboard/InputMethods.kt`): reads the index, keeps the current input method, loads its
   `im.json` and word list when it's picked, and frees the last one. English stays as it is: `SwipeTyping` keeps loading its
   models at start (`engine/SwipeTyping.java:151`), and `AutocorrectLoader` keeps loading English's lists per field.
-- **Letters:** a letter key becomes text in `AtlasIme.key()` (`keyboard/AtlasIme.kt:3465`), from
+- **Letters:** a letter key becomes text in `TitanKeysIme.key()` (`keyboard/TitanKeysIme.kt:3465`), from
   `event.getUnicodeChar(...)`, then `Composer.type()` (`keyboard/Composer.kt:636`). For a non-`qwerty` input method,
   `key()` asks `InputMethods` for the key's letter instead, and upper-cases it with the input method's locale. TitanKeys
   writes straight into the field with no composing text, so this is the only change for data-only input methods.
-- **Holds:** `HoldEngine` (`engine/HoldEngine.java`) already times a held letter, and `canHold()` (`AtlasIme.kt:3134`)
+- **Holds:** `HoldEngine` (`engine/HoldEngine.java`) already times a held letter, and `canHold()` (`TitanKeysIme.kt:3134`)
   decides which keys can be held. In an input method with accents, `canHold()` accepts every key with accents (instead of
-  every key with an Alt symbol), and the hold callback (`replaceHeldLetter`, `AtlasIme.kt:3173`) opens the picker instead
+  every key with an Alt symbol), and the hold callback (`replaceHeldLetter`, `TitanKeysIme.kt:3173`) opens the picker instead
   of calling `Composer.replaceLetter()`. Picking an accent then calls `Composer.replaceLetter()` with it, as a symbol does
   today.
 - **The picker:** a new `Strip.Notice.Picker(choices, page)`, drawn by `Strip` (`keyboard/Strip.kt`) next to the word menu's
   `drawMenu` (`Strip.kt:1037`), with `MenuKeys.slot()` lining each choice up over its key. Marking uses the bar's
-  `SteadyKey` hover (`barHover`, `AtlasIme.kt:134`, through `followRestingKey` and `markMenu`), and the key press is taken
-  the way `menuAction` (`AtlasIme.kt:1887`) takes the word menu's. Unlike the word menu, every letter key can be a choice.
+  `SteadyKey` hover (`barHover`, `TitanKeysIme.kt:134`, through `followRestingKey` and `markMenu`), and the key press is taken
+  the way `menuAction` (`TitanKeysIme.kt:1887`) takes the word menu's. Unlike the word menu, every letter key can be a choice.
 - **The overlay on a held Sym:** Sym is handled in `Modifiers.down()` (`keyboard/Modifiers.kt:262`), which opens the Sym
   panel on the first press (`pressSym()`, `Modifiers.kt:211`). A held Sym isn't used for anything yet (`symHeld` only blocks
   repeats). With two or more input methods on, `pressSym()` moves to Sym's release, and a held Sym (the hold time,
@@ -264,11 +264,11 @@ Paths are under `android/kotlin/com/atlas/`. Line numbers are from 2026-11-16's 
 - **The bar's words:** for input methods with a word list, `Composer.show()` (`Composer.kt:1860`) gets suggestions from the
   current input method's list (prefix matches, accents ignored, ranked by count) instead of `TypedWords`' English ones.
   Swiping, the next word and English's autocorrect rules stay English-only.
-- **Chinese:** while a Rime input method is current, `AtlasIme.key()` sends letters, Space, Enter and Backspace to the
+- **Chinese:** while a Rime input method is current, `TitanKeysIme.key()` sends letters, Space, Enter and Backspace to the
   Rime engine before `Composer`, and only committed text reaches `Composer.type()`. The code being typed shows on the bar
   with the picker (the field has no composing text today, and Chinese doesn't need it).
 - **Settings:** a setting touches `engine/TypingSettings.java` (SharedPreferences `typing_settings`), the bridge in
-  `com/vandam/ink/AppNativeAdapters.kt` (state around :514, set around :660), `lib/atlas.ts` (`State`, `Settings`),
+  `com/vandam/ink/AppNativeAdapters.kt` (state around :514, set around :660), `lib/titankeys.ts` (`State`, `Settings`),
   `keyboard/SettingsReset.kt` and `keyboard/RawLog.kt`. The Chinese page is a `ChoicePage` (`lib/choice.tsx`) like
   `app/settings/spelling.tsx`. New pages get their parent in `lib/settings-tree.ts`.
 - **English's hard-coded locale:** `Locale.UK` in `keyboard/ConnectionEditor.kt:148` and `engine/SwipeTyping.java` stays for

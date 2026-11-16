@@ -37,7 +37,7 @@ def main():
     args = parser.parse_args()
     assert args.cycles > 0, "cycles must be positive"
     selected = shell("settings", "get", "secure", "default_input_method").strip()
-    assert selected.startswith("com.titankeys") and selected.endswith("AtlasIme"), "Select TitanKeys before running"
+    assert selected.startswith("com.titankeys") and selected.endswith("TitanKeysIme"), "Select TitanKeys before running"
     package, input_type, _ = state()
     assert package == args.package and input_type & 0xF == 1, "Focus a text field in the specified app first"
     # A Debug build also has an icon for the recorder, so one match can't be asked for. The app's main screen is first.
@@ -53,7 +53,7 @@ def main():
         shell("input", "keyevent", "HOME")
         time.sleep(delay)
         if delay == .8:
-            assert not state()[2], "Atlas remained visible on the home screen"
+            assert not state()[2], "TitanKeys remained visible on the home screen"
         shell("am", "start", "-a", "android.intent.action.MAIN",
               "-c", "android.intent.category.LAUNCHER", "-n", component)
         time.sleep(1)
@@ -68,8 +68,8 @@ def main():
             time.sleep(2)
             package, actual_type, visible = state()
             assert (package, actual_type) == (args.package, input_type), "The focused field changed during the check"
-        assert visible, f"Atlas window stayed hidden after return {cycle + 1} (home delay {delay}s)"
-        print(f"PASS return {cycle + 1}: Atlas visible after {delay}s home delay", flush=True)
+        assert visible, f"TitanKeys window stayed hidden after return {cycle + 1} (home delay {delay}s)"
+        print(f"PASS return {cycle + 1}: TitanKeys visible after {delay}s home delay", flush=True)
 
     # Back also reaches the app, which can close the screen. Only a field that stays can show the result.
     shell("input", "keyevent", "BACK")
@@ -78,8 +78,8 @@ def main():
     if (package, actual_type) != (args.package, input_type):
         print("SKIP back: the app left the field", flush=True)
         return
-    assert not visible, "Atlas window came back after Back hid it"
-    print("PASS back: Atlas stayed hidden in the same field", flush=True)
+    assert not visible, "TitanKeys window came back after Back hid it"
+    print("PASS back: TitanKeys stayed hidden in the same field", flush=True)
 
 
 if __name__ == "__main__":

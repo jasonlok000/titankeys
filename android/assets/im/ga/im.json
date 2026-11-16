@@ -1,0 +1,29 @@
+{
+  "id": "ga",
+  "name": "Gaeilge",
+  "nameEnglish": "Irish",
+  "label": "GA",
+  "locale": "ga",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "á",
+    "e": "é",
+    "i": "í",
+    "o": "ó",
+    "u": "ú"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_ga.combined"
+  }
+}

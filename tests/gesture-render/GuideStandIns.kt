@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 /**
  * The part of GuideKeyboardView.kt that the strip's drawing uses, as it is there, so the render needs none of the guide's view.

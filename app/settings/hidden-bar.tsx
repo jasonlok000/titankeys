@@ -1,5 +1,5 @@
 import { useSnapshot } from "ink";
-import { type State, state } from "../../lib/atlas";
+import { type State, state } from "../../lib/titankeys";
 import { AppListPage, appsLabel } from "../../lib/app-list";
 import { Note } from "../../lib/note";
 import { barLabel } from "../../lib/setting-names";

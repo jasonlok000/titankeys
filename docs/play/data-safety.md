@@ -1,6 +1,6 @@
 # Data safety answers for TitanKeys 2.1 (draft)
 
-For #36, based on the connected-features design in #55 and the 2.1 code in progress (`com.atlas.connected`). Checked against [Google's Data safety guide](https://support.google.com/googleplay/android-developer/answer/10787469) and the [User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311) on 2026-11-10. This is not legal advice.
+For #36, based on the connected-features design in #55 and the 2.1 code in progress (`com.titankeys.connected`). Checked against [Google's Data safety guide](https://support.google.com/googleplay/android-developer/answer/10787469) and the [User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311) on 2026-11-10. This is not legal advice.
 
 The form describes **the Play build only**, and every version of it on Play. If a later Play version collects more, update the form first.
 

@@ -14,7 +14,7 @@ function files(folder: string): string[] {
 const screens = [...files("app"), ...files("lib")].map(path => ({ path, source: read(path) }));
 
 test("each app haptic has the family its meaning needs", () => {
-  const haptics = read("android/kotlin/com/atlas/keyboard/Haptics.kt");
+  const haptics = read("android/kotlin/com/titankeys/keyboard/Haptics.kt");
   const families: Record<string, string> = {
     app_press: "Texture", app_switch_on: "Lock", app_switch_off: "Release", app_step: "Texture",
     app_picked: "Confirm", app_deleted: "Gone", app_refused: "No",
@@ -66,8 +66,8 @@ test("no press in Ink's pages turns its haptic off, so none can skip Press", () 
 // The native screens: the guide, the playground, the share and Back disclosures, key calibration, the Haptics lab and the
 // recorder's screens. The keyboard's own views (the bar, the panels, exact typing's bar) play the keyboard's haptics instead.
 const nativeScreens = [
-  ...readdirSync(join(root, "android/kotlin/com/atlas/keyboard")).filter(name => name.endsWith("Activity.kt"))
-    .map(name => `android/kotlin/com/atlas/keyboard/${name}`),
+  ...readdirSync(join(root, "android/kotlin/com/titankeys/keyboard")).filter(name => name.endsWith("Activity.kt"))
+    .map(name => `android/kotlin/com/titankeys/keyboard/${name}`),
   ...readdirSync(join(root, "android/kotlin/com/vandam/ink")).filter(name => name.endsWith("Activity.kt"))
     .map(name => `android/kotlin/com/vandam/ink/${name}`),
   ...readdirSync(join(root, "android/debug/recorder")).filter(name => name.endsWith("Activity.kt"))
@@ -75,20 +75,20 @@ const nativeScreens = [
 ];
 
 test("every press on a native screen goes through onPress, which plays its haptic", () => {
-  expect(nativeScreens).toContain("android/kotlin/com/atlas/keyboard/GuideActivity.kt");
+  expect(nativeScreens).toContain("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
   for (const path of nativeScreens) {
     const source = read(path);
     // A click listener set any other way would play nothing. Clearing one, with null, is fine.
     const loose = [...source.matchAll(/\.?setOn(Long)?ClickListener\s*[({](?!null\))/g)].map(match => match[0]);
     expect({ path, loose }).toEqual({ path, loose: [] });
   }
-  const press = read("android/kotlin/com/atlas/keyboard/AppPress.kt");
+  const press = read("android/kotlin/com/titankeys/keyboard/AppPress.kt");
   expect(press).toContain("fun View.onPress(haptics: Haptics, haptic: Haptic? = Haptic.AppPress, action: () -> Unit)");
   expect(press).toContain("isHapticFeedbackEnabled = false");
 });
 
 test("the guide's own switches lock and let go", () => {
-  const guide = read("android/kotlin/com/atlas/keyboard/GuideActivity.kt");
+  const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
   expect(guide).toContain("haptics.play(if (pasteDeclined) Haptic.AppSwitchOn else Haptic.AppSwitchOff)");
   expect(guide).toContain("haptics.play(Haptic.AppSwitchOff)");
   expect(read("lib/contribute.tsx")).toContain("switched(true);");
@@ -112,8 +112,8 @@ test("every long press goes through onHold, which turns Android's own long-press
     const source = read(path);
     expect({ path, longClick: /setOnLongClickListener|\.onLongClick\b|isLongClickable\s*=\s*true/.test(source) }).toEqual({ path, longClick: false });
   }
-  expect(read("android/kotlin/com/atlas/keyboard/AppPress.kt"))
+  expect(read("android/kotlin/com/titankeys/keyboard/AppPress.kt"))
     .toMatch(/fun View\.onHold\(held: \(\) -> Boolean\) \{\s*isHapticFeedbackEnabled = false\s*setOnLongClickListener \{ held\(\) \}/);
   for (const path of ["Strip.kt", "ExactBar.kt", "SymPanel.kt"])
-    expect({ path, holds: read(`android/kotlin/com/atlas/keyboard/${path}`).includes("onHold {") }).toEqual({ path, holds: true });
+    expect({ path, holds: read(`android/kotlin/com/titankeys/keyboard/${path}`).includes("onHold {") }).toEqual({ path, holds: true });
 });

@@ -6,7 +6,7 @@ import { join } from "node:path";
 // reads them: changing system settings is never its job.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
-const checks = read("android/kotlin/com/atlas/keyboard/PhoneChecks.kt");
+const checks = read("android/kotlin/com/titankeys/keyboard/PhoneChecks.kt");
 
 test("the phone checks only read", () => {
   expect(checks).not.toMatch(/Settings\.(System|Global|Secure)\.put/);
@@ -31,14 +31,14 @@ test("Setup shows each phone setting as a step that opens its page", () => {
 });
 
 test("the keyboard notes each app's Sliding Mode, and the app can see the Shortcut keys page", () => {
-  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   // Two readings per field, early and late, and a Sliding Mode 1 touch from the touchpad (tests/sliding-mode has the rules).
   expect(ime).toContain("main.postDelayed({ readSlidingMode(field, late = false) }, SLIDING_CHECK_MILLIS)");
   expect(ime).toContain("main.postDelayed({ readSlidingMode(field, late = true) }, SLIDING_CONFIRM_MILLIS)");
   expect(ime).toContain("private const val SLIDING_CONFIRM_MILLIS = 3000L");
   expect(ime).toContain("SlidingModeList.trustworthy(field.early, reading, sameField, field.mode1Touch)");
   expect(ime).toMatch(/private fun motion\(event: MotionEvent\) \{\s+noteSlidingTouch\(event\)/);
-  expect(read("android/kotlin/com/atlas/keyboard/Touchpad.kt")).toContain("fun sentAsScreenTouch(event: MotionEvent)");
+  expect(read("android/kotlin/com/titankeys/keyboard/Touchpad.kt")).toContain("fun sentAsScreenTouch(event: MotionEvent)");
   expect(read("android/src/main/AndroidManifest.xml")).toContain('<package android:name="com.agui.shortcutsettings" />');
 });
 
@@ -50,7 +50,7 @@ test("the first list, which misread Chrome and Settings, is never read again", (
 });
 
 test("Display over other apps and Accessibility try TitanKeys' own page first, then the list", () => {
-  const setup = read("android/kotlin/com/atlas/keyboard/PhoneSetup.kt");
+  const setup = read("android/kotlin/com/titankeys/keyboard/PhoneSetup.kt");
   expect(setup).toContain('private const val MANAGE_APP_OVERLAY_PERMISSION = "android.settings.MANAGE_APP_OVERLAY_PERMISSION"');
   expect(setup).toMatch(/Intent\(MANAGE_APP_OVERLAY_PERMISSION, [^\n]+\),\s+Intent\(Settings\.ACTION_MANAGE_OVERLAY_PERMISSION/);
   expect(setup).toContain('private const val ACCESSIBILITY_DETAILS_SETTINGS = "android.settings.ACCESSIBILITY_DETAILS_SETTINGS"');
@@ -60,9 +60,9 @@ test("Display over other apps and Accessibility try TitanKeys' own page first, t
   expect(setup).toContain("catch (error: SecurityException)");
   // Every way in goes through open(), so each falls back alike.
   expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain("PhoneSetup.open(activity, part, activity::startActivity)");
-  expect(read("android/kotlin/com/atlas/keyboard/BackDisclosureActivity.kt")).toContain("PhoneSetup.open(this, SetupPart.Back, ::startActivity)");
-  expect(read("android/kotlin/com/atlas/keyboard/GuideActivity.kt")).toContain("PhoneSetup.open(this, part) { page -> startActivityForResult(page, SETUP_REQUEST) }");
-  for (const path of ["android/kotlin/com/vandam/ink/AppNativeAdapters.kt", "android/kotlin/com/atlas/keyboard/BackDisclosureActivity.kt", "android/kotlin/com/atlas/keyboard/GuideActivity.kt"])
+  expect(read("android/kotlin/com/titankeys/keyboard/BackDisclosureActivity.kt")).toContain("PhoneSetup.open(this, SetupPart.Back, ::startActivity)");
+  expect(read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt")).toContain("PhoneSetup.open(this, part) { page -> startActivityForResult(page, SETUP_REQUEST) }");
+  for (const path of ["android/kotlin/com/vandam/ink/AppNativeAdapters.kt", "android/kotlin/com/titankeys/keyboard/BackDisclosureActivity.kt", "android/kotlin/com/titankeys/keyboard/GuideActivity.kt"])
     expect({ path, page: read(path).includes("PhoneSetup.page(") }).toEqual({ path, page: false });
 });
 

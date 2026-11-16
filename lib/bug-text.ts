@@ -1,7 +1,7 @@
 /**
  * The words of Record a bug (#64), in one place for other languages (#56). The owner's voice (#54, voice.md), except the
  * warning about what the file shows and the delete text: those are a clean zone, plain and without jokes. The notification's
- * words are in android/kotlin/com/atlas/keyboard/BugRecording.kt (BugText).
+ * words are in android/kotlin/com/titankeys/keyboard/BugRecording.kt (BugText).
  */
 export const bugText = {
   title: "Record a bug",
@@ -12,7 +12,6 @@ export const bugText = {
     "Press Record a bug.",
     "Go and do the thing that broke.",
     "Come back here and press Stop. It stops by itself after 3 minutes.",
-    // F: draft, was "Check what's in it, then share it wherever you like."
     "Check what's in it, then send it to us or share it wherever you like.",
   ],
   // Clean zone: plain, no jokes. The privacy policy says the same (site/privacy/index.html).
@@ -36,10 +35,9 @@ export const bugText = {
     "The file has every touch and key press you made while it was on. From those, someone can work out what you typed, including the words above.",
     "Only share it with people you'd show that text to.",
     "Password and private fields are never recorded, and neither is the text that was already in a field.",
-    // F: draft (#97), was "TitanKeys doesn't upload it. It goes only where you send it."
-    "TitanKeys sends it only if you press Send in the report form, sealed so only we can read it. Otherwise it stays on your phone.",
+    "TitanKeys only sends it if you press Send in the report form, sealed so only we can read it. Otherwise it stays on your phone.",
   ],
-  // F: "Send it" opens the report form (#97), a draft; "Share elsewhere" is F's (#74).
+  // "Send it" opens the report form (#97); "Share elsewhere" keeps the share sheet (#74).
   send: "Send it",
   share: "Share elsewhere",
   shareSubject: "TitanKeys bug recording",

@@ -11,7 +11,7 @@ ort=android/libs/onnxruntime-android-1.23.2.jar
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 root=android/kotlin
-"$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" "$root/com/atlas/keyboard/Layout.kt"
+"$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" "$root/com/titankeys/keyboard/Layout.kt"
 javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" \
-  $(find "$root/com/atlas/engine" "$root/org" -name '*.java') tests/first-word/FirstWordChecks.java
-java -cp "$work:$stdlib:$android:$ort" com.atlas.engine.FirstWordChecks
+  $(find "$root/com/titankeys/engine" "$root/org" -name '*.java') tests/first-word/FirstWordChecks.java
+java -cp "$work:$stdlib:$android:$ort" com.titankeys.engine.FirstWordChecks

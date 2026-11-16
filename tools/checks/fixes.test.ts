@@ -6,7 +6,7 @@ const root = new URL("../../", import.meta.url);
 const read = (path: string) => Bun.file(new URL(path, root)).text();
 
 test("the page lists every kind of fix in FixKind.kt, in its order", async () => {
-  const source = await read("android/kotlin/com/atlas/autocorrect/FixKind.kt");
+  const source = await read("android/kotlin/com/titankeys/autocorrect/FixKind.kt");
   const native = [...source.matchAll(/^\s+[A-Z_]+\("(\w+)"\)[,;]/gm)].map(match => match[1]);
   expect(native.length).toBeGreaterThan(10);
   expect(fixKinds.map(({ id }) => id)).toEqual(native);

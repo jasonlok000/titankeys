@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "../..");
-const read = (name: string) => readFileSync(join(root, "android/kotlin/com/atlas/keyboard", name), "utf8");
+const read = (name: string) => readFileSync(join(root, "android/kotlin/com/titankeys/keyboard", name), "utf8");
 const files = ["Strip.kt", "SymPanel.kt", "ExactBar.kt"];
 const smallest = 13;
 

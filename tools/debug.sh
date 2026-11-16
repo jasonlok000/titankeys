@@ -6,14 +6,14 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 recorder=android/debug/recorder
-keyboard=android/kotlin/com/atlas/keyboard
+keyboard=android/kotlin/com/titankeys/keyboard
 backup=$(mktemp -d)
 files=(ink.toml android/src/main/AndroidManifest.xml
   android/src/main/res/mipmap-anydpi-v26/ic_launcher.xml android/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml)
 for file in "${files[@]}"; do mkdir -p "$backup/$(dirname "$file")"; cp "$file" "$backup/$file"; done
 restore() {
   for file in "${files[@]}"; do cp "$backup/$file" "$file"; done
-  rm -f android/src/main/res/values/atlas_debug.xml
+  rm -f android/src/main/res/values/titankeys_debug.xml
   rmdir android/src/main/res/values 2>/dev/null || true
   for file in "$recorder"/*.kt; do rm -f "$keyboard/$(basename "$file")"; done
   rm -rf "$backup"
@@ -26,7 +26,7 @@ edit() { local file=$1; shift; sed "$@" "$file" > "$file.tmp"; mv "$file.tmp" "$
 edit ink.toml -e 's/^name = .*/name = "TitanKeys Debug"/' -e 's/^package = .*/package = "com.titankeys.debug"/'
 edit android/src/main/AndroidManifest.xml 's/android:label="TitanKeys Keyboard"/android:label="TitanKeys Debug"/'
 # The guide's still frames open from adb, so only this build exports them.
-edit android/src/main/AndroidManifest.xml '/android:name="com.atlas.keyboard.GuideFrameActivity"/{n;s/android:exported="false"/android:exported="true"/;}'
+edit android/src/main/AndroidManifest.xml '/android:name="com.titankeys.keyboard.GuideFrameActivity"/{n;s/android:exported="false"/android:exported="true"/;}'
 cp "$recorder"/*.kt "$keyboard/"
 awk 'FNR == NR { entry = entry $0 ORS; next } /<\/application>/ { printf "%s", entry } { print }' \
   "$recorder/manifest.xml" android/src/main/AndroidManifest.xml > android/src/main/AndroidManifest.xml.tmp
@@ -37,7 +37,7 @@ mv android/src/main/AndroidManifest.xml.tmp android/src/main/AndroidManifest.xml
 cp android/debug/ic_launcher.xml android/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
 cp android/debug/ic_launcher.xml android/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
 mkdir -p android/src/main/res/values
-cp android/debug/colors.xml android/src/main/res/values/atlas_debug.xml
+cp android/debug/colors.xml android/src/main/res/values/titankeys_debug.xml
 
 bash tools/release.sh
 apk=$(ls -t dist/*.apk | head -1)

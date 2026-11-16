@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 /**
  * Settings > Setup's Sliding Mode 1 list (SlidingModeList). The owner's phone listed Chrome and Settings as outside Sliding
@@ -21,7 +21,7 @@ private const val CHROME = "com.android.chrome"
 private const val SETTINGS = "com.android.settings"
 private const val NOTES = "com.example.notes"
 
-/** One field in [app]: readings [early] and [late], and whether a Sliding Mode 1 touch came. Mirrors AtlasIme.readSlidingMode. */
+/** One field in [app]: readings [early] and [late], and whether a Sliding Mode 1 touch came. Mirrors TitanKeysIme.readSlidingMode. */
 private fun SlidingModeList.field(app: String, early: String?, late: String?, mode1Touch: Boolean = false, sameField: Boolean = true) {
     if (early == SlidingModeList.MODE_1 && sameField) mode1(app)
     if (mode1Touch) mode1(app)

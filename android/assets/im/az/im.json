@@ -1,0 +1,31 @@
+{
+  "id": "az",
+  "name": "Azərbaycan",
+  "nameEnglish": "Azerbaijani",
+  "label": "AZ",
+  "locale": "az",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "c": "ç",
+    "e": "ə",
+    "g": "ğ",
+    "i": "ı",
+    "o": "ö",
+    "s": "ş",
+    "u": "ü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_az.combined"
+  }
+}

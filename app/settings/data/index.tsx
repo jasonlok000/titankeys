@@ -1,6 +1,6 @@
 import { Field, Screen, Section, navigate, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../../lib/app-haptics";
-import { state, update } from "../../../lib/atlas";
+import { state, update } from "../../../lib/titankeys";
 import { transfer } from "../../../lib/transfer";
 
 export default function YourWords() {
@@ -21,7 +21,7 @@ export default function YourWords() {
       <Field label="Blocked words" href="/settings/data/blocked-words" />
     </Section>
     <Section title="Backup">
-      {/* F: "Back up everything" and "Restore" are the owner's names (#65). */}
+      {/* "Back up everything" and "Restore" are the owner's names (#65). */}
       <Field label="Back up everything" onPress={() => void transfer("backup", "data")} />
       <Field label="Restore" onPress={() => navigate("/settings/data/restore")} />
       <Field label="Remove learned words" href="/settings/data/reset" />

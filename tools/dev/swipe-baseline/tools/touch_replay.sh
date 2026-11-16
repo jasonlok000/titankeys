@@ -6,7 +6,7 @@ set -euo pipefail
 TREE=$1; LOG=$2; OUT=$3; TAP=${4:--}
 K="$TK_BUILD/kotlin-2.1.20/kotlinc"
 AJ="$ANDROID_HOME/platforms/android-36/android.jar"
-S=$TREE/android/kotlin/com/atlas
+S=$TREE/android/kotlin/com/titankeys
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPLAY=$HERE/Replay.kt
 mkdir -p "$OUT/cls"
@@ -35,6 +35,6 @@ PY
   "$S/engine/Swipe.java" "$S/engine/Calibration.java" "$S/engine/TouchAlignment.java" \
   "$S/keyboard/Contact.kt" "$S/keyboard/SwipePieces.kt" "$S/keyboard/DeleteSwipe.kt" "$S/keyboard/Layout.kt" "$S/keyboard/Touchpad.kt" "$REPLAY" 2>&1 | grep -v "^warning" | head -20 || true
 javac -nowarn -cp "$AJ" -d "$OUT/cls" "$S/engine/Swipe.java" "$S/engine/Calibration.java" "$S/engine/TouchAlignment.java" 2>&1 | grep -v "^Note" || true
-java -cp "$OUT/cls:$K/lib/kotlin-stdlib.jar:$AJ" com.atlas.keyboard.ReplayKt "$OUT/raw.txt" "$OUT/result.txt" "$TAP" 2>&1 | tail -3
+java -cp "$OUT/cls:$K/lib/kotlin-stdlib.jar:$AJ" com.titankeys.keyboard.ReplayKt "$OUT/raw.txt" "$OUT/result.txt" "$TAP" 2>&1 | tail -3
 wc -l "$OUT/result.txt"
 head -3 "$OUT/result.txt" | cut -c1-120

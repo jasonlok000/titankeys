@@ -12,19 +12,22 @@ screen behaviour that only the phone shows, and the phone pass covers it.
 **Blocked means blocked, never ignored.**
 - A locked key or gesture never changes the field.
 - The phone says no: the GuideBlocked haptic, family No (docs/haptics.md).
-- The slide's chip says what's blocked, and why or what to do instead.
+- The slide's chip says what's blocked, and why or what to do instead. Since #90 every one says what the try was, against what the
+  slide wants: "that's an X, not a Y" (`blockedChip`, `menuBlocked` and `tapMissLine` in the code have every line). On the
+  Space-tap slides that's a press, typing, a swipe, a lift, a tap beside the patch, one tap, or too many or too few taps.
+- The raw log (TitanKeys Debug only) notes each slide and each miss with its kind (`GuideLog`).
 - It says so once for each press or each attempt.
 
 | What the user does | What happens |
 |---|---|
 | A key the slide doesn't teach (letters, Backspace, Enter, Alt, Sym, fn and Ctrl shortcuts) | Nothing types. The slide's lock chip and a no, once for the press. Its repeats and its release are kept too. Checked: every lesson on every slide has its own chip that says it's blocked, on one line. |
 | A delete flick the slide doesn't teach | It glows and crunches like any flick until the lift, so the user sees it registered. At the lift nothing goes, and the chip and a no follow. The crunch's feel is held back, so the no is the only feel. New. |
-| A held delete the slide doesn't teach | Its glow shows. It's refused when the hold would start: the chip ("Held delete is blocked here", or the flick's if flicks are locked too) and a no. Nothing deletes, and the lift adds nothing more. New. |
-| Double or triple Space where Space gestures aren't taught yet | The taps glow and tick as they count. Then it's refused as it would act: a double tap once it's settled, a third tap as it lands, a held tap as it registers, and a slide as it starts. The chip "Space taps are blocked here. That's later." and a no. Nothing steers, selects or types. New. |
+| A held delete the slide doesn't teach | Its glow shows. It's refused when the hold would start: the chip ("That's a held flick, not this slide's move", or the flick's if flicks are locked too) and a no. Nothing deletes, and the lift adds nothing more. New. |
+| Double or triple Space where Space gestures aren't taught yet | The taps glow and tick as they count. Then it's refused as it would act: a double tap once it's settled, a third tap as it lands, a held tap as it registers, and a slide as it starts. The chip "That's a Space tap, not this slide's move." and a no. Nothing steers, selects or types. New. |
 | Two taps above Space where Space gestures aren't taught | The same chip and a no. New. |
 | A lone Space that would type, pressed or tapped, where the slide has no typing | Nothing types. The slide's own chip and a no: "Swipes space themselves" on Swipe, "Taps on Space steer" on Steering, "Typing's done" on Delete, "Just the symbol" on Symbols, "Just paste" on Copy and paste. A tap waits until it can't be a steer's tap, so the two quick taps that start a steer still work: a press ends the touchpad's taps and was never part of one. (Owner, 2026-11-13: Space typed into the steering lines.) Checked. |
-| Holding a bar word where the menu isn't taught | No menu. The chip "Holding bar words is blocked here. That's later." and a no. |
-| Holding a letter where holding isn't taught | The letter stays as typed and its repeats type nothing. The chip "Holding for symbols is blocked here. That's later." and a no, once for the hold. New. |
+| Holding a bar word where the menu isn't taught | No menu. The chip "That's a hold on the bar, not this slide's move." and a no. |
+| Holding a letter where holding isn't taught | The letter stays as typed and its repeats type nothing. The chip "That's a held key, not this slide's move." and a no, once for the hold. New. |
 | Swiping where swiping isn't taught | The trail shows on the drawing, but nothing types and no word grows on the bar. At the lift, the slide's own swipe chip and a no. |
 | Quick settings opened on a typing slide | "Settings? Nobody asked." |
 | Sym opened too early | "Easy, tiger. That's later." Checked. |
@@ -80,17 +83,17 @@ docs/owner-decisions-2.1.md wins over this list wherever they differ.
 | No typo in the whole line | It still passes, with "No typos? Show-off." Checked. |
 | Any word typed wrong, however wrong | It becomes the line's word (forceFix), so there's no way to fail. |
 | Deleting too much | Backspace is allowed. The grey line stays to type over, and nothing is lost. |
-| A swipe | "Swiping's blocked here. Type it. Swiping's next." and a no. |
-| A tap on the bar | "The bar's blocked here. Type it, typo and all." and a no. |
+| A swipe | "That's a swipe, not typing. Type this one." and a no. |
+| A tap on the bar | "That's the bar, not typing. Type it, typo and all." and a no. |
 | A flick, a held delete, Space taps, Enter, Sym, Alt, a letter held | Blocked, as for every slide. |
 
 ### swipe: Swipe it. One hand, no questions.
 | What the user does | What happens |
 |---|---|
 | A tap | "That's a tap. Slide, don't lift." Checked. |
-| The word typed key by key | Letters type. The Space after them is blocked: "Spaces are blocked here. Swipes space themselves." Checked. |
+| The word typed key by key | Letters type. The Space after them is blocked: "That's a space, not a swipe. Swipes add their own." Checked. |
 | A swipe that misreads, or a typo in a swipe | It becomes the line's word (forceFix), and it counts. Checked. |
-| A swipe that starts on Backspace, read as a flick | It glows, then "Flicks are blocked here. That's later." and a no. Nothing deletes. New. |
+| A swipe that starts on Backspace, read as a flick | It glows, then "That's a flick, not this slide's move." and a no. Nothing deletes. New. |
 | Stopping before three swipes | The instruction counts the swipes left. |
 
 ### menu: Make TitanKeys your favourite.
@@ -110,10 +113,10 @@ is unlocked, since typing would replace the selection; with the menu open, its k
 | A tap or a hold on TitanKeys | Its menu opens, either way, and the slide moves on to the save. Checked. |
 | A touch on the box: a tap, a long press, a drag | Nothing in the box changes: no cursor, no other selection, no text menu. "Not the box. Tap TitanKeys on the bar." and a no. The keyboard comes up if it was down. Checked. |
 | Any other selection or cursor in the box, however it comes | It goes back to TitanKeys selected at once, and "Not the box. Tap TitanKeys on the bar." Checked. |
-| Space taps, that would steer or select | Blocked: "Space taps are blocked. Tap TitanKeys on the bar." and a no. Checked. |
-| Typing a letter, a space or Backspace, with the menu shut | Blocked, as it would replace TitanKeys: "Typing's blocked here. Tap TitanKeys.", "Spaces are blocked here. Tap TitanKeys." or "Backspace is blocked here. Tap TitanKeys." The field and the bar don't change. Checked. |
-| Swiping a word | Its start shows, then "Swiping's blocked here. Tap TitanKeys." and a no. Nothing types. Checked. |
-| A tap on another word on the bar | Never there while TitanKeys is selected. If one ever shows: "Other words are blocked. Tap TitanKeys." and a no. Checked. |
+| Space taps, that would steer or select | Blocked: "That's a Space tap, not a tap on TitanKeys." and a no. Checked. |
+| Typing a letter, a space or Backspace, with the menu shut | Blocked, as it would replace TitanKeys: "That's typing, not a tap on TitanKeys.", "That's a space, not a tap on TitanKeys." or "That's Backspace, not a tap on TitanKeys." The field and the bar don't change. Checked. |
+| Swiping a word | Its start shows, then "That's a swipe, not a tap on TitanKeys." and a no. Nothing types. Checked. |
+| A tap on another word on the bar | Never there while TitanKeys is selected. If one ever shows: "That's another word, not TitanKeys. Tap TitanKeys." and a no. Checked. |
 | A key that isn't I, O, K, L, P or Backspace, with the menu open | Nothing happens, and the menu stays open: "I or O. Nothing else does anything here." Checked. |
 | O at not saved (Block) | "Blocked TitanKeys? Rude. I brings it back." It still waits for the save; I unblocks it, then saves it. Checked. |
 | O at saved (Unsave) | "Unsaved. Cold. I, then I again." It goes back to the save. Checked. |
@@ -141,7 +144,7 @@ The delete slides start with their line in the field and the cursor where the de
 | What the user does | What happens |
 |---|---|
 | Backspace | "Backspace is blocked. Flick it." Checked. |
-| A held flick | The hold never starts: "Held delete is blocked here. Flick and lift." and a no. The flick still deletes its one word at the lift. Checked. |
+| A held flick | The hold never starts: "That's a held flick, not this slide's move. Flick and lift." and a no. The flick still deletes its one word at the lift. Checked. |
 | A swipe | "Swiping's blocked here. Flick from Backspace." |
 | The flick now glows and crunches here | Before this change it didn't, because swiping was locked. New. |
 
@@ -160,18 +163,18 @@ The field is the slide's line again and again. Deleting most of it brings it bac
 ### steer: Steer to the underlined word.
 | What the user does | What happens |
 |---|---|
-| Two taps that lift | "You lifted. Keep the second tap down." Checked. |
-| Three taps | "One tap too many. Two taps, the second held." Checked. |
+| Two taps that lift | "That's a lift, not a hold. Keep the second down." Checked. |
+| Three taps | "That's three taps, not two. Hold the second one." Checked. |
 | Held, then let go without sliding | It goes back to the taps: "Held it, then chickened out." Checked. |
 | Steering past or away from the word | It waits until the cursor lands in it. Checked. |
 | The screen touched | "The screen? Really?" |
-| A flick | It glows, then "Flicks are blocked here. That's later." |
+| A flick | It glows, then "That's a flick, not this slide's move." |
 
 ### selectmore: Grab my whole heart. Three taps.
 | What the user does | What happens |
 |---|---|
 | Two taps, then steering | "That's two. Count to three." Checked. |
-| Three taps that lift with one word | "One word? I'm worth more than that." Checked. |
+| Three taps that lift with one word | "That's a lift, not a hold. Keep the third down." Checked. |
 | Too much grabbed | "Easy. Just my heart. Slide back a bit." Checked. |
 | Let go before all of it | "So close. Then you let go." and back to the taps. Checked. |
 

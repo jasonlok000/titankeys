@@ -1,7 +1,7 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.keyboard.BackupFile.Merge
-import com.atlas.keyboard.BackupFile.Picked
+import com.titankeys.keyboard.BackupFile.Merge
+import com.titankeys.keyboard.BackupFile.Picked
 
 /** Back up everything (#65): a round trip of every part, old words and snippets files, a newer file, and how restore merges. */
 fun main() {
@@ -101,12 +101,15 @@ fun main() {
     same(restored["blocked_words"]!!["words"], setOf("ducking", "shirt"), "Blocked words merge")
     same(restored["autocorrect_learning"]!!["kept_once_words"], setOf("teh|20400", "yall|20401", "gonna|20390"),
         "Autocorrect learning merges, the backup's day winning")
-    same(restored["snippets"]!!["list"].toString().let { (com.atlas.connected.Json.parse(it) as Map<*, *>)["snippets"] },
+    same(restored["snippets"]!!["list"].toString().let { (com.titankeys.connected.Json.parse(it) as Map<*, *>)["snippets"] },
         listOf(mapOf("shortcut" to "addr", "text" to "New St"), mapOf("shortcut" to "home", "text" to "H"), mapOf("shortcut" to "sig", "text" to "J")),
         "Snippets merge, the backup's text winning")
     same(restored["emoji"]!!["recent"], "🔥 😀 🍑", "Emoji recents: the backup's first")
     same(BackupFile.merge(Merge.UNION, null, setOf("x")), setOf("x"), "A list the phone doesn't have takes the backup's")
     same(BackupFile.merge(Merge.SNIPPETS, "not json", "{\"snippets\":[]}"), "{\"snippets\":[]}", "A broken list here takes the backup's")
+    val mine = "{\"snippets\":[{\"shortcut\":\"addr\",\"text\":\"1 Main St\"}]}"
+    same(BackupFile.merge(Merge.SNIPPETS, mine, "not json"), mine, "A broken list in the file keeps the phone's, and throws nothing")
+    same(BackupFile.merge(Merge.SNIPPETS, mine, "{\"other\":1}"), mine, "So does a list in the file without snippets")
 
     // Export words' and Export snippets' files from before 3.0 still restore.
     same(BackupFile.read("{\n  \"format\": \"physical-swipe-habits\",\n  \"version\": 2,\n  \"words\": {\"words\": []},\n  \"favourites\": [\"x\"]\n}\n"),
@@ -128,8 +131,8 @@ fun main() {
     same(report.startsWith("java.lang.IllegalStateException\n\tat "), true, "A crash report names the exception and where")
     same(report.contains("Caused by: java.lang.IllegalArgumentException"), true, "A crash report names the cause")
     val trace = sequenceOf("----- pid 1 -----", "\"Signal Catcher\" daemon", "  at x", "", "\"main\" prio=5 tid=1 Sleeping",
-        "  at java.lang.Thread.sleep", "  at com.atlas.keyboard.AtlasIme.onKey", "", "\"other\"", "  at y")
-    same(CrashReport.mainThread(trace), "\"main\" prio=5 tid=1 Sleeping\n  at java.lang.Thread.sleep\n  at com.atlas.keyboard.AtlasIme.onKey",
+        "  at java.lang.Thread.sleep", "  at com.titankeys.keyboard.TitanKeysIme.onKey", "", "\"other\"", "  at y")
+    same(CrashReport.mainThread(trace), "\"main\" prio=5 tid=1 Sleeping\n  at java.lang.Thread.sleep\n  at com.titankeys.keyboard.TitanKeysIme.onKey",
         "A freeze's report is the main thread's stack")
 
     if (failures.isNotEmpty()) {

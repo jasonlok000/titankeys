@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Stack, TextInput } from "ink";
-import { type Point, watchTrace } from "./atlas";
+import { type Point, watchTrace } from "./titankeys";
 import { MUTED } from "./brand";
 import { KeyboardDiagram } from "./keyboard";
 

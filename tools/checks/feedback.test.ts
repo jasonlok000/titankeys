@@ -9,8 +9,8 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 const ADDRESS = "titankeys@everyones-niche.com";
 
 test("one public address, in the app and every public text", () => {
-  expect(read("android/kotlin/com/atlas/keyboard/Mail.kt")).toContain(`const val ADDRESS = "${ADDRESS}"`);
-  expect(read("lib/atlas.ts")).toContain(`export const FEEDBACK_ADDRESS = "${ADDRESS}"`);
+  expect(read("android/kotlin/com/titankeys/keyboard/Mail.kt")).toContain(`const val ADDRESS = "${ADDRESS}"`);
+  expect(read("lib/titankeys.ts")).toContain(`export const FEEDBACK_ADDRESS = "${ADDRESS}"`);
   for (const file of ["site/privacy/index.html", "docs/play/data-safety.md", "docs/play/listing.md", "docs/play/testers.md", "CONTRIBUTING.md"]) {
     const text = read(file);
     expect(`${file}: ${text.includes(ADDRESS)}`).toBe(`${file}: true`);
@@ -34,10 +34,10 @@ test("Send feedback and Record a bug open the form, with no GitHub row", () => {
 
 test("the form has the owner's kinds, sends only on Send, and offers email when it can't send", () => {
   const kinds = read("lib/report.ts");
-  for (const label of ["Wrong word or fix", "Swiping", "Touchpad and Space gestures", "Keyboard didn't show or disappeared",
+  for (const label of ["Wrong word or fix", "Swiping", "Touchpad and Space taps", "Keyboard didn't show, or vanished",
     "Crash or freeze", "The guide", "Settings", "An idea", "Something else"]) expect(kinds).toContain(`label: "${label}"`);
   const ids = [...kinds.matchAll(/value: "([a-z]+)"/g)].map(match => match[1]);
-  expect(read("android/kotlin/com/atlas/connected/Reports.kt")).toContain(`val KINDS = listOf(${ids.map(id => `"${id}"`).join(", ")})`);
+  expect(read("android/kotlin/com/titankeys/connected/Reports.kt")).toContain(`val KINDS = listOf(${ids.map(id => `"${id}"`).join(", ")})`);
   const form = read("app/settings/report.tsx");
   expect(form).toContain('<Button disabled={!kind || what.trim() === ""');
   expect(form).toContain('label="Email it instead"');
@@ -46,21 +46,21 @@ test("the form has the owner's kinds, sends only on Send, and offers email when 
 });
 
 test("each part is sealed with the contributions key before it leaves, to the Worker's report route", () => {
-  const upload = read("android/kotlin/com/atlas/connected/ReportUpload.kt");
+  const upload = read("android/kotlin/com/titankeys/connected/ReportUpload.kt");
   expect(upload).toContain("val sealed = Seal.seal(part, recipient)");
   expect(upload).toContain("recipient: ByteArray = Connected.key(Connected.CONTRIBUTION_KEY)");
   expect(upload).toContain('"${Connected.CONTRIBUTIONS_URL}/v1/report"');
   expect(upload).toContain("connection.outputStream.use { it.write(sealed) }");
   // Reports.kt, which the JVM tests run, never touches the network.
-  expect(read("android/kotlin/com/atlas/connected/Reports.kt")).not.toMatch(/Connected\.open|HttpsURLConnection/);
+  expect(read("android/kotlin/com/titankeys/connected/Reports.kt")).not.toMatch(/Connected\.open|HttpsURLConnection/);
   // The app's part fits the Worker's.
   const worker = read("server/contributions/src/worker.js");
-  const reports = read("android/kotlin/com/atlas/connected/Reports.kt");
+  const reports = read("android/kotlin/com/titankeys/connected/Reports.kt");
   expect(worker).toContain(`export const MAX_REPORT_PARTS = ${reports.match(/const val MAX_PARTS = (\d+)/)![1]};`);
 });
 
 test("the crash report holds no typed text, and is deleted once sent or dismissed", () => {
-  const crash = read("android/kotlin/com/atlas/keyboard/CrashReport.kt");
+  const crash = read("android/kotlin/com/titankeys/keyboard/CrashReport.kt");
   // Only class names and stack frames: never getMessage, toString or printStackTrace, which carry the message.
   expect(crash).not.toMatch(/\.message\b|localizedMessage|printStackTrace|stackTraceToString|error\.toString\(\)/);
   const offer = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
@@ -72,6 +72,16 @@ test("the crash report holds no typed text, and is deleted once sent or dismisse
   // Sent: gone. Offered and not sent: gone at the next open.
   expect(read("android/kotlin/com/vandam/ink/ConnectedAdapter.kt")).toContain("if (crash != null) CrashReport.clear(activity)");
   expect(crash).toMatch(/if \(File\(context\.noBackupFilesDir, OFFERED\)\.isFile\) \{\s*clear\(context\)\s*return null/);
-  for (const file of ["android/kotlin/com/atlas/keyboard/CrashReport.kt", "android/kotlin/com/atlas/keyboard/Mail.kt"])
+  for (const file of ["android/kotlin/com/titankeys/keyboard/CrashReport.kt", "android/kotlin/com/titankeys/keyboard/Mail.kt"])
     expect(read(file)).not.toMatch(/HttpsURLConnection|URL\(|Socket/);
+});
+
+test("the recording goes only when asked: on after Record a bug's Stop, otherwise off; the crash report always goes (review)", () => {
+  const form = read("app/settings/report.tsx");
+  expect(form).toContain("useState(hasRecording && fromRecording)");
+  expect(form).toContain("fromRecording={params.kind === \"recording\"}");
+  expect(read("app/settings/bug.tsx")).toContain('navigate({ path: "/settings/report", params: { kind: "recording" } })');
+  expect(form).toContain("{hasRecording && !recording && <Note>");
+  expect(form).toContain("It always goes along.");
+  expect(form).toMatch(/sendReport\(\{[^}]*recording, crash: hasCrash \}\)/);
 });

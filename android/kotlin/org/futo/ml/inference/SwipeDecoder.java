@@ -1,6 +1,6 @@
 package org.futo.ml.inference;
 
-import com.atlas.engine.Swipe;
+import com.titankeys.engine.Swipe;
 
 /** Java binding to the guarded FUTO JNI entry points in the native adapter. */
 public final class SwipeDecoder implements AutoCloseable {

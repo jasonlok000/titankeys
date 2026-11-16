@@ -15,10 +15,10 @@ of the line, after "follows", and "cursor" is the word right before it (6 letter
 | Place | Today | New |
 | --- | --- | --- |
 | `STEER_LINE` | Hold the second tap to steer the cursor | Hold the second tap and the cursor follows |
-| `steer` slide title | Steer to the underlined word. | Move the cursor to the underlined word. |
+| `steer` slide title | Steer to the underlined word. | Put the cursor in the underlined word. |
 | `GuideChapter.Steering` label | Steering | Cursor |
-| Space blocked, cursor slide (GuideSteps.kt, `GuideLesson.Space`) | Typed spaces are blocked. Taps on Space steer. | Typed spaces are blocked. Taps on Space move the cursor. |
-| Swipe blocked, cursor chapter (`GuideLesson.Swipe`) | Swiping's blocked here. Taps on Space steer. | Swiping's blocked here. Taps on Space move the cursor. |
+| Space blocked, cursor slide (GuideSteps.kt, `GuideLesson.Space`) | Typed spaces are blocked. Taps on Space steer. | Spaces are blocked. Space taps move the cursor. |
+| Swipe blocked, cursor chapter (`GuideLesson.Swipe`) | Swiping's blocked here. Taps on Space steer. | Swiping's blocked. Space taps move the cursor. |
 | `GuideScript.TEXT` (if it still shows anywhere) | …Flick to delete, steer and pick from Space, and… | …Flick to delete, move the cursor from Space, and… |
 
 The slide's stages, done line, praise, help and hints don't say steer, so they stay as they are ("Tap Space twice, and hold the
@@ -46,7 +46,7 @@ The chapter's roast ("Wow, you moved a cursor…") stays too.
 | --- | --- | --- |
 | Menu slide, stage 2 | Press I to save it. | Press I/K to save it. |
 | Menu slide, stage 3 | Press I again to favourite it. | Press I/K again to favourite it. |
-| Menu slide, praise | O steps it back down. P closes the menu. | O/L steps it back down. P/Backspace closes the menu. |
+| Menu slide, praise | O steps it back down. P closes the menu. | O/L steps it down. P/Backspace closes the menu. |
 | Chip after Block | Blocked TitanKeys? Rude. I brings it back. | Blocked TitanKeys? Rude. I/K brings it back. |
 | Chip after Unblock | Unblocked. Now I saves it. | Unblocked. Now I/K saves it. |
 | `MENU_UNSAVED` | Unsaved. Cold. I, then I again. | Unsaved. Cold. I/K, then I/K again. |
@@ -280,7 +280,7 @@ The & is the first symbol of the first group, on its first page.
 | Panel closed | Press Sym. |
 | Symbols, first group, first page | It's on this page. Find & and press its key. |
 | Symbols, first group, a later page | Too far. Swipe down on the keys or press Backspace. |
-| Symbols, another group | Wrong group. The & leads the first one. Swipe left or right on the keys, or slide along the bottom row. |
+| Symbols, another group | Wrong group. The &'s in the first. Swipe left or right on the keys. |
 | Emoji | Emoji already? Patience. Sym again closes them. |
 | Clipboard or quick settings | Wrong page. Alt goes back to the symbols. |
 | Leaving without picking | Sym twice closes it. |
@@ -291,17 +291,17 @@ The ∞ is on the first group's second page. These replace the stage line, the h
 
 | Place or state | Line |
 | --- | --- |
-| Stage 1 (panel closed) | Press Sym, then swipe up on the keys or press Enter for the next page. |
+| Stage 1 (panel closed) | Press Sym. Then swipe up on the keys, or Enter. |
 | Symbols, first group, first page | Not on this page. Swipe up on the keys or press Enter. |
 | Symbols, first group, second page | It's on this page. Find ∞ and press its key. |
 | Symbols, first group, a later page | Too far. Swipe down on the keys or press Backspace. |
-| Symbols, another group | Wrong group. The ∞ is in the first one. Swipe left or right on the keys, or slide along the bottom row. |
+| Symbols, another group | Wrong group. The ∞'s in the first. Swipe left or right on the keys. |
 | Emoji | Not emoji. Sym closes them. Then press Sym once. |
 | Clipboard or quick settings | Wrong page. Alt goes back to the symbols. |
 | Leaving without picking | Sym twice closes it. |
-| `WEIRD_HUNT` hint | It's not on the first page. Swipe up on the keys, or press Enter. |
+| `WEIRD_HUNT` hint | Not on page one. Swipe up on the keys, or Enter. |
 | `WEIRD_HUNT` skip | Page two, near √ and ≈. Or skip it. It's ok. (stays) |
-| Praise | Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups. |
+| Praise | Swipe up or down on the keys to turn pages. |
 
 ### Sign it with 🤡, the clown hunt (`clown`)
 
@@ -311,11 +311,11 @@ The 🤡 is in the Smileys group (the skip line says near 💩). Recent comes fi
 | --- | --- |
 | Panel closed | Press Sym twice for the emoji. |
 | Symbols | That's symbols. Press Sym again for the emoji. |
-| Emoji, Recent | That's Recent. Swipe left or right on the keys, or slide along the bottom row, to Smileys. |
+| Emoji, Recent | That's Recent. Swipe left or right on the keys to Smileys. |
 | Emoji, Smileys, before the clown's page | Not on this page. Swipe up on the keys or press Enter. |
 | Emoji, Smileys, the clown's page | It's on this page. Find 🤡 and press its key. |
 | Emoji, Smileys, past the clown's page | Too far. Swipe down on the keys or press Backspace. |
-| Emoji, another group | Wrong group. The clown's in Smileys. Swipe left or right on the keys, or slide along the bottom row. |
+| Emoji, another group | Wrong group. The clown's in Smileys. Swipe left or right on the keys. |
 | Clipboard or quick settings | Wrong page. Alt goes back to the symbols, then Sym for the emoji. |
 | Leaving without picking | Sym closes the emoji. |
 
@@ -499,3 +499,57 @@ The draft's "Everything else does" is left out: it promises more than we've chec
 ## #82: CONTRIBUTING's tools line
 
 > The maintainer's own build and phone tools are in [tools/dev](tools/dev/README.md). You don't need them to contribute. (stays)
+
+## #90: "That's X, not Y"
+
+Replaces the `F:` drafts in GuideCoach.kt, GuideSteps.kt and guide-boring.tsx. Every miss and every blocked touch says what it
+was, then what the slide wants, in the owner's pattern. Lines marked "(stays)" are the draft's, kept. Each fits one line (50).
+
+**The Space-tap slides** (`tapMissLine`):
+
+| Miss | Line |
+| --- | --- |
+| Press | That's a press, not a tap. Barely touch Space. |
+| Typing | That's typing, not a tap. Barely touch Space. |
+| Swipe | That's a swipe, not a tap. Keep your finger still. |
+| Lift | That's a lift, not a hold. Keep the {second} down. (stays) |
+| Beside | That's beside the patch, not on it. Tap the shade. (stays) |
+| Single, Extra, Short | That's {one tap / four taps}, not {three}. Hold the {third} one. (stays) |
+| NoSlide | That's a lift, not a slide. Stay down and slide. |
+
+**The far swipe** (`SWIPE_COACH`): That's a detour, not the path. Pass every letter.
+
+**The blocked chips** (`blockedChip`, `menuBlocked`): all stay as drafted. They already say what it was and what to do.
+
+**One action each:**
+
+| Place | Line |
+| --- | --- |
+| The paste slide's praise | Hold fn, press V to paste. C copies. |
+| The clipboard slide's lead (`CLIP_LEAD`, a W, 62 at most in the summary) | Wait. Sym, let go, A. (stays) |
+| The clipboard slide's praise | It keeps what you copy. Sym, let go, then A. (stays) |
+| Boring guide, Your newest copy and The clipboard | press Sym, let go, then press A (stays) |
+
+## #81: the update that turns TitanKeys off once
+
+The notification is in UpdateNotice.kt. The other three aren't in the code yet: they go in with the 3.0 release. Plain, as
+they're about Accessibility and setup.
+
+| Place | Line |
+| --- | --- |
+| Channel name | Setup (stays) |
+| Channel description | Says when TitanKeys needs turning back on. Silent. |
+| Notification title | Turn TitanKeys back on (stays) |
+| Notification text | This update turned TitanKeys off as your keyboard, and Back too if you used it. Your words and settings are all still here. Tap to turn them back on. |
+
+**In-app release notes** (release-notes.txt, 3.0):
+
+> Back on, just once: TitanKeys got new names on the inside, so this update switches it off as your keyboard, and Back too if you use it. Your words and settings stay put. Tap the notification, or open Settings > Setup, to turn them back on.
+
+**The 3.0 news entry's line:**
+
+> Updating to 3.0? It switches TitanKeys and Back off, just once. Nothing's lost: Settings > Setup turns them back on in a few taps.
+
+**The GitHub release:**
+
+> **Updating from 2.x?** This update turns TitanKeys off once, as your keyboard and as the Back service (Accessibility), because the app's code moved to new names. Your words and settings stay. Tap the notification TitanKeys shows, or open TitanKeys > Settings > Setup, to turn them back on. New installs aren't affected.

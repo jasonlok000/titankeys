@@ -1,7 +1,7 @@
 // Opens sealed contribution batches with the owner's private key, for training. Run it only on the offline computer
 // that holds the key. It writes one JSON line per batch to standard output.
 // Usage: bun tools/contributions/open.ts <contributions-x25519.pem> <batch.tkc>...
-// The sealed form is made by android/kotlin/com/atlas/connected/Seal.kt: "TKC1", the batch's X25519 public key (32 bytes),
+// The sealed form is made by android/kotlin/com/titankeys/connected/Seal.kt: "TKC1", the batch's X25519 public key (32 bytes),
 // a 12-byte nonce, then the gzipped JSON, encrypted with AES-256-GCM. The key comes from HKDF-SHA256 over the shared
 // secret, with both public keys as salt.
 import { gunzipSync } from "node:zlib";

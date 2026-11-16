@@ -1,4 +1,4 @@
-package com.atlas.engine;
+package com.titankeys.engine;
 
 /**
  * The case a word is kept in (owner, 2026-11-13: "why is And kept on auto correcting to cap? And AUTO too?"), and the one-time

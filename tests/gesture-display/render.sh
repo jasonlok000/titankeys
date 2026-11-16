@@ -9,8 +9,8 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 out=$(realpath -m "${1:-render-out}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
-engine=android/kotlin/com/atlas/engine
+keyboard=android/kotlin/com/titankeys/keyboard
+engine=android/kotlin/com/titankeys/engine
 # The stand-ins come first, so they take the place of android.jar's.
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   tests/gesture-display/render/Graphics.kt tests/gesture-display/render/Stand.kt tests/gesture-display/render/RenderBar.kt \
@@ -18,4 +18,4 @@ engine=android/kotlin/com/atlas/engine
   "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/DeleteSwipe.kt" \
   "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/WordSelection.kt" "$keyboard/GestureDisplay.kt" "$keyboard/TrailThickness.kt" \
   "$keyboard/GestureDrawing.kt" "$keyboard/StripFit.kt"
-java -Djava.awt.headless=true -cp "$work:$stdlib" com.atlas.keyboard.RenderBarKt "$out"
+java -Djava.awt.headless=true -cp "$work:$stdlib" com.titankeys.keyboard.RenderBarKt "$out"

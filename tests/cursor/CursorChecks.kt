@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.view.KeyEvent
 import kotlin.math.abs

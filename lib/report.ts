@@ -1,12 +1,12 @@
 import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
-/** The report form (#97). The kinds, in the form's order: ids as Reports.KINDS has them. F: draft labels, the issue's. */
+/** The report form (#97). The kinds, in the form's order: ids as Reports.KINDS has them. */
 export const reportKinds = [
   { value: "word", label: "Wrong word or fix" },
   { value: "swiping", label: "Swiping" },
-  { value: "touchpad", label: "Touchpad and Space gestures" },
-  { value: "keyboard", label: "Keyboard didn't show or disappeared" },
+  { value: "touchpad", label: "Touchpad and Space taps" },
+  { value: "keyboard", label: "Keyboard didn't show, or vanished" },
   { value: "crash", label: "Crash or freeze" },
   { value: "guide", label: "The guide" },
   { value: "settings", label: "Settings" },
@@ -35,7 +35,7 @@ export const reportState = resource({
   load: async (): Promise<ReportState> => JSON.parse(await connected("reportState")),
 })();
 
-onNativeMessage("atlas-window", () => void reportState.refresh());
+onNativeMessage("titankeys-window", () => void reportState.refresh());
 
 export type Report = { kind: ReportKind; what: string; expected: string; email: string; recording: boolean; crash: boolean };
 

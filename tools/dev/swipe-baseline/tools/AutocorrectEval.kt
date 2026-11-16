@@ -1,6 +1,6 @@
-package com.atlas.autocorrect
+package com.titankeys.autocorrect
 
-import com.atlas.engine.PhoneWords
+import com.titankeys.engine.PhoneWords
 import java.io.File
 import java.nio.file.Path
 import java.util.Base64

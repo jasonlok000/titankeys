@@ -7,7 +7,7 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
+keyboard=android/kotlin/com/titankeys/keyboard
 # The guide's own Share swipes policy must say exactly what the app's policy page says, word for word.
 sed -n '/POLICY TEXT:/,/fun intent/p' "$keyboard/ShareDisclosureActivity.kt" | grep -o '"[^"]*"' | tr -d '"' |
   while IFS= read -r line; do
@@ -18,6 +18,6 @@ sed -n '/POLICY TEXT:/,/fun intent/p' "$keyboard/ShareDisclosureActivity.kt" | g
 mkdir -p "$work/fake"
 javac -nowarn -d "$work/fake" tests/guide-decor/fake/android/graphics/*.java
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work/fake:$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
-  "$keyboard/GuideDecor.kt" "$keyboard/Accent.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/GuideSteps.kt" "$keyboard/GuideFinale.kt" "$keyboard/GuideRoom.kt" "$keyboard/GuideHooks.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Layout.kt" "$keyboard/TrailThickness.kt" "$keyboard/WpmMeter.kt" "$keyboard/KeyHover.kt" "$keyboard/MenuKeys.kt" "$keyboard/MenuMotion.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/SteadyKey.kt" \
+  "$keyboard/GuideDecor.kt" "$keyboard/GuideTapDrawing.kt" "$keyboard/GuideCoach.kt" "$keyboard/Accent.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/GuideSteps.kt" "$keyboard/GuideFinale.kt" "$keyboard/GuideRoom.kt" "$keyboard/GuideHooks.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Layout.kt" "$keyboard/TrailThickness.kt" "$keyboard/WpmMeter.kt" "$keyboard/KeyHover.kt" "$keyboard/MenuKeys.kt" "$keyboard/MenuMotion.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/SteadyKey.kt" \
   tests/guide/GuideChecks.kt tests/guide/SlideRenders.kt tests/guide/FrontPageRender.kt
-java -Djava.awt.headless=true -cp "$work/fake:$work:$stdlib" com.atlas.keyboard.GuideChecksKt
+java -Djava.awt.headless=true -cp "$work/fake:$work:$stdlib" com.titankeys.keyboard.GuideChecksKt

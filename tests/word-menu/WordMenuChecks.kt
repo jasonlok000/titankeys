@@ -1,17 +1,17 @@
-package com.atlas.engine
+package com.titankeys.engine
 
-import com.atlas.keyboard.Accent
-import com.atlas.keyboard.Fingers
-import com.atlas.keyboard.Layout
-import com.atlas.keyboard.MenuBar
-import com.atlas.keyboard.MenuCanvas
-import com.atlas.keyboard.MenuKeys
-import com.atlas.keyboard.MenuPath
-import com.atlas.keyboard.MenuScene
-import com.atlas.keyboard.QuickSetting
-import com.atlas.keyboard.QuickSettingsPage
-import com.atlas.keyboard.SteadyKey
-import com.atlas.keyboard.StripFit
+import com.titankeys.keyboard.Accent
+import com.titankeys.keyboard.Fingers
+import com.titankeys.keyboard.Layout
+import com.titankeys.keyboard.MenuBar
+import com.titankeys.keyboard.MenuCanvas
+import com.titankeys.keyboard.MenuKeys
+import com.titankeys.keyboard.MenuPath
+import com.titankeys.keyboard.MenuScene
+import com.titankeys.keyboard.QuickSetting
+import com.titankeys.keyboard.QuickSettingsPage
+import com.titankeys.keyboard.SteadyKey
+import com.titankeys.keyboard.StripFit
 import java.io.File
 
 /**
@@ -62,12 +62,12 @@ private fun theKeysComeInPairs() {
 
 /** The model's Unblock is the engine's (bug hunt #25): a dictionary word goes on the list taken out, and the keyboard calls it. */
 private fun unblockTakesADictionaryWordOut() {
-    val engine = File("android/kotlin/com/atlas/engine/SwipeTyping.java").readText()
+    val engine = File("android/kotlin/com/titankeys/engine/SwipeTyping.java").readText()
     val unblock = engine.substringAfter("public void unblockWord(String word, OperationCallback callback) {").substringBefore("\n    }\n")
     check("block(word, false)" in unblock && "builtInWord(word) && !unsavedWords.contains(word)" in unblock && "unsave(word, true)" in unblock) {
         "#25: the menu's Unblock takes a dictionary word out, so it lands on Not saved and stays there"
     }
-    val ime = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val ime = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     check("SwipeTyping.get(this).unblockWord(held.word)" in ime.substringAfter("private fun unblockWord(held: HeldWord) {").substringBefore("\n    }\n")) {
         "#25: the menu's Unblock uses it"
     }
@@ -81,7 +81,7 @@ private fun unblockTakesADictionaryWordOut() {
 private fun onlyStoredWordsOpen() {
     for (word in listOf("café", "José", "naïve", "dogs'", "'til", "x", "2nd", "😀")) check(!MenuKeys.opens(word)) { "#12: \"$word\" opens no menu" }
     for (word in listOf("cafe", "Jose", "don't", "don’t", "TitanKeys", "rock'n'roll", "ok")) check(MenuKeys.opens(word)) { "\"$word\" opens its menu" }
-    val stores = File("android/kotlin/com/atlas/engine/SwipeWords.java").readText()
+    val stores = File("android/kotlin/com/titankeys/engine/SwipeWords.java").readText()
     check("value.matches(\"${MenuKeys.STORED.pattern}\")" in stores) { "#12: the menu opens for the words SwipeWords.normalise keeps, by the same rule" }
     check("letters.length() >= 2 && letters.length() <= 24" in stores) { "and the same lengths" }
     println("Only words the lists can hold open a menu")
@@ -93,7 +93,7 @@ private fun onlyStoredWordsOpen() {
  * hides (bug hunt #6: a menu left open over a hide ate the first I, O, K, L, P or Backspace after it).
  */
 private fun theMenuKeepsToItsKeys() {
-    // The keyboard's own rule, as AtlasIme asks it.
+    // The keyboard's own rule, as TitanKeysIme asks it.
     check(MenuKeys.takesKeys(open = true, panelOrAlt = false)) { "An open menu takes its keys" }
     check(!MenuKeys.takesKeys(open = true, panelOrAlt = true)) { "#3: with a panel open or Alt on, the menu's keys go to the panel or type" }
     check(!MenuKeys.takesKeys(open = false, panelOrAlt = false)) { "A closed menu takes nothing" }
@@ -103,7 +103,7 @@ private fun theMenuKeepsToItsKeys() {
     check(MenuKeys.closes(panelOrAlt = false, hidden = true, guideShowOnly = true)) { "#6: the guide's menu too" }
     check(!MenuKeys.closes(panelOrAlt = false, hidden = false, guideShowOnly = false)) { "Nothing else closes it" }
     // And the keyboard asks it where the bugs were: the menu's key branch, the modifiers changing, and the window hiding.
-    val ime = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val ime = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     val branch = ime.substringAfter("// Backspace, under P, goes back.").substringBefore("val action = menuAction(pressed)")
     check("MenuKeys.takesKeys(menuOpen, altOrPanel)" in branch) { "#3: the menu's key branch asks whether a panel or Alt has the keys" }
     val modifiers = ime.substringAfter("private fun showModifiers() {").substringBefore("\n    }\n")
@@ -118,8 +118,8 @@ private fun theMenuKeepsToItsKeys() {
 // The ladder ---------------------------------------------------------------------------------------------------------------------
 
 /**
- * What the phone knows about words, as SwipeTyping and FavouriteWords keep it, and the menu AtlasIme.menuFor opens from it. The
- * dictionary is a few words of the base list. Each press does to the lists what AtlasIme's saveWord, unsaveWord, favouriteWord,
+ * What the phone knows about words, as SwipeTyping and FavouriteWords keep it, and the menu TitanKeysIme.menuFor opens from it. The
+ * dictionary is a few words of the base list. Each press does to the lists what TitanKeysIme's saveWord, unsaveWord, favouriteWord,
  * unfavouriteWord, blockWord and unblockWord, and SwipeTyping under them, do, at once, as the engine does it in the background.
  */
 private class WordLists {
@@ -152,7 +152,7 @@ private class WordLists {
         }
     }
 
-    /** The menu's rung, as AtlasIme.menuFor reads it. */
+    /** The menu's rung, as TitanKeysIme.menuFor reads it. */
     fun menu(word: String) = MenuKeys.step(
         blocked = blockedWord(word),
         favourite = word.lowercase() in favourites,
@@ -348,7 +348,7 @@ private fun theOpening() {
         same(haptics, emptyList<String>(), "$step: opening plays no haptic of a step")
         same(opened.rung, step, "$step: and stays where it opened")
     }
-    val strip = File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val strip = File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     check("menuWordCentre / density, baseline / density, menu.step).also {\n            scene = it\n            sceneNotice = menu" in strip) {
         "A new scene starts at the menu's rung, and plays no press for it"
     }
@@ -835,11 +835,11 @@ private fun theQuickSettingsHover() {
 }
 
 /**
- * [MenuBar], [QuickSettingsPage] and [WordLists] make AtlasIme's and SwipeTyping's calls in their order. These are the lines they
+ * [MenuBar], [QuickSettingsPage] and [WordLists] make TitanKeysIme's and SwipeTyping's calls in their order. These are the lines they
  * copy; a change to one of them must be made in the copy too, or this check fails.
  */
 private fun theKeyboardMakesTheseCalls() {
-    val ime = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val ime = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     for (line in listOf(
         "barHover.keyDown(keyCode)",
         "val action = menuAction(pressed)",
@@ -887,8 +887,8 @@ private fun theKeyboardMakesTheseCalls() {
         "words.menuPress = { haptics.play(Haptic.MenuPress) }",
         "if (inGuide && held != null && action in MENU_CHOICES) {",
         "MenuKeys.Button.Unblock -> Haptic.WordUnblocked",
-    )) check(line in ime) { "AtlasIme no longer has: $line" }
-    val typing = File("android/kotlin/com/atlas/engine/SwipeTyping.java").readText()
+    )) check(line in ime) { "TitanKeysIme no longer has: $line" }
+    val typing = File("android/kotlin/com/titankeys/engine/SwipeTyping.java").readText()
     for (line in listOf(
         "learnedEntries = dictionary.learnedWords(day);",
         "typedEntries = dictionary.typedWords();",
@@ -902,11 +902,11 @@ private fun theKeyboardMakesTheseCalls() {
         "int changed = dictionary.lowercase(word -> baseFrequency(word) > 0 && lowercase.lowercase(word));",
     )) check(line in typing) { "SwipeTyping no longer has: $line" }
     check("words.typed(WordCase.kept(word, if (index < 0) null else before!!.substring(0, index), false), rememberCase)" in
-        File("android/kotlin/com/atlas/keyboard/Composer.kt").readText()) { "Typing learns a word in its own case" }
+        File("android/kotlin/com/titankeys/keyboard/Composer.kt").readText()) { "Typing learns a word in its own case" }
     // Every filter leaves out both lists, the blocked words and the dictionary words taken out.
     check("blockedWords.filter(" !in typing && Regex("hiddenWords\\.filter\\(").findAll(typing).count() == 4) { "Every filter leaves out both lists" }
     // The strip keeps the hover through a new state: a new menu notice for the same word never resets the mark or the pill.
-    val strip = File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val strip = File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     val showNotice = strip.substringAfter("private fun showNotice(").substringBefore("\n    private var menuIn")
     check("menuMark" !in showNotice) { "A new notice must not touch the hover's mark" }
     check("pillShown = -1" in showNotice.substringAfter("if (menu == null) {").substringBefore("} else {")) { "Only a closed menu lets go of the pill" }

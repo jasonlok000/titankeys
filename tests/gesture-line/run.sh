@@ -10,8 +10,8 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 out=$(realpath -m "${1:-$(mktemp -d)/gesture-line}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
-engine=android/kotlin/com/atlas/engine
+keyboard=android/kotlin/com/titankeys/keyboard
+engine=android/kotlin/com/titankeys/engine
 # The checks' own copies of the drawing's sizes must still be the drawing's.
 for line in "const val HANDLE_KNOB = 4.5f" "const val STEER_CARET = 2f" "const val SELECTION_GAP = 6f"; do
   grep -qF "$line" "$keyboard/GestureDrawing.kt" || { echo "GestureDrawing.kt changed: $line"; exit 1; }
@@ -21,7 +21,7 @@ grep -qF "drawing.draw(canvas, gesture, side.toFloat(), (width - side).toFloat()
 grep -qF "private const val WORD_SIZE = 20f" "$keyboard/Strip.kt" || { echo "Strip.kt's word size changed"; exit 1; }
 # The guide's fade must still be the real one, as tests/gesture-render checks.
 fade="fun faded(colour: Int, alpha: Float) = colour and 0x00FFFFFF or ((alpha.coerceIn(0f, 1f) * 255).toInt() shl 24)"
-grep -qF "$fade" "$keyboard/GuideKeyboardView.kt" || { echo "GuideKeyboardView.kt changed: $fade"; exit 1; }
+grep -qF "$fade" "$keyboard/GuideKeyboardView.kt" "$keyboard/GuideTapDrawing.kt" || { echo "GuideKeyboardView.kt changed: $fade"; exit 1; }
 # The stand-in Canvas and Paint draw with Java2D. They come before Android on the class path, so the drawing code runs on them.
 mkdir -p "$work/fake" "$work/classes"
 javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java
@@ -31,5 +31,5 @@ javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java
   "$keyboard/WordSelection.kt" "$keyboard/CursorMode.kt" "$keyboard/GestureDisplay.kt" "$keyboard/GestureDrawing.kt" "$keyboard/StripFit.kt" \
   "$keyboard/TrailThickness.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/Corners.kt" "$keyboard/FixedScale.kt" "$keyboard/Radii.kt" \
   tests/gesture-render/GuideStandIns.kt tests/gesture-line/GestureLine.kt
-java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib:$sdk/platforms/android-36/android.jar" com.atlas.keyboard.GestureLineKt "$out" android/src/main/res/font
+java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib:$sdk/platforms/android-36/android.jar" com.titankeys.keyboard.GestureLineKt "$out" android/src/main/res/font
 echo "Drawn to $out"

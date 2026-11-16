@@ -1,28 +1,28 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.io.File
-import com.atlas.keyboard.KeyboardEvent.Chosen
-import com.atlas.keyboard.KeyboardEvent.Fixed
-import com.atlas.keyboard.KeyboardEvent.GroupPicked
-import com.atlas.keyboard.KeyboardEvent.MenuPicked
-import com.atlas.keyboard.KeyboardEvent.PanelSwiped
-import com.atlas.keyboard.KeyboardEvent.CursorStarted
-import com.atlas.keyboard.KeyboardEvent.DeleteHoldStarted
-import com.atlas.keyboard.KeyboardEvent.DeletedWord
-import com.atlas.keyboard.KeyboardEvent.DoubleTapped
-import com.atlas.keyboard.KeyboardEvent.EmptyKey
-import com.atlas.keyboard.KeyboardEvent.Released
-import com.atlas.keyboard.KeyboardEvent.TwoTapsAbove
-import com.atlas.keyboard.KeyboardEvent.FieldChanged
-import com.atlas.keyboard.KeyboardEvent.HeldSymbol
-import com.atlas.keyboard.KeyboardEvent.ModifierState
-import com.atlas.keyboard.KeyboardEvent.Moved
-import com.atlas.keyboard.KeyboardEvent.Pushed
-import com.atlas.keyboard.KeyboardEvent.Recognised
-import com.atlas.keyboard.KeyboardEvent.Tapped
-import com.atlas.keyboard.KeyboardEvent.WordMenu
-import com.atlas.keyboard.Modifiers.Level
-import com.atlas.keyboard.Modifiers.Panel
+import com.titankeys.keyboard.KeyboardEvent.Chosen
+import com.titankeys.keyboard.KeyboardEvent.Fixed
+import com.titankeys.keyboard.KeyboardEvent.GroupPicked
+import com.titankeys.keyboard.KeyboardEvent.MenuPicked
+import com.titankeys.keyboard.KeyboardEvent.PanelSwiped
+import com.titankeys.keyboard.KeyboardEvent.CursorStarted
+import com.titankeys.keyboard.KeyboardEvent.DeleteHoldStarted
+import com.titankeys.keyboard.KeyboardEvent.DeletedWord
+import com.titankeys.keyboard.KeyboardEvent.DoubleTapped
+import com.titankeys.keyboard.KeyboardEvent.EmptyKey
+import com.titankeys.keyboard.KeyboardEvent.Released
+import com.titankeys.keyboard.KeyboardEvent.TwoTapsAbove
+import com.titankeys.keyboard.KeyboardEvent.FieldChanged
+import com.titankeys.keyboard.KeyboardEvent.HeldSymbol
+import com.titankeys.keyboard.KeyboardEvent.ModifierState
+import com.titankeys.keyboard.KeyboardEvent.Moved
+import com.titankeys.keyboard.KeyboardEvent.Pushed
+import com.titankeys.keyboard.KeyboardEvent.Recognised
+import com.titankeys.keyboard.KeyboardEvent.Tapped
+import com.titankeys.keyboard.KeyboardEvent.WordMenu
+import com.titankeys.keyboard.Modifiers.Level
+import com.titankeys.keyboard.Modifiers.Panel
 
 private fun keys(panel: Panel = Panel.Closed, ctrl: Boolean = false) = ModifierState(Level.Off, Level.Off, panel, ctrl)
 private val altOn = ModifierState(Level.Off, Level.Once, Panel.Closed, false)
@@ -79,8 +79,8 @@ private fun theMenuKeys() {
     }
     val moved = MenuKeys.slot(width, MenuKeys.UP, KeyAlignment(.05f, .93f))
     check(moved != MenuKeys.slot(width, MenuKeys.UP, KeyAlignment.DEFAULT)) { "Calibration moves the buttons" }
-    val menu = java.io.File("android/kotlin/com/atlas/keyboard/MenuKeys.kt").readText()
-    check("KEY_SIDE_DP" !in menu && "KEY_SIDE_DP" !in java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val menu = java.io.File("android/kotlin/com/titankeys/keyboard/MenuKeys.kt").readText()
+    check("KEY_SIDE_DP" !in menu && "KEY_SIDE_DP" !in java.io.File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
         .substringAfter("private fun drawMenu(").substringBefore("private fun drawIcon(")) { "The menu reads its columns from the keys alone" }
     System.getenv("MENU_PNG")?.let { drawMenuBar(it, width, side) }
     theMenuLadder()
@@ -136,7 +136,7 @@ private fun theMenuLadder() {
         "O:Unsave→New", "O:Block→Blocked"), "The walk")
     for (button in MenuKeys.Button.entries) check(MenuKeys.move(button) in -3..3) { "$button moves ${MenuKeys.move(button)}" }
     // The keyboard and the guide press through the same ladder, and no menu opens for a word with no ladder.
-    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val ime = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     check("val next = MenuKeys.press(menu.step, button)" in ime) { "The keyboard and the guide press through the ladder" }
     check("if (!MenuKeys.opens(held.word)) return false" in ime) { "One letter, symbols and emoji open no menu" }
     theMenuHover()
@@ -171,8 +171,8 @@ private fun theMenuHover() {
     kept.touch(.75f, .1f)
     kept.lift(9000)
     same(kept.expire(9000 + SteadyKey.LIFT_MILLIS), true, "and goes when the finger, seen again, lifts")
-    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
-    val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val ime = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
+    val strip = java.io.File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     check("barHover.keyDown(keyCode)" in ime && "barHover.keyUp(keyCode" in ime) { "The bar's hover hears the keys go down and up" }
     check("if (column == MenuKeys.UP || column == MenuKeys.DOWN) column else -1" in ime) { "Only I's and O's buttons take the mark" }
     check("if (hovered == pillShown && action != pillAction) pillSnap = true" in strip) { "A new action under the finger takes its pill in place" }
@@ -182,7 +182,7 @@ private fun theMenuHover() {
     for (gone in listOf("Notice.Forgot", "pendingForget", "undoForget", "FORGET_UNDO_MILLIS", "Action.Undo", "Action.Forget"))
         check(gone !in ime && gone !in strip) { "$gone is gone" }
     check("pendingWords[held.word.lowercase()] = MenuKeys.Step." in ime) { "A press is seen at once, before the lists catch up" }
-    for ((name, text) in listOf("AtlasIme" to ime, "Strip" to strip)) check("playMenuHint" !in text && "hints_shown" !in text) { "$name has no hint" }
+    for ((name, text) in listOf("TitanKeysIme" to ime, "Strip" to strip)) check("playMenuHint" !in text && "hints_shown" !in text) { "$name has no hint" }
 }
 
 /** The word sits centred left of the buttons, placed once, with no quotes; the pill's name never runs into its icon. */
@@ -202,7 +202,7 @@ private fun theMenuWord() {
     same(MenuKeys.wordCentre(10f, 50f, 30f, 10f), 25f, "unless the widest pill could reach it: then it moves left just enough")
     val shown = MenuKeys.shorten("incomprehensibilities") { it.length <= 12 }
     check(shown.length <= 12 && shown.startsWith("inco") && shown.endsWith("ties") && "…" in shown) { "Shortened in the middle: $shown" }
-    val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val strip = java.io.File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     val draw = strip.substringAfter("private fun drawMenu(canvas: Canvas)").substringBefore("private fun drawIcon(")
     check("if (menuWordCentre.isNaN()) menuWordCentre = MenuKeys.wordCentre(wordLeft, wordRight, wordEnd, textWidth)" in draw) { "The word is placed once" }
     check("strip_menu_word" !in draw) { "The word has no quotes" }
@@ -232,10 +232,10 @@ private fun theMenuMotion() {
     val draining = MenuMotion.icon(full, heart, MenuMotion.ICON_MILLIS / 3).first { it.button == full }
     check(draining.orange in .1f..0.9f) { "The orange drains: $draining" }
     check(MenuMotion.ICON_MILLIS in 200L..350L) { "Icon changes take 200 to 350 ms" }
-    val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val strip = java.io.File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     // Places (owner, 2026-11-12): I, O and Back on the centres of their columns, a key apart; Back no longer dodges the corner.
     check("if (centre > most) centre = most" !in strip) { "Back no longer dodges the rounded corner" }
-    check("barHover.press(pressed)" in java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()) { "A picking key keeps the hover" }
+    check("barHover.press(pressed)" in java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()) { "A picking key keeps the hover" }
     check("shown.reducedMotion = !GuideMotion.enabled" in strip) { "Motion off, one crossfade to the end state" }
 }
 
@@ -339,7 +339,9 @@ fun main() {
     steeringToAWord()
     theKeysPart()
     theContactsPart()
+    setupHasOneDefinition()
     eachPageSaysWhereYouAre()
+    theGuideForNewcomers()
     grabbingABunch()
     settingsThatStepsNeed()
     goingBack()
@@ -367,7 +369,7 @@ private fun same(actual: Any?, expected: Any?, message: String) {
  * sight, everything that buzzes or draws checks that it's in sight, and each starts again as it comes back.
  */
 private fun nothingPlaysAwayFromTheGuide() {
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
     val timers = Regex("""private val (\w+) = (Runnable \{|object : Runnable)""").findAll(guide).map { it.groupValues[1] }.toSet()
     // The slide's own timers: everything that can buzz, draw or speak on a slide. The setup's and the playground's have their own.
@@ -390,7 +392,7 @@ private fun nothingPlaysAwayFromTheGuide() {
  * guide (its window has focus again), or closing it, ends the wait; only accessibilityOn ever starts a guide from it.
  */
 private fun anAbandonedAccessibilityStepLetsGo() {
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
     same(body("override fun onWindowFocusChanged(").contains("awaitingAccessibility = false"), true, "Back in the guide, the wait ends")
     same(body("override fun onResume()").contains("awaitingAccessibility"), false,
@@ -405,7 +407,7 @@ private fun anAbandonedAccessibilityStepLetsGo() {
  * paste slide put its clip in the user's own clipboard history, as the keyboard no longer served the guide's field).
  */
 private fun aSlideWaitsForYouToComeBack() {
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     val enter = guide.substring(guide.indexOf("private fun enter(step: GuideStep) {")).substringBefore("heldKeys.clear()")
     same(enter.contains("if (!visible) {") && enter.contains("enterWhenBack = step"), true, "Out of sight, a slide waits")
     val resume = guide.substring(guide.indexOf("override fun onResume()")).substringBefore("\n    }\n")
@@ -419,8 +421,8 @@ private fun aSlideWaitsForYouToComeBack() {
  * else was copied since. The keyboard never keeps the guide's clip in the user's history, wherever it lands (#31).
  */
 private fun yourClipComesBack() {
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
-    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    val ime = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     fun body(start: String) = guide.substring(guide.indexOf(start)).substringBefore("\n    }\n")
     same(Regex("""clipboard\.setPrimaryClip\(android\.content\.ClipData\.newPlainText""").findAll(guide).count(), 1,
         "The guide puts its clip on the clipboard in one place, which keeps the user's first")
@@ -718,7 +720,7 @@ private fun theLadderOnTitanKeys() {
     same(step.lessons, setOf(GuideLesson.BarHold), "Only the selected word's menu: typing, swiping, Space and Backspace are blocked")
     same(step.stages.map { it.text }, listOf("Tap TitanKeys on the bar. Nothing gets saved.", "Press I/K to save it.",
         "Press I/K again to favourite it."), "Tap, I/K, then I/K again: the keys named in pairs (owner, #67)")
-    same(step.done to step.praise, "Favourited. Good taste." to "O/L steps it back down. P/Backspace closes the menu.", "Done and praise")
+    same(step.done to step.praise, "Favourited. Good taste." to "O/L steps it down. P/Backspace closes the menu.", "Done and praise")
     // The show-only menu opens at not saved: the ladder's I is Save, then Favourite.
     same(MenuKeys.choices(MenuKeys.Step.New).i to MenuKeys.choices(MenuKeys.Step.Saved).i, MenuKeys.Button.Save to MenuKeys.Button.Favourite,
         "Not saved, I saves; saved, I favourites")
@@ -755,7 +757,7 @@ private fun theLadderOnTitanKeys() {
 
     // A tap on the selected word opens its menu as a hold does: the slide hears the menu, not the tap.
     same(GuideFlow({ GuideSettings() }).also { it.start("menu") }.event(WordMenu(MENU_WORD)), GuideVerdict.Stage(1), "A tap or a hold opens it")
-    same(blockedChip(step, GuideLesson.BarTap.name), "Other words are blocked. Tap TitanKeys.", "Another word on the bar, if one ever shows")
+    same(blockedChip(step, GuideLesson.BarTap.name), "That's another word, not TitanKeys. Tap TitanKeys.", "Another word on the bar, if one ever shows")
     for (stage in step.stages) same(stage.text.length <= 50, true, "Stage within 50: ${stage.text}")
     same(step.title.length <= 38, true, "Title within 38")
     theMenuSlidesOffTrackMoves(step)
@@ -782,12 +784,12 @@ private fun theMenuSlidesOffTrackMoves(step: GuideStep) {
         same(said(flow.event(KeyboardEvent.MenuMissed)), "I/K or O/L. Nothing else does anything here.", "Another key in the menu, at $stage")
         same(flow.stage, stage, "and none of them moves the slide, at $stage")
     }
-    // The lock's words on this slide: each says it's blocked, then points at TitanKeys.
-    same(blockedChip(step, GuideLesson.Typing.name), "Typing's blocked here. Tap TitanKeys.", "Typing a letter")
-    same(blockedChip(step, GuideLesson.Swipe.name), "Swiping's blocked here. Tap TitanKeys.", "Swiping a word")
-    same(blockedChip(step, GuideLesson.Cursor.name), "Space taps are blocked. Tap TitanKeys on the bar.", "Space taps that would select")
-    same(blockedChip(step, GuideLesson.Space.name), "Spaces are blocked here. Tap TitanKeys.", "A space")
-    same(blockedChip(step, GuideLesson.Backspace.name), "Backspace is blocked here. Tap TitanKeys.", "Backspace with the menu shut")
+    // The lock's words on this slide: each says what it was, then points at TitanKeys (#90).
+    same(blockedChip(step, GuideLesson.Typing.name), "That's typing, not a tap on TitanKeys.", "Typing a letter")
+    same(blockedChip(step, GuideLesson.Swipe.name), "That's a swipe, not a tap on TitanKeys.", "Swiping a word")
+    same(blockedChip(step, GuideLesson.Cursor.name), "That's a Space tap, not a tap on TitanKeys.", "Space taps that would select")
+    same(blockedChip(step, GuideLesson.Space.name), "That's a space, not a tap on TitanKeys.", "A space")
+    same(blockedChip(step, GuideLesson.Backspace.name), "That's Backspace, not a tap on TitanKeys.", "Backspace with the menu shut")
     for (lesson in GuideLesson.entries) same(fits(blockedChip(step, lesson.name)), true, "The lock's chip for $lesson fits")
     // A tap is as good as a hold now, so nothing on the slide says to hold, or not to tap.
     val words = step.stages.map { it.text } + listOfNotNull(step.help, step.done, step.praise) +
@@ -1028,7 +1030,7 @@ private fun chapterOne() {
     // Nothing is blocked silently: every lesson that a slide can block has its own words, on one line (owner, v5).
     for (step in GUIDE_STEPS) for (lesson in GuideLesson.entries) {
         val said = blockedChip(step, lesson.name)
-        same(said.contains("blocked", ignoreCase = true) || said.startsWith("Blocked"), true, "\"$said\" says it's blocked")
+        same(said.startsWith("That's ") && (", not " in said || "than needed" in said), true, "\"$said\" says what it was, not what was wanted (#90)")
         same(fits(said), true, "The lock's chip \"$said\" is one line")
     }
 }
@@ -1040,18 +1042,10 @@ private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideCh
 private const val TITLE_MOST = 38
 private const val LINE_MOST = 50
 /**
- * The writer F's lines (docs/words-m1.md) that run past one line of the slide: used as written, as the rule for M1 says, and left
- * for the Master to judge on the renders. Every other line keeps the limits.
+ * Lines allowed past one line of the slide. None now: F shortened the ones that ran over (docs/words-m1.md), so every line keeps
+ * the limits.
  */
-private val F_LONGER = setOf(
-    "Move the cursor to the underlined word.",
-    "Typed spaces are blocked. Taps on Space move the cursor.",
-    "Swiping's blocked here. Taps on Space move the cursor.",
-    "O/L steps it back down. P/Backspace closes the menu.",
-    "Press Sym, then swipe up on the keys or press Enter for the next page.",
-    "Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups.",
-    "It's not on the first page. Swipe up on the keys, or press Enter.",
-)
+private val F_LONGER = emptySet<String>()
 private fun fits(line: String, most: Int = LINE_MOST) = line.length <= most || line in F_LONGER
 
 private fun wrongEventsDoNotFinish() {
@@ -1094,10 +1088,10 @@ private fun scenarios() {
     flick.start("flick")
     same(flick.event(DeletedWord(held = true)), GuideVerdict.Wait, "A held word isn't the flick")
     same(flick.event(DeletedWord(held = false)), GuideVerdict.Done, "One quick flick finishes it")
-    same(blockedChip(flick.step, GuideLesson.DeleteHold.name), "Held delete is blocked here. Flick and lift.", "The hold, blocked")
-    same(blockedChip(flick.step, GuideLesson.Backspace.name), "Backspace is blocked. Flick it.", "Backspace on the flick slide")
-    same(blockedChip(GUIDE_STEPS.first { it.id == "steer" }, GuideLesson.Typing.name), "Typing's blocked here. Typing's done. Keep up.",
-        "Letters on Steering")
+    same(blockedChip(flick.step, GuideLesson.DeleteHold.name), "That's a held flick, not a flick. Flick and lift.", "The hold, blocked")
+    same(blockedChip(flick.step, GuideLesson.Backspace.name), "That's a press, not a flick. Flick from Backspace.", "Backspace on the flick slide")
+    same(blockedChip(GUIDE_STEPS.first { it.id == "steer" }, GuideLesson.Typing.name), tapMissLine(GuideMiss.Typing, 2),
+        "Letters on the cursor slide: typing, not a tap")
 
     val regret = GuideFlow({ GuideSettings() })
     regret.start("hold")
@@ -1113,17 +1107,17 @@ private fun scenarios() {
 
     val steer = GuideFlow({ GuideSettings() })
     steer.start("steer")
-    same(title(steer.event(DoubleTapped(2))).startsWith("You lifted"), true, "Two taps that lift")
-    same(title(steer.event(TwoTapsAbove)).startsWith("You lifted"), true, "Two taps above Space that lift")
-    same(title(steer.event(CursorStarted(true))).startsWith("One tap too many"), true, "Three taps")
+    same(title(steer.event(DoubleTapped(2))), "That's a lift, not a hold. Keep the second down.", "Two taps that lift")
+    same(title(steer.event(TwoTapsAbove)), "That's a lift, not a hold. Keep the second down.", "Two taps above Space that lift")
+    same(title(steer.event(CursorStarted(true))), "That's three taps, not two. Hold the second one.", "Three taps")
     same(steer.event(CursorStarted(false)), GuideVerdict.Stage(1), "Two taps, the second held")
     same(steer.event(Moved(0f, lifted = true)).let { it is GuideVerdict.Hint && it.stage == 0 }, true, "Held, then let go")
 
     val more = GuideFlow({ GuideSettings() })
     more.start("selectmore")
-    same(title(more.event(CursorStarted(false))).startsWith("That's two"), true, "Two taps, the second held, steer")
+    same(title(more.event(CursorStarted(false))), "That's two taps, not three. Hold the third one.", "Two taps, the second held, steer")
     same(more.event(FieldChanged("a b", 0, 1)), GuideVerdict.Wait, "A held third tap picks a word first: no scolding yet")
-    same(title(more.event(Moved(0f, true))).startsWith("One word"), true, "Three taps that lift pick one word")
+    same(title(more.event(Moved(0f, true))), "That's a lift, not a hold. Keep the third down.", "Three taps that lift pick one word: a lift, not a hold")
     val held = GuideFlow({ GuideSettings() })
     held.start("selectmore")
     held.event(FieldChanged("a b", 0, 1))
@@ -1181,7 +1175,7 @@ private fun steeringToAWord() {
     same(STEER_LINE.contains("steer", ignoreCase = true), false, "No steering in the line")
     // No steering anywhere the guide talks (owner, #90: "change out the steering term"): titles, lines, stages, chips, chapters.
     val slide = GUIDE_STEPS.find { it.id == "steer" }!!
-    same(slide.title to slide.chapter.label, "Move the cursor to the underlined word." to "Cursor", "The slide's title and chapter")
+    same(slide.title to slide.chapter.label, "Put the cursor in the underlined word." to "Cursor", "The slide's title and chapter")
     val said = GUIDE_STEPS.flatMap { step ->
         listOfNotNull(step.title, step.body, step.done, step.praise, step.help, step.helpTitle, step.line, step.seed) +
             step.stages.map { it.text } + GuideLesson.entries.map { blockedChip(step, it.name) }
@@ -1225,12 +1219,12 @@ private fun theKeysPart() {
     val parts = SetupPart.entries
     same(parts.indexOf(SetupPart.Keys), parts.indexOf(SetupPart.Back) + 1, "The keys come right after Back")
     fun ask(keysSet: Boolean, skipped: Set<SetupPart> = emptySet()) =
-        setupToAsk({ it != SetupPart.Keys || keysSet }, backDeclined = false) { it in skipped }
+        setupToAsk({ it != SetupPart.Keys || keysSet }, backDeclined = false, guide = true) { it in skipped }
     same(ask(keysSet = false), listOf(SetupPart.Keys), "It shows while Sym or fn isn't Programmable key")
     same(ask(keysSet = true), emptyList<SetupPart>(), "and hides once both are, or on a phone without them")
     same(ask(keysSet = false, skipped = setOf(SetupPart.Keys)), emptyList<SetupPart>(), "Skipped, it isn't asked again")
-    same(setupToAsk({ false }, backDeclined = true) { false }.contains(SetupPart.Back), false, "Back's Not now still counts")
-    same(setupToAsk({ false }, backDeclined = false) { false }, SetupPart.entries.toList(), "Nothing done: every part, in order")
+    same(setupToAsk({ false }, backDeclined = true, guide = true) { false }.contains(SetupPart.Back), false, "Back's Not now still counts")
+    same(setupToAsk({ false }, backDeclined = false, guide = true) { false }, SetupPart.entries.toList(), "Nothing done: every part, in order, in the guide")
     same(SetupPart.Keys.skip to SetupPart.KEYS_WARN_SKIP, "Not now" to "Skip anyway", "Not now, then the warning's Skip anyway")
     same("won't" in SetupPart.KEYS_WARN_BODY && SetupPart.KEYS_WARN_TITLE.endsWith("?"), true, "The warning says what won't work")
     same(SetupPart.Keys.body.contains("Programmable key") && SetupPart.Keys.action.contains("Shortcut keys"), true, "It names the mode and the page")
@@ -1268,7 +1262,7 @@ private fun eachPageSaysWhereYouAre() {
     same(Modifiers.panelScroll(66, Panel.Emoji), -1f, "The same on the emoji")
     same(Modifiers.panelScroll(66, Panel.Clipboard), 0f, "On the clipboard Enter pins, so it doesn't page")
     // The guide's Recent emoji is told by its first one.
-    val recent = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText().substringAfter("GUIDE_RECENT_EMOJI = listOf(\"")
+    val recent = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText().substringAfter("GUIDE_RECENT_EMOJI = listOf(\"")
     same(recent.startsWith(GUIDE_RECENT_MARK), true, "The guide's Recent starts with $GUIDE_RECENT_MARK")
 
     // The & (symmain): the first group's first page.
@@ -1289,7 +1283,7 @@ private fun eachPageSaysWhereYouAre() {
     // The ∞ hunt, page by page.
     val groups = GuideFlow({ GuideSettings() })
     groups.start("symgroups")
-    same(groups.instruction, "Press Sym, then swipe up on the keys or press Enter for the next page.", "It names both ways")
+    same(groups.instruction, "Press Sym. Then swipe up on the keys, or Enter.", "It names both ways")
     groups.event(face(Panel.Symbols, "1/9", "&", "%"))
     same(groups.liveLine() to groups.panelHint(), "Not on this page. Swipe up on the keys or press Enter." to "Sym twice closes it.",
         "Sym's first page: on to the next, and the way out under it")
@@ -1371,7 +1365,7 @@ private fun eachPageSaysWhereYouAre() {
 /** Names from contacts (owner, #87): the last part, asked once, Yes or Not now. */
 private fun theContactsPart() {
     same(SetupPart.entries.last(), SetupPart.Contacts, "Contact names come last in setup, after the keys")
-    fun ask(answered: Boolean) = setupToAsk({ it != SetupPart.Contacts || answered }, backDeclined = false) { false }
+    fun ask(answered: Boolean) = setupToAsk({ it != SetupPart.Contacts || answered }, backDeclined = false, guide = true) { false }
     same(ask(answered = false), listOf(SetupPart.Contacts), "It shows until it's answered")
     same(ask(answered = true), emptyList<SetupPart>(), "and never again once it is")
     same(SetupPart.Contacts.skip, "Not now", "Not now moves on")
@@ -1522,7 +1516,7 @@ private fun playgroundSpeed() {
     val fresh = WpmMeter()
     fresh.skip(500)
     same(fresh.wpm(1000), null, "and a paste starts no speed")
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     val count = guide.substring(guide.indexOf("private fun countWpm("), guide.indexOf("private fun showWpm("))
     same(count.contains("ctrlOn || panelOpen || GuideHooks.menuOpen?.invoke() == true"), true,
         "A key with fn or Ctrl, or one the menu or a panel takes, doesn't count")
@@ -1701,17 +1695,17 @@ private fun everyWayToFailIsAnswered() {
     // Every lesson a slide locks has its own words: never the catch-all.
     for (step in GUIDE_STEPS) for (lesson in GuideLesson.entries) {
         if (step.lessons?.contains(lesson) == true) continue
-        same(blockedChip(step, lesson.name) != "That's blocked here. That's later.", true, "${step.id} says why ${lesson.name} is blocked")
+        same(blockedChip(step, lesson.name) != "That's not this slide's move.", true, "${step.id} says why ${lesson.name} is blocked")
     }
     fun step(id: String) = GUIDE_STEPS.first { it.id == id }
-    same(blockedChip(step("backspace"), GuideLesson.Flick.name), "Flicks are blocked here. Backspace this one.", "A flick on the Backspace slide")
-    same(blockedChip(step("hold"), GuideLesson.Flick.name, emptySet()), "Blocked. The regrets are gone, the rest stays.",
+    same(blockedChip(step("backspace"), GuideLesson.Flick.name), "That's a flick, not a press. Press Backspace.", "A flick on the Backspace slide")
+    same(blockedChip(step("hold"), GuideLesson.Flick.name, emptySet()), "That's more deleting than needed. The rest stays.",
         "Deleting on, once the regrets are gone")
-    same(blockedChip(step("flick"), GuideLesson.DeleteHold.name), "Held delete is blocked here. Flick and lift.", "A hold on the flick slide")
-    same(blockedChip(step("swipe"), GuideLesson.DeleteHold.name), "Held delete is blocked here. That's later.", "A hold before its time")
-    same(blockedChip(step("type"), GuideLesson.Cursor.name), "Space taps are blocked here. That's later.", "Double or triple Space before steering")
-    same(blockedChip(step("type"), GuideLesson.HoldSymbol.name), "Holding for symbols is blocked here. That's later.", "A letter held too early")
-    same(blockedChip(step("type"), GuideLesson.BarHold.name), "Holding bar words is blocked here. That's later.", "A bar word held too early")
+    same(blockedChip(step("flick"), GuideLesson.DeleteHold.name), "That's a held flick, not a flick. Flick and lift.", "A hold on the flick slide")
+    same(blockedChip(step("swipe"), GuideLesson.DeleteHold.name), "That's a held flick, not this slide's move.", "A hold before its time")
+    same(blockedChip(step("type"), GuideLesson.Cursor.name), "That's a Space tap, not this slide's move.", "Double or triple Space before steering")
+    same(blockedChip(step("type"), GuideLesson.HoldSymbol.name), "That's a held key, not this slide's move.", "A letter held too early")
+    same(blockedChip(step("type"), GuideLesson.BarHold.name), "That's a hold on the bar, not this slide's move.", "A bar word held too early")
     // Wrong moves the earlier checks don't cover.
     val menu = GuideFlow({ GuideSettings() })
     menu.start("menu")
@@ -1742,7 +1736,7 @@ private fun everyWayToFailIsAnswered() {
 private fun everyPassShowsNext() {
     for (step in GUIDE_STEPS) same(showsNextWhenPassed(step), step.chapter != GuideChapter.End, "${step.id} shows Next once passed")
     // The pass's pulse must never stop Next's own fade-in, which a quick pass waits for.
-    val source = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val source = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     val morph = source.substring(source.indexOf("private fun morphNext()"), source.indexOf("private fun nextPressed()"))
     same(morph.contains("next.animate().cancel()"), false, "The pass's pulse leaves Next's fade-in alone")
     same(source.contains("private val nextInView"), true, "and Next is put in full view after a pass whatever happens")
@@ -1768,23 +1762,23 @@ private fun theOwnersInfinityJoke() {
 /** The clipboard slide's right clip, the last and the nice one, is the one that pulses (owner, 2026-11-13). */
 private fun theRightClipPulses() {
     same(PRANK_CLIP, GUIDE_CLIPS.last(), "The nice clip is the last")
-    val keyboard = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val keyboard = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     same(keyboard.contains("guideFlashClip = clips.lastOrNull()"), true, "The last clip pulses")
     same(keyboard.contains("if (clip.text == guideFlashClip) guideFlashClip = null"), true, "until it's the one pasted")
-    val panel = java.io.File("android/kotlin/com/atlas/keyboard/SymPanel.kt").readText()
+    val panel = java.io.File("android/kotlin/com/titankeys/keyboard/SymPanel.kt").readText()
     same(panel.contains("View.ALPHA"), false, "A pulse in orange, not a blink of the whole field")
 }
 
 /** The build #2 run-through's guide fixes (owner, 2026-11-13). */
 private fun runThroughFixes() {
     fun step(id: String) = GUIDE_STEPS.first { it.id == id }
-    val keyboard = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val keyboard = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
 
     // A tap on another bar word on the menu slide gets that slide's words, not the other slides' "Do it with the keys".
-    same(blockedChip(step("menu"), GuideLesson.BarTap.name), "Other words are blocked. Tap TitanKeys.", "A bar tap on the menu slide")
-    same(blockedChip(step("steer"), GuideLesson.BarTap.name), "The bar's blocked here. Do it with the keys.", "A bar tap elsewhere")
-    same(blockedChip(step("type"), GuideLesson.BarTap.name), "The bar's blocked here. Type it, typo and all.", "A bar tap on the first slide")
+    same(blockedChip(step("menu"), GuideLesson.BarTap.name), "That's another word, not TitanKeys. Tap TitanKeys.", "A bar tap on the menu slide")
+    same(blockedChip(step("steer"), GuideLesson.BarTap.name), "That's the bar, not the keys. Do it on the keys.", "A bar tap elsewhere")
+    same(blockedChip(step("type"), GuideLesson.BarTap.name), "That's the bar, not typing. Type it, typo and all.", "A bar tap on the first slide")
 
     // The first help comes 3 s after a slide is reached by Next, Skip or Back, all of which arrive through enter(), then every 6 s.
     val moveOn = guide.substring(guide.indexOf("private fun moveOn("), guide.indexOf("/** What happens after a chapter's roast"))
@@ -1806,24 +1800,24 @@ private fun runThroughFixes() {
     same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: it would replace TitanKeys")
     for (id in listOf("steer", "selectmore")) {
         same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
-        same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space move the cursor.", "Space on $id")
+        same(blockedChip(step(id), GuideLesson.Space.name), tapMissLine(GuideMiss.Press, step(id).cue.let { (it as GuideCue.Taps).count }), "Space on $id: a press, not a tap")
     }
-    same(blockedChip(step("swipe"), GuideLesson.Space.name), "Spaces are blocked here. Swipes space themselves.", "Space on swipe")
+    same(blockedChip(step("swipe"), GuideLesson.Space.name), "That's a space, not a swipe. Swipes add their own.", "Space on swipe")
     same(keyboard.contains("keyCode == KeyEvent.KEYCODE_SPACE -> GuideLesson.Space"), true, "A pressed Space is its own lesson")
     same(keyboard.contains("keyCode == KeyEvent.KEYCODE_SPACE && GuideHooks.allows(GuideLesson.Cursor)"), false,
         "and never slips through as the cursor's")
     same(keyboard.contains("if (key == \" \" && guideBlocked(GuideLesson.Space)) return"), true, "A light tap that types a space is locked too")
     // A key press ends the touchpad's taps, so a press is never part of a steer: refusing it leaves the taps that steer alone.
-    val gesture = java.io.File("android/kotlin/com/atlas/keyboard/CursorGesture.kt").readText()
+    val gesture = java.io.File("android/kotlin/com/titankeys/keyboard/CursorGesture.kt").readText()
     same(gesture.contains("/** A key press or something else interrupted the touchpad at [time]. */"), true, "A press ends the taps")
 
     // Space on the Alt slide says what fits Space, not the letters' Alt line.
-    same(blockedChip(step("alt"), GuideLesson.Space.name), "Spaces are blocked here. Just the symbol.", "Space on the Alt slide")
-    same(blockedChip(step("alt"), GuideLesson.Typing.name), "Blocked. Hold Alt while you press it.", "A letter there keeps its line")
-    same(blockedChip(step("paste"), GuideLesson.Space.name), "Spaces are blocked here. Just paste.", "Space on the paste slide")
+    same(blockedChip(step("alt"), GuideLesson.Space.name), "That's a space, not the symbol. Just the symbol.", "Space on the Alt slide")
+    same(blockedChip(step("alt"), GuideLesson.Typing.name), "That's a letter alone, not with Alt. Hold Alt.", "A letter there keeps its line")
+    same(blockedChip(step("paste"), GuideLesson.Space.name), "That's a space, not a paste. Just paste.", "Space on the paste slide")
     for (lesson in GuideLesson.entries) for (slide in GUIDE_STEPS) {
         val said = blockedChip(slide, lesson.name)
-        same(lesson == GuideLesson.Typing || !said.startsWith("Blocked. Hold Alt"), true, "${slide.id}: only letters get the Alt line")
+        same(lesson == GuideLesson.Typing || !said.endsWith("Hold Alt."), true, "${slide.id}: only letters get the Alt line")
     }
 
     // One Backspace takes the e: the cursor starts after it, before the field's trailing space.
@@ -1839,7 +1833,7 @@ private fun runThroughFixes() {
     val groups = step("symgroups")
     same(groups.stages[1].text, "Find ∞ and press its key. It's further in.", "The hunt's instruction names it")
     same(groups.stages[1].text.length <= LINE_MOST, true, "and fits its line")
-    val steps = java.io.File("android/kotlin/com/atlas/keyboard/GuideSteps.kt").readText()
+    val steps = java.io.File("android/kotlin/com/titankeys/keyboard/GuideSteps.kt").readText()
     val block = steps.substring(steps.indexOf("id = \"symgroups\""), steps.indexOf("id = \"clown\""))
     same(block.contains("chip(\"Not that one. Find ∞.\")"), true, "A wrong symbol says which to find")
     same(block.contains("Hint(\"Closed it. The ∞ is still in there.\""), true, "and so does closing Sym")
@@ -1855,14 +1849,14 @@ private fun runThroughFixes() {
  * counts it at any row. GuideKeyboardView and DeleteSwipe aren't compiled for these checks, so their source is read.
  */
 private fun theHoldZonesExplainThemselves() {
-    val view = java.io.File("android/kotlin/com/atlas/keyboard/GuideKeyboardView.kt").readText()
+    val view = java.io.File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText()
     val zones = view.substring(view.indexOf("private fun drawHoldZones("), view.indexOf("private fun holdLabel("))
     for (word in listOf("\"START\"", "\"FASTER\"", "\"PAUSE\"")) check(word in zones) { "The hold zones say $word" }
     check("geometry.area(HOLD_PAUSE_X, AREA_TOP, AREA_RIGHT, AREA_BOTTOM)" in zones) { "The pause zone is the touchpad's full height" }
     check("onRow(" !in zones) { "No hold zone is one row" }
     check("Paint.Style.STROKE" in zones && "zonePaint" !in zones) { "Nothing in the hold zones is filled like a target: START is the one patch" }
     check("HOLD_TOP_X" in zones && "drawLine(" in zones) { "FASTER is an arrow out to the top-speed line" }
-    val swipe = java.io.File("android/kotlin/com/atlas/keyboard/DeleteSwipe.kt").readText()
+    val swipe = java.io.File("android/kotlin/com/titankeys/keyboard/DeleteSwipe.kt").readText()
     check("if (back < PAUSE_KEYS)" in swipe && "private fun keysBack(from: Sample, to: Sample) = (from.x - to.x) * 10" in swipe) {
         "The real pause goes by the way across only, so it counts at any height, as drawn"
     }
@@ -1875,9 +1869,9 @@ private fun theHoldZonesExplainThemselves() {
  * always kept over the keys, the playground has no actions row, and the room to spare must be at least [FRONT_SLACK_DP].
  */
 private fun theFrontPageKeepsAllFourRows() {
-    val view = java.io.File("android/kotlin/com/atlas/keyboard/GuideKeyboardView.kt").readText()
+    val view = java.io.File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText()
     check("ceil(if (lettersOnly) it.letterHeight else it.height).toInt()" in view) { "The drawing's height is its rows alone, with no room for a label" }
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     check("if (playground) visibility = View.GONE" in guide) { "The playground has no actions row taking room" }
     val slack = frontPageSlack()
     check(slack >= FRONT_SLACK_DP * V2.D) { "The front page has $slack px to spare over its four rows, under ${FRONT_SLACK_DP} dp" }
@@ -1910,7 +1904,7 @@ private fun demosEndWhereAPassDoes() {
     val grab = byId.getValue("selectmore").demo!!
     same(grab, GuideDemo.SelectTarget, "The grab slide's demo selects the marked words")
     // Only the slide's own line in the field, as on every slide (owner, M1: "this should also be one line only").
-    val seeding = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val seeding = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
         .substringAfter("private fun seedSteering(line: String) {").substringBefore("\n    }\n")
     same(seeding.contains("takeWhile") || seeding.contains("joinToString"), false, "The steering slides seed only their own line")
     val text = "$GRAB_LINE "
@@ -1935,14 +1929,14 @@ private fun demosEndWhereAPassDoes() {
 
 /**
  * The bar's TitanKeys is underlined in the accent the whole menu slide, with its menu open and after the pass, and nowhere else
- * (owner, 2026-11-13: "keep it highlighted the whole time"). It replaces the wiggle. GuideActivity and AtlasIme aren't compiled for
+ * (owner, 2026-11-13: "keep it highlighted the whole time"). It replaces the wiggle. GuideActivity and TitanKeysIme aren't compiled for
  * these checks, so their wiring is read from the source.
  */
 private fun titanKeysIsSelected(step: GuideStep) {
-    val guide = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
-    val ime = java.io.File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
-    val hooks = java.io.File("android/kotlin/com/atlas/keyboard/GuideHooks.kt").readText()
-    val strip = java.io.File("android/kotlin/com/atlas/keyboard/Strip.kt").readText()
+    val guide = java.io.File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    val ime = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
+    val hooks = java.io.File("android/kotlin/com/titankeys/keyboard/GuideHooks.kt").readText()
+    val strip = java.io.File("android/kotlin/com/titankeys/keyboard/Strip.kt").readText()
     // Selected in the box as the slide starts, before the keyboard reads the field, and the keyboard shows a selection it starts with.
     same(guide.contains("val selected = step.selected?.let { menuTarget(field.text.toString()) }") &&
         guide.contains("if (selected != null) field.setSelection(selected.first, selected.last + 1)"), true, "The slide starts with TitanKeys selected")
@@ -1965,8 +1959,126 @@ private fun titanKeysIsSelected(step: GuideStep) {
     // A stray key in the menu keeps it open where typing is locked, as on this slide.
     same(ime.contains("menuOpen && inGuide && !guideAllows(GuideLesson.Typing)"), true, "Another key leaves the menu open")
     // No underline anywhere: not on the bar, and not in the box.
-    for ((name, text) in listOf("GuideActivity" to guide, "AtlasIme" to ime, "GuideHooks" to hooks))
+    for ((name, text) in listOf("GuideActivity" to guide, "TitanKeysIme" to ime, "GuideHooks" to hooks))
         for (gone in listOf("barLit", "guideLit", "barWord(", "barWordRequests", "guideBarWord", "shownGuideWord"))
             same(text.contains(gone), false, "$name has no $gone: the bar's guide-only light and word are gone")
     same(Regex(""""menu" -> menuTarget""").containsMatchIn(guide), false, "The box doesn't underline TitanKeys")
+}
+
+/**
+ * The guide for people new to the phone (#90): every miss says what happened, "that's an X, not a Y"; the Space taps light the
+ * drawing as they land, 1, 2, held; a swipe far from its word is told; and the raw log notes each slide and miss.
+ */
+private fun theGuideForNewcomers() {
+    // Each miss on a Space-tap slide says what it was, on one line.
+    val tapMisses = GuideMiss.entries - setOf(GuideMiss.FarSwipe, GuideMiss.Blocked, GuideMiss.Other)
+    for (taps in listOf(2, 3)) for (miss in tapMisses) {
+        val line = tapMissLine(miss, taps, landed = if (miss == GuideMiss.Extra) taps + 1 else taps - 1)
+        same(line.startsWith("That's ") && ", not " in line, true, "$miss on $taps taps: \"$line\" says what it was")
+        same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+    }
+    same(tapMissLine(GuideMiss.Lift, 2), "That's a lift, not a hold. Keep the second down.", "A lift on the cursor slide")
+    same(tapMissLine(GuideMiss.Single, 3), "That's one tap, not three. Hold the third one.", "One tap on the select slide")
+    same(GuideMiss.entries.map { it.log }.toSet().size, GuideMiss.entries.size, "Each miss has its own name in the log")
+    same(GuideMiss.entries.all { it.log.none(Char::isWhitespace) }, true, "and the names have no spaces, for the log's label")
+    same(GuideLog.missLabel("steer", GuideMiss.Beside), "steer beside", "The log's label: the slide and the miss")
+    same(GuideLog.missLabel("type", GuideMiss.Blocked, "swipe"), "type blocked swipe", "with what was blocked")
+    same(SWIPE_COACH.length <= LINE_MOST && SWIPE_COACH.startsWith("That's "), true, "The far swipe's line")
+    // The touches the Space-tap slides lock say what they were, against a tap.
+    for (id in listOf("steer", "selectmore")) {
+        val step = GUIDE_STEPS.first { it.id == id }
+        val taps = (step.cue as GuideCue.Taps).count
+        same(blockedChip(step, GuideLesson.Space.name), tapMissLine(GuideMiss.Press, taps), "$id: Space pressed is a press, not a tap")
+        same(blockedChip(step, GuideLesson.Typing.name), tapMissLine(GuideMiss.Typing, taps), "$id: a letter is typing, not a tap")
+        same(blockedChip(step, GuideLesson.Swipe.name), tapMissLine(GuideMiss.Swipe, taps), "$id: a swipe is a swipe, not a tap")
+    }
+    val steer = GuideFlow({ GuideSettings() })
+    steer.start("steer")
+    same((steer.event(DoubleTapped(2)) as GuideVerdict.Hint).miss, GuideMiss.Lift, "A lift is logged as one")
+    steer.event(CursorStarted(false))
+    same((steer.event(Moved(1f, lifted = true)) as GuideVerdict.Hint).let { it.text to it.miss },
+        tapMissLine(GuideMiss.NoSlide, 2) to GuideMiss.NoSlide, "Held, then lifted before the slide")
+
+    // The tap meter: each tap lights its step as it comes down, the hold lights the rest.
+    val meter = TapMeter(2)
+    same(meter.landed to meter.held, 0 to false, "Nothing yet")
+    meter.down(1_000)
+    same(meter.landed, 1, "The first tap lights 1 as it lands")
+    meter.up(1_080, tap = true)
+    meter.down(1_200)
+    same(meter.landed, 2, "The second, soon after, lights 2")
+    meter.hold()
+    same(listOf(0, 1, 2).map(meter::lit), listOf(true, true, true), "Held: 1, 2 and the hold all lit")
+    meter.up(2_000, tap = false)
+    same(meter.landed to meter.held, 0 to false, "A lift after the hold starts again")
+    meter.down(3_000)
+    meter.up(3_080, tap = true)
+    meter.down(3_080 + TapMeter.TAP_GAP_MILLIS + 1)
+    same(meter.landed, 1, "A tap long after the last is a first tap again")
+    meter.up(4_000, tap = false)
+    same(meter.landed, 0, "A touch that isn't a tap starts again")
+    val three = TapMeter(3)
+    for (t in 0 until 4) {
+        three.down(t * 200L)
+        three.up(t * 200L + 80, tap = true)
+    }
+    same(three.landed <= 3, true, "Never more than the slide's taps")
+
+    // The drawing's own showing: the taps land in turn, the last stays down and is held, then it slides.
+    same(GuideTapDrawing.demo(0f, 2, drag = true).landed, 0, "The showing starts with nothing lit")
+    same(GuideTapDrawing.demo(.2f, 2, drag = true).let { it.landed to it.held }, 1 to false, "then 1")
+    same(GuideTapDrawing.demo(.5f, 2, drag = true).let { it.landed to it.held }, 2 to true, "then 2, held")
+    same(GuideTapDrawing.demo(.7f, 2, drag = true).slide > 0f, true, "then the slide to the left")
+    same(GuideTapDrawing.demo(.99f, 2, drag = true).slide, 1f, "all the way")
+    same(GuideTapDrawing.demo(.43f, 3, drag = true).let { it.landed to it.held }, 3 to false, "The select slide's third tap lands")
+    same(GuideTapDrawing.Pose(2, 1).let { listOf(it.lit(0), it.lit(1), it.lit(2)) }, listOf(true, false, false), "Pose: 1 lit")
+    // The ghost finger no longer draws the taps: the drawing does, from the first try.
+    val view = File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText()
+    same("if (cue is GuideCue.Taps) return" in view && "drawTapSteps(canvas, now)" in view, true, "The thumb replaces the ghost finger")
+
+    // A swipe far from its word: measured against the word's path, in key widths, with the cut-off from recorded swipes.
+    val path = wordPath("swipe")
+    same(path.size, 5, "The word's path goes through each letter")
+    same(wordPath("too").size, 2, "A letter twice in a row is one point")
+    same(swipeDistance(path, "swipe")!! < .01f, true, "A swipe right on the path is 0 keys off")
+    val lower = path.map { floatArrayOf(it[0], it[1] + 1f / KeyGeometry.ROWS) }
+    same(swipeDistance(lower, "swipe")!!.let { it > .99f && it < 1.01f }, true, "A row lower all the way is 1 key off")
+    same(SWIPE_FAR_KEYS, 1.2f, "The cut-off, set from the recorded swipes")
+    same(swipeFar(1.1f) to swipeFar(1.3f), false to true, "Far only past it")
+    same(swipeDistance(listOf(floatArrayOf(.5f, .5f)), "swipe"), null, "No measure without a trail")
+
+    // Key wording names one action at a time (#90): Sym, let go, then A, and the line keeps its W.
+    same(CLIP_LEAD.first() to ("let go" in CLIP_LEAD), 'W' to true, "The paste slide's lead: one action each, still a W")
+    same("let go" in GUIDE_STEPS.first { it.id == "clipboard" }.praise, true, "and the clipboard slide's praise")
+
+    // The raw log notes each slide and each miss, through the keyboard's mark, which only TitanKeys Debug's log keeps.
+    val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    for (call in listOf("logMark(GuideLog.SLIDE, step.id)", "RawLog.MARK_ACTION", "GuideLog.missLabel(flow.step.id, verdict.miss ?: GuideMiss.Other)"))
+        same(call in guide, true, "The guide logs: $call")
+}
+
+/**
+ * The front page, the playground and the guide decide setup by one definition (review, M2): Sym and fn and contact names are
+ * asked only in the guide's own setup, before the guide. A 2.1.0 user who updates with contacts unanswered and Sym and fn not set
+ * has setup done for the front page and the playground alike, so the playground never shows a setup slide that ✕ loops back to.
+ */
+private fun setupHasOneDefinition() {
+    val guideOnly = SetupPart.entries.filter { it.guideOnly }
+    same(guideOnly, listOf(SetupPart.Keys, SetupPart.Contacts), "Sym and fn, and contact names, are the guide's own")
+    // The updating user: the five parts done, the guide's two not.
+    val updated = { part: SetupPart -> !part.guideOnly }
+    same(setupToAsk(updated, backDeclined = false) { false }, emptyList<SetupPart>(), "The front page and the playground ask nothing")
+    same(setupToAsk(updated, backDeclined = false, guide = true) { false }, guideOnly, "The guide's own setup asks the two, before the guide")
+    // Every phone state: the playground's list is empty exactly when the front page sends you to the playground, as both read
+    // the same list, and the guide only ever adds its own two.
+    for (bits in 0 until (1 shl SetupPart.entries.size)) for (declined in listOf(false, true)) {
+        val done = { part: SetupPart -> bits and (1 shl part.ordinal) != 0 }
+        val playground = setupToAsk(done, declined) { false }
+        val guide = setupToAsk(done, declined, guide = true) { false }
+        same(playground.none { it.guideOnly }, true, "The playground never asks a guide-only part")
+        same(guide.filterNot { it.guideOnly }, playground, "The guide asks what the playground does, then its own two")
+    }
+    val activity = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    same(activity.contains("PhoneSetup.missing(this, guide = !playground)") && !activity.contains("PhoneSetup.missing(this)"), true,
+        "The playground reads the front page's list, the guide its own")
 }

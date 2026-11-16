@@ -73,7 +73,9 @@ cat "$WORK/librime_tk.so" > "$OUT/librime_tk.so"
 needed="$("$BIN/llvm-readelf" -d "$OUT/librime_tk.so" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p' | sort | tr '\n' ' ')"
 test "$needed" = "libc++_shared.so libc.so libdl.so liblog.so libm.so " || { echo "unexpected libraries: $needed" >&2; exit 1; }
 echo "$LIBCXX_SHA256  $OUT/libc++_shared.so" | sha256sum -c --quiet
-"$BIN/llvm-readelf" -lW "$OUT/librime_tk.so" | grep -q "LOAD.*0x4000$" || { echo "not 16 KB pages" >&2; exit 1; }
+# Every loaded segment on 16 KB pages. (Read into a variable: grep -q in a pipe can cut readelf off, which pipefail fails.)
+loads="$("$BIN/llvm-readelf" -lW "$OUT/librime_tk.so" | grep " LOAD ")"
+[ -n "$loads" ] && ! grep -qv "0x4000$" <<< "$loads" || { echo "not 16 KB pages" >&2; exit 1; }
 
 # The PC tool, from the same sources: it compiles the data (data.sh) and tries codes.
 cmake -S "$TREE" -B "$WORK/out-host" -DCMAKE_BUILD_TYPE=Release -DTK_RIME_SOURCES="$WORK/src" \

@@ -1,6 +1,6 @@
 import { Row, Screen, Stack, Text, openURL, useSnapshot } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
-import { state } from "../../lib/atlas";
+import { state } from "../../lib/titankeys";
 import { PRIVACY_URL } from "../../lib/connected";
 import { hasReleaseNotes } from "../../lib/release-notes";
 import { Note } from "../../lib/note";

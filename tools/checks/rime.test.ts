@@ -40,7 +40,7 @@ test("the shipped Chinese data is exactly the list data.sh wrote, and the list i
     expect(shipped).toContain(table);
   }
   // RimeData reads this asset and these names.
-  const data = read("android/kotlin/com/atlas/rime/RimeData.kt");
+  const data = read("android/kotlin/com/titankeys/rime/RimeData.kt");
   expect(data).toContain('const val MANIFEST = "rime.sha256"');
   expect(data).toContain('const val ASSETS = "rime"');
   // The copies get the time the data was compiled with, so Rime on the phone compiles nothing again.
@@ -57,7 +57,7 @@ test("the schemas the data ships are the repo's own, and the three the engine us
   }
   // The picker's eight places, over E to P.
   expect(read("android/assets/rime/default.yaml")).toMatch(/^  page_size: 8$/m);
-  const engine = read("android/kotlin/com/atlas/rime/RimeEngine.kt");
+  const engine = read("android/kotlin/com/titankeys/rime/RimeEngine.kt");
   for (const id of ["tk_yale", "tk_jyutping", "tk_pinyin"]) {
     expect(engine).toContain(`"${id}"`);
     expect(existsSync(join(root, `android/assets/rime/${id}.schema.yaml`))).toBe(true);
@@ -68,7 +68,7 @@ test("the schemas the data ships are the repo's own, and the three the engine us
 test("the variants are the schemas' options, one each", () => {
   const variants = read("native/rime/schemas/tk_variants.yaml");
   expect(variants).toContain("- options: [ zh_hk, zh_tw, zh_hans ]");
-  const kotlin = read("android/kotlin/com/atlas/rime/ChineseVariant.kt");
+  const kotlin = read("android/kotlin/com/titankeys/rime/ChineseVariant.kt");
   for (const option of ["zh_hk", "zh_tw", "zh_hans"]) expect(kotlin).toContain(`"${option}", "${option}"`);
   for (const schema of ["tk_yale", "tk_jyutping", "tk_pinyin"]) {
     const text = read(`native/rime/schemas/${schema}.schema.yaml`);
@@ -87,12 +87,12 @@ test("every pinned source is in SOURCES.md, and every licence it names is in lic
 });
 
 test("the JNI class the library registers is the one in the app, kept from shrinking", () => {
-  expect(read("native/rime/rime_jni.cc")).toContain('kClass = "com/atlas/rime/RimeNative"');
-  expect(existsSync(join(root, "android/kotlin/com/atlas/rime/RimeNative.kt"))).toBe(true);
-  expect(read("android/kotlin/com/atlas/rime/RimeNative.kt")).toContain('System.loadLibrary("rime_tk")');
-  expect(read("android/proguard-rules.pro")).toContain("-keep class com.atlas.rime.RimeNative { *; }");
+  expect(read("native/rime/rime_jni.cc")).toContain('kClass = "com/titankeys/rime/RimeNative"');
+  expect(existsSync(join(root, "android/kotlin/com/titankeys/rime/RimeNative.kt"))).toBe(true);
+  expect(read("android/kotlin/com/titankeys/rime/RimeNative.kt")).toContain('System.loadLibrary("rime_tk")');
+  expect(read("android/proguard-rules.pro")).toContain("-keep class com.titankeys.rime.RimeNative { *; }");
   // Every native the Kotlin side declares is one the library registers, by the same name, and no other.
-  const kotlin = [...read("android/kotlin/com/atlas/rime/RimeNative.kt").matchAll(/external fun (\w+)\(/g)].map(m => m[1]).sort();
+  const kotlin = [...read("android/kotlin/com/titankeys/rime/RimeNative.kt").matchAll(/external fun (\w+)\(/g)].map(m => m[1]).sort();
   const registered = [...read("native/rime/rime_jni.cc").matchAll(/^ {4}\{"(\w+)", "\(/gm)].map(m => m[1]).sort();
   expect(kotlin.length).toBeGreaterThan(5);
   expect(registered).toEqual(kotlin);

@@ -108,7 +108,7 @@ There are no storage commands: the Durable Objects are made by the deploy. Secre
 leave Cloudflare. `npx wrangler telemetry disable` turns off Wrangler's own anonymous telemetry, if wanted.
 
 `wrangler deploy` prints the address, such as `https://titankeys-contributions.<account>.workers.dev`. Put it in
-`CONTRIBUTIONS_URL` in `android/kotlin/com/atlas/connected/Connected.kt`: until then the app keeps examples on the
+`CONTRIBUTIONS_URL` in `android/kotlin/com/titankeys/connected/Connected.kt`: until then the app keeps examples on the
 phone and sends nothing. Then check it:
 
 ```bash

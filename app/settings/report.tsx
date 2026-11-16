@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Field, Screen, Section, SettingsChoices, Stack, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
 import { Toggle, playHaptic } from "../../lib/app-haptics";
-import { FEEDBACK_ADDRESS, copyText } from "../../lib/atlas";
+import { FEEDBACK_ADDRESS, copyText } from "../../lib/titankeys";
 import { Note } from "../../lib/note";
 import { type ReportKind, emailReport, reportKinds, reportState, sendReport } from "../../lib/report";
 
@@ -16,7 +16,6 @@ import { type ReportKind, emailReport, reportKinds, reportState, sendReport } fr
 export default function Report() {
   const params = useRouteParams();
   const result = useSnapshot(reportState);
-  // F: drafts, all of this page's lines but the kinds' and the no-mail line (F's, #74).
   if (result.status !== "ready") return <Screen title="Report a bug" />;
   return <ReportForm start={params.kind === "idea" ? "idea" : result.data.crash ? "crash" : null} {...result.data}
     fromRecording={params.kind === "recording"} />;
@@ -36,7 +35,9 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
   const [what, setWhat] = useState("");
   const [expected, setExpected] = useState("");
   const [email, setEmail] = useState("");
-  const [recording, setRecording] = useState(hasRecording);
+  // The recording can show what was typed, so it starts on only when the form came straight from Record a bug's Stop, where
+  // the user just recorded it to send. Otherwise sending it is opt-in (review of #97; the Orchestrator's call, for the owner).
+  const [recording, setRecording] = useState(hasRecording && fromRecording);
   const [outcome, setOutcome] = useState<"sent" | "kept" | "large" | null>(null);
   const [noMail, setNoMail] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -59,7 +60,7 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
 
   if (outcome) return <Screen title="Couldn't send it"
     subtitle={outcome === "large" ? "It's too big to send from here. It's kept on your phone, so you can email it instead."
-      : "No connection, or our server's busy. It's kept on your phone, so you can email it instead, or try again later."}>
+      : "No connection, or our server's busy. It's kept on your phone. Try again later, or email it instead."}>
     <Field label="Email it instead" onPress={() => void mail.run()}>{""}</Field>
     {noMail && <>
       <Note>{`No mail app here. Send it to ${FEEDBACK_ADDRESS} from wherever you do email.`}</Note>
@@ -70,7 +71,7 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
   </Screen>;
 
   return <Screen title={idea ? "Suggest an idea" : "Report a bug"}
-    subtitle="Goes straight to us, sealed so only we can read it. Nothing's sent until you press Send.">
+    subtitle="It comes straight to us, sealed so only we can read it. Nothing goes until you press Send.">
     <Section title="What's it about?">
       <SettingsChoices value={kind ?? ""} options={[...reportKinds]} onChange={value => {
         playHaptic("app_picked");
@@ -80,7 +81,7 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
     <Stack gap={24}>
       <TextInput label={idea ? "Your idea" : "What happened?"} value={what} onChange={setWhat}
         placeholder={idea ? "What should TitanKeys do?" : "What you did, and what went wrong"} minLines={3} maxLines={10} action="return" />
-      {!idea && <TextInput label="What did you expect?" value={expected} onChange={setExpected} minLines={2} maxLines={6} action="return" />}
+      {!idea && <TextInput label="What did you expect?" value={expected} onChange={setExpected} placeholder="What should have happened" minLines={2} maxLines={6} action="return" />}
       <TextInput label="Your email, if you want a reply" value={email} onChange={setEmail} placeholder="Optional"
         autoCapitalise={false} action="done" />
       {!emailOk && <Note>That email doesn't look right.</Note>}
@@ -89,10 +90,13 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
       <Note>{`TitanKeys ${version}, ${phone}, Android ${android}`}</Note>
       {hasRecording && <Toggle label="The recording" value={recording} onChange={setRecording} />}
       {hasRecording && recording && <Note>{fromRecording
-        ? "From Record a bug. It shows your touches and keys, so it can show what you typed while it ran."
-        : "Your last Record a bug. It shows your touches and keys, so it can show what you typed while it ran."}</Note>}
-      {hasCrash && <Note>{froze ? "The freeze report: where it froze, and the versions. Nothing you typed."
-        : "The crash report: where it crashed, and the versions. Nothing you typed."}</Note>}
+        ? "From Record a bug. It has your touches and keys, so it can show what you typed while it ran."
+        : "Your last Record a bug. It has your touches and keys, so it can show what you typed while it ran."}</Note>}
+      {/* F: draft, the line while the recording is off. */}
+      {hasRecording && !recording && <Note>Your last Record a bug stays on your phone unless you switch it on. It can show what you typed while it ran.</Note>}
+      {/* F: draft, "It always goes along." */}
+      {hasCrash && <Note>{froze ? "The freeze report: where it froze, and the versions. Nothing you typed. It always goes along."
+        : "The crash report: where it crashed, and the versions. Nothing you typed. It always goes along."}</Note>}
     </Section>
     {send.status === "error" && <Note>{send.error.message}</Note>}
     <Button disabled={!kind || what.trim() === "" || !emailOk || send.status === "pending"} onPress={() => void send.run()}>

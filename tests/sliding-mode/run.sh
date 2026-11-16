@@ -8,5 +8,5 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" \
-  android/kotlin/com/atlas/keyboard/SlidingModeList.kt tests/sliding-mode/SlidingModeChecks.kt
-java -cp "$work:$stdlib" com.atlas.keyboard.SlidingModeChecksKt
+  android/kotlin/com/titankeys/keyboard/SlidingModeList.kt tests/sliding-mode/SlidingModeChecks.kt
+java -cp "$work:$stdlib" com.titankeys.keyboard.SlidingModeChecksKt

@@ -4,12 +4,12 @@ For #36. Checked against [Use of the AccessibilityService API](https://support.g
 
 ## What the service does today (from the code)
 
-`BackService` (`android/kotlin/com/atlas/keyboard/BackService.kt`, `android/src/main/res/xml/back_service.xml`):
+`BackService` (`android/kotlin/com/titankeys/keyboard/BackService.kt`, `android/src/main/res/xml/back_service.xml`):
 
 - `isAccessibilityTool="false"`, which is correct: TitanKeys is not a tool for people with disabilities.
 - `canRetrieveWindowContent="false"`: it can't read the screen. It asks for no accessibility events.
 - **Back:** sends a system Back (`GLOBAL_ACTION_BACK`), so one press closes the keyboard and goes back in the app.
-- **Keys:** `canRequestFilterKeyEvents="true"`. It turns key filtering on only while the keyboard asks for it (`AtlasIme.updateKeyWatch`):
+- **Keys:** `canRequestFilterKeyEvents="true"`. It turns key filtering on only while the keyboard asks for it (`TitanKeysIme.updateKeyWatch`):
   - while the Sym panel is open, and until a key the panel took is let go, so that Enter and Backspace turn the panel's pages and don't reach the app;
   - in the Smart Launcher search field, when hold for symbols is on or double-press lock is off, so that holds and two presses of Shift or Alt work there;
   - between the first and second press of Back, while the keyboard holds the touchpad (when "Scroll assistant" is off), so the second press reaches the app.

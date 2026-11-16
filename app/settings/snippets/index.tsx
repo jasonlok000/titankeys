@@ -1,7 +1,7 @@
 import { Row, Screen, Section, navigate, useAction, useSnapshot } from "ink";
 import { KeyCapField } from "../../../lib/note";
 import { add, close } from "ink/icons";
-import { type State, removeSnippet, state } from "../../../lib/atlas";
+import { type State, removeSnippet, state } from "../../../lib/titankeys";
 
 const title = "Snippets";
 const subtitle = "Type a shortcut and press Space, and it turns into its text. Changed your mind? Press Backspace right after. Snippets stay on your phone and never work in password fields.";

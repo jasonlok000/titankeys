@@ -1,5 +1,5 @@
 import { Field, Screen, Section, SettingsChoices, useAction, useSnapshot } from "ink";
-import { type Settings, type State, state, update } from "./atlas";
+import { type Settings, type State, state, update } from "./titankeys";
 import { playHaptic } from "./app-haptics";
 
 /** A setting that is off or a number of milliseconds, such as how long to hold a letter for its symbol. */

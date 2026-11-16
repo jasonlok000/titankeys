@@ -4,7 +4,7 @@
 // One Rime session for the whole keyboard. Every call takes the same lock, so start() can run on a background
 // thread while the keyboard waits for it.
 //
-// The Kotlin side is com.atlas.rime.RimeNative. Its methods are registered in JNI_OnLoad, so a package rename changes
+// The Kotlin side is com.titankeys.rime.RimeNative. Its methods are registered in JNI_OnLoad, so a package rename changes
 // only kClass below.
 #include <jni.h>
 #include <rime_api.h>
@@ -15,7 +15,7 @@
 
 namespace {
 
-const char* const kClass = "com/atlas/rime/RimeNative";
+const char* const kClass = "com/titankeys/rime/RimeNative";
 
 std::mutex lock;
 RimeApi* rime = nullptr;

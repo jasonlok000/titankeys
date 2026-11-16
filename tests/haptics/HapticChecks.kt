@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.io.File
 
@@ -233,7 +233,7 @@ private fun eachFamilyPlaysItsPattern() {
 
 /** The phone's ready-made effects all felt generic, so nothing uses one: no effect ids, no predefined effect, no composition. */
 private fun noReadyMadeEffects() {
-    val source = File("android/kotlin/com/atlas/keyboard/Haptics.kt").readText()
+    val source = File("android/kotlin/com/titankeys/keyboard/Haptics.kt").readText()
     for (word in listOf("createPredefined", "EFFECT_", "startComposition", "PRIMITIVE_", "areAllEffectsSupported"))
         check(word !in source) { "Haptics.kt uses $word" }
     check("VibrationEffect.createWaveform(" in source) { "Patterns play as our own waveforms" }
@@ -851,12 +851,12 @@ private fun theWallsQuietSilencesTheHit() {
 
 /** The held delete fade is retired: nothing reads its settings, so an old stored one does nothing. */
 private fun theFadeIsGone() {
-    for (name in listOf("Haptics.kt", "HapticsLab.kt", "HapticsLabActivity.kt", "HapticTimeline.kt", "AtlasIme.kt")) {
-        val source = File("android/kotlin/com/atlas/keyboard/$name").readText()
+    for (name in listOf("Haptics.kt", "HapticsLab.kt", "HapticsLabActivity.kt", "HapticTimeline.kt", "TitanKeysIme.kt")) {
+        val source = File("android/kotlin/com/titankeys/keyboard/$name").readText()
         for (word in listOf("debug_pattern_held_delete_fade", "debug_held_delete_fade_on", "heldDeleteFading", "fun fadeOn("))
             check(word !in source) { "$name still has $word" }
     }
-    val ime = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText()
+    val ime = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     check("haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)" in ime) { "A held word hits at the hold's own pace" }
 }
 
@@ -984,9 +984,9 @@ private fun theLabShowsTheDotsOfAHold() {
     val dot = HapticEvent(1, Haptic.DeleteDotsLand, listOf(17), HapticResult.Played, dot = 1, dots = 30)
     check(HapticTimeline.outcome(dot) == HapticTimeline.trigger(Haptic.DeleteDotsLand)) { "A dot that ticks says what set it off" }
     // The lab's Play plays the plan and feeds the timeline, so it plays and shows the dots with the words.
-    val source = File("android/kotlin/com/atlas/keyboard/Haptics.kt").readText()
+    val source = File("android/kotlin/com/titankeys/keyboard/Haptics.kt").readText()
     check("fun previewHold(plan: HoldTicks.Plan)" in source) { "Play takes the whole hold" }
-    val lab = File("android/kotlin/com/atlas/keyboard/HapticsLab.kt").readText()
+    val lab = File("android/kotlin/com/titankeys/keyboard/HapticsLab.kt").readText()
     check("deleteHoldPauseMillis()" in lab && "GestureDisplay.holdLandings(" in lab) { "The lab's hold uses the real pause and the bar's own dots" }
 }
 
@@ -1232,10 +1232,10 @@ private fun thePlaygroundsFiveMoments() {
     check(rumble.first() == 0L && rumble.last() + HapticPalette.TEXTURE_MILLIS in 300L..400L) { "The rumble lasts 300 to 400 ms: $rumble" }
     for ((a, b) in rumble.zipWithNext()) check(b - a - HapticPalette.TEXTURE_MILLIS >= HapticPalette.MIN_GAP_MILLIS) { "Rule 4 between ticks" }
     // Nothing else in the show plays: no step, no comment.
-    val guide = File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     val comment = guide.substring(guide.indexOf("private fun showComment("), guide.indexOf("private fun playMoment("))
     check("haptics." !in comment) { "A comment plays nothing" }
-    val view = File("android/kotlin/com/atlas/keyboard/WpmEffectsView.kt").readText()
+    val view = File("android/kotlin/com/titankeys/keyboard/WpmEffectsView.kt").readText()
     check("Haptic" !in view) { "The show itself plays nothing: only the playground's moments do" }
 }
 
@@ -1262,7 +1262,7 @@ private fun eachMomentPlaysOnceABurst() {
     check(moments.flash(WpmEffects.at(185)) == PlaygroundMoment.Lightning) { "and the next one too" }
     check(moments.flash(WpmEffects.at(150)) == null && moments.flash(WpmEffects.at(200)) == null) { "No storm, no hit" }
     // The playground resets the moments as it calms: five quiet seconds with the number at nothing, or when it closes.
-    val guide = File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+    val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     check(Regex("""showComment\(-1, force = true\)\s+// [^\n]+\n\s+moments\.calm\(\)""").containsMatchIn(guide)) { "Calm resets them" }
     check(Regex("""private fun calmWpm\(\) \{\s+moments\.calm\(\)""").containsMatchIn(guide)) { "and so does the playground closing" }
 }

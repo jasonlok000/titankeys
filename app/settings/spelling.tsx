@@ -1,4 +1,4 @@
-import type { Spelling, State } from "../../lib/atlas";
+import type { Spelling, State } from "../../lib/titankeys";
 import { ChoicePage } from "../../lib/choice";
 
 // American first, as the keyboard's default (#80).

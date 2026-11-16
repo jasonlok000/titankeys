@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.app.Activity
 import android.content.Context
@@ -371,7 +371,7 @@ class TouchSizeActivity : Activity(), Recording.Sink {
 
         private fun key(canvas: Canvas, x: Float, y: Float, width: Float, height: Float, name: String) {
             box.set(x + 3, y + 3, x + width - 3, y + height - 3)
-            val radius = com.atlas.keyboard.Radii.px(resources, com.atlas.keyboard.Radii.SMALL)
+            val radius = com.titankeys.keyboard.Radii.px(resources, com.titankeys.keyboard.Radii.SMALL)
             canvas.drawRoundRect(box, radius, radius, outline)
             canvas.drawText(name, box.centerX(), box.centerY() + label.textSize / 3, label)
         }

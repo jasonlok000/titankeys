@@ -9,6 +9,6 @@ android=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}/platforms/android-
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android" -d "$work" \
-  android/kotlin/com/atlas/keyboard/StripFit.kt android/kotlin/com/atlas/keyboard/FixedScale.kt android/kotlin/com/atlas/keyboard/Accent.kt \
-  android/kotlin/com/atlas/keyboard/Corners.kt tests/strip-fit/StripFitChecks.kt
-java -cp "$work:$stdlib:$android" com.atlas.keyboard.StripFitChecksKt
+  android/kotlin/com/titankeys/keyboard/StripFit.kt android/kotlin/com/titankeys/keyboard/FixedScale.kt android/kotlin/com/titankeys/keyboard/Accent.kt \
+  android/kotlin/com/titankeys/keyboard/Corners.kt tests/strip-fit/StripFitChecks.kt
+java -cp "$work:$stdlib:$android" com.titankeys.keyboard.StripFitChecksKt

@@ -1,4 +1,4 @@
-package com.atlas.engine;
+package com.titankeys.engine;
 
 public final class SentenceCaseChecks {
     public static void main(String[] args) {

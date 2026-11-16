@@ -8,10 +8,10 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-connected=android/kotlin/com/atlas/connected
+connected=android/kotlin/com/titankeys/connected
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$connected/Json.kt" "$connected/Seal.kt" "$connected/Reports.kt" tests/report/ReportChecks.kt
-java -cp "$work:$stdlib" com.atlas.connected.ReportChecksKt "$work/handover"
+java -cp "$work:$stdlib" com.titankeys.connected.ReportChecksKt "$work/handover"
 if command -v bun >/dev/null; then
   { read -r dir; read -r id; } < "$work/handover"
   bun tools/contributions/reports.ts open "$dir/key.pem" "$dir" >/dev/null

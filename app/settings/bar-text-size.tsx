@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Screen, SettingsChoices, TextInput, useAction, useSnapshot } from "ink";
 import { playHaptic } from "../../lib/app-haptics";
-import { type BarTextSize, type State, state, update } from "../../lib/atlas";
+import { type BarTextSize, type State, state, update } from "../../lib/titankeys";
 import { MUTED } from "../../lib/brand";
 
 /** Ids apart from the names, so no old stored value means a different size than it says (FixedScale.Size). */
@@ -10,8 +10,8 @@ const options = (["small", "medium", "large"] as const).map(value => ({ value, l
 
 export const barTextSizeTitle = "Bar text size";
 export const barTextSizeNote = "Words, menu and chips. The bar keeps its height.";
-// F: draft, the try field's sample line. It ends mid-word, so the bar fills with words as the page opens (#86).
-export const barTextSizeSample = "Pick a size and watch the bar while you type. Looks good from here, but you deci";
+// The try field's sample line. It ends mid-word, so the bar fills with words as the page opens (#86).
+export const barTextSizeSample = "Pick a size and type here. Stop squin";
 
 export const barTextSizeLabel = ({ barTextSize }: State) => labels[barTextSize] ?? "Normal";
 
@@ -20,7 +20,7 @@ export const barTextSizeLabel = ({ barTextSize }: State) => labels[barTextSize] 
  * hints (FixedScale.Size). Everyone starts at Normal. The bar keeps its height, and Settings, the panels and the guide don't
  * change. The field at the top opens the keyboard by itself, with a sample line that ends mid-word so the bar has words in it,
  * and the sizes sit under it, so both stay in sight with the keyboard up. The keyboard hears a pick and makes the bar again at
- * once (AtlasIme's barSize listener). Chips and the clip offer show as they normally would: nothing fake is drawn.
+ * once (TitanKeysIme's barSize listener). Chips and the clip offer show as they normally would: nothing fake is drawn.
  */
 export default function BarTextSizePage() {
   const result = useSnapshot(state);

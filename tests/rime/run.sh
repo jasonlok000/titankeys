@@ -8,10 +8,10 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-rime=android/kotlin/com/atlas/rime
-keyboard=android/kotlin/com/atlas/keyboard
+rime=android/kotlin/com/titankeys/rime
+keyboard=android/kotlin/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$rime/RimeCalls.kt" "$rime/ChineseVariant.kt" "$rime/RimeEngine.kt" "$rime/RimeData.kt" "$rime/RimeNative.kt" \
-  "$rime/RimeAssets.kt" "$rime/RimeBackup.kt" "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" android/kotlin/com/atlas/connected/Json.kt \
+  "$rime/RimeAssets.kt" "$rime/RimeBackup.kt" "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" android/kotlin/com/titankeys/connected/Json.kt \
   tests/rime/RimeChecks.kt
-java -cp "$work:$stdlib" com.atlas.rime.RimeChecksKt android/assets/im
+java -cp "$work:$stdlib" com.titankeys.rime.RimeChecksKt android/assets/im

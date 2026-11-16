@@ -10,7 +10,7 @@ log=${1:?raw log}
 OUT=${2:-$HOME/build/joins83}
 tools=${BASELINE_TOOLS:-/mnt/x/Atlas/.dev/swipe-baseline/tools}
 # The joining code from before #83's rule, to compare against. Git may not work inside WSL here, so save it first
-# from Windows: git show 93eb16d:android/kotlin/com/atlas/engine/Swipe.java > old-Swipe.java
+# from Windows: git show 93eb16d:android/kotlin/com/titankeys/engine/Swipe.java > old-Swipe.java
 old_swipe=${OLD_SWIPE:?Set OLD_SWIPE to Swipe.java from before the rule}
 mkdir -p "$OUT/private" "$OUT/classes" "$OUT/classes-old" "$OUT/old"
 if [ ! -s "$OUT/private/attempts.jsonl" ] || [ "$log" -nt "$OUT/private/attempts.jsonl" ]; then
@@ -19,7 +19,7 @@ fi
 python3 -I "$here/pairs.py" "$OUT/private/attempts.jsonl" "$log" "$tools" "$OUT/private"
 cp "$old_swipe" "$OUT/old/Swipe.java"
 javac --release 17 -d "$OUT/classes-old" "$OUT/old/Swipe.java" "$here/JoinReplay.java"
-javac --release 17 -d "$OUT/classes" "$repo/android/kotlin/com/atlas/engine/Swipe.java" "$here/JoinReplay.java"
+javac --release 17 -d "$OUT/classes" "$repo/android/kotlin/com/titankeys/engine/Swipe.java" "$here/JoinReplay.java"
 java -cp "$OUT/classes-old" JoinReplay 90 old < "$OUT/private/pairs-points.txt" > "$OUT/private/live-rule.txt"
 java -cp "$OUT/classes" JoinReplay 90 < "$OUT/private/pairs-points.txt" > "$OUT/private/new-rule.txt"
 python3 -I "$here/rules.py" "$OUT/private/pairs.jsonl" "$OUT/private/live-rule.txt" "$OUT/report.json"

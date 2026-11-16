@@ -6,7 +6,7 @@
 
 A keyboard for the Unihertz Titan 2 Elite. You bought a phone with keys on it, so here's a keyboard that actually uses them.
 
-Type like you always have, swipe whole words across the keys, steer the cursor from Space and flick words into the void. It's free, and what you type stays on your phone, where your spelling can't hurt anyone.
+Type like you always have, swipe whole words across the keys, move the cursor from Space and flick words into the void. It's free, and what you type stays on your phone, where your spelling can't hurt anyone.
 
 **[Download it](https://github.com/jasonlok000/titankeys/releases)**
 
@@ -45,10 +45,10 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 
 ### Space
 
-- **Steer the cursor.** Tap Space twice, keep the second tap down, and slide. Slow near the middle, fast near the edge, and the caret stays solid while you steer.
-- **Count words by feel.** A tick for each letter and a stronger one at each space, so you can steer without looking.
+- **Move the cursor.** Tap Space twice, keep the second tap down, and slide. Slow near the middle, fast near the edge, and the caret stays solid while it moves.
+- **Count words by feel.** A tick for each letter and a stronger one at each space, so you can move the cursor without looking.
 - **Select with three taps.** Tap Space three times and slide to grab words. Slide back to let them go one at a time. Three taps and no slide selects the word you're on.
-- **Taps count on Space itself,** not the keys beside it, and the first tap counts quickly, so fewer steers get missed.
+- **Taps count on Space itself,** not the keys beside it, and the first tap counts quickly, so fewer cursor moves get missed.
 - **Double Space types a full stop.** Switch it off if you hate it.
 
 ### Deleting
@@ -186,12 +186,11 @@ Atlas is a great keyboard, and TitanKeys only exists because Julian built it and
 
 What you type stays on your phone. The swipe engine and both language models run on the phone, and nothing you type is ever sent.
 
-<!-- F: drafts for #97: "three things" and the Bug reports line. -->
 TitanKeys uses the internet for three things only, and each is strictly limited:
 
 - **News:** at most once a day, it downloads a short signed list of news from the TitanKeys website, such as a new version. It sends nothing about you or your phone. It shows as a silent notification, never while you type, and you can turn it off in **Settings > News**.
 - **Swipe contributions, only if you agree:** you can send examples of your swipes to help train the swipe models. It's off until you agree on a screen that says exactly what is sent: the swipe path, the kept word if it's a dictionary word, and the engine's numbers, never the text around it. Examples are encrypted on your phone, sent on Wi-Fi, used only for training, and you can stop and delete them at any time.
-- **Bug reports, only when you press Send:** **Settings > Send feedback** and **Record a bug** open a form. It sends what you wrote, the versions and your phone's model, and a recording or crash report if one is attached, encrypted on your phone so only we can read it. If it can't be sent, you can email it instead.
+- **Bug reports, only when you press Send:** **Settings > Send feedback**, **Record a bug** and the crash offer open a form. It sends what you wrote, the versions and your phone's model, and a recording or crash report if one is attached, encrypted on your phone so only we can read it. If it can't be sent, you can email it instead.
 
 The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it.
 

@@ -14,21 +14,21 @@ import android.os.Process
 import android.os.ResultReceiver
 import android.view.Gravity
 import android.widget.TextView
-import com.atlas.engine.SwipeTyping
-import com.atlas.engine.TypingSettings
-import com.atlas.engine.WordPairBackup
-import com.atlas.keyboard.AppBuild
-import com.atlas.keyboard.BackupFile
-import com.atlas.keyboard.FavouriteWords
-import com.atlas.keyboard.FixedScale
-import com.atlas.keyboard.FreshStartActivity
-import com.atlas.keyboard.HapticsLab
-import com.atlas.keyboard.R
-import com.atlas.keyboard.Snippets
-import com.atlas.rime.RimeAssets
-import com.atlas.rime.RimeBackup
-import com.atlas.rime.RimeData
-import com.atlas.connected.Json
+import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypingSettings
+import com.titankeys.engine.WordPairBackup
+import com.titankeys.keyboard.AppBuild
+import com.titankeys.keyboard.BackupFile
+import com.titankeys.keyboard.FavouriteWords
+import com.titankeys.keyboard.FixedScale
+import com.titankeys.keyboard.FreshStartActivity
+import com.titankeys.keyboard.HapticsLab
+import com.titankeys.keyboard.R
+import com.titankeys.keyboard.Snippets
+import com.titankeys.rime.RimeAssets
+import com.titankeys.rime.RimeBackup
+import com.titankeys.rime.RimeData
+import com.titankeys.connected.Json
 import java.io.File
 import java.io.IOException
 import java.time.LocalDate
@@ -55,7 +55,7 @@ class BackupActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(TextView(this).apply {
             gravity = Gravity.CENTER
-            // F: drafts, shown behind the file picker while it works.
+            // Shown behind the file picker while it works.
             text = if (backingUp) "Backing up…" else "Restoring…"
         })
         if (savedInstanceState != null) return
@@ -66,7 +66,6 @@ class BackupActivity : Activity() {
         try {
             startActivityForResult(picker, PICK_DOCUMENT)
         } catch (_: ActivityNotFoundException) {
-            // F: draft.
             complete(null, "Couldn't open the file picker.")
         }
     }
@@ -76,7 +75,6 @@ class BackupActivity : Activity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != PICK_DOCUMENT) return
         if (resultCode != RESULT_OK) return complete(null)
-        // F: draft.
         val uri = data?.data ?: return complete(null, "Couldn't open that file.")
         Thread {
             try {
@@ -84,8 +82,7 @@ class BackupActivity : Activity() {
             } catch (error: BackupFile.Problem) {
                 runOnUiThread { complete(null, error.message) }
             } catch (error: Exception) {
-                android.util.Log.w("Atlas", "Backup or restore failed", error)
-                // F: drafts.
+                android.util.Log.w("TitanKeys", "Backup or restore failed", error)
                 runOnUiThread { complete(null, if (backingUp) "Couldn't save the backup. Try again." else BackupFile.DAMAGED) }
             }
         }.start()
@@ -99,12 +96,15 @@ class BackupActivity : Activity() {
         val pairs = WordPairBackup.all(this).map { BackupFile.WordPair(it.first, it.next, it.count, it.lastUsed) }
         // Chinese learned words, as Rime's own snapshots, brought up to date first. If Rime can't open, its last snapshots go.
         val chinese = runCatching { RimeBackup.export(RimeAssets.dataDir(this)) }
-            .onFailure { android.util.Log.w("Atlas", "Rime's learned words", it) }
+            .onFailure { android.util.Log.w("TitanKeys", "Rime's learned words", it) }
             .getOrElse { RimeBackup.snapshots(RimeData(RimeAssets.dataDir(this))) }
         val contents = BackupFile.Contents(version(), AppBuild.kind(this), LocalDate.now().toString(),
             BackupFile.included(preferences, debug), words, pairs, chinese)
+        // The whole file is ready before the old one is opened, as "wt" empties it: a backup that fails to build never
+        // touches the file it would replace.
+        val bytes = BackupFile.write(contents).toByteArray()
         val output = contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Could not open the backup file")
-        output.use { it.write(BackupFile.write(contents).toByteArray()) }
+        output.use { it.write(bytes); it.flush() }
         runOnUiThread { complete(DONE_BACKUP) }
     }
 
@@ -171,7 +171,10 @@ class BackupActivity : Activity() {
             val file = File(cacheDir, WORDS_FILE)
             try {
                 file.writeText(BackupFile.jsonText(words))
-                engine { done -> typing.importConfig(Uri.fromFile(file), done) }?.let { throw BackupFile.Problem(it) }
+                // The words are saved even when the engine only failed to refresh its dictionary: the restart at the end does
+                // that, so the restore goes on.
+                engine { done -> typing.importConfig(Uri.fromFile(file), done) }
+                    ?.takeUnless { it == BackupFile.WORDS_NEED_RESTART }?.let { throw BackupFile.Problem(it) }
             } finally {
                 file.delete()
             }
@@ -202,7 +205,9 @@ class BackupActivity : Activity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != ASK_CONTACTS) return
-        TypingSettings.contactNames(this, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+        // commit(), not TypingSettings.contactNames' apply(): the restart ends this process at once, and could lose the write.
+        TypingSettings.settings(this).edit()
+            .putBoolean(TypingSettings.CONTACT_NAMES, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED).commit()
         restart()
     }
 

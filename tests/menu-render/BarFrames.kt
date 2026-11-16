@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.io.File
 import javax.imageio.ImageIO

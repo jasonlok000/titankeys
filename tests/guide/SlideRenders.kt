@@ -1,18 +1,18 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.keyboard.KeyboardEvent.CursorStarted
-import com.atlas.keyboard.KeyboardEvent.DeletedWord
-import com.atlas.keyboard.KeyboardEvent.DoubleTapped
-import com.atlas.keyboard.KeyboardEvent.EmptyKey
-import com.atlas.keyboard.KeyboardEvent.FieldChanged
-import com.atlas.keyboard.KeyboardEvent.Fixed
-import com.atlas.keyboard.KeyboardEvent.HeldSymbol
-import com.atlas.keyboard.KeyboardEvent.ModifierState
-import com.atlas.keyboard.KeyboardEvent.Pushed
-import com.atlas.keyboard.KeyboardEvent.Recognised
-import com.atlas.keyboard.KeyboardEvent.WordMenu
-import com.atlas.keyboard.Modifiers.Level
-import com.atlas.keyboard.Modifiers.Panel
+import com.titankeys.keyboard.KeyboardEvent.CursorStarted
+import com.titankeys.keyboard.KeyboardEvent.DeletedWord
+import com.titankeys.keyboard.KeyboardEvent.DoubleTapped
+import com.titankeys.keyboard.KeyboardEvent.EmptyKey
+import com.titankeys.keyboard.KeyboardEvent.FieldChanged
+import com.titankeys.keyboard.KeyboardEvent.Fixed
+import com.titankeys.keyboard.KeyboardEvent.HeldSymbol
+import com.titankeys.keyboard.KeyboardEvent.ModifierState
+import com.titankeys.keyboard.KeyboardEvent.Pushed
+import com.titankeys.keyboard.KeyboardEvent.Recognised
+import com.titankeys.keyboard.KeyboardEvent.WordMenu
+import com.titankeys.keyboard.Modifiers.Level
+import com.titankeys.keyboard.Modifiers.Panel
 import android.graphics.Canvas
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -69,6 +69,8 @@ private data class Frame(
     val wash: Float = 0f,
     /** The hold slide's zones on the drawing. */
     val zones: Boolean = false,
+    /** The Space-tap slides' thumb and steps (#90): see GuideTapDrawing. */
+    val taps: GuideTapDrawing.Pose? = null,
 )
 
 private enum class SteerAim { None, Start, Entered }
@@ -148,7 +150,9 @@ private fun framesFor(step: GuideStep): List<Frame> {
         return from.copy(name = "${step.id}-$name", title = title, line = line, chip = chip, passed = passed, panel = if (passed) null else panel,
             labels = if (passed) null else stage?.labels, held = if (passed) emptyList() else spot?.held.orEmpty(),
             spot = if (passed) null else spot?.keys?.firstOrNull(), zones = field.zones,
-            together = if (passed || spot?.together != true) emptyList() else spot.keys.drop(1))
+            together = if (passed || spot?.together != true) emptyList() else spot.keys.drop(1),
+            // The Space-tap slides show the thumb on the patch from the first try (#90), resting until the taps land.
+            taps = (step.cue as? GuideCue.Taps)?.takeIf { !passed }?.let { GuideTapDrawing.Pose(it.count) })
     }
     val frames = ArrayList<Frame>()
     val first = step.stages.firstOrNull()?.text ?: step.body
@@ -194,6 +198,17 @@ private fun framesFor(step: GuideStep): List<Frame> {
         val stage = step.stages.last()
         frames += frame("2-page-${spot.name.lowercase()}", step.title, line, stage = stage)
     }
+    // The Space taps as they land (#90): each one lit, then held, then the slide to the left.
+    (step.cue as? GuideCue.Taps)?.let { taps ->
+        val stage = step.stages.first()
+        for (landed in 1..taps.count) frames += frame("1-taps-$landed", step.title, stage.text, stage = stage)
+            .copy(taps = GuideTapDrawing.Pose(taps.count, landed, press = 1f))
+        frames += frame("1-taps-held", step.title, stage.text, stage = stage).copy(taps = GuideTapDrawing.Pose(taps.count, taps.count, held = true, press = 1f))
+        frames += frame("1-taps-slide", step.title, stage.text, stage = stage).copy(taps = GuideTapDrawing.demo(.85f, taps.count, taps.drag))
+        frames += frame("1-taps-beside", step.title, stage.text, tapMissLine(GuideMiss.Beside, taps.count), stage = stage)
+    }
+    // A swipe far from its word, on the swipe slide: its line (#90). The drawing of the two paths is the phone's own.
+    if (step.id == "swipe") frames += frame("3-chip-far", step.title, step.stages.first().text, SWIPE_COACH)
     if (step.id == "selectmore") {
         val aim = field.target!!
         frames += frame("2-grab", step.title, step.stages[1].text, from = field.copy(start = aim.first, end = field.field.indexOf(' ', aim.first + 4)),
@@ -531,12 +546,32 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
     val corners = id == "alt" || id == "holdsym"
     V2.keys(g, top, lit = setOfNotNull(frame?.spot) + frame?.together.orEmpty(), held = frame?.held?.toSet() ?: emptySet(), hints = frame?.labels,
         corners = corners, zones = frame?.zones == true)
+    frame?.taps?.let { drawTaps(g, top, it) }
     if (corners) V2.note(g, "render note: the corner symbols here are approximate; the phone reads its own", side, top - dp(6))
     // Each key's label must fit in its key.
     frame?.labels?.values?.forEach { hint ->
         g.font = V2.keyFont(minOf(V2.KEYS.key, V2.KEYS.keyHeight) * .3f)
         if (g.fontMetrics.stringWidth(hint) > V2.KEYS.key * .86f) mark(g, "KEY HINT TOO LONG", top)
     }
+}
+
+/**
+ * The Space-tap slides' patch and the real GuideTapDrawing over it, on the stand-in Canvas. The patch is CursorGesture's zone
+ * (not compiled for these checks: the same numbers, copied) down to GuideKeyboardView's ZONE_BOTTOM, as drawTapZone has it.
+ */
+private fun drawTaps(g: Graphics2D, top: Int, pose: GuideTapDrawing.Pose) {
+    val zone = V2.KEYS.area(.36f, .5f, .64f, .885f)
+    val box = RectF(zone.left, top + zone.top, zone.right, top + zone.bottom)
+    g.color = V2.alpha(V2.ORANGE, .2f)
+    g.fill(RoundRectangle2D.Float(box.left, box.top, box.right - box.left, box.bottom - box.top, dp(8).toFloat(), dp(8).toFloat()))
+    val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+    val reach = V2.KEYS.x(.5f) - V2.KEYS.x(.5f - .32f)
+    TAP_DRAWING.draw(Canvas(layer), box, pose, DP, Paint.ORANGE, 0xFF000000.toInt(), Paint.CREAM, reach)
+    g.drawImage(layer, 0, 0, null)
+}
+
+private val TAP_DRAWING by lazy {
+    GuideTapDrawing(Typeface(Font.createFont(Font.TRUETYPE_FONT, File("android/src/main/res/font/inter_bold.otf"))))
 }
 
 /** The held delete's zones, as DeleteSwipe.kt has them (it isn't compiled for these checks): the same numbers, copied. */

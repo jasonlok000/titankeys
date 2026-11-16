@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "../..");
-const ime = readFileSync(join(root, "android/kotlin/com/atlas/keyboard/AtlasIme.kt"), "utf8");
+const ime = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt"), "utf8");
 
 /** The body of the function [name] in the IME, up to the next function. */
 const body = (name: string) => {

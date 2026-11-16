@@ -39,7 +39,7 @@ for word in result:
 lines.append(current)
 
 with open(output, "w", encoding="utf-8", newline="\n") as out:
-    out.write("package com.atlas.keyboard\n\n")
+    out.write("package com.titankeys.keyboard\n\n")
     out.write("/** The 300 prompts, generated once from Atlas's dictionary with a fixed seed so sessions compare. */\n")
     out.write("internal object RecorderWords {\n")
     out.write('    val LIST: List<String> = """\n')

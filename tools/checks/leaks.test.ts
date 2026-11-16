@@ -33,3 +33,17 @@ test("the leak check is only in TitanKeys Debug, and only adb can send to it", (
   expect(check).toContain('getExternalFilesDir("leaks")');
   expect(read(".gitignore")).toMatch(/^\*\.hprof$/m);
 });
+
+test("the crash offer's screen in front is held weakly, so a playground closed after the app's screen went never stays (#85)", () => {
+  const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
+  expect(adapter).toContain("private var frontScreen = java.lang.ref.WeakReference<Activity>(null)");
+  expect(adapter).toContain("frontScreen = java.lang.ref.WeakReference(target)");
+  expect(adapter).not.toMatch(/frontScreen: Activity\?/);
+});
+
+test("a held playground that none of the guide's statics holds says how to name its holder (#85)", () => {
+  const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
+  const memory = guide.slice(guide.indexOf("fun inMemory()"), guide.indexOf("/** Playgrounds that are open now."));
+  expect(memory).toContain("guide.isDestroyed -> \", held from outside the guide's statics: run the check with --ez dump true and \"");
+  expect(memory).toContain("tools/leak-paths.py on the dump to name the holder");
+});

@@ -179,6 +179,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private var waveStart = -1L
 
     fun show(next: GuideCue) {
+        if (next != cue) liveTaps = null
         cue = next
         cueStart = GuideMotion.now()
         ghost = ghostFor(next)
@@ -289,6 +290,81 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         touched()
     }
 
+    /** A swipe far from its word, and the word's path, shown side by side for a moment (#90). See [compare]. */
+    private var compared: Pair<List<FloatArray>, List<FloatArray>>? = null
+    private var comparedAt = -1L
+
+    /** Shows [word]'s path, dashed in the accent, next to the finger's [swipe], in cream, then fades them out. */
+    fun compare(word: List<FloatArray>, swipe: List<FloatArray>) {
+        if (word.isEmpty() || swipe.size < 2) return
+        compared = word to swipe
+        comparedAt = GuideMotion.now()
+        invalidate()
+    }
+
+    private fun drawComparison(canvas: Canvas, now: Long): Boolean {
+        val (word, swipe) = compared ?: return false
+        val t = ((now - comparedAt).toFloat() / COMPARE_MILLIS).coerceIn(0f, 1f)
+        if (t >= 1f) {
+            compared = null
+            return false
+        }
+        val alpha = if (t < .8f) 1f else (1f - t) / .2f
+        val colour = if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour
+        // The finger's swipe, thin, in cream.
+        ghostPaint.pathEffect = null
+        ghostPaint.color = GuideMotion.faded(GuideColours.CREAM, COMPARE_SWIPE * alpha)
+        ghostPaint.strokeWidth = dp(GHOST_WIDTH)
+        linePath(swipe, 1f)
+        canvas.drawPath(path, ghostPaint)
+        // The word's path, through each letter's middle, dashed in the accent, with a dot on each letter.
+        ghostPaint.color = GuideMotion.faded(colour, alpha)
+        ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)
+        ghostPaint.pathEffect = DashPathEffect(floatArrayOf(dp(COMPARE_DASH), dp(COMPARE_DASH)), 0f)
+        if (word.size > 1) {
+            linePath(word, 1f)
+            canvas.drawPath(path, ghostPaint)
+        }
+        ghostPaint.pathEffect = null
+        dotPaint.color = GuideMotion.faded(colour, alpha)
+        for (point in word) canvas.drawCircle(geometry.x(point[0]), geometry.y(point[1]), dp(COMPARE_DOT), dotPaint)
+        return GuideMotion.enabled
+    }
+
+    /** The thumb and its steps on the Space-tap slides (#90): see [GuideTapDrawing]. */
+    private val tapDrawing = GuideTapDrawing(GuideFonts.heavy(context))
+    /** The real taps as they land, from the guide's [TapMeter]: they light the steps in place of the slide's showing. */
+    private var liveTaps: GuideTapDrawing.Pose? = null
+
+    /** The real taps: [landed] of the slide's taps, and [held] once the last stays down. Nothing landed hands back to the showing. */
+    fun taps(landed: Int, held: Boolean) {
+        val taps = (cue as? GuideCue.Taps)?.count ?: return
+        liveTaps = if (landed <= 0 && !held) null else GuideTapDrawing.Pose(taps, landed, held, press = if (held) 1f else 0f)
+        invalidate()
+    }
+
+    /**
+     * The Space-tap slides' thumb on the patch, with its steps lit by the real taps as they land, or by the slide's showing while
+     * it plays, or resting. Shown from the first try, in place of the ghost finger (owner, #90). True while it moves.
+     */
+    private fun drawTapSteps(canvas: Canvas, now: Long): Boolean {
+        val taps = cue as? GuideCue.Taps ?: return false
+        val live = liveTaps
+        val showing = live == null && demoing && !ghostWaits(now)
+        val pose = when {
+            live != null -> live
+            showing && GuideMotion.enabled -> GuideTapDrawing.demo(((now - cueStart) % ghostMillis()).toFloat() / ghostMillis(), taps.count, taps.drag)
+            else -> GuideTapDrawing.Pose(taps.count)
+        }
+        val onOrange = tone == GuideTone.Orange
+        val zone = geometry.area(CursorGesture.ZONE_LEFT, CursorGesture.ZONE_TOP, CursorGesture.ZONE_RIGHT, ZONE_BOTTOM)
+        val reach = geometry.x(SPACE_CENTRE) - geometry.x(SPACE_CENTRE - DRAG_REACH)
+        tapDrawing.draw(canvas, RectF(zone.left, zone.top, zone.right, zone.bottom), pose, dp(1f),
+            if (onOrange) GuideColours.INK else Accent.colour, if (onOrange) Accent.colour else GuideColours.BLACK,
+            GuideColours.CREAM, reach)
+        return showing && GuideMotion.enabled
+    }
+
     /** The ghost finger shows its gesture only during a demonstration, from the start of the gesture. */
     private var demoing = false
 
@@ -356,10 +432,12 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         for (key in keys) if (!lettersOnly || key.box.top < geometry.letterHeight) moving = drawKey(canvas, key, now, frameCount) || moving
         if (zoneMarks) drawZoneMarks(canvas) else drawTouchArea(canvas)
         drawTapZone(canvas)
+        moving = drawTapSteps(canvas, now) || moving
         drawDeleteZone(canvas)
         drawHoldZones(canvas)
         drawGhost(canvas, now)
         moving = drawTrail(canvas, now) || moving
+        moving = drawComparison(canvas, now) || moving
         canvas.restore()
         if (moving) postInvalidateOnAnimation() else lastFrame = 0
     }
@@ -773,10 +851,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val cycle = ghostMillis()
         val t = if (GuideMotion.enabled) ((now - cueStart).coerceAtMost(cycle - 1).toFloat() / cycle) else 1f
 
-        if (cue is GuideCue.Taps) {
-            drawTaps(canvas, cue as GuideCue.Taps, t, colour)
-            return
-        }
+        // The Space taps have their own drawing, shown all the time: see [drawTapSteps].
+        if (cue is GuideCue.Taps) return
         if (ghost.size < 2) return
         drawGhostPath(canvas, ghost, t, colour)
     }
@@ -943,35 +1019,6 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     /** The hold's finger is back in the pause zone: its trail dims, as the bar's glow fades there. */
     private fun inPauseZone() = (cue as? GuideCue.Flick)?.hold == true && trail.isNotEmpty() && liftedAt < 0 && trail.last()[0] >= HOLD_PAUSE_X
 
-    private fun drawTaps(canvas: Canvas, cue: GuideCue.Taps, t: Float, colour: Int) {
-        // Rings for each tap, one after the other, inside the zone where the taps count, then a sideways drag if there is one.
-        val tapsEnd = if (cue.drag) .45f else .8f
-        val x = geometry.x(SPACE_CENTRE)
-        val y = geometry.y(ZONE_TAP_ROW)
-        ringPaint.strokeWidth = dp(2.5f)
-        for (tap in 0 until cue.count) {
-            val start = tap * tapsEnd / cue.count
-            val local = ((t - start) / (tapsEnd / cue.count)).coerceIn(0f, 1f)
-            if (local <= 0f || local >= 1f) continue
-            ringPaint.color = GuideMotion.faded(colour, 1f - local)
-            canvas.drawCircle(x, y, dp(GHOST_FINGER) * (1f + local * 3f), ringPaint)
-        }
-        dotPaint.color = GuideMotion.faded(GuideColours.CREAM, if (t < .95f) 1f else (1f - t) / .05f)
-        var fingerX = x
-        var fingerY = y
-        if (cue.drag && t > tapsEnd) {
-            // The finger stays down and slides sideways to the left: back over the words that the cursor moves through or
-            // that the selection takes, as the field shows. Above Space only a sideways slide counts, so the ghost shows that.
-            val travel = ((t - tapsEnd) / (1f - tapsEnd - .08f)).coerceIn(0f, 1f)
-            fingerX = x - (x - geometry.x(SPACE_CENTRE - DRAG_REACH)) * travel
-            // The drag is the part to copy, so it is as strong as the part of a word that the ghost has done.
-            ghostPaint.color = colour
-            ghostPaint.strokeWidth = dp(GHOST_DONE_WIDTH)
-            canvas.drawLine(x, y, fingerX, fingerY, ghostPaint)
-        }
-        canvas.drawCircle(fingerX, fingerY, dp(GHOST_FINGER), dotPaint)
-    }
-
     private fun cycleMillis() = when (cue) {
         is GuideCue.Word -> 3000L
         is GuideCue.Flick -> if ((cue as GuideCue.Flick).hold) 3400L else 2000L
@@ -1079,6 +1126,11 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         /** Where the ghost taps: just above the line between V and B and Space. */
         const val ZONE_TAP_ROW = .72f
         const val ZONE_ALPHA = .2f
+        /** A far swipe's comparison: how long it shows, the swipe's strength, the word path's dashes and letter dots. */
+        const val COMPARE_MILLIS = 4500L
+        const val COMPARE_SWIPE = .7f
+        const val COMPARE_DASH = 6f
+        const val COMPARE_DOT = 4f
         /** The held delete's zones as parts of the drawing's width: a flick from Backspace's middle (.95) back [PAUSE_KEYS] keys
          *  pauses, and [REPEAT_LONG_KEYS] keys out is top speed, between F and G. */
         const val HOLD_PAUSE_X = .95f - PAUSE_KEYS / 10f

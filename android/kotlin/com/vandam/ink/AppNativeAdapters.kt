@@ -265,6 +265,8 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         // The static press holds this screen's haptics and so the activity: it goes with it (#85). A newer screen's stays.
         if (inkPress === press) inkPress = null
         pressHandler.removeCallbacksAndMessages(null)
+        // The playground's answer and its wait hold this screen too.
+        GuideActivity.appScreenClosed(activity)
     }
 
     override fun onActivityCreated(target: Activity, state: Bundle?) = Unit

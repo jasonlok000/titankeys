@@ -1054,11 +1054,11 @@ internal const val ALT_SYMBOL_KEY = "A"
 
 /**
  * The hunts on the weird-one and clown slides: when they mock, hint and say it's ok to skip, in seconds. Silent before that. A find
- * before the mockery is fast; after it, slow (owner, v5.2).
+ * before the mockery is fast; after it, slow (owner, v5.2). 10, 20 and 30 s, the same for both hunts (owner, #68).
  */
-internal const val HUNT_DRAIN_SECONDS = 20
-internal const val HUNT_HINT_SECONDS = 35
-internal const val HUNT_SKIP_SECONDS = 50
+internal const val HUNT_DRAIN_SECONDS = 10
+internal const val HUNT_HINT_SECONDS = 20
+internal const val HUNT_SKIP_SECONDS = 30
 
 /**
  * What a hunt says as time goes: its mockery, a subtle hint, then the hint and leave to skip. Once found, [fast] is a chip for a

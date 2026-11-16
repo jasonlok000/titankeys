@@ -665,6 +665,7 @@ private fun oneInstructionAtATime() {
     same(huntFast(HUNT_DRAIN_SECONDS - 1) && !huntFast(HUNT_DRAIN_SECONDS), true, "Fast is before the mockery starts")
     same(GUIDE_STEPS.mapNotNull { it.hunt }, listOf(WEIRD_HUNT, CLOWN_HUNT), "The weird one and the clown are hunts")
     same(HUNT_DRAIN_SECONDS < HUNT_HINT_SECONDS && HUNT_HINT_SECONDS < HUNT_SKIP_SECONDS, true, "Mockery, then a hint, then leave to skip")
+    same(Triple(HUNT_DRAIN_SECONDS, HUNT_HINT_SECONDS, HUNT_SKIP_SECONDS), Triple(10, 20, 30), "The hunts mock at 10 s, hint at 20 s and offer Skip at 30 s (owner, #68)")
 
     val paste = GuideFlow({ GuideSettings() })
     paste.start("paste")

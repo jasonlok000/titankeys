@@ -221,8 +221,13 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
   abbreviations, so the test is Rime's own split of the code having a piece that isn't a whole syllable (`EnglishOffer`).
   "hello" (Rime: he l lo) is offered; "man" and Pinyin's "sun" aren't. Picking it types the word as typed and clears the code.
 
-**Not in the row or the menu:** the variant isn't shown (it's in Settings), and Shift, Alt and Ctrl's own bar doesn't
-replace the choices while a code is typed.
+**Not in the row or the menu:** the variant isn't shown (it's in Settings). Shift's own bar never shows in Chinese, so it
+doesn't cover the choices; Alt's and Ctrl's still do while they're down, for their symbols and shortcuts.
+
+**Checks and renders:** `tests/chinese` checks the places, the pages, the keys that pick, the marks and the English word;
+`tests/rime` the engine's keys; `tools/checks/chinese.test.ts` keeps the keyboard's wiring to this design. `bash
+tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's own rules and Rime's real choices.
+**Not yet:** a Settings row for "Plain punctuation" (the setting is `chinese_plain_punctuation`), and the phone test.
 
 ## Switching: the overlay on a held Sym
 

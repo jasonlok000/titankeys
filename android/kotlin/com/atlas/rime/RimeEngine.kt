@@ -147,6 +147,7 @@ class RimeEngine(
             page = raw.page,
             lastPage = raw.lastPage,
             handled = handled,
+            pages = raw.pages,
         )
     }
 

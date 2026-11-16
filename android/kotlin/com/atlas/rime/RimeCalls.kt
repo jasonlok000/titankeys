@@ -27,9 +27,18 @@ interface RimeCalls {
         val highlighted: Int,
         val choices: List<String>,
         val comments: List<String>,
+        /** Choices a page, and how many there are in all: -1 when there are more than Rime counts (rime_jni.cc). */
+        val pageSize: Int = 0,
+        val total: Int = -1,
     ) {
+        /** How many pages of choices there are, or 0 when there are too many to count. */
+        val pages get() = if (total > 0 && pageSize > 0) (total + pageSize - 1) / pageSize else 0
+
         companion object {
-            /** From rime_jni.cc's state(): { commit, input, preedit, int[] { page, lastPage, highlighted, caret }, choices, comments }. */
+            /**
+             * From rime_jni.cc's state(): { commit, input, preedit, int[] { page, lastPage, highlighted, caret, pageSize,
+             * total }, choices, comments }.
+             */
             fun of(a: Array<Any?>): Raw {
                 val numbers = a[3] as IntArray
                 @Suppress("UNCHECKED_CAST")
@@ -42,6 +51,8 @@ interface RimeCalls {
                     highlighted = numbers[2],
                     choices = (a[4] as Array<String>).toList(),
                     comments = (a[5] as Array<String>).toList(),
+                    pageSize = numbers[4],
+                    total = numbers[5],
                 )
             }
         }

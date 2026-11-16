@@ -105,7 +105,7 @@ private class FakeRime : RimeCalls {
 
     override fun read(): RimeCalls.Raw {
         val preedit = if (code.isEmpty()) null else code.replace("ou", "o-u")
-        val out = RimeCalls.Raw(commit, code, preedit, page, page >= 2, 0, choices(), choices().map { "" })
+        val out = RimeCalls.Raw(commit, code, preedit, page, page >= 2, 0, choices(), choices().map { "" }, 8, if (code.isEmpty()) 0 else 24)
         commit = null
         return out
     }
@@ -242,6 +242,14 @@ fun pickingAndPaging() {
     same("SIK10", picked.commit, "the pick is from the page showing")
     check(!engine.pick(-1).handled, "no choice -1")
     check(rime.calls.contains("key ${RimeKeys.PAGE_DOWN}"), "paging is Rime's Page Down")
+    type(engine, "sik")
+    same(3, engine.state().pages, "24 choices at 8 a page are 3 pages")
+    same("1/3", engine.state().pageMark, "and the bar says so")
+    // rime_jni.cc's state(), as it comes: Rime counts the choices up to ten pages' worth, -1 past that.
+    val raw = RimeCalls.Raw.of(arrayOf("你", "nei", "nei", intArrayOf(1, 0, 0, 3, 8, 17), arrayOf("你", "妳"), arrayOf("", "")))
+    same(listOf(1, 3, 8, 17), listOf(raw.page, raw.pages, raw.pageSize, raw.total), "the page, its pages, their size and the count")
+    same(false, raw.lastPage, "and whether more follow")
+    same(0, raw.copy(total = -1).pages, "too many to count is no page count")
 }
 
 fun nothingBeforeStart() {

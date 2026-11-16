@@ -221,7 +221,7 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   its choices), `pick(index)`, `clear()`. Paging is Rime's Page Up and Page Down keys. Trime's `rime_jni` is the reference.
 - **The engine:** `com.atlas.rime.RimeEngine`, made by name with a `(Context)` constructor (`InputEngines`).
 - **Data:** `android/assets/rime/` holds the schemas (`tk_yale`, `tk_jyutping`, `tk_pinyin`, `tk_variants`), Rime's shared
-  files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 10 choices a page.
+  files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 8 choices a page.
   `android/assets/rime.sha256` lists them. On the first use of a Chinese input method, `RimeEngine.start()` copies them to
   `files/engines/rime/shared` (40 MB; Rime opens its tables as files) and checks each file, in the background. The
   user's learned words go to `files/engines/rime/user`.

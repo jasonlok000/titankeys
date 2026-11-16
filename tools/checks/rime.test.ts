@@ -55,8 +55,8 @@ test("the schemas the data ships are the repo's own, and the three the engine us
     const shipped = schema.endsWith(".json") ? `opencc/${schema}` : schema;
     expect(read(`android/assets/rime/${shipped}`)).toBe(read(`native/rime/schemas/${schema}`));
   }
-  // The picker's ten places, over Q to P.
-  expect(read("android/assets/rime/default.yaml")).toMatch(/^  page_size: 10$/m);
+  // The picker's eight places, over E to P.
+  expect(read("android/assets/rime/default.yaml")).toMatch(/^  page_size: 8$/m);
   const engine = read("android/kotlin/com/atlas/rime/RimeEngine.kt");
   for (const id of ["tk_yale", "tk_jyutping", "tk_pinyin"]) {
     expect(engine).toContain(`"${id}"`);

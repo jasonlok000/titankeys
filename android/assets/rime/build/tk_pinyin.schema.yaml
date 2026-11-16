@@ -71,7 +71,7 @@ key_binder:
     - {accept: "Control+Shift+percent", toggle: extended_charset, when: always}
   import_preset: default
 menu:
-  page_size: 10
+  page_size: 8
 punctuator:
   full_shape:
     " ": {commit: "　"}

@@ -21,6 +21,8 @@ std::mutex lock;
 RimeApi* rime = nullptr;
 RimeSessionId session = 0;
 bool started = false;
+// The bar shows "page/pages" for up to this many pages of choices, and the page with an arrow past it.
+const int kCountPages = 10;
 
 jstring text(JNIEnv* env, const char* s) {
   return s ? env->NewStringUTF(s) : nullptr;
@@ -121,7 +123,8 @@ void clear(JNIEnv*, jclass) {
   if (s) rime->clear_composition(s);
 }
 
-// Object[] { String commit, String input, String preedit, int[] { page, lastPage, highlighted, caret },
+// Object[] { String commit, String input, String preedit,
+//            int[] { page, lastPage, highlighted, caret, pageSize, choices in all or -1 for more than kCountPages pages },
 //            String[] choices, String[] comments }
 // commit is the text Rime let go of since the last call (taken, so it's returned once), or null.
 jobjectArray state(JNIEnv* env, jclass) {
@@ -139,7 +142,7 @@ jobjectArray state(JNIEnv* env, jclass) {
   }
   env->SetObjectArrayElement(out, 1, text(env, rime->get_input(s)));
 
-  jint numbers[4] = {0, 1, 0, 0};
+  jint numbers[6] = {0, 1, 0, 0, 0, -1};
   std::vector<std::string> choices, comments;
   RIME_STRUCT(RimeContext, context);
   if (rime->get_context(s, &context)) {
@@ -150,15 +153,32 @@ jobjectArray state(JNIEnv* env, jclass) {
     numbers[0] = context.menu.page_no;
     numbers[1] = context.menu.is_last_page ? 1 : 0;
     numbers[2] = context.menu.highlighted_candidate_index;
+    numbers[4] = context.menu.page_size;
     for (int i = 0; i < context.menu.num_candidates; ++i) {
       const RimeCandidate& c = context.menu.candidates[i];
       choices.emplace_back(c.text ? c.text : "");
       comments.emplace_back(c.comment ? c.comment : "");
     }
+    if (context.menu.num_candidates > 0) {
+      if (context.menu.is_last_page) {
+        numbers[5] = context.menu.page_no * context.menu.page_size + context.menu.num_candidates;
+      } else {
+        // How many choices there are, counted up to kCountPages pages' worth: Rime makes them as they're asked for, so a
+        // short code with thousands of choices stays cheap. -1 when there are more.
+        const int most = kCountPages * context.menu.page_size;
+        RimeCandidateListIterator it = {0};
+        int count = 0;
+        if (rime->candidate_list_begin(s, &it)) {
+          while (count <= most && rime->candidate_list_next(&it)) ++count;
+          rime->candidate_list_end(&it);
+        }
+        numbers[5] = count <= most ? count : -1;
+      }
+    }
     rime->free_context(&context);
   }
-  jintArray ints = env->NewIntArray(4);
-  env->SetIntArrayRegion(ints, 0, 4, numbers);
+  jintArray ints = env->NewIntArray(6);
+  env->SetIntArrayRegion(ints, 0, 6, numbers);
   env->SetObjectArrayElement(out, 3, ints);
   jobjectArray texts = env->NewObjectArray((jsize)choices.size(), stringClass, nullptr);
   jobjectArray notes = env->NewObjectArray((jsize)comments.size(), stringClass, nullptr);

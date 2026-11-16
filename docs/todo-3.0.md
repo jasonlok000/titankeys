@@ -88,7 +88,21 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
     the owner's. F polishes #90's new lines after the rename.
   - Tests pass: check, guide, guide-decor, gesture-line, gesture-render, word-menu, back, key-alignment, autocorrect,
     words, and the build.
-- **Next:** the #81 rename, brought up to date with main by tk-data. Then the language framework (tk-languages) and Rime
+- **#81's code rename is on main at 161e0bc (05:15).**
+  - It covers `com.titankeys.*`, `TitanKeysIme`, `lib/titankeys.ts` and the native channel, plus a one-time quiet
+    notification after the update if the keyboard or Back is off.
+  - `bun run check` (228) and all 41 suites pass, and the Debug build is
+    `~/build/m1-apks/main-rename-debug.apk`.
+  - Not yet run: the phone update test.
+- **In flight at 05:15:**
+  - tk-languages merges the renamed main into the language framework and finishes Spanish, French, German and more.
+  - tk-gestures then merges Rime on top (`claude/m2-rime`: librime and OpenCC, 3.1 MB, reproducible; Yale, Jyutping,
+    Pinyin; the variants), rebuilds its library for the new names, and adds Rime's learned words to the backup and a
+    "getting ready" state.
+  - F polishes #90's lines and writes #81's notice and notes.
+  - tk-tools reviews M1 and M2 on main for correctness bugs: deleting too much, data loss, privacy, typing, joins, the
+    front page.
+- **Next (done):** the #81 rename, brought up to date with main by tk-data. Then the language framework (tk-languages) and Rime
   (tk-gestures) merge the renamed main into their branches.
 - **M2, started 03:50, on code that doesn't need the phone:**
   - tk-data: #81's code rename first, then each worker merges main in.

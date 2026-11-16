@@ -499,8 +499,9 @@ class AtlasIme : InputMethodService() {
             // A dot for each character of the word, for the dots that play when the hold lifts, and the real words for the bar.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
             GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
+            val deletes = editor.deletes
             composer.backspace(true)
-            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.deleteTakes(before, selected))
+            strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
@@ -2471,8 +2472,6 @@ class AtlasIme : InputMethodService() {
      */
     private fun showSwipe() {
         val gesture = strip?.gesture ?: return
-        // While a delete's dots play, the next stroke draws no path: it may be another delete, which joins them.
-        if (gesture.softDelete) return
         val points = contact.points
         val travel = contact.travel
         val first = points.firstOrNull()
@@ -2484,6 +2483,12 @@ class AtlasIme : InputMethodService() {
             return
         }
         if (swipeShown > points.size) swipeShown = 0
+        // While a delete's dots play, a stroke that may be another delete draws nothing, as it would join them; above, it went by.
+        // One that is clearly a swipe takes the bar (#93): the dots land at once and their ticks stop, and the trail draws whole.
+        if (gesture.softDelete) {
+            interruptGesture()
+            swipeShown = 0
+        }
         val now = SystemClock.uptimeMillis()
         for (index in swipeShown until points.size) {
             val point = points[index]
@@ -2796,8 +2801,19 @@ class AtlasIme : InputMethodService() {
      */
     private fun selectionToDelete(): CharSequence? {
         if (lastSelectionStart < 0 || lastSelectionStart == lastSelectionEnd) return null
-        return currentInputConnection?.getSelectedText(0)?.takeIf { it.isNotEmpty() }
+        // A long selection that the app won't hand over is still something to delete, and goes whole: its text is then unknown,
+        // and empty here (#89).
+        return currentInputConnection?.getSelectedText(0)?.takeIf { it.isNotEmpty() } ?: ""
     }
+
+    /**
+     * A delete's dots: a dot for each character it really took, not counting spaces (#89), however many. [deletes] is the
+     * editor's count before the delete. A delete still waiting behind other input hasn't taken anything yet, so its dots come
+     * from the text read before it, [before] and [selected], as they always did.
+     */
+    private fun deleteDots(deletes: Int, before: CharSequence?, selected: CharSequence?): Int =
+        if (editor.deletes != deletes) GestureDisplay.dotsFor(editor.removed, editor.removedLength)
+        else GestureDisplay.deleteTakes(before, selected)
 
     /** Keeps where the cursor is, when nothing is selected, so a double space after a select can put it back there. */
     private fun rememberCursor() {
@@ -3086,6 +3102,7 @@ class AtlasIme : InputMethodService() {
                     if (nothingLeft && deleteWall.reached()) haptics.play(Haptic.deleteFoundNothing(tookAny = false))
                     // A hold's first word: the bar's words are the real ones before it goes.
                     GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
+                    val deletes = editor.deletes
                     composer.backspace(true)
                     if (!nothingLeft) {
                         // A dot for each character of the word that went, not counting spaces. The haptic's tail lands as they pop.
@@ -3093,7 +3110,7 @@ class AtlasIme : InputMethodService() {
                         gesture?.speedUp = Haptics.dotsSpeedUp(this)
                         // How long the dots wait on the bar, which the Haptics lab can try live in TitanKeys Debug.
                         GestureDisplay.triedFlickHold = Haptics.readFlickHold(this)?.toFloat()
-                        gesture?.wordDeleted(SystemClock.uptimeMillis(), GestureDisplay.deleteTakes(before, selected))
+                        gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt

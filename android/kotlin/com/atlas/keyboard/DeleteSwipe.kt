@@ -233,6 +233,34 @@ internal fun wordDeleteLength(before: String, after: String?): Int {
     return before.length - start
 }
 
+/**
+ * The text a word delete takes from the end of the text before the cursor, as [wordDeleteLength] says: the whole last word,
+ * however long it is (#89). [read] gives up to that many characters before the cursor, or null where the field gives no text,
+ * and then this is null too. A read that may have cut the word off, because all of it is the word and its spaces, is read again
+ * twice as far, until the word's start shows, the text's start is reached, or the field gives no more.
+ */
+internal fun wordToDelete(read: (Int) -> String?, after: String?): String? {
+    var reach = WORD_READ_FIRST
+    var before = read(reach) ?: return null
+    while (true) {
+        val length = wordDeleteLength(before, after)
+        if (length < before.length || before.length < reach || reach >= WORD_READ_MOST) return before.substring(before.length - length)
+        val further = read(reach * 2)
+        // A field that gives no more, or fails on a big read, keeps what it gave.
+        if (further == null || further.length <= before.length) return before.substring(before.length - length)
+        reach *= 2
+        before = further
+    }
+}
+
+/** A word delete reads this far first, as it always did, and twice as far each time the word goes on past the read. */
+private const val WORD_READ_FIRST = 256
+/**
+ * It stops growing here, about a quarter of a million characters: a read that size is half a megabyte, near what Android can pass
+ * between apps at once. No real word comes close.
+ */
+private const val WORD_READ_MOST = 1 shl 18
+
 /** The numbers above, for the raw input log. */
 internal val deleteSwipeTuning: Map<String, Any> get() = mapOf(
     "rightEdge" to RIGHT_EDGE, "edgeStartTop" to EDGE_START_TOP, "edgeStartBottom" to EDGE_START_BOTTOM,

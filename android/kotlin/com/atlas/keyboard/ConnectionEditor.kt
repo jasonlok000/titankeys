@@ -128,29 +128,70 @@ class ConnectionEditor(
         }
     }
 
+    /**
+     * Counts the deletes that went to the field, so a delete flick can tell whether its delete has happened yet: see [removed].
+     */
+    var deletes = 0
+        private set
+    /**
+     * What the last delete took, for the flick's dots (#89): its text, or null where the field didn't give it, such as a long
+     * selection it won't hand over or a field that gives no text, and how many characters went, or 0 where that isn't known.
+     */
+    var removed: CharSequence? = null
+        private set
+    var removedLength = 0
+        private set
+
+    private fun took(text: CharSequence?, length: Int) {
+        deletes++
+        removed = text
+        removedLength = length
+    }
+
+    /** What a word delete would take now, without taking it: see [wordToDelete]. Null where the field gives no text. */
+    fun wordToTake(): String? {
+        val connection = connection() ?: return null
+        return wordToDelete({ connection.getTextBeforeCursor(it, 0)?.toString() }, connection.getTextAfterCursor(1, 0)?.toString())
+    }
+
     override fun delete(word: Boolean, selectionStart: Int, selectionEnd: Int): Int? {
         val connection = connection() ?: return null
         connection.finishComposingText()
         val meta = if (word) KeyEvent.META_CTRL_ON else 0
         if (selectionStart >= 0 && selectionEnd >= 0 && selectionStart != selectionEnd) {
-            return if (connection.commitText("", 1)) 0 else null
+            val selected = connection.getSelectedText(0)
+            if (!connection.commitText("", 1)) return null
+            took(selected?.takeIf { it.isNotEmpty() }, kotlin.math.abs(selectionEnd - selectionStart))
+            return 0
+        }
+        if (word && selectionStart >= 0 && selectionEnd >= 0) {
+            // The whole last word, however long it is (#89): the read grows until the word's start shows.
+            val taken = wordToTake() ?: run {
+                key(connection, KeyEvent.KEYCODE_DEL, meta)
+                took(null, 0)
+                return null
+            }
+            if (taken.isEmpty()) return 0
+            if (!connection.deleteSurroundingText(taken.length, 0)) return null
+            took(taken, taken.length)
+            return taken.length
         }
         val before = connection.getTextBeforeCursor(256, 0)?.toString()
         if (selectionStart < 0 || selectionEnd < 0 || before == null) {
             key(connection, KeyEvent.KEYCODE_DEL, meta)
+            took(null, 0)
             return null
         }
         if (before.isEmpty()) return 0
-        var start = before.length
-        if (word) {
-            start -= wordDeleteLength(before, connection.getTextAfterCursor(1, 0)?.toString())
-        } else {
-            val characters = BreakIterator.getCharacterInstance(Locale.UK)
-            characters.setText(before)
-            start = characters.preceding(before.length).coerceAtLeast(0)
+        // One character, as the text draws it.
+        val characters = BreakIterator.getCharacterInstance(Locale.UK)
+        characters.setText(before)
+        val start = characters.preceding(before.length).coerceAtLeast(0)
+        val length = before.length - start
+        if (connection.deleteSurroundingText(length, 0)) {
+            took(before.substring(start), length)
+            return length
         }
-        val removed = before.length - start
-        if (connection.deleteSurroundingText(removed, 0)) return removed
         // A false result can still have partly applied deletion. Never replay it as a key.
         return null
     }

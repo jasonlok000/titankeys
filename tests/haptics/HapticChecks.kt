@@ -644,7 +644,7 @@ private fun theDotsTickAsTheyLand() {
     val tail = 105L
     for ((letters, scale) in listOf(1 to 1f, 3 to 1f, 6 to 1f, 8 to 1f, 9 to 1f, 30 to 1f, 40 to 1f, 6 to .5f, 30 to .5f, 30 to 2f)) {
         val lands = landings(letters, scale)
-        val dots = minOf(letters, GestureDisplay.MAX_DOTS)
+        val dots = letters
         val ticks = DotTicks.times(lands, tail)
         check(ticks == lands && ticks.size == dots) { "$letters letters at $scale: a tick for each of $dots dots: $ticks" }
         check(ticks.all { it.toFloat() in phase(dots, scale) }) { "$letters letters at $scale: every tick lands in the phase: $ticks" }
@@ -917,8 +917,8 @@ private fun aHoldAndItsDotsAreOneSequence() {
         val landings = GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, speedUp)
         val dots = plan.ticks.filter { it.kind == HoldTicks.Kind.Dot }
         check(dots.size == landings.size && dots.map { it.at } == landings.map { plan.liftAt + it }) { "$what: a tick per dot: $dots" }
-        // Each word gets its share of about 30 dots, one at least, so all 11 words show.
-        check(dots.size in GestureDisplay.MAX_DOTS - 2..GestureDisplay.MAX_DOTS + 2 || speedUp) { "$what: the 11 words' 41 letters share about 30 dots: ${dots.size}" }
+        // A dot for each letter of every word, with no cap (#89); with speed-up on, some land without a tick.
+        check(dots.size == HoldTicks.playLetters().sum() || speedUp) { "$what: the 11 words' letters each have a dot: ${dots.size}" }
         check(dots.all { it.at > plan.liftAt }) { "$what: the dots land after the lift" }
         check(dots.all { it.plays }) { "$what: none is near a word, as they land after the lift: $dots" }
     }

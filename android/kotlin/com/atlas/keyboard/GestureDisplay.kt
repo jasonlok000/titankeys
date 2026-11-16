@@ -7,7 +7,6 @@ import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
@@ -207,7 +206,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     val softDelete get() = scene == Scene.DeleteFlick
 
-    /** How many dots show: a dot for each character deleted, not counting spaces, with each word cut to fit: see [setGroups]. */
+    /** How many dots show: a dot for each character deleted, not counting spaces, however many that is (#89). */
     var dots = 0
         private set
     /**
@@ -629,7 +628,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /** A delete of [letters] [at] real ms into a stream that still plays: its dots go at the end of the queue. */
     private fun chain(letters: Int, at: Float) {
-        val count = letters.coerceIn(1, MAX_DOTS)
+        val count = letters.coerceAtLeast(1)
         room(dots + count, batches + 1)
         val from = dots
         groups += count
@@ -766,19 +765,17 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     }
 
     /** When the dots that show now started, an uptime, or null when none show. Tells one flick's or hold's dots from the next. */
-    val dotsAt get() = if (scene == Scene.DeleteFlick) flourishAt else null
+    val dotsAt get() = if (scene == Scene.DeleteFlick) flourishStarted else null
+    /** When the flourish that shows now started. [flourishAt] moves on past a late frame (see [advance]); this one doesn't. */
+    private var flourishStarted = 0L
 
     /**
-     * The dots for words of [letters], nearest the caret first: a dot for each character while they come to [MAX_DOTS] or fewer.
-     * Past that each word shrinks to its share of [MAX_DOTS], and keeps one dot at least, so every word that went shows: a long
-     * hold's row is longer than the bar, and slides along as its dots land.
+     * The dots for words of [letters], nearest the caret first: a dot for each character, one at least for each word, with no cap
+     * (#89: a long word's dots once stopped at 30). A row longer than the bar keeps the dots their size and slides along as they
+     * land, the rest waiting past the far end.
      */
     private fun setGroups(letters: List<Int>) {
-        val total = letters.sumOf { it.coerceAtLeast(1) }
-        groups = IntArray(letters.size) { index ->
-            val count = letters[index].coerceAtLeast(1)
-            if (total <= MAX_DOTS) count else (count * MAX_DOTS.toFloat() / total).roundToInt().coerceIn(1, MAX_DOTS)
-        }
+        groups = IntArray(letters.size) { letters[it].coerceAtLeast(1) }
         dots = groups.sum()
     }
 
@@ -814,6 +811,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         morphNext = next
         scene = Scene.DeleteFlick
         flourishAt = now
+        flourishStarted = now
         lastFrame = now
         revealedAtStart = reveal
         fromHold = true
@@ -859,9 +857,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /**
      * The word swipe reached touchpad point [x], [y]. The first point of a swipe starts the mini path, also while the last one
-     * still fades. Points close to the last one are skipped, and a long path keeps every other point, so it never runs out of room.
+     * still fades, or while a delete's dots or another flourish play. Points close to the last one are skipped, and a long path
+     * keeps every other point, so it never runs out of room.
      */
     fun swipePoint(x: Float, y: Float, step: Int, now: Long) {
+        // A new swipe takes the bar from a delete's dots or a picked word's mark (#93): the text already went, so the dots land at
+        // once, and the trail draws from the swipe's first point.
+        if (flourishing) clear()
         if (scene != Scene.Swipe || leaving) {
             if (live && scene != Scene.Swipe || !begin(Scene.Swipe, now)) return
             pathSize = 0
@@ -1070,6 +1072,13 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         lastFrame = now
         val motion = scale > 0f
         if (flourishing) {
+            // A delete's dots, in motion: a frame that comes very late, as when a slow app holds the keyboard up after a delete in a
+            // long text (#89), doesn't skip what it missed: the picture goes on from where it was, as if one frame had passed.
+            // Without this, a frame over about a second late found a flick's dots already over, and they never showed. A bar that
+            // wasn't drawn for longer, as when the keyboard hid, has nothing to take up: the dots end as they always did. With
+            // motion off they are a still picture, and keep their own time.
+            if (motion && scene == Scene.DeleteFlick && elapsed > STALL_MILLIS && elapsed <= STALL_MOST)
+                flourishAt += (elapsed - MAX_FRAME_MILLIS).toLong()
             if (scene == Scene.DeleteFlick && motion && dots > 0) plan(scale)
             // A pick whose touch is still down stays at the end of its hold, so the mark keeps showing until the lift.
             if (scene == Scene.WordSelected && pickHeld) {
@@ -1214,6 +1223,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         scene = next
         leaving = false
         flourishAt = now
+        flourishStarted = now
         lastFrame = now
         revealedAtStart = reveal
         changed()
@@ -1331,6 +1341,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val BLINK_MILLIS = 530L
         /** A frame that comes late must not make the text jump. */
         private const val MAX_FRAME_MILLIS = 48f
+        /** A flourish's frame this late means the keyboard was held up: the flourish takes up from where it was. See [advance]. */
+        const val STALL_MILLIS = 250f
+        /** Past this, about two of Android's waits on a slow app, the bar wasn't held up but not drawn at all. */
+        const val STALL_MOST = 5_000f
         /** Letters a second past the caret: enough to read one way at low speed, and still clearly one way at top speed. */
         private const val FLOW_SLOWEST = 1.5f
         private const val FLOW_FASTEST = 9f
@@ -1483,12 +1497,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         const val GLOW_PULSE = 120f
         val GLOW_WIDTHS = floatArrayOf(0f, .17f, .39f, .71f)
         val GLOW_ALPHAS = floatArrayOf(0f, .35f, .55f, .8f)
-        /**
-         * The most dots for one word, and about the most for a hold: a hold of more letters than this gives each word its share,
-         * one dot at least. The spacing shrinks to fit them.
-         */
-        const val MAX_DOTS = 30
-
         /** The characters of the last word in [before], not counting spaces: what a delete flick takes. "don't" gives 5. */
         fun letters(before: CharSequence?): Int {
             val text = before?.trimEnd() ?: return 1
@@ -1504,9 +1512,20 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          */
         fun nothingToDelete(before: CharSequence?, selected: CharSequence?) = selected == null && before?.isEmpty() == true
 
-        /** How many dots a delete takes: the selection's characters, not counting spaces, or else the last word's ([letters]). */
+        /**
+         * How many dots a delete takes, read before it goes: the selection's characters, not counting spaces, or else the last
+         * word's ([letters]). Only for a delete that hasn't gone to the field yet: one that has counts what it took ([dotsFor]).
+         */
         fun deleteTakes(before: CharSequence?, selected: CharSequence?): Int =
             if (selected == null) letters(before) else selected.count { !it.isWhitespace() }.coerceAtLeast(1)
+
+        /**
+         * The dots for what a delete really took (#89): a dot for each of its characters that isn't a space, one at least. Where the
+         * field didn't give the text, as with a long selection, a dot for each of its [length] characters, and one where even that
+         * isn't known, as in a field that gives no text.
+         */
+        fun dotsFor(removed: CharSequence?, length: Int): Int =
+            if (removed != null) removed.count { !it.isWhitespace() }.coerceAtLeast(1) else length.coerceAtLeast(1)
 
         /** The text a held delete eats, in order from the end: the words before the cursor, then the selection, which goes first. */
         fun deleteLine(before: CharSequence?, selected: CharSequence?): CharSequence? =

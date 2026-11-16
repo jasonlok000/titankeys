@@ -145,9 +145,11 @@ test("steering ticks when it picks up after a slip, and exact typing's chips pla
 test("any key or touch cuts a flick's dots and the dot ticks still to come, at the same point", () => {
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
   expect(ime).toMatch(/private fun interruptGesture\(\) \{\s+strip\?\.gesture\?\.interrupt\(\)\s+haptics\.cutDots\(\)\s+\}/);
-  // Nothing else cuts the dots, so the ticks can't outlive them: a key, a touch that's no delete, a word's outcome, the cursor.
+  // Nothing else cuts the dots, so the ticks can't outlive them: a key, a touch that's no delete, a word's outcome, the cursor,
+  // and a swipe, which takes the bar from them as it draws its trail (#93).
   expect(ime.match(/gesture\?\.interrupt\(\)/g)?.length).toBe(1);
-  expect(ime.match(/interruptGesture\(\)/g)?.length).toBe(5);
+  expect(ime.match(/interruptGesture\(\)/g)?.length).toBe(6);
+  expect(ime).toMatch(/if \(gesture\.softDelete\) \{\s+interruptGesture\(\)/);
   // A delete's dots wait for what the next touch turns out to be: another delete joins them, anything else cuts them.
   expect(ime).toContain("if (strip?.gesture?.softDelete != true) interruptGesture()");
   expect(ime).toContain("if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()");

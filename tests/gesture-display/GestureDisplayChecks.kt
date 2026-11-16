@@ -12,6 +12,12 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
+    aLateFrameDoesNotEatTheDots()
+    aLongWordShowsEveryDot()
+    aLongRunOfWordsShowsEveryDot()
+    aFieldWithNoTextShowsADot()
+    anyRealActionStopsTheDots()
+    aSwipeDuringTheDotsGetsItsFullPath()
     aSelectionIsSomethingToDelete()
     aFlicksGlowRampsWithItsReach()
     aFlicksWayInStretchesToFitItsDots()
@@ -417,8 +423,7 @@ private fun theHoldEndsHideIt() {
     long.deleteHeld(200, 1_000)
     repeat(8) { long.wordDeleted(1_000L + it * 200, 7) }
     long.deleteEnded(2_700)
-    same(GestureDisplay.MAX_DOTS, 30, "About 30 dots")
-    same(long.groups.toList(), List(8) { 4 }, "Every word shows, each with its share of about 30 dots")
+    same(long.groups.toList(), List(8) { 7 }, "Every word shows, with a dot for each of its characters: no cap (#89)")
 
     val cut = GestureDisplay()
     cut.deleteHeld(200, 1_000)
@@ -470,7 +475,7 @@ private fun aFlickCountsTheCharactersItDeleted() {
     same(GestureDisplay.letters(null), 1, "With no text to read, one dot")
     val long = GestureDisplay()
     long.wordDeleted(1_000, 60)
-    same(long.dots, GestureDisplay.MAX_DOTS, "A very long word shows no more than the bar has room for")
+    same(long.dots, 60, "A very long word shows a dot for each character: no cap (#89)")
 }
 
 private fun newInputEndsAFlick() {
@@ -1305,7 +1310,7 @@ private fun anyNumberOfWordsShowsItsDots() {
     fun landsAll(display: GestureDisplay, from: Long): Long {
         val landed = BooleanArray(display.dots)
         var now = from
-        while (display.scene != Scene.None && now < from + 30_000) {
+        while (display.scene != Scene.None && now < from + 120_000) {
             display.advance(now, 1f)
             isTrue(display.shownUnits <= GestureDisplay.MAX_ROW + .01f, "The row never squeezes past the bar's room: ${display.shownUnits}")
             if (display.scene == Scene.DeleteFlick) for (index in landed.indices) if (display.dotTravel(index) >= 1f) landed[index] = true
@@ -1859,4 +1864,188 @@ private fun aSelectionIsSomethingToDelete() {
     // A hold eats the selection first, then the words before it.
     same(GestureDisplay.deleteLine("hello ", "world").toString(), "hello world", "A hold's words end with the selection")
     same(GestureDisplay.deleteLine("hello", null), "hello", "and without one are the text before the cursor")
+}
+
+// #89 and #93 ---------------------------------------------------------------------------------------------------------------------
+
+/** Runs frames until the flourish is over, and checks every dot landed and the row never squeezed. Returns when it ended. */
+private fun GestureDisplay.landsEvery(from: Long, what: String): Long {
+    val landed = BooleanArray(dots)
+    var now = from
+    while (scene != Scene.None && now < from + 600_000) {
+        advance(now, 1f)
+        isTrue(shownUnits <= GestureDisplay.MAX_ROW + .01f, "$what: the row never squeezes past the bar's room: $shownUnits")
+        if (scene == Scene.DeleteFlick) for (index in landed.indices) if (!landed[index] && dotTravel(index) >= 1f) landed[index] = true
+        now += FRAME
+    }
+    same(scene, Scene.None, "$what: it ends")
+    isTrue(landed.all { it }, "$what: every dot lands: ${landed.count { it }} of ${landed.size}")
+    return now
+}
+
+/** A field's text as [wordToDelete] reads it: up to [reach] characters before the cursor, at the end of [text]. */
+private fun reader(text: String, reads: MutableList<Int> = ArrayList()): (Int) -> String? = { reach -> reads += reach; text.takeLast(reach) }
+
+/**
+ * #89, where the dots vanished. A delete in a really long text makes a slow app slower, and its next read holds the keyboard up:
+ * the first frame after a normal flick then came over a second late, found the dots already over, and the bar showed none. Now a
+ * late frame takes the dots up from where they were.
+ */
+private fun aLateFrameDoesNotEatTheDots() {
+    for (late in listOf(400L, 1_100L, 2_500L, 4_000L)) {
+        val display = GestureDisplay()
+        display.wordDeleted(1_000, 5)
+        display.advance(1_000 + late, 1f)
+        same(display.scene, Scene.DeleteFlick, "#89: a first frame $late ms late still shows the flick's dots")
+        same(display.dotsAt, 1_000L, "#89: they are still the same flick's, so their ticks go on")
+        isTrue(display.dotsIn < .5f, "#89: they take up from where they were, popping in: ${display.dotsIn}")
+        display.landsEvery(1_000 + late, "#89: a flick held up $late ms")
+    }
+    // A late frame mid-way: the dots go on from where they were, none skipped.
+    val mid = GestureDisplay()
+    mid.wordDeleted(1_000, 8)
+    mid.run(1_000, 1_400)
+    val travelled = (0 until 8).map { mid.dotTravel(it) }
+    mid.advance(1_400 + 1_500, 1f)
+    isTrue((0 until 8).all { mid.dotTravel(it) - travelled[it] < .3f }, "#89: a stall mid-way moves the dots one 48 ms frame on, not 1.5 s")
+    mid.landsEvery(2_900, "#89: a flick held up mid-way")
+    // A bar not drawn for long, as when the keyboard hid, has nothing to take up.
+    val hidden = GestureDisplay()
+    hidden.wordDeleted(1_000, 5)
+    hidden.advance(1_000 + 20_000, 1f)
+    same(hidden.scene, Scene.None, "#89: a bar not drawn for 20 s ends the dots as before")
+}
+
+/** #89: a flick on a 5,000-character word takes all of it, and shows a dot for each, at today's pace and speed-up, with no time limit. */
+private fun aLongWordShowsEveryDot() {
+    val word = "x".repeat(5_000)
+    for (text in listOf(word, "some words before it $word", "$word ")) {
+        val reads = ArrayList<Int>()
+        val taken = wordToDelete(reader(text, reads), null)
+        same(taken, text.substring(text.trimEnd().lastIndexOf(' ') + 1), "#89: the flick takes the whole word, ${reads.size} reads: $reads")
+        same(GestureDisplay.dotsFor(taken, taken!!.length), 5_000, "#89: a dot for each of its 5,000 characters, not its space")
+    }
+    // A word just past the first read: one more read, twice as far.
+    val reads = ArrayList<Int>()
+    same(wordToDelete(reader("one " + "y".repeat(300), reads), null), "y".repeat(300), "#89: a 300-character word goes whole")
+    same(reads, listOf(256, 512), "#89: read again twice as far")
+    // A field that stops giving more keeps what it gave.
+    same(wordToDelete({ reach -> "z".repeat(minOf(reach, 1_000)) }, null)?.length, 1_000, "#89: a field that gives at most 1,000 loses those")
+    same(wordToDelete({ reach -> if (reach > 256) null else "z".repeat(reach) }, null)?.length, 256, "#89: a big read that fails keeps the first")
+
+    val display = GestureDisplay()
+    display.wordDeleted(1_000, 5_000)
+    same(display.dots, 5_000, "#89: 5,000 dots")
+    same(display.groups.toList(), listOf(5_000), "#89: in one word")
+    val lands = (0 until 5_000).map { display.dotLandsAt(it) }
+    val gaps = lands.zipWithNext { a, b -> b - a }
+    isTrue(gaps.take(3).all { abs(it - 30f) < .01f }, "#89: today's pace, 30 ms apart at first: ${gaps.take(5)}")
+    isTrue(gaps.drop(40).all { abs(it - GestureDisplay.DOT_FASTEST_GAP) < .01f }, "#89: and today's speed-up, to 10 ms apart")
+    isTrue(lands.last() - lands.first() > 45_000f, "#89: no time limit, so 5,000 dots take about 50 s: ${lands.last() - lands.first()}")
+    val ticks = display.dotLandings(1f)
+    isTrue(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }, "#89: their ticks thin out to 30 ms apart: ${ticks.size} ticks")
+    display.landsEvery(1_000, "#89: a 5,000-character word")
+}
+
+/**
+ * #89: a 5,000-character run of words. A flick takes only its last word, and a held delete through all of it shows a dot for
+ * every character of every word when it lifts, with nothing squeezed.
+ */
+private fun aLongRunOfWordsShowsEveryDot() {
+    val random = Random(89)
+    val words = ArrayList<String>()
+    while (words.sumOf { it.length + 1 } < 5_000) words += "w".repeat(1 + random.nextInt(9))
+    val text = words.joinToString(" ")
+    isTrue(text.length >= 4_990, "#89: the text is about 5,000 characters: ${text.length}")
+    same(wordToDelete(reader(text), null), words.last(), "#89: a flick on it takes the last word only")
+    same(GestureDisplay.letters(text), words.last().length, "#89: and a delete read before it goes counts that word")
+
+    val hold = GestureDisplay()
+    hold.deleteHeld(80, 1_000)
+    for ((index, word) in words.asReversed().withIndex()) hold.wordDeleted(1_000L + index * 80, GestureDisplay.dotsFor(word, word.length))
+    isTrue(hold.deleteEnded(1_000L + words.size * 80), "#89: the hold's lift turns into dots")
+    same(hold.groups.toList(), words.asReversed().map { it.length }, "#89: each word keeps a dot for each of its characters")
+    same(hold.dots, words.sumOf { it.length }, "#89: every character of the run")
+    hold.landsEvery(1_000L + words.size * 80, "#89: a hold through 5,000 characters")
+
+    // Flicks one after another along it join the one stream, none squeezed.
+    val flicks = GestureDisplay()
+    var now = 1_000L
+    for (word in words.asReversed().take(200)) {
+        flicks.wordDeleted(now, word.length)
+        flicks.run(now, now + 144)
+        now += 160
+    }
+    same(flicks.dots, words.asReversed().take(200).sumOf { it.length }, "#89: 200 flicks keep every dot")
+    flicks.landsEvery(now, "#89: 200 flicks along the run")
+}
+
+/** #89: a field that gives no text still shows a dot when a flick deletes in it. */
+private fun aFieldWithNoTextShowsADot() {
+    same(wordToDelete({ null }, null), null, "#89: no text to read, so the delete goes as a key")
+    same(GestureDisplay.dotsFor(null, 0), 1, "#89: and its dots, not known, are one")
+    same(GestureDisplay.nothingToDelete(null, null), false, "#89: no text isn't nothing to delete")
+    same(GestureDisplay.deleteTakes(null, null), 1, "#89: one dot when read before it goes, too")
+    // A long selection the app won't hand over: something to delete, with a dot for each of its characters.
+    same(GestureDisplay.nothingToDelete("", ""), false, "#89: a selection the app won't hand over is something to delete")
+    same(GestureDisplay.dotsFor(null, 5_000), 5_000, "#89: with a dot for each of its 5,000 characters")
+    val display = GestureDisplay()
+    display.wordDeleted(1_000, GestureDisplay.dotsFor(null, 0))
+    same(display.dots, 1, "#89: the bar shows one dot")
+    display.landsEvery(1_000, "#89: a field with no text")
+}
+
+/**
+ * #89: the owner, "any real action stops that anyways". A long delete's dots take as long as they take, and anything real cuts
+ * them: a key or a tap (AtlasIme calls [GestureDisplay.interrupt] for both, see onKeyDown and outcome), a swipe, a steer or a hold.
+ */
+private fun anyRealActionStopsTheDots() {
+    fun playing(): GestureDisplay = GestureDisplay().apply {
+        wordDeleted(1_000, 5_000)
+        run(1_000, 3_000)
+        same(scene, Scene.DeleteFlick, "#89: 5,000 dots are playing")
+    }
+    val key = playing()
+    key.interrupt()
+    same(key.scene to key.dotsAt, Scene.None to null, "#89: a key or a tap stops the dots, and their ticks")
+    same(key.advance(3_016, 1f), false, "#89: and nothing more is drawn")
+    val swipe = playing()
+    swipe.swipePoint(.2f, .5f, 0, 3_016)
+    same(swipe.scene to swipe.dots, Scene.Swipe to 0, "#89: a swipe stops them")
+    val steer = playing()
+    steer.interrupt()
+    steer.cursorFrame(RIGHT_OF_SPACE, 1, 20f, false, 3_016)
+    same(steer.scene, Scene.Cursor, "#89: a steer stops them")
+    val hold = playing()
+    hold.deleteHeld(200, 3_016)
+    same(hold.scene, Scene.DeleteHold, "#89: a held delete takes the bar from them")
+}
+
+/** #93: a swipe while a delete's dots or a picked word's mark plays takes the bar at once, and its trail is whole from its first point. */
+private fun aSwipeDuringTheDotsGetsItsFullPath() {
+    val flick = GestureDisplay().apply { wordDeleted(1_000, 6); run(1_000, 1_300) }
+    val held = GestureDisplay().apply {
+        deleteHeld(200, 1_000)
+        wordDeleted(1_000, 5)
+        wordDeleted(1_200, 4)
+        deleteEnded(1_300)
+        run(1_300, 1_500)
+    }
+    val picked = GestureDisplay().apply { wordSelected(1_000); run(1_000, 1_200) }
+    val bigFlick = GestureDisplay().apply { wordDeleted(1_000, 5_000); run(1_000, 3_000) }
+    for ((what, display) in listOf("a flick's dots" to flick, "a held delete's dots" to held, "a picked word's mark" to picked,
+            "5,000 dots" to bigFlick)) {
+        isTrue(display.scene == Scene.DeleteFlick || display.scene == Scene.WordSelected, "#93: $what play")
+        var now = 3_100L
+        for (index in 0 until 40) {
+            display.swipePoint(.1f + index * .02f, .3f + (index % 5) * .1f, index, now)
+            display.advance(now, 1f)
+            now += 16
+        }
+        same(display.scene, Scene.Swipe, "#93: during $what, the swipe takes the bar")
+        same(display.pathSize, 40, "#93: during $what, the trail has every point from the first")
+        near(display.pathX[0], .1f, "#93: during $what, the trail starts where the swipe did")
+        same(display.dots to display.dotsAt, 0 to null, "#93: during $what, the dots are gone, and their ticks stop")
+        same(display.showing, true, "#93: during $what, the trail shows")
+    }
 }

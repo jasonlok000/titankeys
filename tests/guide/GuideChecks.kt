@@ -1165,7 +1165,7 @@ private fun steeringToAWord() {
     same(STEER_LINE.contains("steer", ignoreCase = true), false, "No steering in the line")
     // No steering anywhere the guide talks (owner, #90: "change out the steering term"): titles, lines, stages, chips, chapters.
     val slide = GUIDE_STEPS.find { it.id == "steer" }!!
-    same(slide.title to slide.chapter.label, "Get the cursor to the underlined word." to "Cursor", "The slide's title and chapter")
+    same(slide.title to slide.chapter.label, "Move to the underlined word." to "Cursor", "The slide's title and chapter")
     val said = GUIDE_STEPS.flatMap { step ->
         listOfNotNull(step.title, step.body, step.done, step.praise, step.help, step.helpTitle, step.line, step.seed) +
             step.stages.map { it.text } + GuideLesson.entries.map { blockedChip(step, it.name) }

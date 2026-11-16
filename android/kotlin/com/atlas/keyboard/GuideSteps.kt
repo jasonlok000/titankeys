@@ -1466,7 +1466,7 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
         // F: draft (#66).
-        title = "Get the cursor to the underlined word.",
+        title = "Move to the underlined word.",
         stages = listOf(
             GuideStage("Tap Space twice, and hold the second tap.") { event ->
                 when {

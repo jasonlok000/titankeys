@@ -58,6 +58,8 @@ private data class Frame(
     val gap: Int = -1,
     /** The key that the slide's spot lights in this frame, and the keys held, steady. See [GuideCue.Spot]. */
     val spot: String? = null,
+    /** The rest of a spot that lights its keys together, as the word menu's I/K (owner, #67). */
+    val together: List<String> = emptyList(),
     val held: List<String> = emptyList(),
     /** How much of a hunt's bar is left under the instruction, from 1 to 0, or null for no bar. */
     val hunt: Float? = null,
@@ -149,7 +151,8 @@ private fun framesFor(step: GuideStep): List<Frame> {
             else null
         return from.copy(name = "${step.id}-$name", title = title, line = line, chip = chip, passed = passed, panel = if (passed) null else panel,
             labels = if (passed) null else stage?.labels, held = if (passed) emptyList() else spot?.held.orEmpty(),
-            spot = if (passed) null else spot?.keys?.firstOrNull(), zones = field.zones)
+            spot = if (passed) null else spot?.keys?.firstOrNull(), zones = field.zones,
+            together = if (passed || spot?.together != true) emptyList() else spot.keys.drop(1))
     }
     val frames = ArrayList<Frame>()
     val first = step.stages.firstOrNull()?.text ?: step.body
@@ -525,7 +528,7 @@ private const val BRIGHT = 5f
 private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
     val id = frame?.name?.substringBefore('-')
     val corners = id == "alt" || id == "holdsym"
-    V2.keys(g, top, lit = setOfNotNull(frame?.spot), held = frame?.held?.toSet() ?: emptySet(), hints = frame?.labels,
+    V2.keys(g, top, lit = setOfNotNull(frame?.spot) + frame?.together.orEmpty(), held = frame?.held?.toSet() ?: emptySet(), hints = frame?.labels,
         corners = corners, zones = frame?.zones == true)
     if (corners) V2.note(g, "render note: the corner symbols here are approximate; the phone reads its own", side, top - dp(6))
     // Each key's label must fit in its key.

@@ -190,7 +190,9 @@ class BackupActivity : Activity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != ASK_CONTACTS) return
-        TypingSettings.contactNames(this, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
+        // commit(), not TypingSettings.contactNames' apply(): the restart ends this process at once, and could lose the write.
+        TypingSettings.settings(this).edit()
+            .putBoolean(TypingSettings.CONTACT_NAMES, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED).commit()
         restart()
     }
 

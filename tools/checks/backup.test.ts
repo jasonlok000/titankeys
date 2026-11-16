@@ -102,3 +102,11 @@ test("Settings > Your words has Back up everything and Restore, and Snippets' ow
   expect(snippets).not.toContain("Import snippets");
   expect(read("lib/titankeys.ts")).not.toContain("transferSnippets");
 });
+
+test("everything restore writes is on disk before the restart: commit(), never apply()", () => {
+  const restore = activity.slice(activity.indexOf("private fun restoreAll"), activity.indexOf("private fun restart"));
+  expect(restore).toContain(".commit()");
+  expect(restore).not.toContain(".apply()");
+  // TypingSettings.contactNames(context, value) writes with apply(), so restore doesn't call it.
+  expect(restore).not.toMatch(/TypingSettings\.contactNames\(this,/);
+});

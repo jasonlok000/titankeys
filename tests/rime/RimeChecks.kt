@@ -1,0 +1,331 @@
+package com.atlas.rime
+
+import com.atlas.keyboard.EngineState
+import com.atlas.keyboard.InputMethod
+import java.io.File
+import java.security.MessageDigest
+
+fun main() {
+    eachVariantSetsExactlyOneOption()
+    aMissingSettingIsNoVariant()
+    theVariantIsSetAgainAfterASchemaSwitch()
+    lettersGoToRime()
+    spaceTypesTheFirstChoice()
+    withNoCodeTheKeyboardKeepsItsKeys()
+    enterTypesTheCodeAsLetters()
+    backspaceDeletesFromTheCode()
+    aCapitalTypesTheCodeFirst()
+    punctuationGoesThroughRime()
+    pickingAndPaging()
+    nothingBeforeStart()
+    onlyARimeInputMethodStarts()
+    theDataInstallsBeforeRimeOpens()
+    theDataCopiesOnceAndChecksEachFile()
+    aBadCopyKeepsTheOldData()
+    aManifestCannotLeaveItsFolder()
+    println("Rime checks passed")
+}
+
+private fun check(ok: Boolean, what: String) {
+    if (!ok) throw AssertionError(what)
+}
+
+private fun <T> same(expected: T, actual: T, what: String) {
+    if (expected != actual) throw AssertionError("$what\n  expected: $expected\n  actual:   $actual")
+}
+
+/**
+ * A stand-in for Rime: letters build a code, Space or a pick commits a choice made from the code, Return commits the
+ * code itself, Backspace deletes a letter, and Rime's punctuator turns ',' into '，'. It keeps every call.
+ */
+private class FakeRime : RimeCalls {
+    val calls = mutableListOf<String>()
+    val options = mutableMapOf<String, Boolean>()
+    var code = ""
+    var page = 0
+    private var commit: String? = null
+    var opened = true
+
+    fun choices() = if (code.isEmpty()) emptyList() else (0 until 8).map { "${code.uppercase()}${page * 8 + it}" }
+
+    override fun open(shared: String, user: String): Boolean {
+        calls += "open"
+        return opened
+    }
+
+    override fun close() {
+        calls += "close"
+    }
+
+    override fun schema(id: String): Boolean {
+        calls += "schema $id"
+        // Selecting a schema resets its switches: the variant switch's reset is zh_hk.
+        options.clear()
+        options["zh_hk"] = true
+        return id.startsWith("tk_")
+    }
+
+    override fun option(name: String, on: Boolean) {
+        calls += "option $name $on"
+        options[name] = on
+    }
+
+    override fun option(name: String) = options[name] == true
+
+    override fun process(keycode: Int, mask: Int): Boolean {
+        calls += "key $keycode"
+        return when (keycode) {
+            in 'a'.code..'z'.code -> { code += keycode.toChar(); page = 0; true }
+            RimeKeys.SPACE -> if (code.isEmpty()) false else { commit = choices()[0]; code = ""; true }
+            RimeKeys.RETURN -> if (code.isEmpty()) false else { commit = code; code = ""; true }
+            RimeKeys.BACKSPACE -> if (code.isEmpty()) false else { code = code.dropLast(1); true }
+            RimeKeys.PAGE_DOWN -> { page++; true }
+            RimeKeys.PAGE_UP -> { if (page > 0) page--; true }
+            ','.code -> { commit = "，"; true }
+            else -> false
+        }
+    }
+
+    override fun select(index: Int): Boolean {
+        val c = choices()
+        if (index !in c.indices) return false
+        commit = c[index]
+        code = ""
+        page = 0
+        return true
+    }
+
+    override fun reset() {
+        calls += "reset"
+        code = ""
+    }
+
+    override fun read(): RimeCalls.Raw {
+        val preedit = if (code.isEmpty()) null else code.replace("ou", "o-u")
+        val out = RimeCalls.Raw(commit, code, preedit, page, page >= 2, 0, choices(), choices().map { "" })
+        commit = null
+        return out
+    }
+}
+
+private fun method(schema: String, engine: String = "rime") = InputMethod.parse(
+    """{ "id": "yue-test", "name": "粵", "nameEnglish": "Cantonese", "label": "粵", "locale": "yue", "script": "Hani",
+    "keys": "qwerty", "engine": { "$engine": "$schema" } }""",
+)
+
+private val dataDir = File("/tk-rime-data")
+
+private fun started(
+    schema: RimeEngine.Schema = RimeEngine.Schema.Yale,
+    variant: ChineseVariant = ChineseVariant.HongKong,
+): Pair<RimeEngine, FakeRime> {
+    val rime = FakeRime()
+    val engine = RimeEngine(rime) { true }
+    engine.variant(variant)
+    check(engine.start(method(schema.id), dataDir), "it starts on ${schema.id}")
+    return engine to rime
+}
+
+private fun type(engine: RimeEngine, text: String) = text.map { engine.key(it) }.last()
+
+fun eachVariantSetsExactlyOneOption() {
+    for (variant in ChineseVariant.entries) {
+        val on = ChineseVariant.options(variant).filter { it.second }.map { it.first }
+        same(listOf(variant.option), on, "$variant turns on its own option only")
+        same(3, ChineseVariant.options(variant).size, "$variant sets all three options")
+    }
+    same(listOf("zh_hk", "zh_tw", "zh_hans"), ChineseVariant.entries.map { it.setting }, "the settings' values, as the schemas' options")
+    same(ChineseVariant.Taiwan, ChineseVariant.of("zh_tw"), "the setting zh_tw is Taiwan")
+}
+
+fun aMissingSettingIsNoVariant() {
+    same(null, ChineseVariant.of(null), "no setting is no variant: there's no default")
+    same(null, ChineseVariant.of(""), "an empty setting is no variant")
+    same(null, ChineseVariant.of("zh_cn"), "an unknown setting is no variant")
+}
+
+fun theVariantIsSetAgainAfterASchemaSwitch() {
+    val (engine, rime) = started(RimeEngine.Schema.Pinyin, ChineseVariant.Simplified)
+    same(true, rime.options["zh_hans"], "Simplified is on")
+    same(false, rime.options["zh_hk"], "the schema's own reset to Hong Kong is undone")
+    check(engine.start(method("tk_yale"), dataDir), "a second Chinese input method starts")
+    same(true, rime.options["zh_hans"], "after a switch to Yale, Simplified is still on")
+    same(false, rime.options["zh_hk"], "and Hong Kong off")
+    same(1, rime.calls.count { it == "schema tk_yale" }, "Yale was selected once")
+    same(1, rime.calls.count { it == "open" }, "Rime opened once for both")
+    engine.variant(ChineseVariant.Taiwan)
+    same(1, rime.calls.count { it == "schema tk_yale" }, "a variant change doesn't select the schema again")
+    same(listOf("zh_tw"), rime.options.filter { it.value }.keys.toList(), "only Taiwan is on")
+}
+
+fun lettersGoToRime() {
+    val (engine, _) = started()
+    val state = type(engine, "neihou")
+    check(state.handled, "a letter is Rime's")
+    same("", state.commit, "nothing is typed yet")
+    same("neiho-u", state.code, "the code shows as Rime spells it")
+    same(8, state.choices.size, "a page of choices")
+}
+
+fun spaceTypesTheFirstChoice() {
+    val (engine, _) = started()
+    type(engine, "nei")
+    val state = engine.space()
+    check(state.handled, "Space is taken while a code is typed")
+    same("NEI0", state.commit, "Space types the first choice")
+    same("", state.code, "and the code is gone")
+}
+
+fun withNoCodeTheKeyboardKeepsItsKeys() {
+    val (engine, _) = started()
+    for ((key, state) in listOf("Space" to engine.space(), "Backspace" to engine.backspace(), "Enter" to engine.enter())) {
+        check(!state.handled, "with no code, $key is the keyboard's")
+        same("", state.commit, "and nothing is typed for it")
+    }
+    same(EngineState.UNHANDLED, engine.page(true), "with no code, there's no page to turn")
+}
+
+fun enterTypesTheCodeAsLetters() {
+    val (engine, _) = started()
+    type(engine, "ngo")
+    val state = engine.enter()
+    check(state.handled, "Enter is taken while a code is typed")
+    same("ngo", state.commit, "Enter types the code as typed letters")
+}
+
+fun backspaceDeletesFromTheCode() {
+    val (engine, _) = started()
+    type(engine, "nei")
+    val state = engine.backspace()
+    check(state.handled, "Backspace is taken while a code is typed")
+    same("ne", state.code, "it deletes from the code")
+    engine.backspace()
+    engine.backspace()
+    check(!engine.backspace().handled, "once the code is empty, Backspace deletes from the text")
+    val (cleared, _) = started()
+    type(cleared, "nei")
+    same("", cleared.reset().code, "a reset drops the code")
+    same("", cleared.state().commit, "with nothing typed")
+}
+
+fun aCapitalTypesTheCodeFirst() {
+    val (engine, _) = started()
+    type(engine, "hou")
+    val state = engine.key('A')
+    check(!state.handled, "the keyboard types the capital itself")
+    same("HOU0", state.commit, "after the code's first choice")
+    val (idle, _) = started()
+    same(EngineState.UNHANDLED, idle.key('A'), "with no code, a capital is simply the keyboard's")
+    val (accent, _) = started()
+    type(accent, "nei")
+    same("NEI0", accent.key('é').commit, "a character Rime has no key for types after the code's first choice")
+}
+
+fun punctuationGoesThroughRime() {
+    val (engine, _) = started()
+    val state = engine.key(',')
+    check(state.handled, "a comma is Rime's")
+    same("，", state.commit, "and comes out as a Chinese comma")
+}
+
+fun pickingAndPaging() {
+    val (engine, rime) = started()
+    type(engine, "sik")
+    same("SIK8", engine.page(true).choices.first(), "forward turns to the next page")
+    same("SIK0", engine.page(false).choices.first(), "back turns back")
+    engine.page(true)
+    val picked = engine.pick(2)
+    check(picked.handled, "a pick on the page is taken")
+    same("SIK10", picked.commit, "the pick is from the page showing")
+    check(!engine.pick(-1).handled, "no choice -1")
+    check(rime.calls.contains("key ${RimeKeys.PAGE_DOWN}"), "paging is Rime's Page Down")
+}
+
+fun nothingBeforeStart() {
+    val rime = FakeRime().apply { opened = false }
+    val engine = RimeEngine(rime) { true }
+    engine.variant(ChineseVariant.HongKong)
+    same(EngineState.UNHANDLED, engine.key('a'), "before start, keys stay the keyboard's")
+    check(!engine.start(method("tk_yale"), dataDir), "a failed start says so")
+    same(EngineState.UNHANDLED, engine.key('a'), "keys stay the keyboard's")
+    same(EngineState.UNHANDLED, engine.space(), "Space too")
+    same(listOf("open"), rime.calls, "nothing else reached Rime")
+}
+
+fun onlyARimeInputMethodStarts() {
+    val rime = FakeRime()
+    val engine = RimeEngine(rime) { true }
+    check(!engine.start(method("tk_yale", engine = "hangul"), dataDir), "another engine's input method isn't Rime's")
+    check(!engine.start(method("luna_pinyin"), dataDir), "a schema TitanKeys doesn't ship doesn't start")
+    same(null, engine.schema, "and no schema is current")
+    check(engine.start(method("tk_jyutping"), dataDir), "Jyutping starts")
+    same("tk_jyutping", engine.schema, "and is current")
+    engine.stop()
+    same(listOf("close"), rime.calls.takeLast(1), "stop closes Rime")
+    same(EngineState.UNHANDLED, engine.key('a'), "and keys are the keyboard's again")
+}
+
+fun theDataInstallsBeforeRimeOpens() {
+    val rime = FakeRime()
+    var installedTo: File? = null
+    val engine = RimeEngine(rime) { data -> installedTo = data.shared; false }
+    check(!engine.start(method("tk_yale"), dataDir), "with the data missing, Rime doesn't start")
+    same(File(dataDir, "shared"), installedTo, "the data goes under the folder the keyboard gives")
+    same(emptyList<String>(), rime.calls, "and Rime isn't opened without it")
+    val opened = RimeEngine(rime) { true }
+    check(opened.start(method("tk_yale"), dataDir), "with the data there, it starts")
+    same("open", rime.calls.first(), "Rime opens")
+}
+
+private fun sha(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+
+private fun manifest(files: Map<String, ByteArray>) = files.entries.joinToString("") { "${sha(it.value)}  ${it.key}\n" }
+
+fun theDataCopiesOnceAndChecksEachFile() {
+    val root = kotlin.io.path.createTempDirectory("rime").toFile()
+    try {
+        val files = mapOf("default.yaml" to "a".toByteArray(), "build/jyut6ping3.table.bin" to ByteArray(200_000) { it.toByte() })
+        val list = manifest(files)
+        val data = RimeData(root)
+        var opened = 0
+        check(data.install(list) { opened++; files.getValue(it).inputStream() }, "the data installs")
+        same(2, opened, "every file was copied")
+        check(files.all { (path, bytes) -> File(data.shared, path).readBytes().contentEquals(bytes) }, "byte for byte")
+        check(files.keys.all { File(data.shared, it).lastModified() == RimeData.SOURCE_TIME * 1000 }, "each at the time Rime compiled them with")
+        File(data.user, "learned.userdb").apply { parentFile.mkdirs(); writeText("mine") }
+        check(data.install(list) { opened++; files.getValue(it).inputStream() }, "installed again")
+        same(2, opened, "the same data isn't copied twice")
+        val newer = files + ("opencc/t2s.json" to "{}".toByteArray())
+        File(data.user, "build").mkdirs()
+        check(data.install(manifest(newer)) { newer.getValue(it).inputStream() }, "new data installs")
+        check(File(data.shared, "opencc/t2s.json").isFile, "with its new file")
+        check(!File(data.user, "build").exists(), "what Rime compiled from the old data is gone")
+        same("mine", File(data.user, "learned.userdb").readText(), "learned words stay")
+    } finally {
+        root.deleteRecursively()
+    }
+}
+
+fun aBadCopyKeepsTheOldData() {
+    val root = kotlin.io.path.createTempDirectory("rime").toFile()
+    try {
+        val data = RimeData(root)
+        val good = mapOf("default.yaml" to "a".toByteArray())
+        check(data.install(manifest(good)) { good.getValue(it).inputStream() }, "the first data installs")
+        val list = manifest(mapOf("default.yaml" to "b".toByteArray()))
+        check(!data.install(list) { "corrupt".byteInputStream() }, "a file whose hash is wrong fails")
+        same("a", File(data.shared, "default.yaml").readText(), "the old data stays")
+        check(!File(root, "shared.new").exists(), "and the half copy is gone")
+        check(!data.install(list) { throw java.io.FileNotFoundException(it) }, "a missing file fails")
+        same(null, RimeData.parse("not a manifest"), "a list that isn't sha256sum's isn't read")
+    } finally {
+        root.deleteRecursively()
+    }
+}
+
+fun aManifestCannotLeaveItsFolder() {
+    val hash = "0".repeat(64)
+    same(null, RimeData.parse("$hash  ../evil"), "no way out of the folder")
+    same(null, RimeData.parse("$hash  /etc/x"), "no absolute paths")
+    same(listOf(RimeData.Entry("build/a.bin", hash)), RimeData.parse("$hash  build/a.bin\n"), "a plain line reads")
+}

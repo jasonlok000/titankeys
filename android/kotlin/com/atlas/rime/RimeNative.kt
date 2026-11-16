@@ -1,0 +1,36 @@
+package com.atlas.rime
+
+/**
+ * The JNI layer over Rime, native/rime/rime_jni.cc, in librime_tk.so. One Rime session for the whole keyboard. Every call
+ * holds the same lock in C++, so [start] can run on a background thread. [RimeEngine] uses it through [RimeCalls].
+ */
+object RimeNative : RimeCalls {
+    @Volatile private var loaded = false
+
+    /** Loads the library once. False if it can't load (no arm64 library on this device, say). */
+    fun load(): Boolean {
+        if (loaded) return true
+        loaded = runCatching { System.loadLibrary("rime_tk") }.isSuccess
+        return loaded
+    }
+
+    @JvmStatic private external fun start(shared: String, user: String): Boolean
+    @JvmStatic private external fun stop()
+    @JvmStatic private external fun selectSchema(schema: String): Boolean
+    @JvmStatic private external fun setOption(name: String, on: Boolean)
+    @JvmStatic private external fun getOption(name: String): Boolean
+    @JvmStatic private external fun key(keycode: Int, mask: Int): Boolean
+    @JvmStatic private external fun pick(index: Int): Boolean
+    @JvmStatic private external fun clear()
+    @JvmStatic private external fun state(): Array<Any?>?
+
+    override fun open(shared: String, user: String) = load() && start(shared, user)
+    override fun close() = stop()
+    override fun schema(id: String) = selectSchema(id)
+    override fun option(name: String, on: Boolean) = setOption(name, on)
+    override fun option(name: String) = getOption(name)
+    override fun process(keycode: Int, mask: Int) = key(keycode, mask)
+    override fun select(index: Int) = pick(index)
+    override fun reset() = clear()
+    override fun read(): RimeCalls.Raw? = state()?.let { RimeCalls.Raw.of(it) }
+}

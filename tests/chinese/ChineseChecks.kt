@@ -41,13 +41,17 @@ fun aChoiceIsAsWideAsItNeeds() {
 
 fun theRowFillsWToOInOrder() {
     val singles = (1..10).map { "字$it" }
-    same((1..8).map { it..it }, ChineseRow.place(singles), "eight one-key choices fill W to O, the rest wait for the menu")
+    same((1..8).map { it..it } + listOf(null, null), ChineseRow.place(singles), "eight one-key choices fill W to O, the rest wait for the menu")
     same(listOf(1..2, 3..3, 4..4), ChineseRow.place(listOf("屌你老母", "你", "好")), "a four-character choice takes W and E")
     val tight = List(7) { "字" } + "屌你老母" + "你"
-    same((1..7).map { it..it }, ChineseRow.place(tight), "a choice that doesn't fit ends the row: the order stays Rime's")
-    same(listOf(1..8), ChineseRow.place(listOf("一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十"))
-        .take(1), "a first choice wider than the row takes the whole row")
-    same(emptyList<IntRange>(), ChineseRow.place(emptyList()), "no choices, no places")
+    same((1..7).map { it..it } + listOf(null, 8..8), ChineseRow.place(tight),
+        "a choice too wide for the room left waits for the menu, and a shorter one after it takes the room, in order")
+    val sentence = listOf("今日はいい天気ですね", "今日は良い天気ですね", "今日", "今日は", "きょう")
+    same(listOf(1..5, null, 6..6, 7..8, null), ChineseRow.place(sentence),
+        "Japanese: the sentence, then the parts that fit, not the second sentence")
+    same(listOf(1..8), ChineseRow.place(listOf("一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十")),
+        "a first choice wider than the row takes the whole row")
+    same(emptyList<IntRange?>(), ChineseRow.place(emptyList()), "no choices, no places")
 }
 
 fun qAndPHaveNoChoice() {
@@ -55,7 +59,7 @@ fun qAndPHaveNoChoice() {
     same(9, ChineseRow.MORE, "the more cue over P")
     for (choices in listOf(List(20) { "字" }, List(5) { "屌你老母" }, listOf("你好", "hello", "我哋"))) {
         val columns = ChineseRow.place(choices)
-        check(columns.none { 0 in it || 9 in it }, "no choice over Q or P: $choices")
+        check(columns.filterNotNull().none { 0 in it || 9 in it }, "no choice over Q or P: $choices")
     }
     same(8, ChineseRow.ASK, "the row asks the engine for one choice a key at most")
 }

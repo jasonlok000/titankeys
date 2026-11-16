@@ -1266,7 +1266,15 @@ class TitanKeysIme : InputMethodService() {
         val choices = ChoicesMenu(ui) { index -> enqueue { pickFromMenu(index) } }.apply { visibility = View.GONE }
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
-        words.pickerTap = { index -> enqueue { openPicker()?.let { pick(it, index) } } }
+        words.pickerTap = { index ->
+            enqueue {
+                openPicker()?.let { open ->
+                    // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
+                    val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
+                    if (choice >= 0) pick(open, choice)
+                }
+            }
+        }
         val keyboard = LinearLayout(ui).apply {
             orientation = LinearLayout.VERTICAL
             addView(keys)
@@ -2945,7 +2953,7 @@ class TitanKeysIme : InputMethodService() {
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
         // A code being typed goes first, as its first choice.
-        if (!field.exact && openPicker() is LanguagePicker.Choices && ChineseKeys.isChinese(languages.current))
+        if (!field.exact && openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current))
             languages.engine?.let { engineState(it.space()) }
         if (field.exact) commitExact(item) else composer.symbol(item)
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
@@ -3217,7 +3225,7 @@ class TitanKeysIme : InputMethodService() {
                 val engine = languages.engine
                 if (engine != null) {
                     // A tap goes to the engine as a key would: Space picks, a letter builds the code. Chinese has no capitals.
-                    val shifted = modifiers.shift != Modifiers.Level.Off && !ChineseKeys.isChinese(languages.current)
+                    val shifted = modifiers.shift != Modifiers.Level.Off && !ChineseKeys.usesBar(languages.current)
                     val state = if (key == " ") engine.space() else engine.key(languages.current.letter(key[0], shifted)?.first() ?: if (shifted) key[0] else key[0].lowercaseChar())
                     if (state.handled) {
                         engineState(state)
@@ -3258,7 +3266,7 @@ class TitanKeysIme : InputMethodService() {
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
         // In Chinese, holding the key under a choice picks it, so a hold never types a symbol (owner, 2026-11-16).
-        if (ChineseKeys.isChinese(languages.current)) return false
+        if (ChineseKeys.usesBar(languages.current)) return false
         if (languages.current.hasAccents) return canHoldAccent(event)
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
         if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
@@ -3517,7 +3525,7 @@ class TitanKeysIme : InputMethodService() {
     private fun engineKey(engine: InputEngine, event: KeyEvent): Boolean {
         val meta = event.metaState or modifiers.metaState
         if (meta and (KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) != 0) return false
-        val chinese = ChineseKeys.isChinese(languages.current)
+        val chinese = ChineseKeys.usesBar(languages.current)
         // Alt's symbols are the keyboard's, but in Chinese Rime turns their punctuation into Chinese marks, and a code typed
         // goes first (docs/languages.md, "Chinese on the bar").
         val alt = meta and KeyEvent.META_ALT_MASK != 0
@@ -3706,7 +3714,7 @@ class TitanKeysIme : InputMethodService() {
      * is the menu's; with the choices on the bar, P waits to see if it's held, which opens the menu. True if the key is taken.
      */
     private fun chineseKey(event: KeyEvent): Boolean {
-        if (event.isSystem || !ChineseKeys.isChinese(languages.current) || inGuide) return false
+        if (event.isSystem || !ChineseKeys.usesBar(languages.current) || inGuide) return false
         if (choicesMenuOpen) return choicesMenuKey(event)
         val keyCode = event.keyCode
         if (keyCode != KeyEvent.KEYCODE_P) {
@@ -4426,7 +4434,7 @@ class TitanKeysIme : InputMethodService() {
     private fun showModifierBar() {
         val bar = ModifierBar.of(modifiers, restingKey) { Keys.letter(it, KeyEvent.META_ALT_ON) }
         // In Chinese, Shift is no capital (it picks the choice over a key), so its bar doesn't cover the choices or the words.
-        val chinese = ::languages.isInitialized && ChineseKeys.isChinese(languages.current)
+        val chinese = ::languages.isInitialized && ChineseKeys.usesBar(languages.current)
         strip?.modifiers = if (bar != null && chinese && bar.chips.all { it == ModifierBar.SHIFT || it == ModifierBar.CAPS }) null else bar
     }
 

@@ -77,6 +77,32 @@ def guard_field(action):
         raise NotInFront(f"STOP before {action}: no field of {APP} is focused")
 
 
+def screen():
+    """The screen's pixels as (width, height, RGBA bytes), read in memory and never saved. Only while the app is in front, so
+    nothing of another app's is read. Ink draws its pages without views that uiautomator can see, so pages go by their look."""
+    guard("reading the screen")
+    data = subprocess.check_output(["adb", "exec-out", "screencap"])
+    width, height = int.from_bytes(data[0:4], "little"), int.from_bytes(data[4:8], "little")
+    return width, height, data[len(data) - width * height * 4:]
+
+
+def accent(pixels, x, y):
+    """TitanKeys' orange, as Settings draws its titles and section labels."""
+    width, _, data = pixels
+    i = (y * width + x) * 4
+    return data[i] > 200 and 100 < data[i + 1] < 165 and data[i + 2] < 120
+
+
+def accent_count(pixels, left, top, right, bottom):
+    return sum(accent(pixels, x, y) for y in range(top, bottom, 2) for x in range(left, right, 2))
+
+
+def title_right_edge(pixels):
+    """Where a Settings page's orange title ends, which tells pages apart by their titles' lengths."""
+    xs = [x for y in range(165, 235, 3) for x in range(80, 1000, 2) if accent(pixels, x, y)]
+    return max(xs) if xs else 0
+
+
 def tap(x, y):
     guard(f"tap at {x},{y}")
     shell("input", "tap", str(x), str(y))

@@ -58,14 +58,14 @@ test("the app's keyboard only around the checks that type, and the phone's keybo
   expect(read("tools/checks/feedback.py")).not.toContain("app_keyboard");
 });
 
-test("feedback checks that both rows open the report form, by the form's own hints", () => {
+test("feedback checks that both rows open the report form, by its label and its title, read only while the app is in front", () => {
   const check = read("tools/checks/feedback.py");
-  const pattern = new RegExp(check.match(/IDEA_HINT, BUG_HINT = re\.search\(r'(.+)', FORM\)/)![1]);
-  const form = read("app/settings/report.tsx");
-  const found = form.match(pattern);
-  expect(found).not.toBeNull();
-  expect(found![1]).toBe("What should TitanKeys do?");
-  expect(check).toContain('("Report a bug", 455, BUG_HINT)');
-  expect(check).toContain('("Suggest an idea", 598, IDEA_HINT)');
+  expect(check).toContain('("Report a bug", 455, lambda edge: edge < 650)');
+  expect(check).toContain('("Suggest an idea", 598, lambda edge: edge > 710)');
+  expect(check).toContain("accent_count(pixels, *LABEL) > 100 and title_fits(title_right_edge(pixels))");
+  // Ink pages have no views for uiautomator, so the form goes by its look; the screen is read only behind the guard.
+  const screen = body(phone, "screen");
+  expect(screen.indexOf("guard(")).toBeLessThan(screen.indexOf('"screencap"'));
+  expect(screen).not.toContain("-p");
   expect(read("tools/checks/feedback.sh")).toContain('exec python3 "$(dirname "$0")/feedback.py"');
 });

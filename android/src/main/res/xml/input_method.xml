@@ -1,5 +1,13 @@
+<!-- One entry per input method, written by tools/im/make.py from android/assets/im (docs/languages.md). -->
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
     android:settingsActivity="com.vandam.ink.MainActivity"
     android:suppressesSpellChecker="true">
-    <subtype android:imeSubtypeLocale="en_GB" android:imeSubtypeMode="keyboard" />
+    <subtype android:label="@string/im_en" android:imeSubtypeLocale="en_US" android:languageTag="en-US"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=en" android:subtypeId="1373672657" />
+    <subtype android:label="@string/im_es" android:imeSubtypeLocale="es" android:languageTag="es"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=es" android:subtypeId="1889884217" />
+    <subtype android:label="@string/im_fr" android:imeSubtypeLocale="fr" android:languageTag="fr"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=fr" android:subtypeId="456279360" />
+    <subtype android:label="@string/im_de" android:imeSubtypeLocale="de" android:languageTag="de"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=de" android:subtypeId="1251114636" />
 </input-method>

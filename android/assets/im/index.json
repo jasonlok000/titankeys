@@ -1,0 +1,29 @@
+[
+ {
+  "id": "es",
+  "name": "Español",
+  "nameEnglish": "Spanish",
+  "label": "ES",
+  "locale": "es",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "fr",
+  "name": "Français",
+  "nameEnglish": "French",
+  "label": "FR",
+  "locale": "fr",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "de",
+  "name": "Deutsch",
+  "nameEnglish": "German",
+  "label": "DE",
+  "locale": "de",
+  "script": "Latn",
+  "engine": null
+ }
+]

@@ -1,0 +1,29 @@
+{
+  "id": "de",
+  "name": "Deutsch",
+  "nameEnglish": "German",
+  "label": "DE",
+  "locale": "de",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "ä",
+    "e": "é",
+    "o": "ö",
+    "s": "ß",
+    "u": "ü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_de__legacy.combined"
+  }
+}

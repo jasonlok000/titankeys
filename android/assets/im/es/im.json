@@ -1,0 +1,30 @@
+{
+  "id": "es",
+  "name": "Español",
+  "nameEnglish": "Spanish",
+  "label": "ES",
+  "locale": "es",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "á",
+    "e": "é",
+    "i": "í",
+    "n": "ñ",
+    "o": "ó",
+    "u": "úü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "¿¡",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_es.combined"
+  }
+}

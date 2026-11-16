@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Written by tools/im/make.py: one keyboard-list name per input method. Don't edit by hand. -->
+<resources>
+    <string name="im_en" translatable="false">English</string>
+    <string name="im_es" translatable="false">Español</string>
+    <string name="im_fr" translatable="false">Français</string>
+    <string name="im_de" translatable="false">Deutsch</string>
+</resources>

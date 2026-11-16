@@ -110,7 +110,7 @@ Rules for a valid input method, checked by `tools/checks/im.test.ts` on every `b
 - every letter in `keys` and `accents` is in CLDR's letters for the locale (main or auxiliary), or listed in an `extra`
   field with a reason;
 - every letter the word list uses often (20 times in its top 50,000 words) can be typed, from a key or a hold;
-- the word list parses, has at most 100,000 words, and its file is at most 3 MB;
+- the word list parses, has at most 100,000 words, and its file is at most 4 MB (Cyrillic and Greek take two bytes a letter);
 - `NOTICE` exists and names a licence on the allowed list (Apache-2.0, MIT, BSD, CC0, CC BY 4.0, CC BY-SA 4.0, LGPL,
   GPL-3.0, GPL-2.0-or-later, Unicode);
 - labels are unique, and at most 3 characters wide.

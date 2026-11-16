@@ -47,6 +47,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Български",
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_bulgarian_phonetic.kcm",
     "words": "main_bg__experimental.combined"

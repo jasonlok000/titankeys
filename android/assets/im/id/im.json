@@ -1,6 +1,6 @@
 {
   "id": "id",
-  "name": "Bahasa Indonesia",
+  "name": "Indonesia",
   "nameEnglish": "Indonesian",
   "label": "ID",
   "locale": "id",
@@ -17,6 +17,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Indonesia",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_id__experimental.combined"
   }

@@ -380,9 +380,41 @@ private fun telexTypesTheList(method: InputMethod, list: File) {
 }
 
 /** Every `im.json` in [folder]: it reads, its label is unique, its word list reads, and its accents' letters are in it or held. */
+/** The app's text fonts (theme.ts), which Settings > Input methods draws the names with. */
+private val textFonts by lazy {
+    listOf("assets/fonts/Inter-Regular.otf", "assets/fonts/Inter-Medium.otf").map { java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, File(it)) }
+}
+
+/** What CLDR's own name for an input method's language is recorded as, by tools/im/make.py, which checks it against CLDR. */
+private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
+
+/**
+ * An input method's own name, as Settings > Input methods shows it: there, the same in the index, CLDR's name for the
+ * language in that language (accents and all), and in the app's fonts. Chinese input methods are named for their spelling;
+ * Hangul and Chinese characters come from Android's CJK font, which the app's fonts fall back to.
+ */
+private fun theNameShows(method: InputMethod, inIndex: String?) {
+    val name = method.name
+    check("${method.id}: has a name", name.isNotBlank())
+    check("${method.id}: has an English name", method.nameEnglish.isNotBlank())
+    same("${method.id}: its name is NFC", java.text.Normalizer.isNormalized(name, java.text.Normalizer.Form.NFC), true)
+    same("${method.id}: the index has the same name", inIndex, name)
+    if (method.script != "Hani") same("${method.id}: its name is CLDR's", method.source["name"], CLDR_NAME + name)
+    val missing = name.codePoints().toArray().filter { code ->
+        val script = Character.UnicodeScript.of(code)
+        script != Character.UnicodeScript.HAN && script != Character.UnicodeScript.HANGUL && textFonts.any { !it.canDisplay(code) }
+    }
+    check("${method.id}: the app's fonts have its name's letters", missing.isEmpty()) {
+        missing.joinToString(" ") { String(Character.toChars(it)) }
+    }
+}
+
 private fun everyInputMethodInTheFolder(folder: File) {
     val methods = folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }
     val labels = HashMap<String, String>()
+    @Suppress("UNCHECKED_CAST")
+    val index = (com.titankeys.connected.Json.parse(File(folder, "index.json").readText()) as List<Map<String, Any?>>)
+        .associate { it["id"] as String to it["name"] as String? }
     for (dir in methods) {
         val file = File(dir, "im.json")
         val parsed = runCatching { InputMethod.parse(file.readText()) }
@@ -394,6 +426,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         same("${dir.name}: the folder is its id", method.id, dir.name)
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
+        theNameShows(method, index[method.id])
         if (method.keys != null) same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
         val words = method.words ?: continue
         if (method.engine == "telex") {

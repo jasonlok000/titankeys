@@ -35,6 +35,7 @@
   },
   "engine": null,
   "source": {
+    "name": "CLDR 49 localeDisplayNames: Português",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_pt_BR.combined"
   }

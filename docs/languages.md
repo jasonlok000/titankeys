@@ -201,6 +201,12 @@ Languages
 - A list of every input method, grouped by script, each with a switch. The ones that are on sit at the top in the
   overlay's order, which for now is the order they were turned on (moving them comes later).
 - English can't be turned off while it's the only one.
+- **Names:** each row shows the input method's own name, which is CLDR's name for its language in that language,
+  capitalised (Français, Русский, Indonesia); `tools/im/make.py` stops if one differs, and `tests/languages` checks the
+  files. Chinese input methods are named for their spelling (漢語拼音, 粵拼, 耶魯拼音). Ink draws the page with the app's
+  text fonts (`assets/fonts`, built by `tools/im/fonts.py`): Inter with Latin and its extensions, Greek and Cyrillic, and
+  Noto Sans Georgian's letters. Hangul and Chinese come from Android's CJK font; a letter none of them has is left blank,
+  which is why Русский was blank while the fonts were Latin-1 only.
 - At most 8 on, the overlay's places. The 9th switch says why it won't turn on: "Eight at a time. Turn one off first."
 - Each input method's page shows its name, its source and licence, its variants when it has them (Portuguese), and
   "Fix typos as you type" for it, off by default.

@@ -3071,7 +3071,7 @@ class GuideActivity : Activity() {
         main.removeCallbacks(openAuto)
         autoPart = null
         hideHint()
-        // Google Play asks for its own disclosure before Accessibility opens. "No thanks" lets setup go on without it.
+        // Google Play asks for its own disclosure before Accessibility opens. "Not now" lets setup go on without it.
         if (part == SetupPart.Back && !BackDisclosureActivity.agreed(this)) {
             @Suppress("DEPRECATION")
             startActivityForResult(BackDisclosureActivity.forGuide(this), DISCLOSURE_REQUEST)
@@ -3155,7 +3155,7 @@ class GuideActivity : Activity() {
             return
         }
         if (requestCode != DISCLOSURE_REQUEST) return
-        // After "Agree" Accessibility opens as before. After "No thanks" the part is no longer missing, and setup moves on.
+        // After "Agree" Accessibility opens as before. After "Not now" the part is no longer missing, and setup moves on.
         if (resultCode == RESULT_OK && setupPart == SetupPart.Back) openPart(SetupPart.Back) else checkKeyboard()
     }
 

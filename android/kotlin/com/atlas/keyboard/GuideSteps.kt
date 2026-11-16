@@ -1901,7 +1901,7 @@ internal fun keyOff(step: GuideStep, skipped: Boolean, programmable: (String) ->
 
 /**
  * The parts of setup still to ask, in order (PhoneSetup.missing reads the phone for it): each that isn't [done], except Back
- * after "No thanks" on its disclosure ([backDeclined]), and Sym and fn once [skipped] (owner, #72). Contact names count as done
+ * after "Not now" on its disclosure ([backDeclined]), and Sym and fn once [skipped] (owner, #72). Contact names count as done
  * once answered either way, or on already (owner, #87).
  */
 internal fun setupToAsk(done: (SetupPart) -> Boolean, backDeclined: Boolean, skipped: (SetupPart) -> Boolean) =

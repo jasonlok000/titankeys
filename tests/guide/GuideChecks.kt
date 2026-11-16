@@ -1213,7 +1213,7 @@ private fun theKeysPart() {
     same(ask(keysSet = false), listOf(SetupPart.Keys), "It shows while Sym or fn isn't Programmable key")
     same(ask(keysSet = true), emptyList<SetupPart>(), "and hides once both are, or on a phone without them")
     same(ask(keysSet = false, skipped = setOf(SetupPart.Keys)), emptyList<SetupPart>(), "Skipped, it isn't asked again")
-    same(setupToAsk({ false }, backDeclined = true) { false }.contains(SetupPart.Back), false, "Back's No thanks still counts")
+    same(setupToAsk({ false }, backDeclined = true) { false }.contains(SetupPart.Back), false, "Back's Not now still counts")
     same(setupToAsk({ false }, backDeclined = false) { false }, SetupPart.entries.toList(), "Nothing done: every part, in order")
     val skip = SetupPart.Keys.skip.orEmpty()
     same(skip.startsWith("Skip") && "won't work" in skip, true, "Its skip says what won't work: \"$skip\"")

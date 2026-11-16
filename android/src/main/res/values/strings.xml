@@ -1,5 +1,6 @@
 <resources>
-    <string name="back_service_description">Sends Back, so one press of Back closes the keyboard and goes back. While the Sym panel is open, in Smart Launcher\'s search field and for a moment after you press Back, TitanKeys sees the keys you press. While you type, it keeps the touchpad on the keys when a notification shows at the top of the screen. It can\'t read your screen, and it doesn\'t keep or send anything.</string>
+    <!-- F: draft (#79), shortened to match the disclosure. -->
+    <string name="back_service_description">Sends Back, so one press closes the keyboard and goes back. At a few moments it sees which keys you press, and it keeps the touchpad on the keys when a notification pops up. It can\'t read your screen, and it doesn\'t keep or send anything.</string>
     <!-- The menu of a word held on the strip, or of the word selected in the field. Hovering a button shows its name in a pill. -->
     <string name="strip_menu_word">“%1$s”</string>
     <!-- I on a word that isn't saved: TitanKeys knows it now. -->
@@ -74,19 +75,27 @@
         <item>"Okay, seriously, what are you on?"</item>
         <item>"Fuck it, you win. Go touch grass."</item>
     </string-array>
+    <!-- The Accessibility disclosure (#79), in Share swipes' style: a short title and lines, the full detail behind
+         "What exactly does it see?". Plain, with no jokes: Play's reviewers read this screen (CONTRIBUTING.md, Writing).
+         F: drafts (#79), every line below. -->
     <string name="back_disclosure_title">Let TitanKeys handle Back?</string>
-    <string name="back_disclosure_intro">TitanKeys can use Android\'s Accessibility service to make Back and a few keys work better. It\'s optional.</string>
-    <string name="back_disclosure_does_title">What it does</string>
-    <string name="back_disclosure_back">Back: when you press Back, TitanKeys sends it on for you, so one press closes the keyboard and goes back in the app.</string>
-    <string name="back_disclosure_keys">Keys: at these times only, it sees which keys you press before the app does:</string>
+    <string name="back_disclosure_subtitle">It uses Android\'s Accessibility service. It\'s optional.</string>
+    <string name="back_disclosure_back">Back: one press closes the keyboard and goes back in the app.</string>
+    <string name="back_disclosure_keys">Keys: at a few moments, it sees which keys you press before the app does.</string>
+    <string name="back_disclosure_touchpad">Touchpad: it keeps the touchpad on the keys when a notification pops up.</string>
+    <string name="back_disclosure_never">It can\'t read your screen, and it doesn\'t keep or send anything.</string>
+    <string name="back_disclosure_no">Say no and TitanKeys still types and swipes. You can turn it on later in Settings &gt; Setup.</string>
+    <string name="back_disclosure_more">What exactly does it see?</string>
+    <!-- The full detail, opened in place. -->
+    <string name="back_disclosure_more_back">Back: when you press Back, TitanKeys sends it on for you, so one press closes the keyboard and goes back in the app.</string>
+    <string name="back_disclosure_more_keys">Keys: at these moments only, it sees which keys you press before the app does:</string>
     <string name="back_disclosure_keys_sym">while the Sym panel is open, so Enter and Backspace turn its pages instead of reaching the app;</string>
     <string name="back_disclosure_keys_launcher">in Smart Launcher\'s search field, where Smart Launcher would take your keys before TitanKeys gets them, so TitanKeys types there as in any other app;</string>
     <string name="back_disclosure_keys_back">for a moment after you press Back, so your next press of Back reaches the app.</string>
-    <string name="back_disclosure_touchpad">Touchpad: while you type, it keeps the touchpad on the keys when a notification shows at the top of the screen.</string>
-    <string name="back_disclosure_never_title">What it never does</string>
+    <string name="back_disclosure_more_touchpad">Touchpad: while you type, it keeps the touchpad on the keys when a notification shows at the top of the screen.</string>
     <string name="back_disclosure_never_screen">It can\'t read your screen or the text in your apps.</string>
     <string name="back_disclosure_never_keep">It doesn\'t keep or send the keys it sees. They\'re used on your phone straight away, then forgotten.</string>
-    <string name="back_disclosure_no">If you say no: TitanKeys still types and swipes. Back may take two presses, and those keys work as they would without TitanKeys. You can turn it on later in Settings &gt; Setup.</string>
-    <string name="back_disclosure_decline">No thanks</string>
+    <string name="back_disclosure_more_no">Without it, Back may take two presses, and those keys work as they would without TitanKeys.</string>
+    <string name="back_disclosure_decline">Not now</string>
     <string name="back_disclosure_agree">Agree</string>
 </resources>

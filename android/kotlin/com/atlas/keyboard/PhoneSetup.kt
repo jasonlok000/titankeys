@@ -38,7 +38,7 @@ internal object PhoneSetup {
     }
 
     /**
-     * The parts that are not done yet, in the order that setup asks for them. Accessibility is optional: after "No thanks" on
+     * The parts that are not done yet, in the order that setup asks for them. Accessibility is optional: after "Not now" on
      * its disclosure ([BackDisclosureActivity]), setup goes on without it, and Settings > Setup can still ask again. Sym and fn
      * can be skipped (owner, #72), and contact names are asked once (owner, #87).
      */

@@ -101,6 +101,9 @@ fun main() {
     same(restored["emoji"]!!["recent"], "🔥 😀 🍑", "Emoji recents: the backup's first")
     same(BackupFile.merge(Merge.UNION, null, setOf("x")), setOf("x"), "A list the phone doesn't have takes the backup's")
     same(BackupFile.merge(Merge.SNIPPETS, "not json", "{\"snippets\":[]}"), "{\"snippets\":[]}", "A broken list here takes the backup's")
+    val mine = "{\"snippets\":[{\"shortcut\":\"addr\",\"text\":\"1 Main St\"}]}"
+    same(BackupFile.merge(Merge.SNIPPETS, mine, "not json"), mine, "A broken list in the file keeps the phone's, and throws nothing")
+    same(BackupFile.merge(Merge.SNIPPETS, mine, "{\"other\":1}"), mine, "So does a list in the file without snippets")
 
     // Export words' and Export snippets' files from before 3.0 still restore.
     same(BackupFile.read("{\n  \"format\": \"physical-swipe-habits\",\n  \"version\": 2,\n  \"words\": {\"words\": []},\n  \"favourites\": [\"x\"]\n}\n"),

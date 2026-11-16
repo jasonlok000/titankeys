@@ -330,7 +330,12 @@ internal object BackupFile {
         } catch (error: Exception) {
             return file
         }
-        merged.putAll(snippetMap(file))
+        // A damaged list in the file keeps the phone's: restore runs after the words are in, so it mustn't throw here (#65).
+        try {
+            merged.putAll(snippetMap(file))
+        } catch (error: Exception) {
+            return phone
+        }
         return jsonText(mapOf("snippets" to merged.map { (shortcut, text) -> linkedMapOf("shortcut" to shortcut, "text" to text) }))
     }
 

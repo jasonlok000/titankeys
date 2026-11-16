@@ -46,11 +46,13 @@ public final class PhoneNames {
             Matcher matcher = WORD.matcher(name);
             while (matcher.find()) {
                 String spelling = matcher.group().replace('’', '\'');
-                if (people && allCapitals(spelling)) spelling = firstCapital(spelling);
                 String key = SwipeWords.normalise(spelling);
                 if (key.isEmpty()) continue;
                 double frequency = baseFrequency.applyAsDouble(key);
+                // Asked with the spelling as saved: a contact "ESPN" is all capitals, so the dictionary's "ESPN" wins. Given a
+                // first capital before asking, it read as the brand "Espn" and took the dictionary's place.
                 if (frequency > 0 && !brand(spelling, lowercase.test(key))) continue;
+                if (people && allCapitals(spelling)) spelling = firstCapital(spelling);
                 String known = words.get(key);
                 if (known == null || known.equals(key) && !spelling.equals(key)) words.put(key, spelling);
             }

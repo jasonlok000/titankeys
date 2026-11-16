@@ -221,9 +221,7 @@ private fun anEngineFitsTheInterface() {
  * [android] is Android's entry as the keyboard starts and [synced] the one it last left Android on.
  */
 private fun startsWith(index: InputMethodIndex, setting: String, current: String, android: String?, synced: String?): String {
-    val sync = KeyboardListSync(synced)
-    val picked = sync.heard(android)?.takeIf { id -> index.on(setting).any { it.id == id } }
-    return index.current(setting, picked ?: current).id
+    return InputMethodChoice.atFieldStart(index, setting, current, KeyboardListSync(synced).heard(android)).id
 }
 
 private fun aRestoredInputMethodTypes() {
@@ -238,6 +236,19 @@ private fun aRestoredInputMethodTypes() {
     same("Picked in Android's list while the keyboard was off: Android's", startsWith(index, "en,ru", "en", "ru", "en"), "ru")
     same("Android's pick of one that's off changes nothing", startsWith(index, "en,ru", "en", "de", "en"), "en")
     same("A current that's off: the first on", startsWith(index, "en,ru", "de", "en", "en"), "en")
+    // The phone re-test's exact path: Reset literally everything (nothing synced), a restore of en,ru with ru current, then the
+    // keyboard starts with Android still on English's entry, or on none of TitanKeys' entries, and Android says it before the
+    // first field and again as that field starts.
+    val afterReset = KeyboardListSync(null)
+    same("After Reset, Android's entry said as the keyboard starts is no pick", afterReset.heard("en"), null)
+    same("Said again as the first field starts, still no pick", afterReset.heard("en"), null)
+    same("The first field after the restore types the restored one, and says why",
+        InputMethodChoice.atFieldStart(index, "en,ru", "ru", null), InputMethodChoice("ru", "the saved setting"))
+    same("With none of TitanKeys' entries in Android's list", startsWith(index, "en,ru", "ru", null, null), "ru")
+    same("A restored current that isn't on: the first that is",
+        InputMethodChoice.atFieldStart(index, "en,ru", "de", null), InputMethodChoice("en", "the saved de isn't on, so the first that is"))
+    same("A pick in Android's list says so", InputMethodChoice.atFieldStart(index, "en,ru", "en", "ru"),
+        InputMethodChoice("ru", "picked in Android's keyboard list"))
     val sync = KeyboardListSync("en")
     same("Android's old entry, said again as the keyboard starts", sync.heard("en"), null)
     sync.told("ru")

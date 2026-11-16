@@ -107,6 +107,8 @@ class Composer(
             val context: String,
             val recognition: Words.Recognition,
             val endedAt: Long,
+            /** The contact size as the swipe ended, from [endContact]: NaN when it isn't known. */
+            val endContact: Float,
             val continuable: Boolean,
             val snapshot: Snapshot,
             val chosen: Boolean,
@@ -141,7 +143,8 @@ class Composer(
     }
 
     private sealed interface PendingInput
-    private data class PendingSwipe(val swipe: Swipe, val startedAt: Long, val endedAt: Long, val metaState: Int) : PendingInput
+    private data class PendingSwipe(val swipe: Swipe, val startedAt: Long, val endedAt: Long, val metaState: Int,
+                                    val endContact: Float) : PendingInput
     private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
     private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false, val leaves: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
@@ -432,13 +435,14 @@ class Composer(
         return true
     }
 
-    fun swipe(swipe: Swipe, startedAt: Long, endedAt: Long, metaState: Int) {
+    /** [endContact] is the contact size as the swipe ended (see [endContact]), which helps tell a slip from a finished word. */
+    fun swipe(swipe: Swipe, startedAt: Long, endedAt: Long, metaState: Int, endContact: Float = Float.NaN) {
         if (!field.words) return
         if (!hasPendingInput) {
             invalidate()
             fullStop = null
         }
-        if (enqueue(PendingSwipe(swipe, startedAt, endedAt, metaState))) recogniseNext()
+        if (enqueue(PendingSwipe(swipe, startedAt, endedAt, metaState, endContact))) recogniseNext()
     }
 
     private fun defer(transferable: Boolean = false, leaves: Boolean = false, action: () -> Unit): Boolean {
@@ -529,7 +533,7 @@ class Composer(
         val gap = if (previous != null) pending.startedAt - previous.endedAt else -1L
         val joinable = previous != null && previous.continuable && liftOffMillis > 0
             && anchor == previous.snapshot && before.endsWith(previous.inserted) && !anchor.selected
-        val sameStroke = joinable && previous!!.swipe.sameStroke(pending.swipe, gap, liftOffMillis.toLong())
+        val sameStroke = joinable && previous!!.swipe.sameStroke(pending.swipe, gap, liftOffMillis.toLong(), previous.endContact)
         val joined = if (joinable && (sameStroke || gap in 0..JOIN_CHECK_MILLIS)) appended(previous!!.swipe, pending.swipe, gap) else null
 
         /** Reads [path], or uses the reading already made of it, and types the result. */
@@ -577,7 +581,7 @@ class Composer(
                     val accepted = snapshot()
                     automaticSpace = accepted.takeIf { trailingSpace }
                     val swiped = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
-                        true, accepted, false, choices)
+                        pending.endContact, true, accepted, false, choices)
                     composition = swiped
                     remember(swiped)
                     confirmState(accepted) { confirmed ->

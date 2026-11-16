@@ -12,6 +12,28 @@ internal fun letterSpace(points: List<Sample>): Swipe {
     )
 }
 
+/** How far back from a swipe's end [endContact] looks. */
+private const val END_CONTACT_MILLIS = 60L
+
+/**
+ * The finger's mean contact size over the last moments of a swipe, in the sensor's steps, or NaN when the sensor gave
+ * none. A finger sliding off the touchpad's edge thins out; one that finished a word lifts at full size (#83).
+ */
+internal fun endContact(points: List<Sample>): Float {
+    val end = points.lastOrNull()?.time ?: return Float.NaN
+    var sum = 0
+    var count = 0
+    for (index in points.indices.reversed()) {
+        val point = points[index]
+        if (end - point.time > END_CONTACT_MILLIS) break
+        if (point.step > 0) {
+            sum += point.step
+            count++
+        }
+    }
+    return if (count == 0) Float.NaN else sum.toFloat() / count
+}
+
 private const val MIN_DELETE_GAP_MILLIS = 250L
 
 /** The number above, for the raw input log. */
@@ -68,5 +90,5 @@ internal class SwipePieces(
     }
 
     private fun follows(before: List<Sample>, after: List<Sample>) = flickerMillis() > 0 &&
-        letterSpace(before).sameStroke(letterSpace(after), after.first().time - before.last().time, flickerMillis())
+        letterSpace(before).sameStroke(letterSpace(after), after.first().time - before.last().time, flickerMillis(), endContact(before))
 }

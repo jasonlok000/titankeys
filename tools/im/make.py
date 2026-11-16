@@ -520,8 +520,96 @@ def build_thai(data, ident):
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice([THAI_NOTICE, THAI_WORDS]))
 
 
+# Hindi: Wikimedia's jquery.ime transliteration rules (jquery.ime/hi-transliteration.js in the data dir, GPL-3.0), run by
+# the keyboard's Rules engine, and FrequencyWords' Hindi words.
+HINDI_NOTICE = ("Typing: Wikimedia's jquery.ime, hi-transliteration (https://github.com/wikimedia/jquery.ime, "
+                "rules/hi/hi-transliteration.js) by Junaid P V, GNU GPL 3.0.")
+
+
+def js_values(text, start):
+    """The JavaScript literal at [start] in [text]: strings, lists of them and nested lists, with comments between."""
+    i = start
+
+    def skip():
+        nonlocal i
+        while i < len(text):
+            if text[i] in " \t\r\n,":
+                i += 1
+            elif text.startswith("//", i):
+                i = text.index("\n", i)
+            elif text.startswith("/*", i):
+                i = text.index("*/", i) + 2
+            else:
+                return
+
+    def value():
+        nonlocal i
+        skip()
+        if text[i] == "[":
+            i += 1
+            out = []
+            while True:
+                skip()
+                if text[i] == "]":
+                    i += 1
+                    return out
+                out.append(value())
+        quote = text[i]
+        if quote not in "'\"":
+            raise SystemExit("hi-transliteration.js: unexpected %r at %d" % (text[i], i))
+        i += 1
+        out = []
+        while text[i] != quote:
+            c = text[i]
+            if c == "\\":
+                n = text[i + 1]
+                i += 2
+                if n == "u":
+                    out.append(chr(int(text[i:i + 4], 16)))
+                    i += 4
+                else:
+                    out.append({"n": "\n", "r": "\r", "t": "\t", "0": "\0"}.get(n, n))
+                continue
+            out.append(c)
+            i += 1
+        i += 1
+        return "".join(out)
+
+    return value()
+
+
+def read_jquery_ime(data, file):
+    text = open(os.path.join(data, "jquery.ime", file), encoding="utf-8").read()
+    number = lambda key: int(re.search(r"\b%s:\s*(\d+)" % key, text).group(1))
+    patterns = js_values(text, text.index("[", text.index("patterns:")))
+    return {"maxKeyLength": number("maxKeyLength"), "contextLength": number("contextLength"), "patterns": patterns}
+
+
+def build_hindi(data, ident):
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    rules = read_jquery_ime(data, "hi-transliteration.js")
+    with open(os.path.join(folder, "rules.json"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(rules, f, ensure_ascii=False, indent=0)
+        f.write("\n")
+    # Devanagari's letters and signs (CLDR's exemplars leave out the vowel signs, which aren't alphabetic to Python), not its
+    # digits or dandas.
+    letters = [chr(c) for c in range(0x0900, 0x0980) if not 0x0964 <= c <= 0x096F and unicodedata.category(chr(c))[0] in "LM"]
+    file = "frequencywords/hi_full.txt"
+    head, words = read_counts(data, file, "hi", letters)
+    write_words(folder, head, words)
+    write_im(folder, {"id": ident, "name": cldr_name(data, "hi"), "nameEnglish": "Hindi", "label": "HI", "locale": "hi",
+                      "script": "Deva", "keys": "qwerty", "accents": {}, "words": "words.combined", "variants": None,
+                      # Shift letters are their own sounds (namaH, maChiyoM), so no sentence capitals.
+                      "rules": {"capitalise": False, "sentenceEnd": ".?!।", "openingMarks": "", "apostrophes": False},
+                      "engine": {"rules": "rules.json"},
+                      "source": {"keys": "jquery.ime hi-transliteration", "words": os.path.basename(file)}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
+        notice([CLDR_NOTICE, HINDI_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="hi_full.txt")]))
+
+
 # Input methods built by a function of their own.
-OWN = {"th": build_thai}
+OWN = {"th": build_thai, "hi": build_hindi}
 
 # The data folder, for CLDR's names as each input method is written.
 DATA = None

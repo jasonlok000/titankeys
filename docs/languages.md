@@ -29,6 +29,7 @@ From the study's ranking:
   Mandarin in Pinyin, with the Chinese variant setting.
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
 - **Thai** (experimental), Kedmanee with a third layer of held keys and a word break for suggestions ("Thai" below).
+- **Hindi** (experimental), typed by sound through Wikimedia's jquery.ime rules ("Hindi" below).
 - **Not in 3.0:** right-to-left scripts, Indic scripts, Japanese, handwriting, swiping and a next-word model in other
   languages, and translating the app, the guide and the playground.
 
@@ -346,6 +347,25 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   continue the word before: แม้ + น is แม้น). Folding for the bar now keeps marks outside U+0300 to U+036F, so Thai's
   vowels and tones stay part of a word.
 - No sentence capitals or apostrophes. Settings shows ไทย with Noto Sans Thai's letters; Ink places no marks, so only names.
+
+## Hindi
+
+- **Typing by sound:** Wikimedia's jquery.ime transliteration rules (`hi-transliteration`, GPL-3.0), read by
+  `tools/im/make.py` into `android/assets/im/hi/rules.json` and run by the keyboard's own rule runner (`keyboard/Rules.kt`,
+  `"engine": {"rules": "rules.json"}`): each key is added to the word's last letters, and the first rule that matches the
+  end rewrites them, as jquery.ime does (namaste is नमस्ते). The same runner takes any other script's rule file later.
+- **The word being typed** is the engine's code, on the bar, worked out again from the keys, so Backspace takes the last key
+  off. Space goes through the rules too, so a word's last virama goes (agar is अगर, agar~ keeps it), as jquery.ime does.
+  The word list's words that start with it are the choices, as Telex's are. Shift letters are their own sounds (namaH,
+  maChiyoM), so there are no sentence capitals.
+- **Measured** (`tests/languages`): jquery.ime's own Hindi test cases pass 100 of 101 when exported to `$HI_FIXTURES` (the
+  one left is a browser's line break, `` written as `
+`); typing the 300 commonest words by sound, a search finds keys
+  for 290 (96.7%), 1.17 keys a letter. The ones left need chandrabindu or nukta keys the search doesn't try.
+- **Words:** FrequencyWords' Hindi (CC BY-SA 4.0), 20,026 words. HeliBoard's Hindi list says only "GPLv2", which may not
+  combine with TitanKeys' GPL-3.0, so it isn't used.
+- **Its name:** Ink draws text without shaping, so हिन्दी's vowel sign would sit after its letter. Settings shows Devanagari
+  names in English ("Hindi") until it can (`UNSHAPED` in `app/settings/languages.tsx`); Android's own list shows हिन्दी.
 
 ## Korean and Vietnamese
 

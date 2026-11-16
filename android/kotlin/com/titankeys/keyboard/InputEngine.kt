@@ -114,5 +114,6 @@ object EngineClasses {
         "rime" to "com.titankeys.rime.RimeEngine",
         "hangul" to "com.titankeys.keyboard.HangulEngine",
         "telex" to "com.titankeys.keyboard.TelexEngine",
+        "rules" to "com.titankeys.keyboard.RulesEngine",
     )
 }

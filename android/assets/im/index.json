@@ -731,6 +731,23 @@
   }
  },
  {
+  "id": "hi",
+  "name": "हिन्दी",
+  "nameEnglish": "Hindi",
+  "label": "HI",
+  "locale": "hi",
+  "script": "Deva",
+  "engine": "rules",
+  "language": {
+   "id": "hi",
+   "name": "हिन्दी",
+   "nameEnglish": "Hindi",
+   "label": "HI",
+   "script": "Deva",
+   "experimental": true
+  }
+ },
+ {
   "id": "ko",
   "name": "한국어",
   "nameEnglish": "Korean",

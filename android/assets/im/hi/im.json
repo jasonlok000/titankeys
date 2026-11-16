@@ -1,0 +1,26 @@
+{
+  "id": "hi",
+  "name": "हिन्दी",
+  "nameEnglish": "Hindi",
+  "label": "HI",
+  "locale": "hi",
+  "script": "Deva",
+  "keys": "qwerty",
+  "accents": {},
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": ".?!।",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": {
+    "rules": "rules.json"
+  },
+  "source": {
+    "name": "CLDR 49 localeDisplayNames: हिन्दी",
+    "keys": "jquery.ime hi-transliteration",
+    "words": "hi_full.txt"
+  }
+}

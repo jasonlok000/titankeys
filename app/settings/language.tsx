@@ -2,7 +2,7 @@ import { Field, Screen, Section, useAction, useRouteParams, useSnapshot } from "
 import { type InputMethodEntry, state, update } from "../../lib/titankeys";
 import { Toggle } from "../../lib/app-haptics";
 import { Note } from "../../lib/note";
-import { MAX_ON, languagesOf } from "./languages";
+import { MAX_ON, languagesOf, shownName } from "./languages";
 import { spellingLabel } from "./spelling";
 import { chineseLabel } from "./chinese";
 
@@ -29,9 +29,9 @@ export default function LanguagePage() {
   const subtitle = language.experimental
     ? `${language.nameEnglish}. Experimental: it types, and its words and fixes are still being tuned.`
     : language.nameEnglish === language.name ? undefined : language.nameEnglish;
-  return <Screen title={language.name} subtitle={subtitle}>
+  return <Screen title={shownName(language.name, language.nameEnglish, language.script)} subtitle={subtitle}>
     <Section title={methods.length > 1 ? "Input methods" : "Input method"}>
-      {methods.map(im => <Toggle key={im.id} label={im.name}
+      {methods.map(im => <Toggle key={im.id} label={shownName(im.name, im.nameEnglish, im.script)}
         subtitle={im.nameEnglish === im.name || methods.length === 1 ? undefined : im.nameEnglish}
         value={inputMethods.includes(im.id)} onChange={value => set(im, value)} />)}
       {full && <Note>Eight at a time, tops. Turn one off first.</Note>}

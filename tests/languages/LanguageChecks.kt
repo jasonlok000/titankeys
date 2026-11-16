@@ -49,6 +49,7 @@ fun main(args: Array<String>) {
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
     thaiHoldsAndBreaks()
+    hindiRulesType()
     aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
     androidsListFollowsTheOnes()
@@ -316,6 +317,79 @@ private fun thaiHoldsAndBreaks() {
     same("a fold still drops Latin accents", WordList.fold("Café", java.util.Locale.FRENCH), "cafe")
 }
 
+/** Hindi's rules, as jquery.ime runs them, and the keyboard's engine on them: a word, Space, Backspace and a choice. */
+private fun hindiRulesType() {
+    val file = File("android/assets/im/hi/rules.json")
+    if (!file.isFile) return
+    val rules = Rules.parse(file.readText())
+    for ((keys, word) in listOf("namaste" to "नमस्ते", "raama" to "राम", "namaH" to "नमः", "madhumaChiyoM" to "मधुमक्खियों",
+            "agar " to "अगर ", "agar~ " to "अगर् ", "//" to "ऽ", "raam," to "राम,")) same("rules: $keys", rules.spell(keys), word)
+    val engine = RulesComposer(rules)
+    check("starts with its rules", engine.start(InputMethod.ENGLISH, File(".")))
+    for (c in "agar") engine.key(c)
+    same("the word on the bar keeps its virama until Space", engine.code(), "अगर्")
+    same("Space writes it without, and the space", engine.space().commit, "अगर ")
+    for (c in "namastee") engine.key(c)
+    same("Backspace takes the last key off", engine.backspace().code, "नमस्ते")
+    same("a mark no rule takes ends the word", engine.key('!').commit, "नमस्ते")
+}
+
+/** Jquery.ime's own test cases for an input method, when $HI_FIXTURES names their JSON ([{input, output}]): how many pass. */
+private fun rulesPassTheirFixtures(method: InputMethod, rules: Rules) {
+    val path = System.getenv("HI_FIXTURES")?.takeIf { method.id == "hi" } ?: return
+    @Suppress("UNCHECKED_CAST")
+    val cases = com.titankeys.connected.Json.parse(File(path).readText()) as List<Map<String, Any?>>
+    val failed = cases.filter { rules.spell(it["input"] as String) != it["output"] }
+    println("${method.id}: jquery.ime's test cases: ${cases.size - failed.size} of ${cases.size} pass" +
+        failed.take(5).joinToString("") { "; not ${it["input"]} -> ${it["output"]} (got ${rules.spell(it["input"] as String)})" })
+}
+
+/**
+ * The commonest 300 words of an input method typed through rules (Hindi), as someone typing them by sound would: a search
+ * over the keys for a spelling that gives each word, written by Space. Says the share found and the keys per letter.
+ */
+private fun rulesTypeTheList(method: InputMethod, dir: File, list: File) {
+    val rules = Rules.parse(File(dir, method.engineArg ?: "rules.json").readText())
+    rulesPassTheirFixtures(method, rules)
+    val common = list.useLines { lines -> lines.filter { it.startsWith(" word=") }.map { it.removePrefix(" word=").substringBefore(',') }.take(300).toList() }
+    var found = 0
+    var keys = 0
+    var letters = 0
+    val missed = ArrayList<String>()
+    for (word in common) {
+        val spelling = keysFor(rules, word)
+        if (spelling == null) missed += word else {
+            found++
+            keys += spelling.length
+            letters += word.length
+        }
+    }
+    val share = 100.0 * found / common.size
+    println("${method.id}: typed by sound: %d of %d common words (%.1f%%), %.2f keys a letter; not: %s".format(found, common.size, share,
+        keys.toDouble() / maxOf(letters, 1), missed.take(10).joinToString(" ")))
+    check("${method.id}: its common words can be typed", share >= 90.0) { "%.1f%%".format(share) }
+}
+
+private val RULE_KEYS = ('a'..'z') + ('A'..'Z') + listOf('~', '.', '^', '_')
+
+/** Keys that the rules turn into [word], with Space after: a beam search, keeping the spellings closest to it. */
+private fun keysFor(rules: Rules, word: String): String? {
+    var beam = listOf("" to Rules.State("", ""))
+    repeat(word.length * 3 + 2) {
+        val next = ArrayList<Triple<String, Rules.State, Int>>()
+        for ((keys, state) in beam) for (k in RULE_KEYS) {
+            val after = rules.step(state, k)
+            if (rules.step(after, ' ').text.removeSuffix(" ") == word) return keys + k
+            val common = after.text.commonPrefixWith(word).length
+            if (after.text.length - common > rules.maxKeyLength) continue
+            next += Triple(keys + k, after, common * 10 - keys.length)
+        }
+        beam = next.sortedByDescending { it.third }.distinctBy { it.second }.take(24).map { it.first to it.second }
+        if (beam.isEmpty()) return null
+    }
+    return null
+}
+
 private fun aRestoredInputMethodTypes() {
     val index = InputMethodIndex(listOf(
         InputMethodIndex.Entry("ru", "Русский", "Russian", "RU", "ru", "Cyrl"),
@@ -489,6 +563,9 @@ private val textFonts by lazy {
 }
 
 /** What CLDR's own name for an input method's language is recorded as, by tools/im/make.py, which checks it against CLDR. */
+/** Scripts Settings names in English, as Ink can't shape them yet (app/settings/languages.tsx). */
+private val UNSHAPED = setOf("Deva")
+
 private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
 
 /**
@@ -503,7 +580,8 @@ private fun theNameShows(method: InputMethod, inIndex: String?) {
     same("${method.id}: its name is NFC", java.text.Normalizer.isNormalized(name, java.text.Normalizer.Form.NFC), true)
     same("${method.id}: the index has the same name", inIndex, name)
     if (method.script != "Hani") same("${method.id}: its name is CLDR's", method.source["name"], CLDR_NAME + name)
-    val missing = name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
+    // Devanagari's names show in English in Settings (app/settings/languages.tsx, UNSHAPED): Ink can't shape them yet.
+    val missing = if (method.script in UNSHAPED) emptyList() else name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
     check("${method.id}: the app's fonts have its name's letters", missing.isEmpty()) {
         missing.joinToString(" ") { String(Character.toChars(it)) }
     }
@@ -545,7 +623,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         .associate { it["id"] as String to it["name"] as String? }
     @Suppress("UNCHECKED_CAST")
     val languageNames = (com.titankeys.connected.Json.parse(File(folder, "index.json").readText()) as List<Map<String, Any?>>)
-        .mapNotNull { (it["language"] as? Map<String, Any?>)?.get("name") as? String }.toSet()
+        .mapNotNull { (it["language"] as? Map<String, Any?>)?.takeIf { language -> language["script"] !in UNSHAPED }?.get("name") as? String }.toSet()
     for (name in languageNames) {
         val missing = name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
         check("language $name: the app's fonts have its letters", missing.isEmpty()) { missing.joinToString(" ") { String(Character.toChars(it)) } }
@@ -571,6 +649,10 @@ private fun everyInputMethodInTheFolder(folder: File) {
             check("${method.id}: Shift + every letter key types a letter", unshifted.isEmpty()) { unshifted.joinToString(" ") }
         }
         val words = method.words ?: continue
+        if (method.engine == "rules") {
+            rulesTypeTheList(method, dir, File(dir, words))
+            continue
+        }
         if (method.engine == "telex") {
             telexTypesTheList(method, File(dir, words))
             continue

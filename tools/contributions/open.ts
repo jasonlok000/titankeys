@@ -16,6 +16,11 @@ export function pem(text: string): Uint8Array {
 
 /** Opens one sealed batch and returns its JSON text. */
 export async function openBatch(sealed: Uint8Array, pkcs8: Uint8Array): Promise<string> {
+  return new TextDecoder().decode(await openBytes(sealed, pkcs8));
+}
+
+/** Opens one sealed batch, or one part of a report (reports.ts), and returns its bytes. */
+export async function openBytes(sealed: Uint8Array, pkcs8: Uint8Array): Promise<Uint8Array> {
   if (sealed.length <= HEADER + 16 || new TextDecoder().decode(sealed.subarray(0, 4)) !== MAGIC) throw new Error("Not a sealed batch");
   const ephemeralRaw = sealed.slice(4, 36);
   const privateKey = await crypto.subtle.importKey("pkcs8", pkcs8, { name: "X25519" }, true, ["deriveBits"]);
@@ -29,7 +34,7 @@ export async function openBatch(sealed: Uint8Array, pkcs8: Uint8Array): Promise<
     { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
   const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: sealed.slice(36, HEADER), additionalData: sealed.slice(0, 36), tagLength: 128 },
     key, sealed.slice(HEADER));
-  return gunzipSync(new Uint8Array(plain)).toString("utf8");
+  return new Uint8Array(gunzipSync(new Uint8Array(plain)));
 }
 
 if (import.meta.main) {

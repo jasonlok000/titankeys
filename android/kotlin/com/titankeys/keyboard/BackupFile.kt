@@ -98,6 +98,7 @@ internal object BackupFile {
         "clipboard" to Store.Left("the clipboard can hold passwords and codes"),
         "back_disclosure" to Store.Left("Google Play wants the Accessibility disclosure answered on each phone"),
         "phone_checks" to Store.Left("they describe this phone"),
+        "keyboard_list" to Store.Left("it follows this phone's own keyboard list"),
         "easter_egg" to Store.Left("it counts this phone's boots"),
     )
 

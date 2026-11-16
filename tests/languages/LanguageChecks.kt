@@ -46,6 +46,7 @@ fun main(args: Array<String>) {
     wordsCompleteIgnoringAccents()
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
+    aRestoredInputMethodTypes()
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (failures > 0) {
@@ -215,6 +216,40 @@ private fun anEngineFitsTheInterface() {
 }
 
 /** Types [keys] into a fresh Korean engine ("<" is Backspace): what's in the field after, and the syllable still being built. */
+/**
+ * What types as the keyboard starts: the setting, unless Android's keyboard list picked another since the keyboard last set it.
+ * [android] is Android's entry as the keyboard starts and [synced] the one it last left Android on.
+ */
+private fun startsWith(index: InputMethodIndex, setting: String, current: String, android: String?, synced: String?): String {
+    val sync = KeyboardListSync(synced)
+    val picked = sync.heard(android)?.takeIf { id -> index.on(setting).any { it.id == id } }
+    return index.current(setting, picked ?: current).id
+}
+
+private fun aRestoredInputMethodTypes() {
+    val index = InputMethodIndex(listOf(
+        InputMethodIndex.Entry("ru", "Русский", "Russian", "RU", "ru", "Cyrl"),
+        InputMethodIndex.Entry("de", "Deutsch", "German", "DE", "de", "Latn"),
+    ))
+    // The phone run's bug: a restore made Russian current, and Android still had English, as the keyboard last left it.
+    same("A restored input method types over Android's old entry", startsWith(index, "en,ru", "ru", "en", "en"), "ru")
+    same("So does one chosen in Settings while the keyboard was off", startsWith(index, "en,ru,de", "de", "ru", "ru"), "de")
+    same("The first start with nothing synced: the setting", startsWith(index, "en,ru", "ru", "en", null), "ru")
+    same("Picked in Android's list while the keyboard was off: Android's", startsWith(index, "en,ru", "en", "ru", "en"), "ru")
+    same("Android's pick of one that's off changes nothing", startsWith(index, "en,ru", "en", "de", "en"), "en")
+    same("A current that's off: the first on", startsWith(index, "en,ru", "de", "en", "en"), "en")
+    val sync = KeyboardListSync("en")
+    same("Android's old entry, said again as the keyboard starts", sync.heard("en"), null)
+    sync.told("ru")
+    same("Android's answer to the keyboard's own switch", sync.heard("ru"), null)
+    same("A pick in Android's list while typing", sync.heard("en"), "en")
+    same("Said twice, it's one pick", sync.heard("en"), null)
+    same("Android with none of TitanKeys' entries", sync.heard(null), null)
+    val fresh = KeyboardListSync()
+    same("Nothing synced: the first entry heard is no pick", fresh.heard("en"), null)
+    same("but the next change is", fresh.heard("ru"), "ru")
+}
+
 private fun hangul(keys: String): Pair<String, String> {
     val engine = HangulComposer()
     val field = StringBuilder()

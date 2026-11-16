@@ -39,6 +39,8 @@ internal object FreshStart {
         "app",
         // Back's disclosure answer: Setup asks again while Accessibility is off, as on a new install. With it on, Back is done.
         "back_disclosure",
+        // What the keyboard last set Android's keyboard list to: with it gone, the setting decides again.
+        "keyboard_list",
     )
 
     /** Files kept whole: the key calibration, which only TitanKeys Debug has. */

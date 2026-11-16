@@ -159,3 +159,24 @@ object Picker {
         return if (column < 0) -1 else columns.indexOf(column)
     }
 }
+
+/**
+ * Which input method Android's keyboard list picked, if any. Android keeps its own current entry, and it isn't in TitanKeys'
+ * backup: after a restore, or a change in Settings > Languages while the keyboard was off, Android still has the old one and
+ * says so as the keyboard starts. So only a change of Android's entry is a pick. [synced] is the entry the keyboard last left
+ * Android on, or heard from it; with none yet, the first one heard is taken as it is, and the setting decides.
+ */
+class KeyboardListSync(var synced: String? = null) {
+    /** Android says its entry is [id]: the input method picked there, to switch to, or null when nothing was picked. */
+    fun heard(id: String?): String? {
+        if (id == null || id == synced) return null
+        val first = synced == null
+        synced = id
+        return if (first) null else id
+    }
+
+    /** The keyboard set Android's entry to [id], to match the input method typing. */
+    fun told(id: String) {
+        synced = id
+    }
+}

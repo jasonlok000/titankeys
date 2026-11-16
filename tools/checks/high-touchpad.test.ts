@@ -19,7 +19,7 @@ function body(source: string, name: string) {
 
 test("every field start and end updates the overlays", () => {
   const ime = read("TitanKeysIme.kt");
-  expect(body(ime, "onStartInput")).toContain("updateOverlay()");
+  expect(body(ime, "onStartInput")).toContain("updateOverlay(raise = editing)");
   expect(body(ime, "onFinishInput")).toContain("updateOverlay()");
 });
 
@@ -27,13 +27,13 @@ test("updating the overlays hands the touchpad to the Back service while a field
   const update = body(read("TitanKeysIme.kt"), "updateOverlay");
   // While a field is edited, and only while this keyboard is alive and the current one (overlay-lifecycle.test.ts).
   expect(update).toMatch(/val wanted = !destroyed && PhoneSetup\.selected\(this\) && \(editing\b/);
-  expect(update).toContain("BackService.touchpad(overlayEvent)");
+  expect(update).toContain("BackService.touchpad(overlayEvent, raise)");
 });
 
 test("the Back service checks the window when it connects and at every call, from the live screen state", () => {
   const service = read("BackService.kt");
   expect(body(service, "onServiceConnected")).toContain("updateTouchpad()");
-  expect(body(service, "touchpad")).toContain("current?.updateTouchpad()");
+  expect(body(service, "touchpad")).toContain("current?.updateTouchpad(raise)");
   const update = body(service, "updateTouchpad");
   expect(update).toContain("HighTouchpad.up(");
   expect(update).toContain("isKeyguardLocked");

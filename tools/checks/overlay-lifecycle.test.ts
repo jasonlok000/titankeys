@@ -10,12 +10,12 @@ const ime = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/Titan
 const back = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/BackService.kt"), "utf8");
 
 test("the touchpad's windows are up only while this keyboard is alive and Android's current one", () => {
-  const update = ime.slice(ime.indexOf("private fun updateOverlay()"), ime.indexOf("private var destroyed"));
+  const update = ime.slice(ime.indexOf("private fun updateOverlay("), ime.indexOf("private var destroyed"));
   expect(update).toContain("val wanted = !destroyed && PhoneSetup.selected(this) && (editing || TypingSettings.touchpadOnlyInFields(this))");
   expect(update).toContain("destroyed -> BackService.releaseTouchpad(overlayEvent)");
   // Nothing else shows the overlay or hands the Back service a handler.
   expect(ime.match(/overlay\.show\(\)/g)?.length).toBe(1);
-  expect(ime.match(/BackService\.touchpad\(overlayEvent\)/g)?.length).toBe(1);
+  expect(ime.match(/BackService\.touchpad\(overlayEvent\b/g)?.length).toBe(1);
 });
 
 test("onDestroy marks the keyboard gone before anything else, and lets go of only its own handler", () => {
@@ -24,4 +24,16 @@ test("onDestroy marks the keyboard gone before anything else, and lets go of onl
   expect(destroy).toContain("BackService.releaseTouchpad(overlayEvent)");
   expect(ime).not.toContain("BackService.touchpad(null)");
   expect(back).toMatch(/fun releaseTouchpad\(handler: \(MotionEvent\) -> Boolean\) \{\s+if \(touchpad === handler\) touchpad\(null\)/);
+});
+
+test("at each field start the keyboard's windows go back on top of other apps' leftovers, new before old", () => {
+  const overlay = readFileSync(join(root, "android/kotlin/com/titankeys/keyboard/TouchpadOverlay.kt"), "utf8");
+  const raise = overlay.slice(overlay.indexOf("fun raise()"), overlay.indexOf("private fun added()"));
+  // The new window is added before the old one goes: never none, never two.
+  expect(raise.indexOf("added()")).toBeLessThan(raise.indexOf("removeViewImmediate(old)"));
+  expect(raise).toContain("view = fresh");
+  const start = ime.slice(ime.indexOf("override fun onStartInput("), ime.indexOf("override fun onStartInput(") + 6000);
+  expect(start).toContain("updateOverlay(raise = editing)");
+  expect(ime).toContain("if (wanted && raise) overlay.raise()");
+  expect(back).toContain("if (window.up && raise) window.raise() else window.show()");
 });

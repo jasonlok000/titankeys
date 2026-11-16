@@ -1091,12 +1091,14 @@ class TitanKeysIme : InputMethodService() {
      * window titled "InputMethod", so those dead windows took it from whichever keyboard came next (2.1 left 96 on the
      * owner's phone, 2026-11-16).
      */
-    private fun updateOverlay() {
+    private fun updateOverlay(raise: Boolean = false) {
         val wanted = !destroyed && PhoneSetup.selected(this) && (editing || TypingSettings.touchpadOnlyInFields(this))
         if (wanted) overlay.show() else overlay.hide()
+        // At a field start, back on top of any other app's leftover window of the same kind: see TouchpadOverlay.raise.
+        if (wanted && raise) overlay.raise()
         main.removeCallbacks(releaseHighTouchpad)
         when {
-            wanted -> BackService.touchpad(overlayEvent)
+            wanted -> BackService.touchpad(overlayEvent, raise)
             // Gone now, not after the grace: and only its own, never a newer keyboard's.
             destroyed -> BackService.releaseTouchpad(overlayEvent)
             else -> main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)
@@ -1413,7 +1415,7 @@ class TitanKeysIme : InputMethodService() {
             // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
-        updateOverlay()
+        updateOverlay(raise = editing)
         if (!restarting) {
             sticky.clear()
         }

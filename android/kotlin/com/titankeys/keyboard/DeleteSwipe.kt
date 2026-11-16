@@ -226,12 +226,18 @@ internal class FlickCrunch {
  */
 internal fun wordDeleteLength(before: String, after: String?): Int {
     var start = before.length
-    while (start > 0 && Character.isWhitespace(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
-    while (start > 0 && !Character.isWhitespace(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
-    val tookWord = start < before.length && !Character.isWhitespace(before.codePointBefore(before.length))
+    while (start > 0 && isWordBreak(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
+    while (start > 0 && !isWordBreak(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
+    val tookWord = start < before.length && !isWordBreak(before.codePointBefore(before.length))
     if (tookWord && start > 0 && before[start - 1] == ' ' && after?.startsWith(' ') == true) start--
     return before.length - start
 }
+
+/**
+ * A space between words. Fields in web pages often keep a typed space as a non-breaking one (U+00A0), which isn't whitespace to
+ * Java, so a word delete would run on through it and take the word before too.
+ */
+private fun isWordBreak(c: Int) = Character.isWhitespace(c) || Character.isSpaceChar(c)
 
 /**
  * The text a word delete takes from the end of the text before the cursor, as [wordDeleteLength] says: the whole last word,

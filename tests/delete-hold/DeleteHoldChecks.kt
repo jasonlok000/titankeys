@@ -635,6 +635,8 @@ private fun aWordDeleteLeavesNoTwoSpaces() {
     same(deleted("one two|"), "one |", "Nothing after the cursor, nothing more")
     same(wordDeleteLength("one two", null), 3, "A field that doesn't give the text after: the word alone")
     same(deleted("|three"), "|three", "Nothing before the cursor, nothing goes")
+    same(deleted("one two|"), "one |", "A web page's non-breaking space ends the word too")
+    same(deleted("one two |"), "one |", "So do the narrow and figure spaces")
 }
 
 /**

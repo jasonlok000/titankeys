@@ -9,8 +9,8 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 out=$(realpath -m "${1:-$(mktemp -d)/gesture-render}")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
-engine=android/kotlin/com/atlas/engine
+keyboard=android/kotlin/com/titankeys/keyboard
+engine=android/kotlin/com/titankeys/engine
 # The stand-in for the guide's fade must still be the real one. The orange is the real Accent's, compiled in below.
 line="fun faded(colour: Int, alpha: Float) = colour and 0x00FFFFFF or ((alpha.coerceIn(0f, 1f) * 255).toInt() shl 24)"
 grep -qF "$line" "$keyboard/GuideKeyboardView.kt" "$keyboard/GuideTapDrawing.kt" || { echo "GuideKeyboardView.kt changed: $line"; exit 1; }
@@ -23,4 +23,4 @@ javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java
   "$keyboard/WordSelection.kt" \
   "$keyboard/CursorMode.kt" "$keyboard/GestureDisplay.kt" "$keyboard/GestureDrawing.kt" "$keyboard/StripFit.kt" "$keyboard/TrailThickness.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" \
   tests/gesture-render/GuideStandIns.kt tests/gesture-render/GestureRender.kt
-java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib" com.atlas.keyboard.GestureRenderKt "$out"
+java -Djava.awt.headless=true -cp "$work/fake:$work/classes:$stdlib" com.titankeys.keyboard.GestureRenderKt "$out"

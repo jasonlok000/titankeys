@@ -1,6 +1,6 @@
 import { Row, Screen, Section } from "ink";
 import { arrowOutward, chevronRight } from "ink/icons";
-import { openGuide } from "../../lib/atlas";
+import { openGuide } from "../../lib/titankeys";
 
 /**
  * Settings > Guide: the fun guide, which teaches on the keys, and the boring guide, which has every feature in words.

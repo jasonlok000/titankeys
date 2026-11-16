@@ -43,8 +43,8 @@ New apps are now enrolled by default in Google's "quantum-ready hybrid signing" 
    ```
 
    It asks for the keystore and key passwords. Type them in yourself. Nobody else, and no agent, should handle them.
-9. Upload `atlas-for-play.zip` on the same page and save.
-10. **Delete `atlas-for-play.zip`** after the upload. It holds the private key, encrypted for Google.
+9. Upload `titankeys-for-play.zip` on the same page and save.
+10. **Delete `titankeys-for-play.zip`** after the upload. It holds the private key, encrypted for Google.
 
 ### 3. Make and register an upload key
 

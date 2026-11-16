@@ -1,6 +1,6 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.engine.Swipe
+import com.titankeys.engine.Swipe
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Checks that a held key replaces the letter it typed, through a real Composer. */
@@ -111,8 +111,8 @@ private class Typist(autoCapitalise: Boolean = false) {
 
 /** #77: a fresh install, with no hold time stored, reads Medium, 400 ms, and so does the engine before settings load. */
 private fun freshInstallReadsMedium() {
-    same(com.atlas.engine.TypingSettings.DEFAULT_HOLD_SYMBOL_MILLIS, 400, "A fresh install's hold time")
-    same(com.atlas.engine.HoldEngine.DEFAULT_MILLIS, 400, "The engine's hold time before settings load")
+    same(com.titankeys.engine.TypingSettings.DEFAULT_HOLD_SYMBOL_MILLIS, 400, "A fresh install's hold time")
+    same(com.titankeys.engine.HoldEngine.DEFAULT_MILLIS, 400, "The engine's hold time before settings load")
 }
 
 fun main() {
@@ -170,7 +170,7 @@ private fun aLetterThatHasMovedStays() {
 }
 
 /**
- * Exact typing (issue 45), the way AtlasIme runs it: the hold engine sees each press first, a press it does not keep goes through
+ * Exact typing (issue 45), the way TitanKeysIme runs it: the hold engine sees each press first, a press it does not keep goes through
  * [ExactTyping.plan], and the keyboard keeps Shift, Alt and Sym. The owner's AnyDesk round found repeats of a held J, a one-time Alt
  * that stayed on or locked, and Sym that did not open. Each has a check here.
  */
@@ -178,7 +178,7 @@ private class ExactKeys {
     val modifiers = Modifiers()
     val sent = ArrayList<String>()
     private var held = 0
-    private val engine = com.atlas.engine.HoldEngine { key ->
+    private val engine = com.titankeys.engine.HoldEngine { key ->
         sent += ExactTyping.takeBack.map(::describe)
         sent += "text " + symbolOf(key)
         held = 0

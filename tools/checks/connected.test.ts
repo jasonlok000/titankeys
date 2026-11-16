@@ -282,7 +282,7 @@ describe("contributions server", () => {
 
   test("accepts the largest batch that the app makes", async () => {
     // Contributions.kt sends at most 256 KB of examples before gzip; sealing adds 64 bytes.
-    const source = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    const source = await text("android/kotlin/com/titankeys/connected/Contributions.kt");
     expect(source).toContain("BATCH_BYTES = 256 * 1024");
     expect(MAX_BATCH_BYTES).toBeGreaterThanOrEqual(256 * 1024 + 64);
   });
@@ -380,7 +380,7 @@ describe("privacy texts (#53)", () => {
     const url = "https://jasonlok000.github.io/titankeys/privacy/";
     expect(await text("lib/connected.ts")).toContain(url);
     expect(await text("README.md")).toContain(url);
-    const kotlin = await text("android/kotlin/com/atlas/connected/Connected.kt");
+    const kotlin = await text("android/kotlin/com/titankeys/connected/Connected.kt");
     expect(kotlin).toContain('SITE = "https://jasonlok000.github.io/titankeys"');
     expect(kotlin).toContain('PRIVACY_URL = "$SITE/privacy/"');
   });
@@ -388,7 +388,7 @@ describe("privacy texts (#53)", () => {
   test("the policy and the disclosure name the same limits as the code", async () => {
     const policy = await text("site/privacy/index.html");
     const disclosure = await text("lib/connected-text.ts");
-    const code = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    const code = await text("android/kotlin/com/titankeys/connected/Contributions.kt");
     expect(code).toContain("QUEUE_CAP_BYTES = 4L * 1024 * 1024");
     for (const words of [policy, disclosure]) {
       expect(words).toContain("4 MB");
@@ -401,19 +401,19 @@ describe("privacy texts (#53)", () => {
 describe("news on the phone", () => {
   test("turning News off takes down only news, never Record a bug's ongoing notification", async () => {
     // Bug hunt 2.1, #26: cancelAll() took Record a bug's notification and its Stop down too, while it went on recording.
-    const news = await text("android/kotlin/com/atlas/connected/Announcements.kt");
+    const news = await text("android/kotlin/com/titankeys/connected/Announcements.kt");
     expect(news).not.toContain("cancelAll(");
     expect(news).toContain("if (!on) cancelNews(context)");
     expect(news).toContain("if (shown.notification.channelId == CHANNEL) manager.cancel(shown.tag, shown.id)");
     expect(news).toContain('private const val CHANNEL = "news"');
-    expect(await text("android/kotlin/com/atlas/keyboard/BugRecording.kt")).toContain('private const val CHANNEL = "bug-recording"');
+    expect(await text("android/kotlin/com/titankeys/keyboard/BugRecording.kt")).toContain('private const val CHANNEL = "bug-recording"');
   });
 });
 
 describe("contributions on the phone", () => {
   test("a deletion waits for any batch on its way, and sent examples leave the queue by content", async () => {
     // Bug hunt 2.1, #28. tests/connected checks the queue's removal; this checks the lock between the two jobs.
-    const code = await text("android/kotlin/com/atlas/connected/Contributions.kt");
+    const code = await text("android/kotlin/com/titankeys/connected/Contributions.kt");
     expect(code).toContain("repeat(BATCHES_PER_RUN) { synchronized(sending) {");
     expect(code).toContain("fun sendDeletion(context: Context): Boolean = synchronized(sending) {");
     expect(code).toContain("queue.removeSent(lines)");

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Screen, type SettingsChoice, SettingsChoices, useAction, useSnapshot } from "ink";
-import { type Settings, type State, state, update } from "./atlas";
+import { type Settings, type State, state, update } from "./titankeys";
 import { playHaptic } from "./app-haptics";
 
 /** Saves a setting when an option is selected. */

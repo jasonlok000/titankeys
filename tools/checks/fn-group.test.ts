@@ -5,7 +5,7 @@ const root = new URL("../../", import.meta.url);
 const read = (path: string) => Bun.file(new URL(path, root)).text();
 
 test("fn picks a Sym panel group before Ctrl takes it", async () => {
-  const ime = await read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = await read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   const keyDown = ime.slice(ime.indexOf("override fun onKeyDown("), ime.indexOf("override fun onKeyUp("));
   const group = keyDown.indexOf("keyCode == Modifiers.FN && panelOpen && isInputViewShown && categoryKey(event)");
   const ctrl = keyDown.indexOf("if (ctrlKey(event))");

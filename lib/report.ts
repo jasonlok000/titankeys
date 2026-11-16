@@ -35,7 +35,7 @@ export const reportState = resource({
   load: async (): Promise<ReportState> => JSON.parse(await connected("reportState")),
 })();
 
-onNativeMessage("atlas-window", () => void reportState.refresh());
+onNativeMessage("titankeys-window", () => void reportState.refresh());
 
 export type Report = { kind: ReportKind; what: string; expected: string; email: string; recording: boolean; crash: boolean };
 

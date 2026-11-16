@@ -8,6 +8,6 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
-  android/kotlin/com/atlas/keyboard/Expansions.kt android/kotlin/com/atlas/keyboard/ExactTyping.kt android/kotlin/com/atlas/keyboard/Field.kt \
+  android/kotlin/com/titankeys/keyboard/Expansions.kt android/kotlin/com/titankeys/keyboard/ExactTyping.kt android/kotlin/com/titankeys/keyboard/Field.kt \
   tests/expansion/ExpansionChecks.kt
-java -cp "$work:$stdlib" com.atlas.keyboard.ExpansionChecksKt
+java -cp "$work:$stdlib" com.titankeys.keyboard.ExpansionChecksKt

@@ -11,7 +11,7 @@ export type AppHaptic = "app_switch_on" | "app_switch_off" | "app_step" | "app_p
 
 /** Plays [id]. A haptic that can't play is no reason to hold up what the control does, so a failure is ignored. */
 export function playHaptic(id: AppHaptic) {
-  callNative("atlas", "haptic", { id }).catch(() => undefined);
+  callNative("titankeys", "haptic", { id }).catch(() => undefined);
 }
 
 /** A switch turned on locks in; turned off, it lets go. */

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Screen, Section, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
-import { type State, previewTouchpad, state, update } from "../../lib/atlas";
+import { type State, previewTouchpad, state, update } from "../../lib/titankeys";
 import { hapticGroups } from "../../lib/haptics";
 
 export const hapticsLabel = ({ haptics }: State) => haptics ? "On" : "Off";

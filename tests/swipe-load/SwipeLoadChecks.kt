@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 /**
  * One failed engine load no longer ends swiping until a reboot (bug hunt 2.1, #22): the next text box loads it again, a bounded

@@ -20,7 +20,7 @@ test("every activity wraps its base context in FixedScale, at Normal", () => {
   const wrap = "override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))";
   for (const { path, source } of activities) expect({ path, wrapped: source.includes(wrap) }).toEqual({ path, wrapped: true });
   // No window can be sized: Bar text size grows only the keyboard's bar (owner, 2026-11-13).
-  expect(read("android/kotlin/com/atlas/keyboard/FixedScale.kt")).toContain("    fun wrap(base: Context): Context {");
+  expect(read("android/kotlin/com/titankeys/keyboard/FixedScale.kt")).toContain("    fun wrap(base: Context): Context {");
 });
 
 test("Bar text size grows only the keyboard's bar, at once while it's up (#86)", () => {
@@ -29,14 +29,14 @@ test("Bar text size grows only the keyboard's bar, at once while it's up (#86)",
   expect(adapter).toContain('internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.UNSCALED');
   expect(adapter).not.toContain("activity.applyUserScale()");
   expect(adapter).toContain('"barTextSize" -> FixedScale.size(activity, FixedScale.Size.of(value as String))');
-  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   // The next field start catches up, and a keyboard that's up hears the pick and makes the bar again at once.
   expect(ime.match(/if \(FixedScale\.size\(this\) != viewSize\) setInputView\(onCreateInputView\(\)\)/g)?.length).toBe(2);
   expect(ime).toContain("barSize = FixedScale.listen(this) { main.post(::followBarSize) }");
   expect(ime).toContain("barSize?.let { FixedScale.stopListening(this, it) }");
   const follow = ime.slice(ime.indexOf("private fun followBarSize()"), ime.indexOf("override fun onStartInputView"));
   expect(follow).toContain("if (!isInputViewShown || field.exact) return");
-  const scale = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
+  const scale = read("android/kotlin/com/titankeys/keyboard/FixedScale.kt");
   expect(scale).toContain("if (key == SIZE || key == null) changed()");
   // The page tries it: a field at the top with a sample line, opening the keyboard by itself, and no "catches up" note.
   const tryPage = read("app/settings/bar-text-size.tsx");
@@ -46,7 +46,7 @@ test("Bar text size grows only the keyboard's bar, at once while it's up (#86)",
   expect(tryPage).toContain("useState(barTextSizeSample)");
   expect(tryPage).not.toContain("catches up the next time it shows");
   // The page lists the sizes FixedScale knows, smallest first, by the same fresh ids.
-  const kotlin = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
+  const kotlin = read("android/kotlin/com/titankeys/keyboard/FixedScale.kt");
   const sizes = [...kotlin.matchAll(/^\s+(\w+)\("(\w+)", (SMALLER|NORMAL|BIGGER)\)/gm)].map(match => [match[1], match[2], match[3]]);
   expect(sizes).toEqual([["Smaller", "small", "SMALLER"], ["Normal", "medium", "NORMAL"], ["Bigger", "large", "BIGGER"]]);
   expect(kotlin).toContain("const val SMALLER = 1f");
@@ -56,7 +56,7 @@ test("Bar text size grows only the keyboard's bar, at once while it's up (#86)",
   const page = read("app/settings/bar-text-size.tsx");
   expect(page).toContain('(["small", "medium", "large"] as const)');
   expect(page).toContain('{ small: "Smaller", medium: "Normal", large: "Bigger" }');
-  expect(read("lib/atlas.ts")).toContain('export type BarTextSize = "small" | "medium" | "large";');
+  expect(read("lib/titankeys.ts")).toContain('export type BarTextSize = "small" | "medium" | "large";');
 });
 
 /** A section of Settings' top page, by its title. */
@@ -89,7 +89,7 @@ test("Bar text size lives in Settings > The bar, and no Size is left in Look and
 });
 
 test("only the bar and the menu's effects are made at Bar text size; the panels and exact typing's bar stay unscaled", () => {
-  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   const start = ime.indexOf("override fun onCreateInputView(): View {");
   const body = ime.slice(start, ime.indexOf("\n    }\n", start));
   expect(body).toContain("val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)");
@@ -101,28 +101,28 @@ test("only the bar and the menu's effects are made at Bar text size; the panels 
 });
 
 test("the bar keeps its height at every size, and the menu's pill stays inside it", () => {
-  const strip = read("android/kotlin/com/atlas/keyboard/Strip.kt");
+  const strip = read("android/kotlin/com/titankeys/keyboard/Strip.kt");
   expect(strip).toContain("private val barHeight = Math.round(FixedScale.fixedPx(context, BAR_DP))");
   expect(strip).not.toContain("dp(56)");
   // The pill grows with Bar text size only as far as fits round the bar's line, inside the bar, which doesn't grow.
   expect(strip).toContain("val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, height, inside))");
   expect(strip).toContain("fitClipLines(wordPixels() * clipScale)");
   // fixedPx works from the screen, not the window's own density, so it's right from a window at any size.
-  expect(read("android/kotlin/com/atlas/keyboard/FixedScale.kt"))
+  expect(read("android/kotlin/com/titankeys/keyboard/FixedScale.kt"))
     .toContain("return dp * densityDpi(metrics.widthPixels, metrics.heightPixels) / DisplayMetrics.DENSITY_DEFAULT");
-  expect(read("android/kotlin/com/atlas/keyboard/ExactBar.kt")).toContain("minimumHeight = dp(HEIGHT).toInt() + navigationInset");
+  expect(read("android/kotlin/com/titankeys/keyboard/ExactBar.kt")).toContain("minimumHeight = dp(HEIGHT).toInt() + navigationInset");
 });
 
 test("everyone starts at Normal, whatever the phone's text size, and both resets go back to it", () => {
-  const kotlin = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
+  const kotlin = read("android/kotlin/com/titankeys/keyboard/FixedScale.kt");
   expect(kotlin).toContain("fun size(context: Context): Size = Size.of(preferences(context).getString(SIZE, null))");
   expect(kotlin).toContain("fun of(id: String?): Size = entries.firstOrNull { it.id == id } ?: Normal");
   expect(kotlin).not.toMatch(/forFontScale|phoneFontScale|Resources\.getSystem|fun picked/);
   expect(kotlin).toContain("preferences(context).edit().remove(SIZE).remove(OLD_SIZE).apply()");
-  expect(read("android/kotlin/com/atlas/keyboard/SettingsReset.kt")).toContain("FixedScale.resetSize(context)");
+  expect(read("android/kotlin/com/titankeys/keyboard/SettingsReset.kt")).toContain("FixedScale.resetSize(context)");
   // Reset literally everything wipes FixedScale's whole file, the pick with it.
-  expect(read("android/kotlin/com/atlas/keyboard/FreshStart.kt")).toContain('"fixed_scale"');
-  for (const path of ["android/kotlin/com/vandam/ink/AppNativeAdapters.kt", "android/kotlin/com/atlas/keyboard/RawLog.kt", "lib/atlas.ts"]) {
+  expect(read("android/kotlin/com/titankeys/keyboard/FreshStart.kt")).toContain('"fixed_scale"');
+  for (const path of ["android/kotlin/com/vandam/ink/AppNativeAdapters.kt", "android/kotlin/com/titankeys/keyboard/RawLog.kt", "lib/titankeys.ts"]) {
     expect({ path, picked: read(path).includes("barTextSizePicked") }).toEqual({ path, picked: false });
   }
 });
@@ -135,7 +135,7 @@ test("every activity in the manifest is one that's checked, or Ink's own", () =>
 });
 
 test("the keyboard's bar, panels and exact typing's bar are made from a fixed-scale context", () => {
-  const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   const start = ime.indexOf("override fun onCreateInputView(): View {");
   const body = ime.slice(start, ime.indexOf("\n    }\n", start));
   expect(body).not.toMatch(/(Strip|SymPanel|ExactBar|LinearLayout|MenuEffects)\(this/);

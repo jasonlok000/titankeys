@@ -213,7 +213,7 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
 - **The library:** librime with OpenCC, built from source with Trime's CMake files, without plugins, as
   `android/jniLibs/arm64-v8a/librime_tk.so` (4.5 MB). It builds in WSL with `native/rime/build.sh`, like the swipe library,
   and is checked in prebuilt, so a normal build doesn't need the NDK. The study's build is in `~/build/lang/rime-build`.
-- **JNI:** a thin layer (`native/rime/rime_jni.cc`, `com.atlas.engine.Rime`), with: `start(sharedDir, userDir)`,
+- **JNI:** a thin layer (`native/rime/rime_jni.cc`, `com.titankeys.engine.Rime`), with: `start(sharedDir, userDir)`,
   `select(schema)`, `setOption(name, on)`, `key(code)`, `state()` (the code typed so far, the choices on this page, the page
   number, the text to commit), `pick(index)`, `page(down)`, `clear()`. Trime's `rime_jni` is the reference, and only what
   the picker needs is copied.
@@ -233,24 +233,24 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
 
 ## Where it goes in the code
 
-Paths are under `android/kotlin/com/atlas/`. Line numbers are from 2026-11-16's main.
+Paths are under `android/kotlin/com/titankeys/`. Line numbers are from 2026-11-16's main.
 
 - **`InputMethods`** (new, `keyboard/InputMethods.kt`): reads the index, keeps the current input method, loads its
   `im.json` and word list when it's picked, and frees the last one. English stays as it is: `SwipeTyping` keeps loading its
   models at start (`engine/SwipeTyping.java:151`), and `AutocorrectLoader` keeps loading English's lists per field.
-- **Letters:** a letter key becomes text in `AtlasIme.key()` (`keyboard/AtlasIme.kt:3465`), from
+- **Letters:** a letter key becomes text in `TitanKeysIme.key()` (`keyboard/TitanKeysIme.kt:3465`), from
   `event.getUnicodeChar(...)`, then `Composer.type()` (`keyboard/Composer.kt:636`). For a non-`qwerty` input method,
   `key()` asks `InputMethods` for the key's letter instead, and upper-cases it with the input method's locale. TitanKeys
   writes straight into the field with no composing text, so this is the only change for data-only input methods.
-- **Holds:** `HoldEngine` (`engine/HoldEngine.java`) already times a held letter, and `canHold()` (`AtlasIme.kt:3134`)
+- **Holds:** `HoldEngine` (`engine/HoldEngine.java`) already times a held letter, and `canHold()` (`TitanKeysIme.kt:3134`)
   decides which keys can be held. In an input method with accents, `canHold()` accepts every key with accents (instead of
-  every key with an Alt symbol), and the hold callback (`replaceHeldLetter`, `AtlasIme.kt:3173`) opens the picker instead
+  every key with an Alt symbol), and the hold callback (`replaceHeldLetter`, `TitanKeysIme.kt:3173`) opens the picker instead
   of calling `Composer.replaceLetter()`. Picking an accent then calls `Composer.replaceLetter()` with it, as a symbol does
   today.
 - **The picker:** a new `Strip.Notice.Picker(choices, page)`, drawn by `Strip` (`keyboard/Strip.kt`) next to the word menu's
   `drawMenu` (`Strip.kt:1037`), with `MenuKeys.slot()` lining each choice up over its key. Marking uses the bar's
-  `SteadyKey` hover (`barHover`, `AtlasIme.kt:134`, through `followRestingKey` and `markMenu`), and the key press is taken
-  the way `menuAction` (`AtlasIme.kt:1887`) takes the word menu's. Unlike the word menu, every letter key can be a choice.
+  `SteadyKey` hover (`barHover`, `TitanKeysIme.kt:134`, through `followRestingKey` and `markMenu`), and the key press is taken
+  the way `menuAction` (`TitanKeysIme.kt:1887`) takes the word menu's. Unlike the word menu, every letter key can be a choice.
 - **The overlay on a held Sym:** Sym is handled in `Modifiers.down()` (`keyboard/Modifiers.kt:262`), which opens the Sym
   panel on the first press (`pressSym()`, `Modifiers.kt:211`). A held Sym isn't used for anything yet (`symHeld` only blocks
   repeats). With two or more input methods on, `pressSym()` moves to Sym's release, and a held Sym (the hold time,
@@ -259,11 +259,11 @@ Paths are under `android/kotlin/com/atlas/`. Line numbers are from 2026-11-16's 
 - **The bar's words:** for input methods with a word list, `Composer.show()` (`Composer.kt:1860`) gets suggestions from the
   current input method's list (prefix matches, accents ignored, ranked by count) instead of `TypedWords`' English ones.
   Swiping, the next word and English's autocorrect rules stay English-only.
-- **Chinese:** while a Rime input method is current, `AtlasIme.key()` sends letters, Space, Enter and Backspace to the
+- **Chinese:** while a Rime input method is current, `TitanKeysIme.key()` sends letters, Space, Enter and Backspace to the
   Rime engine before `Composer`, and only committed text reaches `Composer.type()`. The code being typed shows on the bar
   with the picker (the field has no composing text today, and Chinese doesn't need it).
 - **Settings:** a setting touches `engine/TypingSettings.java` (SharedPreferences `typing_settings`), the bridge in
-  `com/vandam/ink/AppNativeAdapters.kt` (state around :514, set around :660), `lib/atlas.ts` (`State`, `Settings`),
+  `com/vandam/ink/AppNativeAdapters.kt` (state around :514, set around :660), `lib/titankeys.ts` (`State`, `Settings`),
   `keyboard/SettingsReset.kt` and `keyboard/RawLog.kt`. The Chinese page is a `ChoicePage` (`lib/choice.tsx`) like
   `app/settings/spelling.tsx`. New pages get their parent in `lib/settings-tree.ts`.
 - **English's hard-coded locale:** `Locale.UK` in `keyboard/ConnectionEditor.kt:148` and `engine/SwipeTyping.java` stays for

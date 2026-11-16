@@ -1,4 +1,4 @@
 <resources>
     <!-- The debug build's icon background, so it stands apart from the real TitanKeys. -->
-    <color name="atlas_debug_background">#FFE3D1</color>
+    <color name="titankeys_debug_background">#FFE3D1</color>
 </resources>

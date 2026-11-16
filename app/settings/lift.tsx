@@ -1,4 +1,4 @@
-import type { State } from "../../lib/atlas";
+import type { State } from "../../lib/titankeys";
 import { DurationPage, ms } from "../../lib/duration";
 
 export const liftLabel = ({ liftOff, liftOffMillis }: State) => liftOff ? ms(liftOffMillis) : "Off";

@@ -8,7 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "../..");
-const folder = join(root, "android/kotlin/com/atlas/keyboard");
+const folder = join(root, "android/kotlin/com/titankeys/keyboard");
 
 /** The lines from [start] to where its braces close. */
 const block = (lines: string[], start: number) => {

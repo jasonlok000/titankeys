@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Field, Screen, Section, SettingsChoices, TextInput, useSnapshot } from "ink";
 import { Toggle, playHaptic } from "../../lib/app-haptics";
-import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, setLabSelectionEnd, showHapticsGraph, state } from "../../lib/atlas";
+import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, setLabSelectionEnd, showHapticsGraph, state } from "../../lib/titankeys";
 import { hapticGroups } from "../../lib/haptics";
 
 const title = "Haptics lab";

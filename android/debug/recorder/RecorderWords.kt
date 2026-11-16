@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 /** The 300 prompts, generated once from Atlas's dictionary with a fixed seed so sessions compare. */
 internal object RecorderWords {

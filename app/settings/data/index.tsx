@@ -1,6 +1,6 @@
 import { Field, Screen, Section, navigate, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../../lib/app-haptics";
-import { state, update } from "../../../lib/atlas";
+import { state, update } from "../../../lib/titankeys";
 import { transfer } from "../../../lib/transfer";
 
 export default function YourWords() {

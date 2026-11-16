@@ -7,7 +7,7 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-keyboard=android/kotlin/com/atlas/keyboard
+keyboard=android/kotlin/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$keyboard/Field.kt" "$keyboard/RawLogGate.kt" "$keyboard/RawLogLine.kt" "$keyboard/RawLogStore.kt" "$keyboard/RawLogWriter.kt" tests/rawlog/RawLogChecks.kt
-java -cp "$work:$stdlib" com.atlas.keyboard.RawLogChecksKt
+java -cp "$work:$stdlib" com.titankeys.keyboard.RawLogChecksKt

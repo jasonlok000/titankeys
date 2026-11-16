@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Screen, replace } from "ink";
-import { onAppWindow, openGuideEnd } from "../../lib/atlas";
+import { onAppWindow, openGuideEnd } from "../../lib/titankeys";
 
 /** How long after it opens the end again that this page counts its window coming to the front as the end having closed. */
 const SETTLE_MILLIS = 1500;

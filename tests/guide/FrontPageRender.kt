@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.awt.BasicStroke
 import java.awt.Color
@@ -297,7 +297,7 @@ internal object V2 {
 
 /** The front page's title, read from GuideActivity's FRONT_TITLE, so the render shows the app's own. */
 private val FRONT_TITLE: String by lazy {
-    Regex("FRONT_TITLE = \"(.*?)\"").find(File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText())!!.groupValues[1]
+    Regex("FRONT_TITLE = \"(.*?)\"").find(File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText())!!.groupValues[1]
 }
 
 /** Words wrapped at [width], whole words only. */

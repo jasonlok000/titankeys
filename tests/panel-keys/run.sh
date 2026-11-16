@@ -8,6 +8,6 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
-  android/kotlin/com/atlas/keyboard/PanelKeyFilter.kt android/kotlin/com/atlas/keyboard/Modifiers.kt \
+  android/kotlin/com/titankeys/keyboard/PanelKeyFilter.kt android/kotlin/com/titankeys/keyboard/Modifiers.kt \
   tests/panel-keys/PanelKeyFilterChecks.kt
-java -cp "$work:$stdlib" com.atlas.keyboard.PanelKeyFilterChecksKt
+java -cp "$work:$stdlib" com.titankeys.keyboard.PanelKeyFilterChecksKt

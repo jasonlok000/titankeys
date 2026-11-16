@@ -1,6 +1,6 @@
 import { Row, Screen, Section, useAction, useSnapshot } from "ink";
 import { add, close } from "ink/icons";
-import { type EnterApp, type SendMethod, removeEnterApp, setEnterApp, state } from "../../lib/atlas";
+import { type EnterApp, type SendMethod, removeEnterApp, setEnterApp, state } from "../../lib/titankeys";
 
 const title = "Message apps";
 const subtitle = "The Enter key setting works in these apps, and in any field that has a Send action. Everywhere else, Enter adds a new line. Pick an app to change how TitanKeys sends in it.";

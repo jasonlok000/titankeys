@@ -9,9 +9,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
-import com.atlas.engine.TypingSettings
-import com.atlas.keyboard.FixedScale
-import com.atlas.keyboard.R
+import com.titankeys.engine.TypingSettings
+import com.titankeys.keyboard.FixedScale
+import com.titankeys.keyboard.R
 
 /**
  * Asks Android for the Contacts permission when the user turns on "Names from my contacts", as only an app screen can

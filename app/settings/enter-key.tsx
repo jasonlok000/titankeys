@@ -1,5 +1,5 @@
 import { Field } from "ink";
-import type { EnterKey, State } from "../../lib/atlas";
+import type { EnterKey, State } from "../../lib/titankeys";
 import { ChoicePage } from "../../lib/choice";
 
 const labels: Record<EnterKey, string> = { send: "Always send", newline: "Always new line", app: "App decides" };

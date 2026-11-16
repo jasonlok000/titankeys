@@ -4,7 +4,7 @@
 - **Mistype:** the owner did not mean to type, but a word was typed anyway (a swipe deleted within 5 s, nothing kept in its place).
 - **Wrong word:** the owner meant to swipe and got the wrong word. This is engine accuracy (#31), not this report.
 
-Data: raw-log-12 (Nov 9 07:02 to Nov 10 12:00, 8,664 contacts) and the resting-touch recording (344 touches). To find which contacts vibrated, both were replayed through the keyboard's own `Contact` class with the swipe-tick rule from `AtlasIme.motion` and `Haptics.move`. The replay reproduces the log's outcomes closely: 4,329 swipes and flicks against 4,303 logged, and 1,004 taps against 1,100. On the recording, its reading agrees with what TitanKeys showed on 333 of 344 touches. Tools: `tools/HapticReplay.kt`, `tools/haptic_events.py`, `tools/mistaps.py`. Numbers: `report/mistaps-v12.json`. Counts and features only.
+Data: raw-log-12 (Nov 9 07:02 to Nov 10 12:00, 8,664 contacts) and the resting-touch recording (344 touches). To find which contacts vibrated, both were replayed through the keyboard's own `Contact` class with the swipe-tick rule from `TitanKeysIme.motion` and `Haptics.move`. The replay reproduces the log's outcomes closely: 4,329 swipes and flicks against 4,303 logged, and 1,004 taps against 1,100. On the recording, its reading agrees with what TitanKeys showed on 333 of 344 touches. Tools: `tools/HapticReplay.kt`, `tools/haptic_events.py`, `tools/mistaps.py`. Numbers: `report/mistaps-v12.json`. Counts and features only.
 
 ## 1. Where the touchpad vibrates without input
 

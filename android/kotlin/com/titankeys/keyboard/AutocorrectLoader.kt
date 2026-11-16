@@ -1,0 +1,115 @@
+package com.titankeys.keyboard
+
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.util.Log
+import com.titankeys.autocorrect.Autocorrect
+import com.titankeys.autocorrect.ContinuationScorer
+import com.titankeys.autocorrect.CorrectionData
+import com.titankeys.autocorrect.FixKind
+import com.titankeys.autocorrect.KeptOnceStore
+import com.titankeys.autocorrect.Lexicon
+import com.titankeys.autocorrect.LoadRetry
+import com.titankeys.autocorrect.TypedCorrector
+import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypedPredictions
+import java.io.IOException
+import java.io.InputStreamReader
+
+/**
+ * Keeps autocorrect's word data in memory only while the user types. About 470,000 word pairs share the keyboard
+ * process with the swipe models, so they load on their own thread at the first typed key and go after a pause.
+ */
+class AutocorrectLoader(private val context: Context, private val typing: SwipeTyping) {
+    private val main = Handler(Looper.getMainLooper())
+    private var loading = false
+    /** A failed load tries again after a while, longer each time, instead of never (bug hunt #39). */
+    private val retry = LoadRetry()
+    private var generation = 0
+    private val forget = Runnable {
+        generation++
+        autocorrect.corrector = null
+    }
+
+    val autocorrect = Autocorrect(
+        KeptOnceStore(context.getSharedPreferences(KeptOnceStore.PREFS_NAME, Context.MODE_PRIVATE)),
+        { word -> typing.addWord(word) { error -> if (error != null) Log.w("TitanKeys", "Could not save a kept word: $error") } },
+        { typing.learningEnabled() },
+        ::using,
+    )
+
+    /**
+     * Starts loading before the first key, as a text field opens. The words come from the swipe engine, which can still be
+     * loading when the app has just started, so then this waits for it.
+     */
+    fun prepare() {
+        if (loading || !retry.mayLoad(SystemClock.uptimeMillis()) || autocorrect.corrector != null) return
+        if (typing.typedPredictions() != null) using() else typing.whenReady { _, _, _ -> main.post(::using) }
+    }
+
+    private fun using() {
+        main.removeCallbacks(forget)
+        main.postDelayed(forget, IDLE_MILLIS)
+        if (loading || !retry.mayLoad(SystemClock.uptimeMillis()) || autocorrect.corrector != null) return
+        val words = typing.typedPredictions() ?: return
+        loading = true
+        val request = ++generation
+        Thread({ load(words, request) }, "autocorrect-data").apply {
+            priority = Thread.MIN_PRIORITY
+            start()
+        }
+    }
+
+    private fun load(words: TypedPredictions, request: Int) {
+        val lexicon = PhoneLexicon(typing, words, FavouriteWords.get(context))
+        val data = try {
+            CorrectionData.read(lexicon) { name -> InputStreamReader(context.assets.open("autocorrect/$name"), Charsets.UTF_8) }
+        } catch (error: IOException) {
+            Log.w("TitanKeys", "Could not read the autocorrect data", error)
+            null
+        } catch (error: RuntimeException) {
+            Log.w("TitanKeys", "Could not read the autocorrect data", error)
+            null
+        } catch (error: OutOfMemoryError) {
+            Log.w("TitanKeys", "Not enough memory for the autocorrect data", error)
+            null
+        }
+        main.post {
+            loading = false
+            if (data == null) retry.failed(SystemClock.uptimeMillis()) else retry.loaded()
+            if (data != null && request == generation) autocorrect.corrector = TypedCorrector(lexicon, data, autocorrect.rejected, autocorrect.recent,
+                nextWordChance = typing::nextWordChance,
+                // Only ever run on the engine's thread: see Composer's apostrophe check.
+                continuation = ContinuationScorer { before, texts -> typing.continuations(before, texts.toTypedArray()) })
+        }
+    }
+
+    /** Frees the word data straight away, as when the setting is turned off. */
+    fun release() {
+        main.removeCallbacks(forget)
+        forget.run()
+    }
+
+    private class PhoneLexicon(private val typing: SwipeTyping, private val words: TypedPredictions,
+                               private val favourites: FavouriteWords) : Lexicon {
+        override fun known(word: String) = words.contains(word) || typing.personalWord(word)
+        override fun frequency(word: String) = words.frequencyOf(word)
+        override fun personal(word: String) = typing.personalWord(word)
+        override fun name(word: String): String? = typing.properName(word) ?: typing.savedSpelling(word)
+        override fun preferredSpelling(word: String): String = typing.preferredSpelling(word)
+        override fun acronym(word: String) = words.acronym(word)
+        override fun expandShorthand() = typing.expandShorthand()
+        override fun shorthandOff(shorthand: String) = typing.shorthandOff(shorthand)
+        override fun ownShorthand(shorthand: String): String? = typing.ownShorthand(shorthand)
+        override fun favourite(word: String) = favourites.contains(word)
+        override fun fixes(kind: FixKind) = typing.fixOn(kind.id)
+        override fun onlyWhenSure() = typing.fixOnlyWhenSure()
+        override fun forEachWord(action: (String, Int) -> Unit) = words.forEachWord { word, frequency -> action(word, frequency) }
+    }
+
+    private companion object {
+        const val IDLE_MILLIS = 300_000L
+    }
+}

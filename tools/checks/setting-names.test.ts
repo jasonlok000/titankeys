@@ -11,14 +11,14 @@ const labels = new Set([...settings.matchAll(/label="([^"]+)"/g)].map(match => m
 labels.add(barLabel).add(cursorLabel).add(scrollLabel);
 
 test("each quick setting has its name in Settings", () => {
-  const quick = [...read("android/kotlin/com/atlas/keyboard/QuickSetting.kt").matchAll(/^\s+(\w+)\("\w", "[^"]+", "([^"]+)"\)/gm)];
+  const quick = [...read("android/kotlin/com/titankeys/keyboard/QuickSetting.kt").matchAll(/^\s+(\w+)\("\w", "[^"]+", "([^"]+)"\)/gm)];
   expect(quick.length).toBeGreaterThan(8);
   const notSettings = new Set(["OpenSettings", "Clipboard", "ChangeKeyboard"]);
   for (const [, name, title] of quick) if (!notSettings.has(name)) expect(`${name}: ${labels.has(title)}`).toBe(`${name}: true`);
 });
 
 test("the fun guide's steps name settings as Settings does", () => {
-  const steps = [...read("android/kotlin/com/atlas/keyboard/GuideSteps.kt").matchAll(/\("Turn on ([^"]+)"\)/g)].map(match => match[1]);
+  const steps = [...read("android/kotlin/com/titankeys/keyboard/GuideSteps.kt").matchAll(/\("Turn on ([^"]+)"\)/g)].map(match => match[1]);
   expect(steps.length).toBeGreaterThan(0);
   for (const step of steps) expect(`${step}: ${labels.has(step)}`).toBe(`${step}: true`);
 });

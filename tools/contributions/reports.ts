@@ -8,7 +8,7 @@
 // download writes each sealed part as <report>-<part>-of-<count>.tkr. With --confirm, it then asks the server to delete
 // what it downloaded, but only up to the first report that hasn't arrived whole, so a report still on its way stays.
 // open joins each whole report's parts, opens them, and writes <report>.zip beside them. The app makes them with
-// android/kotlin/com/atlas/connected/Reports.kt: one ZIP, split into parts, each sealed as a contribution batch is.
+// android/kotlin/com/titankeys/connected/Reports.kt: one ZIP, split into parts, each sealed as a contribution batch is.
 import { mkdir, readdir } from "node:fs/promises";
 import { openBytes, pem } from "./open";
 

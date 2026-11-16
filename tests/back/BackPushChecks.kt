@@ -1,6 +1,6 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.keyboard.BackPush.Action
+import com.titankeys.keyboard.BackPush.Action
 
 fun main() {
     secondPairOfEventsDoesNotHideTheKeyboard()

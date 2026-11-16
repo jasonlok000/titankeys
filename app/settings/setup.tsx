@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Field, Screen, Section, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
-import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, fakeOtherPhone, onAppWindow, openScrollAssistant, openShortcutKeys, state, update, type State } from "../../lib/atlas";
+import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, fakeOtherPhone, onAppWindow, openScrollAssistant, openShortcutKeys, state, update, type State } from "../../lib/titankeys";
 import { otherPhone } from "../../lib/front";
 import { Note } from "../../lib/note";
 

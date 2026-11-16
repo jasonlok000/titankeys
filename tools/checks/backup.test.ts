@@ -6,8 +6,8 @@ import { join } from "node:path";
 // settings-reset.test.ts makes each say which reset clears it. A new store fails here until BackupFile.kt lists it.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
-const backup = read("android/kotlin/com/atlas/keyboard/BackupFile.kt");
-const fresh = read("android/kotlin/com/atlas/keyboard/FreshStart.kt");
+const backup = read("android/kotlin/com/titankeys/keyboard/BackupFile.kt");
+const fresh = read("android/kotlin/com/titankeys/keyboard/FreshStart.kt");
 const activity = read("android/kotlin/com/vandam/ink/BackupActivity.kt");
 
 function files(folder: string): string[] {
@@ -100,5 +100,5 @@ test("Settings > Your words has Back up everything and Restore, and Snippets' ow
   const snippets = read("app/settings/snippets/index.tsx");
   expect(snippets).not.toContain("Export snippets");
   expect(snippets).not.toContain("Import snippets");
-  expect(read("lib/atlas.ts")).not.toContain("transferSnippets");
+  expect(read("lib/titankeys.ts")).not.toContain("transferSnippets");
 });

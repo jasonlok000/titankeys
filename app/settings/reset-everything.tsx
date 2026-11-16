@@ -1,4 +1,4 @@
-import { wipeEverything } from "../../lib/atlas";
+import { wipeEverything } from "../../lib/titankeys";
 import { playHaptic } from "../../lib/app-haptics";
 import { ConfirmPage } from "../../lib/confirm";
 

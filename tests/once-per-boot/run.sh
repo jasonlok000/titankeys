@@ -7,5 +7,5 @@ stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" \
-  android/kotlin/com/atlas/keyboard/OncePerBoot.kt tests/once-per-boot/OncePerBootChecks.kt
-java -cp "$work:$stdlib" com.atlas.keyboard.OncePerBootChecksKt
+  android/kotlin/com/titankeys/keyboard/OncePerBoot.kt tests/once-per-boot/OncePerBootChecks.kt
+java -cp "$work:$stdlib" com.titankeys.keyboard.OncePerBootChecksKt

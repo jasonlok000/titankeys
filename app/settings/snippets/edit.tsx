@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Screen, Stack, TextInput, back, useAction, useRouteParams, useSnapshot } from "ink";
-import { putSnippet, state } from "../../../lib/atlas";
+import { putSnippet, state } from "../../../lib/titankeys";
 import { Note } from "../../../lib/note";
 import { refusedOnError } from "../../../lib/app-haptics";
 

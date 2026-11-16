@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.awt.BasicStroke
 import java.awt.Color
@@ -59,7 +59,7 @@ internal object BarLine {
     private lateinit var drawables: File
     private lateinit var strings: String
     /** Strip.kt, where the render reads how the modifier row is set up: see [AndroidRow.modifierRow]. */
-    private var strip = File("android/kotlin/com/atlas/keyboard/Strip.kt")
+    private var strip = File("android/kotlin/com/titankeys/keyboard/Strip.kt")
 
     private val INK = Color.WHITE
     private val PAPER = Color.BLACK

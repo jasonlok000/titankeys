@@ -1,6 +1,6 @@
 # Numen autocorrect data
 
-TitanKeys copies the autocorrect from [Numen](https://github.com/jlo-aug/numen) (GPL-3.0, read at commit `7b1391c`), which is a modified version of [Pastiera](https://github.com/palsoftware/pastiera) (GPL-3.0). The code is in `android/kotlin/com/atlas/autocorrect`. The GPL-3.0 text is in `Numen-GPL-3.0.txt` and `Pastiera-GPL-3.0.txt`.
+TitanKeys copies the autocorrect from [Numen](https://github.com/jlo-aug/numen) (GPL-3.0, read at commit `7b1391c`), which is a modified version of [Pastiera](https://github.com/palsoftware/pastiera) (GPL-3.0). The code is in `android/kotlin/com/titankeys/autocorrect`. The GPL-3.0 text is in `Numen-GPL-3.0.txt` and `Pastiera-GPL-3.0.txt`.
 
 The word data is in `android/assets/autocorrect`. It has these attributions and licences. A copy of this file is next to the data, so it is also in the app.
 

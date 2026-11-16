@@ -1,6 +1,6 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.keyboard.GestureDisplay.Scene
+import com.titankeys.keyboard.GestureDisplay.Scene
 import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -1997,7 +1997,7 @@ private fun aFieldWithNoTextShowsADot() {
 
 /**
  * #89: the owner, "any real action stops that anyways". A long delete's dots take as long as they take, and anything real cuts
- * them: a key or a tap (AtlasIme calls [GestureDisplay.interrupt] for both, see onKeyDown and outcome), a swipe, a steer or a hold.
+ * them: a key or a tap (TitanKeysIme calls [GestureDisplay.interrupt] for both, see onKeyDown and outcome), a swipe, a steer or a hold.
  */
 private fun anyRealActionStopsTheDots() {
     fun playing(): GestureDisplay = GestureDisplay().apply {

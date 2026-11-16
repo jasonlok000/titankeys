@@ -27,7 +27,8 @@ From the study's ranking:
   Cyrillic, Greek and Georgian (Russian, Ukrainian, Belarusian, Bulgarian, Serbian, Macedonian, Greek, Kazakh, Georgian).
 - **Chinese through Rime:** Cantonese in Yale, the owner's input method and the first Chinese one, then Jyutping, and
   Mandarin in Pinyin, with the Chinese variant setting.
-- **If time allows:** Korean and Vietnamese, which need a little code each.
+- **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
+- **Thai** waits for a third layer of keys ("To check while building").
 - **Not in 3.0:** right-to-left scripts, Indic scripts, Japanese, handwriting, swiping and a next-word model in other
   languages, and translating the app, the guide and the playground.
 
@@ -233,9 +234,28 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
 - **Keys:** a letter goes to Rime, which returns the code and the choices for the picker. Space picks the first choice.
   Enter types the code as typed letters. Backspace deletes from the code, or from the text when the code is empty.
   Punctuation goes through Rime's punctuator, which gives Chinese marks (，。).
-- **Engines in general:** Rime, and later Korean and Telex, implement one interface:
-  `key(code, shift) -> State`, `pick(i)`, `page(dir)`, `reset()`, where `State` has the text to commit, the text being
-  built (shown underlined in the field) and the picker's choices. Data-only input methods use no engine.
+- **Engines in general:** Rime, Korean and Telex implement one interface (`keyboard/InputEngine.kt`): a key, Space, Enter
+  or Backspace gives an `EngineState` with the text to commit, the text being built (on the bar, over Q and W) and the
+  picker's choices. A state that isn't `handled` may still commit: the keyboard writes that first, then handles the key as
+  usual (Korean's syllable before a space, Rime's code before a capital). Data-only input methods use no engine.
+
+## Korean and Vietnamese
+
+Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tests/languages`), named in `im.json` as
+`"engine": "hangul"` and `"engine": "telex"`.
+
+- **Korean (`keyboard/Hangul.kt`):** the 2-set (Dubeolsik) layout on the printed keys, with Shift for ㅃ ㅉ ㄸ ㄲ ㅆ and
+  ㅒ ㅖ. The syllable being built shows on the bar; once the next jamo can't join it, it's written to the field (가 + ㅂ +
+  ㅏ is 가바). Backspace takes off the last jamo typed. Space, Enter, digits and marks write the syllable and go on as
+  usual. No sentence capitals, since Shift is a letter key's other jamo. No word list yet: none with a clear licence was
+  found, and typing comes first.
+- **Vietnamese (`keyboard/Telex.kt`):** Telex. aa â, ee ê, oo ô, aw ă, ow ơ, uw ư (uow ươ), dd đ; s f r x j for the five
+  tones, z to take the tone off; the same key again undoes its mark and types the key. The tone goes where the spelling
+  puts it, in the older style most people write (hòa, thúy). The word being typed shows on the bar, worked out again from
+  the keys typed, so Backspace takes the last key off. The word list's words that are the code without marks, or start
+  with it, are its choices, picked with the finger and Space; Space alone writes the word as typed. Telex is an engine
+  rather than letters typed into the field and then rewritten, because a tone typed at the end of a word changes a vowel
+  in its middle: the engine keeps the whole word until it's done, and the keyboard's own suggestions never see half a word.
 
 ## Where it goes in the code
 
@@ -306,5 +326,10 @@ can drop to 50,000 words (−11 MB), or the word lists can move into an install-
   (Apache 2.0), Macedonian and Bosnian come from FrequencyWords (CC BY-SA 4.0), and Georgian from the Leipzig Corpora
   Collection's kat_newscrawl_2016_1M (CC BY 4.0). FrequencyWords' Georgian list is mis-encoded, Macedonian's AOSP-format
   list names no licence, and HeliBoard's Bosnian list has no real counts.
+- **Thai:** Android has no Thai layout file; the Kedmanee layout puts 22 of its letters on the number row and punctuation
+  keys, which the Titan doesn't have. On 26 keys with Shift they'd be held, as Cyrillic's few are, but they include ม ล ง
+  ว ต บ ค, so about a quarter of Thai typing would be holds (PyThaiNLP's word list, CC0). Thai needs a third layer first:
+  a key or a held key that gives the number row's and punctuation keys' letters, as `"key": "base/shift/third"`. Thai's
+  vowel and tone marks also aren't letters to Java and Python (`isLetter`), which the generator and the checks assume.
 - How rime-cantonese's tones as letters (v, x, q) feel to the owner, who may type tones as digits.
 - The Rime test on the phone: its speed and that the compiled tables are reused (`~/build/lang/rime-test`).

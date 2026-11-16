@@ -89,7 +89,8 @@ internal class Languages(private val context: Context, english: Words, private v
         }
         Thread({
             val method = InputMethodList.load(context, id)
-            val words = method?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
+            // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
+            val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
             // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
             val engine = method?.engine?.let { name ->
                 InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }

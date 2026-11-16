@@ -1,0 +1,23 @@
+{
+  "id": "ko",
+  "name": "한국어",
+  "nameEnglish": "Korean",
+  "label": "한",
+  "locale": "ko",
+  "script": "Kore",
+  "keys": "qwerty",
+  "accents": {},
+  "words": null,
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": "hangul",
+  "source": {
+    "keys": "hangul",
+    "words": null
+  }
+}

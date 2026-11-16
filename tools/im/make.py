@@ -368,6 +368,35 @@ def build_chinese(data, ident):
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
         notice([CHINESE_NOTICE.format(source=source)]))
 
+# Korean and Vietnamese through TitanKeys' own engines (android/kotlin/com/titankeys/keyboard/Hangul.kt and Telex.kt).
+# Korean has no capitals and uses Shift for its tense consonants, so no sentence capitals.
+# id: (name, English name, label, locale, script, engine, word list file or None, word list notice, notice for the typing)
+ENGINES = {
+    "ko": ("한국어", "Korean", "한", "ko", "Kore", "hangul", None, None,
+           "Typed with TitanKeys' Hangul engine (GPL-3.0) on the Korean standard 2-set layout (KS X 5002): Hangul syllables "
+           "built from their letters as Unicode composes them."),
+    "vi": ("Tiếng Việt", "Vietnamese", "VI", "vi", "Latn", "telex", "main_vi__experimental", LEIPZIG,
+           "Typed with TitanKeys' Telex engine (GPL-3.0)."),
+}
+
+
+def build_engine(data, ident):
+    name, english, label, locale, script, engine, file, source, typing = ENGINES[ident]
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    notices = [typing]
+    if file:
+        head, words = read_words(data, file)
+        write_words(folder, head, words)
+        notices = [CLDR_NOTICE, typing, "Words: " + source.format(file=file + ".combined")]
+    rules = {"capitalise": ident != "ko", "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False}
+    write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": script,
+                      "keys": "qwerty", "accents": {}, "words": "words.combined" if file else None, "variants": None,
+                      "rules": rules, "engine": engine,
+                      "source": {"keys": engine, "words": file + ".combined" if file else None}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice(notices))
+
+
 def build_national(data, ident):
     name, english, label, locale, file, source, layout, holds, *more = NATIONAL[ident]
     extra = more[0] if more else {}
@@ -440,7 +469,7 @@ def write_index_and_list():
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine)})
-    order = list(LATIN) + list(NATIONAL) + list(CHINESE)
+    order = list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(entries, f, ensure_ascii=False, indent=1)
@@ -476,13 +505,15 @@ def escape(text):
 
 def main():
     data = sys.argv[1]
-    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(CHINESE)
+    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
         if ident in LATIN:
             build_latin(data, ident)
         elif ident in NATIONAL:
             build_national(data, ident)
+        elif ident in ENGINES:
+            build_engine(data, ident)
         elif ident in CHINESE:
             build_chinese(data, ident)
         else:

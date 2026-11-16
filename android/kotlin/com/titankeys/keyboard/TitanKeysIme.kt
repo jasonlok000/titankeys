@@ -3192,6 +3192,8 @@ class TitanKeysIme : InputMethodService() {
                         showModifiers()
                         return
                     }
+                    // The engine wrote what it had (Korean's syllable) and the key goes on as usual.
+                    if (state.commit.isNotEmpty()) engineState(state)
                 }
                 if (key == " ") {
                     composer.space(repeated = false, time = outcome.endedAt)
@@ -3471,7 +3473,11 @@ class TitanKeysIme : InputMethodService() {
                 engine.key(text[0])
             }
         }
-        if (!state.handled) return false
+        if (!state.handled) {
+            // What the engine had goes first (Korean's syllable, Telex's word, Rime's code before a capital), then the key as usual.
+            if (state.commit.isNotEmpty()) engineState(state)
+            return false
+        }
         if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.useHeld() else modifiers.consume()
         engineState(state)
         return true

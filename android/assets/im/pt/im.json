@@ -1,0 +1,41 @@
+{
+  "id": "pt",
+  "name": "Português",
+  "nameEnglish": "Portuguese",
+  "label": "PT",
+  "locale": "pt",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "áàâã",
+    "c": "ç",
+    "e": "éê",
+    "i": "í",
+    "o": "óôõ",
+    "u": "ú"
+  },
+  "words": "words-pt-BR.combined",
+  "variants": [
+    {
+      "id": "pt-BR",
+      "name": "Brasil",
+      "words": "words-pt-BR.combined"
+    },
+    {
+      "id": "pt-PT",
+      "name": "Portugal",
+      "words": "words-pt-PT.combined"
+    }
+  ],
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_pt_BR.combined"
+  }
+}

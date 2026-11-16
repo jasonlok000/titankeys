@@ -1,0 +1,75 @@
+package com.atlas.keyboard
+
+import android.content.Context
+import android.util.Log
+import android.view.inputmethod.InputMethodManager
+import android.view.inputmethod.InputMethodSubtype
+import java.util.Locale
+
+/**
+ * The input methods on the phone: the index and each one's files from `android/assets/im`, and their entries in Android's
+ * keyboard list (docs/languages.md, "How an input method declares itself"). The keyboard and Settings both use it.
+ */
+internal object InputMethodList {
+    private const val TAG = "InputMethods"
+    private const val FOLDER = "im"
+    /** What each keyboard-list entry carries, to say which input method it is. */
+    private const val EXTRA = "im="
+
+    @Volatile private var index: InputMethodIndex? = null
+
+    /** Every input method the app has, English first. An app without the folder has English alone. */
+    fun index(context: Context): InputMethodIndex = index ?: runCatching {
+        context.assets.open("$FOLDER/index.json").bufferedReader().use { InputMethodIndex.parse(it.readText()) }
+    }.getOrElse {
+        Log.w(TAG, "No input method index", it)
+        InputMethodIndex(emptyList())
+    }.also { index = it }
+
+    /** An input method's file, or English. Null when its file is missing or wrong, which the bar then says. */
+    fun load(context: Context, id: String): InputMethod? {
+        if (id == InputMethod.ENGLISH_ID) return InputMethod.ENGLISH
+        return runCatching {
+            context.assets.open("$FOLDER/$id/im.json").bufferedReader().use { InputMethod.parse(it.readText()) }
+        }.onFailure { Log.w(TAG, "Input method $id didn't load", it) }.getOrNull()
+    }
+
+    /** [method]'s word list, for its spelling [variant] when it has variants. It can take a second: call it off the main thread. */
+    fun words(context: Context, method: InputMethod, variant: String?): WordList? {
+        val file = method.variants.firstOrNull { it.id == variant }?.words ?: method.words ?: return null
+        return runCatching {
+            context.assets.open("$FOLDER/${method.id}/$file").bufferedReader().useLines { WordList.read(it, method.javaLocale) }
+        }.onFailure { Log.w(TAG, "Word list of ${method.id} didn't load", it) }.getOrNull()
+    }
+
+    /** The input method a keyboard-list entry stands for, or null for an entry that isn't one of ours. */
+    fun idOf(subtype: InputMethodSubtype?): String? =
+        subtype?.extraValue?.split(',')?.firstOrNull { it.startsWith(EXTRA) }?.removePrefix(EXTRA)
+
+    /** TitanKeys' own entry for input method [id] in Android's keyboard list. */
+    fun subtype(context: Context, id: String): InputMethodSubtype? {
+        val info = own(context) ?: return null
+        return (0 until info.subtypeCount).map(info::getSubtypeAt).firstOrNull { idOf(it) == id }
+    }
+
+    /**
+     * Makes Android's list of enabled keyboard-list entries the same as Settings > Languages' [ids], so the two never disagree
+     * (API 34). Anything that goes wrong only leaves Android's list as it was.
+     */
+    fun enable(context: Context, ids: List<String>) {
+        runCatching {
+            val info = own(context) ?: return
+            val hashes = (0 until info.subtypeCount).map(info::getSubtypeAt).filter { idOf(it) in ids }.map { it.hashCode() }
+            context.getSystemService(InputMethodManager::class.java).setExplicitlyEnabledInputMethodSubtypes(info.id, hashes.toIntArray())
+        }.onFailure { Log.w(TAG, "Android's keyboard list didn't take the input methods", it) }
+    }
+
+    /** TitanKeys' own id in Android's keyboard list. */
+    fun ownId(context: Context): String? = own(context)?.id
+
+    private fun own(context: Context) = context.getSystemService(InputMethodManager::class.java)?.inputMethodList
+        ?.firstOrNull { it.packageName == context.packageName }
+
+    /** The locale an input method types in, for capitals. */
+    fun locale(method: InputMethod): Locale = method.javaLocale
+}

@@ -1,0 +1,37 @@
+{
+  "id": "cs",
+  "name": "Čeština",
+  "nameEnglish": "Czech",
+  "label": "CS",
+  "locale": "cs",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "á",
+    "c": "č",
+    "d": "ď",
+    "e": "éě",
+    "i": "í",
+    "n": "ň",
+    "o": "ó",
+    "r": "ř",
+    "s": "š",
+    "t": "ť",
+    "u": "úů",
+    "y": "ý",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_cs.combined"
+  }
+}

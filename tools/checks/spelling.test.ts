@@ -28,3 +28,20 @@ test("the default stays American", async () => {
   expect(await read("android/kotlin/com/atlas/engine/TypingSettings.java"))
     .toContain('getString("spelling", "american")');
 });
+
+test("Settings lists American first, and says American when it can't tell (#80)", async () => {
+  const page = await read("app/settings/spelling.tsx");
+  expect(page).toContain('(["american", "british", "canadian"] as const)');
+  expect(page).toContain('?? "American"');
+});
+
+test("English spelling sits in Settings' Languages section, between Typing and Shortcuts", async () => {
+  const settings = await read("app/settings/index.tsx");
+  const typing = settings.indexOf('<Section title="Typing">');
+  const languages = settings.indexOf('<Section title="Languages">');
+  const shortcuts = settings.indexOf('<Section title="Shortcuts">');
+  const spelling = settings.indexOf('href="/settings/spelling"');
+  expect(typing).toBeLessThan(languages);
+  expect(languages).toBeLessThan(spelling);
+  expect(spelling).toBeLessThan(shortcuts);
+});

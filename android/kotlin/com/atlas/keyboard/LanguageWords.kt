@@ -25,7 +25,8 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     override fun prepare(text: String, cancelled: AtomicBoolean) { if (!other) english.prepare(text, cancelled) }
     override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) =
         if (other) result(null) else english.lookAlike(context, word, next, result)
-    override fun allowed(word: String) = if (other) true else english.allowed(word)
+    /** Only the input method's own words show on the bar: English's sentence starts don't, for one. */
+    override fun allowed(word: String) = if (other) list()?.contains(word) == true else english.allowed(word)
     override fun fixAllowed(typed: String, fix: String) = if (other) false else english.fixAllowed(typed, fix)
     override fun known(word: String) = if (other) list()?.contains(word) == true else english.known(word)
     override fun sentenceStarts(): List<String> = if (other) emptyList() else english.sentenceStarts()

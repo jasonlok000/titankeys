@@ -1,0 +1,59 @@
+{
+  "id": "el",
+  "name": "Ελληνικά",
+  "nameEnglish": "Greek",
+  "label": "EL",
+  "locale": "el",
+  "script": "Grek",
+  "keys": {
+    "a": "α",
+    "b": "β",
+    "c": "ψ",
+    "d": "δ",
+    "e": "ε",
+    "f": "φ",
+    "g": "γ",
+    "h": "η",
+    "i": "ι",
+    "j": "ξ",
+    "k": "κ",
+    "l": "λ",
+    "m": "μ",
+    "n": "ν",
+    "o": "ο",
+    "p": "π",
+    "q": ";",
+    "r": "ρ",
+    "s": "σ",
+    "t": "τ",
+    "u": "θ",
+    "v": "ω",
+    "w": "ς",
+    "x": "χ",
+    "y": "υ",
+    "z": "ζ"
+  },
+  "accents": {
+    "a": "ά",
+    "e": "έ",
+    "h": "ή",
+    "i": "ίϊΐ",
+    "o": "ό",
+    "v": "ώ",
+    "y": "ύϋΰ"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!;",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "keys": "keyboard_layout_greek.kcm",
+    "words": "main_el__legacy.combined"
+  }
+}

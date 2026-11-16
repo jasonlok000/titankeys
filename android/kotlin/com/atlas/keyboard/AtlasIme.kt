@@ -38,6 +38,7 @@ import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
+import android.view.inputmethod.InputMethodSubtype
 import android.view.inputmethod.SurroundingText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -160,6 +161,22 @@ class AtlasIme : InputMethodService() {
     private val holdEngine = HoldEngine(HoldEngine.Output { replaceHeldLetter() })
     /** The press that can still become its symbol. Its letter is already typed. */
     private var heldLetter: KeyEvent? = null
+    /** Whether Shift was on for [heldLetter], so its accents show in capitals. */
+    private var heldShift = false
+    /** The input methods that are on and the one typing now (docs/languages.md). */
+    private lateinit var languages: Languages
+    /** What the bar's picker shows while it's open: a held letter's accents, or the input methods on a held Sym. */
+    private var picker: LanguagePicker? = null
+    /** The key that picked from the picker, whose repeats and release belong to that pick. */
+    private var pickerKey = -1
+    /**
+     * A Sym press held back while it may still become a hold, which opens the switch overlay. Let go sooner, it does what Sym
+     * always does. Only with two or more input methods on, so an English-only keyboard's Sym is as it was.
+     */
+    private var symDown: KeyEvent? = null
+    /** The held Sym opened the overlay, so its release does nothing more. */
+    private var symHeldOpen = false
+    private val symHeld = Runnable { openSwitchOverlay() }
     /** In Smart Launcher's search field the Back service hears the keys first and takes them for the keyboard. See [updateKeyWatch]. */
     private var watchingKeys = false
     private val panelKeys = PanelKeyFilter()
@@ -742,7 +759,8 @@ class AtlasIme : InputMethodService() {
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
-        composer = Composer(editor, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains),
+        languages = Languages(this, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains)) { inputMethodChanged(it) }
+        composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
             { modifiers.autoShifted }) { barWords = it; strip?.words = it }
@@ -756,7 +774,8 @@ class AtlasIme : InputMethodService() {
         }
         composer.commaSpace = { TypingSettings.commaSpace(this) }
         composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) }
-        composer.fixOn = { kind -> TypingSettings.fixOn(this, kind.id) }
+        // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
+        composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
         composer.onStroke = Trace::stroke
         // Backspace putting a word back plays nothing: the key press is felt already.
         composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }
@@ -1311,6 +1330,12 @@ class AtlasIme : InputMethodService() {
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
         heldLetter = null
+        main.removeCallbacks(symHeld)
+        symDown = null
+        symHeldOpen = false
+        closePicker()
+        // Text an engine was building belongs to the field before.
+        if (::languages.isInitialized) languages.engine?.reset()
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
@@ -1383,6 +1408,11 @@ class AtlasIme : InputMethodService() {
 
     /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
     private fun readSettings() {
+        // The guide and the playground teach English, so they type it whatever input method is on.
+        languages.englishOnly = inGuide || inPractice
+        languages.refresh()
+        languages.variant()
+        val english = languages.current.isEnglish
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
         holdSymbols = TypingSettings.holdSymbols(this)
@@ -1393,11 +1423,13 @@ class AtlasIme : InputMethodService() {
         cursorControl = TypingSettings.cursorControl(this)
         exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
-        contact.swipes = TypingSettings.swipeTyping(this) && field.words
+        // Other input methods have no swiping (docs/languages.md).
+        contact.swipes = TypingSettings.swipeTyping(this) && field.words && english
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
-        val corrects = TypingSettings.autocorrect(this)
+        // Autocorrect and shorthand are English's: other input methods only offer words on the bar (docs/languages.md).
+        val corrects = TypingSettings.autocorrect(this) && english
         // Spell out shorthand is its own setting: with Fix typos off, the word data spells out shorthand alone (bug hunt #13).
-        val shorthandAlone = !corrects && TypingSettings.expandShorthand(this)
+        val shorthandAlone = !corrects && TypingSettings.expandShorthand(this) && english
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
         composer.shorthandOnly = autocorrect.autocorrect.takeIf { shorthandAlone }
         // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
@@ -1993,6 +2025,13 @@ class AtlasIme : InputMethodService() {
      */
     private fun markMenu(key: String, quiet: Boolean = false) {
         val strip = strip ?: return
+        openPicker()?.let { open ->
+            val column = Picker.column(key)
+            val mark = column.takeIf { c -> open.notice.columns.any { c in it } } ?: -1
+            if (!quiet && mark >= 0 && mark != strip.pickerMark) haptics.play(Haptic.MenuMark)
+            strip.pickerMark = mark
+            return
+        }
         val column = if (menuOpen) MenuKeys.hovered(key) else -1
         val mark = if (column == MenuKeys.UP || column == MenuKeys.DOWN) column else -1
         if (!quiet && mark >= 0 && mark != strip.menuMark) haptics.play(Haptic.MenuMark)
@@ -3139,7 +3178,10 @@ class AtlasIme : InputMethodService() {
                 if (key == " ") {
                     composer.space(repeated = false, time = outcome.endedAt)
                 } else {
-                    val word = if ((key == "I" && TypingSettings.autoCapitalise(this)) || modifiers.shift != Modifiers.Level.Off) key else key.lowercase()
+                    val shifted = modifiers.shift != Modifiers.Level.Off
+                    // An input method with its own letters types its letter (Russian's й on Q), in its own capitals.
+                    val word = languages.current.letter(key[0], shifted)
+                        ?: if ((key == "I" && TypingSettings.autoCapitalise(this) && languages.current.isEnglish) || shifted) key else key.lowercase()
                     composer.type(word, letterTap = true)
                 }
                 modifiers.consume()
@@ -3162,6 +3204,7 @@ class AtlasIme : InputMethodService() {
 
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
+        if (languages.current.hasAccents) return canHoldAccent(event)
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
         if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
@@ -3175,6 +3218,38 @@ class AtlasIme : InputMethodService() {
         return symbol > 0 && !Character.isISOControl(symbol)
     }
 
+    /**
+     * In an input method with accents, holding a letter shows its accents on the bar, and hold for symbols is off on every key,
+     * so a hold always means one thing (docs/languages.md). Shift is fine: the accents show in capitals. Never in exact typing,
+     * which sends keys, or with Alt or a panel on.
+     */
+    private fun canHoldAccent(event: KeyEvent): Boolean {
+        if (!editing || field.exact || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
+        if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
+        if (altOrPanel || event.isAltPressed || event.isCtrlPressed || event.isMetaPressed) return false
+        if (pendingInput.any { it.event?.keyCode?.let(Modifiers::isModifier) == true }) return false
+        val device = event.device ?: return false
+        if (device.isVirtual || device.isExternal || !event.isFromSource(InputDevice.SOURCE_KEYBOARD)) return false
+        return languages.current.accentsOf(printedLetter(event.keyCode), false).isNotEmpty()
+    }
+
+    /** The letter printed on a letter key, in lower case. */
+    private fun printedLetter(keyCode: Int) = 'a' + (keyCode - KeyEvent.KEYCODE_A)
+
+    /** Whether a key types a capital: Shift (held, tapped or automatic) or Caps, but not both. */
+    private fun shiftOn(event: KeyEvent): Boolean {
+        val meta = event.metaState or modifiers.metaState
+        return (meta and KeyEvent.META_SHIFT_MASK != 0) != (meta and KeyEvent.META_CAPS_LOCK_ON != 0)
+    }
+
+    /** What a letter key types in an input method with its own letters (Russian's й on Q), or null where it types what it shows. */
+    private fun inputMethodLetter(event: KeyEvent): String? {
+        if (languages.current.keys == null || event.keyCode !in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) return null
+        val meta = event.metaState or modifiers.metaState
+        if (meta and (KeyEvent.META_ALT_MASK or KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) != 0) return null
+        return languages.current.letter(printedLetter(event.keyCode), shiftOn(event))
+    }
+
     /** Starts the hold timer for a letter that can become its symbol. True if this is a repeat of such a key, which types nothing. */
     private fun trackHold(event: KeyEvent): Boolean {
         val earlier = holdEngine.pending()
@@ -3182,6 +3257,7 @@ class AtlasIme : InputMethodService() {
         val press = holdEngine.pending()
         if (press != null && press !== earlier) {
             heldLetter = KeyEvent(event)
+            heldShift = shiftOn(event)
             // Typing the letter before this one can take a long time, so this reads the clock after that.
             main.postAtTime({ holdTimer(press) }, holdEngine.timerAt(press, SystemClock.uptimeMillis()))
         }
@@ -3204,6 +3280,11 @@ class AtlasIme : InputMethodService() {
         val letter = heldLetter ?: return
         heldLetter = null
         if (!editing) return
+        // In an input method with accents, the hold shows the letter's accents on the bar instead (docs/languages.md).
+        if (languages.current.hasAccents) {
+            showAccents(letter.keyCode)
+            return
+        }
         val symbol = letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON)
         if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
         val text = String(Character.toChars(symbol))
@@ -3215,6 +3296,205 @@ class AtlasIme : InputMethodService() {
             sendExact(letter, ExactTyping.takeBack)
             commitExact(text)
         } else if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(text) } else composer.replaceLetter(text)
+    }
+
+    // Input methods (docs/languages.md): the picker on the bar, accents on hold, and the switch overlay on a held Sym.
+
+    /** The picker, if it's the bar's notice now. Anything else that took the bar, as a word's menu, closed it. */
+    private fun openPicker(): LanguagePicker? {
+        val open = picker ?: return null
+        if (strip?.notice === open.notice) return open
+        picker = null
+        return null
+    }
+
+    private fun showPicker(open: LanguagePicker) {
+        closeMenu()
+        picker = open
+        strip?.pickerMark = -1
+        strip?.notice = open.notice
+    }
+
+    private fun closePicker() {
+        val open = picker ?: return
+        picker = null
+        strip?.pickerMark = -1
+        if (strip?.notice === open.notice) strip?.notice = null
+    }
+
+    /** A held letter's accents, on the bar over the keys around it. The letter it typed stays until one is picked. */
+    private fun showAccents(keyCode: Int) {
+        val printed = printedLetter(keyCode)
+        val accents = languages.current.accentsOf(printed, heldShift)
+        if (accents.isEmpty()) return
+        haptics.play(Haptic.HeldSymbol)
+        showPicker(LanguagePicker.Accents(accents, printed.uppercase()))
+    }
+
+    /**
+     * A key while the picker is open, or a Sym that may become a hold. True when the key is taken: it picked, or closed the
+     * picker, or is a Sym held back to see if it's held.
+     * - A letter in the top two rows under a choice picks it.
+     * - Backspace closes the picker. Any other key closes the accents and types as usual; the overlay takes it and closes.
+     * - Sym, with two or more input methods on, waits: let go before the hold time it's Sym as always, held it opens the
+     *   overlay. Sym with the overlay open closes it.
+     */
+    private fun languageKey(event: KeyEvent): Boolean {
+        val keyCode = event.keyCode
+        if (event.isSystem) return false
+        if (keyCode == pickerKey && event.repeatCount > 0) return true
+        val open = openPicker()
+        if (keyCode == KeyEvent.KEYCODE_SYM) {
+            if (open is LanguagePicker.Switch) {
+                if (event.repeatCount == 0) closePicker()
+                pickerKey = keyCode
+                return true
+            }
+            if (symDown != null) return true
+            if (event.repeatCount == 0 && languages.switching && !panelOpen && modifiers.alt == Modifiers.Level.Off && !inGuide &&
+                    !field.exact && pendingInput.isEmpty()) {
+                symDown = KeyEvent(event)
+                symHeldOpen = false
+                main.postDelayed(symHeld, TypingSettings.holdSymbolMillis(this).toLong())
+                return true
+            }
+            return false
+        }
+        if (open == null || event.repeatCount > 0 || Modifiers.isModifier(keyCode)) return false
+        // An engine's choices stay while its text is built: its keys go to the engine, in [engineKey].
+        if (open is LanguagePicker.Choices) return false
+        val letter = if (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString() else null
+        val choice = when (open) {
+            is LanguagePicker.Accents -> letter?.let(open::choice)
+            is LanguagePicker.Switch -> letter?.let(open::choice)
+            is LanguagePicker.Choices -> null
+        } ?: -1
+        if (choice >= 0) {
+            pickerKey = keyCode
+            pick(open, choice)
+            return true
+        }
+        if (keyCode == KeyEvent.KEYCODE_DEL || open is LanguagePicker.Switch) {
+            closePicker()
+            pickerKey = keyCode
+            return true
+        }
+        closePicker()
+        return false
+    }
+
+    private fun pick(open: LanguagePicker, choice: Int) {
+        closePicker()
+        haptics.play(Haptic.MenuPress)
+        when (open) {
+            is LanguagePicker.Accents -> {
+                val accent = open.accents[choice]
+                if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(accent) } else composer.replaceLetter(accent)
+            }
+            is LanguagePicker.Choices -> languages.engine?.let { engineState(it.pick(choice)) }
+            is LanguagePicker.Switch -> {
+                val entry = open.entries[choice]
+                if (entry.id == languages.current.id) return
+                languages.switchTo(entry.id)
+                // F: draft. The bar says, for a moment, which input method types now.
+                strip?.let { strip ->
+                    strip.notice = Strip.Notice.Line("${entry.label}  ${entry.name}")
+                    main.removeCallbacks(endTeamsEgg)
+                    main.postDelayed(endTeamsEgg, SWITCHED_NOTICE_MILLIS)
+                }
+            }
+        }
+    }
+
+    /**
+     * A key for the current input method's engine (Rime): letters, punctuation, Space, Enter and Backspace go to it first, and
+     * only what it commits reaches the field. Space picks the choice a resting finger marks, or else the first. A key the
+     * engine doesn't take, as Backspace with nothing being built, goes on as usual. Shortcuts with Ctrl, Alt or Meta never go
+     * to it.
+     */
+    private fun engineKey(engine: InputEngine, event: KeyEvent): Boolean {
+        val meta = event.metaState or modifiers.metaState
+        if (meta and (KeyEvent.META_ALT_MASK or KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) != 0) return false
+        val state = when (event.keyCode) {
+            KeyEvent.KEYCODE_DEL -> engine.backspace()
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> engine.enter()
+            KeyEvent.KEYCODE_SPACE -> {
+                val choices = openPicker() as? LanguagePicker.Choices
+                val marked = choices?.choiceAt(strip?.pickerMark ?: -1) ?: -1
+                if (marked >= 0) engine.pick(marked) else engine.space()
+            }
+            else -> {
+                val text = inputMethodLetter(event) ?: event.getUnicodeChar(meta).takeIf { it > 0 && Character.isValidCodePoint(it) &&
+                    !Character.isISOControl(it) && it and KeyCharacterMap.COMBINING_ACCENT == 0 }?.let { String(Character.toChars(it)) }
+                if (text == null || text.length != 1) return false
+                engine.key(text[0])
+            }
+        }
+        if (!state.handled) return false
+        if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.useHeld() else modifiers.consume()
+        engineState(state)
+        return true
+    }
+
+    /** Writes what the engine committed, and shows its choices on the bar while text is being built. */
+    private fun engineState(state: EngineState) {
+        if (state.commit.isNotEmpty()) {
+            val text = state.commit
+            if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
+        }
+        if (state.composing || state.choices.isNotEmpty()) showPicker(LanguagePicker.Choices(state)) else closePicker()
+    }
+
+    /** Sym held for the hold time: the overlay, with every input method that's on over W to O. */
+    private fun openSwitchOverlay() {
+        if (symDown == null || !editing) return
+        symHeldOpen = true
+        haptics.play(Haptic.HeldSymbol)
+        showPicker(LanguagePicker.Switch(languages.on, languages.current.id))
+    }
+
+    /**
+     * Sym let go. True if it was held back: held long enough, it opened the overlay and its release does nothing more; let go
+     * sooner, its press now goes on as Sym always does, and then its release.
+     */
+    private fun symReleased(): Boolean {
+        val down = symDown ?: return false
+        symDown = null
+        main.removeCallbacks(symHeld)
+        if (symHeldOpen) {
+            symHeldOpen = false
+            return true
+        }
+        // Taken as a key that the keyboard handled, so its release stays here too, as any Sym's does.
+        consumedKeys += down.keyCode
+        if (pendingInput.isNotEmpty()) enqueue(KeyEvent(down)) {
+            key(down)
+            showModifiers()
+        } else {
+            key(down)
+            showModifiers()
+        }
+        return false
+    }
+
+    /** Another input method types now: autocorrect, swiping and the bar follow it, and Android's keyboard list says it (#76). */
+    private fun inputMethodChanged(method: InputMethod) {
+        closePicker()
+        if (editing) readSettings()
+        val id = InputMethodList.ownId(this) ?: return
+        val subtype = InputMethodList.subtype(this, method.id) ?: return
+        if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) == method.id) return
+        runCatching { switchInputMethod(id, subtype) }
+    }
+
+    private fun currentInputMethodSubtypeOrNull() =
+        runCatching { getSystemService(InputMethodManager::class.java)?.currentInputMethodSubtype }.getOrNull()
+
+    /** Android's keyboard list switched to another of TitanKeys' entries: it types from now on, if it's on. */
+    override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype) {
+        super.onCurrentInputMethodSubtypeChanged(newSubtype)
+        val id = InputMethodList.idOf(newSubtype) ?: return
+        if (::languages.isInitialized && languages.on.any { it.id == id }) languages.switchTo(id)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -3252,6 +3532,12 @@ class AtlasIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        // Back closes the picker, and its release goes with it.
+        if (keyCode == KeyEvent.KEYCODE_BACK && openPicker() != null) {
+            if (event.repeatCount == 0) closePicker()
+            pickerKey = keyCode
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = true)
         // Android hands back to a shown keyboard first, which would only close the strip.
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
@@ -3271,6 +3557,7 @@ class AtlasIme : InputMethodService() {
             logExact("bar back for a key")
             main.post(showStrip)
         }
+        if (languageKey(event)) return true
         // With the word menu open, the top two rows of letters pick its buttons, as the keys pick symbols on the Sym panel, and
         // Backspace, under P, goes back.
         if (keyCode == menuKey && event.repeatCount > 0) return true
@@ -3362,6 +3649,12 @@ class AtlasIme : InputMethodService() {
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
         if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
         if (lockedKeys.remove(keyCode)) return true
+        // The release of a key that picked from the picker, or closed it, belongs to that.
+        if (keyCode == pickerKey) {
+            pickerKey = -1
+            return true
+        }
+        if (keyCode == KeyEvent.KEYCODE_SYM && symReleased()) return true
         // Published before the take-back, so the guide hears the letter let go too soon.
         val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
         Recording.sink?.key(event, touchpad.isGestureKey(event))
@@ -3469,6 +3762,7 @@ class AtlasIme : InputMethodService() {
             command(event)
             return true
         }
+        languages.engine?.let { engine -> if (engineKey(engine, event)) return true }
         if (deadKeyPending && (event.keyCode == KeyEvent.KEYCODE_SPACE || event.keyCode == KeyEvent.KEYCODE_DEL)) {
             command(event, textKey = true)
             if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.consume() else modifiers.useHeld()
@@ -3492,6 +3786,11 @@ class AtlasIme : InputMethodService() {
             KeyEvent.KEYCODE_SPACE -> { composer.space(event.repeatCount > 0, event.eventTime); modifiers.useHeld() }
             KeyEvent.KEYCODE_TAB -> { modifiers.useHeld(); command(event) }
             else -> {
+                inputMethodLetter(event)?.let { text ->
+                    modifiers.consume()
+                    composer.type(text)
+                    return true
+                }
                 val typed = event.getUnicodeChar(event.metaState or modifiers.metaState)
                 val dead = typed and KeyCharacterMap.COMBINING_ACCENT != 0
                 if (dead || deadKeyPending || typed <= 0 || !Character.isValidCodePoint(typed) || Character.isISOControl(typed)) {
@@ -3863,6 +4162,8 @@ class AtlasIme : InputMethodService() {
         private const val FLICK_REACH = 64
         /** How long the word on Teams shows. */
         private const val TEAMS_EGG_MILLIS = 500L
+        /** How long the bar says which input method types, after a switch in the overlay. */
+        private const val SWITCHED_NOTICE_MILLIS = 1500L
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"
         private const val EGG_BOOT_STARTED = "teams_boot_started"

@@ -1,0 +1,54 @@
+{
+  "id": "bg",
+  "name": "Български",
+  "nameEnglish": "Bulgarian",
+  "label": "BG",
+  "locale": "bg",
+  "script": "Cyrl",
+  "keys": {
+    "a": "а",
+    "b": "б",
+    "c": "ц",
+    "d": "д",
+    "e": "е",
+    "f": "ф",
+    "g": "г",
+    "h": "х",
+    "i": "и",
+    "j": "й",
+    "k": "к",
+    "l": "л",
+    "m": "м",
+    "n": "н",
+    "o": "о",
+    "p": "п",
+    "q": "ч",
+    "r": "р",
+    "s": "с",
+    "t": "т",
+    "u": "у",
+    "v": "в",
+    "w": "ш",
+    "x": "ж",
+    "y": "ъ",
+    "z": "з"
+  },
+  "accents": {
+    "m": "ью",
+    "p": "ящ"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "keys": "keyboard_layout_bulgarian_phonetic.kcm",
+    "words": "main_bg__experimental.combined"
+  }
+}

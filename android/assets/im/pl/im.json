@@ -1,0 +1,32 @@
+{
+  "id": "pl",
+  "name": "Polski",
+  "nameEnglish": "Polish",
+  "label": "PL",
+  "locale": "pl",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "ą",
+    "c": "ć",
+    "e": "ę",
+    "l": "ł",
+    "n": "ń",
+    "o": "ó",
+    "s": "ś",
+    "z": "źż"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_pl.combined"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "is",
+  "name": "Íslenska",
+  "nameEnglish": "Icelandic",
+  "label": "IS",
+  "locale": "is",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "áæ",
+    "d": "ð",
+    "e": "é",
+    "i": "í",
+    "o": "óö",
+    "t": "þ",
+    "u": "ú",
+    "y": "ý"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_is__experimental.combined"
+  }
+}

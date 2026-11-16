@@ -37,6 +37,8 @@ import com.atlas.keyboard.Haptic
 import com.atlas.keyboard.HapticGroup
 import com.atlas.keyboard.Haptics
 import com.atlas.keyboard.HapticsLab
+import com.atlas.keyboard.InputMethodIndex
+import com.atlas.keyboard.InputMethodList
 import com.atlas.keyboard.InkPress
 import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
@@ -595,6 +597,12 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("hapticToggles", JSONObject(Haptics.toggles(activity)))
             .put("hapticsLab", if (HapticsLab.available(activity)) hapticsLab.value.state() else JSONObject.NULL)
             .put("spelling", TypingSettings.spelling(activity).value())
+            .put("inputMethods", JSONArray(TypingSettings.inputMethods(activity).split(',').filter { it.isNotBlank() }))
+            .put("availableInputMethods", JSONArray(inputMethodIndex().entries.map {
+                JSONObject().put("id", it.id).put("name", it.name).put("nameEnglish", it.nameEnglish).put("label", it.label)
+                    .put("script", it.script).put("engine", it.engine ?: JSONObject.NULL)
+            }))
+            .put("chineseVariant", TypingSettings.chineseVariant(activity))
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))
             .put("build", AppBuild.kind(activity))
@@ -602,6 +610,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
     }
+
+    private fun inputMethodIndex() = InputMethodList.index(activity)
 
     private fun putShorthand(state: JSONObject) {
         val off = TypingSettings.shorthandOff(activity)
@@ -758,11 +768,21 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                 for (id in toggles.keys()) Haptics.toggle(activity, id, toggles.getBoolean(id))
             }
             "spelling" -> TypingSettings.spelling(activity, EnglishSpelling.Variant.of(value as String))
+            // The order is the overlay's. Unknown ids and repeats are dropped, and English comes back when nothing is on.
+            "inputMethods" -> (value as JSONArray).let { list ->
+                val ids = inputMethodIndex().on(InputMethodIndex.setting(List(list.length()) { list.getString(it) })).map { it.id }
+                TypingSettings.inputMethods(activity, InputMethodIndex.setting(ids))
+                InputMethodList.enable(activity, ids)
+            }
+            "chineseVariant" -> TypingSettings.chineseVariant(activity, (value as String).takeIf { it in CHINESE_VARIANTS }.orEmpty())
             "rawLog" -> RawLog.enabled(activity, value as Boolean)
             else -> throw IllegalArgumentException("Unknown setting: $key")
         }
     }
 }
+
+/** The Chinese variants Settings can set: Hong Kong, Taiwan and Simplified (docs/languages.md). */
+private val CHINESE_VARIANTS = setOf("zh_hk", "zh_tw", "zh_hans")
 
 private const val SEEN_NOTES = "seen_release_notes"
 /** The report form (#97), which attaches a kept crash report by itself. */

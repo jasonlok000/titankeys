@@ -1,0 +1,31 @@
+{
+  "id": "fr",
+  "name": "Français",
+  "nameEnglish": "French",
+  "label": "FR",
+  "locale": "fr",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "àâæ",
+    "c": "ç",
+    "e": "éèêë",
+    "i": "îï",
+    "o": "ôœ",
+    "u": "ùûü",
+    "y": "ÿ"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": true
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_fr.combined"
+  }
+}

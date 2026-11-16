@@ -1,0 +1,29 @@
+{
+  "id": "it",
+  "name": "Italiano",
+  "nameEnglish": "Italian",
+  "label": "IT",
+  "locale": "it",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "à",
+    "e": "éè",
+    "i": "ì",
+    "o": "ò",
+    "u": "ù"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": true
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_it.combined"
+  }
+}

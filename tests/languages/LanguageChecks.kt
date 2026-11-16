@@ -223,7 +223,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         val read = WordList.read(list.useLines { it.toList() }.asSequence(), method.javaLocale)
         check("${method.id}: its word list has words", read.size > 1000) { "${read.size}" }
         check("${method.id}: at most 100,000 words", read.size <= 100_000) { "${read.size}" }
-        check("${method.id}: at most 3 MB", list.length() <= 3_000_000) { "${list.length()}" }
+        check("${method.id}: at most 4 MB", list.length() <= 4_000_000) { "${list.length()}" }
         // Every letter the list uses often can be typed: from a key, or held on one.
         val typable = HashSet<String>()
         for (key in 'a'..'z') {

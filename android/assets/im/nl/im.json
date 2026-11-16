@@ -1,0 +1,29 @@
+{
+  "id": "nl",
+  "name": "Nederlands",
+  "nameEnglish": "Dutch",
+  "label": "NL",
+  "locale": "nl",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "áä",
+    "e": "éëè",
+    "i": "íï",
+    "o": "óö",
+    "u": "úü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": true
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_nl.combined"
+  }
+}

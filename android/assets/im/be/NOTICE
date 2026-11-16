@@ -1,0 +1,5 @@
+Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. Copyright Unicode, Inc.
+
+Key layout: Android's keyboard_layout_belarusian.kcm (platform/frameworks/base, InputDevices), Apache License 2.0.
+
+Words: Belarusian word forms from GrammarDB (https://github.com/Belarus/GrammarDB), via HeliBoard's aosp-dictionaries (main_be.combined), CC BY-SA 4.0.

@@ -748,6 +748,23 @@
   }
  },
  {
+  "id": "he",
+  "name": "עברית",
+  "nameEnglish": "Hebrew",
+  "label": "HE",
+  "locale": "he",
+  "script": "Hebr",
+  "engine": null,
+  "language": {
+   "id": "he",
+   "name": "עברית",
+   "nameEnglish": "Hebrew",
+   "label": "HE",
+   "script": "Hebr",
+   "experimental": true
+  }
+ },
+ {
   "id": "ko",
   "name": "한국어",
   "nameEnglish": "Korean",

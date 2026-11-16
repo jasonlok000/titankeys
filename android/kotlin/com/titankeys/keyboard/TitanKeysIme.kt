@@ -1252,6 +1252,7 @@ class TitanKeysIme : InputMethodService() {
             openClipboard = { enqueue { openClipboardPage() } },
         )
         strip = words
+        if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys
         keys.emoji = emoji
         // Android can make this view after the field has started, and again when the screen settings change.
@@ -2781,7 +2782,10 @@ class TitanKeysIme : InputMethodService() {
             // Going past a space feels different from a letter, so that you can count words without looking. A cursor at the
             // start or end of the text can't move, so it plays gone, once each time it gets there. See [CursorSteps].
             val connection = currentInputConnection
-            val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
+            // Android moves the cursor visually, so in a right-to-left paragraph a step right goes back in the text.
+            val forward = RightToLeft.forward(direction, connection != null && RightToLeft.paragraph(
+                connection.getTextBeforeCursor(RTL_REACH, 0)?.toString().orEmpty(), connection.getTextAfterCursor(RTL_REACH, 0)?.toString().orEmpty()))
+            val next = if (forward) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
             // An app that does not answer still gets the light tick.
             cursorSteps.step(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
             if (rereadCursorText) readCursorText()
@@ -3816,6 +3820,7 @@ class TitanKeysIme : InputMethodService() {
         preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
         preparingNotice = null
         closePicker()
+        strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
@@ -4579,6 +4584,8 @@ class TitanKeysIme : InputMethodService() {
         private const val MODIFIER_RELEASE_SLOTS = 5
         private const val DRAIN_BUDGET = 8
         private const val DRAIN_NANOS = 4_000_000L
+        /** How far each way the cursor's paragraph is read for its direction. */
+        private const val RTL_REACH = 200
         private val NAVIGATION_KEYS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME,
             KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN)

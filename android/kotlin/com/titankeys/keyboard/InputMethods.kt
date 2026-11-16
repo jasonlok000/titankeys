@@ -286,3 +286,33 @@ class KeyboardListSync(var synced: String? = null) {
         synced = id
     }
 }
+
+/** Which suggestion, by rank (0 the best), each of the bar's three places shows, left to right. */
+object BarOrder {
+    private val LEFT_TO_RIGHT = listOf(1, 0, 2)
+    private val RIGHT_TO_LEFT = listOf(2, 0, 1)
+
+    fun of(rightToLeft: Boolean) = if (rightToLeft) RIGHT_TO_LEFT else LEFT_TO_RIGHT
+}
+
+/** Right-to-left text, for steering: which way the cursor goes logically when the finger moves it visually. */
+object RightToLeft {
+    /** Scripts written right to left. */
+    val SCRIPTS = setOf("Hebr", "Arab")
+
+    /**
+     * Whether the paragraph the cursor is in reads right to left: its first letter with a direction decides, as Android's
+     * text does (the text before the cursor back to the line's start, then what's after it).
+     */
+    fun paragraph(before: String, after: String): Boolean {
+        val text = before.substringAfterLast('\n') + after.substringBefore('\n')
+        for (c in text) when (Character.getDirectionality(c)) {
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT, Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> return true
+            Character.DIRECTIONALITY_LEFT_TO_RIGHT -> return false
+        }
+        return false
+    }
+
+    /** Whether moving the cursor one step visually right ([direction] > 0) goes forward in the text. */
+    fun forward(direction: Int, rightToLeft: Boolean) = (direction > 0) != rightToLeft
+}

@@ -491,8 +491,17 @@ def read_xkb(data, layout="basic", file="symbols-th"):
     block = re.search(r'xkb_symbols "%s" \{(.*?)\n\};' % layout, text, re.S).group(1)
     keys = {}
     for m in re.finditer(r"key <(\w+)>\s*\{\[\s*([^\]]+)\]\}", block):
-        keys[m.group(1)] = [codes[name.strip()] for name in m.group(2).split(",")]
+        keys[m.group(1)] = [xkb_char(codes, name.strip()) for name in m.group(2).split(",")]
     return keys
+
+
+def xkb_char(codes, name):
+    """A keysym's character: by its name in keysymdef.h, or U05F3 as a code point; none is nothing."""
+    if name == "none":
+        return ""
+    if re.fullmatch(r"U[0-9A-Fa-f]{4,6}", name):
+        return chr(int(name[1:], 16))
+    return codes[name]
 
 
 def thai_keys(data):
@@ -608,8 +617,48 @@ def build_hindi(data, ident):
         notice([CLDR_NOTICE, HINDI_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="hi_full.txt")]))
 
 
+# Hebrew: SI-1452, read from xkeyboard-config's symbols/il "basic" (xkb/ in the data dir). Its letters sit on the Titan's
+# letter keys where a PC has them; Shift types the same letter, as Hebrew has no capitals (the standard's Shift gives Latin
+# capitals). Three letters are on keys the Titan lacks: ת (the comma key) goes on Q in place of /, and the final forms ף and
+# ץ (; and .) are held on their own letters, P and M; / is held on Q.
+HEBREW_THIRD = {"q": "/", "p": "ף", "m": "ץ"}
+HEBREW_ON_Q = "ת"
+HEBREW_NOTICE = ("Key layout: SI-1452, as xkeyboard-config's symbols/il gives it "
+                 "(https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config), with ת on Q and the final ף and ץ held "
+                 "on P and M.")
+
+
+def hebrew_keys(data):
+    xkb = read_xkb(data, file="symbols-il")
+    keys = {}
+    for k in KEYS:
+        base = xkb[THAI_LETTER_KEYS[k]][0]
+        if k == "q":
+            base = HEBREW_ON_Q
+        held = HEBREW_THIRD.get(k)
+        keys[k] = [base, base, held, held] if held else base
+    return keys
+
+
+def build_hebrew(data, ident):
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    file = "frequencywords/he_full.txt"
+    letters = [chr(c) for c in range(0x05D0, 0x05EB)] + ["'"]
+    head, words = read_counts(data, file, "he", letters)
+    write_words(folder, head, words)
+    write_im(folder, {"id": ident, "name": cldr_name(data, "he"), "nameEnglish": "Hebrew", "label": "HE", "locale": "he",
+                      "script": "Hebr", "keys": hebrew_keys(data), "accents": {}, "words": "words.combined", "variants": None,
+                      # Geresh, typed as ', is part of a word (צ'יפס).
+                      "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": True},
+                      "engine": None,
+                      "source": {"keys": "xkeyboard-config symbols/il basic", "words": os.path.basename(file)}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
+        notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")]))
+
+
 # Input methods built by a function of their own.
-OWN = {"th": build_thai, "hi": build_hindi}
+OWN = {"th": build_thai, "hi": build_hindi, "he": build_hebrew}
 
 # The data folder, for CLDR's names as each input method is written.
 DATA = None

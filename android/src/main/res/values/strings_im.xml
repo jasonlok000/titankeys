@@ -46,6 +46,7 @@
     <string name="im_ka" translatable="false">ქართული</string>
     <string name="im_th" translatable="false">ไทย</string>
     <string name="im_hi" translatable="false">हिन्दी</string>
+    <string name="im_he" translatable="false">עברית</string>
     <string name="im_ko" translatable="false">한국어</string>
     <string name="im_vi" translatable="false">Tiếng Việt</string>
     <string name="im_yue_yale" translatable="false">耶魯拼音</string>

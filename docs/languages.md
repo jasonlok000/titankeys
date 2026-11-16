@@ -30,6 +30,7 @@ From the study's ranking:
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
 - **Thai** (experimental), Kedmanee with a third layer of held keys and a word break for suggestions ("Thai" below).
 - **Hindi** (experimental), typed by sound through Wikimedia's jquery.ime rules ("Hindi" below).
+- **Hebrew** (experimental), the first right-to-left language ("Right to left: Hebrew" below).
 - **Not in 3.0:** right-to-left scripts, Indic scripts, Japanese, handwriting, swiping and a next-word model in other
   languages, and translating the app, the guide and the playground.
 
@@ -359,13 +360,31 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   The word list's words that start with it are the choices, as Telex's are. Shift letters are their own sounds (namaH,
   maChiyoM), so there are no sentence capitals.
 - **Measured** (`tests/languages`): jquery.ime's own Hindi test cases pass 100 of 101 when exported to `$HI_FIXTURES` (the
-  one left is a browser's line break, `` written as `
+  one left is a browser's line break, `
+` written as `
 `); typing the 300 commonest words by sound, a search finds keys
   for 290 (96.7%), 1.17 keys a letter. The ones left need chandrabindu or nukta keys the search doesn't try.
 - **Words:** FrequencyWords' Hindi (CC BY-SA 4.0), 20,026 words. HeliBoard's Hindi list says only "GPLv2", which may not
   combine with TitanKeys' GPL-3.0, so it isn't used.
 - **Its name:** Ink draws text without shaping, so हिन्दी's vowel sign would sit after its letter. Settings shows Devanagari
   names in English ("Hindi") until it can (`UNSHAPED` in `app/settings/languages.tsx`); Android's own list shows हिन्दी.
+
+## Right to left: Hebrew
+
+- **Keys: SI-1452,** read by `tools/im/make.py` from xkeyboard-config's `symbols/il`: 24 of its 27 letters where a PC has
+  them. The three on keys the Titan lacks: ת (the comma key) on Q, in place of the standard's /, as it's common; the
+  finals ף and ץ (; and .) held on their own letters, P and M. / is held on Q. Shift types the same letter, as Hebrew has no
+  capitals (the standard's Shift gives Latin ones), and W types the geresh ', part of a word (צ'יפס).
+- **Measured** (`python3 -I tools/im/measure.py <data> he`): all 27 letters on the keys; every one of the word list's
+  100,000 words can be typed; 0.4% of key presses are holds (the two finals), weighted by each word's count.
+- **Words:** FrequencyWords' Hebrew (CC BY-SA 4.0), the 100,000 commonest.
+- **The bar:** right to left, the second best word goes on the right, where reading starts, and the third on the left; the
+  best stays in the middle (`BarOrder`, `Strip.rightToLeft`, set as the input method changes).
+- **Steering:** Android moves the cursor visually, so the arrow keys already go the finger's way. The keyboard peeks at the
+  next letter to feel spaces and the text's ends, and now peeks on the side the cursor really goes: in a paragraph whose
+  first letter reads right to left, a step right goes back in the text (`RightToLeft`).
+- **Not yet:** the word menu's buttons keep their left-to-right order; mixed Hebrew and Latin in one line follows Android.
+- Android shapes and orders the letters; the keyboard only sends them. Settings shows עברית from Noto Sans Hebrew's letters.
 
 ## Korean and Vietnamese
 

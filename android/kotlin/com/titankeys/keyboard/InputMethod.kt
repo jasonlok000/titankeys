@@ -68,6 +68,8 @@ data class InputMethod(
     )
 
     val isEnglish get() = id == ENGLISH_ID
+    /** Hebrew, Arabic: the bar's side words swap ([BarOrder]). */
+    val rightToLeft get() = script in RightToLeft.SCRIPTS
     val hasAccents get() = accents.isNotEmpty()
     val javaLocale: Locale get() = Locale.forLanguageTag(locale)
 

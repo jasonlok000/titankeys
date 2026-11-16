@@ -50,6 +50,7 @@ fun main(args: Array<String>) {
     aRestoredInputMethodTypes()
     thaiHoldsAndBreaks()
     hindiRulesType()
+    hebrewRightToLeft()
     aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
     androidsListFollowsTheOnes()
@@ -388,6 +389,28 @@ private fun keysFor(rules: Rules, word: String): String? {
         if (beam.isEmpty()) return null
     }
     return null
+}
+
+/** Hebrew: its final letters held on their own, and the bar and steering right to left. */
+private fun hebrewRightToLeft() {
+    val hebrew = InputMethod.parse("""{"id":"he","name":"עברית","nameEnglish":"Hebrew","label":"HE","locale":"he","script":"Hebr",
+        "keys":{"q":["ת","ת","/","/"],"p":["פ","פ","ף","ף"],"e":"ק"},"accents":{},"words":null,"variants":null,
+        "rules":{"capitalise":false},"engine":null,"source":{}}""")
+    same("Q types ת", hebrew.letter('q', false), "ת")
+    same("Shift types the same letter: Hebrew has no capitals", hebrew.letter('e', true), "ק")
+    same("held P types the final ף", hebrew.held('p', false), "ף")
+    check("Hebrew reads right to left", hebrew.rightToLeft)
+    check("Spanish doesn't", !InputMethod.parse(SPANISH).rightToLeft)
+    same("the bar left to right: second, best, third", BarOrder.of(false), listOf(1, 0, 2))
+    same("right to left: the second best on the right", BarOrder.of(true), listOf(2, 0, 1))
+    check("a Hebrew paragraph is right to left", RightToLeft.paragraph("שלום ", "עולם"))
+    check("an English one isn't", !RightToLeft.paragraph("hello ", "world"))
+    check("its first letter decides: Hebrew, then English", RightToLeft.paragraph("שלום hello", ""))
+    check("a new line starts a new paragraph", !RightToLeft.paragraph("שלום\nhello", ""))
+    check("digits and spaces decide nothing: the letter after does", RightToLeft.paragraph("12 ", "שלום"))
+    check("a step right goes forward in English", RightToLeft.forward(1, false))
+    check("a step right goes back in Hebrew", !RightToLeft.forward(1, true))
+    check("a step left goes forward in Hebrew", RightToLeft.forward(-1, true))
 }
 
 private fun aRestoredInputMethodTypes() {

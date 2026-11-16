@@ -25,6 +25,8 @@ const licences = [
   { title: "Inter", subtitle: "SIL Open Font Licence. Regular, Medium and Bold.", url: "https://github.com/rsms/inter" },
   // F: draft. The Georgian letters in the app's text fonts (tools/im/fonts.py).
   { title: "Noto Sans Georgian", subtitle: "SIL Open Font Licence. The Georgian letters in Settings.", url: "https://github.com/notofonts/georgian" },
+  // F: draft. The Hebrew letters in the app's text fonts (tools/im/fonts.py), for Hebrew's name.
+  { title: "Noto Sans Hebrew", subtitle: "SIL Open Font Licence. The Hebrew letters in Settings.", url: "https://github.com/notofonts/hebrew" },
   // F: draft. The Thai letters in the app's text fonts (tools/im/fonts.py), for Thai's name.
   { title: "Noto Sans Thai", subtitle: "SIL Open Font Licence. The Thai letters in Settings.", url: "https://github.com/notofonts/thai" },
   // F: draft. The Korean and Chinese characters in the app's text fonts (tools/im/fonts.py).

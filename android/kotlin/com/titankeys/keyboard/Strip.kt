@@ -84,7 +84,8 @@ class Strip(
     private val boldTypeface = resources.getFont(R.font.inter_medium)
     /** The best word's weight, in the middle: the same size as the others, and bold. */
     private val bestTypeface = resources.getFont(R.font.inter_bold)
-    private val wordViews = WORD_ORDER.map { index -> item({ choose(index) }, { hold(index) }) }
+    // Each place picks the word its order puts there at the time, so a right-to-left bar picks what it shows.
+    private val wordViews = List(3) { slot -> item({ choose(order[slot]) }, { hold(order[slot]) }) }
     /** The word that the field has selected, alone in the middle. A touch or a hold opens its menu. */
     private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })
     private val noticeLabel = TextView(context).apply {
@@ -194,6 +195,20 @@ class Strip(
             render()
         }
 
+    /**
+     * Right to left (Hebrew): the second best word goes on the right, where reading starts, and the third on the left. The
+     * best stays in the middle, where the thumb knows it is (docs/languages.md, "Right to left").
+     */
+    var rightToLeft = false
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+        }
+
+    /** Which word, by rank, each place shows, left to right: [BarOrder]. */
+    private val order get() = BarOrder.of(rightToLeft)
+
     var words: List<String> = emptyList()
         set(value) {
             field = value
@@ -240,7 +255,7 @@ class Strip(
             field = value
             render()
             if (value && GuideMotion.enabled) for ((slot, view) in wordViews.withIndex()) {
-                if (WORD_ORDER[slot] == 0) continue
+                if (order[slot] == 0) continue
                 view.translationY = barHeight.toFloat()
                 view.alpha = 0f
                 view.animate().translationY(0f).alpha(1f).setDuration(SIDES_MILLIS).start()
@@ -255,7 +270,7 @@ class Strip(
         pointed = null
         pointedIndex = -1
         if (index == null || index !in words.indices || !GuideMotion.enabled) return
-        val view = wordViews[WORD_ORDER.indexOf(index)]
+        val view = wordViews[order.indexOf(index)]
         pointedIndex = index
         pointed = words[index]
         val reach = dp(POINT_DP).toFloat()
@@ -294,7 +309,7 @@ class Strip(
     /** The lit word's line on the bar, under the word as drawn, wherever it is. */
     private fun drawLit(canvas: Canvas) {
         if (litIndex < 0 || notice != null) return
-        val view = wordViews.getOrNull(WORD_ORDER.indexOf(litIndex)) ?: return
+        val view = wordViews.getOrNull(order.indexOf(litIndex)) ?: return
         val layout = view.layout ?: return
         if (view.visibility != VISIBLE || view.text.isEmpty()) return
         litWord = words.getOrNull(litIndex) ?: litWord
@@ -464,7 +479,7 @@ class Strip(
         addView(clipView, LayoutParams(0, barHeight, 1f))
         addView(selectedView, LayoutParams(0, barHeight, 1f))
         // Screen readers go left to right, so point them at the best word first.
-        val ranked = wordViews.withIndex().sortedBy { WORD_ORDER[it.index] }.map { it.value }
+        val ranked = wordViews.withIndex().sortedBy { order[it.index] }.map { it.value }
         for (view in ranked) view.id = generateViewId()
         ranked.zipWithNext { view, next -> view.accessibilityTraversalBefore = next.id }
         // Keep the words clear of the gesture handle, which draws over the bottom of the keyboard, and of the rounded corners.
@@ -554,11 +569,11 @@ class Strip(
         // The three places never move or shrink: the middle one is muscle memory. A long word shrinks in its own place, and as a last
         // resort loses the part that it shares with the others, so the part where they differ shows. The fit keeps a little slack,
         // so that the text always fits its view and Android never cuts it with an "…" of its own.
-        val shown = WORD_ORDER.map { (demoWords ?: words).getOrElse(it) { "" } }
+        val shown = order.map { (demoWords ?: words).getOrElse(it) { "" } }
         val room = (width - paddingLeft - paddingRight).toFloat()
         val fits = if (room > 0) StripFit.fit(shown, room, wordRoomPadding(), ::measureWord, lend = false) else null
         for ((slot, view) in wordViews.withIndex()) {
-            val index = WORD_ORDER[slot]
+            val index = order[slot]
             // While the idle scene plays, it draws the letters itself, and the words keep their places underneath.
             view.visibility = if (showSuggestions && bar == null && confirm == null && offer == null && chosen == null)
                 (if (idle != null || !sides && index != 0) INVISIBLE else VISIBLE) else GONE
@@ -1617,7 +1632,7 @@ class Strip(
     }
 
     /** The word in the middle of the bar, the best one, where both demonstrations act. */
-    private fun middleWord() = wordViews[WORD_ORDER.indexOf(0)]
+    private fun middleWord() = wordViews[order.indexOf(0)]
 
     private fun stepDemo() {
         val playing = demo ?: return
@@ -1687,7 +1702,6 @@ class Strip(
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)
 
     companion object {
-        private val WORD_ORDER = listOf(1, 0, 2)
         /** How far, in dp, and how quickly a word that the guide points at wiggles. */
         private const val POINT_DP = 3
         /** The guide's light under a word: its thickness, and its gap under the baseline, in dp. */

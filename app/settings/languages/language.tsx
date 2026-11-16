@@ -1,10 +1,10 @@
 import { Field, Screen, Section, useAction, useRouteParams, useSnapshot } from "ink";
-import { type InputMethodEntry, state, update } from "../../lib/titankeys";
-import { Toggle } from "../../lib/app-haptics";
-import { Note } from "../../lib/note";
-import { MAX_ON, languagesOf } from "./languages";
-import { spellingLabel } from "./spelling";
-import { chineseLabel } from "./chinese";
+import { type InputMethodEntry, state, update } from "../../../lib/titankeys";
+import { Toggle } from "../../../lib/app-haptics";
+import { Note } from "../../../lib/note";
+import { MAX_ON, languagesOf } from "./index";
+import { spellingLabel } from "../spelling";
+import { chineseLabel } from "../chinese";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The

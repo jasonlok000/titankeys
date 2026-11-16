@@ -40,6 +40,8 @@ export const languageSubtitle = (language: Language) =>
 
 const SCRIPTS: Record<string, string> = {
   Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Geor: "Georgian", Kore: "Korean", Hani: "Chinese",
+  // F: draft.
+  Jpan: "Japanese",
 };
 
 /**

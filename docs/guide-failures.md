@@ -160,7 +160,7 @@ The delete slides start with their line in the field and the cursor where the de
 
 The field is the slide's line again and again. Deleting most of it brings it back: "The delete lesson is over, man."
 
-### steer: Steer to the underlined word.
+### steer: Move to the underlined word.
 | What the user does | What happens |
 |---|---|
 | Two taps that lift | "That's a lift, not a hold. Keep the second down." Checked. |

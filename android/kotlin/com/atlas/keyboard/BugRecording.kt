@@ -21,13 +21,16 @@ import java.io.File
  * the typing log's format, so the same tools read it. It holds touches, swipe shapes, keys and the keyboard's decisions,
  * with the build and the settings. It never holds the text around the cursor, and it records nothing in a field that
  * does not allow learning (passwords, private fields and the like). It stops by itself after [MAX_MILLIS].
- * TitanKeys uploads nothing: the user shares the file through Android's share sheet.
+ * TitanKeys uploads nothing: the user emails the file to us from their mail app (#74), or shares it through Android's share
+ * sheet.
  */
 object BugRecording {
     const val MAX_MILLIS = 3 * 60_000L
     const val PAGE = "/settings/bug"
     private const val DIRECTORY = "bug-recording"
     private const val CAP_BYTES = 24L * 1024 * 1024
+    /** Mail servers often refuse much more, so a bigger recording is zipped before it's attached (#74). */
+    const val ZIP_OVER_BYTES = 10L * 1024 * 1024
     private const val CHANNEL = "bug-recording"
     private const val NOTIFICATION = 0x4B00001
     private const val STOP = "com.titankeys.bug.STOP"
@@ -99,7 +102,7 @@ object BugRecording {
         File(context.cacheDir, DIRECTORY).deleteRecursively()
     }
 
-    /** The finished recording as one file, ready to share. Only [share] makes it, so a file already lent out stays as it is. */
+    /** The finished recording as one file, ready to share. Only [share] and [email] make it, so a file already lent out stays as it is. */
     private fun file(context: Context): File? {
         if (recording || store(context).size() == 0L) return null
         val folder = File(context.cacheDir, DIRECTORY).apply { deleteRecursively(); mkdirs() }
@@ -148,6 +151,29 @@ object BugRecording {
         }
         lines.use { store.export(it) }
         return Summary(if (last > first) last - first else 0L, fields, touches, swipes, keys, words)
+    }
+
+    /**
+     * Opens the mail app with the file attached and our address filled in, zipped first if it's over [ZIP_OVER_BYTES]. False if
+     * the phone has no mail app, and the page then offers the address and the share sheet.
+     */
+    fun email(context: Context, subject: String, text: String): Boolean {
+        var file = file(context) ?: throw IllegalStateException("Nothing recorded")
+        if (file.length() > ZIP_OVER_BYTES) file = zip(file)
+        val type = if (file.name.endsWith(".zip")) "application/zip" else "text/plain"
+        return Mail.attach(context, subject, text, BugRecordingProvider.uri(context, file.name), file.name, type)
+    }
+
+    /** The recording in a zip of its own, beside it. Recordings are text, so they shrink a lot. */
+    private fun zip(file: File): File {
+        val zipped = File(file.parentFile, file.nameWithoutExtension + ".zip")
+        java.util.zip.ZipOutputStream(zipped.outputStream().buffered()).use { out ->
+            out.putNextEntry(java.util.zip.ZipEntry(file.name))
+            file.inputStream().use { it.copyTo(out) }
+            out.closeEntry()
+        }
+        file.delete()
+        return zipped
     }
 
     /** Opens Android's share sheet with the file. A read-only provider lends it to the app the user picks. */

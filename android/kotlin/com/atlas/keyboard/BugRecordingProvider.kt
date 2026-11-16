@@ -12,8 +12,8 @@ import java.io.File
 import java.io.FileNotFoundException
 
 /**
- * Lends a finished bug recording to the app that the user picks in the share sheet, and nothing else: read-only, not
- * exported, and only for the one file named in the link, which Android grants for that share alone.
+ * Lends a finished bug recording, or its zip, to the mail app or the app that the user picks in the share sheet, and nothing
+ * else: read-only, not exported, and only for the one file named in the link, which Android grants for that share alone.
  */
 class BugRecordingProvider : ContentProvider() {
     override fun onCreate() = true
@@ -40,13 +40,13 @@ class BugRecordingProvider : ContentProvider() {
         }
     }
 
-    override fun getType(uri: Uri) = "text/plain"
+    override fun getType(uri: Uri) = if (uri.lastPathSegment.orEmpty().endsWith(".zip")) "application/zip" else "text/plain"
     override fun insert(uri: Uri, values: ContentValues?): Uri? = throw UnsupportedOperationException()
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?) = 0
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?) = 0
 
     companion object {
-        private val NAME = Regex("titankeys-bug-[0-9-]+\\.jsonl")
+        private val NAME = Regex("titankeys-bug-[0-9-]+\\.(jsonl|zip)")
 
         fun authority(context: Context) = "${context.packageName}.bugrecording"
 

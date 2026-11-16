@@ -72,9 +72,10 @@ describe("record a bug", () => {
     expect(bug).toContain('private val autoStop = Runnable { app?.let { context -> Thread({ stop(context) }, "BugRecordingStop").start() } }');
     expect(bug).toMatch(/stopping\.join\(WRITE_WAIT_MILLIS\)[\s\S]{0,200}summary = read\(context\)/);
     expect(bug).toMatch(/fun summary\(context: Context\): Summary\? \{\s*if \(recording\) return null\s*summary\?\.let \{ return it \}/);
-    // Only share() makes the shared file.
+    // Only share() and email() (#74) make the shared file.
     expect(bug).toContain("private fun file(context: Context): File?");
-    expect(bug.match(/\bfile\(context\)/g)?.length).toBe(1);
+    expect(bug.match(/\bfile\(context\)/g)?.length).toBe(2);
+    expect(bug).toContain("var file = file(context) ?: throw IllegalStateException(\"Nothing recorded\")");
     expect(bug).toContain("val file = file(context) ?: throw IllegalStateException(\"Nothing recorded\")");
   });
 

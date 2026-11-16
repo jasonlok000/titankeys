@@ -76,6 +76,8 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
                     BugRecording.delete(activity)
                     "null"
                 }
+                // Email it (#74): "false" if the phone has no mail app.
+                "bugEmail" -> BugRecording.email(activity, data.getString("subject"), data.getString("text")).toString()
                 "bugShare" -> {
                     BugRecording.share(activity, data.getString("subject"), data.getString("text"))
                     "null"

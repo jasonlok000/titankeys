@@ -58,8 +58,9 @@ private class Lists(val words: PhoneWords, val habits: PhoneWords.Habits = Phone
     override fun known(word: String) = words.contains(word) || habits.active(word) || word.lowercase() in phoneNames
     override fun frequency(word: String) = words.frequency(word)
     override fun personal(word: String) = habits.active(word) || word.lowercase() in phoneNames
+    // As SwipeTyping.savedSpelling: a word the user saved in lowercase keeps it over a name's capitals (#91).
     override fun name(word: String): String? = words.name(word) ?: habits.capitals(word)
-        ?: phoneNames[word.lowercase()]?.takeIf { it != word.lowercase() }
+        ?: phoneNames[word.lowercase()]?.takeIf { it != word.lowercase() && !habits.active(word) }
     override fun preferredSpelling(word: String) = spelling(word)
     override fun acronym(word: String) = words.acronym(word)
     override fun expandShorthand() = expand
@@ -1005,6 +1006,19 @@ private fun composerFlow(world: Realistic) {
         same(typed("send it on whatsapp", phone), "send it on WhatsApp", "\"whatsapp\" gets the capitals inside its name")
         same(typed("watch netflix later", phone), "watch Netflix later", "\"netflix\" gets its capital")
         same(typed("my instagram", phone), "my Instagram", "\"instagram\" gets its capital")
+        // #91: the dictionary's spelling wins over a phone name's, and a word saved in lowercase wins over both.
+        val shouting = com.atlas.engine.PhoneNames.words(listOf("AUTO", "IKEA", "WhatsApp"),
+            { world.words.frequency(it).toDouble() }, { it in plain })
+        must("auto" !in shouting, "An app \"AUTO\" gives \"auto\" no capitals: $shouting")
+        same(typed("the auto setting", Lists(world.words, phoneNames = shouting)), "the auto setting",
+            "\"auto\" stays lowercase beside an app named AUTO")
+        same(typed("open whatsapp", Lists(world.words, phoneNames = shouting)), "open WhatsApp", "\"WhatsApp\" still gets its capitals")
+        val contactNames = com.atlas.engine.PhoneNames.words(listOf("JOHN", "AUTO"),
+            { world.words.frequency(it).toDouble() }, { it in plain }, true)
+        must(contactNames["john"] != "JOHN" && "auto" !in contactNames, "A contact in capitals keeps the dictionary's spelling: $contactNames")
+        val lowSaved = Lists(world.words, phoneNames = mapOf("auto" to "AUTO"))
+        lowSaved.habits.add("auto")
+        same(typed("the auto setting", lowSaved), "the auto setting", "\"auto\" saved in lowercase beats an app's \"AUTO\"")
         // The bar keeps a name's capitals off while the word is in progress, and a tapped word gets them as it goes in.
         val tapping = Typist(world, world.autocorrect(phone), lists = phone,
             words = FakeWords(phone).also { it.completions = listOf("whatsapp", "toggle", "spotify") })

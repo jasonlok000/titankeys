@@ -9,13 +9,13 @@ public final class PhoneNamesChecks {
         // As the base list has them, from english.combined.
         Map<String, Double> frequencies = new java.util.HashMap<>();
         String[] words = {"maps", "clock", "google", "messages", "the", "jason", "whatsapp", "spotify", "chrome", "youtube", "music",
-                "toggle", "rose", "bill", "hunter"};
-        double[] values = {124, 123, 72, 121, 255, 112, 25, 25, 98, 109, 160, 77, 128, 131, 60};
+                "toggle", "rose", "bill", "hunter", "auto", "john"};
+        double[] values = {124, 123, 72, 121, 255, 112, 25, 25, 98, 109, 160, 77, 128, 131, 60, 120, 110};
         for (int i = 0; i < words.length; i++) frequencies.put(words[i], values[i]);
         java.util.function.ToDoubleFunction<String> frequency = word -> frequencies.getOrDefault(word, 0d);
         // The words that english.combined also writes in lowercase. "Jason", "WhatsApp" and "Spotify" it writes only with capitals.
         java.util.Set<String> lowercase = java.util.Set.of("maps", "clock", "google", "messages", "the", "chrome", "music",
-                "toggle", "rose", "bill", "hunter");
+                "toggle", "rose", "bill", "hunter", "auto");
         Names base = names -> PhoneNames.words(names, frequency, lowercase::contains);
         Map<String, String> apps = base.words(List.of("WhatsApp", "Google Maps", "Clock", "Signal Private Messenger",
                 "Pokémon GO", "X", "Stack Overflow 2", "Bank of the West"));
@@ -57,6 +57,20 @@ public final class PhoneNamesChecks {
         check(!people.containsKey("rose") && !people.containsKey("bill") && !people.containsKey("hunter"),
                 "A contact named with ordinary words gives them no capitals: " + people);
         same(people.get("jones"), "Jones", "A name that is no ordinary word keeps its capitals");
+        // #91, the owner's rule: a word the dictionary has keeps the dictionary's spelling. A name in all capitals only adds a
+        // word that the dictionary lacks: an app's keeps its capitals, a contact's gets a first capital.
+        Names contactsOf = names -> PhoneNames.words(names, frequency, lowercase::contains, true);
+        Map<String, String> shouting = base.words(List.of("AUTO", "IKEA", "WhatsApp", "JOHN"));
+        check(!shouting.containsKey("auto"), "An app \"AUTO\" leaves the dictionary's \"auto\" alone: " + shouting);
+        check(!shouting.containsKey("john"), "An app \"JOHN\" leaves the dictionary's \"John\" alone: " + shouting);
+        same(shouting.get("ikea"), "IKEA", "An app's word in capitals that the dictionary lacks keeps them");
+        same(shouting.get("whatsapp"), "WhatsApp", "A capital inside a mixed word still makes a brand");
+        Map<String, String> saved = contactsOf.words(List.of("JOHN", "AUTO", "NGUYEN", "O'BRIEN", "WhatsApp"));
+        check(!saved.containsKey("auto"), "A contact \"AUTO\" leaves the dictionary's \"auto\" alone: " + saved);
+        check(!"JOHN".equals(saved.get("john")), "A contact \"JOHN\" never gives \"JOHN\": " + saved);
+        same(saved.get("nguyen"), "Nguyen", "A contact saved in capitals that the dictionary lacks gets a first capital");
+        same(saved.get("o'brien"), "O'Brien", "A capital after the apostrophe too");
+        same(saved.get("whatsapp"), "WhatsApp", "A contact's mixed capitals stay as written");
         System.out.println("Phone name checks passed");
     }
 

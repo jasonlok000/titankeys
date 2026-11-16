@@ -80,7 +80,7 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
     private fun refreshContacts() = worker.execute {
         val allowed = contactsAllowed(context)
         contacts = if (allowed) try {
-            PhoneNames.words(contactNames(), { typing.baseFrequency(it).toDouble() }, typing::baseLowercase)
+            PhoneNames.words(contactNames(), { typing.baseFrequency(it).toDouble() }, typing::baseLowercase, true)
         } catch (error: RuntimeException) {
             Log.w(TAG, "Could not read the contacts' names", error)
             emptyMap()

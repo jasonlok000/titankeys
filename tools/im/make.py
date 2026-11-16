@@ -342,10 +342,10 @@ def build_latin(data, ident):
 
 
 # Chinese through Rime (native/rime/SOURCES.md): no word list of their own here, since Rime's tables are in
-# android/assets/rime. Yale first, the owner's input method. F: draft, the names and labels.
+# android/assets/rime. Yale first, the owner's input method. F (docs/words-m1.md).
 # id: (name, English name, label, locale, Rime schema, sources)
 CHINESE = {
-    "yue-yale": ("粵語耶魯", "Cantonese, Yale", "耶", "yue", "tk_yale",
+    "yue-yale": ("耶魯拼音", "Cantonese, Yale", "耶", "yue", "tk_yale",
                  "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"),
     "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping", "rime-cantonese (CC BY 4.0)"),
     "zh-pinyin": ("漢語拼音", "Mandarin, Pinyin", "拼", "zh", "tk_pinyin",

@@ -122,8 +122,8 @@ internal class Languages(private val context: Context, english: Words, private v
 /** How long an engine's input method may take to start before the bar says it's getting ready. */
 internal const val PREPARING_MILLIS = 500L
 
-/** What the bar says while an engine's input method gets ready. F: draft. */
-internal fun preparingLine(entry: InputMethodIndex.Entry) = "Getting ${entry.name} ready…"
+/** What the bar says while an engine's input method gets ready. F (docs/words-m1.md). */
+internal fun preparingLine(entry: InputMethodIndex.Entry) = "Warming up ${entry.name}…"
 
 /** The Chinese variants, one setting for every Chinese input method (docs/languages.md). */
 internal val CHINESE_VARIANTS = listOf("zh_hk", "zh_tw", "zh_hans")

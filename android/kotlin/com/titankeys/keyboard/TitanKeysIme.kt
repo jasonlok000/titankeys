@@ -3437,9 +3437,9 @@ class TitanKeysIme : InputMethodService() {
                 val entry = open.entries[choice]
                 if (entry.id == languages.current.id) return
                 languages.switchTo(entry.id)
-                // F: draft. The bar says, for a moment, which input method types now.
+                // The bar says, for a moment, which input method types now. F (docs/words-m1.md).
                 strip?.let { strip ->
-                    strip.notice = Strip.Notice.Line("${entry.label}  ${entry.name}")
+                    strip.notice = Strip.Notice.Line("${entry.name} it is.")
                     main.removeCallbacks(endTeamsEgg)
                     main.postDelayed(endTeamsEgg, SWITCHED_NOTICE_MILLIS)
                 }

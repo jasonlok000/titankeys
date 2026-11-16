@@ -127,6 +127,11 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - A backup syncs Rime first, which drops any half-typed Chinese code at that moment.
   - The 4 missed joins are left to the 150 ms check, not joined outright, and the check gets no extra lead, so no right join
     is lost.
+- **F's words pass 3 on main at c508c31:** every "F: draft" in the language framework, Chinese, the licences and the report
+  form is replaced (`docs/words-m1.md` has each line before and after). F's calls, to confirm:
+  - The Yale input method is named 耶魯拼音, with "Cantonese, Yale" under it.
+  - The licences and the README credit 幸延 for the Yale rules, as `native/rime/SOURCES.md` does.
+  - Not yet seen on the phone: whether "Simplified or Traditional? Settings." fits the bar.
 - **Review of M1 and M2 (05:50), merged at 3084dd0 with the Worker redeployed.** Seven bugs fixed, each with a test:
   - a flick took two words in web fields, whose spaces are non-breaking;
   - reports over 20 parts couldn't upload;

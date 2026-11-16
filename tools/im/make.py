@@ -34,6 +34,14 @@ LEIPZIG = ("A word list built by HeliBoard's aosp-dictionaries ({file}) from the
            "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large "
            "Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012.")
 
+FREQUENCY_WORDS = ("Hermit Dave's FrequencyWords (https://github.com/hermitdave/FrequencyWords), built from OpenSubtitles, via HeliBoard's "
+                   "aosp-dictionaries ({file}). Its content is CC BY-SA 4.0.")
+AZERBAIJANI = ("aosp-dict-az by Subhan Gadirli (https://github.com/subhangadirli/aosp-dict-az), via HeliBoard's aosp-dictionaries "
+               "({file}), CC BY-SA 4.0, with lists from the Leipzig Corpora Collection (CC BY 4.0).")
+IRISH = "aosp-gaeilge (https://codeberg.org/goibhniu/aosp-gaeilge), via HeliBoard's aosp-dictionaries ({file}), CC BY 4.0."
+BASQUE = "AnySoftKeyboard's Basque word lists, via HeliBoard's aosp-dictionaries ({file}), Apache License 2.0."
+NYNORSK = "Norwegian Nynorsk words from Wikipedia, via HeliBoard's aosp-dictionaries ({file}), CC BY-SA 4.0."
+
 # id: (name, English name, label, locale, word list file, word list notice, extra settings)
 LATIN = {
     "es": ("Español", "Spanish", "ES", "es", "main_es", AOSP, {"openingMarks": "¿¡", "apostrophes": False}),
@@ -63,6 +71,11 @@ LATIN = {
     "is": ("Íslenska", "Icelandic", "IS", "is", "main_is__experimental", LEIPZIG, {"apostrophes": False}),
     "af": ("Afrikaans", "Afrikaans", "AF", "af", "main_af__experimental", LEIPZIG, {}),
     "eo": ("Esperanto", "Esperanto", "EO", "eo", "main_eo__experimental", LEIPZIG, {"apostrophes": False}),
+    "sk": ("Slovenčina", "Slovak", "SK", "sk", "main_sk__experimental", FREQUENCY_WORDS, {"apostrophes": False}),
+    "az": ("Azərbaycan", "Azerbaijani", "AZ", "az", "main_az", AZERBAIJANI, {"apostrophes": False}),
+    "ga": ("Gaeilge", "Irish", "GA", "ga", "main_ga", IRISH, {"apostrophes": False}),
+    "eu": ("Euskara", "Basque", "EU", "eu", "main_eu", BASQUE, {"apostrophes": False}),
+    "nn": ("Norsk nynorsk", "Norwegian Nynorsk", "NN", "nn", "main_nn", NYNORSK, {"apostrophes": False}),
 }
 
 # Cyrillic and Greek: Android's national layout on the 26 keys, and the letters that layout puts on punctuation keys, held on the

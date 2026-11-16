@@ -28,6 +28,11 @@
     <string name="im_is" translatable="false">Íslenska</string>
     <string name="im_af" translatable="false">Afrikaans</string>
     <string name="im_eo" translatable="false">Esperanto</string>
+    <string name="im_sk" translatable="false">Slovenčina</string>
+    <string name="im_az" translatable="false">Azərbaycan</string>
+    <string name="im_ga" translatable="false">Gaeilge</string>
+    <string name="im_eu" translatable="false">Euskara</string>
+    <string name="im_nn" translatable="false">Norsk nynorsk</string>
     <string name="im_ru" translatable="false">Русский</string>
     <string name="im_uk" translatable="false">Українська</string>
     <string name="im_be" translatable="false">Беларуская</string>

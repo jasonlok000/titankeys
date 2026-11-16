@@ -56,6 +56,16 @@
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=af" android:subtypeId="1852295325" />
     <subtype android:label="@string/im_eo" android:imeSubtypeLocale="eo" android:languageTag="eo"
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=eo" android:subtypeId="1946746092" />
+    <subtype android:label="@string/im_sk" android:imeSubtypeLocale="sk" android:languageTag="sk"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=sk" android:subtypeId="1940001193" />
+    <subtype android:label="@string/im_az" android:imeSubtypeLocale="az" android:languageTag="az"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=az" android:subtypeId="99514475" />
+    <subtype android:label="@string/im_ga" android:imeSubtypeLocale="ga" android:languageTag="ga"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=ga" android:subtypeId="-623722801" />
+    <subtype android:label="@string/im_eu" android:imeSubtypeLocale="eu" android:languageTag="eu"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=eu" android:subtypeId="1937673507" />
+    <subtype android:label="@string/im_nn" android:imeSubtypeLocale="nn" android:languageTag="nn"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=nn" android:subtypeId="1085090443" />
     <subtype android:label="@string/im_ru" android:imeSubtypeLocale="ru" android:languageTag="ru"
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=ru" android:subtypeId="1726145601" />
     <subtype android:label="@string/im_uk" android:imeSubtypeLocale="uk" android:languageTag="uk"

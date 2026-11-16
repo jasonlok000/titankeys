@@ -234,6 +234,51 @@
   "engine": null
  },
  {
+  "id": "sk",
+  "name": "Slovenčina",
+  "nameEnglish": "Slovak",
+  "label": "SK",
+  "locale": "sk",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "az",
+  "name": "Azərbaycan",
+  "nameEnglish": "Azerbaijani",
+  "label": "AZ",
+  "locale": "az",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "ga",
+  "name": "Gaeilge",
+  "nameEnglish": "Irish",
+  "label": "GA",
+  "locale": "ga",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "eu",
+  "name": "Euskara",
+  "nameEnglish": "Basque",
+  "label": "EU",
+  "locale": "eu",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "nn",
+  "name": "Norsk nynorsk",
+  "nameEnglish": "Norwegian Nynorsk",
+  "label": "NN",
+  "locale": "nn",
+  "script": "Latn",
+  "engine": null
+ },
+ {
   "id": "ru",
   "name": "Русский",
   "nameEnglish": "Russian",

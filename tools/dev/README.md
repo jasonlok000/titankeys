@@ -39,6 +39,8 @@ phone run:
 | `compat.py` | Removes the few options that only the private Ink has, in a build copy. `verify.sh`, `try.sh` and `play-bundle.sh` run it. Never run it in the repo. | |
 | `rg` | Stands in for ripgrep where it isn't installed. | |
 
+Each build uses an Ink that carries its own tree's `tools/ink/titankeys.patch` (`ink.sh`): `~/build/ink-<hash>`, made once per patch from the clean `~/build/ink` with its Rust build cache, so branches with different patches never step on each other. Each build copy sits in a folder of its own, `~/build/copies/<name>/tk`, beside a link `ink` to that Ink, which the tree reaches as `../ink`. `~/build/tk-overnight` still leads to `verify.sh`'s copy. The newest 4 Inks are kept, never one a build is using. `test-ink.sh` checks this on a small throwaway Ink.
+
 `verify.sh` and `try.sh` build the checkout they sit in. Set `TK_WORKTREE=<path>` for `verify.sh` to build another one, such as a git worktree. Only one `verify.sh` or `play-bundle.sh` runs at a time on a machine: they share the build lock (see Locks).
 
 The Play bundle needs Julian's private Ink SDK, which isn't public and never goes in this repo. `play-bundle.sh` expects it at `TK_PLAY_INK` (default `~/build/play/ink`), patched with `tools/ink-bundle.patch`.

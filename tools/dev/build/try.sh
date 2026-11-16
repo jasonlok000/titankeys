@@ -19,11 +19,14 @@ for i in $(seq 1 "$slots"); do
   flock -n 8 && break
   [ "$i" = "$slots" ] && { echo "waiting for a free test slot"; flock 8; }
 done
-B="$TK_BUILD/tk-try-$(basename "$W")"
-mkdir -p "$B"
+. "$H/ink.sh"
+# The copy, in a folder of its own beside the Ink for its patch (ink.sh); an older $TK_BUILD/tk-try-<name> moves there.
+B=$(tk_ink_copy_dir "try-$(basename "$W")" "$TK_BUILD/tk-try-$(basename "$W")")
 for f in node_modules .ink signing; do [ -e "$B/$f" ] || cp -a "$SEED/$f" "$B/"; done
 find "$B" -mindepth 1 -maxdepth 1 ! -name node_modules ! -name .ink ! -name signing ! -name dist -exec rm -rf {} +
 tar -C "$W" --exclude=.git --exclude=node_modules --exclude=dist --exclude=.ink --exclude=signing --exclude=tools/dev/local.env -cf - . | tar -xf - -C "$B"
 cd "$B" || exit 1
 python3 "$H/compat.py" > /dev/null || { echo "FAIL public Ink edits"; exit 1; }
+# The Ink for this tree's own patch as ../ink, as verify.sh has: try.sh used to build against whatever the shared Ink had.
+tk_ink_use "$B" || exit 1
 "$@"

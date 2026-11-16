@@ -126,21 +126,64 @@ def switch_to(im, ids):
     return ids.get(current_subtype()) == im
 
 
+# The field the tests type in: TitanKeys Debug's Space gestures screen. Never the guide's or the playground's, which type English
+# whatever input method is on (englishOnly = inGuide || inPractice), and never another app's. The gate brings it back too.
+FIELD_ACTIVITY = "com.titankeys.keyboard.SpaceGestureActivity"
+os.environ["TK_TOUCH_ACTIVITY"] = FIELD_ACTIVITY
+APP = os.environ.get("TK_APP", "com.titankeys.debug")
+# TitanKeys Debug's own log lines about input methods ("Input method at field start: ru (the saved setting)", "… loaded: N words,
+# engine none", "… didn't load (…): typing English") and about Sym. Ids and counts only, never text.
+LOG_TAGS = ["TitanKeysIM", "TitanKeysSym"]
+
+
+def front():
+    return next((line for line in adb("shell", "dumpsys", "window").splitlines() if "mCurrentFocus" in line), "")
+
+
+def in_field():
+    """The Space gestures screen is in front: opened when TitanKeys Debug is, never over another app."""
+    if FIELD_ACTIVITY in front():
+        return True
+    if f" {APP}/" in front():
+        adb("shell", "am", "start", "-n", f"{APP}/{FIELD_ACTIVITY}")
+        time.sleep(2)
+    return FIELD_ACTIVITY in front()
+
+
+def log_lines():
+    return [line for line in adb("logcat", "-d", "-v", "brief", "-s", *LOG_TAGS).splitlines() if "TitanKeys" in line]
+
+
+def logs_on(on):
+    """This firmware keeps apps' info lines out of the log (log.tag is M); each tag's own property lets it through. A debug
+    property, not a setting: gone at the next restart, and cleared at the end of the run."""
+    for tag in LOG_TAGS:
+        adb("shell", "setprop", f"log.tag.{tag}", "I" if on else "''")
+    return all(adb("shell", "getprop", f"log.tag.{tag}") == "I" for tag in LOG_TAGS) if on else True
+
+
 def run(name, ids):
     im = TESTS[name].get("im", name)
     want = expected(name)
     checks.keyboard("debug")
     os.environ["TK_IME_HELD"] = "1"
+    seen = len(log_lines())
     try:
+        if not in_field():
+            return checks.record(f"lang-{name}", None, f"not in the Space gestures field: front is {front().strip()}")
         if not switch_to(im, ids):
             now = ids.get(current_subtype(), current_subtype())
             return checks.record(f"lang-{name}", None, f"Alt+Sym didn't reach {im} (Android's entry: {now}): is it on?")
+        if not in_field():
+            return checks.record(f"lang-{name}", None, f"left the Space gestures field while switching: {front().strip()}")
         before = checks.field()
         checks.play(*gestures(name), shot=f"lang-{name}", at=len(gestures(name)) * 75)
         time.sleep(.8)
         got = inserted(before, checks.field())
         note = f" ({TESTS[name]['note']})" if "note" in TESTS[name] else ""
-        checks.record(f"lang-{name}", got == want, f"typed {got!r}, wanted {want!r}{note}", f"lang-{name}")
+        said = [line.split(":", 1)[-1].strip() for line in log_lines()[seen:] if "TitanKeysIM" in line][-3:]
+        log = "; the log: " + " | ".join(said) if said else "; the log said nothing about input methods"
+        checks.record(f"lang-{name}", got == want, f"typed {got!r}, wanted {want!r}{note}{log}", f"lang-{name}")
     finally:
         os.environ.pop("TK_IME_HELD", None)
         checks.keyboard("release")
@@ -159,12 +202,16 @@ def main():
     ids = subtype_ids()
     if os.environ.get("TK_PHONE_LOCKED") != "1":
         held = checks.lock()  # noqa: F841 (kept open until the end)
+    if not logs_on(True):
+        print("note: the shell couldn't let TitanKeysIM and TitanKeysSym through the log; the lines will say nothing", flush=True)
     try:
         for name in args or TESTS:
             run(name, ids)
     except checks.Stop as stop:
         print(f"STOP: the run ended: {stop}", flush=True)
         sys.exit(1)
+    finally:
+        logs_on(False)
     verdicts = [v for _, v in checks.results]
     print(f"{verdicts.count('YES')} YES, {verdicts.count('NO')} NO, {verdicts.count('LOOK')} UNSURE")
     sys.exit(1 if "NO" in verdicts else 0)

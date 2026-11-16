@@ -70,11 +70,15 @@ internal class Languages(
         val index = InputMethodList.index(context)
         val setting = TypingSettings.inputMethods(context)
         on = index.on(setting)
-        // A restore writes the setting but not Android's list of enabled entries, which only Settings kept the same: the
-        // keyboard does it too, once per process and after any change, so Android can switch to the restored one.
-        if (setting != enabledFor) {
+        // A restore writes the setting but not Android's list of enabled entries, which only Settings kept the same. The keyboard
+        // checks Android's list at every field start and sets it again whenever it isn't exactly the input methods that are on
+        // (German was once on in Settings and missing from Android's list), and once per process or after any change.
+        val ids = on.map { it.id }
+        val android = InputMethodList.enabledIds(context)
+        if (setting != enabledFor || EnabledEntries.differ(ids, android)) {
+            if (EnabledEntries.differ(ids, android)) Log.w(LOG_TAG, "Android's keyboard list had $android, not the input methods on, $ids")
             enabledFor = setting
-            InputMethodList.enable(context, on.map { it.id })
+            InputMethodList.enable(context, ids)
         }
         val picked = sync.heard(android())
         saveSync()

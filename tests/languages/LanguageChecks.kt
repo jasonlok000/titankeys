@@ -48,6 +48,7 @@ fun main(args: Array<String>) {
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
     aHeldSymWaits()
+    androidsListFollowsTheOnes()
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (failures > 0) {
@@ -223,6 +224,16 @@ private fun anEngineFitsTheInterface() {
  */
 private fun startsWith(index: InputMethodIndex, setting: String, current: String, android: String?, synced: String?): String {
     return InputMethodChoice.atFieldStart(index, setting, current, KeyboardListSync(synced).heard(android)).id
+}
+
+/** The keyboard sets Android's list again whenever it isn't exactly the input methods on: batch 2 of the phone run. */
+private fun androidsListFollowsTheOnes() {
+    val on = listOf("en", "es", "de", "el", "yue-yale")
+    check("German missing: set again", EnabledEntries.differ(on, listOf("en", "es", "el", "ru", "sr", "kk", "yue-yale")))
+    check("an old one left over: set again", EnabledEntries.differ(on, on + "ru"))
+    check("nothing on in Android's list: set again", EnabledEntries.differ(on, emptyList()))
+    check("the same in another order: left alone", !EnabledEntries.differ(on, on.reversed()))
+    check("Android can't say: left alone", !EnabledEntries.differ(on, null))
 }
 
 /** A held Sym opens the overlay in any field with two or more input methods on; each reason it doesn't is said. */

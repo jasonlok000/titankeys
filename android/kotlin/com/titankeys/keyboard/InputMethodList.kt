@@ -61,8 +61,18 @@ internal object InputMethodList {
             val info = own(context) ?: return
             val hashes = (0 until info.subtypeCount).map(info::getSubtypeAt).filter { idOf(it) in ids }.map { it.hashCode() }
             context.getSystemService(InputMethodManager::class.java).setExplicitlyEnabledInputMethodSubtypes(info.id, hashes.toIntArray())
-        }.onFailure { Log.w(TAG, "Android's keyboard list didn't take the input methods", it) }
+            // Read back, so a list Android didn't take as given shows in the log (German was once missing).
+            val taken = enabledIds(context)
+            if (EnabledEntries.differ(ids, taken)) Log.w(LOG_TAG, "Android's keyboard list has $taken after setting $ids")
+            else Log.i(LOG_TAG, "Android's keyboard list set to $ids")
+        }.onFailure { Log.w(LOG_TAG, "Android's keyboard list didn't take the input methods $ids", it) }
     }
+
+    /** The input methods of TitanKeys' entries that Android's keyboard list has on, or null when Android can't say. */
+    fun enabledIds(context: Context): List<String>? = runCatching {
+        val info = own(context) ?: return null
+        context.getSystemService(InputMethodManager::class.java).getEnabledInputMethodSubtypeList(info, false).mapNotNull(::idOf)
+    }.getOrNull()
 
     /** TitanKeys' own id in Android's keyboard list. */
     fun ownId(context: Context): String? = own(context)?.id

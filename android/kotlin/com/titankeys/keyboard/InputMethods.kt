@@ -165,6 +165,12 @@ object Picker {
  * Whether a Sym press waits to see if it's held, which opens the input method overlay: null when it waits, or why not, for
  * TitanKeys Debug's TitanKeysSym log.
  */
+/** Android's list of TitanKeys' enabled entries against the input methods that are on: the two must be the same set. */
+object EnabledEntries {
+    /** True when Android's [android] entries (null when it can't say) aren't exactly the input methods [on]. */
+    fun differ(on: List<String>, android: List<String>?) = android != null && android.toSet() != on.toSet()
+}
+
 object SymHold {
     fun whyNot(onCount: Int, englishOnly: Boolean, panelOpen: Boolean, altOn: Boolean, inGuide: Boolean, exact: Boolean,
                waiting: Int): String? = when {

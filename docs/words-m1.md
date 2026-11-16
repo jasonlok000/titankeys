@@ -15,7 +15,7 @@ of the line, after "follows", and "cursor" is the word right before it (6 letter
 | Place | Today | New |
 | --- | --- | --- |
 | `STEER_LINE` | Hold the second tap to steer the cursor | Hold the second tap and the cursor follows |
-| `steer` slide title | Steer to the underlined word. | Put the cursor in the underlined word. |
+| `steer` slide title | Steer to the underlined word. | Land in the underlined word. (was "Put the cursor in the underlined word.", which ran past one line on the phone) |
 | `GuideChapter.Steering` label | Steering | Cursor |
 | Space blocked, cursor slide (GuideSteps.kt, `GuideLesson.Space`) | Typed spaces are blocked. Taps on Space steer. | Spaces are blocked. Space taps move the cursor. |
 | Swipe blocked, cursor chapter (`GuideLesson.Swipe`) | Swiping's blocked here. Taps on Space steer. | Swiping's blocked. Space taps move the cursor. |

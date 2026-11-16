@@ -2,6 +2,7 @@
 # keymap.sh: reads, without changing anything, which key codes the phone's keyboard ("TitanKey") sends for Sym, fn and the rest,
 # from its key layout file, into $TK_OUT/touch/keys.txt for gestures.py. Also checks the touchpad's range against gestures.py.
 # On the Titan 2 Elite, Sym is AGUI_SYM (scancode 253) and fn is FUNC3 (251), both vendor names in TitanKey.kl.
+# Shift is its right Shift (54): the layout names a left one (42) too, but the keyboard has none, and its twin drops it.
 H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$H/../env.sh"; . "$H/../phone/safety.sh"; . "$H/touchlib.sh"
 tk_touch_lock
@@ -11,7 +12,7 @@ layout=$(awk '/^ *[0-9]+: TitanKey( |$)/{f=1; next} f && /KeyLayoutFile:/{print 
 [ -n "$layout" ] || { echo "No key layout file for TitanKey in dumpsys input"; exit 1; }
 echo "TitanKey's layout: $layout"
 tk_adb shell cat "$layout" | tr -d '\r' | awk '
-  BEGIN { split("SPACE=space ENTER=enter DEL=del SHIFT_LEFT=shift ALT_LEFT=alt SYM=sym AGUI_SYM=sym FUNCTION=fn FUNC3=fn", pairs, " ")
+  BEGIN { split("SPACE=space ENTER=enter DEL=del SHIFT_RIGHT=shift ALT_LEFT=alt SYM=sym AGUI_SYM=sym FUNCTION=fn FUNC3=fn", pairs, " ")
           for (i in pairs) { split(pairs[i], kv, "="); names[kv[1]] = kv[2] } }
   $1 == "key" && $2 ~ /^[0-9]+$/ {
     name = $3

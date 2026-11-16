@@ -21,6 +21,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -113,17 +114,49 @@ def inserted(before, after):
     return after[start:len(after) - end]
 
 
+PICKER = "Select input method"
+DEBUG_LABEL = "TitanKeys Debug"
+
+
+def picker_entries():
+    """Android's input method list, read from its views: [(label, keyboard, (x, y))] in order. The dump is deleted at once."""
+    path = "/data/local/tmp/tk-ui.xml"
+    adb("shell", "uiautomator", "dump", path)
+    xml = adb("shell", "cat", path)
+    adb("shell", "rm", "-f", path)
+    texts = []
+    for text, x0, y0, x1, y1 in re.findall(r'text="([^"]+)"[^>]*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml):
+        texts.append((text, ((int(x0) + int(x1)) // 2, (int(y0) + int(y1)) // 2)))
+    return [(label, texts[i + 1][0], at) for i, (label, at) in enumerate(texts[:-1])]
+
+
 def switch_to(im, ids):
-    """Alt+Sym until Android's current entry is im's. Debug stays the keyboard; a step that left it ends the try."""
-    for _ in range(10):
-        if ids.get(current_subtype()) == im:
-            return True
-        checks.play("chord:alt+sym")
-        time.sleep(.8)
-        if adb("shell", "settings", "get", "secure", "default_input_method") != checks.os.environ.get(
-                "TK_DEBUG_IME", "com.titankeys.debug/com.titankeys.keyboard.TitanKeysIme"):
+    """Picks im's entry in Android's input method list, as a person does: TitanKeys opens the list for Alt+Sym on this phone
+    (not the next keyboard). Only an entry of TitanKeys Debug's own is tapped, only while the list is in front, and Android's
+    current entry is read back after."""
+    if ids.get(current_subtype()) == im:
+        return True
+    # Android's list and im.json can write the same name in different Unicode forms ("Tiếng Việt"): compared in one form.
+    info = im_json(im)
+    names = {unicodedata.normalize("NFC", info["name"]), unicodedata.normalize("NFC", info.get("nameEnglish", ""))}
+    checks.play("chord:alt+sym")
+    time.sleep(1.2)
+    for _ in range(4):
+        if PICKER not in front():
             return False
-    return ids.get(current_subtype()) == im
+        match = [at for label, keyboard, at in picker_entries()
+                 if unicodedata.normalize("NFC", label) in names and keyboard == DEBUG_LABEL]
+        if match:
+            if PICKER not in front():
+                return False
+            adb("shell", "input", "tap", str(match[0][0]), str(match[0][1]))
+            time.sleep(1.5)
+            return ids.get(current_subtype()) == im
+        adb("shell", "input", "swipe", "540", "1000", "540", "550", "400")
+        time.sleep(1)
+    if PICKER in front():
+        adb("shell", "input", "keyevent", "4")
+    return False
 
 
 # The field the tests type in: TitanKeys Debug's Space gestures screen. Never the guide's or the playground's, which type English
@@ -147,7 +180,27 @@ def in_field():
     if f" {APP}/" in front():
         adb("shell", "am", "start", "-n", f"{APP}/{FIELD_ACTIVITY}")
         time.sleep(2)
-    return FIELD_ACTIVITY in front()
+    return FIELD_ACTIVITY in front() and focus_field()
+
+
+def focus_field():
+    """The screen's text field has the keyboard: tapped if it lost it, as after a list was open."""
+    path = "/data/local/tmp/tk-ui.xml"
+    adb("shell", "uiautomator", "dump", path)
+    xml = adb("shell", "cat", path)
+    adb("shell", "rm", "-f", path)
+    for node in re.findall(r"<node [^>]*>", xml):
+        if f'package="{APP}"' in node and "EditText" in node:
+            if 'focused="true"' in node:
+                return True
+            x0, y0, x1, y1 = (int(v) for v in re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node).groups())
+            if FIELD_ACTIVITY not in front():
+                return False
+            # Its middle: a corner can be padding, which takes no tap.
+            adb("shell", "input", "tap", str((x0 + x1) // 2), str((y0 + y1) // 2))
+            time.sleep(1)
+            return True
+    return False
 
 
 def log_lines():

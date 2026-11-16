@@ -58,6 +58,12 @@ tk_ink_use() {
   local copy="$1" dir link target rest
   tk_ink_for "$copy/tools/ink/titankeys.patch" || return 1
   dir="$TK_INK_DIR"
+  # Built against another Ink: its build outputs (.ink/build, Kotlin's incremental caches with them) no longer fit, and kept they
+  # can fail a build with two copies of a moved function. A copy that changes Ink starts that build afresh.
+  if [ "$(readlink "$(dirname "$copy")/ink" 2>/dev/null)" != "$dir" ] && [ -d "$copy/.ink/build" ]; then
+    rm -rf "$copy/.ink/build"
+    echo "new Ink for this copy: its old build outputs cleared" >&2
+  fi
   ln -sfn "$dir" "$(dirname "$copy")/ink"
   find "$copy/node_modules" -maxdepth 4 -type l -lname "$TK_BUILD/ink*" 2>/dev/null | while read -r link; do
     target=$(readlink "$link")

@@ -19,7 +19,7 @@ function body(source: string, name: string) {
 
 test("every field start and end updates the overlays", () => {
   const ime = read("TitanKeysIme.kt");
-  expect(body(ime, "onStartInput")).toContain("updateOverlay()");
+  expect(body(ime, "onStartInput")).toContain("updateOverlay(raise = editing)");
   expect(body(ime, "onFinishInput")).toContain("updateOverlay()");
 });
 

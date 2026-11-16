@@ -134,6 +134,9 @@ class BackService : AccessibilityService() {
         fun touchpad(handler: ((MotionEvent) -> Boolean)?): Boolean {
             touchpad = handler
             // The keyboard calls this at every field start, so the window is checked again there even with the same handler.
+            // It isn't added again to go on top, as the keyboard's own overlay is (TouchpadOverlay.raise): Android stacks an
+            // Accessibility service's windows by when the service connected, not when the window came (the owner's phone,
+            // 2026-11-16), so a new window stays where the old one was.
             current?.updateTouchpad()
             return current != null
         }

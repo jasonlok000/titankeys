@@ -49,6 +49,7 @@ class BackDisclosureActivity : Activity() {
             for (line in listOf(R.string.back_disclosure_keys_sym, R.string.back_disclosure_keys_launcher, R.string.back_disclosure_keys_back))
                 addView(bullet(getString(line)))
             addView(text(getString(R.string.back_disclosure_more_end), BODY_TYPE, top = 12))
+            addView(text(getString(R.string.back_disclosure_more_touchpad), BODY_TYPE, top = 12))
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

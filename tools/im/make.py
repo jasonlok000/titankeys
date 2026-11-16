@@ -7,6 +7,8 @@
   aosp-dictionaries/   HeliBoard's word lists (https://codeberg.org/Helium314/aosp-dictionaries)
   cldr/x/package/      CLDR's cldr-misc-full (characters.json per locale)
   kcm/                 Android's keyboard_layout_*.kcm files
+  frequencywords/      Hermit Dave's FrequencyWords, content/2018/<lang>/<lang>_full.txt (commit 525f9b5)
+  leipzig/             Leipzig Corpora Collection words files (<corpus>/<corpus>-words.txt)
 
 It writes, from the repository's root:
   android/assets/im/<id>/im.json, words.combined, NOTICE
@@ -42,6 +44,14 @@ AZERBAIJANI = ("aosp-dict-az by Subhan Gadirli (https://github.com/subhangadirli
 IRISH = "aosp-gaeilge (https://codeberg.org/goibhniu/aosp-gaeilge), via HeliBoard's aosp-dictionaries ({file}), CC BY 4.0."
 BASQUE = "AnySoftKeyboard's Basque word lists, via HeliBoard's aosp-dictionaries ({file}), Apache License 2.0."
 NYNORSK = "Norwegian Nynorsk words from Wikipedia, via HeliBoard's aosp-dictionaries ({file}), CC BY-SA 4.0."
+SERBIAN_LATIN = ("AOSP LatinIME's Serbian word list ({file}), Apache License 2.0. Copyright The Android Open Source Project. "
+                 "https://android.googlesource.com/platform/packages/inputmethods/LatinIME/ . Written in Latin letters by "
+                 "tools/im/make.py, letter for letter.")
+FREQUENCY_WORDS_OWN = ("Hermit Dave's FrequencyWords (https://github.com/hermitdave/FrequencyWords, {file}), built from "
+                       "OpenSubtitles. Its content is CC BY-SA 4.0.")
+LEIPZIG_OWN = ("The Leipzig Corpora Collection's {file} (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, "
+               "T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 "
+               "to 200 Languages. LREC 2012.")
 
 # id: (name, English name, label, locale, word list file, word list notice, extra settings)
 LATIN = {
@@ -77,17 +87,34 @@ LATIN = {
     "ga": ("Gaeilge", "Irish", "GA", "ga", "main_ga", IRISH, {"apostrophes": False}),
     "eu": ("Euskara", "Basque", "EU", "eu", "main_eu", BASQUE, {"apostrophes": False}),
     "nn": ("Norsk nynorsk", "Norwegian Nynorsk", "NN", "nn", "main_nn", NYNORSK, {"apostrophes": False}),
+    # HeliBoard's main_bs (ebukva's bs_BA, LGPL-3.0) is a spelling list with made-up counts, so its top 100,000 miss "je".
+    "bs": ("Bosanski", "Bosnian", "BS", "bs", "frequencywords/bs_full.txt", FREQUENCY_WORDS_OWN, {"apostrophes": False, "counts": True}),
+    # Serbian's own list from AOSP, in Latin letters: HeliBoard's main_sr_ZZ does the same but names no licence.
+    "sr-latn": ("Srpski", "Serbian, Latin", "SR", "sr-Latn", "main_sr", SERBIAN_LATIN,
+                {"apostrophes": False, "transliterate": "sr"}),
 }
 
-# Cyrillic and Greek: Android's national layout on the 26 keys, and the letters that layout puts on punctuation keys, held on the
-# nearest key of the same row (docs/studies/56-languages.md, "How the letters sit on the Titan's keys"). Serbian waits: Android's
-# layout is shared with Montenegrin (ѕ on Z, QWERTZ's Y and Z), and its mapping needs checking first.
+# Cyrillic, Greek and Georgian: Android's national layout on the 26 keys, and the letters that layout puts on punctuation keys,
+# held on the nearest key of the same row (docs/studies/56-languages.md, "How the letters sit on the Titan's keys").
+# Serbian and Macedonian share Android's Serbian layout (QWERTZ: з on Y). Serbian has no ѕ, so its Z types ж, which the layout
+# puts on a punctuation key. Macedonian has ѓ and ќ where Serbian has ђ and ћ, as on Macedonian keyboards.
+# Kazakh has no Android layout: Russian's, with Kazakh's nine letters held on the Russian letter nearest in sound and shape.
+# Georgian has no capitals: Shift types the layout's Shift letter, or the key's own letter.
 NATIONAL = {
     "ru": ("Русский", "Russian", "RU", "ru", "main_ru", AOSP, "russian", {"p": "хъ", "l": "жэ", "m": "бю", "t": "ё"}),
     "uk": ("Українська", "Ukrainian", "UK", "uk", "main_uk__experimental", LEIPZIG, "ukrainian", {"p": "хї", "l": "жє", "m": "бю", "u": "ґ"}),
     "be": ("Беларуская", "Belarusian", "BE", "be", "main_be", None, "belarusian", {"p": "х", "l": "жэ", "m": "бю", "t": "ё"}),
     "bg": ("Български", "Bulgarian", "BG", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "ью"}),
     "el": ("Ελληνικά", "Greek", "EL", "el", "main_el__legacy", AOSP, "greek", {}),
+    "sr": ("Српски", "Serbian, Cyrillic", "СР", "sr", "main_sr", AOSP, "serbian_and_montenegrin_cyrillic",
+           {"p": "шђ", "l": "чћ"}, {"keys": {"z": "ж"}, "own_letters": True}),
+    "mk": ("Македонски", "Macedonian", "MK", "mk", "frequencywords/mk_full.txt", FREQUENCY_WORDS_OWN,
+           "serbian_and_montenegrin_cyrillic", {"p": "шѓж", "l": "чќ"}, {"counts": True}),
+    "kk": ("Қазақ тілі", "Kazakh", "KK", "kk", "main_kk__experimental", LEIPZIG, "russian",
+           {"f": "ә", "u": "ғ", "r": "қ", "y": "ң", "j": "ө", "e": "үұ", "h": "һ", "s": "і", "p": "хъ", "l": "жэ", "m": "бю",
+            "t": "ё"}, {"layout_note": "with Kazakh's letters held on the Russian letters nearest them"}),
+    "ka": ("ქართული", "Georgian", "KA", "ka", "leipzig/kat_newscrawl_2016_1M/kat_newscrawl_2016_1M-words.txt", LEIPZIG_OWN,
+           "georgian", {}, {"counts": True, "script": "Geor", "capitalise": False}),
 }
 BELARUSIAN = ("Belarusian word forms from GrammarDB (https://github.com/Belarus/GrammarDB), via HeliBoard's aosp-dictionaries "
               "({file}), CC BY-SA 4.0.")
@@ -138,7 +165,7 @@ def read_words(data, name):
                 continue
             if not line.startswith(" word=") and not (line.startswith("word=")):
                 continue
-            fields = line.strip().split(",")
+            fields = [x.strip() for x in line.strip().split(",")]
             word = next((x[5:] for x in fields if x.startswith("word=")), "")
             if not word or "not_a_word=true" in fields or "possibly_offensive=true" in fields:
                 continue
@@ -150,6 +177,55 @@ def read_words(data, name):
             seen.add(word)
             unique.append((word, freq))
     return head, unique[:MAX_WORDS]
+
+
+def read_counts(data, name, locale, letters):
+    """A plain list of words and counts (FrequencyWords: "word count"; Leipzig: "id<TAB>word<TAB>count"), as AOSP's
+    frequencies: HeliBoard's scale, the log of the count from 15 to 254. Only words made of the language's letters."""
+    allowed = set(letters) | {c.upper() for c in letters}
+    counts = {}
+    with open(os.path.join(data, name), encoding="utf-8") as f:
+        for line in f:
+            parts = line.rstrip("\n").split("\t") if "\t" in line else line.split()
+            if len(parts) < 2:
+                continue
+            word, count = parts[-2], parts[-1]
+            if not count.isdigit() or not word or any(c not in allowed for c in word):
+                continue
+            counts[word] = counts.get(word, 0) + int(count)
+    ranked = sorted(counts.items(), key=lambda w: -w[1])[:MAX_WORDS]
+    import math
+    low, high = math.log(max(ranked[-1][1], 1)), math.log(ranked[0][1])
+    span = max(high - low, 1)
+    words = [(w, int((math.log(n) - low) * (254 - 15) / span + 15)) for w, n in ranked]
+    return "dictionary=main:%s,locale=%s,description=%s" % (locale, locale, locale), words
+
+
+SERBIAN_LATIN_LETTERS = dict(zip("абвгдђежзијклмнопрстћуфхцчш", "abvgdđežzijklmnoprstćufhcčš"))
+SERBIAN_LATIN_LETTERS.update({"љ": "lj", "њ": "nj", "џ": "dž"})
+
+
+def serbian_latin(word):
+    """Serbian Cyrillic in Latin letters, one for one: љ њ џ are lj nj dž, and Lj, Nj, Dž at a capital's start, LJ in capitals."""
+    out = []
+    for i, ch in enumerate(word):
+        low = ch.lower()
+        latin = SERBIAN_LATIN_LETTERS.get(low)
+        if latin is None:
+            return None
+        if ch != low:
+            latin = latin.upper() if word.isupper() and len(word) > 1 else latin[0].upper() + latin[1:]
+        out.append(latin)
+    return "".join(out)
+
+
+def transliterated(words):
+    best = {}
+    for word, freq in words:
+        latin = serbian_latin(word)
+        if latin and freq > best.get(latin, -1):
+            best[latin] = freq
+    return sorted(best.items(), key=lambda w: -w[1])
 
 
 def write_words(folder, head, words, file="words.combined"):
@@ -232,8 +308,11 @@ def build_latin(data, ident):
     name, english, label, locale, file, source, extra = LATIN[ident]
     folder = os.path.join(ASSETS, ident)
     os.makedirs(folder, exist_ok=True)
-    main, _ = cldr_letters(data, locale)
-    head, words = read_words(data, file)
+    main, aux = cldr_letters(data, locale)
+    head, words = read_counts(data, file, locale, main + aux) if extra.get("counts") else read_words(data, file)
+    if extra.get("transliterate") == "sr":
+        words = transliterated(words)
+        head = "dictionary=main:sr_Latn,locale=sr_Latn,description=Srpski"
     common = common_letters(words, lower(locale))
     # CLDR's letters first, in its order, then any other letter the word list uses often (é in Afrikaans).
     ordered = main + sorted(c for c in common if c not in main)
@@ -251,12 +330,14 @@ def build_latin(data, ident):
     else:
         write_words(folder, head, words)
         words_file = "words.combined"
-        notices.append("Words: " + source.format(file=file + ".combined"))
+        file = os.path.basename(file) if extra.get("counts") else file + ".combined"
+        notices.append("Words: " + source.format(file=file))
     rules = {"capitalise": True, "sentenceEnd": ".?!", "openingMarks": extra.get("openingMarks", ""),
              "apostrophes": extra.get("apostrophes", True)}
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Latn",
                       "keys": "qwerty", "accents": accents, "words": words_file, "variants": variants, "rules": rules,
-                      "engine": None, "source": {"letters": "CLDR 49 exemplarCharacters", "words": file + ".combined"}})
+                      "engine": None, "source": {"letters": "CLDR 49 exemplarCharacters",
+                                                                     "words": file if "." in file else file + ".combined"}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice(notices))
 
 
@@ -288,12 +369,19 @@ def build_chinese(data, ident):
         notice([CHINESE_NOTICE.format(source=source)]))
 
 def build_national(data, ident):
-    name, english, label, locale, file, source, layout, holds = NATIONAL[ident]
+    name, english, label, locale, file, source, layout, holds, *more = NATIONAL[ident]
+    extra = more[0] if more else {}
     folder = os.path.join(ASSETS, ident)
     os.makedirs(folder, exist_ok=True)
     main, _ = cldr_letters(data, locale)
-    head, words = read_words(data, file)
+    head, words = read_counts(data, file, locale, main) if extra.get("counts") else read_words(data, file)
+    if extra.get("own_letters"):
+        # AOSP's Serbian list has a few words in Latin letters ("a" among them), which its Cyrillic keys can't type.
+        own = set(main)
+        words = [(w, f) for w, f in words if all(c in own for c in w.lower())]
     kcm = read_kcm(data, layout)
+    for k, letter in extra.get("keys", {}).items():
+        kcm[k] = (letter, letter.upper())
     missing = [k for k in KEYS if k not in kcm]
     if missing:
         raise SystemExit("%s: %s has no letter for %s" % (ident, layout, " ".join(missing)))
@@ -317,15 +405,22 @@ def build_national(data, ident):
             accents.setdefault(key, []).append(ch)
     accents = {k: "".join(v) for k, v in sorted(accents.items())}
     write_words(folder, head, words)
-    source_line = (source or BELARUSIAN).format(file=file + ".combined")
-    rules = {"capitalise": True, "sentenceEnd": ".?!;" if ident == "el" else ".?!", "openingMarks": "", "apostrophes": ident in ("uk", "be")}
+    shown = os.path.basename(file) if extra.get("counts") else file + ".combined"
+    source_line = (source or BELARUSIAN).format(file=shown)
+    rules = {"capitalise": extra.get("capitalise", True), "sentenceEnd": ".?!;" if ident == "el" else ".?!", "openingMarks": "",
+             "apostrophes": ident in ("uk", "be")}
+    layout_line = KCM_NOTICE.format(file="keyboard_layout_%s.kcm" % layout)
+    if extra.get("layout_note") or extra.get("keys") or ident == "mk":
+        changes = extra.get("layout_note") or ("with Macedonian's ѓ and ќ in place of ђ and ћ" if ident == "mk"
+                                               else "with ж on Z in place of ѕ")
+        layout_line = layout_line[:-1] + ", " + changes + "."
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale,
-                      "script": "Grek" if ident == "el" else "Cyrl", "keys": keys, "accents": accents, "words": "words.combined",
-                      "variants": None, "rules": rules, "engine": None,
+                      "script": extra.get("script", "Grek" if ident == "el" else "Cyrl"), "keys": keys, "accents": accents,
+                      "words": "words.combined", "variants": None, "rules": rules, "engine": None,
                       "source": {"letters": "CLDR 49 exemplarCharacters", "keys": "keyboard_layout_%s.kcm" % layout,
-                                 "words": file + ".combined"}})
+                                 "words": shown}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, KCM_NOTICE.format(file="keyboard_layout_%s.kcm" % layout), "Words: " + source_line]))
+        notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
 
 
 def write_im(folder, im):

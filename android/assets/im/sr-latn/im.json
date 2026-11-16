@@ -1,0 +1,28 @@
+{
+  "id": "sr-latn",
+  "name": "Srpski",
+  "nameEnglish": "Serbian, Latin",
+  "label": "SR",
+  "locale": "sr-Latn",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "c": "čć",
+    "d": "đ",
+    "s": "š",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_sr.combined"
+  }
+}

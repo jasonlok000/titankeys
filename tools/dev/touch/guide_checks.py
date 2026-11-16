@@ -103,22 +103,58 @@ def check_67_selectmore():
 
 
 def check_68_hunts():
-    """#68: the ∞ and 🤡 hunts. Opens each and reads what the guide says at 0, 11, 21, 31 and 41 s, with screenshots."""
+    """#68: the ∞ and 🤡 hunts. The guide times them from the hunt line's appearance (startHunt, at the slide's hunt stage), so the
+    stopwatch starts there too, and what the guide says is read just before and after 10, 20 and 30 s, with screenshots."""
     for step, reach, name in [("symgroups", ["key:sym", "+400", "key:enter"], "68-infinity"), ("clown", ["key:sym", "+400", "key:sym"], "68-clown")]:
         guide(step)
         try:
             play(*reach)
-            start = time.monotonic()
+            # Wait for the hunt line itself ("Find ∞…", "Find 🤡…"): the guide's clock starts with it.
+            start, waited = None, time.monotonic()
+            while time.monotonic() - waited < 8:
+                if said(texts(), "Find ∞", "Find 🤡", "Swipe left or right"):
+                    start = time.monotonic()
+                    break
+                time.sleep(.3)
+            if start is None:
+                record(name, None, f"the hunt line didn't show: {' | '.join(texts()[:5])}")
+                continue
             timeline = []
-            for second in (0, 11, 21, 31, 41):
+            for second in (2, 9, 12, 19, 22, 29, 32):
                 time.sleep(max(0.0, start + second - time.monotonic()))
                 lines = texts()
                 shot(f"{name}-{second}s")
-                timeline.append(f"{second} s: {' | '.join(line for line in lines[:5])}")
-            record(name, None, "what the hunt says over time (owner's rule: 10, 20, 30 s):\n      " + "\n      ".join(timeline),
-                   f"{name}-41s")
+                timeline.append(f"{second} s: {' | '.join(lines[:6])}")
+            record(name, None, "from the hunt line on (the guide's rule: the count and mockery at 10 s, the hint at 20, the skip at "
+                   "30):\n      " + "\n      ".join(timeline), f"{name}-32s")
         finally:
             leave_guide()
+
+
+def check_69_clip():
+    """#69's second paste: the clipboard slide. Sym, A, then each clip's key until the nice one pastes; the guide's done line is
+    "No, seriously. I mean it." (a rude clip is taken back out at once, so a wrong key costs nothing)."""
+    guide("clipboard")
+    keys = ["R", "I", "F", "K", "C"]  # GuideSteps.CLIP_FIELD_KEYS: a key in each clip's field
+    seen = []
+    try:
+        for _ in range(16):
+            lines = texts()
+            seen.append(" | ".join(lines[:3]))
+            if said(lines, "No, seriously. I mean it."):
+                return record("69-clip", True, f"the guide says \"No, seriously. I mean it.\" after {len(seen)} steps", shot("69-clip"))
+            if said(lines, "Press Sym."):
+                play("key:sym")
+            elif said(lines, "Press A for the clipboard"):
+                play("key:a")
+            elif said(lines, "Rest on each clip") and keys:
+                play(f"key:{keys.pop(0).lower()}:70:lift")
+            else:
+                play("key:sym")
+            time.sleep(.8)
+        record("69-clip", False, "no nice paste: " + " / ".join(seen[-4:]), shot("69-clip"))
+    finally:
+        leave_guide()
 
 
 def check_69_paste():
@@ -157,14 +193,25 @@ def check_shift():
         ime = adb("shell", "dumpsys", "input_method")
         editor = re.search(r"mCurrentEditorInfo.*?packageName=(\S+)", ime, re.S)
         return f"front {front().strip()[-50:]}; editor {editor.group(1) if editor else None}"
+    im = os.environ.get("TK_SHIFT_IM")
+    if im:
+        import languages
+        if not (languages.in_field() and languages.switch_to(im, languages.subtype_ids())):
+            return record("shift-w", None, f"couldn't switch to {im}: is it on?")
+        languages.in_field()
     adb("logcat", "-b", "events", "-c")
     before = state()
+    text_before = checks.field()
     play("chord:shift+w:120")
     time.sleep(1)
     after = state()
+    try:
+        gained = repr(checks.field()[len(text_before):]) if checks.field().startswith(text_before) else "the text changed"
+    except Stop as stop:
+        gained = f"no field: {stop}"
     events = [line for line in adb("logcat", "-b", "events", "-d").splitlines()
               if re.search(r"wm_|am_|input_focus", line) and "titankeys" in line][-10:]
-    record("shift-w", None, f"before: {before}\n      after: {after}\n      events:\n        " + "\n        ".join(events or ["(none)"]))
+    record(f"shift-w{'-' + im if im else ''}", None, f"before: {before}\n      after: {after}\n      field gained: {gained}\n      events:\n        " + "\n        ".join(events or ["(none)"]))
 
 
 CHECKS = {
@@ -172,6 +219,7 @@ CHECKS = {
     "67-selectmore": check_67_selectmore,
     "68-hunts": check_68_hunts,
     "69-paste": check_69_paste,
+    "69-clip": check_69_clip,
     "84-menu": check_84_menu,
     "shift-w": check_shift,
 }

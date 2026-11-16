@@ -1334,6 +1334,8 @@ class AtlasIme : InputMethodService() {
         symDown = null
         symHeldOpen = false
         closePicker()
+        // Text an engine was building belongs to the field before.
+        if (::languages.isInitialized) languages.engine?.reset()
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
@@ -1409,6 +1411,7 @@ class AtlasIme : InputMethodService() {
         // The guide and the playground teach English, so they type it whatever input method is on.
         languages.englishOnly = inGuide || inPractice
         languages.refresh()
+        languages.variant()
         val english = languages.current.isEnglish
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
@@ -3358,10 +3361,13 @@ class AtlasIme : InputMethodService() {
             return false
         }
         if (open == null || event.repeatCount > 0 || Modifiers.isModifier(keyCode)) return false
+        // An engine's choices stay while its text is built: its keys go to the engine, in [engineKey].
+        if (open is LanguagePicker.Choices) return false
         val letter = if (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString() else null
         val choice = when (open) {
             is LanguagePicker.Accents -> letter?.let(open::choice)
             is LanguagePicker.Switch -> letter?.let(open::choice)
+            is LanguagePicker.Choices -> null
         } ?: -1
         if (choice >= 0) {
             pickerKey = keyCode
@@ -3385,6 +3391,7 @@ class AtlasIme : InputMethodService() {
                 val accent = open.accents[choice]
                 if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(accent) } else composer.replaceLetter(accent)
             }
+            is LanguagePicker.Choices -> languages.engine?.let { engineState(it.pick(choice)) }
             is LanguagePicker.Switch -> {
                 val entry = open.entries[choice]
                 if (entry.id == languages.current.id) return
@@ -3397,6 +3404,45 @@ class AtlasIme : InputMethodService() {
                 }
             }
         }
+    }
+
+    /**
+     * A key for the current input method's engine (Rime): letters, punctuation, Space, Enter and Backspace go to it first, and
+     * only what it commits reaches the field. Space picks the choice a resting finger marks, or else the first. A key the
+     * engine doesn't take, as Backspace with nothing being built, goes on as usual. Shortcuts with Ctrl, Alt or Meta never go
+     * to it.
+     */
+    private fun engineKey(engine: InputEngine, event: KeyEvent): Boolean {
+        val meta = event.metaState or modifiers.metaState
+        if (meta and (KeyEvent.META_ALT_MASK or KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) != 0) return false
+        val state = when (event.keyCode) {
+            KeyEvent.KEYCODE_DEL -> engine.backspace()
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> engine.enter()
+            KeyEvent.KEYCODE_SPACE -> {
+                val choices = openPicker() as? LanguagePicker.Choices
+                val marked = choices?.choiceAt(strip?.pickerMark ?: -1) ?: -1
+                if (marked >= 0) engine.pick(marked) else engine.space()
+            }
+            else -> {
+                val text = inputMethodLetter(event) ?: event.getUnicodeChar(meta).takeIf { it > 0 && Character.isValidCodePoint(it) &&
+                    !Character.isISOControl(it) && it and KeyCharacterMap.COMBINING_ACCENT == 0 }?.let { String(Character.toChars(it)) }
+                if (text == null || text.length != 1) return false
+                engine.key(text[0])
+            }
+        }
+        if (!state.handled) return false
+        if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.useHeld() else modifiers.consume()
+        engineState(state)
+        return true
+    }
+
+    /** Writes what the engine committed, and shows its choices on the bar while text is being built. */
+    private fun engineState(state: EngineState) {
+        if (state.commit.isNotEmpty()) {
+            val text = state.commit
+            if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
+        }
+        if (state.composing || state.choices.isNotEmpty()) showPicker(LanguagePicker.Choices(state)) else closePicker()
     }
 
     /** Sym held for the hold time: the overlay, with every input method that's on over W to O. */
@@ -3716,6 +3762,7 @@ class AtlasIme : InputMethodService() {
             command(event)
             return true
         }
+        languages.engine?.let { engine -> if (engineKey(engine, event)) return true }
         if (deadKeyPending && (event.keyCode == KeyEvent.KEYCODE_SPACE || event.keyCode == KeyEvent.KEYCODE_DEL)) {
             command(event, textKey = true)
             if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.consume() else modifiers.useHeld()

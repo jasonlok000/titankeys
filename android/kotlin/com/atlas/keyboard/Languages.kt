@@ -14,6 +14,10 @@ import com.atlas.engine.TypingSettings
 internal class Languages(private val context: Context, english: Words, private val changed: (InputMethod) -> Unit) {
     private val main = Handler(Looper.getMainLooper())
     private var list: WordList? = null
+    private var loadedEngine: InputEngine? = null
+
+    /** The current input method's engine, started, or null for one whose keys type letters straight in. */
+    val engine: InputEngine? get() = if (englishOnly) null else loadedEngine
     val words = LanguageWords(english) { list }
 
     /** The input method switched to, once loaded. */
@@ -52,6 +56,13 @@ internal class Languages(private val context: Context, english: Words, private v
         if (wanted != target) use(wanted)
     }
 
+    /** The Chinese variant: exactly one of zh_hk, zh_tw and zh_hans on, from Settings. None until the user picks one. */
+    fun variant() {
+        val engine = loadedEngine ?: return
+        val chosen = TypingSettings.chineseVariant(context)
+        for (option in CHINESE_VARIANTS) engine.option(option, option == chosen)
+    }
+
     /** Switches to input method [id], saved for next time. Its files load in the background; English is at once. */
     fun switchTo(id: String) {
         if (on.none { it.id == id }) return
@@ -69,18 +80,37 @@ internal class Languages(private val context: Context, english: Words, private v
         Thread({
             val method = InputMethodList.load(context, id)
             val words = method?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
-            main.post { if (method != null) apply(method, words, ticket) else apply(InputMethod.ENGLISH, null, ticket) }
+            // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
+            val engine = method?.engine?.let { name ->
+                InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
+            }
+            main.post {
+                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, engine)
+                else {
+                    engine?.stop()
+                    apply(InputMethod.ENGLISH, null, ticket)
+                }
+            }
         }, "InputMethod $id").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
     }
 
-    private fun apply(method: InputMethod, words: WordList?, ticket: Int) {
-        if (ticket != loading) return
+    private fun apply(method: InputMethod, words: WordList?, ticket: Int, engine: InputEngine? = null) {
+        if (ticket != loading) {
+            engine?.stop()
+            return
+        }
+        loadedEngine?.stop()
+        loadedEngine = engine
+        variant()
         loaded = method
         list = words
         this.words.other = !current.isEnglish
         changed(method)
     }
 }
+
+/** The Chinese variants, one setting for every Chinese input method (docs/languages.md). */
+internal val CHINESE_VARIANTS = listOf("zh_hk", "zh_tw", "zh_hans")
 
 /** What the bar's picker is showing, and so what a key picks. */
 internal sealed interface LanguagePicker {
@@ -91,6 +121,16 @@ internal sealed interface LanguagePicker {
         private val columns = Picker.accentColumns(accents.size, Picker.anyColumn(held))
         override val notice = Strip.Notice.Picker(accents.take(columns.size), columns.map { it..it })
         fun choice(key: String) = Picker.choice(key, columns)
+    }
+
+    /**
+     * An engine's choices for the text being built, from the left. Letters go on building it, so a choice is picked with Space:
+     * the one a resting finger marks, or else the first.
+     */
+    class Choices(val state: EngineState) : LanguagePicker {
+        override val notice = Strip.Notice.Picker(state.choices.take(Picker.COLUMNS), Picker.pageColumns(state.choices.size).map { it..it })
+        /** The choice over key [column], or -1. */
+        fun choiceAt(column: Int) = if (column in 0 until notice.items.size) column else -1
     }
 
     /** The switch overlay on a held Sym: each input method that's on, the current one marked. */

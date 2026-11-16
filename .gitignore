@@ -22,3 +22,8 @@ local.properties
 /assets/home.png
 /assets/spelling.png
 /assets/vibration.png
+# Machine facts for the maintainer tools (tools/dev/local.env.example shows what goes in it).
+/tools/dev/local.env
+# Downloads and private data the tools read; never committed.
+/tools/dev/swipe-baseline/ort/
+/tools/dev/swipe-baseline/private/

@@ -45,6 +45,8 @@ fun main(args: Array<String>) {
     theAccentsSitOverTheHeldKey()
     wordsCompleteIgnoringAccents()
     anEngineFitsTheInterface()
+    hangulBuildsSyllables()
+    telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
@@ -212,6 +214,136 @@ private fun anEngineFitsTheInterface() {
     check("Backspace with nothing built goes to the field", !engine.backspace().handled)
 }
 
+/** Types [keys] into a fresh Korean engine ("<" is Backspace): what's in the field after, and the syllable still being built. */
+private fun hangul(keys: String): Pair<String, String> {
+    val engine = HangulComposer()
+    val field = StringBuilder()
+    var code = ""
+    for (key in keys) {
+        val state = when (key) {
+            ' ' -> engine.space()
+            '<' -> engine.backspace().also { if (!it.handled && field.isNotEmpty()) field.setLength(field.length - 1) }
+            else -> engine.key(key)
+        }
+        field.append(state.commit)
+        if (!state.handled && key != '<') field.append(key)
+        code = if (state.handled) state.code else ""
+    }
+    return field.toString() to code
+}
+
+private fun hangulBuildsSyllables() {
+    same("ㄱ alone", hangul("r"), "" to "ㄱ")
+    same("가", hangul("rk"), "" to "가")
+    same("각", hangul("rkr"), "" to "각")
+    same("A vowel after a final takes it: 가가", hangul("rkrk"), "가" to "가")
+    same("한국어", hangul("gksrnrdj "), "한국어 " to "")
+    same("Two finals: 닭", hangul("ekfr"), "" to "닭")
+    same("The second of two finals moves on: 달가", hangul("ekfrk"), "달" to "가")
+    same("Two vowels join: 과", hangul("rhk"), "" to "과")
+    same("Shift's tense consonant and vowel: 썌", hangul("TO"), "" to "썌")
+    same("Shift on a tense key: 까", hangul("Rk"), "" to "까")
+    same("Shift on a key with no tense letter types it as usual: 가", hangul("rK"), "" to "가")
+    same("ㅖ with Shift on P", hangul("rP"), "" to "계")
+    same("Backspace takes the last jamo off: 과 to 고", hangul("rhk<"), "" to "고")
+    same("Backspace to nothing, then the field's", hangul("rk<<<"), "" to "")
+    same("A mark writes the syllable first", hangul("rk."), "가." to "")
+    same("ㄸ can't end a syllable", hangul("rkE"), "가" to "ㄸ")
+    same("Two consonants stay apart", hangul("rs"), "ㄱ" to "ㄴ")
+    same("A lone vowel", hangul("k"), "" to "ㅏ")
+    same("Nothing built: Space is the keyboard's", HangulComposer().space().handled, false)
+    same("No choices to pick", HangulComposer().pick(0).handled, false)
+}
+
+private fun telex(keys: String) = TelexComposer.spell(keys)
+
+private fun telexMarksAndTones() {
+    same("aa", telex("aa"), "â")
+    same("aw", telex("aw"), "ă")
+    same("ee oo", telex("ee") + telex("oo"), "êô")
+    same("ow uw", telex("ow") + telex("uw"), "ơư")
+    same("uow", telex("nguowif"), "người")
+    same("uơ at a word's end: thuở", telex("thuowr"), "thuở")
+    same("ươ before a final: đường", telex("dduowngf"), "đường")
+    same("dd", telex("ddi"), "đi")
+    same("tones s f r x j", listOf("as", "af", "ar", "ax", "aj").map(::telex), listOf("á", "à", "ả", "ã", "ạ"))
+    same("A repeated tone key undoes it", telex("ass"), "as")
+    same("A repeated hat undoes it", telex("aaa"), "aa")
+    same("A repeated dd undoes it", telex("ddd"), "dd")
+    same("A repeated w undoes it", telex("aww"), "aw")
+    same("z takes the tone off", telex("asz"), "a")
+    same("A new tone replaces the old", telex("asf"), "à")
+    same("The tone goes on the hat: tiếng", telex("tieengs"), "tiếng")
+    same("Hat and tone can come at the end", telex("tiengse"), "tiếng")
+    same("Before a final consonant, the last vowel: hoàn", telex("hoanf"), "hoàn")
+    same("An open syllable of two: the first, hòa", telex("hoaf"), "hòa")
+    same("Of three: the middle, ngoài", telex("ngoaif"), "ngoài")
+    same("qu's u is the consonant's: quá", telex("quas"), "quá")
+    same("gi's i is the consonant's: giá", telex("gias"), "giá")
+    same("gì", telex("gif"), "gì")
+    same("Capitals keep their case", telex("Vieetj"), "Việt")
+    same("w alone is ư", telex("w"), "ư")
+    same("A tone key with no vowel is a letter", telex("sao"), "sao")
+    val vi = java.util.Locale.forLanguageTag("vi")
+    val engine = TelexComposer(WordList.read(sequenceOf(" word=tiếng,f=200", " word=tiến,f=150"), vi))
+    "tieeng".forEach { engine.key(it) }
+    same("The tone key marks the code", engine.key('s').code, "tiếng")
+    same("Backspace takes the last key off", engine.backspace().code, "tiêng")
+    engine.reset()
+    same("Unmarked code offers the marked word", "tieng".map { engine.key(it) }.last().choices, listOf("tiếng"))
+    same("Picking writes it with a space", engine.pick(0).commit, "tiếng ")
+    val ended = TelexComposer().apply { "xin".forEach { key(it) } }.space()
+    same("Space writes the word and goes on", ended.commit to ended.handled, "xin" to false)
+}
+
+/** The Telex keys for [word]: each mark as its keys, and the tone's key at the end. */
+private fun telexKeysFor(word: String): String {
+    val keys = StringBuilder()
+    var tone = ""
+    for (ch in java.text.Normalizer.normalize(word, java.text.Normalizer.Form.NFD)) {
+        when (ch) {
+            '\u0301' -> tone = "s"
+            '\u0300' -> tone = "f"
+            '\u0309' -> tone = "r"
+            '\u0303' -> tone = "x"
+            '\u0323' -> tone = "j"
+            '\u0302' -> keys.append(keys.last())
+            '\u0306', '\u031B' -> keys.append('w')
+            'đ' -> keys.append("dd")
+            'Đ' -> keys.append("Dd")
+            else -> keys.append(ch)
+        }
+    }
+    return keys.toString() + tone
+}
+
+/**
+ * Vietnamese: Telex can type the word list's common words. Where the tone sits is a style (hòa or hoà), so a word counts as
+ * typed when Telex spells its letters and its tone, wherever the tone sits.
+ */
+private fun telexTypesTheList(method: InputMethod, list: File) {
+    val words = list.useLines { lines -> lines.filter { it.startsWith(" word=") }.map { it.removePrefix(" word=").substringBefore(',') }.toList() }
+    check("${method.id}: its word list has words", words.size > 1000) { "${words.size}" }
+    check("${method.id}: at most 4 MB", list.length() <= 4_000_000) { "${list.length()}" }
+    val letters = Regex("[a-zàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]+", RegexOption.IGNORE_CASE)
+    val common = words.take(5000).filter { letters.matches(it) }
+    fun tones(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).filter { it in "\u0301\u0300\u0309\u0303\u0323" }
+    fun noTone(s: String) = java.text.Normalizer.normalize(
+        java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).filter { it !in "\u0301\u0300\u0309\u0303\u0323" },
+        java.text.Normalizer.Form.NFC)
+    var exact = 0
+    val missed = ArrayList<String>()
+    for (word in common) {
+        val typed = TelexComposer.spell(telexKeysFor(word))
+        if (typed == word) exact++
+        else if (noTone(typed) != noTone(word) || tones(typed) != tones(word)) missed += word
+    }
+    check("${method.id}: Telex types the common words' letters and tones", missed.size * 100 <= common.size) {
+        "${missed.size} of ${common.size}: ${missed.take(15).joinToString(" ")}"
+    }
+    println("${method.id}: Telex spells $exact of ${common.size} common words exactly; ${missed.size} not: ${missed.joinToString(" ")}")
+}
+
 /** Every `im.json` in [folder]: it reads, its label is unique, its word list reads, and its accents' letters are in it or held. */
 private fun everyInputMethodInTheFolder(folder: File) {
     val methods = folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }
@@ -229,6 +361,10 @@ private fun everyInputMethodInTheFolder(folder: File) {
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         if (method.keys != null) same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
         val words = method.words ?: continue
+        if (method.engine == "telex") {
+            telexTypesTheList(method, File(dir, words))
+            continue
+        }
         val list = File(dir, words)
         check("${method.id}: its word list is there", list.isFile)
         if (!list.isFile) continue

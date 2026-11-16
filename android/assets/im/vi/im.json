@@ -1,0 +1,23 @@
+{
+  "id": "vi",
+  "name": "Tiếng Việt",
+  "nameEnglish": "Vietnamese",
+  "label": "VI",
+  "locale": "vi",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {},
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": "telex",
+  "source": {
+    "keys": "telex",
+    "words": "main_vi__experimental.combined"
+  }
+}

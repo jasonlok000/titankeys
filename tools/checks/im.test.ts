@@ -9,7 +9,7 @@ const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const folder = "android/assets/im";
 const ids = readdirSync(join(root, folder)).filter(name => statSync(join(root, folder, name)).isDirectory()).sort();
-const ALLOWED = /Apache License 2\.0|CC BY 4\.0|CC BY-SA 4\.0|LGPL|MIT|BSD|CC0|Unicode License/;
+const ALLOWED = /Apache License 2\.0|CC BY 4\.0|CC BY-SA 4\.0|LGPL|MIT|BSD|CC0|Unicode License|GPL-3\.0/;
 
 type Im = {
   id: string; name: string; nameEnglish: string; label: string; locale: string; script: string;

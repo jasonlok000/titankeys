@@ -12,6 +12,8 @@ internal object InputEngines {
     /** Each engine's name and its class. */
     private val CLASSES = mapOf(
         "rime" to "com.titankeys.rime.RimeEngine",
+        "hangul" to "com.titankeys.keyboard.HangulEngine",
+        "telex" to "com.titankeys.keyboard.TelexEngine",
     )
 
     /** A new engine for [name], or null when the app has none by that name or it can't be made. */

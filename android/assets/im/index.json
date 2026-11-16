@@ -378,6 +378,24 @@
   "engine": null
  },
  {
+  "id": "ko",
+  "name": "한국어",
+  "nameEnglish": "Korean",
+  "label": "한",
+  "locale": "ko",
+  "script": "Kore",
+  "engine": "hangul"
+ },
+ {
+  "id": "vi",
+  "name": "Tiếng Việt",
+  "nameEnglish": "Vietnamese",
+  "label": "VI",
+  "locale": "vi",
+  "script": "Latn",
+  "engine": "telex"
+ },
+ {
   "id": "yue-yale",
   "name": "耶魯拼音",
   "nameEnglish": "Cantonese, Yale",

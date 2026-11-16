@@ -44,6 +44,8 @@
     <string name="im_mk" translatable="false">Македонски</string>
     <string name="im_kk" translatable="false">Қазақ тілі</string>
     <string name="im_ka" translatable="false">ქართული</string>
+    <string name="im_ko" translatable="false">한국어</string>
+    <string name="im_vi" translatable="false">Tiếng Việt</string>
     <string name="im_yue_yale" translatable="false">耶魯拼音</string>
     <string name="im_yue_jyutping" translatable="false">粵拼</string>
     <string name="im_zh_pinyin" translatable="false">漢語拼音</string>

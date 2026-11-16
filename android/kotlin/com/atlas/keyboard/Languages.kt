@@ -44,6 +44,13 @@ internal class Languages(private val context: Context, english: Words, private v
     /** The input method being switched to, which may still be loading. */
     private var target = InputMethod.ENGLISH_ID
 
+    /**
+     * Called on the main thread when an engine's input method is still getting ready [PREPARING_MILLIS] after it was switched
+     * to: the first time Rime copies its data out, for one. Whatever it shows ends with [changed], when the input method is
+     * ready or the keyboard falls back to English.
+     */
+    var preparing: ((InputMethodIndex.Entry) -> Unit)? = null
+
     /** Whether holding Sym opens the overlay: only with two or more on. */
     val switching get() = on.size > 1 && !englishOnly
 
@@ -77,6 +84,9 @@ internal class Languages(private val context: Context, english: Words, private v
             apply(InputMethod.ENGLISH, null, ticket)
             return
         }
+        on.firstOrNull { it.id == id && it.engine != null }?.let { entry ->
+            main.postDelayed({ if (ticket == loading) preparing?.invoke(entry) }, PREPARING_MILLIS)
+        }
         Thread({
             val method = InputMethodList.load(context, id)
             val words = method?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
@@ -108,6 +118,12 @@ internal class Languages(private val context: Context, english: Words, private v
         changed(method)
     }
 }
+
+/** How long an engine's input method may take to start before the bar says it's getting ready. */
+internal const val PREPARING_MILLIS = 500L
+
+/** What the bar says while an engine's input method gets ready. F: draft. */
+internal fun preparingLine(entry: InputMethodIndex.Entry) = "Getting ${entry.name} ready…"
 
 /** The Chinese variants, one setting for every Chinese input method (docs/languages.md). */
 internal val CHINESE_VARIANTS = listOf("zh_hk", "zh_tw", "zh_hans")

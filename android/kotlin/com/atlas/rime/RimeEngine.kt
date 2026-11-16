@@ -45,17 +45,42 @@ class RimeEngine(
     override fun start(method: InputMethod, dataDir: File): Boolean {
         val id = method.engineArg ?: return false
         if (method.engine != ENGINE) return false
+        val data = RimeData(dataDir)
         synchronized(this) {
-            if (!open) open = runCatching { opened(rime) { RimeData(dataDir).let { install(it) && rime.open(it.shared.path, it.user.path) } } }
+            if (!open) open = runCatching { opened(rime) { data.prepareUser(); install(data) && rime.open(data.shared.path, data.user.path) } }
                 .getOrDefault(false)
             if (!open) return false
-            if (schema != id) {
-                if (!rime.schema(id)) return false
-                schema = id
+            if ((schema != id || seen != syncs) && !select(id)) return false
+            // A restored backup's learned words merge in now ([RimeBackup]), once the schema has opened its dictionary.
+            if (RimeBackup.pending(data)) {
+                sync(rime, data)
+                if (!select(id)) return false
             }
-            for ((name, on) in options) rime.option(name, on)
         }
         return true
+    }
+
+    /** The sync count when this engine last selected its schema: a sync since closed the session, so it selects it again. */
+    private var seen = -1
+
+    /** Selects [id] on Rime's session, with every option set so far. */
+    private fun select(id: String): Boolean {
+        schema = null
+        seen = syncs
+        if (!rime.schema(id)) return false
+        schema = id
+        for ((name, on) in options) rime.option(name, on)
+        return true
+    }
+
+    private fun reselect() = synchronized(this) {
+        val id = schema ?: return@synchronized
+        schema = null
+        seen = syncs
+        if (rime.schema(id)) {
+            schema = id
+            for ((name, on) in options) rime.option(name, on)
+        }
     }
 
     override fun stop() {
@@ -79,7 +104,11 @@ class RimeEngine(
         for ((name, on) in ChineseVariant.options(variant)) option(name, on)
     }
 
-    private val ready get() = open && schema != null
+    private val ready: Boolean get() {
+        if (!open || schema == null) return false
+        if (seen != syncs) reselect()
+        return schema != null
+    }
 
     /** Rime's state now, with nothing sent. */
     fun state(): EngineState = if (ready) read(handled = false) else EngineState.UNHANDLED
@@ -160,6 +189,25 @@ class RimeEngine(
 
         /** How many engines have each Rime open: it closes when the last stops. */
         private val users = IdentityHashMap<RimeCalls, Int>()
+
+        /** How many syncs have run: each closes Rime's session, so an engine selects its schema again after one. */
+        @Volatile private var syncs = 0
+
+        /**
+         * Rime's own backup of the learned words ([RimeBackup]): merges in every snapshot in [data]'s sync folder, a restored
+         * backup's included, and writes its own. Through the open Rime if an engine has it, else Rime opens for it. Takes
+         * only Rime's count, never an engine, so it can't wait on one that waits on it.
+         */
+        fun sync(rime: RimeCalls, data: RimeData): Boolean = synchronized(users) {
+            val merging = RimeBackup.mergeable(data)
+            val ok = if ((users[rime] ?: 0) > 0) rime.sync() else {
+                data.prepareUser()
+                runCatching { rime.open(data.shared.path, data.user.path) && rime.sync().also { rime.close() } }.getOrDefault(false)
+            }
+            syncs++
+            if (ok) merging.forEach { it.delete() }
+            ok
+        }
 
         private fun opened(rime: RimeCalls, open: () -> Boolean): Boolean = synchronized(users) {
             val count = users[rime] ?: 0

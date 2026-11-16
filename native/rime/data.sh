@@ -113,6 +113,24 @@ check tk_pinyin zh_tw "ruan jian" 軟體
 check tk_pinyin zh_hans "da yin ji" 打印机
 check tk_pinyin zh_tw "da yin ji" 印表機
 
+# Learned words in Back up everything (RimeBackup): a word learned on one phone goes out in Rime's snapshot, and a fresh
+# phone merges that snapshot in from sync/restored/ with its own name, titankeys, as the app sets it.
+for u in one two; do
+  rm -rf "$D/$u"; mkdir -p "$D/$u"; printf 'installation_id: "titankeys"\n' > "$D/$u/installation.yaml"
+done
+learned="$("$TOOL" try "$D/phone" "$D/one" tk_yale zh_hk "nei hou" 2 2>/dev/null | sed 's/^[^:]*: //' | cut -d' ' -f2)"
+[ -n "$learned" ] || { echo "FAIL no second choice for nei hou" >&2; exit 1; }
+"$TOOL" learn "$D/phone" "$D/one" tk_yale "nei hou" 1 2>/dev/null
+"$TOOL" sync "$D/phone" "$D/one" 2>/dev/null
+snapshot="$D/one/sync/titankeys/jyut6ping3.userdb.txt"
+grep -q "$learned" "$snapshot" || { echo "FAIL the snapshot hasn't the learned word $learned" >&2; exit 1; }
+mkdir -p "$D/two/sync/restored"; cp "$snapshot" "$D/two/sync/restored/"
+# As the app does: the schema opens its dictionary first, since Rime merges only into a dictionary the phone has.
+"$TOOL" try "$D/phone" "$D/two" tk_yale zh_hk "nei" 1 > /dev/null 2>&1
+"$TOOL" sync "$D/phone" "$D/two" 2>/dev/null
+grep -q "$learned" "$D/two/sync/titankeys/jyut6ping3.userdb.txt" \
+  || { echo "FAIL a restored snapshot didn't merge in" >&2; exit 1; }
+
 cd "$REPO"
 # The list the app copies by (RimeData), and that tools/checks/rime.test.ts checks the shipped data against.
 (cd android/assets/rime && find . -type f | LC_ALL=C sort | sed 's#^\./##' | xargs sha256sum) > android/assets/rime.sha256

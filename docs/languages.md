@@ -224,7 +224,9 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   files, the compiled tables and OpenCC's dictionaries, built by `native/rime/data.sh` on the PC, 8 choices a page.
   `android/assets/rime.sha256` lists them. On the first use of a Chinese input method, `RimeEngine.start()` copies them to
   `files/engines/rime/shared` (40 MB; Rime opens its tables as files) and checks each file, in the background. The
-  user's learned words go to `files/engines/rime/user`.
+  user's learned words go to `files/engines/rime/user`. Back up everything takes them as Rime's own text snapshots
+  (`RimeBackup`), and a restore leaves them in Rime's sync folder, merged in the next time a Chinese input method starts.
+  While an engine's input method takes over half a second to start, the bar says it's getting ready.
 - **Variants:** the app sets exactly one of `zh_hk`, `zh_tw`, `zh_hans` on the engine whenever it starts or the setting
   changes. With none on, the code still builds, but the only choice says to pick one, and nothing Chinese is typed.
 - **Keys:** a letter goes to Rime, which returns the code and the choices for the picker. Space picks the first choice.

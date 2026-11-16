@@ -25,6 +25,9 @@ import com.atlas.keyboard.FreshStartActivity
 import com.atlas.keyboard.HapticsLab
 import com.atlas.keyboard.R
 import com.atlas.keyboard.Snippets
+import com.atlas.rime.RimeAssets
+import com.atlas.rime.RimeBackup
+import com.atlas.rime.RimeData
 import com.atlas.connected.Json
 import java.io.File
 import java.io.IOException
@@ -94,8 +97,12 @@ class BackupActivity : Activity() {
         val words = engineWords()
         val preferences = BackupFile.STORES.keys.associateWith { getSharedPreferences(it, MODE_PRIVATE).all }
         val pairs = WordPairBackup.all(this).map { BackupFile.WordPair(it.first, it.next, it.count, it.lastUsed) }
+        // Chinese learned words, as Rime's own snapshots, brought up to date first. If Rime can't open, its last snapshots go.
+        val chinese = runCatching { RimeBackup.export(RimeAssets.dataDir(this)) }
+            .onFailure { android.util.Log.w("Atlas", "Rime's learned words", it) }
+            .getOrElse { RimeBackup.snapshots(RimeData(RimeAssets.dataDir(this))) }
         val contents = BackupFile.Contents(version(), AppBuild.kind(this), LocalDate.now().toString(),
-            BackupFile.included(preferences, debug), words, pairs)
+            BackupFile.included(preferences, debug), words, pairs, chinese)
         val output = contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Could not open the backup file")
         output.use { it.write(BackupFile.write(contents).toByteArray()) }
         runOnUiThread { complete(DONE_BACKUP) }
@@ -157,7 +164,7 @@ class BackupActivity : Activity() {
 
     /**
      * The words first, through the engine's own import, as they're the part most likely to fail; then the settings and lists;
-     * then the word pairs; then Contacts' permission if the backup had the names on; then the restart.
+     * then the word pairs and the Chinese words; then Contacts' permission if the backup had the names on; then the restart.
      */
     private fun restoreAll(contents: BackupFile.Contents) {
         contents.words?.let { words ->
@@ -187,6 +194,8 @@ class BackupActivity : Activity() {
             if (!editor.commit()) throw IOException("Could not write $name")
         }
         WordPairBackup.put(this, contents.pairs.map { WordPairBackup.Pair(it.first, it.next, it.count, it.lastUsed) })
+        // Chinese learned words wait in Rime's sync folder, and merge in the next time a Chinese input method starts.
+        RimeBackup.restore(RimeAssets.dataDir(this), contents.chineseWords)
         runOnUiThread { if (wantsNames) requestPermissions(arrayOf(Manifest.permission.READ_CONTACTS), ASK_CONTACTS) else restart() }
     }
 

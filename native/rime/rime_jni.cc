@@ -117,6 +117,18 @@ jboolean pick(JNIEnv*, jclass, jint index) {
   return rime->select_candidate_on_current_page(s, (size_t)index) ? JNI_TRUE : JNI_FALSE;
 }
 
+// Rime's own backup of the learned words: writes each user dictionary as a text snapshot in <user>/sync/<installation id>/,
+// after merging in every snapshot already in <user>/sync/ (a restored backup's, for one). It closes the session first, so
+// the next call makes a new one, with the default schema: the Kotlin side selects its schema again.
+jboolean sync(JNIEnv*, jclass) {
+  std::lock_guard<std::mutex> guard(lock);
+  if (!started) return JNI_FALSE;
+  if (!rime->sync_user_data()) return JNI_FALSE;
+  rime->join_maintenance_thread();
+  session = 0;
+  return JNI_TRUE;
+}
+
 void clear(JNIEnv*, jclass) {
   std::lock_guard<std::mutex> guard(lock);
   RimeSessionId s = live();
@@ -204,6 +216,7 @@ const JNINativeMethod kMethods[] = {
     {"key", "(II)Z", (void*)key},
     {"pick", "(I)Z", (void*)pick},
     {"clear", "()V", (void*)clear},
+    {"sync0", "()Z", (void*)sync},
     {"state", "()[Ljava/lang/Object;", (void*)state},
 };
 

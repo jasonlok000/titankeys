@@ -14,13 +14,32 @@ import java.security.MessageDigest
 class RimeData(private val root: File) {
     val shared = File(root, "shared")
     val user = File(root, "user")
-    private val installed = File(shared, ".installed")
+    private val marker = File(shared, ".installed")
 
     /** One line of the list: a file under assets/rime/ and its SHA-256. */
     data class Entry(val path: String, val sha256: String)
 
+    /** Whether any data is installed, so Rime can open. */
+    val installed get() = marker.isFile
+
+    /** Rime's own snapshots of the learned words ([RimeBackup]), in its sync folder, named by [INSTALLATION]. */
+    val snapshots get() = File(user, "sync/$INSTALLATION")
+
+    /** Snapshots from a restored backup, which the next sync merges in. */
+    val restored get() = File(user, "sync/$RESTORED")
+
+    /**
+     * Names this install [INSTALLATION] before Rime first opens, so its snapshots have a folder we know. Rime keeps an
+     * installation.yaml that already exists.
+     */
+    fun prepareUser() {
+        user.mkdirs()
+        val file = File(user, "installation.yaml")
+        if (!file.exists()) file.writeText("installation_id: \"$INSTALLATION\"\n")
+    }
+
     /** Whether the data [manifest] lists is the data installed now. */
-    fun current(manifest: String) = installed.isFile && installed.readText() == manifest
+    fun current(manifest: String) = marker.isFile && marker.readText() == manifest
 
     /**
      * Copies every file in [manifest] from [open] (a path under assets/rime/), checking each one's SHA-256, into a new
@@ -73,6 +92,10 @@ class RimeData(private val root: File) {
         const val MANIFEST = "rime.sha256"
         /** The folder under assets/ that holds it. */
         const val ASSETS = "rime"
+        /** This install's name in Rime's sync folder. */
+        const val INSTALLATION = "titankeys"
+        /** The sync folder's folder for a restored backup's snapshots. */
+        const val RESTORED = "restored"
         /** Every data file's time, in seconds, as native/rime/data.sh sets it before compiling. */
         const val SOURCE_TIME = 1763251200L
 

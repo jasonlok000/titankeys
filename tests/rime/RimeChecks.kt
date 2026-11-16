@@ -23,6 +23,9 @@ fun main(args: Array<String>) {
     withNoVariantNothingChineseIsTyped()
     switchingInputMethodsKeepsRimeOpen()
     theChineseInputMethodsAreRimes(args.firstOrNull())
+    theBackupTakesRimesSnapshots()
+    aRestoredBackupMergesInAtTheNextStart()
+    aSyncWhileTypingSelectsTheSchemaAgain()
     theDataCopiesOnceAndChecksEachFile()
     aBadCopyKeepsTheOldData()
     aManifestCannotLeaveItsFolder()
@@ -103,6 +106,14 @@ private class FakeRime : RimeCalls {
         code = ""
     }
 
+    /** As Rime's sync: it closes the session, so the schema and options are gone until selected again. */
+    override fun sync(): Boolean {
+        calls += "sync"
+        code = ""
+        options.clear()
+        return true
+    }
+
     override fun read(): RimeCalls.Raw {
         val preedit = if (code.isEmpty()) null else code.replace("ou", "o-u")
         val out = RimeCalls.Raw(commit, code, preedit, page, page >= 2, 0, choices(), choices().map { "" }, 8, if (code.isEmpty()) 0 else 24)
@@ -116,7 +127,7 @@ private fun method(schema: String, engine: String = "rime") = InputMethod.parse(
     "keys": "qwerty", "engine": { "$engine": "$schema" } }""",
 )
 
-private val dataDir = File("/tk-rime-data")
+private val dataDir = kotlin.io.path.createTempDirectory("tk-rime-data").toFile().apply { deleteOnExit() }
 
 private fun started(
     schema: RimeEngine.Schema = RimeEngine.Schema.Yale,
@@ -343,6 +354,72 @@ fun theChineseInputMethodsAreRimes(folder: String?) {
     val ids = chinese.associate { it.engineArg to it.id }
     check(order.indexOf(ids["tk_yale"]) < order.indexOf(ids["tk_jyutping"]), "Yale comes before Jyutping")
     check(order.indexOf(ids["tk_jyutping"]) < order.indexOf(ids["tk_pinyin"]), "and Jyutping before Pinyin")
+}
+
+fun theBackupTakesRimesSnapshots() {
+    val dir = kotlin.io.path.createTempDirectory("rime-backup").toFile()
+    try {
+        val rime = FakeRime()
+        same(emptyMap<String, String>(), RimeBackup.export(dir, rime), "with Chinese never used, there's nothing")
+        same(emptyList<String>(), rime.calls, "and Rime isn't opened for it")
+        val data = RimeData(dir)
+        File(data.shared, ".installed").apply { parentFile.mkdirs(); writeText("x") }
+        data.snapshots.mkdirs()
+        File(data.snapshots, "jyut6ping3.userdb.txt").writeText("nei hou \t你好\tc=3\n")
+        File(data.snapshots, "notes.txt").writeText("not Rime's")
+        val words = RimeBackup.export(dir, rime)
+        same(listOf("open", "sync", "close"), rime.calls, "with Rime closed, it opens for the sync and closes again")
+        same(mapOf("jyut6ping3.userdb.txt" to "nei hou \t你好\tc=3\n"), words, "only Rime's snapshots go in")
+        same("installation_id: \"titankeys\"\n", File(data.user, "installation.yaml").readText(), "under the name we know")
+        // With an engine using Rime, the sync goes through it, and Rime stays open.
+        val engine = RimeEngine(rime) { true }
+        check(engine.start(method("tk_yale"), dir), "an engine starts")
+        rime.calls.clear()
+        RimeBackup.export(dir, rime)
+        same(listOf("sync"), rime.calls, "the open Rime syncs, and nothing opens or closes")
+    } finally {
+        dir.deleteRecursively()
+    }
+}
+
+fun aRestoredBackupMergesInAtTheNextStart() {
+    val dir = kotlin.io.path.createTempDirectory("rime-restore").toFile()
+    try {
+        val data = RimeData(dir)
+        RimeBackup.restore(dir, mapOf(
+            "luna_pinyin.userdb.txt" to "ni hao \t你好\n", "jyut6ping3.userdb.txt" to "nei hou \t你好\n",
+            "../escape.userdb.txt" to "x", "a.txt" to "y",
+        ))
+        same(listOf("jyut6ping3.userdb.txt", "luna_pinyin.userdb.txt"), data.restored.list()!!.sorted(),
+            "only a snapshot's name is written, and inside the folder")
+        // Rime merges a snapshot only into a dictionary the phone has: one appears once its input method is first used.
+        check(!RimeBackup.pending(data), "with no Chinese used on this phone yet, nothing can merge")
+        File(data.user, "luna_pinyin.userdb").mkdirs()
+        check(RimeBackup.pending(data), "once Pinyin's dictionary is there, its snapshot can")
+        val rime = FakeRime()
+        val engine = RimeEngine(rime) { true }
+        check(engine.start(method("tk_pinyin"), dir), "Pinyin starts")
+        same(listOf("open", "schema tk_pinyin", "sync", "schema tk_pinyin"),
+            rime.calls.filter { it == "open" || it == "sync" || it.startsWith("schema") },
+            "Rime opens Pinyin's dictionary, merges the backup in, then selects Pinyin again")
+        same(listOf("jyut6ping3.userdb.txt"), data.restored.list()!!.toList(), "Pinyin's snapshot is merged, so it isn't merged again")
+        check(!RimeBackup.pending(data), "Cantonese's waits for its dictionary, without a sync on every start")
+        same("ni", type(engine, "ni").code, "and Pinyin types")
+        RimeBackup.restore(dir, emptyMap())
+        same(listOf("jyut6ping3.userdb.txt"), data.restored.list()!!.toList(), "a backup with no Chinese words adds nothing")
+    } finally {
+        dir.deleteRecursively()
+    }
+}
+
+fun aSyncWhileTypingSelectsTheSchemaAgain() {
+    val (engine, rime) = started(RimeEngine.Schema.Pinyin, ChineseVariant.Taiwan)
+    check(RimeEngine.sync(rime, RimeData(dataDir)), "a backup syncs while Pinyin is in use")
+    same(emptyMap<String, Boolean>(), rime.options, "the sync closed the session")
+    type(engine, "ni")
+    same(2, rime.calls.count { it == "schema tk_pinyin" }, "the next key selects Pinyin again")
+    same(true, rime.options["zh_tw"], "with the variant")
+    same("ni", engine.state().code, "and types")
 }
 
 private fun sha(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }

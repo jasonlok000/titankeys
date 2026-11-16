@@ -4,6 +4,9 @@ import android.content.Context
 
 /** Rime's data in the APK: assets/rime/, listed in assets/rime.sha256 (native/rime/data.sh). */
 object RimeAssets {
+    /** Rime's folder in the app's files: the one the keyboard starts the engine with (Languages: engines/<name>). */
+    fun dataDir(context: Context) = java.io.File(context.filesDir, "engines/${RimeEngine.ENGINE}")
+
     /**
      * Copies the data into [RimeData]'s folder, if it isn't there yet, from the app's assets. For [RimeEngine]'s
      * `install`: it runs in [RimeEngine.start], on a background thread.

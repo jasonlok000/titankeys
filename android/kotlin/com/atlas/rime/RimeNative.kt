@@ -22,6 +22,7 @@ object RimeNative : RimeCalls {
     @JvmStatic private external fun key(keycode: Int, mask: Int): Boolean
     @JvmStatic private external fun pick(index: Int): Boolean
     @JvmStatic private external fun clear()
+    @JvmStatic private external fun sync0(): Boolean
     @JvmStatic private external fun state(): Array<Any?>?
 
     override fun open(shared: String, user: String) = load() && start(shared, user)
@@ -32,5 +33,6 @@ object RimeNative : RimeCalls {
     override fun process(keycode: Int, mask: Int) = key(keycode, mask)
     override fun select(index: Int) = pick(index)
     override fun reset() = clear()
+    override fun sync() = sync0()
     override fun read(): RimeCalls.Raw? = state()?.let { RimeCalls.Raw.of(it) }
 }

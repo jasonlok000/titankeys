@@ -13,6 +13,11 @@ interface RimeCalls {
     fun select(index: Int): Boolean
     fun reset()
     fun read(): Raw?
+    /**
+     * Rime's own backup of the learned words: merges every snapshot in the user folder's sync/ and writes its own there.
+     * It closes the session, so the schema is selected again after it.
+     */
+    fun sync(): Boolean
 
     /**
      * Rime's state after a call: the text it let go of since the last read ([commit], once), the letters typed so far

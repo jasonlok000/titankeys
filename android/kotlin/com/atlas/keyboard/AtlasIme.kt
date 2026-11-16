@@ -760,6 +760,7 @@ class AtlasIme : InputMethodService() {
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
         languages = Languages(this, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains)) { inputMethodChanged(it) }
+        languages.preparing = { showPreparing(it) }
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
@@ -3517,7 +3518,21 @@ class AtlasIme : InputMethodService() {
     }
 
     /** Another input method types now: autocorrect, swiping and the bar follow it, and Android's keyboard list says it (#76). */
+    /** The line on the bar while an input method gets ready, until [inputMethodChanged] takes it away. */
+    private var preparingNotice: Strip.Notice.Line? = null
+
+    /** An input method still getting ready (Rime copying its data the first time): the bar says so, never over a word's menu. */
+    private fun showPreparing(entry: InputMethodIndex.Entry) {
+        val strip = strip ?: return
+        if (strip.notice != null && strip.notice !is Strip.Notice.Line) return
+        val notice = Strip.Notice.Line(preparingLine(entry))
+        preparingNotice = notice
+        strip.notice = notice
+    }
+
     private fun inputMethodChanged(method: InputMethod) {
+        preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
+        preparingNotice = null
         closePicker()
         if (editing) readSettings()
         val id = InputMethodList.ownId(this) ?: return

@@ -91,4 +91,9 @@ test("the JNI class the library registers is the one in the app, kept from shrin
   expect(existsSync(join(root, "android/kotlin/com/atlas/rime/RimeNative.kt"))).toBe(true);
   expect(read("android/kotlin/com/atlas/rime/RimeNative.kt")).toContain('System.loadLibrary("rime_tk")');
   expect(read("android/proguard-rules.pro")).toContain("-keep class com.atlas.rime.RimeNative { *; }");
+  // Every native the Kotlin side declares is one the library registers, by the same name, and no other.
+  const kotlin = [...read("android/kotlin/com/atlas/rime/RimeNative.kt").matchAll(/external fun (\w+)\(/g)].map(m => m[1]).sort();
+  const registered = [...read("native/rime/rime_jni.cc").matchAll(/^ {4}\{"(\w+)", "\(/gm)].map(m => m[1]).sort();
+  expect(kotlin.length).toBeGreaterThan(5);
+  expect(registered).toEqual(kotlin);
 });

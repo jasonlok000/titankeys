@@ -68,6 +68,28 @@ int main(int argc, char** argv) {
     rime->finalize();
     return 0;
   }
-  fprintf(stderr, "usage: %s deploy <shared> <user> | try <shared> <user> <schema> <variant> <code> [count]\n", argv[0]);
+  if (argc >= 7 && strcmp(argv[1], "learn") == 0) {
+    // Types the code and picks choice <index>, as a user would, so Rime learns it.
+    RimeApi* rime = open(argv[2], argv[3], true);
+    if (rime->start_maintenance(False)) rime->join_maintenance_thread();
+    RimeSessionId s = rime->create_session();
+    if (!rime->select_schema(s, argv[4])) return 1;
+    for (const char* c = argv[5]; *c; ++c) rime->process_key(s, *c == ' ' ? '\'' : (unsigned char)*c, 0);
+    Bool ok = rime->select_candidate_on_current_page(s, (size_t)atoi(argv[6]));
+    rime->destroy_session(s);
+    rime->finalize();
+    return ok ? 0 : 1;
+  }
+  if (argc >= 4 && strcmp(argv[1], "sync") == 0) {
+    // As the app's backup: merges every snapshot in <user>/sync/ and writes this install's own.
+    RimeApi* rime = open(argv[2], argv[3], true);
+    if (rime->start_maintenance(False)) rime->join_maintenance_thread();
+    Bool ok = rime->sync_user_data();
+    rime->join_maintenance_thread();
+    rime->finalize();
+    return ok ? 0 : 1;
+  }
+  fprintf(stderr, "usage: %s deploy <shared> <user> | try <shared> <user> <schema> <variant> <code> [count]\n"
+          "  | learn <shared> <user> <schema> <code> <index> | sync <shared> <user>\n", argv[0]);
   return 2;
 }

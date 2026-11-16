@@ -42,6 +42,7 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "bar_word", label: "Tap a word", about: "When you tap a word on the bar to put it in." },
     { id: "menu_open", label: "Word menu opens", about: "When you hold a word on the bar and its menu opens." },
     { id: "menu_mark", label: "Marked menu button changes", about: "When your finger moves the mark to another button in the word menu." },
+    // F: drafts (#67): the word menu's keys named in pairs, I/K and O/L, in each about below.
     { id: "menu_press", label: "Press a word menu button", about: "A light tick the moment you press I/K or O/L in the word menu, before the step's own haptic plays with its effect." },
     { id: "menu_closed", label: "Word menu closed", about: "When you press Back and the word menu closes without a pick." },
     { id: "word_saved", label: "Save", about: "When you save a word from the word menu, with I/K or the Save button. Two light taps settle into a firm one: kept." },

@@ -808,7 +808,8 @@ class GuideActivity : Activity() {
             val seconds = huntSeconds()
             if (seconds >= HUNT_DRAIN_SECONDS) {
                 huntBar.visibility = View.GONE
-                if (flow.stage == 1) body.text = huntLine(flow.instruction, seconds)
+                // The count goes on the page's own line, when one shows (owner, M1).
+                if (flow.stage == 1) body.text = huntLine(flow.liveLine() ?: flow.instruction, seconds)
             }
             // Each once, even if a tick comes late: the mockery, a subtle hint, then the hint and leave to skip (owner, v5).
             if (seconds >= HUNT_DRAIN_SECONDS && huntSaid < 1) {
@@ -2191,6 +2192,8 @@ class GuideActivity : Activity() {
         }
         if (said != null) main.postDelayed({ if (!passed && flow.step === step) showChip(said) }, ENTER_MILLIS)
         hideHint()
+        liveShown = null
+        panelHintShown = null
         if (missing == GuideNeed.FnAsCtrl) offerDecline()
         // Sym or fn isn't Programmable key, as setup's part for them was skipped: the slide can't work, so one line says to skip
         // it, and Skip shows at once. No button (owner, #72).
@@ -3315,23 +3318,19 @@ class GuideActivity : Activity() {
         return false
     }
 
-    /** Puts [line] in the field again and again, with the cursor in the middle after a space. */
+    /** Puts [line] in the field, with a space after it. */
     private fun seedSteering(line: String) {
-        // The lines finished so far, then the slide's own: text that reads as the user's own, and never the same line again and
-        // again (owner, v5). The steer slide shows only its own line (owner, #66: "we only show one line now").
-        val before = if (flow.step.id == "steer") emptyList() else
-            GUIDE_STEPS.takeWhile { it.id != flow.step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(STEER_LINES_BEFORE)
-        val text = (before + line).joinToString("\n") + " "
+        // Only the slide's own line, as on every slide (owner, #66 and M1: "this should also be one line only").
+        val text = "$line "
         field.setText(text)
         steerLength = text.length
-        val middle = text.length / 2
         // The cursor starts at the end of the slide's line; the word to move to is on its line, to the left (owner, #66).
         field.setSelection(text.length - 1)
         steerAim = null
         inSteerAim = false
         if (flow.step.id == "steer") field.post { pickSteerAim() }
         // Grab a bunch: its words are marked, and the cursor waits right before them, their line at the top of the field.
-        if (flow.step.id == "selectmore") grabTarget(text, middle)?.let { words ->
+        if (flow.step.id == "selectmore") grabTarget(text, 0)?.let { words ->
             steerAim = words
             field.setSelection(words.first)
             field.post {
@@ -3740,8 +3739,36 @@ class GuideActivity : Activity() {
     /** A line the slide shows in place of its instruction while it's tried, such as a count. See [GuideStep.live]. */
     private fun showLive() {
         if (passed || playground) return
-        val line = flow.liveLine() ?: return
-        if (body.text.toString() != line) body.text = line
+        val live = flow.liveLine()
+        // A line that's gone, such as the page's with the panel closed, gives the slide's own instruction back.
+        if (live == null && liveShown != null && body.text.toString().startsWith(liveShown!!)) body.text = flow.instruction
+        liveShown = live
+        showPanelHint()
+        val line = live ?: return
+        // A hunt that's counting keeps its seconds on the line.
+        val counting = huntStart >= 0 && flow.stage == 1 && huntSeconds() >= HUNT_DRAIN_SECONDS
+        val shown = if (counting) huntLine(line, huntSeconds()) else line
+        if (body.text.toString() != shown) body.text = shown
+    }
+
+    /** The live line on the screen now, to take back when it goes. */
+    private var liveShown: String? = null
+    /** The panel's line under the instruction now: how to leave it. See [GuideFlow.panelHint]. */
+    private var panelHintShown: String? = null
+
+    /** The line under the instruction while the slide's panel is open (owner, M1), kept as other hints come and go. */
+    private fun showPanelHint() {
+        val line = flow.panelHint()?.takeIf { !passed && keyOff(flow.step) == null }
+        if (line == null) {
+            if (panelHintShown != null && hint.text.toString() == panelHintShown) hideHint()
+            panelHintShown = null
+            return
+        }
+        if (line == panelHintShown && hint.visibility == View.VISIBLE && hint.text.toString() == line) return
+        keepHint = true
+        showHint(line)
+        keepHint = false
+        panelHintShown = line
     }
 
     /**
@@ -4893,7 +4920,6 @@ class GuideActivity : Activity() {
         /** The field on the slides: exactly two lines, always (owner). */
         private const val FIELD_LINES = 2
         /** How many of the lines finished so far the steering slides put above their own. */
-        private const val STEER_LINES_BEFORE = 4
         /** A bottom inset this much over the keyboard's own is an open panel's, in dp. */
         private const val PANEL_EXTRA = 80
 

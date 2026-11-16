@@ -121,12 +121,8 @@ private fun fieldFor(step: GuideStep): Frame = when (step.id) {
     } else at(step, END_TEXT)
 }
 
-/**
- * The steering slides' field, as GuideActivity seeds it: the last few lines finished so far, then the slide's own. The steer slide
- * shows only its own line (owner, #66).
- */
-private fun steeringText(step: GuideStep) = (if (step.id == "steer") emptyList() else
-    GUIDE_STEPS.takeWhile { it.id != step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(4)).plus(step.seed).joinToString("\n") + " "
+/** The steering slides' field, as GuideActivity seeds it: only the slide's own line, as on every slide (owner, M1). */
+private fun steeringText(step: GuideStep) = step.seed + " "
 
 /** The field once the slide is passed: its line, finished. */
 private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) {
@@ -188,10 +184,23 @@ private fun framesFor(step: GuideStep): List<Frame> {
         val stage = step.stages[1]
         frames.removeAll { it.name.endsWith("-2-hint2") }
         frames += frame("2-hunt0s", step.title, stage.text, stage = stage).copy(hunt = 1f)
-        frames += frame("2-hunt10s", step.title, stage.text, stage = stage).copy(hunt = .5f)
+        frames += frame("2-hunt${HUNT_DRAIN_SECONDS / 2}s", step.title, stage.text, stage = stage).copy(hunt = .5f)
         frames += frame("2-hunt${HUNT_DRAIN_SECONDS}s", step.title, huntLine(stage.text, HUNT_DRAIN_SECONDS), chip = hunt.mock, stage = stage)
         frames += frame("2-hunt${HUNT_HINT_SECONDS}s", step.title, huntLine(stage.text, HUNT_HINT_SECONDS), chip = hunt.hint, stage = stage)
         frames += frame("2-hunt${HUNT_SKIP_SECONDS}s", step.title, huntLine(stage.text, HUNT_SKIP_SECONDS), chip = hunt.skip, stage = stage)
+    }
+    // The instruction for each page of the panel that's open (owner, M1): see panelLine.
+    step.findIn?.let { want ->
+        val stage = step.stages.last()
+        val symbol = step.symbol.orEmpty()
+        val pages = if (want == Modifiers.Panel.Clipboard) listOf(Triple<String, PanelPage, Int?>("clips", PanelPage(want, emptySet()), null))
+        else listOf(
+            Triple<String, PanelPage, Int?>("next", PanelPage(want, emptySet(), 1, 9), null),
+            Triple("found", PanelPage(want, setOf(symbol), 2, 9), 2),
+            Triple("past", PanelPage(want, emptySet(), 3, 9), 2),
+            Triple("othergroup", PanelPage(want, emptySet(), 4, 4), null),
+        )
+        for ((name, page, seen) in pages) panelLine(step, page, seen)?.let { frames += frame("2-page-$name", step.title, it, stage = stage) }
     }
     if (step.id == "selectmore") {
         val aim = field.target!!

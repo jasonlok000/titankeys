@@ -338,6 +338,7 @@ fun main() {
     steeringToAWord()
     theKeysPart()
     theContactsPart()
+    eachPageSaysWhereYouAre()
     grabbingABunch()
     settingsThatStepsNeed()
     goingBack()
@@ -1236,6 +1237,82 @@ private fun theKeysPart() {
     }
 }
 
+/**
+ * On the slides with a panel, the instruction follows the page that's open (owner, M1): what to do here, how to get to the next
+ * page or back, on the keys or with Enter and Backspace, and how to leave.
+ */
+private fun eachPageSaysWhereYouAre() {
+    fun step(id: String) = GUIDE_STEPS.first { it.id == id }
+    fun face(panel: Panel, position: String?, vararg shown: String) =
+        KeyboardEvent.PanelFace(panel, shown.withIndex().associate { (i, s) -> "WERTYUIO"[i].toString() to s } +
+            listOfNotNull(position?.let { Layout.PAGE_POSITION to it }))
+    same(panelPage(Panel.Symbols, mapOf("P" to "2/9", "W" to "∞")), PanelPage(Panel.Symbols, setOf("∞"), 2, 9), "P's position is the page")
+    same(panelPage(Panel.Closed, emptyMap()), null, "No page with the panel closed")
+    // Enter and Backspace really page there: Enter the next page, as a swipe up, and Backspace the one before.
+    same(Modifiers.panelScroll(66, Panel.Symbols) to Modifiers.panelScroll(67, Panel.Symbols), -1f to 1f, "Enter: next. Backspace: back")
+    same(Modifiers.panelScroll(66, Panel.Emoji), -1f, "The same on the emoji")
+
+    // The ∞ hunt, page by page.
+    val groups = GuideFlow({ GuideSettings() })
+    groups.start("symgroups")
+    val first = groups.instruction
+    same(first.contains("on the keys") && first.contains("Enter") && first.length <= LINE_MOST, true, "It names both ways: \"$first\"")
+    same(groups.liveLine(), null, "Panel closed: the slide's own instruction")
+    groups.event(face(Panel.Symbols, "1/9", "&", "%"))
+    same(groups.liveLine() to groups.panelHint(), PAGE_NOT_HERE to "To leave, press Sym twice.", "Sym's first page: on to the next, and the way out under it")
+    groups.event(face(Panel.Symbols, "2/9", "√", WEIRD))
+    same(groups.liveLine(), "∞ is on this page. Press its key.", "The page with ∞: it's here")
+    groups.event(face(Panel.Symbols, "3/9", "√"))
+    same(groups.liveLine(), PAGE_PAST, "Past it: back, on the keys or Backspace")
+    groups.event(face(Panel.Symbols, "1/9", "&"))
+    same(groups.liveLine(), PAGE_BEFORE, "Before it again: on")
+    groups.event(KeyboardEvent.GroupPicked(3))
+    groups.event(face(Panel.Symbols, "4/4", "¢"))
+    same(groups.liveLine(), GROUP_NOT_HERE, "Another group's last page, ∞ never seen there: another group")
+    groups.event(face(Panel.Emoji, "1/5", "😀"))
+    same(groups.liveLine() to groups.panelHint(), "Emoji. Press Sym to close, then Sym again." to null, "The emoji on the ∞ slide: how to get back")
+    groups.event(face(Panel.Settings, null, "Swipe"))
+    same(groups.liveLine(), SETTINGS_PAGE, "Quick settings: how to get back")
+    groups.event(KeyboardEvent.PanelFace(Panel.Closed, emptyMap()))
+    same(groups.liveLine() to groups.panelHint(), null to null, "Closed again: the slide's own instruction, nothing under it")
+
+    // The clown, on the emoji.
+    val clown = GuideFlow({ GuideSettings() })
+    clown.start("clown")
+    clown.event(face(Panel.Symbols, "1/9", "&"))
+    same(clown.liveLine(), "These are symbols. Press Sym again for emoji.", "Symbols on the clown slide: Sym again")
+    clown.event(face(Panel.Emoji, "1/6", "😀"))
+    same(clown.liveLine() to clown.panelHint(), PAGE_NOT_HERE to "To leave, press Sym.", "The emoji, no clown: on, and the way out")
+    clown.event(face(Panel.Emoji, "2/6", CLOWN))
+    same(clown.liveLine(), "$CLOWN is on this page. Press its key.", "The clown's page")
+
+    // The clipboard, one page of clips.
+    val clips = GuideFlow({ GuideSettings() })
+    clips.start("clipboard")
+    clips.event(face(Panel.Symbols, "1/9", "&"))
+    same(clips.liveLine(), "Press A for the clipboard.", "Symbols on the clipboard slide: A")
+    clips.event(face(Panel.Clipboard, null, "Per my last message"))
+    same(clips.liveLine() to clips.panelHint(), CLIP_PAGE to "To leave, press Sym.", "The clipboard: what to do, and the way out")
+    clips.event(face(Panel.Clipboard, "1/2", "Per my last message"))
+    same(clips.panelHint(), "$CLIP_MORE To leave, press Sym.", "More pages of clips: how to get to them")
+
+    // Each line is one line, and every swipe on a panel says where: on the keys, as a first-time user may swipe on the screen.
+    val lines = listOf(PAGE_NOT_HERE, PAGE_PAST, PAGE_BEFORE, GROUP_NOT_HERE, CLIP_PAGE, CLIP_MORE, SETTINGS_PAGE, pageFound(WEIRD)) +
+        PANEL_LEAVE.values + Panel.entries.flatMap { open -> Panel.entries.map { wrongPanel(open, it) } }
+    for (line in lines) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+    val said = GUIDE_STEPS.filter { it.findIn != null }.flatMap { s -> s.stages.map { it.text } + s.praise + listOfNotNull(s.help) } +
+        lines + listOf(WEIRD_HUNT, CLOWN_HUNT).flatMap { listOf(it.mock, it.hint, it.skip) }
+    for (line in said.filter { Regex("(?i)swipe|up or down|sideways").containsMatchIn(it) })
+        same(line.contains("on the keys"), true, "\"$line\" says the swipe is on the keys")
+    same(listOf("symmain", "symgroups", "clown", "clipboard").map { step(it).findIn },
+        listOf(Panel.Symbols, Panel.Symbols, Panel.Emoji, Panel.Clipboard), "Every slide with a panel follows its pages")
+    val boring = java.io.File("app/settings/guide-boring.tsx").readText().lines()
+        .filter { line -> listOf("\"The Sym panel\"", "\"Emoji\"", "\"The clipboard\"").any { it in line } }
+    same(boring.size, 3, "The boring guide's panel topics")
+    for (line in boring) for (sentence in line.split(". ").filter { Regex("(?i)\\bswipe").containsMatchIn(it) })
+        same(sentence.contains("on the keys"), true, "Boring guide: \"$sentence\" says on the keys")
+}
+
 /** Names from contacts (owner, #87): the last part, asked once, Yes or Not now. */
 private fun theContactsPart() {
     same(SetupPart.entries.last(), SetupPart.Contacts, "Contact names come last in setup, after the keys")
@@ -1777,7 +1854,11 @@ private fun demosEndWhereAPassDoes() {
 
     val grab = byId.getValue("selectmore").demo!!
     same(grab, GuideDemo.SelectTarget, "The grab slide's demo selects the marked words")
-    val text = "$STEER_LINE\n$GRAB_LINE "
+    // Only the slide's own line in the field, as on every slide (owner, M1: "this should also be one line only").
+    val seeding = java.io.File("android/kotlin/com/atlas/keyboard/GuideActivity.kt").readText()
+        .substringAfter("private fun seedSteering(line: String) {").substringBefore("\n    }\n")
+    same(seeding.contains("takeWhile") || seeding.contains("joinToString"), false, "The steering slides seed only their own line")
+    val text = "$GRAB_LINE "
     val aim = grabTarget(text, 0)!!
     val picked = demoRange(grab, text, aim)!!
     same(picked, aim, "It selects exactly what the slide marks")

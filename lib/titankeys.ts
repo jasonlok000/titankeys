@@ -164,8 +164,16 @@ export type State = {
   blockedWords: string[];
 };
 
-/** One input method as Settings lists it: its own name, its English name, the overlay's label, and its engine, if any. */
-export type InputMethodEntry = { id: string; name: string; nameEnglish: string; label: string; script: string; engine: string | null };
+/**
+ * One input method as Settings lists it: its own name, its English name, the overlay's label, its engine, if any, and its
+ * language (Serbian's Cyrillic and Latin share one, as do Chinese's Yale, Jyutping and Pinyin).
+ */
+export type InputMethodEntry = {
+  id: string; name: string; nameEnglish: string; label: string; script: string; engine: string | null; language: Language;
+};
+
+/** A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16). */
+export type Language = { id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean };
 
 export type ChineseVariant = "zh_hk" | "zh_tw" | "zh_hans";
 

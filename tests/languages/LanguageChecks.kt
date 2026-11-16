@@ -42,11 +42,13 @@ fun main(args: Array<String>) {
     englishIsAlwaysThereAndFirst()
     turningOnAndOff()
     theOverlaySpansTwoKeysWhenFewAreOn()
+    languagesGroupTheirInputMethods()
     theAccentsSitOverTheHeldKey()
     wordsCompleteIgnoringAccents()
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
+    aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
     androidsListFollowsTheOnes()
     telexMarksAndTones()
@@ -135,20 +137,52 @@ private fun turningOnAndOff() {
 }
 
 private fun theOverlaySpansTwoKeysWhenFewAreOn() {
-    same("two on", SwitchOverlay.columns(2), listOf(1..2, 3..4))
+    // Spread evenly over W to O (owner, 2026-11-16): 2 take 4 keys each, 3 take 2 each with the rest empty, 4 take 2 each.
+    same("two on", SwitchOverlay.columns(2), listOf(1..4, 5..8))
+    same("three on", SwitchOverlay.columns(3), listOf(1..2, 3..4, 5..6))
     same("four on", SwitchOverlay.columns(4), listOf(1..2, 3..4, 5..6, 7..8))
     same("five on", SwitchOverlay.columns(5), listOf(1..1, 2..2, 3..3, 4..4, 5..5))
     same("eight on reach O", SwitchOverlay.columns(8).last(), 8..8)
     same("W picks the first of two", SwitchOverlay.choice("W", 2), 0)
-    same("E picks the first of two too", SwitchOverlay.choice("E", 2), 0)
-    same("R picks the second of two", SwitchOverlay.choice("R", 2), 1)
+    same("R picks the first of two too", SwitchOverlay.choice("R", 2), 0)
+    same("T picks the first of two", SwitchOverlay.choice("T", 2), 0)
+    same("Y picks the second of two", SwitchOverlay.choice("Y", 2), 1)
+    same("O picks the second of two", SwitchOverlay.choice("O", 2), 1)
     same("S, on the second row, picks as W does", SwitchOverlay.choice("S", 2), 0)
     same("Q picks nothing", SwitchOverlay.choice("Q", 2), -1)
-    same("T picks the second of two", SwitchOverlay.choice("T", 2), 1)
-    same("Y picks nothing with two on", SwitchOverlay.choice("Y", 2), -1)
+    same("I picks nothing with three on", SwitchOverlay.choice("I", 3), -1)
     same("Z's row picks nothing", SwitchOverlay.choice("X", 2), -1)
     same("O picks the eighth of eight", SwitchOverlay.choice("O", 8), 7)
 }
+
+/** Languages, then input methods: Serbian and Chinese group theirs, and the switcher's second row shows them. */
+private fun languagesGroupTheirInputMethods() {
+    fun entry(id: String, language: String, name: String = id) =
+        """{"id":"$id","name":"$name","nameEnglish":"$name","label":"${id.take(2).uppercase()}","locale":"$id","script":"Latn",""" +
+            """"language":{"id":"$language","name":"$language","nameEnglish":"$language","label":"${language.uppercase()}","script":"Latn",""" +
+            """"experimental":${language != "zh"}}}"""
+    val index = InputMethodIndex.parse("[" + listOf(entry("es", "es"), entry("sr-latn", "sr"), entry("sr", "sr"),
+        entry("yue-yale", "zh"), entry("zh-pinyin", "zh")).joinToString(",") + "]")
+    same("English is a language, not experimental", index.languages.first(),
+        InputMethodIndex.Language("en", "English", "English", "EN", "Latn", false))
+    same("Serbian is one language", index.methodsOf("sr").map { it.id }, listOf("sr-latn", "sr"))
+    same("languages in the index's order", index.languages.map { it.id }, listOf("en", "es", "sr", "zh"))
+    check("Spanish is experimental", index.languages.first { it.id == "es" }.experimental)
+    check("Chinese isn't", !index.languages.first { it.id == "zh" }.experimental)
+    val on = index.languagesOn("en,sr,es,yue-yale,sr-latn,zh-pinyin")
+    same("languages on, in the order each first comes", on.map { it.language.id }, listOf("en", "sr", "es", "zh"))
+    same("each with its own on, in the setting's order", on[1].methods.map { it.id }, listOf("sr", "sr-latn"))
+    same("a language with one picks its input method", SwitchOverlay.pick(on, null, 2), SwitchPick.To("es"))
+    same("a language with two opens its row", SwitchOverlay.pick(on, null, 1), SwitchPick.Row(on[1]))
+    same("its row picks an input method", SwitchOverlay.pick(on, on[1], 1), SwitchPick.To("sr-latn"))
+    same("an empty place picks nothing", SwitchOverlay.pick(on, null, 5), null)
+    same("several languages: the switcher opens on them", SwitchOverlay.opening(on), null)
+    val serbianOnly = index.languagesOn("sr,sr-latn")
+    same("one language with two: straight to its row", SwitchOverlay.opening(serbianOnly), serbianOnly[0])
+    same("an index without languages: each its own", InputMethodIndex.parse(SPANISH_INDEX).languages.map { it.id }, listOf("en", "es"))
+}
+
+private const val SPANISH_INDEX = """[{"id":"es","name":"Español","nameEnglish":"Spanish","label":"ES","locale":"es","script":"Latn"}]"""
 
 private fun theAccentsSitOverTheHeldKey() {
     same("one accent over E", Picker.accentColumns(1, Picker.anyColumn("E")), listOf(2))
@@ -247,6 +281,14 @@ private fun aHeldSymWaits() {
     check("the panel open: Sym closes it", why(panel = true) != null)
     check("Alt on: Alt+Sym is Android's keyboard list", why(alt = true) != null)
     check("keys waiting for the app: Sym keeps its place", why(waiting = 1) != null)
+}
+
+/** Shift + a letter in an input method with its own letters is the keyboard's, never the app's (Georgian's Shift + W). */
+private fun aShiftedLetterIsTheKeyboards() {
+    check("Shift + W in Georgian: kept", KeysMapKeys.keeps(hasKeys = true, letterKey = true, alt = false, ctrl = false, meta = false))
+    check("Ctrl + W in Georgian: the app's shortcut", !KeysMapKeys.keeps(hasKeys = true, letterKey = true, alt = false, ctrl = true, meta = false))
+    check("Alt + W: its symbol, as always", !KeysMapKeys.keeps(hasKeys = true, letterKey = true, alt = true, ctrl = false, meta = false))
+    check("Shift + W in English: as always", !KeysMapKeys.keeps(hasKeys = false, letterKey = true, alt = false, ctrl = false, meta = false))
 }
 
 private fun aRestoredInputMethodTypes() {
@@ -448,6 +490,13 @@ private fun everyInputMethodInTheFolder(folder: File) {
     @Suppress("UNCHECKED_CAST")
     val index = (com.titankeys.connected.Json.parse(File(folder, "index.json").readText()) as List<Map<String, Any?>>)
         .associate { it["id"] as String to it["name"] as String? }
+    @Suppress("UNCHECKED_CAST")
+    val languageNames = (com.titankeys.connected.Json.parse(File(folder, "index.json").readText()) as List<Map<String, Any?>>)
+        .mapNotNull { (it["language"] as? Map<String, Any?>)?.get("name") as? String }.toSet()
+    for (name in languageNames) {
+        val missing = name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
+        check("language $name: the app's fonts have its letters", missing.isEmpty()) { missing.joinToString(" ") { String(Character.toChars(it)) } }
+    }
     for (dir in methods) {
         val file = File(dir, "im.json")
         val parsed = runCatching { InputMethod.parse(file.readText()) }
@@ -463,7 +512,11 @@ private fun everyInputMethodInTheFolder(folder: File) {
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         theNameShows(method, index[method.id])
-        if (method.keys != null) same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
+        if (method.keys != null) {
+            same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
+            val unshifted = ('a'..'z').filter { method.letter(it, true).isNullOrEmpty() }
+            check("${method.id}: Shift + every letter key types a letter", unshifted.isEmpty()) { unshifted.joinToString(" ") }
+        }
         val words = method.words ?: continue
         if (method.engine == "telex") {
             telexTypesTheList(method, File(dir, words))

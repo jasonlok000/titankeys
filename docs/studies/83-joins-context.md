@@ -11,7 +11,7 @@ The owner asked for "a pilot investigation to see whether the context engine cou
 - **Together with the geometry it adds nothing measurable.** A model of gap, landing speed, direction and distance separates one word from two 0.904 of the time. Adding the margin makes it 0.906.
 - **It's fast enough.** Scoring both readings takes 74 ms (median) on one PC thread, starting cold.
 
-What would settle it is below.
+What would settle it is below. The follow-up ([`83-joins-followup.md`](83-joins-followup.md)) re-scores with the phone's own readings and fits the richer geometry rule. Neither cuts the wrong joins at the owner's bar.
 
 ## Method
 

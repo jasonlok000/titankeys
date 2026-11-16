@@ -91,11 +91,23 @@ object GuideRoom {
      */
     class Room(val steady: Int, val keyboard: Int, val panel: Int, val sized: Boolean)
 
-    /** [Room] for a bottom [inset], with [panelOpen] what the keyboard last said, and [keep] whether [steady] is kept here. */
-    fun room(inset: Int, panelOpen: Boolean, steady: Int, extra: Int, keep: Boolean): Room {
+    /**
+     * [Room] for a bottom [inset], with [panelOpen] what the keyboard last said, and [keep] whether [steady] is kept here.
+     * [follow]: with no panel, [steady] is the keyboard's room as it is now, smaller too, and only a gone inset (0) keeps the last.
+     * The playground follows: it has no slides to change, so its keyboard's bar never hides for a moment, and keeping the most
+     * room it ever saw kept a too-large one for good (phone check, 2026-11-16: opening TitanKeys' own screen over the playground,
+     * as the launcher does, brought it back with its block squeezed under the header, the field out of sight, and the drawing of
+     * the keys over its title, at 4 s and at 14 s).
+     */
+    fun room(inset: Int, panelOpen: Boolean, steady: Int, extra: Int, keep: Boolean, follow: Boolean = false): Room {
         val sized = steady > 0 && inset > steady + extra
         val panel = panelOpen || sized
-        val held = if (!keep) 0 else if (panel) steady else max(steady, inset)
+        val held = when {
+            !keep -> 0
+            panel -> steady
+            follow && inset > 0 -> inset
+            else -> max(steady, inset)
+        }
         return Room(held, max(held, if (panel) 0 else inset), if (panel) max(inset, held) else 0, sized)
     }
 }

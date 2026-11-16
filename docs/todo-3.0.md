@@ -453,6 +453,14 @@ More calls get added here as the night goes.
   - The WSL distro export and import.
   - The 07:30 battery reset.
 
+## Found today: the touchpad overlay leak (2.1 and 3.0)
+
+- Every time TitanKeys stops being the keyboard, Android's own shutdown calls `onFinishInput` after our `onDestroy`, which
+  shows the touchpad overlay again with "touchpad only in fields" on. One overlay leaks per switch, and 2.1's Back service
+  keeps a High window on top. On the owner's phone: 96 leaked 2.1 overlays and a High window that took the touchpad from
+  TitanKeys Debug. Fixed for 3.0 on main (a `destroyed` flag; the overlay only for the current keyboard), with a check.
+- 2.1 keeps leaking until its process ends (a reboot, or the 3.0 update). Possible 2.1.1 quick fix: the owner's call.
+
 ## Later, after the languages work on the phone (owner, 2026-11-16)
 
 - **Proposal for Chinese choices (and any engine with choices), waiting for the owner:**

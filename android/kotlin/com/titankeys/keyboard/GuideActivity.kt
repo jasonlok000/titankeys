@@ -1057,7 +1057,7 @@ class GuideActivity : Activity() {
         super.onResume()
         visible = true
         // The same playground in sight again still has its text: what it kept is for a new one only.
-        if (playgroundKept?.from === this) playgroundKept = null
+        if (playgroundKept?.from?.get() === this) playgroundKept = null
         // Back from a Settings page with its part still not done: say what to do there, and wait for the button.
         openedPart?.let { part ->
             openedPart = null
@@ -1161,7 +1161,8 @@ class GuideActivity : Activity() {
         // the app's own screen to the front, which closes the playground over it (singleTask), and the front page opens a new one
         // (Master, phone checks: "hello" was gone after Home every time). Back leaves the app, and leaves nothing to come back to.
         if (playground && started && !settingUp && !leftByBack)
-            playgroundKept = PlaygroundKept(field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource, this)
+            playgroundKept = PlaygroundKept(field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource,
+                java.lang.ref.WeakReference(this))
     }
 
     /** Back on the front page left the app: the next playground starts empty. */
@@ -1586,7 +1587,8 @@ class GuideActivity : Activity() {
             // gives back would drop the keys by its height (owner, 2026-11-11). They keep the most room the keyboard took.
             // Only the keyboard's own height counts: an open panel is much taller, and keeping its room after it closed squashed the
             // keys and left a gap for the rest of the guide (owner, v5: slide 12). The panel's room counts only while it's open.
-            val room = GuideRoom.room(bars.bottom, panelOpen, steadyBottom, dp(PANEL_EXTRA), keep = guideLooks == true || playground)
+            val room = GuideRoom.room(bars.bottom, panelOpen, steadyBottom, dp(PANEL_EXTRA), keep = guideLooks == true || playground,
+                follow = playground)
             // A panel's room arrives before the keyboard says the panel is open: the drawing hides at once, so its rows never peek
             // above the panel or get cut by it (owner, v5.3).
             panelRoom = room.sized
@@ -5306,13 +5308,19 @@ class GuideActivity : Activity() {
 
         /**
          * The guides and playgrounds still in memory, one line each: a playground or a guide, and whether Android has destroyed it.
-         * After a full collection, a destroyed one here is held by something: a leak. Main thread only.
+         * After a full collection, a destroyed one here is held by something: a leak. Each line also names the guide's own statics
+         * that hold it, the only holders it can see from here; the heap dump (tools/leak-paths.py) finds any other. Main thread only.
          */
         fun inMemory(): List<String> {
             made.removeAll { it.get() == null }
             return made.mapNotNull { it.get() }.map { guide ->
+                val holders = listOfNotNull(
+                    "the text kept for the next playground".takeIf { playgroundKept?.from?.get() === guide },
+                    "the open playgrounds' list".takeIf { guide in playgrounds },
+                    "the playground's asker".takeIf { playgroundAsker === guide })
                 "${if (guide.playground) "playground" else "guide"} ${Integer.toHexString(System.identityHashCode(guide))}: " +
-                    if (guide.isDestroyed) "destroyed, still held" else if (guide.isFinishing) "finishing" else "open"
+                    (if (guide.isDestroyed) "destroyed, still held" else if (guide.isFinishing) "finishing" else "open") +
+                    if (holders.isEmpty()) "" else ", held by ${holders.joinToString(" and ")}"
             }
         }
 
@@ -5321,7 +5329,8 @@ class GuideActivity : Activity() {
 
         /**
          * What the last playground had when it went out of sight, for the next one that shows. In memory only: a new process, after
-         * Android closed TitanKeys or after a wipe, starts empty. [from] is the playground that kept it.
+         * Android closed TitanKeys or after a wipe, starts empty. [from] is the playground that kept it, held weakly: it's only there
+         * to tell whether the playground coming back is that same one, and it must not keep a closed playground (#85).
          */
         private var playgroundKept: PlaygroundKept? = null
         /** When a playground was asked to start, until it has started. */
@@ -5333,4 +5342,4 @@ class GuideActivity : Activity() {
 
 /** The playground's text, cursor and line to type along to, as one playground left them for the next (see GuideActivity.onPause). */
 private class PlaygroundKept(val text: String, val selection: Int, val passage: Passage, val passageFrom: Int, val passageText: String,
-    val passageSource: String, val from: Any)
+    val passageSource: String, val from: java.lang.ref.WeakReference<GuideActivity>)

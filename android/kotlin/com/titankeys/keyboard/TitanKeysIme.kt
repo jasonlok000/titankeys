@@ -1083,14 +1083,32 @@ class TitanKeysIme : InputMethodService() {
      * sends the touchpad to the windows, and a swipe that ends as the keyboard goes, or the gap as one field hands over to
      * the next, would reach the pop-up. With no field it only drops the touchpad events, as the keyboard's own overlay does.
      */
-    private fun updateOverlay() {
-        val wanted = editing || TypingSettings.touchpadOnlyInFields(this)
+    /**
+     * The touchpad overlays: this keyboard's own, and the Back service's above the shade. Only while this keyboard is Android's
+     * current one and alive. Android's own onDestroy finishes the input (doFinishInput, so onFinishInput and this run) after
+     * ours has taken the overlays down: without [destroyed], a keyboard on its way out put its overlay up again, with the
+     * Back service's window pointing at it, on every switch to another keyboard. The firmware gives the touchpad to the topmost
+     * window titled "InputMethod", so those dead windows took it from whichever keyboard came next (2.1 left 96 on the
+     * owner's phone, 2026-11-16).
+     */
+    private fun updateOverlay(raise: Boolean = false) {
+        val wanted = !destroyed && PhoneSetup.selected(this) && (editing || TypingSettings.touchpadOnlyInFields(this))
         if (wanted) overlay.show() else overlay.hide()
+        // At a field start, back on top of any other app's leftover window of the same kind: see TouchpadOverlay.raise.
+        if (wanted && raise) overlay.raise()
         main.removeCallbacks(releaseHighTouchpad)
-        if (wanted) BackService.touchpad(overlayEvent) else main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)
+        when {
+            wanted -> BackService.touchpad(overlayEvent)
+            // Gone now, not after the grace: and only its own, never a newer keyboard's.
+            destroyed -> BackService.releaseTouchpad(overlayEvent)
+            else -> main.postDelayed(releaseHighTouchpad, HIGH_GRACE_MILLIS)
+        }
     }
 
-    private val releaseHighTouchpad = Runnable { BackService.touchpad(null) }
+    /** onDestroy has begun: nothing may put the touchpad's windows up again. See [updateOverlay]. */
+    private var destroyed = false
+
+    private val releaseHighTouchpad = Runnable { BackService.releaseTouchpad(overlayEvent) }
 
     private fun holdWanted() =
         TouchpadHold.wanted(TypingSettings.touchpadOnlyInFields(this), editing, overlay.up, BackService.enabled(this), hold.lettingGo)
@@ -1403,7 +1421,7 @@ class TitanKeysIme : InputMethodService() {
             // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
         }
-        updateOverlay()
+        updateOverlay(raise = editing)
         if (!restarting) {
             sticky.clear()
         }
@@ -3281,10 +3299,15 @@ class TitanKeysIme : InputMethodService() {
 
     /** What a letter key types in an input method with its own letters (Russian's й on Q), or null where it types what it shows. */
     private fun inputMethodLetter(event: KeyEvent): String? {
-        if (languages.current.keys == null || event.keyCode !in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) return null
-        val meta = event.metaState or modifiers.metaState
-        if (meta and (KeyEvent.META_ALT_MASK or KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) != 0) return null
+        if (!keysMapKey(event)) return null
         return languages.current.letter(printedLetter(event.keyCode), shiftOn(event))
+    }
+
+    /** A letter key the current input method's own letters type, so the app never gets it: see [KeysMapKeys]. */
+    private fun keysMapKey(event: KeyEvent): Boolean {
+        val meta = event.metaState or modifiers.metaState
+        return KeysMapKeys.keeps(languages.current.keys != null, event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z,
+            meta and KeyEvent.META_ALT_MASK != 0, meta and KeyEvent.META_CTRL_MASK != 0, meta and KeyEvent.META_META_MASK != 0)
     }
 
     /** Starts the hold timer for a letter that can become its symbol. True if this is a repeat of such a key, which types nothing. */
@@ -3464,7 +3487,15 @@ class TitanKeysIme : InputMethodService() {
             }
             is LanguagePicker.Choices -> pickChoice(open, choice)
             is LanguagePicker.Switch -> {
-                val entry = open.entries[choice]
+                val entry = when (val next = SwitchOverlay.pick(open.languages, open.opened, choice)) {
+                    // A language with several input methods on: its own row, the one typing now marked.
+                    is SwitchPick.Row -> {
+                        showPicker(LanguagePicker.Switch(open.languages, next.language, languages.current.id))
+                        return
+                    }
+                    is SwitchPick.To -> languages.on.firstOrNull { it.id == next.id } ?: return
+                    null -> return
+                }
                 if (entry.id == languages.current.id) return
                 languages.switchTo(entry.id)
                 // The bar says, for a moment, which input method types now. F (docs/words-m1.md).
@@ -3719,7 +3750,8 @@ class TitanKeysIme : InputMethodService() {
         symLog("Sym held: the input method overlay opens")
         symHeldOpen = true
         haptics.play(Haptic.HeldSymbol)
-        showPicker(LanguagePicker.Switch(languages.on, languages.current.id))
+        val on = InputMethodIndex.group(languages.on)
+        showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), languages.current.id))
     }
 
     /**
@@ -3768,8 +3800,10 @@ class TitanKeysIme : InputMethodService() {
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
-        if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) != method.id && runCatching { switchInputMethod(id, subtype) }.isFailure) return
+        // Android's list has one entry for TitanKeys, the input method typing, under its name (#76; owner, 2026-11-16).
         languages.toldAndroid(method.id)
+        InputMethodList.enable(this, listOf(method.id))
+        if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) != method.id) runCatching { switchInputMethod(id, subtype) }
     }
 
     /**
@@ -3933,9 +3967,13 @@ class TitanKeysIme : InputMethodService() {
             return true
         }
         val handled = key(carried)
-        if (handled) consumedKeys += keyCode
+        // In an input method with its own letters, a letter key is the keyboard's, also if nothing above typed it.
+        val kept = !handled && keysMapKey(carried)
+        if (kept && AppBuild.kind(this) == "debug") Log.w(LOG_TAG, "A letter key in ${languages.current.id} wasn't typed: kept from the app " +
+            "(Shift ${shiftOn(carried)})")
+        if (handled || kept) consumedKeys += keyCode
         showModifiers()
-        return handled || super.onKeyDown(keyCode, event)
+        return handled || kept || super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
@@ -4393,6 +4431,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onDestroy() {
+        destroyed = true
         editing = false
         // It holds this keyboard, which must go with it (#85).
         TouchpadFeedHook.dispatch = null
@@ -4432,7 +4471,7 @@ class TitanKeysIme : InputMethodService() {
         TypingSettings.stopListening(this, overlaySetting)
         barSize?.let { FixedScale.stopListening(this, it) }
         overlay.hide()
-        BackService.touchpad(null)
+        BackService.releaseTouchpad(overlayEvent)
         rawLog?.finish()
         rawLog = null
         composer.log = null

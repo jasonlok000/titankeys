@@ -37,8 +37,13 @@ Cyrillic and Greek; then the rest.
 
 ## Words
 
-- **Input method:** one way of typing, such as English, Spanish, Cantonese (Yale) or Mandarin (Pinyin). It has one entry in
-  the switch overlay and in Android's keyboard list. A language can have several.
+- **Language:** what Settings > Languages lists and the held Sym's switcher shows first (owner, 2026-11-16: the Gboard way).
+  Serbian has two input methods (Cyrillic and Latin), Chinese three (Yale, Jyutping, Pinyin); every other language has
+  one. Each index entry names its language (`make.py`'s `LANGUAGES`). Every language but English and Chinese is marked
+  experimental in Settings.
+- **Input method:** one way of typing, such as English, Spanish, Cantonese (Yale) or Mandarin (Pinyin). A language can have
+  several. The `input_methods` setting lists the ones that are on; a language is on when any of its input methods is, so
+  settings and backups from before languages read the same.
 - **Variant:** a spelling of the same input method's text. English has British, American and Canadian. Portuguese has
   Brazil and Portugal. Chinese has Simplified, Hong Kong and Taiwan, shared by every Chinese input method.
 - **Engine:** code an input method uses to turn keys into text with choices. English's engine is today's code. Rime is
@@ -132,9 +137,11 @@ data-only language is one command plus a check by eye. Where the data comes from
   ```
 
   - `subtypeId` is fixed per input method (a hash of its `id`), so Android keeps the user's choices across updates.
-  - Settings > Languages decides which input methods are in the overlay. Android's own list of enabled subtypes is kept
-    the same as it, through `InputMethodManager.setExplicitlyEnabledInputMethodSubtypes` (API 34), so the two never
-    disagree.
+  - **One entry in Android's list** (owner, 2026-11-16: the list is TitanKeys and the other keyboards; languages switch
+    inside TitanKeys). Only the input method typing now is enabled, through
+    `InputMethodManager.setExplicitlyEnabledInputMethodSubtypes` (API 34), so Android's list shows TitanKeys once, under
+    its name. The keyboard enables the new one on every switch, and checks at every field start that Android's list is
+    that one entry; Settings does it when the input methods change. Alt + Sym still opens Android's list.
   - When the input method changes, the keyboard calls `InputMethodService.switchInputMethod(id, subtype)`, so apps see the
     language in `getCurrentInputMethodSubtype()` and pick their own spell checker and hints from it. This is #76's label.
   - Which types as the keyboard starts: the `current_input_method` setting, unless Android's list was switched to
@@ -231,31 +238,33 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 
 ## Switching: the overlay on a held Sym
 
-- **Holding Sym opens the overlay** over the top row, like the word menu: each input method's label over a key, W to O
-  (8 places), the current one marked.
-- With 4 or fewer on, each spans two keys.
+- **Holding Sym opens the switcher** over the top row, like the word menu: each language that's on, its label over W to O
+  (8 places), the current one marked. They're spread evenly: two take four keys each, three take two each with the rest
+  empty, four take two each, more take one (owner, 2026-11-16).
+- **Picking a language with more than one input method on** (Serbian, Chinese) shows a second row with them, spread the
+  same way, the one typing now marked; picking the language typing now does the same. A language with one input method
+  switches to it. With one language on that has several, the switcher opens on its row. There's no hold-Q.
 - It stays open after Sym is let go. Rest a finger to mark, press to switch. Back or Sym closes it with no change. A short
   Sym press still opens the Sym panel, as today.
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
+- The experimental mark stays in Settings: the switcher shows labels only.
 - After a switch, the bar says for a moment which input method types now. A lasting mark on the bar for anything but English
   comes later; its accessibility text says it in full: "Typing in Spanish".
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
 
-A new page, between Typing and Shortcuts:
+Languages, then input methods, the Gboard way (owner, 2026-11-16). Settings' Languages section has one row, Languages,
+with the names of the ones that are on.
 
-```
-Languages
-  Input methods            English, Español, 粵 Yale
-  Chinese characters       Traditional (Hong Kong)      (only when a Chinese input method is on)
-  English spelling         British                      (moves here from Typing)
-```
-
-**Input methods** (`app/settings/languages.tsx`):
-- A list of every input method, grouped by script, each with a switch. The ones that are on sit at the top in the
-  overlay's order, which for now is the order they were turned on (moving them comes later).
+**Languages** (`app/settings/languages.tsx`):
+- Every language, grouped by script; the ones that are on sit at the top in the switcher's order. Each row shows its
+  English name, with "· experimental" for every language but English and Chinese (F: draft), or the input methods that
+  are on when it has several.
+- **A language's page** (`app/settings/language.tsx`, the route's `language` parameter): its input methods, each with a
+  switch, and its own options: English's Spelling, Chinese's Characters. An experimental language says once, under its
+  name, what that means (F: draft).
 - English can't be turned off while it's the only one.
 - **Names:** each row shows the input method's own name, which is CLDR's name for its language in that language,
   capitalised (Français, Русский, Indonesia); `tools/im/make.py` stops if one differs, and `tests/languages` checks the

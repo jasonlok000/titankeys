@@ -27,3 +27,5 @@ local.properties
 # Downloads and private data the tools read; never committed.
 /tools/dev/swipe-baseline/ort/
 /tools/dev/swipe-baseline/private/
+# Heap dumps from TitanKeys Debug's leak check (#85): they hold everything in the app's memory, typed text among it.
+*.hprof

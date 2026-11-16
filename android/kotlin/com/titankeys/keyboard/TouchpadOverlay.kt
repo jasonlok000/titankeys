@@ -34,7 +34,32 @@ class TouchpadOverlay(
 
     fun show() {
         if (view != null) return
-        if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY && !Settings.canDrawOverlays(context)) return
+        view = added()
+    }
+
+    /**
+     * Puts the window on top of the others of its kind again. Android stacks windows of one kind by when they came, and the
+     * firmware gives the touchpad to the topmost window titled "InputMethod": another app's leftover window of the same kind
+     * added later would take it (2.1 left some on the owner's phone, 2026-11-16). The new window comes first and the old one goes
+     * after, so the touchpad is never without one, and never two are left.
+     *
+     * For the keyboard's own overlay only. An Accessibility service's windows stack by when the service connected, so adding the
+     * Back service's window again leaves it where it was (BackService.touchpad).
+     */
+    fun raise() {
+        val old = view ?: return
+        val fresh = added() ?: return
+        view = fresh
+        try {
+            windows.removeViewImmediate(old)
+        } catch (error: RuntimeException) {
+            Log.w("TitanKeys", "Could not remove the old touchpad overlay $title", error)
+        }
+    }
+
+    /** A new 1×1 window that sends the touchpad's events to [touchpad], or null where Android refuses it. */
+    private fun added(): View? {
+        if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY && !Settings.canDrawOverlays(context)) return null
         val catcher = object : View(context) {
             override fun dispatchTouchEvent(event: MotionEvent) = touchpad(event)
             override fun dispatchGenericMotionEvent(event: MotionEvent) = touchpad(event)
@@ -47,11 +72,12 @@ class TouchpadOverlay(
             alpha = .5f
             title = this@TouchpadOverlay.title
         }
-        try {
+        return try {
             windows.addView(catcher, params)
-            view = catcher
+            catcher
         } catch (error: RuntimeException) {
             Log.w("TitanKeys", "Could not add the touchpad overlay $title", error)
+            null
         }
     }
 

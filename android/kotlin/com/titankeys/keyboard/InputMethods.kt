@@ -18,13 +18,40 @@ class InputMethodIndex(entries: List<Entry>) {
         val locale: String,
         val script: String,
         val engine: String? = null,
+        /** The language it types: Serbian's Cyrillic and Latin, Chinese's Yale, Jyutping and Pinyin share one. */
+        val language: Language = Language(id, name, nameEnglish, label, script, experimental = id != InputMethod.ENGLISH_ID),
     )
+
+    /**
+     * A language, as Settings > Languages and the held Sym's switcher show it: its input methods are ticked on its own page
+     * (owner, 2026-11-16, the Gboard way). [experimental]: every language but English and Chinese is marked so in Settings.
+     */
+    data class Language(
+        val id: String,
+        val name: String,
+        val nameEnglish: String,
+        val label: String,
+        val script: String,
+        val experimental: Boolean,
+    )
+
+    /** A language that's on, with its input methods that are on, in the setting's order. */
+    data class LanguageOn(val language: Language, val methods: List<Entry>)
 
     /** English first, then the rest in the index's order. */
     val entries: List<Entry> = listOf(ENGLISH) + entries.filter { it.id != InputMethod.ENGLISH_ID }
     private val byId = this.entries.associateBy { it.id }
 
     operator fun get(id: String) = byId[id]
+
+    /** Every language, in the index's order: English first. */
+    val languages: List<Language> get() = entries.map { it.language }.distinctBy { it.id }
+
+    /** The input methods of language [id], in the index's order. */
+    fun methodsOf(id: String) = entries.filter { it.language.id == id }
+
+    /** The languages that are on, from the setting's text, each with its input methods that are on. */
+    fun languagesOn(setting: String?) = group(on(setting))
     val ids get() = entries.map { it.id }
 
     /**
@@ -46,13 +73,24 @@ class InputMethodIndex(entries: List<Entry>) {
     companion object {
         val ENGLISH = Entry(InputMethod.ENGLISH_ID, "English", "English", "EN", "en", "Latn")
 
+        /** The languages of the input methods [on], in the order each first appears, each with its own of them in order. */
+        fun group(on: List<Entry>): List<LanguageOn> =
+            on.groupBy { it.language.id }.values.map { LanguageOn(it.first().language, it) }
+
         /** Reads `index.json`: a list of entries. */
         fun parse(text: String): InputMethodIndex {
             val list = Json.parse(text) as? List<*> ?: throw Json.Error("index.json must be a list")
             return InputMethodIndex(list.map {
                 val entry = it as? Map<*, *> ?: throw Json.Error("each entry must be an object")
                 fun text(key: String) = entry[key] as? String ?: throw Json.Error("$key must be text")
-                Entry(text("id"), text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String)
+                val language = entry["language"] as? Map<*, *>
+                val id = text("id")
+                if (language == null) Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String)
+                else {
+                    fun of(key: String) = language[key] as? String ?: throw Json.Error("language.$key must be text")
+                    Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String,
+                        Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
+                }
             })
         }
 
@@ -83,10 +121,18 @@ class InputMethodIndex(entries: List<Entry>) {
     }
 }
 
+/** What a pick in the switcher does: open a language's second row, or switch to an input method. */
+sealed interface SwitchPick {
+    data class Row(val language: InputMethodIndex.LanguageOn) : SwitchPick
+    data class To(val id: String) : SwitchPick
+}
+
 /**
- * Where the switch overlay puts each input method that's on, over the top row's keys W to O (columns 1 to 8). With four or
- * fewer, each spans two keys so it's easier to hit. The top two rows pick, as the word menu's do: rest a finger on a key to
- * mark, press it to switch (docs/languages.md, "Switching").
+ * The held Sym's switcher, over the top row's keys W to O (columns 1 to 8): the languages that are on, spread evenly (two
+ * take four keys each, three or four take two each with the rest empty, more take one). Picking a language with more than
+ * one input method on shows a second row with them, spread the same way, the language typing now's included; a language
+ * with one switches to it. The top two rows pick, as the word menu's do: rest a finger on a key to mark, press it
+ * (docs/languages.md, "Switching"; owner, 2026-11-16).
  */
 object SwitchOverlay {
     /** The first and last columns the overlay uses: W and O. */
@@ -95,11 +141,22 @@ object SwitchOverlay {
     /** The rows of letters that pick: the top two. */
     const val ROWS = 2
 
-    /** The key columns each of [count] input methods spans, in order. */
+    /** The key columns each of [count] places spans, in order, from W. */
     fun columns(count: Int): List<IntRange> {
         val shown = count.coerceIn(0, InputMethod.MAX_ON)
-        return if (shown <= InputMethod.MAX_ON / 2) List(shown) { FIRST + 2 * it..FIRST + 2 * it + 1 }
-        else List(shown) { FIRST + it..FIRST + it }
+        if (shown == 0) return emptyList()
+        val width = (LAST - FIRST + 1) / shown
+        return List(shown) { FIRST + width * it until FIRST + width * (it + 1) }
+    }
+
+    /** The row the switcher opens on: with one language on, straight to its input methods. */
+    fun opening(languages: List<InputMethodIndex.LanguageOn>) = languages.singleOrNull()?.takeIf { it.methods.size > 1 }
+
+    /** What picking place [choice] does, in the languages' row or, with [opened], that language's row. */
+    fun pick(languages: List<InputMethodIndex.LanguageOn>, opened: InputMethodIndex.LanguageOn?, choice: Int): SwitchPick? {
+        if (opened != null) return opened.methods.getOrNull(choice)?.let { SwitchPick.To(it.id) }
+        val language = languages.getOrNull(choice) ?: return null
+        return if (language.methods.size > 1) SwitchPick.Row(language) else SwitchPick.To(language.methods.first().id)
     }
 
     /** Which of [count] input methods the key [key] (A to Z) picks, or -1. */
@@ -183,6 +240,15 @@ object SymHold {
         waiting > 0 -> "$waiting keys still waiting for the app"
         else -> null
     }
+}
+
+/**
+ * In an input method with its own letters (Georgian, Russian), a letter key without Alt, Ctrl or Meta is the keyboard's,
+ * Shift or not: it types the key's letter or its Shift letter, and never reaches the app, whose own handling of a Latin key
+ * would be wrong (a Shift + W in Georgian once moved the focus out of the field).
+ */
+object KeysMapKeys {
+    fun keeps(hasKeys: Boolean, letterKey: Boolean, alt: Boolean, ctrl: Boolean, meta: Boolean) = hasKeys && letterKey && !alt && !ctrl && !meta
 }
 
 data class InputMethodChoice(val id: String, val why: String) {

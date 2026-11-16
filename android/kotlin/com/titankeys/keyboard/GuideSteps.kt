@@ -62,7 +62,9 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
     // The phone's own name for the mode, numbers and all (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1").
     ScrollAssistant("Turn on Scroll assistant.", "Flip it on, and keep your apps on Sliding Mode 1. Swiping needs both.", "Open Scroll assistant",
         "The switch is at the top of that page."),
-    Back("Let TitanKeys handle Back.", "Turn TitanKeys Keyboard on in Accessibility, so Back takes one press.", "Open Accessibility",
+    // F: draft (2026-11-16): "the touchpad holds" is new, in the 72 characters a body may have (the leftover layers of other keyboards, see
+    // TouchpadOverlay.raise).
+    Back("Let TitanKeys handle Back.", "Turn TitanKeys Keyboard on: Back takes one press, the touchpad holds.", "Open Accessibility",
         "Switch greyed out? Android is being careful. In App info, open the menu and allow restricted settings."),
     // Sym and fn as Programmable key, both on the phone's one Shortcut keys page (owner, #72: in the guide's setup only, after
     // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.

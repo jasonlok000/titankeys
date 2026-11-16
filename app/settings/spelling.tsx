@@ -1,10 +1,11 @@
 import type { Spelling, State } from "../../lib/atlas";
 import { ChoicePage } from "../../lib/choice";
 
-const labels: Record<Spelling, string> = { british: "British", american: "American", canadian: "Canadian" };
-const options = (["british", "american", "canadian"] as const).map(value => ({ value, label: labels[value] }));
+// American first, as the keyboard's default (#80).
+const labels: Record<Spelling, string> = { american: "American", british: "British", canadian: "Canadian" };
+const options = (["american", "british", "canadian"] as const).map(value => ({ value, label: labels[value] }));
 
-export const spellingLabel = ({ spelling }: State) => labels[spelling] ?? "British";
+export const spellingLabel = ({ spelling }: State) => labels[spelling] ?? "American";
 
 export default function SpellingPage() {
   return <ChoicePage title="English spelling"

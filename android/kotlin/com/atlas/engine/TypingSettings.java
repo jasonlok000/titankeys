@@ -509,5 +509,38 @@ public final class TypingSettings {
         preferences(context).edit().putString("spelling", variant.value()).apply();
     }
 
+    /**
+     * The input methods that are on, in the overlay's order, as ids with commas between (docs/languages.md, "Settings >
+     * Languages"). English alone by default.
+     */
+    public static String inputMethods(Context context) {
+        return preferences(context).getString("input_methods", "en");
+    }
+
+    public static void inputMethods(Context context, String ids) {
+        preferences(context).edit().putString("input_methods", ids).apply();
+    }
+
+    /** The input method the keyboard types with now, picked in the overlay on a held Sym. */
+    public static String currentInputMethod(Context context) {
+        return preferences(context).getString("current_input_method", "en");
+    }
+
+    public static void currentInputMethod(Context context, String id) {
+        preferences(context).edit().putString("current_input_method", id).apply();
+    }
+
+    /**
+     * The Chinese variant for every Chinese input method: zh_hk, zh_tw or zh_hans, or empty until the user picks one. There's no
+     * default (owner, 2026-11-16): the user chooses.
+     */
+    public static String chineseVariant(Context context) {
+        return preferences(context).getString("chinese_variant", "");
+    }
+
+    public static void chineseVariant(Context context, String variant) {
+        preferences(context).edit().putString("chinese_variant", variant).apply();
+    }
+
     private TypingSettings() {}
 }

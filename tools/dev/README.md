@@ -70,7 +70,7 @@ Measures the swipe engine on recorded swipes, and rebuilds engine 2.0's models. 
 
 - The recordings and typing logs hold typed text. They live at `TK_PRIVATE` and `TK_DATA`, on your machine only, and never go in git. `report/` holds counts and the public passages' words only.
 - ONNX Runtime for Android isn't committed. Download onnxruntime-android 1.20.0 from Maven Central and unpack it into `TK_ORT`, as the README there says.
-- The ranker tools need numpy, LightGBM, onnxruntime and transformers. A venv works: `python3 -m venv ~/venv-tk && ~/venv-tk/bin/pip install numpy lightgbm onnxruntime transformers`.
+- The ranker tools need numpy, LightGBM, scikit-learn, onnxruntime and transformers. A venv works: `python3 -m venv ~/venv-tk && ~/venv-tk/bin/pip install numpy lightgbm scikit-learn onnxruntime transformers`.
 
 ## diagrams
 

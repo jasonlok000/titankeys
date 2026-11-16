@@ -254,7 +254,8 @@ with open(os.path.join(OUT, 'swipe-ranker.txt'), 'w', encoding='utf-8', newline=
 print('wrote', len(trees), 'trees', flush=True)
 raw = np.sum([m.booster_.predict(X, raw_score=True) for m in final], 0)
 # Parity cases for SwipeRanker.java: every input it reads, and the features and scores it must reproduce.
-with open(os.path.join(V, 'ranker-parity.jsonl'), 'w', encoding='utf-8') as f:
+# They hold strokes and context from the recordings, so they go to OUT beside the model, never into the repo.
+with open(os.path.join(OUT, 'ranker-parity.jsonl'), 'w', encoding='utf-8') as f:
     for q, e in enumerate(examples[:300]):
         c = corpus[e['id']]
         idx = rows_of[q]

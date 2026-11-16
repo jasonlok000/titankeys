@@ -32,7 +32,7 @@ The shell tools source it themselves.
 
 `ANDROID_HOME` comes from the build environment script (`TK_ENV_SCRIPT`).
 
-Python needs `numpy`, `onnxruntime`, `lightgbm`, `transformers` and `torch`.
+Python needs `numpy`, `onnxruntime`, `lightgbm`, `scikit-learn` and `transformers`, and `torch` for `export_lm.py`.
 
 ### The recordings stay private
 
@@ -171,10 +171,12 @@ The predictor directory needs the 8-bit model and the Hugging Face tokenizer fil
 . tools/dev/env.sh
 B=$TK_REPO/tools/dev/swipe-baseline
 LM=$TK_DATA/lm-distilgpt2
-python3 -I $B/tools/export_lm.py distilgpt2 $LM
-cp $TK_REPO/android/assets/swipe2/predictor/model-int8pc.onnx $LM/
+# The tokenizer files from Hugging Face, with the shipped model and its lm-info.txt (no torch needed).
+# export_lm.py distilgpt2 $LM makes the same folder from scratch, with torch.
+python3 -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('distilgpt2').save_pretrained('$LM')"
+cp $TK_REPO/android/assets/swipe2/predictor/{model-int8pc.onnx,lm-info.txt} $LM/
 python3 -I $B/tools/train_ranker.py $B $TK_REPO/android/assets/swipe/english.combined $LM \
   $TK_PRIVATE/v9/ck-crossfit2.jsonl $TK_OUT/ranker
 ```
 
-The defaults are right: `V_DIR=v9`, `LM_FILE=model-int8pc.onnx`, `LM_CAP=32`. The script writes `report/ranker-train.json`. Its `ranker.all` should read 78.9 first and 85.7 top 3, as in `report/ranker-train-final.json`. It also writes the ranker to `$TK_OUT/ranker/swipe-ranker.txt` and parity cases to `$TK_PRIVATE/v9/ranker-parity.jsonl`.
+The defaults are right: `V_DIR=v9`, `LM_FILE=model-int8pc.onnx`, `LM_CAP=32`. The script writes `report/ranker-train.json`. Its `ranker.all` should read 78.9 first and 85.7 top 3, as in `report/ranker-train-final.json`. It also writes the ranker to `$TK_OUT/ranker/swipe-ranker.txt` and parity cases to `$TK_OUT/ranker/ranker-parity.jsonl`. Those hold strokes and context from the recordings, so keep them out of the repo.

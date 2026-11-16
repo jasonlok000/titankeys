@@ -499,3 +499,57 @@ The draft's "Everything else does" is left out: it promises more than we've chec
 ## #82: CONTRIBUTING's tools line
 
 > The maintainer's own build and phone tools are in [tools/dev](tools/dev/README.md). You don't need them to contribute. (stays)
+
+## #90: "That's X, not Y"
+
+Replaces the `F:` drafts in GuideCoach.kt, GuideSteps.kt and guide-boring.tsx. Every miss and every blocked touch says what it
+was, then what the slide wants, in the owner's pattern. Lines marked "(stays)" are the draft's, kept. Each fits one line (50).
+
+**The Space-tap slides** (`tapMissLine`):
+
+| Miss | Line |
+| --- | --- |
+| Press | That's a press, not a tap. Barely touch Space. |
+| Typing | That's typing, not a tap. Barely touch Space. |
+| Swipe | That's a swipe, not a tap. Keep your finger still. |
+| Lift | That's a lift, not a hold. Keep the {second} down. (stays) |
+| Beside | That's beside the patch, not on it. Tap the shade. (stays) |
+| Single, Extra, Short | That's {one tap / four taps}, not {three}. Hold the {third} one. (stays) |
+| NoSlide | That's a lift, not a slide. Stay down and slide. |
+
+**The far swipe** (`SWIPE_COACH`): That's a detour, not the path. Pass every letter.
+
+**The blocked chips** (`blockedChip`, `menuBlocked`): all stay as drafted. They already say what it was and what to do.
+
+**One action each:**
+
+| Place | Line |
+| --- | --- |
+| The paste slide's praise | Hold fn, press V to paste. C copies. |
+| The clipboard slide's lead (`CLIP_LEAD`, a W, 62 at most in the summary) | Wait. Sym, let go, A. (stays) |
+| The clipboard slide's praise | It keeps what you copy. Sym, let go, then A. (stays) |
+| Boring guide, Your newest copy and The clipboard | press Sym, let go, then press A (stays) |
+
+## #81: the update that turns TitanKeys off once
+
+The notification is in UpdateNotice.kt. The other three aren't in the code yet: they go in with the 3.0 release. Plain, as
+they're about Accessibility and setup.
+
+| Place | Line |
+| --- | --- |
+| Channel name | Setup (stays) |
+| Channel description | Says when TitanKeys needs turning back on. Silent. |
+| Notification title | Turn TitanKeys back on (stays) |
+| Notification text | This update turned TitanKeys off as your keyboard, and Back too if you used it. Your words and settings are all still here. Tap to turn them back on. |
+
+**In-app release notes** (release-notes.txt, 3.0):
+
+> Back on, just once: TitanKeys got new names on the inside, so this update switches it off as your keyboard, and Back too if you use it. Your words and settings stay put. Tap the notification, or open Settings > Setup, to turn them back on.
+
+**The 3.0 news entry's line:**
+
+> Updating to 3.0? It switches TitanKeys and Back off, just once. Nothing's lost: Settings > Setup turns them back on in a few taps.
+
+**The GitHub release:**
+
+> **Updating from 2.x?** This update turns TitanKeys off once, as your keyboard and as the Back service (Accessibility), because the app's code moved to new names. Your words and settings stay. Tap the notification TitanKeys shows, or open TitanKeys > Settings > Setup, to turn them back on. New installs aren't affected.

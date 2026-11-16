@@ -7,8 +7,10 @@ H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export KOTLIN_HOME="$TK_BUILD/kotlin-2.1.20/kotlinc"
 export PATH="$TK_DEV/build:$HOME/android-sdk/build-tools/36.0.0:$PATH"
 [ -n "$TK_ADB_SERIAL" ] && export ANDROID_SERIAL="$TK_ADB_SERIAL"
+# The build copy is verify.sh's, so the build lock keeps it still; then the phone lock, always in that order.
 exec 9>"$TK_BUILD/tk-tools/.lock"
-flock -w 900 9 || { echo "phone busy"; exit 3; }
+flock -w 900 9 || { echo "build busy"; exit 3; }
+TK_PHONE_LOCK_WAIT=900 . "$TK_REPO/tools/phone-lock.sh"
 B="${TK_VERIFY_COPY:-$TK_BUILD/tk-overnight}"
 cd "$B" || exit 1
 # The build copy holds the tree of the last build with the public Ink edits made; take the test from this checkout.

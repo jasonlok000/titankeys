@@ -2,6 +2,7 @@
 # Read-only checks before a long unattended run: the phone link, power and screen settings, the keyboard in use,
 # the installed build, the link's round trip and free space here. TK_APP picks the package (default the debug build).
 . "$(dirname "$0")/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 app=${TK_APP:-com.titankeys.debug}
 echo "--- phone link"
 timeout 15 adb devices -l | sed -n 2,5p | cut -c1-90

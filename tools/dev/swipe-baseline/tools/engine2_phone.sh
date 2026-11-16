@@ -18,8 +18,7 @@ jar cf "$work/classes.jar" -C "$work/classes" .
 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/e2.zip" "$work/classes.jar" "$stdlib" "$ort" 2>&1 | grep -iv 'warning' | head -5 || true
 python3 -I "$BASE/tools/make_readings.py" "$CORPUS" "$work/readings.jsonl" plain
 device=/data/local/tmp/tk-baseline
-mkdir -p "$TK_BUILD/tk-tools"; exec 9>"$TK_BUILD/tk-tools/.lock"
-flock -w 1800 9 || { echo "phone busy"; exit 3; }
+TK_PHONE_LOCK_WAIT=1800 . "$TK_REPO/tools/phone-lock.sh"
 tk_adb push -q "$work/e2.zip" "$device/e2.zip" >/dev/null
 # Always the tree's own ONNX Runtime, so a cached older runtime on the phone is never tested by mistake.
 for so in libonnxruntime.so libonnxruntime4j_jni.so; do

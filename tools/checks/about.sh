@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+# The maintainer's phone lock, if there is one (tools/phone-lock.sh).
+. tools/phone-lock.sh
 # APP=com.titankeys.debug checks the debug build instead.
 app="${APP:-com.titankeys}"
 

@@ -2,6 +2,7 @@
 # Read-only: logs the firmware's touchpad mode each time the front app changes, to the screen and $TK_OUT/modes.txt.
 # Usage: mode-watch.sh [MINUTES]   default 15. It polls adb once a second from here; nothing is started on the phone.
 . "$(dirname "$0")/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 minutes=${1:-15}
 mkdir -p "$TK_OUT"
 out=$TK_OUT/modes.txt

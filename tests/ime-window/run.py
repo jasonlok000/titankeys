@@ -31,6 +31,10 @@ def state():
 
 
 def main():
+    # The maintainer's phone lock, if there is one (tools/phone_lock.py).
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../tools"))
+    import phone_lock
+    phone_lock.hold()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package", help="App containing the focused text field")
     parser.add_argument("--cycles", type=int, default=12)

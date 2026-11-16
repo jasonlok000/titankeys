@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Read-only: the phone's display size, density and font scale, and which TitanKeys builds are installed.
 . "$(dirname "$0")/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 echo "size:    $(tk_adb shell wm size | tr -d '\r' | tr '\n' ' ')"
 echo "density: $(tk_adb shell wm density | tr -d '\r' | tr '\n' ' ')"
 echo "font scale: $(tk_adb shell settings get system font_scale | tr -d '\r')"

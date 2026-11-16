@@ -13,6 +13,20 @@ They run in WSL (Ubuntu) on Windows, or any Linux. The phone tools need the Tita
 
 Every tool loads `env.sh`, which reads `local.env` and fills in the defaults. Python tools read the same variables, so run them from a shell that ran `. tools/dev/env.sh`.
 
+## Locks
+
+The phone and the builds have a lock each, in `~/build/tk-tools`, so a long phone run doesn't hold up a build, nor a build a
+phone run:
+
+- `.lock`, the build lock: one `verify.sh` or `play-bundle.sh` at a time, as they share a build copy.
+- `.phone.lock`, the phone lock: anything that talks to the phone. Scripts take it with `tools/phone-lock.sh`, or
+  `tools/phone_lock.py`, and `phone/safety.sh` takes it for every phone tool. It does nothing where `~/build/tk-tools` doesn't
+  exist, so contributors never wait for it.
+- `verify.sh phone` and `phone/preview-test.sh` take the build lock first, then the phone lock for their phone steps. Nothing takes
+  them the other way round.
+
+`tools/checks/locks.test.ts` fails when a script that talks to the phone doesn't take the phone lock, or takes the build lock.
+
 ## build
 
 | Tool | Does | Needs |
@@ -25,7 +39,9 @@ Every tool loads `env.sh`, which reads `local.env` and fills in the defaults. Py
 | `compat.py` | Removes the few options that only the private Ink has, in a build copy. `verify.sh`, `try.sh` and `play-bundle.sh` run it. Never run it in the repo. | |
 | `rg` | Stands in for ripgrep where it isn't installed. | |
 
-`verify.sh` and `try.sh` build the checkout they sit in. Set `TK_WORKTREE=<path>` for `verify.sh` to build another one, such as a git worktree. Only one `verify.sh` or `play-bundle.sh` runs at a time on a machine: they share a lock in `~/build/tk-tools`.
+Each build uses an Ink that carries its own tree's `tools/ink/titankeys.patch` (`ink.sh`): `~/build/ink-<hash>`, made once per patch from the clean `~/build/ink` with its Rust build cache, so branches with different patches never step on each other. Each build copy sits in a folder of its own, `~/build/copies/<name>/tk`, beside a link `ink` to that Ink, which the tree reaches as `../ink`. `~/build/tk-overnight` still leads to `verify.sh`'s copy. The newest 4 Inks are kept, never one a build is using. `test-ink.sh` checks this on a small throwaway Ink.
+
+`verify.sh` and `try.sh` build the checkout they sit in. Set `TK_WORKTREE=<path>` for `verify.sh` to build another one, such as a git worktree. Only one `verify.sh` or `play-bundle.sh` runs at a time on a machine: they share the build lock (see Locks).
 
 The Play bundle needs Julian's private Ink SDK, which isn't public and never goes in this repo. `play-bundle.sh` expects it at `TK_PLAY_INK` (default `~/build/play/ink`), patched with `tools/ink-bundle.patch`.
 
@@ -51,6 +67,61 @@ Every phone tool keeps these rules:
 | `preview-test.sh` | Runs `tests/preview` from the last `verify.sh` build copy, then reinstalls and selects the keyboard. The test force-stops the app, so turn Accessibility back on after. |
 
 adb can't press Sym, hold a key or touch the touchpad. Those checks need hands.
+
+## touch
+
+The touch simulator plays touches on the touchpad and presses on the keys, as the hardware itself sends them, so the checks that
+used to need hands run over adb: swipes, delete flicks, Space taps, a finger resting or lifting after a press, holds, Sym and fn.
+It needs no root. On the Titan 2 Elite (Android 16) SELinux keeps adb's shell from writing to `/dev/input`, so the injector makes
+a twin of each device through `/dev/uinput`, which the shell may use: the same name, location, bus, vendor and product, keys and
+ranges, read from the real one. Android gives the twin the real device's configuration, and the kernel removes it when the
+injector ends. It takes 0.8 s to be added, and its events then play within a few milliseconds of their times.
+
+What works today and what doesn't (phone run, 2026-11-16):
+
+- Keys work: typed letters reach TitanKeys Debug's field, and Sym reaches it as Sym (it opens the panel).
+- A held Sym opens the Sym panel, not the switch overlay. Why isn't known yet.
+- The touchpad doesn't work yet. The phone's input reader sets a new touchpad's height before it knows the display, and only
+  sets it again at its next reconfiguration (screen off and on). Until then the twin's heights come out upside down and squeezed,
+  so no touch lands on a key. A brief screen recording didn't trigger the reconfiguration. `serve.sh start` keeps one twin of
+  each device alive for the whole session instead; after the owner turns the screen off and on once (the tools never do),
+  `serve.sh status` shows whether the twin's height is right, and `touch.sh` plays through it until `serve.sh stop`. Untried.
+
+The keys are real, so they type in whatever is in front. Before every gesture and every setup key, `touchlib.sh` checks that
+the screen is awake and unlocked, no navigation app is running, TitanKeys Debug's window is in front and one of its own text
+fields has the keyboard. Otherwise nothing is sent. The owner may use the phone meanwhile, so when another app is in front or
+no Debug field has the keyboard, TitanKeys Debug's Space gestures screen comes back with `am start` (twice at most) and
+everything is checked again first. A screen that's off or locked, or a navigation app, stops the run after a second try. The
+release app is never a target: `TK_APP` must end in `.debug`. If the injector stops part way, it lets go of every key and lifts
+the finger. TitanKeys Debug is the keyboard only while a check types in its field: release TitanKeys goes back right after,
+read back each time, and at once whenever the front stops being Debug. Every tool holds the phone lock for its whole run, so no other phone run overlaps (see Locks).
+
+| Tool | Does | Needs |
+|---|---|---|
+| `test/run.sh` | The offline checks: the calibration against the app's own `TouchAlignment.java`, every key read back on itself, each gesture against the rules in `DeleteSwipe.kt` and `CursorGesture.kt`, and the injector's script format. | a JDK, a C compiler |
+| `build.sh` | Builds the injector, `tk-inject`, for the phone with the NDK. `touch.sh` builds and pushes it when it changes. | WSL, the NDK |
+| `keymap.sh` | Reads which codes the keyboard sends for Sym, fn and the rest from its key layout file, and checks the touchpad's range. Run it once. | the phone |
+| `touch.sh GESTURE...` | Plays gestures after the checks. At most 15 s for each call. | the phone |
+| `gestures.py GESTURE...` | Writes the script `touch.sh` plays, without the phone. See its help for every gesture. | |
+| `capture.sh SECONDS [--keys]` | Records real touches (and with `--keys`, keys) for `replay-getevent`. A capture with keys holds what was typed: keep it on your computer. | the phone |
+| `serve.sh start\|status\|stop` | Keeps the twins alive for a session, so the touchpad's can be set right once (see above). | the phone |
+| `languages.py [ID...]` | Types each input method's test with the phone's own keys, switching with Alt+Sym, and reads the field back against its `im.json` (`--list`). | the phone, the input methods on |
+| `checks.py [NAME...]` | The first checks, each with a YES or NO read back from the field, or a screenshot to look at (`--list`). | the phone, a Debug field focused |
+
+Gestures, played in order, with `+MS` for a pause between two:
+
+- `swipe:WORD[:SPEED]`: through the word's key centres, at .012 keys a millisecond unless you set it.
+- `flick[:KEYS[:MS]]`: a level delete flick from Backspace.
+- `space:N`: 1, 2 or 3 taps on Space.
+- `key:NAME[:HOLD[:AFTER]]`: a press with the finger on the key. AFTER is `lift`, `rest`, `slide` or `none`.
+- `hold:LETTER[:MS]` and `touch:X,Y[:MS]`.
+- `replay-getevent:FILE` and `replay-rawlog:FILE[:FROM[:TO]]`.
+
+For example, `bash tools/dev/touch/touch.sh swipe:go +100 swipe:on` swipes "go" and "on" 100 ms apart.
+
+Positions are chosen where TitanKeys reads them, after the built-in calibration, and turned back into the touchpad's raw steps.
+The touchpad reports about every 9.5 ms, with a contact size of 2 or 3 while moving and 1 or 2 while still, as real captures do.
+A raw log replay reads only its touch and key lines; the rest, which can hold typed text, is skipped unread.
 
 ## preview
 

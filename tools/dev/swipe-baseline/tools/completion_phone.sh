@@ -26,8 +26,7 @@ with open(sys.argv[2], 'w', encoding='utf-8') as out:
             out.write(json.dumps({k: e[k] for k in ('id', 'set', 'first', 'expected', 'context')}) + '\n')
 " "$CORPUS" "$work/in.jsonl"
 device=/data/local/tmp/tk-baseline
-mkdir -p "$TK_BUILD/tk-tools"; exec 9>"$TK_BUILD/tk-tools/.lock"
-flock -w 1800 9 || { echo "phone busy"; exit 3; }
+TK_PHONE_LOCK_WAIT=1800 . "$TK_REPO/tools/phone-lock.sh"
 tk_adb push -q "$work/c.zip" "$device/cr.zip" >/dev/null
 # Always the tree's own ONNX Runtime, so a cached older runtime on the phone is never tested by mistake.
 for so in libonnxruntime.so libonnxruntime4j_jni.so; do

@@ -11,15 +11,20 @@ H="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export KOTLIN_HOME="$TK_BUILD/kotlin-2.1.20/kotlinc"
 export PATH="$H:$HOME/android-sdk/build-tools/36.0.0:$PATH"
 W="${TK_WORKTREE:-$TK_REPO}"
-# The build copy and the seed it takes node_modules, .ink and signing from. The seed is a checkout that has built once.
-B="${TK_VERIFY_COPY:-$TK_BUILD/tk-overnight}"
+# The seed the build copy takes node_modules, .ink and signing from: a checkout that has built once.
 SEED="${TK_SEED:-$TK_BUILD/titankeys}"
-# One build at a time on this machine: the lock and logs live beside the build toolchain, not in the repo.
+. "$H/ink.sh"
+# One build at a time on this machine: the build lock and logs live beside the build toolchain, not in the repo. The phone has
+# a lock of its own (tools/phone-lock.sh), taken only for the phone steps, so a phone run elsewhere doesn't hold up a build.
 S="$TK_BUILD/tk-tools"
 L="$S/logs"
-mkdir -p "$L" "$B"
+mkdir -p "$L"
 exec 9>"$S/.lock"
 flock 9
+# The build copy, in a folder of its own beside the Ink for its patch (ink.sh); $TK_BUILD/tk-overnight still leads to it.
+# TK_VERIFY_COPY=<path> uses another, which must also sit in a folder of its own.
+B="${TK_VERIFY_COPY:-$(tk_ink_copy_dir verify "$TK_BUILD/tk-overnight")}"
+mkdir -p "$B"
 rm -f "$L"/*.log
 
 for f in node_modules .ink signing; do
@@ -30,17 +35,9 @@ tar -C "$W" --exclude=.git --exclude=node_modules --exclude=dist --exclude=.ink 
 cd "$B" || { echo "RESULT: FAIL"; exit 1; }
 python3 "$H/compat.py" || { echo "FAIL public Ink edits"; echo "RESULT: FAIL"; exit 1; }
 # TitanKeys needs a few additions to Ink (tools/ink/titankeys.patch): the theme accent, Text tone, setRouteParents and more.
-# They go into the shared Ink checkout, which every build copy uses as ../ink. A changed patch starts again from clean Ink.
-P="$B/tools/ink/titankeys.patch"
-I="$TK_BUILD/ink"
-if [ -f "$P" ]; then
-  want=$(sha256sum < "$P")
-  if [ "$(cat "$I/.titankeys-patch" 2>/dev/null)" != "$want" ]; then
-    { git -C "$I" checkout -q -- . && git -C "$I" apply "$P" && echo "$want" > "$I/.titankeys-patch"; } \
-      || { echo "FAIL Ink patch"; echo "RESULT: FAIL"; exit 1; }
-    echo "Ink patch applied to $I"
-  fi
-fi
+# This copy's ../ink is the Ink for its own patch, made once per patch (ink.sh), so branches with different patches never
+# share one.
+tk_ink_use "$B" || { echo "FAIL Ink patch"; echo "RESULT: FAIL"; exit 1; }
 
 failed=0
 step() {
@@ -69,6 +66,8 @@ if [ "$MODE" != phone ] || [ "$failed" != 0 ]; then
   exit "$failed"
 fi
 
+# From here on the phone: its lock, after the build lock, never the other way round.
+. "$TK_REPO/tools/phone-lock.sh"
 # The phone tests use plain adb, so pick the phone for them.
 [ -n "$TK_ADB_SERIAL" ] && export ANDROID_SERIAL="$TK_ADB_SERIAL"
 if ! timeout 20 adb get-state >/dev/null 2>&1 && [ -n "$TK_ADB_SERIAL" ]; then

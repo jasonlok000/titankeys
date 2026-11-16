@@ -2,6 +2,7 @@
 # Read-only look at how this phone routes the touchpad: overlay permission, the firmware's touchpad properties and settings,
 # input devices and the windows that take input. Changes nothing on the phone.
 . "$(dirname "$0")/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 echo "--- overlay permission"
 for p in com.titankeys com.titankeys.debug; do echo "$p: $(tk_adb shell appops get $p SYSTEM_ALERT_WINDOW | tr -d '\r' | cut -c1-70)"; done
 echo "--- firmware properties"

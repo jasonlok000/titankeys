@@ -18,6 +18,12 @@ import time
 import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import phone_lock  # noqa: E402
+
+# Every check that imports this talks to the phone: it holds the maintainer's phone lock, if there is one.
+phone_lock.hold()
+
 APP = os.environ.get("APP", "com.titankeys")
 KEYBOARD = f"{APP}/com.titankeys.keyboard.TitanKeysIme"
 DUMP = "/sdcard/titankeys-phone-check.xml"

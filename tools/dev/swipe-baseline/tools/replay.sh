@@ -21,8 +21,7 @@ javac -nowarn --release 17 -cp "$work/classes:$android:$stdlib:$TK_ORT/onnxrunti
 jar cf "$work/classes.jar" -C "$work/classes" .
 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/checks.zip" "$work/classes.jar" "$stdlib" 2>&1 | grep -v 'warning\|Warning' | head -5 || true
 device=/data/local/tmp/tk-baseline
-mkdir -p "$TK_BUILD/tk-tools"; exec 9>"$TK_BUILD/tk-tools/.lock"
-flock -w 900 9 || { echo "phone busy"; exit 3; }
+TK_PHONE_LOCK_WAIT=900 . "$TK_REPO/tools/phone-lock.sh"
 tk_adb shell mkdir -p "$device/models"
 tk_adb push -q "$work/checks.zip" "$device/" >/dev/null
 tk_adb shell "ls $device/lib/libswipe_jni.so >/dev/null 2>&1" || tk_adb push -q "$TREE/android/jniLibs/arm64-v8a" "$device/lib" >/dev/null

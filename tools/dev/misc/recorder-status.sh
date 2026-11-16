@@ -3,6 +3,7 @@
 # Pulls the newest session to $TK_DATA/recordings/latest.jsonl, and screenshots only when the recorder itself is in front.
 set -u
 . "$(dirname "$0")/../env.sh"
+. "$TK_REPO/tools/phone-lock.sh"
 app=${TK_APP:-com.titankeys.debug}
 dir=/sdcard/Android/data/$app/files/recordings
 

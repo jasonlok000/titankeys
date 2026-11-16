@@ -25,7 +25,7 @@ The shell tools source it themselves.
 | `TK_PRIVATE` | The recordings and labelled tables (see below) |
 | `TK_DATA` | The raw logs exported from the phone |
 | `TK_ORT` | ONNX Runtime for Android (see below) |
-| `TK_BUILD` | The Kotlin compiler (`kotlin-2.1.20/`), the phone lock (`tk-tools/.lock`) and the desktop ONNX Runtime jar |
+| `TK_BUILD` | The Kotlin compiler (`kotlin-2.1.20/`), the phone lock (`tk-tools/.phone.lock`) and the desktop ONNX Runtime jar |
 | `TK_OUT` | Scratch output, such as the edge-variant engine copies |
 | `TK_ADB_SERIAL` | The phone, for `tk_adb` |
 | `TK_GPU_HOST`, `TK_GPU_KEY` | The GPU machine for `tools/gpu`, reached over SSH |

@@ -159,12 +159,8 @@ data-only language is one command plus a check by eye. Where the data comes from
 
 **The picker** is one component for accents and for Chinese:
 - A row of choices over the keys, each with the key under it. Keys under no choice do nothing while it's open.
-- It takes a list and a page: accents fit on one page; Chinese gets pages.
-- **Chinese, and any engine with choices:** the code you've typed shows over Q and W, muted, with the page after it in the
-  accent ("2›", or "1/3" when the engine knows the count). The choices sit over E to P, eight a page. Letters go on building
-  the code, so a choice is picked with Space: the one a resting finger marks, or else the first. Swiping up on the keys
-  turns to the next page and down to the one before, the Sym panel's own direction; Rime's own , and . paging keys work too. Back closes
-  the choices.
+- Accents fit on one row. Chinese, and any engine with choices, has its own row and a bigger menu: see "Chinese on the
+  bar".
 
 **Accents from the word list** (input methods with a word list):
 - The bar's suggestions ignore accents when matching: typing "cafe" offers **café**.
@@ -172,6 +168,61 @@ data-only language is one command plus a check by eye. Where the data comes from
   by default, so by default it's suggestions only.
 
 The bar, its hover and the picking come from the word menu's code (see "Where it goes in the code").
+
+## Chinese on the bar
+
+The owner's design (2026-11-16, `docs/owner-decisions-2.1.md`: "Chinese choices" rounds 1 to 3, "Chinese picking, the
+concept test" and "The rest of the Chinese proposal agreed"). It holds for every Chinese input method (Yale, Jyutping,
+Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffer` in `keyboard/`.
+
+**The bar while a code is typed:**
+- **The code** floats on a thin line just above the bar's left edge, muted, only while a code is typed. It's drawn in the
+  see-through layer over the app (the word menu's effects layer), so the app never resizes. With no code, nothing floats,
+  and the bar shows its suggestions: no language name, no tint ("keep it using the orange black theme").
+- **The language mark at Q:** the input method's label (耶, 粵, 拼) in the accent over Q, as Shift's arrow and Caps show
+  today, while the choices are on the bar.
+- **The choices sit over W to O,** from the left, each as wide as it needs: one key for one or two characters, two keys for
+  three or four (屌你老母 over two), and so on (`ChineseRow.keys`: a Chinese character counts two, a Latin letter one, four to
+  a key). They fill W to O in order; a choice that doesn't fit, and everything after it, waits for the bigger menu. There's
+  no paging in the row.
+- **P has no choice.** It shows a small "more" cue (`⋯`) when the engine has more choices than the row shows.
+
+**Picking from the row,** all of these at once:
+- **Space** picks the first choice. A resting finger doesn't change that ("no marking first").
+- **A tap on the screen** on a choice picks it.
+- **Shift + the key under a choice** picks it (the top two rows, W to O and S to L, as the word menu's buttons). Shift alone
+  does nothing special: Chinese has no capitals, and English is its own keyboard.
+- **Holding the key under a choice** picks it (a concept test, owner: "we can remove it if it doesn't work well"). The letter
+  the press typed into the code goes again first. Hold for symbols is off in every Chinese input method, so a hold means
+  one thing.
+- **A flick up on the touchpad** from the key under a choice picks it (also a concept test). Swipes on the keys never turn
+  the row's pages.
+- A resting finger still marks the choice over its key, in the word menu's pill, to show what Shift, a hold or a flick
+  would pick.
+
+**The bigger menu: hold P.** Like the Sym panel's emoji and symbol pages, in the panel's place:
+- The choices fill the three letter rows over the keys (W to O, S to L, Z to M), each as wide as it needs, as in the row.
+  P shows the page ("2/5").
+- A press of the key under a choice picks it, and so does a tap on the screen. A resting finger highlights the choice over
+  its key.
+- Enter turns to the next page and Backspace to the one before, the Sym panel's own keys; a swipe up on the keys turns to
+  the next and down to the one before.
+- Sym is the ✕: it closes the menu, and so does Back. A pick closes it too.
+- Only holding P opens it: no flick from P, no swipe ("actions told apart only by speed are hard to learn").
+
+**Keys while a code is typed:**
+- **Enter** types the code as letters. **Backspace** takes off the last code letter.
+- **Punctuation:** Chinese full-width marks by default (，。？！：；、 and Hong Kong's 「」 for quotes in Hong Kong and Taiwan
+  characters; “” in Simplified), from Rime's punctuator, Alt's symbols included. With a code pending, a punctuation key types
+  the first choice, then the mark. Settings: "Plain punctuation" types ASCII marks instead (Rime's `ascii_punct`).
+- **Digits stay plain** (1, 2, 3, never full-width). With a code pending, a digit types the first choice, then the digit.
+- **English words:** the typed letters are offered as an English word, as the second choice, never the first, only when
+  they're a word in English's list and Rime can't read them as whole syllables: Rime reads nearly any letters through
+  abbreviations, so the test is Rime's own split of the code having a piece that isn't a whole syllable (`EnglishOffer`).
+  "hello" (Rime: he l lo) is offered; "man" and Pinyin's "sun" aren't. Picking it types the word as typed and clears the code.
+
+**Not in the row or the menu:** the variant isn't shown (it's in Settings), and Shift, Alt and Ctrl's own bar doesn't
+replace the choices while a code is typed.
 
 ## Switching: the overlay on a held Sym
 
@@ -237,7 +288,8 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   bytes. The sources, versions and licences: `native/rime/SOURCES.md`.
 - **JNI:** a thin layer, `native/rime/rime_jni.cc`, registered on `com.titankeys.rime.RimeNative`: `start(sharedDir, userDir)`,
   `selectSchema`, `setOption`, `key(keysym, mask)`, `state()` (the text to commit, the code, how Rime spells it, the page and
-  its choices), `pick(index)`, `clear()`. Paging is Rime's Page Up and Page Down keys. Trime's `rime_jni` is the reference.
+  its choices), `pick(index)` on the page, `choices(start, count)` and `pickAt(index)` across every page (the row and the
+  bigger menu read past Rime's 8 a page), `clear()`. Trime's `rime_jni` is the reference.
 - **The engine:** `com.titankeys.rime.RimeEngine`, made by name with a `(Context)` constructor (`InputEngines`).
 - **Every engine by name:** `EngineClasses` (`InputEngine.kt`) names each engine's class: Rime's, Korean's and Telex's.
   R8 can't see a class made by name, and left Korean's and Telex's out of the APK, so they typed English on the phone;
@@ -256,9 +308,10 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   changes. With none on, the code still builds, but the only choice says to pick one, and nothing Chinese is typed.
 - **Keys:** a letter goes to Rime, which returns the code and the choices for the picker. Space picks the first choice.
   Enter types the code as typed letters. Backspace deletes from the code, or from the text when the code is empty.
-  Punctuation goes through Rime's punctuator, which gives Chinese marks (，。).
+  Punctuation goes through Rime's punctuator, which gives Chinese marks (，。); digits never do. The rest, as the bar works
+  with them: "Chinese on the bar".
 - **Engines in general:** Rime, Korean and Telex implement one interface (`keyboard/InputEngine.kt`): a key, Space, Enter
-  or Backspace gives an `EngineState` with the text to commit, the text being built (on the bar, over Q and W) and the
+  or Backspace gives an `EngineState` with the text to commit, the text being built (floating above the bar) and the
   picker's choices. A state that isn't `handled` may still commit: the keyboard writes that first, then handles the key as
   usual (Korean's syllable before a space, Rime's code before a capital). Data-only input methods use no engine.
 

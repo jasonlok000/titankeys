@@ -39,6 +39,22 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **Phone:** reached at 100.98.104.89:5555 again (the owner sent Wireless debugging's port at 01:20, after a restart). At 01:25 it was at 2% and not charging.
 - **07:30:** a background timer resets the battery stats, with release TitanKeys as the keyboard, then logs to the scratchpad.
 - **Analytics** is #96, with questions for the owner.
+- **Merged into main at 2d54b0d, 02:40:**
+  - screens: #70, #71, #75, #86, #87's row;
+  - data: #65, #74, #97;
+  - tools: #82;
+  - the #83 study.
+
+  `bun run check` passes (222 tests) and the Debug build passes. #97's report route is deployed to the contributions Worker,
+  and the routes answer correctly. Phone checks run through tk-screens, now the phone tester, on
+  `~/build/m1-apks/main-2d54b0d-debug.apk`.
+- **#83's study says:**
+  - 502 joins: 380 right, 64 wrong (46 episodes), 58 unclear; and 18 missed joins.
+  - No rule cuts wrong joins without losing a right one.
+  - Recommended: join less when the second touch comes over 150 ms later after a clear word or a full-size touch (−12
+    wrong episodes, −4 right joins); join more for a touch that lands still moving, within 150 ms and 2 keys (+4 missed
+    joins, nothing kept apart broken).
+  - Next: a phone replay of every pair, both ways.
 - **Owner's answers at 01:40:**
   - Yale input comes first for Chinese, from the owner's Weasel schema; the files are in WSL `~/build/lang/owner-rime/`.
   - No default Chinese variant: the user chooses.

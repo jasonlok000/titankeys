@@ -1406,6 +1406,8 @@ class AtlasIme : InputMethodService() {
 
     /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
     private fun readSettings() {
+        // The guide and the playground teach English, so they type it whatever input method is on.
+        languages.englishOnly = inGuide || inPractice
         languages.refresh()
         val english = languages.current.isEnglish
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)

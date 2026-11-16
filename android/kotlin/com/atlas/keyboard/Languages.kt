@@ -16,9 +16,22 @@ internal class Languages(private val context: Context, english: Words, private v
     private var list: WordList? = null
     val words = LanguageWords(english) { list }
 
-    /** The input method typing now. English until the settings say otherwise. */
-    var current: InputMethod = InputMethod.ENGLISH
-        private set
+    /** The input method switched to, once loaded. */
+    private var loaded: InputMethod = InputMethod.ENGLISH
+
+    /**
+     * True in the guide's and the playground's fields, which teach English: they type English whatever is switched on, and
+     * switching waits for the next field.
+     */
+    var englishOnly = false
+        set(value) {
+            if (field == value) return
+            field = value
+            words.other = !current.isEnglish
+        }
+
+    /** The input method typing now. English until the settings say otherwise, and always in the guide. */
+    val current: InputMethod get() = if (englishOnly) InputMethod.ENGLISH else loaded
     /** The input methods that are on, in the overlay's order. */
     var on: List<InputMethodIndex.Entry> = listOf(InputMethodIndex.ENGLISH)
         private set
@@ -28,7 +41,7 @@ internal class Languages(private val context: Context, english: Words, private v
     private var target = InputMethod.ENGLISH_ID
 
     /** Whether holding Sym opens the overlay: only with two or more on. */
-    val switching get() = on.size > 1
+    val switching get() = on.size > 1 && !englishOnly
 
     /** Reads which input methods are on and which types now, as a field starts: Settings may have changed them. */
     fun refresh() {
@@ -62,9 +75,9 @@ internal class Languages(private val context: Context, english: Words, private v
 
     private fun apply(method: InputMethod, words: WordList?, ticket: Int) {
         if (ticket != loading) return
-        current = method
+        loaded = method
         list = words
-        this.words.other = !method.isEnglish
+        this.words.other = !current.isEnglish
         changed(method)
     }
 }

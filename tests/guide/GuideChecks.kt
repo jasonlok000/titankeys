@@ -1,5 +1,6 @@
 package com.atlas.keyboard
 
+import java.io.File
 import com.atlas.keyboard.KeyboardEvent.Chosen
 import com.atlas.keyboard.KeyboardEvent.Fixed
 import com.atlas.keyboard.KeyboardEvent.GroupPicked
@@ -660,7 +661,7 @@ private fun oneInstructionAtATime() {
     same(clown.event(FieldChanged(CLOWN_LINE, 7, 7)), GuideVerdict.Done, "The clown finishes it")
     same(clown.step.done to clown.step.rain, "Hey, that's you." to CLOWN, "and it's you, raining down")
     for (hunt in listOf(WEIRD_HUNT, CLOWN_HUNT)) for (line in listOf(hunt.mock, hunt.hint, hunt.skip, hunt.fast))
-        same(line.length <= LINE_MOST, true, "The hunt's \"$line\" is one line")
+        same(fits(line), true, "The hunt's \"$line\" is one line")
     same(CLOWN_HUNT.skip.contains("skip") && WEIRD_HUNT.skip.contains("skip"), true, "Each hunt says it's ok to skip, at the end")
     same(WEIRD_HUNT.fast, "Quick. Just like you in bed.", "A quick find of ∞ gets the owner's chip")
     same(WEIRD_HUNT.slow(40), "That took 40 seconds. Still longer than you claim to last.", "and a slow one the owner's line")
@@ -717,7 +718,7 @@ private fun theLadderOnTitanKeys() {
     same(step.lessons, setOf(GuideLesson.BarHold), "Only the selected word's menu: typing, swiping, Space and Backspace are blocked")
     same(step.stages.map { it.text }, listOf("Tap TitanKeys on the bar. Nothing gets saved.", "Press I/K to save it.",
         "Press I/K again to favourite it."), "Tap, I/K, then I/K again: the keys named in pairs (owner, #67)")
-    same(step.done to step.praise, "Favourited. Good taste." to "O/L steps it back down. P/Backspace closes it.", "Done and praise")
+    same(step.done to step.praise, "Favourited. Good taste." to "O/L steps it back down. P/Backspace closes the menu.", "Done and praise")
     // The show-only menu opens at not saved: the ladder's I is Save, then Favourite.
     same(MenuKeys.choices(MenuKeys.Step.New).i to MenuKeys.choices(MenuKeys.Step.Saved).i, MenuKeys.Button.Save to MenuKeys.Button.Favourite,
         "Not saved, I saves; saved, I favourites")
@@ -787,7 +788,7 @@ private fun theMenuSlidesOffTrackMoves(step: GuideStep) {
     same(blockedChip(step, GuideLesson.Cursor.name), "Space taps are blocked. Tap TitanKeys on the bar.", "Space taps that would select")
     same(blockedChip(step, GuideLesson.Space.name), "Spaces are blocked here. Tap TitanKeys.", "A space")
     same(blockedChip(step, GuideLesson.Backspace.name), "Backspace is blocked here. Tap TitanKeys.", "Backspace with the menu shut")
-    for (lesson in GuideLesson.entries) same(blockedChip(step, lesson.name).length <= 50, true, "The lock's chip for $lesson fits")
+    for (lesson in GuideLesson.entries) same(fits(blockedChip(step, lesson.name)), true, "The lock's chip for $lesson fits")
     // A tap is as good as a hold now, so nothing on the slide says to hold, or not to tap.
     val words = step.stages.map { it.text } + listOfNotNull(step.help, step.done, step.praise) +
         GuideLesson.entries.map { blockedChip(step, it.name) } + listOf(MENU_CLOSED, MENU_UNSAVED, MENU_NOT_BOX, MENU_MISSED)
@@ -997,9 +998,9 @@ private fun stepsStartInTheRightMenu() {
 /** Every slide: one-line words, and each slide unlocks only what it teaches. */
 private fun chapterOne() {
     for (step in GUIDE_STEPS.filter { it.chapter != GuideChapter.End }) {
-        for (line in listOf(step.title, step.done)) same(line.length <= TITLE_MOST, true, "\"$line\" is one line")
+        for (line in listOf(step.title, step.done)) same(fits(line, TITLE_MOST), true, "\"$line\" is one line")
         for (line in step.stages.map { it.text } + step.praise + listOfNotNull(step.help, step.helpTitle))
-            same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+            same(fits(line), true, "\"$line\" is one line")
     }
     val keys = setOf(GuideLesson.Typing, GuideLesson.Backspace)
     val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
@@ -1028,7 +1029,7 @@ private fun chapterOne() {
     for (step in GUIDE_STEPS) for (lesson in GuideLesson.entries) {
         val said = blockedChip(step, lesson.name)
         same(said.contains("blocked", ignoreCase = true) || said.startsWith("Blocked"), true, "\"$said\" says it's blocked")
-        same(said.length <= LINE_MOST, true, "The lock's chip \"$said\" is one line")
+        same(fits(said), true, "The lock's chip \"$said\" is one line")
     }
 }
 
@@ -1038,6 +1039,20 @@ private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideCh
 /** Titles shrink to fit their one line now (v5.2). */
 private const val TITLE_MOST = 38
 private const val LINE_MOST = 50
+/**
+ * The writer F's lines (docs/words-m1.md) that run past one line of the slide: used as written, as the rule for M1 says, and left
+ * for the Master to judge on the renders. Every other line keeps the limits.
+ */
+private val F_LONGER = setOf(
+    "Move the cursor to the underlined word.",
+    "Typed spaces are blocked. Taps on Space move the cursor.",
+    "Swiping's blocked here. Taps on Space move the cursor.",
+    "O/L steps it back down. P/Backspace closes the menu.",
+    "Press Sym, then swipe up on the keys or press Enter for the next page.",
+    "Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups.",
+    "It's not on the first page. Swipe up on the keys, or press Enter.",
+)
+private fun fits(line: String, most: Int = LINE_MOST) = line.length <= most || line in F_LONGER
 
 private fun wrongEventsDoNotFinish() {
     val flow = GuideFlow({ GuideSettings() })
@@ -1161,12 +1176,12 @@ private fun steeringToAWord() {
     fun marked(text: String, cursor: Int = text.trimEnd().length, line: IntRange = text.indices) =
         steerTarget(text, line, cursor)?.let { text.substring(it.first, it.last + 1) }
     // The slide's own line, alone, with the cursor at its end, as GuideActivity seeds it (owner, #66).
-    same(marked(STEER_LINE), "move", "The target is the line's verb, about one word back from the cursor")
+    same(marked(STEER_LINE), "cursor", "The target is the word right before the cursor's, one word back (F)")
     same(STEER_LINE.first(), 'H', "The line keeps its H for the finale's GO TOUCH GRASS NOW")
     same(STEER_LINE.contains("steer", ignoreCase = true), false, "No steering in the line")
     // No steering anywhere the guide talks (owner, #90: "change out the steering term"): titles, lines, stages, chips, chapters.
     val slide = GUIDE_STEPS.find { it.id == "steer" }!!
-    same(slide.title to slide.chapter.label, "Move to the underlined word." to "Cursor", "The slide's title and chapter")
+    same(slide.title to slide.chapter.label, "Move the cursor to the underlined word." to "Cursor", "The slide's title and chapter")
     val said = GUIDE_STEPS.flatMap { step ->
         listOfNotNull(step.title, step.body, step.done, step.praise, step.help, step.helpTitle, step.line, step.seed) +
             step.stages.map { it.text } + GuideLesson.entries.map { blockedChip(step, it.name) }
@@ -1216,8 +1231,8 @@ private fun theKeysPart() {
     same(ask(keysSet = false, skipped = setOf(SetupPart.Keys)), emptyList<SetupPart>(), "Skipped, it isn't asked again")
     same(setupToAsk({ false }, backDeclined = true) { false }.contains(SetupPart.Back), false, "Back's Not now still counts")
     same(setupToAsk({ false }, backDeclined = false) { false }, SetupPart.entries.toList(), "Nothing done: every part, in order")
-    val skip = SetupPart.Keys.skip.orEmpty()
-    same(skip.startsWith("Skip") && "won't work" in skip, true, "Its skip says what won't work: \"$skip\"")
+    same(SetupPart.Keys.skip to SetupPart.KEYS_WARN_SKIP, "Not now" to "Skip anyway", "Not now, then the warning's Skip anyway")
+    same("won't" in SetupPart.KEYS_WARN_BODY && SetupPart.KEYS_WARN_TITLE.endsWith("?"), true, "The warning says what won't work")
     same(SetupPart.Keys.body.contains("Programmable key") && SetupPart.Keys.action.contains("Shortcut keys"), true, "It names the mode and the page")
 
     // The slides that need a key, and their one line once the part was skipped.
@@ -1233,7 +1248,7 @@ private fun theKeysPart() {
     for (step in GUIDE_STEPS.filter { it.id !in needs }) same(keyOff(step, skipped = true) { false }, null, "${step.id} needs neither")
     for (key in listOf(SYM_KEY, FN_KEY)) {
         val line = keyOffLine(key)
-        same(line.startsWith(key) && "Skip" in line && line.length <= LINE_MOST, true, "One line that says to skip: \"$line\"")
+        same(line.startsWith(key) && "skip" in line && line.length <= LINE_MOST, true, "One line that says to skip: \"$line\"")
     }
 }
 
@@ -1251,62 +1266,102 @@ private fun eachPageSaysWhereYouAre() {
     // Enter and Backspace really page there: Enter the next page, as a swipe up, and Backspace the one before.
     same(Modifiers.panelScroll(66, Panel.Symbols) to Modifiers.panelScroll(67, Panel.Symbols), -1f to 1f, "Enter: next. Backspace: back")
     same(Modifiers.panelScroll(66, Panel.Emoji), -1f, "The same on the emoji")
+    same(Modifiers.panelScroll(66, Panel.Clipboard), 0f, "On the clipboard Enter pins, so it doesn't page")
+    // The guide's Recent emoji is told by its first one.
+    val recent = File("android/kotlin/com/atlas/keyboard/AtlasIme.kt").readText().substringAfter("GUIDE_RECENT_EMOJI = listOf(\"")
+    same(recent.startsWith(GUIDE_RECENT_MARK), true, "The guide's Recent starts with $GUIDE_RECENT_MARK")
+
+    // The & (symmain): the first group's first page.
+    val amp = GuideFlow({ GuideSettings() })
+    amp.start("symmain")
+    same(amp.liveLine(), null, "Panel closed: the stage's own instruction")
+    amp.event(face(Panel.Symbols, "1/9", "&", "%"))
+    same(amp.liveLine() to amp.panelHint(), SYMMAIN_PAGES[PanelSpot.Found] to "Sym twice closes it.", "The &'s page, and the way out")
+    amp.event(face(Panel.Symbols, "2/9", "√"))
+    same(amp.liveLine(), "Too far. Swipe down on the keys or press Backspace.", "A later page: back")
+    amp.event(face(Panel.Symbols, "1/2", "–"))
+    same(amp.liveLine(), SYMMAIN_PAGES[PanelSpot.OtherGroup], "Another group")
+    amp.event(face(Panel.Emoji, "1/1", GUIDE_RECENT_MARK))
+    same(amp.liveLine() to amp.panelHint(), "Emoji already? Patience. Sym again closes them." to null, "The emoji")
+    amp.event(face(Panel.Settings, null, "Swipe"))
+    same(amp.liveLine(), "Wrong page. Alt goes back to the symbols.", "Quick settings")
 
     // The ∞ hunt, page by page.
     val groups = GuideFlow({ GuideSettings() })
     groups.start("symgroups")
-    val first = groups.instruction
-    same(first.contains("on the keys") && first.contains("Enter") && first.length <= LINE_MOST, true, "It names both ways: \"$first\"")
-    same(groups.liveLine(), null, "Panel closed: the slide's own instruction")
+    same(groups.instruction, "Press Sym, then swipe up on the keys or press Enter for the next page.", "It names both ways")
     groups.event(face(Panel.Symbols, "1/9", "&", "%"))
-    same(groups.liveLine() to groups.panelHint(), PAGE_NOT_HERE to "To leave, press Sym twice.", "Sym's first page: on to the next, and the way out under it")
+    same(groups.liveLine() to groups.panelHint(), "Not on this page. Swipe up on the keys or press Enter." to "Sym twice closes it.",
+        "Sym's first page: on to the next, and the way out under it")
     groups.event(face(Panel.Symbols, "2/9", "√", WEIRD))
-    same(groups.liveLine(), "∞ is on this page. Press its key.", "The page with ∞: it's here")
+    same(groups.liveLine(), "It's on this page. Find ∞ and press its key.", "The page with ∞")
     groups.event(face(Panel.Symbols, "3/9", "√"))
-    same(groups.liveLine(), PAGE_PAST, "Past it: back, on the keys or Backspace")
+    same(groups.liveLine(), "Too far. Swipe down on the keys or press Backspace.", "Past it: back")
     groups.event(face(Panel.Symbols, "1/9", "&"))
-    same(groups.liveLine(), PAGE_BEFORE, "Before it again: on")
+    same(groups.liveLine(), "Not on this page. Swipe up on the keys or press Enter.", "Back on the first page: on again")
     groups.event(KeyboardEvent.GroupPicked(3))
-    groups.event(face(Panel.Symbols, "4/4", "¢"))
-    same(groups.liveLine(), GROUP_NOT_HERE, "Another group's last page, ∞ never seen there: another group")
+    groups.event(face(Panel.Symbols, "1/2", "½"))
+    same(groups.liveLine(), SYMGROUPS_PAGES[PanelSpot.OtherGroup], "Another group, by its first page")
+    groups.event(face(Panel.Symbols, "2/2", "⅛"))
+    same(groups.liveLine(), SYMGROUPS_PAGES[PanelSpot.OtherGroup], "and its later pages")
     groups.event(face(Panel.Emoji, "1/5", "😀"))
-    same(groups.liveLine() to groups.panelHint(), "Emoji. Press Sym to close, then Sym again." to null, "The emoji on the ∞ slide: how to get back")
-    groups.event(face(Panel.Settings, null, "Swipe"))
-    same(groups.liveLine(), SETTINGS_PAGE, "Quick settings: how to get back")
+    same(groups.liveLine() to groups.panelHint(), "Not emoji. Sym closes them. Then press Sym once." to null, "The emoji on the ∞ slide")
+    groups.event(face(Panel.Clipboard, null, "Per my last…"))
+    same(groups.liveLine(), "Wrong page. Alt goes back to the symbols.", "The clipboard on the ∞ slide")
     groups.event(KeyboardEvent.PanelFace(Panel.Closed, emptyMap()))
-    same(groups.liveLine() to groups.panelHint(), null to null, "Closed again: the slide's own instruction, nothing under it")
+    same(groups.liveLine() to groups.panelHint(), null to null, "Closed again: the stage's own instruction, nothing under it")
 
-    // The clown, on the emoji.
+    // The clown: Recent, Smileys, another group.
     val clown = GuideFlow({ GuideSettings() })
     clown.start("clown")
     clown.event(face(Panel.Symbols, "1/9", "&"))
-    same(clown.liveLine(), "These are symbols. Press Sym again for emoji.", "Symbols on the clown slide: Sym again")
-    clown.event(face(Panel.Emoji, "1/6", "😀"))
-    same(clown.liveLine() to clown.panelHint(), PAGE_NOT_HERE to "To leave, press Sym.", "The emoji, no clown: on, and the way out")
-    clown.event(face(Panel.Emoji, "2/6", CLOWN))
-    same(clown.liveLine(), "$CLOWN is on this page. Press its key.", "The clown's page")
+    same(clown.liveLine(), "That's symbols. Press Sym again for the emoji.", "Symbols on the clown slide")
+    clown.event(face(Panel.Emoji, null, GUIDE_RECENT_MARK, "🍆"))
+    same(clown.liveLine() to clown.panelHint(), CLOWN_PAGES[PanelSpot.Recent] to "Sym closes the emoji.", "The guide's Recent")
+    clown.event(face(Panel.Emoji, "1/9", SMILEYS_HOME, "😃"))
+    same(clown.liveLine(), "Not on this page. Swipe up on the keys or press Enter.", "Smileys' first page: on")
+    clown.event(face(Panel.Emoji, "3/9", "🤠", CLOWN))
+    same(clown.liveLine(), "It's on this page. Find 🤡 and press its key.", "The clown's page")
+    clown.event(face(Panel.Emoji, "4/9", "😺"))
+    same(clown.liveLine(), "Too far. Swipe down on the keys or press Backspace.", "Past the clown")
+    clown.event(face(Panel.Emoji, "1/6", "👋"))
+    same(clown.liveLine(), CLOWN_PAGES[PanelSpot.OtherGroup], "Another group")
 
-    // The clipboard, one page of clips.
+    // The clipboard: the guide's clips, and Pinned.
     val clips = GuideFlow({ GuideSettings() })
     clips.start("clipboard")
     clips.event(face(Panel.Symbols, "1/9", "&"))
     same(clips.liveLine(), "Press A for the clipboard.", "Symbols on the clipboard slide: A")
-    clips.event(face(Panel.Clipboard, null, "Per my last message"))
-    same(clips.liveLine() to clips.panelHint(), CLIP_PAGE to "To leave, press Sym.", "The clipboard: what to do, and the way out")
-    clips.event(face(Panel.Clipboard, "1/2", "Per my last message"))
-    same(clips.panelHint(), "$CLIP_MORE To leave, press Sym.", "More pages of clips: how to get to them")
+    clips.event(face(Panel.Clipboard, null, "Per my last…", PRANK_CLIP.take(8) + "…"))
+    same(clips.liveLine(), CLIPBOARD_PAGES[PanelSpot.Found], "The nice clip's page, told by its start")
+    same(clips.panelHint(), "$CLIP_KEYS_REMINDER Sym closes the clipboard. Alt goes back to the symbols.", "The reminder and the way out")
+    clips.event(face(Panel.Clipboard, "2/2", GUIDE_CLIPS.first()))
+    same(clips.liveLine(), "Not on this page. Swipe up or down on the keys for the others.", "Another page of clips")
+    clips.event(face(Panel.Clipboard, null, "←", "✕"))
+    same(clips.liveLine(), CLIPBOARD_PAGES[PanelSpot.OtherGroup], "Pinned, with none of the guide's clips")
 
-    // Each line is one line, and every swipe on a panel says where: on the keys, as a first-time user may swipe on the screen.
-    val lines = listOf(PAGE_NOT_HERE, PAGE_PAST, PAGE_BEFORE, GROUP_NOT_HERE, CLIP_PAGE, CLIP_MORE, SETTINGS_PAGE, pageFound(WEIRD)) +
-        PANEL_LEAVE.values + Panel.entries.flatMap { open -> Panel.entries.map { wrongPanel(open, it) } }
-    for (line in lines) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
-    val said = GUIDE_STEPS.filter { it.findIn != null }.flatMap { s -> s.stages.map { it.text } + s.praise + listOfNotNull(s.help) } +
-        lines + listOf(WEIRD_HUNT, CLOWN_HUNT).flatMap { listOf(it.mock, it.hint, it.skip) }
-    for (line in said.filter { Regex("(?i)swipe|up or down|sideways").containsMatchIn(it) })
+    // The paste slide needs no panel.
+    val paste = GuideFlow({ GuideSettings(fnAsCtrl = true) })
+    paste.start("paste")
+    paste.event(face(Panel.Symbols, "1/9", "&"))
+    same(paste.liveLine() to paste.panelHint(), PASTE_PAGES[PanelSpot.Symbols] to null, "A panel on the paste slide: how to close it")
+
+    // Every slide that opens a panel has a line for every place it can be.
+    val places = mapOf(
+        "symmain" to listOf(PanelSpot.Found, PanelSpot.Before, PanelSpot.Past, PanelSpot.OtherGroup, PanelSpot.Emoji, PanelSpot.Clipboard, PanelSpot.Settings),
+        "symgroups" to listOf(PanelSpot.Found, PanelSpot.Before, PanelSpot.Past, PanelSpot.OtherGroup, PanelSpot.Emoji, PanelSpot.Clipboard, PanelSpot.Settings),
+        "clown" to listOf(PanelSpot.Found, PanelSpot.Before, PanelSpot.Past, PanelSpot.OtherGroup, PanelSpot.Recent, PanelSpot.Symbols, PanelSpot.Clipboard, PanelSpot.Settings),
+        "clipboard" to listOf(PanelSpot.Found, PanelSpot.Before, PanelSpot.OtherGroup, PanelSpot.Symbols, PanelSpot.Emoji, PanelSpot.Settings),
+        "paste" to listOf(PanelSpot.Symbols, PanelSpot.Emoji, PanelSpot.Clipboard, PanelSpot.Settings),
+    )
+    for ((id, spots) in places) for (spot in spots) same(step(id).pageLines[spot] != null, true, "$id has a line for $spot")
+
+    // Every swipe on a panel says where: on the keys, as a first-time user may swipe on the screen.
+    val said = GUIDE_STEPS.flatMap { s -> s.stages.map { it.text } + s.praise + s.pageLines.values + listOfNotNull(s.leaveLine) } +
+        listOf(WEIRD_HUNT, CLOWN_HUNT).flatMap { listOf(it.mock, it.hint, it.skip) } + listOf(1, 2, 4).map(::groupsPraise)
+    for (line in said.filter { Regex("(?i)swip(e|ing) (up|down|left|right)|up or down|left or right|sideways").containsMatchIn(it) })
         same(line.contains("on the keys"), true, "\"$line\" says the swipe is on the keys")
-    same(listOf("symmain", "symgroups", "clown", "clipboard").map { step(it).findIn },
-        listOf(Panel.Symbols, Panel.Symbols, Panel.Emoji, Panel.Clipboard), "Every slide with a panel follows its pages")
-    val boring = java.io.File("app/settings/guide-boring.tsx").readText().lines()
+    val boring = File("app/settings/guide-boring.tsx").readText().lines()
         .filter { line -> listOf("\"The Sym panel\"", "\"Emoji\"", "\"The clipboard\"").any { it in line } }
     same(boring.size, 3, "The boring guide's panel topics")
     for (line in boring) for (sentence in line.split(". ").filter { Regex("(?i)\\bswipe").containsMatchIn(it) })
@@ -1320,7 +1375,7 @@ private fun theContactsPart() {
     same(ask(answered = false), listOf(SetupPart.Contacts), "It shows until it's answered")
     same(ask(answered = true), emptyList<SetupPart>(), "and never again once it is")
     same(SetupPart.Contacts.skip, "Not now", "Not now moves on")
-    same("stay on this phone" in SetupPart.Contacts.body, true, "It says the names stay on the phone before Android asks")
+    same("never leave your phone" in SetupPart.Contacts.body, true, "It says the names stay on the phone before Android asks")
 }
 
 private fun grabbingABunch() {
@@ -1751,7 +1806,7 @@ private fun runThroughFixes() {
     same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: it would replace TitanKeys")
     for (id in listOf("steer", "selectmore")) {
         same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
-        same(blockedChip(step(id), GuideLesson.Space.name), "Spaces are blocked. Taps on Space move the cursor.", "Space on $id")
+        same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space move the cursor.", "Space on $id")
     }
     same(blockedChip(step("swipe"), GuideLesson.Space.name), "Spaces are blocked here. Swipes space themselves.", "Space on swipe")
     same(keyboard.contains("keyCode == KeyEvent.KEYCODE_SPACE -> GuideLesson.Space"), true, "A pressed Space is its own lesson")

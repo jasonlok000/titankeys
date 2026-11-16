@@ -189,18 +189,10 @@ private fun framesFor(step: GuideStep): List<Frame> {
         frames += frame("2-hunt${HUNT_HINT_SECONDS}s", step.title, huntLine(stage.text, HUNT_HINT_SECONDS), chip = hunt.hint, stage = stage)
         frames += frame("2-hunt${HUNT_SKIP_SECONDS}s", step.title, huntLine(stage.text, HUNT_SKIP_SECONDS), chip = hunt.skip, stage = stage)
     }
-    // The instruction for each page of the panel that's open (owner, M1): see panelLine.
-    step.findIn?.let { want ->
+    // The line for each place in the panels (owner, M1; F's words): see panelLine. One frame for each line the slide has.
+    for ((spot, line) in step.pageLines) {
         val stage = step.stages.last()
-        val symbol = step.symbol.orEmpty()
-        val pages = if (want == Modifiers.Panel.Clipboard) listOf(Triple<String, PanelPage, Int?>("clips", PanelPage(want, emptySet()), null))
-        else listOf(
-            Triple<String, PanelPage, Int?>("next", PanelPage(want, emptySet(), 1, 9), null),
-            Triple("found", PanelPage(want, setOf(symbol), 2, 9), 2),
-            Triple("past", PanelPage(want, emptySet(), 3, 9), 2),
-            Triple("othergroup", PanelPage(want, emptySet(), 4, 4), null),
-        )
-        for ((name, page, seen) in pages) panelLine(step, page, seen)?.let { frames += frame("2-page-$name", step.title, it, stage = stage) }
+        frames += frame("2-page-${spot.name.lowercase()}", step.title, line, stage = stage)
     }
     if (step.id == "selectmore") {
         val aim = field.target!!

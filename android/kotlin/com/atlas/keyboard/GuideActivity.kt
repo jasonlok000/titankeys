@@ -1052,7 +1052,13 @@ class GuideActivity : Activity() {
         openedPart?.let { part ->
             openedPart = null
             main.removeCallbacks(watchSetup)
-            if (!PhoneSetup.done(this, part)) if (part.skip != null) showSetupSkip(part) else part.help?.let(::showHint)
+            if (!PhoneSetup.done(this, part)) {
+                // A part that can be passed over keeps its Not now in the hint line, so its help takes the body's place.
+                if (part.skip != null) {
+                    part.help?.let { swapIn(body, it, 0) }
+                    showSetupSkip(part)
+                } else part.help?.let(::showHint)
+            }
         }
         if (autoPart != null) {
             main.removeCallbacks(openAuto)
@@ -2961,7 +2967,11 @@ class GuideActivity : Activity() {
 
     private fun offerPressed() {
         setupPart?.let {
-            if (!setupChanging) openPart(it)
+            if (keysWarning) {
+                // Set them up: back to the part as it was.
+                keysWarning = false
+                setUp(it, auto = false)
+            } else if (!setupChanging) openPart(it)
             return
         }
         val step = flow.step
@@ -3056,6 +3066,7 @@ class GuideActivity : Activity() {
             for (view in listOf(chapter, close)) view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         }
         setupPart = part
+        keysWarning = false
         decorate(GuideDecor.SETUP)
         guideLook(false)
         unlockKeyboard()
@@ -3109,10 +3120,20 @@ class GuideActivity : Activity() {
      */
     private fun showSetupSkip(part: SetupPart) {
         hint.setOnClickListener(null)
-        val skip = part.skip ?: return
+        val skip = (if (keysWarning) SetupPart.KEYS_WARN_SKIP else part.skip) ?: return
         showHint(skip)
         hint.onPress(haptics) {
             if (setupPart != part || setupChanging) return@onPress
+            // The keys' Not now warns first, with what won't work: Skip anyway passes it, Set them up goes back (owner, #72).
+            if (part == SetupPart.Keys && !keysWarning) {
+                keysWarning = true
+                swapIn(title, SetupPart.KEYS_WARN_TITLE, 0)
+                swapIn(body, SetupPart.KEYS_WARN_BODY, ENTER_STAGGER_MILLIS)
+                showOffer(SetupPart.KEYS_WARN_BACK)
+                showSetupSkip(part)
+                return@onPress
+            }
+            keysWarning = false
             hint.setOnClickListener(null)
             main.removeCallbacks(watchSetup)
             openedPart = null
@@ -3120,6 +3141,9 @@ class GuideActivity : Activity() {
             checkKeyboard()
         }
     }
+
+    /** The keys' part shows its warning, after Not now: its button goes back to the part. */
+    private var keysWarning = false
 
     /** The key [step] needs that isn't Programmable key, after setup's Keys part was skipped, or null. See [programmableKeys]. */
     private fun keyOff(step: GuideStep): String? = keyOff(step, PhoneSetup.skipped(this, SetupPart.Keys)) { name ->
@@ -3154,7 +3178,14 @@ class GuideActivity : Activity() {
         // Android has answered about the contacts, yes or no: the guide doesn't ask again, and setup moves on (owner, #87).
         if (requestCode == CONTACTS_REQUEST) {
             PhoneSetup.skip(this, SetupPart.Contacts)
-            checkKeyboard()
+            if (TypingSettings.contactNames(this)) checkKeyboard() else {
+                // Android said no: the part says so, and where to turn it on later, then setup moves on.
+                hideHint()
+                hint.setOnClickListener(null)
+                offer.visibility = View.GONE
+                SetupPart.Contacts.help?.let { swapIn(body, it, 0) }
+                main.postDelayed({ checkKeyboard() }, CONTACTS_NO_MILLIS)
+            }
             return
         }
         if (requestCode != DISCLOSURE_REQUEST) return
@@ -4834,6 +4865,8 @@ class GuideActivity : Activity() {
         private const val DISCLOSURE_REQUEST = 8
         private const val SHARE_REQUEST = 9
         private const val CONTACTS_REQUEST = 10
+        /** How long "Android said no" stays before setup moves on. */
+        private const val CONTACTS_NO_MILLIS = 2500L
         /** How often the guide looks at the part whose page is open. Reading these settings is cheap. */
         private const val SETUP_POLL_MILLIS = 400L
         /** How long the guide waits to be in front again after it closes a page, before it sends for itself. */

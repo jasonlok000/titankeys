@@ -42,9 +42,9 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "bar_word", label: "Tap a word", about: "When you tap a word on the bar to put it in." },
     { id: "menu_open", label: "Word menu opens", about: "When you hold a word on the bar and its menu opens." },
     { id: "menu_mark", label: "Marked menu button changes", about: "When your finger moves the mark to another button in the word menu." },
-    // F: drafts (#67): the word menu's keys named in pairs, I/K and O/L, in each about below.
+    // The word menu's keys named in pairs, I/K and O/L, in each about below (#67). F (docs/words-m1.md).
     { id: "menu_press", label: "Press a word menu button", about: "A light tick the moment you press I/K or O/L in the word menu, before the step's own haptic plays with its effect." },
-    { id: "menu_closed", label: "Word menu closed", about: "When you press Back and the word menu closes without a pick." },
+    { id: "menu_closed", label: "Word menu closed", about: "When you press P/Backspace or Back and the word menu closes without a pick." },
     { id: "word_saved", label: "Save", about: "When you save a word from the word menu, with I/K or the Save button. Two light taps settle into a firm one: kept." },
     { id: "word_blocked", label: "Block", about: "When you block a word from the word menu, with O/L on a word that isn't saved. A firm hit that trails off: gone." },
     { id: "word_favourited", label: "Favourite", about: "When you make a saved word a favourite, with I/K or the Favourite button. Save's taps, ending on a stronger hit." },

@@ -50,19 +50,19 @@ Because `isAccessibilityTool` is false:
 
 **Buttons:** "Agree" and "Not now". Only "Agree" counts as agreement. Back, Home or tapping outside counts as "Not now", never as agreement. The screen never closes by itself.
 
-**The text** (`back_disclosure_*` in `android/src/main/res/values/strings.xml`; drafts for the writer, F):
+**The text** (`back_disclosure_*` in `android/src/main/res/values/strings.xml`; the writer F's words, docs/words-m1.md):
 
 > **Let TitanKeys handle Back?**
 >
-> It uses Android's Accessibility service. It's optional.
+> TitanKeys uses Android's Accessibility service for three things. It's optional.
 >
-> - **Back:** one press closes the keyboard and goes back in the app.
+> - **Back:** one press closes the keyboard and goes back.
 > - **Keys:** at a few moments, it sees which keys you press before the app does.
 > - **Touchpad:** it keeps the touchpad on the keys when a notification pops up.
 >
-> **It can't read your screen, and it doesn't keep or send anything.**
+> **It can't read your screen, and it doesn't keep or send anything it sees.**
 >
-> Say no and TitanKeys still types and swipes. You can turn it on later in Settings > Setup.
+> Say no and TitanKeys still types and swipes. Back may take two presses. You can turn it on later in Settings > Setup.
 >
 > What exactly does it see?
 >
@@ -72,20 +72,13 @@ Because `isAccessibilityTool` is false:
 
 **"What exactly does it see?"** opens, under the lines:
 
-> **Back:** when you press Back, TitanKeys sends it on for you, so one press closes the keyboard and goes back in the app.
->
-> **Keys:** at these moments only, it sees which keys you press before the app does:
+> It sees which keys you press only at these moments:
 >
 > - while the Sym panel is open, so Enter and Backspace turn its pages instead of reaching the app;
-> - in Smart Launcher's search field, where Smart Launcher would take your keys before TitanKeys gets them, so TitanKeys types there as in any other app;
+> - in Smart Launcher's search field, where Smart Launcher would take your keys first, so TitanKeys types there as in any other app;
 > - for a moment after you press Back, so your next press of Back reaches the app.
 >
-> **Touchpad:** while you type, it keeps the touchpad on the keys when a notification shows at the top of the screen.
->
-> - It can't read your screen or the text in your apps.
-> - It doesn't keep or send the keys it sees. They're used on your phone straight away, then forgotten.
->
-> Without it, Back may take two presses, and those keys work as they would without TitanKeys.
+> The keys are used on your phone straight away, then forgotten. It never sees the text in your apps.
 
 **Against Google's rules:** what the service accesses (key presses at named moments, and an overlay for the touchpad) and how it's used are on the first screen, one line each, with the full list one press away on the same screen. The active yes is the pill. It's its own screen, shown during normal use before Accessibility opens, and not combined with the Share swipes screen.
 
@@ -95,7 +88,7 @@ After **Not now**, the guide moves on to the next step. The setup row stays "Not
 
 **Needs a code change:** the guide's front page waits until the service is on today, so a user can't decline. It must let the user go on without it (see `build-tasks.md`). **Check on the phone:** what exactly changes without the service ("Back may take two presses"), so the "If you say no" line is true.
 
-**The service description in Android's settings** (`back_service_description`) doesn't replace the disclosure. It's shortened to match it (#79): "Sends Back, so one press closes the keyboard and goes back. At a few moments it sees which keys you press, and it keeps the touchpad on the keys when a notification pops up. It can't read your screen, and it doesn't keep or send anything."
+**The service description in Android's settings** (`back_service_description`) doesn't replace the disclosure. It's shortened to match it (#79, F's words): "Makes one press of Back close the keyboard and go back, and keeps the touchpad on the keys when a notification shows. At a few moments, such as while the Sym panel is open, it sees the keys you press. It can't read your screen, and it doesn't keep or send anything."
 
 ## 3. Shot list for the declaration video
 

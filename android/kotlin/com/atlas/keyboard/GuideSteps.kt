@@ -35,7 +35,7 @@ internal enum class GuideTone { Orange, Ink }
 internal enum class GuideChapter(val label: String, val roast: String? = null) {
     Typing("Typing", "OK, you're not that dumb."),
     Delete("Delete", "Fine, you're not useless. You delete stuff almost as fast as you screw it up."),
-    // F: draft, the chapter is "Cursor", with no steering in it (owner, #66 and #90).
+    // The chapter is "Cursor", with no steering in it (owner, #66 and #90). F (docs/words-m1.md).
     Steering("Cursor", "Wow, you moved a cursor. The bar was on the floor and you still needed a run-up."),
     Symbols("Symbols and emoji",
         "Holy shit, you found the clown. Took you long enough, and you see it in the mirror every day."),
@@ -64,14 +64,14 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
         "Switch greyed out? Android is being careful. In App info, open the menu and allow restricted settings."),
     // Sym and fn as Programmable key, both on the phone's one Shortcut keys page (owner, #72: in the guide's setup only, after
     // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.
-    // F: draft (#72): the title, body, button and the skip line, which says what won't work.
-    Keys("Make Sym and fn programmable.", "Set both to Programmable key in Shortcut keys. Sym's panels need it.", "Open Shortcut keys",
-        skip = "Skip. Sym's panels and fn's paste won't work without it."),
+    // Not now shows a warning first: see KEYS_WARN_TITLE. F (docs/words-m1.md).
+    Keys("Set up Sym and fn.", "Set both to Programmable key. Sym opens the panel, fn works as Ctrl.", "Open Shortcut keys",
+        "Sym key and fn key are both on that page. Pick Programmable key for each.", skip = "Not now"),
     // Names from contacts, last (owner, #87). It says what it's for and that the names stay on the phone before Android asks.
     // Not now moves on, and the guide never asks again.
-    // F: draft (#87).
-    Contacts("Swipe names from your contacts.", "Names swipe and get fixed like any word. They stay on this phone.", "Use my contacts",
-        skip = "Not now"),
+    // Its help shows if Android says no. F (docs/words-m1.md).
+    Contacts("Teach it your contacts' names.", "Names swipe and get fixed right. They never leave your phone.", "Use my contacts",
+        "Android said no. You can turn it on later in Settings > Setup.", skip = "Not now"),
     ;
 
     companion object {
@@ -80,6 +80,12 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
         /** The line that lands when a part is done, and when all of them are. */
         const val DONE = "Done."
         const val ALL_DONE = "All set."
+        /** Not now on the Keys part asks first, with what won't work (owner, #72: "skippable with a warning"). F (docs/words-m1.md). */
+        const val KEYS_WARN_TITLE = "Skip Sym and fn?"
+        const val KEYS_WARN_BODY = "Then Sym won't open its panel, and that's where symbols, emoji and the clipboard live. And fn won't " +
+            "work as Ctrl, so fn + V won't paste. You can set them later in Settings > Setup."
+        const val KEYS_WARN_SKIP = "Skip anyway"
+        const val KEYS_WARN_BACK = "Set them up"
     }
 }
 
@@ -159,10 +165,10 @@ internal enum class GuideBar {
  * whole guide is one text in one field: each word that you swipe or type moves the line on to the next word, whatever the word was,
  * so that nothing waits on one word. After the last word it starts again.
  */
-// F: "move the cursor" in place of "steer" (#66), draft.
+// F (docs/words-m1.md), "move the cursor" in place of "steer" (#66).
 internal object GuideScript {
     const val TEXT = "Nothing to unlearn: type with two hands or one, and TitanKeys fixes your typos as you go. Then swipe whole " +
-        "words on the same keys. Missed one? The right word is a tap away. Flick to delete, move the cursor and pick from Space, and " +
+        "words on the same keys. Missed one? The right word is a tap away. Flick to delete, move the cursor from Space, and " +
         "get every symbol and emoji without the screen. This is the ultimate keyboard, and these are the keys your Titan " +
         "deserves."
 
@@ -711,6 +717,8 @@ internal class GuideMemory {
     var page: PanelPage? = null
     /** The page of the open group where the slide's symbol showed last, or null if it hasn't shown in this group. */
     var seenOn: Int? = null
+    /** The open group is the slide's own, as its first page said, or null before a first page was seen. */
+    var home: Boolean? = null
 
     /** The field's text is longer than when this stage began: something was typed or pasted. */
     fun grew(event: KeyboardEvent) = event is FieldChanged && stageLength >= 0 && event.text.length > stageLength
@@ -789,6 +797,12 @@ internal class GuideStep(
      * leave ([panelLine]; owner, M1: "specific instructions within the different pages so the user will never be lost").
      */
     val findIn: Panel? = null,
+    /** What the first page of the slide's own group shows, to tell it from the others: see [followPanel]. */
+    val homeMark: String? = null,
+    /** The slide's line for each place in the panels, in place of its stage's (owner, M1): see [panelLine]. */
+    val pageLines: Map<PanelSpot, String> = emptyMap(),
+    /** The line under the instruction while the slide's own panel is open: how to leave it. */
+    val leaveLine: String? = null,
     /**
      * The menu that the keyboard is put in when the step starts, so that the step starts in the right place: the Sym panel for
      * the steps that need it, closed for the rest. Null leaves a step that uses the panel as it is.
@@ -954,8 +968,8 @@ internal fun holdTarget(text: String, cursor: Int): IntRange? {
  * Slide 7's line, alone in the field (owner, #66: "we only show one line now"). It keeps its first letter H, as the lines spell GO
  * TOUCH GRASS NOW. Its target is a word of its own, see [steerTarget].
  */
-// F: draft (#66), no "steer" in it. Any rewording keeps the H, and a word of four letters or more a word or so before the end.
-internal const val STEER_LINE = "Hold the second tap to move the cursor"
+// F (docs/words-m1.md). It keeps its H. Its target is "cursor", the word before "follows": see [steerTarget].
+internal const val STEER_LINE = "Hold the second tap and the cursor follows"
 
 /** Slide 8's line, with the words to grab in it. */
 internal const val GRAB_LINE = "Grab my whole heart with three taps"
@@ -967,7 +981,8 @@ internal const val ALT_LINE = "Read the fine print: Alt and A*"
 internal const val HOLD_SYMBOL = "?"
 internal const val HOLD_SYMBOL_KEY = "V"
 internal const val HOLD_SYMBOL_LINE = "Are you even reading this?"
-internal const val SYM_LINE = "Sym has the rest, terms & conditions apply"
+// F (docs/words-m1.md): the line stands on its own, with no slide before it.
+internal const val SYM_LINE = "Sym has all the symbols, terms & conditions apply"
 /** The symbol that the weird-one hunt looks for. Its title doesn't name it, its hunt does (owner, 2026-11-13). */
 internal const val WEIRD = "∞"
 // The owner's joke (2026-11-13): the line asks how long, and the ∞ the user adds is the answer, then "Sure you do." It starts with
@@ -1097,8 +1112,7 @@ internal class Hunt(val mock: String, val hint: String, val skip: String, val fa
 
 internal val WEIRD_HUNT = Hunt(
     "It goes on forever. Like this hunt.",
-    // F: draft (M1), the swipe on the keys.
-    "It's not on the first page. Swipe up on the keys.",
+    "It's not on the first page. Swipe up on the keys, or press Enter.",
     "Page two, near √ and ≈. Or skip it. It's ok.",
     "Quick. Just like you in bed.",
     // The seconds it really took (owner, 2026-11-13).
@@ -1127,12 +1141,10 @@ internal const val MENU_WORD = "TitanKeys"
 /** The pair of keys that steps a word up the menu: the drawing lights both at once (owner, #67). */
 internal val MENU_UP_KEYS = listOf("I", "K")
 internal const val MENU_CLOSED = "Closed it. Tap TitanKeys again."
-// F: the word menu's keys are named in pairs, I/K and O/L, and Back is P/Backspace (owner, #67). Drafts below.
+// The word menu's keys are named in pairs, I/K and O/L, and Back is P/Backspace (owner, #67). F (docs/words-m1.md), here and below.
 internal const val MENU_UNSAVED = "Unsaved. Cold. I/K, then I/K again."
 internal const val MENU_NOT_BOX = "Not the box. Tap TitanKeys on the bar."
-// F: draft (#67).
 internal const val MENU_MISSED = "I/K or O/L. Nothing else does anything here."
-// F: draft (#67).
 internal const val MENU_BLOCKED = "Blocked TitanKeys? Rude. I/K brings it back."
 
 /** The word menu slide's selected word in its line: TitanKeys, wherever [text] has it, or null. See [GuideStep.selected]. */
@@ -1353,8 +1365,7 @@ internal val GUIDE_STEPS = listOf(
             // One step at a time: the drawing hints Save on I/K, then Favourite on I/K again. The keys are named in pairs, and both
             // keys of the pair light together (owner, #67).
             // The hint lights them once, steady, and only once the menu is open: the screen waits for it (owner, v5.2).
-            // F: draft (#67).
-            GuideStage("Press I/K to save it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_SAVE) { event ->
+                        GuideStage("Press I/K to save it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_SAVE) { event ->
                 when {
                     event is MenuPicked && event.action == "Save" -> GuideVerdict.Done
                     // Held again after the save: it opens saved, and I on it favourites it, which is the whole slide.
@@ -1362,15 +1373,13 @@ internal val GUIDE_STEPS = listOf(
                     event is MenuPicked && event.action == "Close" -> GuideVerdict.Hint(MENU_CLOSED, stage = 0)
                     // O on a word that isn't saved blocks it, for show; I takes it back off (ladder v4).
                     event is MenuPicked && event.action == "Block" -> chip(MENU_BLOCKED)
-                    // F: draft (#67).
-                    event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I/K saves it.")
+                                        event is MenuPicked && event.action == "Unblock" -> chip("Unblocked. Now I/K saves it.")
                     event is MenuPicked && event.action == "Unsave" -> chip(MENU_UNSAVED)
                     else -> menuOffTrack(event)
                 }
             },
             // The top of the ladder: I again on a saved word makes it a favourite, and the hearts burst.
-            // F: draft (#67).
-            GuideStage("Press I/K again to favourite it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_FAVOURITE) { event ->
+                        GuideStage("Press I/K again to favourite it.", GuideCue.Spot(MENU_UP_KEYS, rounds = 1, together = true), MENU_FAVOURITE) { event ->
                 when {
                     event is MenuPicked && event.action == "Favourite" -> GuideVerdict.Done
                     // O on a saved word unsaves it: back to the save.
@@ -1381,8 +1390,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Favourited. Good taste.",
-        // F: draft (#67).
-        praise = "O/L steps it back down. P/Backspace closes it.",
+                praise = "O/L steps it back down. P/Backspace closes the menu.",
         line = MENU_LINE,
         seed = MENU_LINE,
         help = "Already selected. Tap TitanKeys on the bar.",
@@ -1476,8 +1484,8 @@ internal val GUIDE_STEPS = listOf(
     // STEERING: the slide's line again and again, with the cursor in the middle; the cursor gestures only.
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
-        // F: draft (#66).
-        title = "Move to the underlined word.",
+        // F (docs/words-m1.md).
+        title = "Move the cursor to the underlined word.",
         stages = listOf(
             GuideStage("Tap Space twice, and hold the second tap.") { event ->
                 when {
@@ -1680,6 +1688,9 @@ internal val GUIDE_STEPS = listOf(
         symbol = "&",
         usesPanel = true,
         findIn = Panel.Symbols,
+        homeMark = SYMBOLS_HOME,
+        pageLines = SYMMAIN_PAGES,
+        leaveLine = "Sym twice closes it.",
         setup = Panel.Closed,
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM), ""),
@@ -1692,8 +1703,7 @@ internal val GUIDE_STEPS = listOf(
         // bottom row or a sideways swipe, which works too and says so.
         stages = listOf(
             // Both ways to the next page, on the keys (owner, M1: "swipe up on the keyboard or enter for the next page").
-            // F: draft (M1).
-            GuideStage("Press Sym. Swipe up on the keys, or press Enter.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Press Sym, then swipe up on the keys or press Enter for the next page.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Finished
                     event is PanelSwiped && event.moved && abs(event.down) >= abs(event.across) -> {
@@ -1730,8 +1740,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Sure you do.",
-        // F: draft (M1), the swipes on the keys.
-        praise = "Pages: up or down on the keys. Groups: sideways.",
+        praise = "Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups.",
         line = GROUPS_LINE,
         seed = gapSeed(GROUPS_LINE, WEIRD),
         cursorAt = { gapCursor(GROUPS_LINE, WEIRD) },
@@ -1739,6 +1748,9 @@ internal val GUIDE_STEPS = listOf(
         hunt = WEIRD_HUNT,
         usesPanel = true,
         findIn = Panel.Symbols,
+        homeMark = SYMBOLS_HOME,
+        pageLines = SYMGROUPS_PAGES,
+        leaveLine = "Sym twice closes it.",
         setup = Panel.Closed,
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM), ""),
@@ -1775,6 +1787,9 @@ internal val GUIDE_STEPS = listOf(
         hunt = CLOWN_HUNT,
         usesPanel = true,
         findIn = Panel.Emoji,
+        homeMark = SMILEYS_HOME,
+        pageLines = CLOWN_PAGES,
+        leaveLine = "Sym closes the emoji.",
         setup = Panel.Closed,
         lessons = setOf(GuideLesson.Sym),
         rain = CLOWN,
@@ -1804,6 +1819,7 @@ internal val GUIDE_STEPS = listOf(
         seed = PASTE_SEED,
         needs = GuideNeed.FnAsCtrl,
         clip = PASTE_TEXT,
+        pageLines = PASTE_PAGES,
         preselect = true,
         rain = "🤪",
         lessons = setOf(GuideLesson.Ctrl),
@@ -1848,6 +1864,9 @@ internal val GUIDE_STEPS = listOf(
         setup = Panel.Closed,
         sandboxClips = GUIDE_CLIPS,
         findIn = Panel.Clipboard,
+        pageLines = CLIPBOARD_PAGES,
+        // The reminder and the way out, under the instruction while the clipboard is open.
+        leaveLine = "$CLIP_KEYS_REMINDER Sym closes the clipboard. Alt goes back to the symbols.",
         rain = "🫶",
         lessons = setOf(GuideLesson.Sym),
         demo = GuideDemo.Insert(listOf(Layout.SYM, Layout.CLIPBOARD_KEY), ""),
@@ -1868,9 +1887,9 @@ internal val SUMMARY_LINES get() = GUIDE_STEPS.filter { it.line.isNotEmpty() }.m
 
 /** What the groups slide says once done, besides its own praise: a way that worked too. See [GuideMemory.used]. */
 internal fun groupsPraise(used: Int) = when {
-    used and 4 != 0 -> "The bottom row works too. Up or down turns pages."
+    used and 4 != 0 -> "The bottom row works too. So does swiping up or down on the keys."
     used and 2 == 0 -> "Backspace and Enter turn pages too."
-    else -> "Up or down turns pages. The bottom row, groups."
+    else -> "Swipe up or down on the keys for pages. The bottom row, groups."
 }
 
 /**
@@ -1902,78 +1921,137 @@ internal fun panelPage(panel: Panel, labels: Map<String, String>): PanelPage? {
     return PanelPage(panel, labels.filterKeys { it != Layout.PAGE_POSITION }.values.toSet(), position?.get(0) ?: 1, position?.get(1) ?: 1)
 }
 
-/** Follows the panel for [GuideStep.findIn]: the page that's open, and where [symbol] showed last in the open group. */
-internal fun GuideMemory.followPanel(event: KeyboardEvent, symbol: String?) {
-    when {
-        event is KeyboardEvent.PanelFace -> {
-            val next = panelPage(event.panel, event.labels)
-            if (next == null || next.panel != page?.panel) seenOn = null
-            page = next
-            if (next != null && symbol != null && symbol in next.shown) seenOn = next.page
-        }
-        // Another group starts its own pages.
-        otherGroup(event) -> seenOn = null
-    }
-}
-
-// The lines for each page (owner, M1): where you are, how to get on or back, all on the keys, and how to leave. Paging is a
-// swipe up or down on the keys, or Enter for the next page and Backspace for the one before, on the symbols and the emoji
-// (Modifiers.panelScroll). The clipboard pages only by a swipe: there Enter pins and Backspace clears.
-// F: drafts (M1), every line below.
-internal const val PAGE_NOT_HERE = "Not here. Swipe up on the keys, or press Enter."
-internal const val PAGE_PAST = "Too far. Swipe down on the keys, or Backspace."
-internal const val PAGE_BEFORE = "Not yet. Swipe up on the keys, or press Enter."
-internal const val GROUP_NOT_HERE = "Not in this group. Swipe sideways on the keys."
-internal const val CLIP_PAGE = "Rest on each clip to read it. Paste the nice one."
-internal const val CLIP_MORE = "More clips: swipe up or down on the keys."
-internal const val SETTINGS_PAGE = "Quick settings. Press Alt to go back."
-internal fun pageFound(symbol: String) = "$symbol is on this page. Press its key."
-/** How to leave each panel: Sym goes from the symbols to the emoji, and from any other page it closes the panel. */
-internal val PANEL_LEAVE = mapOf(
-    Panel.Symbols to "To leave, press Sym twice.",
-    Panel.Emoji to "To leave, press Sym.",
-    Panel.Clipboard to "To leave, press Sym.",
-)
-
-/** The open panel isn't the slide's: how to get to the right one. */
-internal fun wrongPanel(open: Panel, want: Panel): String = when {
-    want == Panel.Clipboard -> "Press A for the clipboard."
-    open == Panel.Symbols && want == Panel.Emoji -> "These are symbols. Press Sym again for emoji."
-    open == Panel.Emoji -> "Emoji. Press Sym to close, then Sym again."
-    else -> "The clipboard. Alt goes back to the symbols."
-}
+/**
+ * Where the user is, for a slide's line for each page (owner, M1: "specific instructions within the different pages so the user
+ * will never be lost"). [Found], [Before] and [Past] are in the slide's own group: on the page with what it asks for, or before
+ * or after it. [Recent] is the guide's own Recent emoji. [Symbols] to [Settings] are a panel that isn't the slide's.
+ */
+internal enum class PanelSpot { Found, Before, Past, OtherGroup, Recent, Symbols, Emoji, Clipboard, Settings }
 
 /**
- * The instruction while a panel is open on a slide with [GuideStep.findIn], one line as every instruction is: what to do on this
- * page, or how to get to the next page or back. Null with the panel closed, so the slide's own instruction shows. The way out is
- * in the line under it: see [panelHint].
+ * The first item of the guide's own Recent emoji (AtlasIme's GUIDE_RECENT_EMOJI), which tells its page from the others. The
+ * guide checks that the list still starts with it.
  */
-internal fun panelLine(step: GuideStep, page: PanelPage?, seenOn: Int?): String? {
-    val want = step.findIn ?: return null
-    if (page == null) return null
-    if (page.panel == Panel.Settings) return SETTINGS_PAGE
-    if (page.panel != want) return wrongPanel(page.panel, want)
+internal const val GUIDE_RECENT_MARK = "🍑"
+/** The first symbol of the first group, on its first page, and the first emoji of Smileys: they tell the slide's group. */
+internal const val SYMBOLS_HOME = "&"
+internal const val SMILEYS_HOME = "😀"
+
+/**
+ * Follows the panel: the page that's open, whether it's in the slide's group ([GuideMemory.home], told by [GuideStep.homeMark]
+ * on a group's first page, where every group opens), and the page of that group where [GuideStep.symbol] showed last.
+ */
+internal fun GuideMemory.followPanel(event: KeyboardEvent, step: GuideStep) {
+    if (event !is KeyboardEvent.PanelFace) return
+    val next = panelPage(event.panel, event.labels)
+    if (next == null || next.panel != page?.panel) {
+        seenOn = null
+        home = null
+    }
+    page = next
+    if (next == null) return
+    // A group opens on its first page: that page says whose group it is. Later pages are reached by turning from it.
+    if (next.page == 1) {
+        val mark = step.homeMark
+        val now = mark == null || mark in next.shown || step.symbol?.let { it in next.shown } == true
+        if (now != home) seenOn = null
+        home = now
+    }
+    if (step.symbol != null && step.symbol in next.shown) seenOn = next.page
+}
+
+/** Where the user is now, from [page], for [step]: see [PanelSpot]. Null with the panel closed. */
+internal fun panelSpot(step: GuideStep, page: PanelPage?, home: Boolean?, seenOn: Int?): PanelSpot? {
+    page ?: return null
+    val want = step.findIn
+    if (want == null || page.panel != want) return when (page.panel) {
+        Panel.Symbols -> PanelSpot.Symbols
+        Panel.Emoji -> PanelSpot.Emoji
+        Panel.Clipboard -> PanelSpot.Clipboard
+        else -> PanelSpot.Settings
+    }
+    if (want == Panel.Clipboard) {
+        // Clips show cut short on their keys: the guide's own clips tell its Clipboard from Pinned, and the nice one its page.
+        fun shows(clip: String) = page.shown.any { it.isNotEmpty() && (clip.startsWith(it.removeSuffix("…")) || it.startsWith(clip)) }
+        return when {
+            GUIDE_CLIPS.none(::shows) -> PanelSpot.OtherGroup
+            shows(PRANK_CLIP) -> PanelSpot.Found
+            else -> PanelSpot.Before
+        }
+    }
     val symbol = step.symbol
     return when {
-        want == Panel.Clipboard -> CLIP_PAGE
-        symbol != null && symbol in page.shown -> pageFound(symbol)
-        seenOn != null && page.page > seenOn -> PAGE_PAST
-        seenOn != null && page.page < seenOn -> PAGE_BEFORE
-        page.page < page.pages -> PAGE_NOT_HERE
-        else -> GROUP_NOT_HERE
+        GUIDE_RECENT_MARK in page.shown -> PanelSpot.Recent
+        symbol != null && symbol in page.shown -> PanelSpot.Found
+        home != true -> PanelSpot.OtherGroup
+        seenOn != null && page.page > seenOn -> PanelSpot.Past
+        else -> PanelSpot.Before
     }
 }
 
 /**
- * The line under the instruction while the slide's own panel is open: how to leave it, and on a clipboard of more than one page,
- * how to see the rest. Null otherwise.
+ * The instruction while a panel is open, in place of the stage's: the slide's line for where the user is ([GuideStep.pageLines]).
+ * Null with the panel closed, or where the slide has no line for it, so the stage's own instruction shows.
  */
-internal fun panelHint(step: GuideStep, page: PanelPage?): String? {
-    val want = step.findIn ?: return null
-    if (page?.panel != want) return null
-    val leave = PANEL_LEAVE[want] ?: return null
-    return if (want == Panel.Clipboard && page.pages > 1) "$CLIP_MORE $leave" else leave
-}
+internal fun panelLine(step: GuideStep, page: PanelPage?, home: Boolean?, seenOn: Int?): String? =
+    panelSpot(step, page, home, seenOn)?.let(step.pageLines::get)
+
+/** The line under the instruction while the slide's own panel is open: how to leave it ([GuideStep.leaveLine]). */
+internal fun panelHint(step: GuideStep, page: PanelPage?): String? =
+    step.leaveLine?.takeIf { page != null && page.panel == step.findIn }
+
+// The words for each page are F's (docs/words-m1.md, "Every page says where you are"). Paging is a swipe up or down on the keys,
+// or Enter for the next page and Backspace for the one before, on the symbols and the emoji (Modifiers.panelScroll). The clipboard
+// pages only by a swipe: there Enter pins and Backspace clears.
+private const val TOO_FAR = "Too far. Swipe down on the keys or press Backspace."
+private const val NOT_ON_PAGE = "Not on this page. Swipe up on the keys or press Enter."
+private const val SYM_WRONG_PAGE = "Wrong page. Alt goes back to the symbols."
+
+internal val SYMMAIN_PAGES get() = mapOf(
+    PanelSpot.Found to "It's on this page. Find & and press its key.",
+    PanelSpot.Past to TOO_FAR,
+    PanelSpot.Before to TOO_FAR,
+    PanelSpot.OtherGroup to "Wrong group. The & leads the first one. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.Emoji to "Emoji already? Patience. Sym again closes them.",
+    PanelSpot.Clipboard to SYM_WRONG_PAGE,
+    PanelSpot.Settings to SYM_WRONG_PAGE,
+)
+internal val SYMGROUPS_PAGES get() = mapOf(
+    PanelSpot.Before to "Not on this page. Swipe up on the keys or press Enter.",
+    PanelSpot.Found to "It's on this page. Find ∞ and press its key.",
+    PanelSpot.Past to TOO_FAR,
+    PanelSpot.OtherGroup to "Wrong group. The ∞ is in the first one. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.Emoji to "Not emoji. Sym closes them. Then press Sym once.",
+    PanelSpot.Clipboard to SYM_WRONG_PAGE,
+    PanelSpot.Settings to SYM_WRONG_PAGE,
+)
+internal val CLOWN_PAGES get() = mapOf(
+    PanelSpot.Symbols to "That's symbols. Press Sym again for the emoji.",
+    PanelSpot.Recent to "That's Recent. Swipe left or right on the keys, or slide along the bottom row, to Smileys.",
+    PanelSpot.Before to NOT_ON_PAGE,
+    PanelSpot.Found to "It's on this page. Find 🤡 and press its key.",
+    PanelSpot.Past to TOO_FAR,
+    PanelSpot.OtherGroup to "Wrong group. The clown's in Smileys. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.Clipboard to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
+    PanelSpot.Settings to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
+)
+internal val CLIPBOARD_PAGES get() = mapOf(
+    PanelSpot.Symbols to "Press A for the clipboard.",
+    PanelSpot.Emoji to "Emoji? Sure, A works from there too.",
+    PanelSpot.Found to "It's on this page. Rest on each clip to read it, then press the key under the nice one.",
+    PanelSpot.Before to "Not on this page. Swipe up or down on the keys for the others.",
+    PanelSpot.OtherGroup to "That's Pinned. Swipe left or right on the keys to get back to your clips.",
+    PanelSpot.Settings to "Wrong page. Alt goes back, then press A.",
+)
+/** The paste slide needs no panel: if one opens anyway, how to close it and paste. */
+internal val PASTE_PAGES get() = mapOf(
+    PanelSpot.Symbols to "No panel needed here. Sym twice closes it. Then hold fn and press V.",
+    PanelSpot.Emoji to "No panel needed here. Sym closes it. Then hold fn and press V.",
+    PanelSpot.Clipboard to "No panel needed here. Sym closes it. Then hold fn and press V.",
+    PanelSpot.Settings to "No panel needed here. Alt, then Sym twice, closes it. Then hold fn and press V.",
+)
+/** The clipboard's reminder that its Enter and Backspace don't turn pages. */
+internal const val CLIP_KEYS_REMINDER = "Enter pins and Backspace clears here, so swipe on the keys to turn pages."
 
 /** Sym and fn, as setup's Keys part names them and [PhoneChecks.Key] has them. */
 internal const val SYM_KEY = "Sym"
@@ -1992,8 +2070,8 @@ internal fun programmableKeys(step: GuideStep): List<String> = listOfNotNull(
  * The one line on a slide that needs [key] after setup's Keys part was skipped and the key still isn't Programmable key: the
  * slide can't work, so it says to skip it. No button (owner, #72).
  */
-// F: draft (#72).
-internal fun keyOffLine(key: String) = "$key isn't a Programmable key yet. Skip this one."
+// F (docs/words-m1.md).
+internal fun keyOffLine(key: String) = "$key isn't set up, so skip this one."
 
 /**
  * The key [step] needs that isn't Programmable key, so its line shows ([keyOffLine]), or null. Only after setup's Keys part was
@@ -2027,8 +2105,8 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         }
         // A space that would type, from the key or a light tap, on a slide with no typing (owner, 2026-11-13).
         GuideLesson.Space.name -> when {
-            // F: draft (#66).
-            GuideLesson.Cursor in open -> "Spaces are blocked. Taps on Space move the cursor."
+            // F (docs/words-m1.md).
+            GuideLesson.Cursor in open -> "Typed spaces are blocked. Taps on Space move the cursor."
             step.chapter in NOT_TYPING -> "Spaces are blocked here. Typing's done. Keep up."
             GuideLesson.Swipe in open -> "Spaces are blocked here. Swipes space themselves."
             step.chapter == GuideChapter.Symbols -> "Spaces are blocked here. Just the symbol."
@@ -2042,8 +2120,8 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             GuideChapter.Typing -> "Swiping's blocked here. Type it. Swiping's next."
             GuideChapter.Delete -> if (GuideLesson.Flick in open) "Swiping's blocked here. Flick from Backspace." else
                 "Swiping's blocked here. Backspace this one."
-            // F: draft (#66).
-            GuideChapter.Steering -> "Swiping's blocked. Taps on Space move the cursor."
+            // F (docs/words-m1.md).
+            GuideChapter.Steering -> "Swiping's blocked here. Taps on Space move the cursor."
             else -> "Swiping's blocked on this slide. Not this way."
         }
         GuideLesson.BarTap.name -> when {
@@ -2178,7 +2256,7 @@ internal class GuideFlow(
      * The line that shows in place of the instruction now, if the step has one: see [GuideStep.live]. On a slide with
      * [GuideStep.findIn], with a panel open, it's the page's own line ([panelLine]).
      */
-    fun liveLine() = step.live?.invoke(memory) ?: panelLine(step, memory.page, memory.seenOn)
+    fun liveLine() = step.live?.invoke(memory) ?: panelLine(step, memory.page, memory.home, memory.seenOn)
 
     /** The line under the instruction while the slide's panel is open: how to leave it. See [panelHint]. */
     fun panelHint() = panelHint(step, memory.page)
@@ -2190,7 +2268,7 @@ internal class GuideFlow(
     fun event(event: KeyboardEvent, expected: String = ""): GuideVerdict {
         if (finished) return GuideVerdict.Wait
         memory.expected = expected
-        memory.followPanel(event, step.symbol)
+        memory.followPanel(event, step)
         val verdict = step.check(memory, event)
         memory.skip?.let {
             skipped += it

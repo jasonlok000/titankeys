@@ -31,8 +31,11 @@ test("Back declined with No thanks counts as done, as the guide's own setup coun
   // Declined, but another part to do: still setup.
   expect(frontChoice({ ...done, backService: false, backDeclined: true, overlay: false })).toBe("setup");
   // The guide's setup treats it the same way.
+  // PhoneSetup.missing hands the answer to GuideSteps' setupToAsk, which also passes skipped parts over (#72, #87).
   expect(read("android/kotlin/com/atlas/keyboard/PhoneSetup.kt"))
-    .toContain("done(context, it) || it == SetupPart.Back && BackDisclosureActivity.declined(context)");
+    .toContain("setupToAsk({ done(context, it) }, BackDisclosureActivity.declined(context))");
+  expect(read("android/kotlin/com/atlas/keyboard/GuideSteps.kt"))
+    .toContain("done(it) || it == SetupPart.Back && backDeclined");
   expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt"))
     .toContain('.put("backDeclined", BackDisclosureActivity.declined(activity))');
 });

@@ -490,7 +490,7 @@ class SymPanel(
             clipboard -> context.getString(R.string.clipboard_description)
             current != null -> "${if (mode == Modifiers.Panel.Symbols) "Symbols" else "Emoji"}, ${current.group()}. " +
                 "Press a key to type it. Swipe up or down on the keyboard for more, or press Backspace or Enter. " +
-                "Swipe left or right to change the group, or put a finger on the bottom row of keys."
+                "Swipe left or right on the keyboard to change the group, or put a finger on the bottom row of keys."
             else -> null
         }
         showHover()

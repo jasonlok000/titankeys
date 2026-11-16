@@ -45,14 +45,10 @@ class BackDisclosureActivity : Activity() {
         val detail = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
-            addView(text(boldLead(getString(R.string.back_disclosure_more_back)), BODY_TYPE, top = 8))
-            addView(text(boldLead(getString(R.string.back_disclosure_more_keys)), BODY_TYPE, top = 12))
+            addView(text(getString(R.string.back_disclosure_more_keys), BODY_TYPE, top = 8))
             for (line in listOf(R.string.back_disclosure_keys_sym, R.string.back_disclosure_keys_launcher, R.string.back_disclosure_keys_back))
                 addView(bullet(getString(line)))
-            addView(text(boldLead(getString(R.string.back_disclosure_more_touchpad)), BODY_TYPE, top = 12))
-            addView(bullet(getString(R.string.back_disclosure_never_screen), top = 12))
-            addView(bullet(getString(R.string.back_disclosure_never_keep)))
-            addView(text(getString(R.string.back_disclosure_more_no), BODY_TYPE, colour = GuideColours.MUTED, top = 12))
+            addView(text(getString(R.string.back_disclosure_more_end), BODY_TYPE, top = 12))
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

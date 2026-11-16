@@ -27,11 +27,11 @@ internal object BackupFile {
     /** A backup is a few megabytes at most. Anything far bigger isn't one. */
     const val MAX_BYTES = 64L * 1024 * 1024
 
-    // F: Restore's failures. The first two are the owner's lines from Import words (BackupFormat.java), kept as they were.
+    // Restore's failures. The first two are the owner's lines from Import words (BackupFormat.java), kept as they were.
     const val NOT_A_BACKUP = "Yeah, that's not a TitanKeys backup. Pick the right file."
     const val DAMAGED = "Can't read that file, duh. Is it a TitanKeys backup?"
-    // F: draft. A backup from a newer TitanKeys, which this one won't half-restore.
-    const val TOO_NEW = "This backup is from a newer TitanKeys. Update TitanKeys, then restore it."
+    // A backup from a newer TitanKeys, which this one won't half-restore.
+    const val TOO_NEW = "This backup comes from a newer TitanKeys. Update this one, then restore it."
 
     fun name(year: Int, month: Int, day: Int) = "titankeys-backup-%04d-%02d-%02d.json".format(year, month, day)
 

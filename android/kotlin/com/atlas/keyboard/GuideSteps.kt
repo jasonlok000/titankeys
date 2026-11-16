@@ -1112,7 +1112,7 @@ internal class Hunt(val mock: String, val hint: String, val skip: String, val fa
 
 internal val WEIRD_HUNT = Hunt(
     "It goes on forever. Like this hunt.",
-    "It's not on the first page. Swipe up on the keys, or press Enter.",
+    "Not on page one. Swipe up on the keys, or Enter.",
     "Page two, near √ and ≈. Or skip it. It's ok.",
     "Quick. Just like you in bed.",
     // The seconds it really took (owner, 2026-11-13).
@@ -1390,7 +1390,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Favourited. Good taste.",
-                praise = "O/L steps it back down. P/Backspace closes the menu.",
+                praise = "O/L steps it down. P/Backspace closes the menu.",
         line = MENU_LINE,
         seed = MENU_LINE,
         help = "Already selected. Tap TitanKeys on the bar.",
@@ -1485,7 +1485,7 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
         // F (docs/words-m1.md).
-        title = "Move the cursor to the underlined word.",
+        title = "Put the cursor in the underlined word.",
         stages = listOf(
             GuideStage("Tap Space twice, and hold the second tap.") { event ->
                 when {
@@ -1703,7 +1703,7 @@ internal val GUIDE_STEPS = listOf(
         // bottom row or a sideways swipe, which works too and says so.
         stages = listOf(
             // Both ways to the next page, on the keys (owner, M1: "swipe up on the keyboard or enter for the next page").
-            GuideStage("Press Sym, then swipe up on the keys or press Enter for the next page.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
+            GuideStage("Press Sym. Then swipe up on the keys, or Enter.", GuideCue.Spot(listOf(Layout.SYM))) { event ->
                 when {
                     event is FieldChanged && symbolInGap(event.text, GROUPS_LINE, WEIRD) -> GuideVerdict.Finished
                     event is PanelSwiped && event.moved && abs(event.down) >= abs(event.across) -> {
@@ -1740,7 +1740,7 @@ internal val GUIDE_STEPS = listOf(
             },
         ),
         done = "Sure you do.",
-        praise = "Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups.",
+        praise = "Swipe up or down on the keys to turn pages.",
         line = GROUPS_LINE,
         seed = gapSeed(GROUPS_LINE, WEIRD),
         cursorAt = { gapCursor(GROUPS_LINE, WEIRD) },
@@ -2011,7 +2011,7 @@ internal val SYMMAIN_PAGES get() = mapOf(
     PanelSpot.Found to "It's on this page. Find & and press its key.",
     PanelSpot.Past to TOO_FAR,
     PanelSpot.Before to TOO_FAR,
-    PanelSpot.OtherGroup to "Wrong group. The & leads the first one. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.OtherGroup to "Wrong group. The &'s in the first. Swipe left or right on the keys.",
     PanelSpot.Emoji to "Emoji already? Patience. Sym again closes them.",
     PanelSpot.Clipboard to SYM_WRONG_PAGE,
     PanelSpot.Settings to SYM_WRONG_PAGE,
@@ -2020,18 +2020,18 @@ internal val SYMGROUPS_PAGES get() = mapOf(
     PanelSpot.Before to "Not on this page. Swipe up on the keys or press Enter.",
     PanelSpot.Found to "It's on this page. Find ∞ and press its key.",
     PanelSpot.Past to TOO_FAR,
-    PanelSpot.OtherGroup to "Wrong group. The ∞ is in the first one. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.OtherGroup to "Wrong group. The ∞'s in the first. Swipe left or right on the keys.",
     PanelSpot.Emoji to "Not emoji. Sym closes them. Then press Sym once.",
     PanelSpot.Clipboard to SYM_WRONG_PAGE,
     PanelSpot.Settings to SYM_WRONG_PAGE,
 )
 internal val CLOWN_PAGES get() = mapOf(
     PanelSpot.Symbols to "That's symbols. Press Sym again for the emoji.",
-    PanelSpot.Recent to "That's Recent. Swipe left or right on the keys, or slide along the bottom row, to Smileys.",
+    PanelSpot.Recent to "That's Recent. Swipe left or right on the keys to Smileys.",
     PanelSpot.Before to NOT_ON_PAGE,
     PanelSpot.Found to "It's on this page. Find 🤡 and press its key.",
     PanelSpot.Past to TOO_FAR,
-    PanelSpot.OtherGroup to "Wrong group. The clown's in Smileys. Swipe left or right on the keys, or slide along the bottom row.",
+    PanelSpot.OtherGroup to "Wrong group. The clown's in Smileys. Swipe left or right on the keys.",
     PanelSpot.Clipboard to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
     PanelSpot.Settings to "Wrong page. Alt goes back to the symbols, then Sym for the emoji.",
 )
@@ -2106,7 +2106,7 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         // A space that would type, from the key or a light tap, on a slide with no typing (owner, 2026-11-13).
         GuideLesson.Space.name -> when {
             // F (docs/words-m1.md).
-            GuideLesson.Cursor in open -> "Typed spaces are blocked. Taps on Space move the cursor."
+            GuideLesson.Cursor in open -> "Spaces are blocked. Space taps move the cursor."
             step.chapter in NOT_TYPING -> "Spaces are blocked here. Typing's done. Keep up."
             GuideLesson.Swipe in open -> "Spaces are blocked here. Swipes space themselves."
             step.chapter == GuideChapter.Symbols -> "Spaces are blocked here. Just the symbol."
@@ -2121,7 +2121,7 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             GuideChapter.Delete -> if (GuideLesson.Flick in open) "Swiping's blocked here. Flick from Backspace." else
                 "Swiping's blocked here. Backspace this one."
             // F (docs/words-m1.md).
-            GuideChapter.Steering -> "Swiping's blocked here. Taps on Space move the cursor."
+            GuideChapter.Steering -> "Swiping's blocked. Space taps move the cursor."
             else -> "Swiping's blocked on this slide. Not this way."
         }
         GuideLesson.BarTap.name -> when {

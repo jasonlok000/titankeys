@@ -718,7 +718,7 @@ private fun theLadderOnTitanKeys() {
     same(step.lessons, setOf(GuideLesson.BarHold), "Only the selected word's menu: typing, swiping, Space and Backspace are blocked")
     same(step.stages.map { it.text }, listOf("Tap TitanKeys on the bar. Nothing gets saved.", "Press I/K to save it.",
         "Press I/K again to favourite it."), "Tap, I/K, then I/K again: the keys named in pairs (owner, #67)")
-    same(step.done to step.praise, "Favourited. Good taste." to "O/L steps it back down. P/Backspace closes the menu.", "Done and praise")
+    same(step.done to step.praise, "Favourited. Good taste." to "O/L steps it down. P/Backspace closes the menu.", "Done and praise")
     // The show-only menu opens at not saved: the ladder's I is Save, then Favourite.
     same(MenuKeys.choices(MenuKeys.Step.New).i to MenuKeys.choices(MenuKeys.Step.Saved).i, MenuKeys.Button.Save to MenuKeys.Button.Favourite,
         "Not saved, I saves; saved, I favourites")
@@ -1040,18 +1040,10 @@ private val NEW_LAYOUT = setOf(GuideChapter.Typing, GuideChapter.Delete, GuideCh
 private const val TITLE_MOST = 38
 private const val LINE_MOST = 50
 /**
- * The writer F's lines (docs/words-m1.md) that run past one line of the slide: used as written, as the rule for M1 says, and left
- * for the Master to judge on the renders. Every other line keeps the limits.
+ * Lines allowed past one line of the slide. None now: F shortened the ones that ran over (docs/words-m1.md), so every line keeps
+ * the limits.
  */
-private val F_LONGER = setOf(
-    "Move the cursor to the underlined word.",
-    "Typed spaces are blocked. Taps on Space move the cursor.",
-    "Swiping's blocked here. Taps on Space move the cursor.",
-    "O/L steps it back down. P/Backspace closes the menu.",
-    "Press Sym, then swipe up on the keys or press Enter for the next page.",
-    "Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups.",
-    "It's not on the first page. Swipe up on the keys, or press Enter.",
-)
+private val F_LONGER = emptySet<String>()
 private fun fits(line: String, most: Int = LINE_MOST) = line.length <= most || line in F_LONGER
 
 private fun wrongEventsDoNotFinish() {
@@ -1181,7 +1173,7 @@ private fun steeringToAWord() {
     same(STEER_LINE.contains("steer", ignoreCase = true), false, "No steering in the line")
     // No steering anywhere the guide talks (owner, #90: "change out the steering term"): titles, lines, stages, chips, chapters.
     val slide = GUIDE_STEPS.find { it.id == "steer" }!!
-    same(slide.title to slide.chapter.label, "Move the cursor to the underlined word." to "Cursor", "The slide's title and chapter")
+    same(slide.title to slide.chapter.label, "Put the cursor in the underlined word." to "Cursor", "The slide's title and chapter")
     val said = GUIDE_STEPS.flatMap { step ->
         listOfNotNull(step.title, step.body, step.done, step.praise, step.help, step.helpTitle, step.line, step.seed) +
             step.stages.map { it.text } + GuideLesson.entries.map { blockedChip(step, it.name) }
@@ -1289,7 +1281,7 @@ private fun eachPageSaysWhereYouAre() {
     // The ∞ hunt, page by page.
     val groups = GuideFlow({ GuideSettings() })
     groups.start("symgroups")
-    same(groups.instruction, "Press Sym, then swipe up on the keys or press Enter for the next page.", "It names both ways")
+    same(groups.instruction, "Press Sym. Then swipe up on the keys, or Enter.", "It names both ways")
     groups.event(face(Panel.Symbols, "1/9", "&", "%"))
     same(groups.liveLine() to groups.panelHint(), "Not on this page. Swipe up on the keys or press Enter." to "Sym twice closes it.",
         "Sym's first page: on to the next, and the way out under it")
@@ -1806,7 +1798,7 @@ private fun runThroughFixes() {
     same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: it would replace TitanKeys")
     for (id in listOf("steer", "selectmore")) {
         same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
-        same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space move the cursor.", "Space on $id")
+        same(blockedChip(step(id), GuideLesson.Space.name), "Spaces are blocked. Space taps move the cursor.", "Space on $id")
     }
     same(blockedChip(step("swipe"), GuideLesson.Space.name), "Spaces are blocked here. Swipes space themselves.", "Space on swipe")
     same(keyboard.contains("keyCode == KeyEvent.KEYCODE_SPACE -> GuideLesson.Space"), true, "A pressed Space is its own lesson")

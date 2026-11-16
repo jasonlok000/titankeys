@@ -52,7 +52,7 @@ class BackupActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(TextView(this).apply {
             gravity = Gravity.CENTER
-            // F: drafts, shown behind the file picker while it works.
+            // Shown behind the file picker while it works.
             text = if (backingUp) "Backing up…" else "Restoring…"
         })
         if (savedInstanceState != null) return
@@ -63,7 +63,6 @@ class BackupActivity : Activity() {
         try {
             startActivityForResult(picker, PICK_DOCUMENT)
         } catch (_: ActivityNotFoundException) {
-            // F: draft.
             complete(null, "Couldn't open the file picker.")
         }
     }
@@ -73,7 +72,6 @@ class BackupActivity : Activity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != PICK_DOCUMENT) return
         if (resultCode != RESULT_OK) return complete(null)
-        // F: draft.
         val uri = data?.data ?: return complete(null, "Couldn't open that file.")
         Thread {
             try {
@@ -82,7 +80,6 @@ class BackupActivity : Activity() {
                 runOnUiThread { complete(null, error.message) }
             } catch (error: Exception) {
                 android.util.Log.w("Atlas", "Backup or restore failed", error)
-                // F: drafts.
                 runOnUiThread { complete(null, if (backingUp) "Couldn't save the backup. Try again." else BackupFile.DAMAGED) }
             }
         }.start()

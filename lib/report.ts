@@ -1,12 +1,12 @@
 import { resource } from "ink";
 import { callNative, onNativeMessage } from "ink/native";
 
-/** The report form (#97). The kinds, in the form's order: ids as Reports.KINDS has them. F: draft labels, the issue's. */
+/** The report form (#97). The kinds, in the form's order: ids as Reports.KINDS has them. */
 export const reportKinds = [
   { value: "word", label: "Wrong word or fix" },
   { value: "swiping", label: "Swiping" },
-  { value: "touchpad", label: "Touchpad and Space gestures" },
-  { value: "keyboard", label: "Keyboard didn't show or disappeared" },
+  { value: "touchpad", label: "Touchpad and Space taps" },
+  { value: "keyboard", label: "Keyboard didn't show, or vanished" },
   { value: "crash", label: "Crash or freeze" },
   { value: "guide", label: "The guide" },
   { value: "settings", label: "Settings" },

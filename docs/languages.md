@@ -149,7 +149,7 @@ data-only language is one command plus a check by eye. Where the data comes from
 - **Picking is the word menu's way:** rest a finger on a key to mark the accent above it, press the key to pick it. The
   accent replaces the typed letter. Releasing the held key without a press keeps the plain letter.
 - With Shift or Caps on, the accents show in capitals.
-- The first time an input method with accents is used, the bar says once: "Hold a letter for its accents." <!-- F: draft -->
+- The first time an input method with accents is used, the bar says once: "Hold a letter for its accents."
 - In an input method with accents, **hold for symbols is off on every key**, so a hold always means one thing. Symbols stay
   on Alt + key and the Sym panel. Input methods without accents keep hold for symbols.
 
@@ -176,7 +176,7 @@ The bar, its hover and the picking come from the word menu's code (see "Where it
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
 - The current input method's label shows on the bar's left while you type in anything but English, so you know where you
-  are. <!-- F: draft for its accessibility text, "Typing in Spanish" -->
+  are. Its accessibility text says it in full: "Typing in Spanish".
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
@@ -194,16 +194,16 @@ Languages
 - A list of every input method, grouped by script, each with a switch. The ones that are on sit at the top in the
   overlay's order, and can be moved up and down.
 - English can't be turned off while it's the only one.
-- At most 8 on, the overlay's places. The 9th switch says why it won't turn on. <!-- F: draft "Eight at a time. Turn one off first." -->
+- At most 8 on, the overlay's places. The 9th switch says why it won't turn on: "Eight at a time. Turn one off first."
 - Each input method's page shows its name, its source and licence, its variants when it has them (Portuguese), and
   "Fix typos as you type" for it, off by default.
 
 **Chinese characters** (`app/settings/chinese.tsx`), a ChoicePage like English spelling:
-- Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China). <!-- F: draft labels -->
+- Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China).
 - One setting for every Chinese input method.
 - **No default (owner, 2026-11-16): you choose.** The first time a Chinese input method is turned on, its switch opens
   this page, and it stays off until a variant is picked. Nothing is guessed from the phone's region.
-  <!-- F: draft subtitle "Pick how your characters come out. You can change it any time." -->
+  The page's subtitle: "Pick how your characters come out. You can change it any time."
 
 The settings live in `typing_settings` with the others: `inputMethods` (the ordered list of ids that are on),
 `imVariant.<id>`, `imAutocorrect.<id>` and `chineseVariant` (`zh_hk`, `zh_tw`, `zh_hans`).

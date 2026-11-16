@@ -3467,7 +3467,15 @@ class TitanKeysIme : InputMethodService() {
             }
             is LanguagePicker.Choices -> languages.engine?.let { engineState(it.pick(choice)) }
             is LanguagePicker.Switch -> {
-                val entry = open.entries[choice]
+                val entry = when (val next = SwitchOverlay.pick(open.languages, open.opened, choice)) {
+                    // A language with several input methods on: its own row, the one typing now marked.
+                    is SwitchPick.Row -> {
+                        showPicker(LanguagePicker.Switch(open.languages, next.language, languages.current.id))
+                        return
+                    }
+                    is SwitchPick.To -> languages.on.firstOrNull { it.id == next.id } ?: return
+                    null -> return
+                }
                 if (entry.id == languages.current.id) return
                 languages.switchTo(entry.id)
                 // The bar says, for a moment, which input method types now. F (docs/words-m1.md).
@@ -3532,7 +3540,8 @@ class TitanKeysIme : InputMethodService() {
         symLog("Sym held: the input method overlay opens")
         symHeldOpen = true
         haptics.play(Haptic.HeldSymbol)
-        showPicker(LanguagePicker.Switch(languages.on, languages.current.id))
+        val on = InputMethodIndex.group(languages.on)
+        showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), languages.current.id))
     }
 
     /**
@@ -3581,8 +3590,10 @@ class TitanKeysIme : InputMethodService() {
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
-        if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) != method.id && runCatching { switchInputMethod(id, subtype) }.isFailure) return
+        // Android's list has one entry for TitanKeys, the input method typing, under its name (#76; owner, 2026-11-16).
         languages.toldAndroid(method.id)
+        InputMethodList.enable(this, listOf(method.id))
+        if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) != method.id) runCatching { switchInputMethod(id, subtype) }
     }
 
     /**

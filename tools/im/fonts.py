@@ -57,7 +57,8 @@ def is_han(code):
 
 def cjk_in_text():
     """Every Hangul and Chinese character in the input methods' names and in the app's own text."""
-    text = [m["name"] for m in json.load(open(os.path.join(ROOT, "android", "assets", "im", "index.json"), encoding="utf-8"))]
+    index = json.load(open(os.path.join(ROOT, "android", "assets", "im", "index.json"), encoding="utf-8"))
+    text = [m["name"] for m in index] + [m["language"]["name"] for m in index]
     for pattern in ("app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"):
         for path in glob.glob(os.path.join(ROOT, pattern), recursive=True):
             text.append(open(path, encoding="utf-8").read())

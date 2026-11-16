@@ -70,16 +70,6 @@ internal class Languages(
         val index = InputMethodList.index(context)
         val setting = TypingSettings.inputMethods(context)
         on = index.on(setting)
-        // A restore writes the setting but not Android's list of enabled entries, which only Settings kept the same. The keyboard
-        // checks Android's list at every field start and sets it again whenever it isn't exactly the input methods that are on
-        // (German was once on in Settings and missing from Android's list), and once per process or after any change.
-        val ids = on.map { it.id }
-        val android = InputMethodList.enabledIds(context)
-        if (setting != enabledFor || EnabledEntries.differ(ids, android)) {
-            if (EnabledEntries.differ(ids, android)) Log.w(LOG_TAG, "Android's keyboard list had $android, not the input methods on, $ids")
-            enabledFor = setting
-            InputMethodList.enable(context, ids)
-        }
         val picked = sync.heard(android())
         saveSync()
         val choice = InputMethodChoice.atFieldStart(index, setting, TypingSettings.currentInputMethod(context), picked)
@@ -91,10 +81,16 @@ internal class Languages(
             Log.i(LOG_TAG, line)
         }
         if (choice.id != target) use(choice.id)
+        // Android's keyboard list shows one entry for TitanKeys, the input method typing now, under its name; languages switch
+        // inside the keyboard (owner, 2026-11-16). A restore or Settings may have left it otherwise: checked at every field start.
+        val shown = listOf(choice.id)
+        val android = InputMethodList.enabledIds(context)
+        if (EnabledEntries.differ(shown, android)) {
+            Log.i(LOG_TAG, "Android's keyboard list had $android, not the input method typing, ${choice.id}")
+            toldAndroid(choice.id)
+            InputMethodList.enable(context, shown)
+        }
     }
-
-    /** The input methods' setting Android's enabled entries were last made to match, in this process. */
-    private var enabledFor: String? = null
     private var lastLogged: String? = null
 
     /**
@@ -223,10 +219,15 @@ internal sealed interface LanguagePicker {
         fun choiceAt(column: Int) = columns.indexOf(column)
     }
 
-    /** The switch overlay on a held Sym: each input method that's on, the current one marked. */
-    class Switch(val entries: List<InputMethodIndex.Entry>, current: String) : LanguagePicker {
-        override val notice = Strip.Notice.Picker(entries.map { it.label }, SwitchOverlay.columns(entries.size),
-            entries.indexOfFirst { it.id == current })
-        fun choice(key: String) = SwitchOverlay.choice(key, entries.size)
+    /**
+     * The switcher on a held Sym ([SwitchOverlay]): the languages that are on, or with [opened] that language's input methods
+     * that are on. The one typing now is marked.
+     */
+    class Switch(val languages: List<InputMethodIndex.LanguageOn>, val opened: InputMethodIndex.LanguageOn?, current: String) :
+        LanguagePicker {
+        private val labels = opened?.methods?.map { it.label } ?: languages.map { it.language.label }
+        override val notice = Strip.Notice.Picker(labels, SwitchOverlay.columns(labels.size),
+            opened?.methods?.indexOfFirst { it.id == current } ?: languages.indexOfFirst { on -> on.methods.any { it.id == current } })
+        fun choice(key: String) = SwitchOverlay.choice(key, labels.size)
     }
 }

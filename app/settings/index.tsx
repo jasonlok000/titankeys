@@ -22,9 +22,7 @@ import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
 import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
-import { spellingLabel } from "./spelling";
-import { inputMethodsLabel } from "./languages";
-import { anyChinese, chineseLabel } from "./chinese";
+import { languagesLabel } from "./languages";
 import { tapKeysLabel } from "./tap-keys";
 import { RESET_NOTE, resetDone } from "./reset-most";
 import { Note } from "../../lib/note";
@@ -58,9 +56,8 @@ export default function Settings() {
     </Section>
     {/* Between Typing and Shortcuts (docs/languages.md). F (docs/words-m1.md). */}
     <Section title="Languages">
-      <Field label="Input methods" href="/settings/languages">{inputMethodsLabel(settings)}</Field>
-      {anyChinese(settings) && <Field label="Chinese characters" href="/settings/chinese">{chineseLabel(settings)}</Field>}
-      <Field label="English spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>
+      {/* Languages, then input methods, the Gboard way: English spelling and Chinese characters are on their language's page. */}
+      <Field label="Languages" href="/settings/languages">{languagesLabel(settings)}</Field>
     </Section>
     {/* The same topics, in the same order, as the boring guide's Shortcuts and Symbols sections. */}
     <Section title="Shortcuts">

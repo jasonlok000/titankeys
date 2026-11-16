@@ -13,10 +13,6 @@ const options = (["zh_hk", "zh_tw", "zh_hans"] as const).map(value => ({ value, 
 /** "Not picked yet" until the user has: there's no default. */
 export const chineseLabel = ({ chineseVariant }: State) => chineseVariant ? labels[chineseVariant] : "Not picked yet";
 
-/** Whether an input method that's on is Chinese, so Settings shows this page. */
-export const anyChinese = ({ inputMethods, availableInputMethods }: State) =>
-  availableInputMethods.some(im => im.engine === "rime" && inputMethods.includes(im.id));
-
 export default function ChinesePage() {
   return <ChoicePage<ChineseVariant> title="Chinese characters"
     subtitle="Every Chinese input method types in these. In Macau, pick Hong Kong. In Singapore or Malaysia, Simplified."

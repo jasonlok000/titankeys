@@ -75,3 +75,13 @@ test("the crash report holds no typed text, and is deleted once sent or dismisse
   for (const file of ["android/kotlin/com/titankeys/keyboard/CrashReport.kt", "android/kotlin/com/titankeys/keyboard/Mail.kt"])
     expect(read(file)).not.toMatch(/HttpsURLConnection|URL\(|Socket/);
 });
+
+test("the recording goes only when asked: on after Record a bug's Stop, otherwise off; the crash report always goes (review)", () => {
+  const form = read("app/settings/report.tsx");
+  expect(form).toContain("useState(hasRecording && fromRecording)");
+  expect(form).toContain("fromRecording={params.kind === \"recording\"}");
+  expect(read("app/settings/bug.tsx")).toContain('navigate({ path: "/settings/report", params: { kind: "recording" } })');
+  expect(form).toContain("{hasRecording && !recording && <Note>");
+  expect(form).toContain("It always goes along.");
+  expect(form).toMatch(/sendReport\(\{[^}]*recording, crash: hasCrash \}\)/);
+});

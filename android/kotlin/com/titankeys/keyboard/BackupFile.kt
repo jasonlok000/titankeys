@@ -33,6 +33,12 @@ internal object BackupFile {
     // A backup from a newer TitanKeys, which this one won't half-restore.
     const val TOO_NEW = "This backup comes from a newer TitanKeys. Update this one, then restore it."
 
+    /**
+     * The engine's answer when the words were saved but its dictionary didn't refresh (SwipeTyping.importConfig). A restore
+     * goes on after it, as its restart refreshes the dictionary anyway. A check keeps it equal to the engine's text.
+     */
+    const val WORDS_NEED_RESTART = "Learning was imported. Restart TitanKeys to use the imported words."
+
     fun name(year: Int, month: Int, day: Int) = "titankeys-backup-%04d-%02d-%02d.json".format(year, month, day)
 
     /** How a list kept in one key merges with the one on the phone. The file wins a clash. */

@@ -35,7 +35,9 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
   const [what, setWhat] = useState("");
   const [expected, setExpected] = useState("");
   const [email, setEmail] = useState("");
-  const [recording, setRecording] = useState(hasRecording);
+  // The recording can show what was typed, so it starts on only when the form came straight from Record a bug's Stop, where
+  // the user just recorded it to send. Otherwise sending it is opt-in (review of #97; the Orchestrator's call, for the owner).
+  const [recording, setRecording] = useState(hasRecording && fromRecording);
   const [outcome, setOutcome] = useState<"sent" | "kept" | "large" | null>(null);
   const [noMail, setNoMail] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -90,8 +92,11 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
       {hasRecording && recording && <Note>{fromRecording
         ? "From Record a bug. It has your touches and keys, so it can show what you typed while it ran."
         : "Your last Record a bug. It has your touches and keys, so it can show what you typed while it ran."}</Note>}
-      {hasCrash && <Note>{froze ? "The freeze report: where it froze, and the versions. Nothing you typed."
-        : "The crash report: where it crashed, and the versions. Nothing you typed."}</Note>}
+      {/* F: draft, the line while the recording is off. */}
+      {hasRecording && !recording && <Note>Your last Record a bug stays on your phone unless you switch it on. It can show what you typed while it ran.</Note>}
+      {/* F: draft, "It always goes along." */}
+      {hasCrash && <Note>{froze ? "The freeze report: where it froze, and the versions. Nothing you typed. It always goes along."
+        : "The crash report: where it crashed, and the versions. Nothing you typed. It always goes along."}</Note>}
     </Section>
     {send.status === "error" && <Note>{send.error.message}</Note>}
     <Button disabled={!kind || what.trim() === "" || !emailOk || send.status === "pending"} onPress={() => void send.run()}>

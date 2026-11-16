@@ -64,11 +64,11 @@ test("the crash report holds no typed text, and is deleted once sent or dismisse
   // Only class names and stack frames: never getMessage, toString or printStackTrace, which carry the message.
   expect(crash).not.toMatch(/\.message\b|localizedMessage|printStackTrace|stackTraceToString|error\.toString\(\)/);
   const offer = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
-  const start = offer.indexOf("private fun offerCrashReport()");
-  const body = offer.slice(start, offer.indexOf("\n    }\n", start));
+  const start = offer.indexOf("private fun showCrashOffer(");
+  const body = offer.slice(start, offer.indexOf("private fun answeredCrashOffer(", start));
   expect(body).toContain("CrashReport.offered(activity)");
-  expect(body).toContain('.setNegativeButton("No thanks") { _, _ -> CrashReport.clear(activity) }');
-  expect(body).toContain(".setOnCancelListener { CrashReport.clear(activity) }");
+  expect(body).toMatch(/\.setNegativeButton\("No thanks"\) \{ _, _ ->\s+answeredCrashOffer\(\)\s+CrashReport\.clear\(activity\)/);
+  expect(body).toMatch(/\.setOnCancelListener \{\s+answeredCrashOffer\(\)\s+CrashReport\.clear\(activity\)/);
   // Sent: gone. Offered and not sent: gone at the next open.
   expect(read("android/kotlin/com/vandam/ink/ConnectedAdapter.kt")).toContain("if (crash != null) CrashReport.clear(activity)");
   expect(crash).toMatch(/if \(File\(context\.noBackupFilesDir, OFFERED\)\.isFile\) \{\s*clear\(context\)\s*return null/);
@@ -84,4 +84,19 @@ test("the recording goes only when asked: on after Record a bug's Stop, otherwis
   expect(form).toContain("{hasRecording && !recording && <Note>");
   expect(form).toContain("It always goes along.");
   expect(form).toMatch(/sendReport\(\{[^}]*recording, crash: hasCrash \}\)/);
+});
+
+test("the crash offer shows on the screen in front, the playground included, and moving it isn't an answer (phone check)", () => {
+  const offer = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
+  // The playground is its own activity over the app's window, so a dialog on MainActivity alone sat under it.
+  expect(offer).toContain("fun shows(host: Activity) = host is MainActivity || host is com.titankeys.keyboard.GuideActivity");
+  const resumed = offer.slice(offer.indexOf("override fun onActivityResumed("), offer.indexOf("override fun onActivityPaused("));
+  expect(resumed.indexOf("if (crashOffer != null) showCrashOffer(target)")).toBeGreaterThan(-1);
+  // Before the check for the app's own window, so every screen of the app counts.
+  expect(resumed.indexOf("showCrashOffer(target)")).toBeLessThan(resumed.indexOf("if (target !== activity) return"));
+  const show = offer.slice(offer.indexOf("private fun showCrashOffer("), offer.indexOf("private fun answeredCrashOffer("));
+  expect(show).toContain(".create().apply { setOwnerActivity(host) }");
+  // dismiss() moves it without clearing the report: only a button or Back clears it.
+  expect(show).toContain("crashDialog?.dismiss()");
+  expect(show.match(/CrashReport\.clear\(activity\)/g)!.length).toBe(2);
 });

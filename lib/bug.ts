@@ -20,8 +20,8 @@ export const bugState = resource({
 })();
 
 // Back from the app where the bug happened, or from the share sheet: read the state again.
-onNativeMessage("atlas-state", () => void bugState.refresh());
-onNativeMessage("atlas-window", () => void bugState.refresh());
+onNativeMessage("titankeys-state", () => void bugState.refresh());
+onNativeMessage("titankeys-window", () => void bugState.refresh());
 
 async function run(operation: string, payload: object = {}) {
   try {

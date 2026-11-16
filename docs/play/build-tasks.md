@@ -27,7 +27,7 @@ For the build agent of workstream G (#36, #55). Research only so far: nothing he
 | R8 | on for release (`isMinifyEnabled`, `isShrinkResources`) | `app/build.gradle.kts` |
 | Tools in WSL | Java 17, `keytool`, build-tools 35.0.0 and 36.0.0 (`apksigner`, `zipalign`), NDK `llvm-readelf`. **No `bundletool`.** | `~/android-sdk` |
 | How TitanKeys makes a variant | `tools/debug.sh` edits `ink.toml` and the manifest, builds with `tools/release.sh`, then restores them | `tools/debug.sh` |
-| How 2.1 knows it is the Play build | `Connected.build()` reads manifest meta-data `com.titankeys.build` (`"play"`, `"github"`, `"debug"`) | branch `claude/connected-ba75d6`, `android/kotlin/com/atlas/connected/Connected.kt` (untracked, in progress) |
+| How 2.1 knows it is the Play build | `Connected.build()` reads manifest meta-data `com.titankeys.build` (`"play"`, `"github"`, `"debug"`) | branch `claude/connected-ba75d6`, `android/kotlin/com/titankeys/connected/Connected.kt` (untracked, in progress) |
 
 ## A. Make an App Bundle with Ink
 

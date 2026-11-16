@@ -42,11 +42,11 @@ TitanKeys is made for the Unihertz Titan 2 Elite. If you own another phone with 
 
 ## Languages
 
-TitanKeys is English only for now. Other languages are welcome, but only from a native speaker who really knows the language.
+TitanKeys 3.0 types in as many languages as it can, from open word lists and input methods, so you can use yours from day one. The plan is in [docs/languages.md](docs/languages.md).
 
-I won't build a language I don't speak myself, because I can't tell when it's wrong. So a language happens only if a native speaker brings it and keeps it right: the word list, the autocorrect and the guide's words.
+That first version of each language is generic, and it won't be perfect. Native speakers make it right over time: the word list, the accents, the autocorrect and the guide's words.
 
-Want to help? Say which language in [issue #56](https://github.com/jasonlok000/titankeys/issues/56).
+Speak one well? Say which language, and what's off, in [issue #56](https://github.com/jasonlok000/titankeys/issues/56).
 
 ## Open an issue
 
@@ -136,7 +136,6 @@ If you want to do the work, write this in the issue. Wait until I give the issue
    ```
 
 The maintainer's own build and phone tools are in [tools/dev](tools/dev/README.md). You don't need them to contribute.
-<!-- F: draft line for the tools/dev link (#82). -->
 
 ## Writing
 

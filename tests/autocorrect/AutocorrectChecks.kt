@@ -1,21 +1,21 @@
-package com.atlas.autocorrect
+package com.titankeys.autocorrect
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
-import com.atlas.engine.EnglishSpelling
-import com.atlas.engine.NextWordModel
-import com.atlas.engine.PhoneWords
-import com.atlas.engine.Swipe
-import com.atlas.engine.SwipeTyping
-import com.atlas.engine.TypingSettings
-import com.atlas.keyboard.Composer
-import com.atlas.keyboard.Editor
-import com.atlas.keyboard.EnterKey
-import com.atlas.keyboard.Expansions
-import com.atlas.keyboard.Favourites
-import com.atlas.keyboard.Field
-import com.atlas.keyboard.Haptic
-import com.atlas.keyboard.Words
+import com.titankeys.engine.EnglishSpelling
+import com.titankeys.engine.NextWordModel
+import com.titankeys.engine.PhoneWords
+import com.titankeys.engine.Swipe
+import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypingSettings
+import com.titankeys.keyboard.Composer
+import com.titankeys.keyboard.Editor
+import com.titankeys.keyboard.EnterKey
+import com.titankeys.keyboard.Expansions
+import com.titankeys.keyboard.Favourites
+import com.titankeys.keyboard.Field
+import com.titankeys.keyboard.Haptic
+import com.titankeys.keyboard.Words
 import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -996,8 +996,8 @@ private fun composerFlow(world: Realistic) {
         // The owner's rule, with the app labels that this phone has, against the real base list: an ordinary word never takes
         // a name's capitals ("toggle" became "Toggle" from an app named Toggle), and a brand's capitals wait for the whole word.
         val plain = File("android/assets/swipe/english.combined").useLines { lines ->
-            lines.mapNotNull { com.atlas.engine.TypedPredictions.lowercaseOn(it) }.toHashSet() }
-        val labels = com.atlas.engine.PhoneNames.words(listOf("Toggle", "Spotify", "WhatsApp", "Netflix", "Instagram", "Chrome", "Clock"),
+            lines.mapNotNull { com.titankeys.engine.TypedPredictions.lowercaseOn(it) }.toHashSet() }
+        val labels = com.titankeys.engine.PhoneNames.words(listOf("Toggle", "Spotify", "WhatsApp", "Netflix", "Instagram", "Chrome", "Clock"),
             { world.words.frequency(it).toDouble() }, { it in plain })
         val phone = Lists(world.words, phoneNames = labels)
         must(listOf("toggle", "chrome", "clock").none { it in labels }, "Ordinary words from app names give no capitals: $labels")
@@ -1007,13 +1007,13 @@ private fun composerFlow(world: Realistic) {
         same(typed("watch netflix later", phone), "watch Netflix later", "\"netflix\" gets its capital")
         same(typed("my instagram", phone), "my Instagram", "\"instagram\" gets its capital")
         // #91: the dictionary's spelling wins over a phone name's, and a word saved in lowercase wins over both.
-        val shouting = com.atlas.engine.PhoneNames.words(listOf("AUTO", "IKEA", "WhatsApp"),
+        val shouting = com.titankeys.engine.PhoneNames.words(listOf("AUTO", "IKEA", "WhatsApp"),
             { world.words.frequency(it).toDouble() }, { it in plain })
         must("auto" !in shouting, "An app \"AUTO\" gives \"auto\" no capitals: $shouting")
         same(typed("the auto setting", Lists(world.words, phoneNames = shouting)), "the auto setting",
             "\"auto\" stays lowercase beside an app named AUTO")
         same(typed("open whatsapp", Lists(world.words, phoneNames = shouting)), "open WhatsApp", "\"WhatsApp\" still gets its capitals")
-        val contactNames = com.atlas.engine.PhoneNames.words(listOf("JOHN", "AUTO"),
+        val contactNames = com.titankeys.engine.PhoneNames.words(listOf("JOHN", "AUTO"),
             { world.words.frequency(it).toDouble() }, { it in plain }, true)
         must(contactNames["john"] != "JOHN" && "auto" !in contactNames, "A contact in capitals keeps the dictionary's spelling: $contactNames")
         val lowSaved = Lists(world.words, phoneNames = mapOf("auto" to "AUTO"))
@@ -1030,7 +1030,7 @@ private fun composerFlow(world: Realistic) {
         tapping.type("t")
         tapping.choose(tapping.bar.indexOf("toggle"))
         same(tapping.text, "hi WhatsApp toggle ", "A tapped \"toggle\" stays lowercase")
-        same(typed("rose and bill came", Lists(world.words, phoneNames = com.atlas.engine.PhoneNames.words(listOf("Rose Bill"),
+        same(typed("rose and bill came", Lists(world.words, phoneNames = com.titankeys.engine.PhoneNames.words(listOf("Rose Bill"),
             { world.words.frequency(it).toDouble() }, { it in plain }))), "rose and bill came",
             "A contact's name made of ordinary words gives them no capitals")
         val undone = Typist(world, world.autocorrect(saved), lists = saved).type("titankeys ").backspace().type(" ")
@@ -2461,8 +2461,37 @@ private fun apostrophes(world: Realistic) {
             lines.append("  $typed | $expected | $got${if (got == expected) "" else "  <-- DIFFERS"}\n")
             same(got, expected, "Owner's report with the real model: $typed")
         }
+        // #73: "were" becomes "we're" only when the model is very sure, at 2.0 nats. The meant "were" here scored -13 to 0.7.
+        val weres = listOf(
+            "Were almost there." to "We're almost there.", "Great. Were done here." to "Great. We're done here.",
+            "Were going to be late." to "We're going to be late.",
+            "Were you at home last night?" to null, "Were the kids asleep?" to null, "Were there any problems?" to null,
+            "they came and were going to stay" to null, "the cats ate and were happy" to null, "if we were there" to null,
+            "We were going to call you." to null, "ok were going now" to null,
+        )
+        for ((typed, expected) in weres) {
+            val got = typist().type("$typed ").text.trimEnd()
+            lines.append("  $typed | ${expected ?: typed} | $got${if (got == (expected ?: typed)) "" else "  <-- DIFFERS"}\n")
+            same(got, expected ?: typed, "were/we're with the real model: $typed")
+        }
         println(lines)
     }
+
+    // #73: "were" waits like the other context words, but needs 1.0 nats more: 2.0, or 3.0 when only sure.
+    val onlySure = Lists(world.words, sure = true)
+    fun scoring(margin: Double) = ContinuationScorer { _, texts -> DoubleArray(texts.size) { if (it == 0) 0.0 else margin } }
+    same(typist(with = scoring(2.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "+2.5: were becomes we're")
+    same(typist(with = scoring(1.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "+1.5 isn't enough for were")
+    same(typist(with = scoring(1.5)).type("Sorry, its going to be late. ").text, "Sorry, it's going to be late. ", "though it is for its")
+    same(typist(onlySure, scoring(2.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "Only when sure: +2.5 isn't")
+    same(typist(onlySure, scoring(3.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "Only when sure: +3.5 is")
+    same(typist(with = scoring(5.0)).type("Sorry, were going to ").backspace().text, "Sorry, were going to ",
+        "Backspace right after puts \"were\" back")
+    same(typist(with = scoring(5.0)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, were going to ", "A swiped were never changes")
+    same(typist(Lists(world.words, off = setOf(FixKind.CONTEXT_APOSTROPHES)), scoring(5.0)).type("Sorry, were going to ").text,
+        "Sorry, were going to ", "Switched off, \"were\" stays")
+    same(typist(with = scoring(5.0)).type("so were, ").text, "so were, ", "Too few words: \"were\" stays")
+    same(typist(with = scoring(5.0)).type("Sorry, we're going to ").text, "Sorry, we're going to ", "\"we're\" never loses its apostrophe")
 
     // Always fixed at the word's end, though "whats", "cant", "wont", "hes" and "shes" are in the word lists.
     val always = listOf("whats" to "what's", "wheres" to "where's", "hes" to "he's", "shes" to "she's", "cant" to "can't",
@@ -2479,8 +2508,8 @@ private fun apostrophes(world: Realistic) {
     // "lets" is a context word now: alone it stays.
     same(typist(with = null).type("so lets ").text, "so lets ", "\"lets\" isn't always fixed")
 
-    // Never: "were" to "we're", "their" and "there" swapped, an apostrophe taken out, or a swiped word.
-    same(typist().type("We were going to call you. ").text, "We were going to call you. ", "\"were\" never becomes \"we're\"")
+    // Never: a meant "were" changed, "their" and "there" swapped, an apostrophe taken out, or a swiped word.
+    same(typist().type("We were going to call you. ").text, "We were going to call you. ", "\"We were\" stays")
     for (text in listOf("put it there for now ", "their dog is here ", "the dog wagged it's tail ", "it was it's own thing "))
         same(typist().type(text).text, text, "Never changed: $text")
     same(typist().type("Bring a coat, ").swipe("its").type("going to ").text, "Bring a coat, its going to ", "A swiped word never changes")
@@ -2646,7 +2675,7 @@ private fun bugHunt(world: Realistic) {
     retry.loaded()
     retry.failed(5_000_000)
     must(retry.mayLoad(5_000_000 + LoadRetry.FIRST_MILLIS), "#39: a load that worked starts the waits over")
-    val loader = java.io.File("android/kotlin/com/atlas/keyboard/AutocorrectLoader.kt").readText()
+    val loader = java.io.File("android/kotlin/com/titankeys/keyboard/AutocorrectLoader.kt").readText()
     must("failed = true" !in loader && loader.contains("retry.failed(SystemClock.uptimeMillis())") &&
         loader.split("!retry.mayLoad(SystemClock.uptimeMillis())").size == 3, "#39: the loader waits on the retry, and never gives up")
 }

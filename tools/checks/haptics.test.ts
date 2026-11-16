@@ -5,7 +5,7 @@ import { hapticGroups } from "../../lib/haptics";
 const root = new URL("../../", import.meta.url);
 
 test("the Haptics page lists every haptic in Haptics.kt", async () => {
-  const source = await Bun.file(new URL("android/kotlin/com/atlas/keyboard/Haptics.kt", root)).text();
+  const source = await Bun.file(new URL("android/kotlin/com/titankeys/keyboard/Haptics.kt", root)).text();
   const body = source.slice(source.indexOf("enum class Haptic("), source.indexOf("/** Its switch in"));
   // Haptics that share a switch, as the playground's moments do, show as that one switch.
   const all = [...body.matchAll(/^\s+\w+\("(\w+)", HapticGroup\.(\w+), Family\.\w+(?:, "(\w+)")?\)/gm)]

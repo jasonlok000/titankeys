@@ -1,5 +1,5 @@
 import { Screen, useSnapshot } from "ink";
-import { addWord, removeWord, state } from "../../../lib/atlas";
+import { addWord, removeWord, state } from "../../../lib/titankeys";
 import { WordList } from "../../../lib/word-list";
 
 export default function SavedWords() {

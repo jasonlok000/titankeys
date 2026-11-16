@@ -14,10 +14,10 @@ test("Settings opens the shorthand page, and it can add its own", async () => {
 });
 
 test("the app's calls for shorthand are the ones the bridge handles", async () => {
-  const lib = await read("lib/atlas.ts");
+  const lib = await read("lib/titankeys.ts");
   const bridge = await read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   for (const operation of ["putShorthand", "removeShorthand"]) {
-    expect(lib).toContain(`atlas("${operation}"`);
+    expect(lib).toContain(`titankeys("${operation}"`);
     expect(bridge).toContain(`"${operation}" ->`);
   }
   expect(bridge).toContain('"shorthandToggles" ->');
@@ -41,7 +41,7 @@ test("each listed shorthand fits what Settings takes as the user's own", async (
 });
 
 test("shorthand is kept in lowercase, and its fields ask for no capitals (owner, 2026-11-13)", async () => {
-  const settings = await read("android/kotlin/com/atlas/engine/TypingSettings.java");
+  const settings = await read("android/kotlin/com/titankeys/engine/TypingSettings.java");
   // Saved and removed by its lowercase key, and what was saved with capitals before is repaired when it's read.
   expect(settings).toContain("own.put(shorthandKey(shorthand), full)");
   expect(settings).toContain("own.remove(shorthandKey(shorthand))");

@@ -14,7 +14,7 @@ describe("typing log: TitanKeys Debug only", () => {
   });
 
   test("the keyboard records the full log only through the gate", async () => {
-    const rawLog = await text("android/kotlin/com/atlas/keyboard/RawLog.kt");
+    const rawLog = await text("android/kotlin/com/titankeys/keyboard/RawLog.kt");
     expect(rawLog).toContain("fun available(context: Context) = RawLogGate.allows(context.packageName)");
     expect(rawLog).toContain("fun on(context: Context) = available(context) && TypingSettings.rawLog(context)");
     expect(rawLog).toContain("val debug = if (on(context)) debugField(context, info, restarting) else null");
@@ -36,7 +36,7 @@ describe("typing log: TitanKeys Debug only", () => {
     expect(adapter).toContain('"rawLog" -> RawLog.enabled(activity, value as Boolean)');
     expect(await text("android/kotlin/com/vandam/ink/RawLogExportActivity.kt")).toMatch(/if \(!RawLog\.available\(this\)\) \{\s*complete\(false/);
     // An old 2.0 log on a public release goes away at keyboard start.
-    expect(await text("android/kotlin/com/atlas/keyboard/AtlasIme.kt")).toContain("RawLog.removeLeftovers(this)");
+    expect(await text("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt")).toContain("RawLog.removeLeftovers(this)");
   });
 
   test("no public text points to the typing log", async () => {
@@ -47,18 +47,18 @@ describe("typing log: TitanKeys Debug only", () => {
 
 describe("record a bug", () => {
   test("keeps its own store, apart from the typing log", async () => {
-    const bug = await text("android/kotlin/com/atlas/keyboard/BugRecording.kt");
+    const bug = await text("android/kotlin/com/titankeys/keyboard/BugRecording.kt");
     expect(bug).toContain('private const val DIRECTORY = "bug-recording"');
-    expect(await text("android/kotlin/com/atlas/keyboard/RawLog.kt")).toContain('private const val DIRECTORY = "rawlog"');
+    expect(await text("android/kotlin/com/titankeys/keyboard/RawLog.kt")).toContain('private const val DIRECTORY = "rawlog"');
   });
 
   test("records only in fields that allow learning, never the text around the cursor, and stops by itself", async () => {
-    const bug = await text("android/kotlin/com/atlas/keyboard/BugRecording.kt");
+    const bug = await text("android/kotlin/com/titankeys/keyboard/BugRecording.kt");
     expect(bug).toContain("if (!Field.of(info.inputType, info.imeOptions).learning) {");
     expect(bug).toMatch(/RawLogLines\.fieldStart\([^)]*info\.initialSelStart, info\.initialSelEnd, null, now\)/);
     expect(bug).toContain("const val MAX_MILLIS = 3 * 60_000L");
     expect(bug).toContain("main.postDelayed(autoStop, MAX_MILLIS)");
-    const rawLog = await text("android/kotlin/com/atlas/keyboard/RawLog.kt");
+    const rawLog = await text("android/kotlin/com/titankeys/keyboard/RawLog.kt");
     expect(rawLog).toContain("if (keepText) before?.toString() else null");
     expect(rawLog).toContain("if (bug != null && !bug.closed) bug.add(line(false))");
     // Marks come from any app, so only the debug log takes them.
@@ -68,7 +68,7 @@ describe("record a bug", () => {
   test("never freezes the keyboard: the auto-stop runs off the main thread, and the summary is read once", async () => {
     // Bug hunt 2.1, #23: the auto-stop ran on the main looper and waited up to 2 s for the writer, and every Settings refresh
     // exported and parsed up to 24 MB, rewriting the file the share sheet had lent out.
-    const bug = await text("android/kotlin/com/atlas/keyboard/BugRecording.kt");
+    const bug = await text("android/kotlin/com/titankeys/keyboard/BugRecording.kt");
     expect(bug).toContain('private val autoStop = Runnable { app?.let { context -> Thread({ stop(context) }, "BugRecordingStop").start() } }');
     expect(bug).toMatch(/stopping\.join\(WRITE_WAIT_MILLIS\)[\s\S]{0,200}summary = read\(context\)/);
     expect(bug).toMatch(/fun summary\(context: Context\): Summary\? \{\s*if \(recording\) return null\s*summary\?\.let \{ return it \}/);
@@ -81,11 +81,11 @@ describe("record a bug", () => {
 
   test("shares only through the share sheet, with a provider no other app can reach", async () => {
     const manifest = await text("android/src/main/AndroidManifest.xml");
-    expect(manifest).toMatch(/android:name="com\.atlas\.keyboard\.BugRecordingProvider"[\s\S]*?android:exported="false"[\s\S]*?android:grantUriPermissions="true"/);
-    const bug = await text("android/kotlin/com/atlas/keyboard/BugRecording.kt");
+    expect(manifest).toMatch(/android:name="com\.titankeys\.keyboard\.BugRecordingProvider"[\s\S]*?android:exported="false"[\s\S]*?android:grantUriPermissions="true"/);
+    const bug = await text("android/kotlin/com/titankeys/keyboard/BugRecording.kt");
     expect(bug).toContain("Intent(Intent.ACTION_SEND)");
     expect(bug.includes("HttpsURLConnection") || bug.includes("Connected.open(")).toBe(false);
-    const provider = await text("android/kotlin/com/atlas/keyboard/BugRecordingProvider.kt");
+    const provider = await text("android/kotlin/com/titankeys/keyboard/BugRecordingProvider.kt");
     expect(provider).toContain('if (mode != "r") throw SecurityException("Read only")');
   });
 
@@ -93,7 +93,7 @@ describe("record a bug", () => {
     const words = await text("lib/bug-text.ts");
     expect(words).toContain("someone can work out what you typed");
     expect(words).toContain("Password and private fields are never recorded");
-    expect(words).toContain("TitanKeys doesn't upload it");
+    expect(words).toContain("TitanKeys only sends it if you press Send in the report form");
     expect(words.toLowerCase().includes("anonym")).toBe(false);
   });
 

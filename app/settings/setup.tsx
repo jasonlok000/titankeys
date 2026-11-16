@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Field, Screen, Section, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
-import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, fakeOtherPhone, onAppWindow, openScrollAssistant, openShortcutKeys, state, update, type State } from "../../lib/atlas";
+import { allowBack, allowOverlay, chooseKeyboard, enableKeyboard, fakeOtherPhone, onAppWindow, openScrollAssistant, openShortcutKeys, state, update, type State } from "../../lib/titankeys";
 import { otherPhone } from "../../lib/front";
 import { Note } from "../../lib/note";
 
@@ -21,8 +21,8 @@ const onOff = (on: boolean) => on ? "On" : "Off";
 export const scrollAssistantStep = "Turn on Scroll assistant, Sliding Mode 1";
 export const overlayListNote = "Android opened its whole list. Find TitanKeys Keyboard in it, open it and flip the switch.";
 export const backListNote = "Android opened its whole list. Find TitanKeys Keyboard in it and turn it on.";
-// F: draft, the line that stays at the top of Settings > Setup on phones other than the Titan 2 Elite (#75).
-export const otherPhoneNote = "This isn't a Titan 2 Elite, so swiping and the touch keys won't work. Everything else does.";
+// The line that stays at the top of Settings > Setup on phones other than the Titan 2 Elite (#75).
+export const otherPhoneNote = "This isn't a Titan 2 Elite, so swiping, Space taps and flicks won't work here.";
 export const contactsStep = "Names from my contacts";
 
 export const setupLabel = (settings: State) => status([...steps(settings), ...phoneSteps(settings)].every(Boolean));

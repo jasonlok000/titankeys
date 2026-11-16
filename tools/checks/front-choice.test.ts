@@ -32,9 +32,9 @@ test("Back declined with No thanks counts as done, as the guide's own setup coun
   expect(frontChoice({ ...done, backService: false, backDeclined: true, overlay: false })).toBe("setup");
   // The guide's setup treats it the same way.
   // PhoneSetup.missing hands the answer to GuideSteps' setupToAsk, which also passes skipped parts over (#72, #87).
-  expect(read("android/kotlin/com/atlas/keyboard/PhoneSetup.kt"))
+  expect(read("android/kotlin/com/titankeys/keyboard/PhoneSetup.kt"))
     .toContain("setupToAsk({ done(context, it) }, BackDisclosureActivity.declined(context))");
-  expect(read("android/kotlin/com/atlas/keyboard/GuideSteps.kt"))
+  expect(read("android/kotlin/com/titankeys/keyboard/GuideSteps.kt"))
     .toContain("done(it) || it == SetupPart.Back && backDeclined");
   expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt"))
     .toContain('.put("backDeclined", BackDisclosureActivity.declined(activity))');
@@ -43,7 +43,7 @@ test("Back declined with No thanks counts as done, as the guide's own setup coun
 test("with setup done, the guide opens once by itself, then never again", () => {
   expect(frontChoice({ ...done, guideDue: true })).toBe("guide");
   // The guide marks itself shown as it opens (GuideActivity.start), so any way out of it lands on the front page.
-  expect(read("android/kotlin/com/atlas/keyboard/GuideActivity.kt"))
+  expect(read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt"))
     .toContain("activity.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit().putBoolean(SHOWN, true).apply()");
 });
 
@@ -72,8 +72,8 @@ test("a Titan 2 Elite is the touchpad's property and the device, the pair the to
   expect(isTitan2Elite({ touchpadFunction: "", device: "husky" })).toBe(false);
   expect(isTitan2Elite({ touchpadFunction: "", device: "" })).toBe(false);
   // The same pair as the touchpad: Touchpad.kt checks the device, TypingSettings the property.
-  expect(read("android/kotlin/com/atlas/keyboard/Touchpad.kt")).toContain('Build.DEVICE != "Titan_2"');
-  expect(read("android/kotlin/com/atlas/engine/TypingSettings.java")).toContain('"ro.agui.touchpad_function"');
+  expect(read("android/kotlin/com/titankeys/keyboard/Touchpad.kt")).toContain('Build.DEVICE != "Titan_2"');
+  expect(read("android/kotlin/com/titankeys/engine/TypingSettings.java")).toContain('"ro.agui.touchpad_function"');
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   expect(adapter).toContain('.put("touchpadFunction", systemProperty("ro.agui.touchpad_function"))');
   expect(adapter).toContain('.put("device", Build.DEVICE ?: "")');

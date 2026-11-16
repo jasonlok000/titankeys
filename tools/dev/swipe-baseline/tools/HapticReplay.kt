@@ -1,11 +1,11 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.io.File
 import kotlin.math.hypot
 
 /**
  * #30 mistaps: replays logged touchpad motion and key presses through the keyboard's own [Contact], with the swipe tick
- * rule of AtlasIme.motion and Haptics.move, to find which contacts vibrated. The touchpad's other vibrations (accepted
+ * rule of TitanKeysIme.motion and Haptics.move, to find which contacts vibrated. The touchpad's other vibrations (accepted
  * tap keys, the cursor, a delete flick) are left out: tap keys were off, and the cursor's and the flick's are input.
  * Prints one line per contact: down, up, ticks, first tick time, outcome (swipe, delete, tap, none), whether it counted,
  * travel in keys, landing step, largest step, and whether the first tick came before the contact counted as a swipe.

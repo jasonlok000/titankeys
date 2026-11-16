@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Screen, Section, Stack, Text, useSnapshot } from "ink";
-import { markNerdSeen, state } from "../../lib/atlas";
+import { markNerdSeen, state } from "../../lib/titankeys";
 import { nerdSplash } from "../../lib/nerd";
 import { Topic } from "../../lib/topic";
 
@@ -69,7 +69,8 @@ export default function BoringGuide() {
       {/* The keys named in pairs, I/K, O/L and P/Backspace (#67). F (docs/words-m1.md). */}
       <Topic title="The word menu">{"Hold a word on the bar for its menu. I/K moves the word up a step and O/L moves it down: Blocked, Not saved, Saved, Favourite. Saved means TitanKeys knows the word: it's in the dictionary, you typed it twice, or you saved it. Unsave takes a word out without blocking it, so typing it twice brings it back. Block keeps it out until you unblock it. Rest a finger on I/K or O/L to see what the press will do, then press. P/Backspace closes the menu."}</Topic>
       <Topic title="A selected word">{"Pick a word in your text and the bar shows it alone in the middle. Touch it for the same menu."}</Topic>
-      <Topic title="Your newest copy">{"Right after you copy something, the bar offers it. Touch it to paste. It goes away once you type on. Older copies are in the clipboard: press Sym, then A."}</Topic>
+      {/* F: drafts (#90): key steps one action each, here and in The clipboard. */}
+      <Topic title="Your newest copy">{"Right after you copy something, the bar offers it. Touch it to paste. It goes away once you type on. Older copies are in the clipboard: press Sym, let go, then press A."}</Topic>
       <Topic title="Shift, Alt and Ctrl">{"When you press or hold Shift, Alt or Ctrl, the bar shows it in place of your words. Filled means you're holding the key, an outline means you pressed it once, and Caps means Shift is locked. Rest your finger on a key to see what it types. The only exception is the capital at the start of a sentence: that one keeps your words."}</Topic>
       <Topic title="Ctrl shortcuts">{"Hold Ctrl and the bar shows what each shortcut does. Press a key while you hold Ctrl to use it."}</Topic>
       <Topic title="Bar text size">{"Want the bar's words bigger or smaller? Settings > Bar text size has Smaller, Normal and Bigger. It changes the words, the word menu and the Shift, Alt and Ctrl chips, and the bar keeps its height. Everyone starts at Normal."}</Topic>
@@ -96,7 +97,7 @@ export default function BoringGuide() {
     <Section title="Copy and paste">
       <Topic title="Copy, cut and paste">{"Pick some text, then hold fn and press C to copy, X to cut, or V to paste. fn works as Ctrl, so every Ctrl shortcut works with it."}</Topic>
       <Topic title="Use fn as Ctrl">{"On by default. Want fn for the phone's own shortcuts instead? Turn off Use fn as Ctrl in Settings."}</Topic>
-      <Topic title="The clipboard">{"Press Sym, then A. Your last copies are there, newest first, a few to a page. Swipe up or down on the keys for more, and left or right for Pinned. Press a key to paste its clip. Enter pins clips so they stay. Backspace clears the ones that aren't pinned. Alt goes back to the symbols."}</Topic>
+      <Topic title="The clipboard">{"Press Sym, let go, then press A. Your last copies are there, newest first, a few to a page. Swipe up or down on the keys for more, and left or right for Pinned. Press a key to paste its clip. Enter pins clips so they stay. Backspace clears the ones that aren't pinned. Alt goes back to the symbols."}</Topic>
     </Section>
     <Section title="Shortcuts">
       <Topic title="Snippets">{`Type a shortcut like ${start}addr and press Space. It turns into your address, or whatever you saved for it. Press Backspace right after to get the shortcut back. ${typeStart} Make snippets in Settings > Snippets, where you can also pick another symbol for the start and back them up.`}</Topic>
@@ -108,8 +109,7 @@ export default function BoringGuide() {
       <Topic title="New words">{"TitanKeys learns the new words you type, so it suggests them next time. Turn that off with Learn new words I type in Settings > Your words. Typing in password fields and private fields teaches it nothing."}</Topic>
       <Topic title="Saved and blocked words">{"Saved words always show up. Blocked words never do. Both lists are in Settings > Your words, where you can add or remove words. The word menu on the bar fills them too."}</Topic>
       <Topic title="Names from your contacts">{"Turn on Names from my contacts in Settings > Your words, and the names on your phone swipe right, with their capitals. They stay on your phone."}</Topic>
-      {/* F: draft (#65): Export words and Import words became Back up everything and Restore, with snippets and settings in it. */}
-      <Topic title="Backup">{"Your words > Back up everything saves one file with your words, snippets, shorthand, app lists and settings. Restore brings it back, on this phone or a new one. Remove learned words wipes everything TitanKeys learned from you."}</Topic>
+      <Topic title="Backup">{"Settings > Your words > Back up everything saves one file with your words, snippets, shorthand, app lists and settings. Keep it somewhere safe. Restore brings it back, on this phone or a new one: your settings change to the backup's, and its words and lists join yours. Remove learned words wipes everything TitanKeys learned from you."}</Topic>
     </Section>
     <Section title="Look and feel">
       <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>

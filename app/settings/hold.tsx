@@ -1,4 +1,4 @@
-import type { State } from "../../lib/atlas";
+import type { State } from "../../lib/titankeys";
 import { DurationPage, ms } from "../../lib/duration";
 
 export const holdLabel = ({ holdSymbols, holdSymbolMillis }: State) => holdSymbols ? ms(holdSymbolMillis) : "Off";

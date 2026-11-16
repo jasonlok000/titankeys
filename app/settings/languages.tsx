@@ -1,5 +1,5 @@
 import { Screen, Section, useAction, useSnapshot } from "ink";
-import { type InputMethodEntry, type State, state, update } from "../../lib/atlas";
+import { type InputMethodEntry, type State, state, update } from "../../lib/titankeys";
 import { Toggle } from "../../lib/app-haptics";
 import { Note } from "../../lib/note";
 

@@ -1,4 +1,4 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 /** #85: a burst of contact or app changes reads the names once, after it settles. */
 private class FakeClock {

@@ -1,5 +1,5 @@
         <activity
-            android:name="com.atlas.keyboard.RecorderActivity"
+            android:name="com.titankeys.keyboard.RecorderActivity"
             android:label="TitanKeys Recorder"
             android:exported="true"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
@@ -11,7 +11,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.atlas.keyboard.TouchSizeActivity"
+            android:name="com.titankeys.keyboard.TouchSizeActivity"
             android:label="TitanKeys Touch size"
             android:exported="true"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
@@ -24,16 +24,16 @@
         </activity>
         <!-- Copies the raw typing log where adb can pull it. Only adb, which holds DUMP, can send to it. -->
         <receiver
-            android:name="com.atlas.keyboard.RawLogPull"
+            android:name="com.titankeys.keyboard.RawLogPull"
             android:exported="true"
             android:permission="android.permission.DUMP" />
         <!-- Resets the connected features for phone tests. Only adb, which holds DUMP, can send to it. -->
         <receiver
-            android:name="com.atlas.keyboard.ConnectedReset"
+            android:name="com.titankeys.keyboard.ConnectedReset"
             android:exported="true"
             android:permission="android.permission.DUMP" />
         <activity
-            android:name="com.atlas.keyboard.SpaceGestureActivity"
+            android:name="com.titankeys.keyboard.SpaceGestureActivity"
             android:label="TitanKeys Space gestures"
             android:exported="true"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"

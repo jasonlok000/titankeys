@@ -6,7 +6,7 @@ sdk=${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}
 adb="$sdk/platform-tools/adb"
 app=com.titankeys.debug
 manifest=android/src/main/AndroidManifest.xml
-check=android/kotlin/com/atlas/keyboard/PreviewChecks.kt
+check=android/kotlin/com/titankeys/keyboard/PreviewChecks.kt
 work=$(mktemp -d)
 test ! -e "$check"
 cp "$manifest" "$work/AndroidManifest.xml"
@@ -24,14 +24,14 @@ path = Path("android/src/main/AndroidManifest.xml")
 text = path.read_text()
 assert text.count("<application") == 1, "Could not find the application tag"
 path.write_text(text.replace("<application",
-    f'<instrumentation android:name="com.atlas.keyboard.PreviewChecks" android:targetPackage="{sys.argv[1]}" />\n    <application'))
+    f'<instrumentation android:name="com.titankeys.keyboard.PreviewChecks" android:targetPackage="{sys.argv[1]}" />\n    <application'))
 PY
 bash tools/debug.sh --install
-"$adb" shell ime enable "$app/com.atlas.keyboard.AtlasIme"
-"$adb" shell ime set "$app/com.atlas.keyboard.AtlasIme"
+"$adb" shell ime enable "$app/com.titankeys.keyboard.TitanKeysIme"
+"$adb" shell ime set "$app/com.titankeys.keyboard.TitanKeysIme"
 passed=true
 for attempt in 1 2 3; do
-  output=$("$adb" shell am instrument -w "$app/com.atlas.keyboard.PreviewChecks")
+  output=$("$adb" shell am instrument -w "$app/com.titankeys.keyboard.PreviewChecks")
   printf '%s\n' "$output"
   [[ "$output" == *"PASS the playground shows a new swipe after returning from Settings"* ]] || passed=false
 done

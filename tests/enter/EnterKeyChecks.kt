@@ -1,9 +1,9 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
-import com.atlas.keyboard.EnterKey.Press
-import com.atlas.keyboard.EnterKey.SendMethod
+import com.titankeys.keyboard.EnterKey.Press
+import com.titankeys.keyboard.EnterKey.SendMethod
 
 private const val SINGLE_LINE = InputType.TYPE_CLASS_TEXT
 private const val MULTI_LINE = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE

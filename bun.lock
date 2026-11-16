@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "atlas",
+      "name": "titankeys",
       "dependencies": {
         "ink": "file:../ink/packages/ink",
         "react": "19.2.8",

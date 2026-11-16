@@ -1,5 +1,5 @@
 // Renders the delete's dots on the bar to pictures, to look at by eye: one strip of frames for each case. render.sh runs it.
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.awt.Font
 import java.awt.RenderingHints

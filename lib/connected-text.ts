@@ -2,7 +2,7 @@
  * The words of the News and Share swipes pages, in one place, so that other languages (#56) can change them without
  * touching the pages. The voice is the owner's (#54, voice.md): casual and direct. The Share swipes disclosure and
  * everything about deleting data are a clean zone: casual, never swearing. The disclosure must stay true to the privacy
- * policy (site/privacy) and to what android/kotlin/com/atlas/connected does. The guide's own offer is in GuideActivity
+ * policy (site/privacy) and to what android/kotlin/com/titankeys/connected does. The guide's own offer is in GuideActivity
  * (SHARE_HINT, SHARE_OFFER). Page titles stay short: the large header cuts long ones.
  */
 export const newsText = {

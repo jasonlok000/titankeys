@@ -1,0 +1,178 @@
+package com.titankeys.keyboard
+
+import com.titankeys.connected.Json
+import java.util.Locale
+
+/**
+ * One way of typing: English, Spanish, Russian, Cantonese in Yale... Each lives in `android/assets/im/<id>/im.json`, with its
+ * word list beside it (docs/languages.md, "The input method file"). English is built in and keeps all its own code; it only
+ * borrows this shape for its name, label and locale.
+ *
+ * Nothing here needs Android, so tests/languages checks it on the JVM.
+ */
+data class InputMethod(
+    /** The folder's name, a lower-case BCP 47 tag: `es`, `pt`, `sr-latn`, `yue-yale`. */
+    val id: String,
+    /** Its own name, as in the overlay and Settings: Español. */
+    val name: String,
+    /** Its English name, for Settings' second line: Spanish. */
+    val nameEnglish: String,
+    /** Two or three characters for the overlay: ES, RU, 粵. */
+    val label: String,
+    /** Android's locale for its keyboard-list entry and for capitals (Turkish's i and İ). */
+    val locale: String,
+    /** ISO 15924: Latn, Cyrl, Grek, Geor, Hani. */
+    val script: String,
+    /**
+     * What each of the 26 keys types, by the letter printed on it (lower case), or null where the keys type what they show,
+     * as in every Latin-script input method.
+     */
+    val keys: Map<Char, KeyLetters>?,
+    /** The letters held on each key, by the letter printed on it, in the order they show on the bar. */
+    val accents: Map<Char, List<String>>,
+    /** The word list's file in the input method's folder, or null. */
+    val words: String?,
+    /** Spellings with their own word lists, such as Portuguese's Brazil and Portugal, or none. */
+    val variants: List<Variant>,
+    val rules: Rules,
+    /** The engine's name (`rime`), or null for an input method whose keys type letters straight in. */
+    val engine: String?,
+    /** What the engine needs to know: Rime's schema, for one. */
+    val engineArg: String?,
+    /** Where the letters and the words come from, for the licences page and for contributors. */
+    val source: Map<String, String>,
+) {
+    /** What a key types: [base], and [shift] where Shift gives another letter rather than [base]'s capital (Georgian). */
+    data class KeyLetters(val base: String, val shift: String? = null)
+
+    data class Variant(val id: String, val name: String, val words: String?)
+
+    data class Rules(
+        /** A capital after a sentence ends. */
+        val capitalise: Boolean = true,
+        /** The marks that end a sentence. */
+        val sentenceEnd: String = ".?!",
+        /** Marks that open a sentence, as Spanish's ¿ and ¡. */
+        val openingMarks: String = "",
+        /** Whether an apostrophe can be part of a word (French: l'eau). */
+        val apostrophes: Boolean = true,
+    )
+
+    val isEnglish get() = id == ENGLISH_ID
+    val hasAccents get() = accents.isNotEmpty()
+    val javaLocale: Locale get() = Locale.forLanguageTag(locale)
+
+    /**
+     * What the key printed [printed] (a to z, any case) types, with Shift on or off: its own letter, upper-cased in the
+     * input method's language, or the letter Shift gives it. Null for a key this input method doesn't change.
+     */
+    fun letter(printed: Char, shift: Boolean): String? {
+        val key = keys?.get(printed.lowercaseChar()) ?: return null
+        if (!shift) return key.base
+        return key.shift ?: key.base.uppercase(javaLocale)
+    }
+
+    /** The letters held on the key printed [printed], in capitals with [shift], or none. */
+    fun accentsOf(printed: Char, shift: Boolean): List<String> {
+        val held = accents[printed.lowercaseChar()] ?: return emptyList()
+        return if (shift) held.map { it.uppercase(javaLocale) } else held
+    }
+
+    companion object {
+        const val ENGLISH_ID = "en"
+        /** The most input methods on at once: the overlay's places, W to O. */
+        const val MAX_ON = 8
+        /** The longest label the overlay can show over its key. */
+        const val MAX_LABEL = 3
+        /** The most accents on one key: one per key column. */
+        const val MAX_ACCENTS = 10
+
+        /** English, built in: it has no file of its own. */
+        val ENGLISH = InputMethod(ENGLISH_ID, "English", "English", "EN", "en", "Latn", null, emptyMap(), null,
+            emptyList(), Rules(), null, null, emptyMap())
+
+        /** Reads an `im.json`. Throws [Json.Error] with the reason when the file is wrong. */
+        fun parse(text: String): InputMethod {
+            val root = Json.parse(text) as? Map<*, *> ?: throw Json.Error("im.json must be an object")
+            fun text(key: String) = root[key] as? String ?: throw Json.Error("$key must be text")
+            fun textOrNull(key: String) = when (val value = root[key]) {
+                null -> null
+                is String -> value
+                else -> throw Json.Error("$key must be text or null")
+            }
+            val id = text("id")
+            if (!ID.matches(id)) throw Json.Error("id must be a lower-case tag such as es or sr-latn")
+            val label = text("label")
+            if (label.codePointCount(0, label.length) !in 1..MAX_LABEL) throw Json.Error("label must be 1 to $MAX_LABEL characters")
+            val keys = when (val value = root["keys"]) {
+                "qwerty", null -> null
+                is Map<*, *> -> value.entries.associate { (key, letters) ->
+                    val printed = printedKey(key)
+                    val parts = (letters as? String ?: throw Json.Error("keys.$printed must be text")).split('/')
+                    if (parts.size > 2 || parts.any { it.isEmpty() }) throw Json.Error("keys.$printed must be a letter, or letter/shifted")
+                    printed to KeyLetters(parts[0], parts.getOrNull(1))
+                }
+                else -> throw Json.Error("keys must be \"qwerty\" or a map of keys")
+            }
+            val accents = when (val value = root["accents"]) {
+                null -> emptyMap()
+                is Map<*, *> -> value.entries.associate { (key, held) ->
+                    val printed = printedKey(key)
+                    val letters = graphemes(held as? String ?: throw Json.Error("accents.$printed must be text"))
+                    if (letters.isEmpty() || letters.size > MAX_ACCENTS) throw Json.Error("accents.$printed must hold 1 to $MAX_ACCENTS letters")
+                    printed to letters
+                }
+                else -> throw Json.Error("accents must be a map of keys")
+            }
+            val variants = when (val value = root["variants"]) {
+                null -> emptyList()
+                is List<*> -> value.map {
+                    val variant = it as? Map<*, *> ?: throw Json.Error("each variant must be an object")
+                    Variant(variant["id"] as? String ?: throw Json.Error("a variant needs an id"),
+                        variant["name"] as? String ?: throw Json.Error("a variant needs a name"), variant["words"] as? String)
+                }
+                else -> throw Json.Error("variants must be a list or null")
+            }
+            val rules = (root["rules"] as? Map<*, *>)?.let {
+                Rules(it["capitalise"] as? Boolean ?: true, it["sentenceEnd"] as? String ?: ".?!", it["openingMarks"] as? String ?: "",
+                    it["apostrophes"] as? Boolean ?: true)
+            } ?: Rules()
+            val (engine, engineArg) = when (val value = root["engine"]) {
+                null -> null to null
+                is String -> value to null
+                is Map<*, *> -> {
+                    val entry = value.entries.singleOrNull() ?: throw Json.Error("engine must name one engine")
+                    entry.key as String to (entry.value as? String)
+                }
+                else -> throw Json.Error("engine must be null, a name, or { name: argument }")
+            }
+            val source = (root["source"] as? Map<*, *>)?.entries?.associate { (k, v) -> k as String to v.toString() } ?: emptyMap()
+            return InputMethod(id, text("name"), text("nameEnglish"), label, text("locale"), text("script"), keys, accents,
+                textOrNull("words"), variants, rules, engine, engineArg, source)
+        }
+
+        private val ID = Regex("[a-z]{2,3}(-[a-z0-9]{2,8})*")
+
+        private fun printedKey(key: Any?): Char {
+            val text = key as? String
+            if (text == null || text.length != 1 || text[0] !in 'a'..'z') throw Json.Error("\"$key\" is not a key: use a to z")
+            return text[0]
+        }
+
+        /** Splits text into what reads as single letters, so a letter with a combining mark stays whole. */
+        fun graphemes(text: String): List<String> {
+            val out = ArrayList<String>()
+            val iterator = java.text.BreakIterator.getCharacterInstance(Locale.ROOT)
+            iterator.setText(text)
+            var start = iterator.first()
+            var end = iterator.next()
+            while (end != java.text.BreakIterator.DONE) {
+                val piece = text.substring(start, end)
+                if (piece.isNotBlank()) out += piece
+                start = end
+                end = iterator.next()
+            }
+            return out
+        }
+    }
+}

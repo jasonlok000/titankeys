@@ -1,5 +1,5 @@
 import { Screen, useSnapshot } from "ink";
-import { blockWord, state, unblockWord } from "../../../lib/atlas";
+import { blockWord, state, unblockWord } from "../../../lib/titankeys";
 import { WordList } from "../../../lib/word-list";
 
 export default function BlockedWords() {

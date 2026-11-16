@@ -1,5 +1,5 @@
 import { back } from "ink";
-import { resetSettings } from "../../lib/atlas";
+import { resetSettings } from "../../lib/titankeys";
 import { playHaptic } from "../../lib/app-haptics";
 import { ConfirmPage } from "../../lib/confirm";
 

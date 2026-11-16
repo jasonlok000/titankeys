@@ -8,7 +8,7 @@ import { END, parentOf } from "../../lib/settings-tree";
 // end screen."). Each page comes with the app's /end page under it, which opens the guide at its end again as Back uncovers it.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
-const guide = read("android/kotlin/com/atlas/keyboard/GuideActivity.kt");
+const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
 const constant = (name: string) => guide.match(new RegExp(`const val ${name} = "([^"]+)"`))![1];
 
 /** Each way out of the end screen: the page it opens, and the button. Share swipes opens its own policy and comes back by itself. */
@@ -39,7 +39,7 @@ test("Go type something opens the playground under /end, whose Back goes back to
   const front = read("app/index.tsx");
   expect(front).toContain('else if (action === "back") back();');
   expect(front).toContain("}, fromEnd);");
-  expect(read("lib/atlas.ts")).toContain('void atlas(fromEnd ? "playgroundFromEnd" : "playground");');
+  expect(read("lib/titankeys.ts")).toContain('void titankeys(fromEnd ? "playgroundFromEnd" : "playground");');
   expect(guide).toContain("if (playgroundFromEnd && !settingUp) leavePlayground(PLAYGROUND_BACK)");
 });
 

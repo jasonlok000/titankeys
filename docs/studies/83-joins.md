@@ -26,7 +26,7 @@ Numbers only. No typed words appear here, in the scripts' output or in `report.j
 - the contact size at the end of the first and the start of the second (logged from 2.0 on);
 - whether the words kept end and start on the top row (checked inside the script; only the yes/no leaves it).
 
-**The app's own code.** `JoinReplay.java` runs `Swipe.couldContinue` and `Swipe.sameStroke` from `android/kotlin/com/atlas/engine/Swipe.java` on every pair, compiled on the desktop as-is. It reproduces **483 of the 502** logged joins as a same-stroke join, so the geometric part of the replay is the keyboard's real path. Of the 19 it doesn't reproduce, 1 went through the 150 ms check, which needs the recogniser. The other 18 fail `couldContinue` in the replay: 6 are mid-pad joins in 2.1.0 that look like the touch-level piece joining in `SwipePieces.kt`, and the rest probably come from small differences between the points rebuilt from the log and the ones the keyboard held.
+**The app's own code.** `JoinReplay.java` runs `Swipe.couldContinue` and `Swipe.sameStroke` from `android/kotlin/com/titankeys/engine/Swipe.java` on every pair, compiled on the desktop as-is. It reproduces **483 of the 502** logged joins as a same-stroke join, so the geometric part of the replay is the keyboard's real path. Of the 19 it doesn't reproduce, 1 went through the 150 ms check, which needs the recogniser. The other 18 fail `couldContinue` in the replay: 6 are mid-pad joins in 2.1.0 that look like the touch-level piece joining in `SwipePieces.kt`, and the rest probably come from small differences between the points rebuilt from the log and the ones the keyboard held.
 
 **Labels**, from what happened next:
 
@@ -162,7 +162,7 @@ In WSL `atlas-build` as `dev`:
 OLD_SWIPE=old-Swipe.java bash docs/studies/83-joins/run.sh ~/tk-data/rawlog-20261111-1548/rawlog/raw-log-20261111-154845.jsonl
 ```
 
-`old-Swipe.java` is `Swipe.java` from before the rule, saved on Windows with `git show 93eb16d:android/kotlin/com/atlas/engine/Swipe.java`. Add `FIXTURE=tests/swipe/join-pairs.txt` to write the fixture again.
+`old-Swipe.java` is `Swipe.java` from before the rule, saved on Windows with `git show 93eb16d:android/kotlin/com/titankeys/engine/Swipe.java`. Add `FIXTURE=tests/swipe/join-pairs.txt` to write the fixture again.
 
 | File | Does |
 |---|---|

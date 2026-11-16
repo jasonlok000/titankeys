@@ -11,10 +11,10 @@ PATH=$sdk/platform-tools:$PATH
 ort=$(ls "$TREE"/android/libs/onnxruntime-android-*.jar | head -1)
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 mkdir "$work/classes" "$work/src"
-cp "$TREE/android/kotlin/com/atlas/keyboard/Layout.kt" "$work/src/"
+cp "$TREE/android/kotlin/com/titankeys/keyboard/Layout.kt" "$work/src/"
 "$kotlin/bin/kotlinc" -language-version 2.2 -no-stdlib -no-reflect -classpath "$stdlib" -d "$work/classes" "$work/src/Layout.kt" 2>/dev/null
 javac -nowarn --release 17 -cp "$work/classes:$android:$stdlib:$ort" -d "$work/classes" \
-  "$TREE"/android/kotlin/com/atlas/engine/*.java "$TREE"/android/kotlin/org/futo/ml/inference/*.java "$BASE/tools/CompletionRunner.java" 2>&1 | grep -v '^Note' || true
+  "$TREE"/android/kotlin/com/titankeys/engine/*.java "$TREE"/android/kotlin/org/futo/ml/inference/*.java "$BASE/tools/CompletionRunner.java" 2>&1 | grep -v '^Note' || true
 jar cf "$work/classes.jar" -C "$work/classes" .
 "$sdk/build-tools/36.0.0/d8" --min-api 34 --lib "$android" --output "$work/c.zip" "$work/classes.jar" "$stdlib" "$ort" 2>&1 | grep -iv 'warning' | head -5 || true
 python3 -I -c "
@@ -36,7 +36,7 @@ done
 tk_adb shell rm -rf "$device/swipe2"
 tk_adb push -q "$TREE/android/assets/swipe2" "$device/" >/dev/null
 tk_adb push -q "$work/in.jsonl" "$device/cr-in.jsonl" >/dev/null
-tk_adb shell "cd $device && LD_LIBRARY_PATH=$device/lib CLASSPATH=$device/cr.zip app_process -Djava.library.path=$device/lib $device com.atlas.engine.CompletionRunner $device/models $device/swipe2 $device/cr-in.jsonl $device/cr-out.jsonl" 2>&1 | tr -d '\r' | grep -v '^WARNING' | tail -20 || true
+tk_adb shell "cd $device && LD_LIBRARY_PATH=$device/lib CLASSPATH=$device/cr.zip app_process -Djava.library.path=$device/lib $device com.titankeys.engine.CompletionRunner $device/models $device/swipe2 $device/cr-in.jsonl $device/cr-out.jsonl" 2>&1 | tr -d '\r' | grep -v '^WARNING' | tail -20 || true
 tk_adb pull -q "$device/cr-out.jsonl" "$OUT" >/dev/null
 tk_adb shell rm -rf "$device/cr-in.jsonl" "$device/cr-out.jsonl" "$device/cr.zip" "$device/swipe2"
 echo "wrote $OUT"

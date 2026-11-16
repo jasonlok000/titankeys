@@ -1,9 +1,9 @@
 import { useSnapshot } from "ink";
-import { state } from "./atlas";
+import { state } from "./titankeys";
 
 /**
  * The colours drawn directly by screens, one set for the whole app: pure black with orange accents. theme.ts sets the same
- * values for everything else, and android/kotlin/com/atlas/keyboard/GuideColours mirrors them by hand for the native screens.
+ * values for everything else, and android/kotlin/com/titankeys/keyboard/GuideColours mirrors them by hand for the native screens.
  * The orange is named only here, in theme.ts and in Accent.kt (tools/checks/accent.test.ts): a screen asks [useAccent].
  */
 /** The one accent: titles, section labels, values and what's on. */

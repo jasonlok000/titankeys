@@ -1,7 +1,7 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.view.KeyEvent
-import com.atlas.keyboard.Modifiers.Panel
+import com.titankeys.keyboard.Modifiers.Panel
 
 /** Clipboard history (#46): up to twenty clips, an hour each unless pinned, Clear all, and its page in the Sym panel. */
 fun main() {

@@ -1,10 +1,10 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.io.File
 
 private fun sum(points: List<Sample>) = points.fold(17) { h, p -> 31 * (31 * (31 * h + p.x.toRawBits()) + p.y.toRawBits()) + p.time.toInt() }
 
-/** Feeds a converted event file through the real Contact and SwipePieces, the way AtlasIme.motion does. */
+/** Feeds a converted event file through the real Contact and SwipePieces, the way TitanKeysIme.motion does. */
 fun main(args: Array<String>) {
     val out = File(args[1]).bufferedWriter()
     val tapKeys = args[2].replace('_', ' ')

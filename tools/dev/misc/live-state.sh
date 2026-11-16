@@ -12,7 +12,7 @@ tk_adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' | tr -s ' ' | 
 echo "--- input method service"
 tk_adb shell dumpsys input_method | grep -E 'mCurMethodId|mCurId=|mInputShown|mVisibleBound|mShowRequested|mImeWindowVis|mCurFocusedWindowSoftInputMode|mCurClient|mBoundToMethod|mHaveConnection|packageName=|inputType=|imeOptions=' | tr -s ' ' | cut -c1-130 | head -24
 echo "--- keyboard window"
-tk_adb shell dumpsys window windows | grep -E 'Window #.*(InputMethod|AtlasInputMethodTouchpad)' | tr -s ' ' | cut -c1-110
+tk_adb shell dumpsys window windows | grep -E 'Window #.*(InputMethod|TitanKeysInputMethodTouchpad)' | tr -s ' ' | cut -c1-110
 tk_adb shell dumpsys window windows | awk '/Window #.*u0 InputMethod/{f=1;c=0} f{c++; if ($0 ~ /isVisible|mHasSurface|mViewVisibility|isOnScreen|mDrawState|mAttrs=/) print; if (c>70) f=0}' | tr -s ' ' | cut -c1-140 | head -12
 echo "--- recent log (keyboard related)"
-tk_adb logcat -d -t 1500 | grep -E 'Atlas|TouchpadSwipe|com\.titankeys|FATAL|ANR ' | grep -vE 'mali_platform|CoreBackPreview' | tail -28 | cut -c1-170
+tk_adb logcat -d -t 1500 | grep -E 'TitanKeys|TouchpadSwipe|com\.titankeys|FATAL|ANR ' | grep -vE 'mali_platform|CoreBackPreview' | tail -28 | cut -c1-170

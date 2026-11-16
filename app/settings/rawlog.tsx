@@ -1,6 +1,6 @@
 import { Field, Screen, Section, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
-import { type State, exportRawLog, state, update } from "../../lib/atlas";
+import { type State, exportRawLog, state, update } from "../../lib/titankeys";
 
 const title = "Typing log";
 const subtitle = "A record of your touches on the keys, the keys you press and the text you type, to help make TitanKeys better. It skips password, email, web address and private fields.";

@@ -1,4 +1,4 @@
-package com.atlas.connected
+package com.titankeys.connected
 
 import java.io.File
 import java.nio.file.Files

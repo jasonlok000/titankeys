@@ -1,4 +1,4 @@
-import com.atlas.engine.Swipe;
+import com.titankeys.engine.Swipe;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
  * pairs.py found. Reads pairs-points.txt on standard input and prints "pair couldContinue sameStroke" per line.
  * Lines carry the first swipe's end contact size (or NaN); the code from #83 on uses it. Pass "old" as the second
  * argument to run a Swipe.java from before #83, which has no size.
- * Compile it with android/kotlin/com/atlas/engine/Swipe.java; it needs nothing else from the app.
+ * Compile it with android/kotlin/com/titankeys/engine/Swipe.java; it needs nothing else from the app.
  */
 public final class JoinReplay {
     public static void main(String[] args) throws Exception {

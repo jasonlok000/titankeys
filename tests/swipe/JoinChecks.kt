@@ -1,6 +1,6 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.engine.Swipe
+import com.titankeys.engine.Swipe
 import java.io.File
 import kotlin.system.exitProcess
 

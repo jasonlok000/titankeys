@@ -1,4 +1,4 @@
-package com.atlas.connected
+package com.titankeys.connected
 
 import java.io.File
 import java.nio.file.Files
@@ -105,7 +105,7 @@ private fun ed25519() {
 }
 
 private val FEED_KEY: ByteArray by lazy {
-    val source = File("android/kotlin/com/atlas/connected/Connected.kt").readText()
+    val source = File("android/kotlin/com/titankeys/connected/Connected.kt").readText()
     val key = Regex("FEED_KEY = \"([A-Za-z0-9+/=]+)\"").find(source)!!.groupValues[1]
     Ed25519.publicKeyFromSpki(Base64.getDecoder().decode(key))
 }
@@ -190,7 +190,7 @@ private fun seal(openTool: String?) {
     fails("A changed header must not open") { Seal.open(changedHeader, pair.private.encoded, pair.public.encoded) }
     must(!Seal.seal(plain, pair.public.encoded).contentEquals(sealed), "Each batch has its own key and nonce")
     // The app's real key must be an X25519 key that seals.
-    val source = File("android/kotlin/com/atlas/connected/Connected.kt").readText()
+    val source = File("android/kotlin/com/titankeys/connected/Connected.kt").readText()
     val appKey = Base64.getDecoder().decode(Regex("CONTRIBUTION_KEY = \"([A-Za-z0-9+/=]+)\"").find(source)!!.groupValues[1])
     must(Seal.seal(plain, appKey).size > Seal.HEADER_BYTES, "The app's contribution key seals")
     // Hand a batch to the owner's tool, which must open it the same way.

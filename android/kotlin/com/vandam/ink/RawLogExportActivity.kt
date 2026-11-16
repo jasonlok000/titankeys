@@ -10,8 +10,8 @@ import android.os.Looper
 import android.os.ResultReceiver
 import android.view.Gravity
 import android.widget.TextView
-import com.atlas.keyboard.FixedScale
-import com.atlas.keyboard.RawLog
+import com.titankeys.keyboard.FixedScale
+import com.titankeys.keyboard.RawLog
 
 /** Owns the Android file picker's result, then copies the raw input log away from the main thread. */
 class RawLogExportActivity : Activity() {

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Canvas, CanvasIcon, CanvasText, Screen, Stack, Text, back, navigate, replace, useSnapshot } from "ink";
 import { arrowOutward } from "ink/icons";
-import { cancelPlayground, markNotesSeen, markPhoneWarningSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/atlas";
+import { cancelPlayground, markNotesSeen, markPhoneWarningSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/titankeys";
 import { INK, useAccent } from "../lib/brand";
 import { connectedState, declineContributions, setContribute } from "../lib/connected";
 import { Disclosure } from "../lib/contribute";
@@ -72,13 +72,10 @@ function PhoneWarning() {
   return <Screen centered theme="onboarding">
     <Stack align="center" gap={44}>
       <Stack align="center" gap={14}>
-        {/* F: draft, the other-phone warning's title, in the guide's humour. */}
         <Text size={60} align="center">This isn't a Titan 2 Elite</Text>
-        {/* F: draft, the other-phone warning's body: swiping and the touch keys need the Elite, the rest works, nothing is blocked. */}
-        <Text size={30} align="center">TitanKeys was built for its touch keys. Swiping, Space taps and flick to delete won't work here. Typing still does, so have a go anyway.</Text>
+        <Text size={30} align="center">TitanKeys is made for its touch keys, so swiping, Space taps and flicks won't work here. Typing on the keys should. Carry on at your own risk.</Text>
       </Stack>
-      {/* F: draft, the warning's one button. */}
-      <Action label="Carry on" onPress={() => void markPhoneWarningSeen()} />
+      <Action label="Carry on anyway" onPress={() => void markPhoneWarningSeen()} />
     </Stack>
   </Screen>;
 }

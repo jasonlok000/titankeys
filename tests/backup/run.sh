@@ -4,5 +4,5 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-javac --release 17 -d "$work" android/kotlin/com/atlas/engine/BackupFormat.java tests/backup/BackupFormatChecks.java
-java -cp "$work" com.atlas.engine.BackupFormatChecks
+javac --release 17 -d "$work" android/kotlin/com/titankeys/engine/BackupFormat.java tests/backup/BackupFormatChecks.java
+java -cp "$work" com.titankeys.engine.BackupFormatChecks

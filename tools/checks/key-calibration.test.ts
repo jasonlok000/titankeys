@@ -17,16 +17,16 @@ test("the operation refuses outside a debug package", () => {
 });
 
 test("the screen shows nothing outside a debug package", () => {
-  const screen = read("android/kotlin/com/atlas/keyboard/KeyCalibrationActivity.kt");
+  const screen = read("android/kotlin/com/titankeys/keyboard/KeyCalibrationActivity.kt");
   const onCreate = screen.slice(screen.indexOf("override fun onCreate("));
   expect(onCreate).toMatch(/^override fun onCreate\(savedInstanceState: Bundle\?\) \{\s+super\.onCreate\(savedInstanceState\)\s+\/\/[^\n]*\n\s+if \(!HapticsLab\.available\(this\)\) \{\s+finish\(\)\s+return\s+\}/);
   expect(onCreate.indexOf("HapticsLab.available(this)")).toBeLessThan(onCreate.indexOf("setContentView"));
   expect(read("android/src/main/AndroidManifest.xml"))
-    .toMatch(/android:name="com\.atlas\.keyboard\.KeyCalibrationActivity"\s+android:exported="false"/);
+    .toMatch(/android:name="com\.titankeys\.keyboard\.KeyCalibrationActivity"\s+android:exported="false"/);
 });
 
 test("only Key calibration writes the alignment", () => {
   const writers = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
     /KeyCalibration\.(save|reset)\(/.test(read(join("android", path))));
-  expect(writers.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/atlas/keyboard/KeyCalibrationActivity.kt"]);
+  expect(writers.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/titankeys/keyboard/KeyCalibrationActivity.kt"]);
 });

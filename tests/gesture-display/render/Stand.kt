@@ -1,5 +1,5 @@
 // The keyboard's own Look and GuideMotion.faded, without Android's Context, for render.sh.
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 internal class Look(val orange: Boolean) {
     val ink = 0xFFFFFFFF.toInt()

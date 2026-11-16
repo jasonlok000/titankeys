@@ -1,4 +1,4 @@
-import type { SentenceSpaces, State } from "../../lib/atlas";
+import type { SentenceSpaces, State } from "../../lib/titankeys";
 import { ChoicePage } from "../../lib/choice";
 
 const options = [

@@ -1,7 +1,7 @@
 import { Row, Screen, Section, navigate, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../../lib/app-haptics";
 import { add, close } from "ink/icons";
-import { type State, removeShorthand, state, update } from "../../../lib/atlas";
+import { type State, removeShorthand, state, update } from "../../../lib/titankeys";
 
 const title = "Shorthand";
 const subtitle = "Type shd and press Space, and you get should. Backspace right after puts shd back. Off, it all stays as typed and autocorrect leaves it alone.";

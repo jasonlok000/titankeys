@@ -1,9 +1,9 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import android.view.KeyEvent
-import com.atlas.engine.EmojiPages
-import com.atlas.keyboard.Modifiers.Level
-import com.atlas.keyboard.Modifiers.Panel
+import com.titankeys.engine.EmojiPages
+import com.titankeys.keyboard.Modifiers.Level
+import com.titankeys.keyboard.Modifiers.Panel
 
 private const val SHIFT = KeyEvent.KEYCODE_SHIFT_LEFT
 private const val OTHER_SHIFT = KeyEvent.KEYCODE_SHIFT_RIGHT

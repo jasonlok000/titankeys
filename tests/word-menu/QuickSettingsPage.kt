@@ -1,12 +1,12 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
 import java.util.PriorityQueue
 
 /**
- * The Sym panel's quick settings page as AtlasIme drives it, without Android or a phone: the touchpad's touches and lifts (hover),
+ * The Sym panel's quick settings page as TitanKeysIme drives it, without Android or a phone: the touchpad's touches and lifts (hover),
  * the keys going down and up (onKeyDown, panelKey's quick settings, onKeyUp), and the main looper's expireHover posts, all in time
- * order. It makes the same calls on the real [SteadyKey] that AtlasIme makes, reading keys as the page does
- * ([Layout.restingKeyAt]), and tests/word-menu checks that AtlasIme still makes them. [mark] is the panel's hover.
+ * order. It makes the same calls on the real [SteadyKey] that TitanKeysIme makes, reading keys as the page does
+ * ([Layout.restingKeyAt]), and tests/word-menu checks that TitanKeysIme still makes them. [mark] is the panel's hover.
  */
 class QuickSettingsPage : Fingers {
     /** The panel's pages that matter here, as Modifiers.Panel has them. */

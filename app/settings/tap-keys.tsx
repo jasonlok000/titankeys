@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Row, Screen, useAction, useSnapshot } from "ink";
 import { add, close } from "ink/icons";
-import { captureKey, state, tapKeyLabel, update, type State } from "../../lib/atlas";
+import { captureKey, state, tapKeyLabel, update, type State } from "../../lib/titankeys";
 
 export const tapKeysLabel = ({ tapKeys }: State) => tapKeys ? [...tapKeys].map(tapKeyLabel).join(", ") : "Off";
 

@@ -1,4 +1,4 @@
-import type { ChineseVariant, State } from "../../lib/atlas";
+import type { ChineseVariant, State } from "../../lib/titankeys";
 import { ChoicePage } from "../../lib/choice";
 
 // One setting for every Chinese input method, with no default: the user picks (owner, 2026-11-16). docs/languages.md.

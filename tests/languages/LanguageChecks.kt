@@ -1,6 +1,6 @@
-package com.atlas.keyboard
+package com.titankeys.keyboard
 
-import com.atlas.connected.Json
+import com.titankeys.connected.Json
 import java.io.File
 import java.util.Locale
 
@@ -160,8 +160,8 @@ private fun theAccentsSitOverTheHeldKey() {
     same("the last of Rime's pages", EngineState(page = 2, lastPage = true).pageMark, "3")
     same("a count when the engine knows it", EngineState(page = 0, lastPage = false, pages = 3).pageMark, "1/3")
     // The choices turn as the Sym panel's pages do: up is the next page (owner: "swipe up on the keyboard ... for the next page").
-    check("a swipe up goes forward", com.atlas.engine.EmojiPages.forward(-1f))
-    check("a swipe down goes back", !com.atlas.engine.EmojiPages.forward(1f))
+    check("a swipe up goes forward", com.titankeys.engine.EmojiPages.forward(-1f))
+    check("a swipe down goes back", !com.titankeys.engine.EmojiPages.forward(1f))
 }
 
 private fun wordsCompleteIgnoringAccents() {

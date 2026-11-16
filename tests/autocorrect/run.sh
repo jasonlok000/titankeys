@@ -11,10 +11,10 @@ ort=android/libs/onnxruntime-android-1.23.2.jar
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 root=android/kotlin
-engine=$root/com/atlas/engine
-keyboard=$root/com/atlas/keyboard
+engine=$root/com/titankeys/engine
+keyboard=$root/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android:$ort" -d "$work" \
-  "$root/com/atlas/autocorrect" "$keyboard/Composer.kt" "$keyboard/Expansions.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
+  "$root/com/titankeys/autocorrect" "$keyboard/Composer.kt" "$keyboard/Expansions.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
   "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Touchpad.kt" \
   "$keyboard/Haptics.kt" "$keyboard/Favourites.kt" \
   tests/autocorrect/AutocorrectChecks.kt tests/autocorrect/PhoneWords.java $(find "$engine" "$root/org" -name '*.java')
@@ -23,4 +23,4 @@ javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" tests/au
 # The apostrophe checks run the real next-word model when ORT_DESKTOP_JAR names a desktop ONNX Runtime jar (onnxruntime-*.jar from
 # Maven, with native code for this computer). It goes first, so its classes stand in for Android's. Without it they use the study's
 # measured margins.
-java -cp "${ORT_DESKTOP_JAR:+$ORT_DESKTOP_JAR:}$work:$stdlib:$android:$ort" com.atlas.autocorrect.AutocorrectChecksKt
+java -cp "${ORT_DESKTOP_JAR:+$ORT_DESKTOP_JAR:}$work:$stdlib:$android:$ort" com.titankeys.autocorrect.AutocorrectChecksKt

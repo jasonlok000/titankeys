@@ -1,6 +1,6 @@
 import { Canvas, CanvasIcon, CanvasText, Rectangle, Screen, Stack, useAction, useSnapshot } from "ink";
 import { check } from "ink/icons";
-import { type SnippetStart, snippetStarts, state, update } from "../../../lib/atlas";
+import { type SnippetStart, snippetStarts, state, update } from "../../../lib/titankeys";
 import { CREAM, INK, useAccent } from "../../../lib/brand";
 import { KeyCaps } from "../../../lib/keyboard";
 import { playHaptic } from "../../../lib/app-haptics";

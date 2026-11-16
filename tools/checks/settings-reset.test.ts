@@ -7,8 +7,8 @@ import { join } from "node:path";
 // install (FreshStart.kt). Every key and every store says which reset clears it, so a new one has to choose.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
-const reset = read("android/kotlin/com/atlas/keyboard/SettingsReset.kt");
-const fresh = read("android/kotlin/com/atlas/keyboard/FreshStart.kt");
+const reset = read("android/kotlin/com/titankeys/keyboard/SettingsReset.kt");
+const fresh = read("android/kotlin/com/titankeys/keyboard/FreshStart.kt");
 
 function files(folder: string): string[] {
   return readdirSync(join(root, folder), { withFileTypes: true }).flatMap(entry =>
@@ -26,8 +26,8 @@ const data = listed(reset, "TYPING_DATA");
 
 /** Every key TypingSettings and ExactTyping keep in typing_settings. A fix's "fix_" + id comes out as "fix_". */
 function typingKeys(): string[] {
-  const typing = read("android/kotlin/com/atlas/engine/TypingSettings.java");
-  const exact = read("android/kotlin/com/atlas/keyboard/ExactTyping.kt");
+  const typing = read("android/kotlin/com/titankeys/engine/TypingSettings.java");
+  const exact = read("android/kotlin/com/titankeys/keyboard/ExactTyping.kt");
   const literal = [...typing.matchAll(/preferences(?:\(context\))?\.(?:get\w+|put\w+|remove|contains)\("([a-z_]+)"/g)].map(m => m[1]);
   const constants = [...typing.matchAll(/static final String \w+ = "([a-z_]+)";/g)].map(m => m[1]);
   const exactKeys = [...exact.matchAll(/private const val (?:APPS|REAL_ALT) = "([a-z_]+)"/g)].map(m => m[1]);
@@ -83,7 +83,7 @@ test("every store is wiped, kept, or kept in part by the full wipe, and Reset mo
   expect(resetFiles.sort()).toEqual(["HAPTICS", "TYPING"]);
   expect(reset).toContain('const val TYPING = "typing_settings"');
   expect(reset).toContain('const val HAPTICS = "swipe_haptics"');
-  expect(read("android/kotlin/com/atlas/keyboard/Haptics.kt")).toContain('val key get() = "haptic_$switch"');
+  expect(read("android/kotlin/com/titankeys/keyboard/Haptics.kt")).toContain('val key get() = "haptic_$switch"');
 });
 
 test("the full wipe clears each file with commit() before deleting it, so no queued apply() writes it back", () => {
@@ -101,7 +101,7 @@ test("the full wipe clears each file with commit() before deleting it, so no que
 });
 
 test("the full wipe keeps Share swipes' ID and what was sent, so shared swipes can still be deleted", () => {
-  const contributions = read("android/kotlin/com/atlas/connected/Contributions.kt");
+  const contributions = read("android/kotlin/com/titankeys/connected/Contributions.kt");
   const keptConnected = fresh.match(/"connected" to setOf\(([^)]*)\)/)![1];
   for (const name of ["CONTRIBUTOR", "PENDING_DELETE", "SENT", "SENT_AT"]) {
     const key = contributions.match(new RegExp(`const val ${name} = "([a-z_]+)"`))![1];
@@ -110,14 +110,14 @@ test("the full wipe keeps Share swipes' ID and what was sent, so shared swipes c
   // Share swipes itself is not kept, so it goes back to off.
   expect(keptConnected).not.toContain('"contribute"');
   // It restarts the process as a crash would, never a force-stop, which would turn the Accessibility service off.
-  expect(fresh + read("android/kotlin/com/atlas/keyboard/FreshStartActivity.kt")).not.toMatch(/forceStopPackage|killBackgroundProcesses|clearApplicationUserData/);
+  expect(fresh + read("android/kotlin/com/titankeys/keyboard/FreshStartActivity.kt")).not.toMatch(/forceStopPackage|killBackgroundProcesses|clearApplicationUserData/);
   expect(read("android/src/main/AndroidManifest.xml")).toMatch(/FreshStartActivity"[^>]*android:process=":restart"/);
 });
 
 test("a reset removes values, so every default stays where its setting defines it", () => {
   expect(reset).not.toMatch(/\.put(Boolean|String|Int|Long|Float|StringSet)\(/);
   expect(reset).not.toMatch(/\.clear\(\)/);
-  const engine = read("android/kotlin/com/atlas/engine/SwipeTyping.java");
+  const engine = read("android/kotlin/com/titankeys/engine/SwipeTyping.java");
   const learning = engine.slice(engine.indexOf("public void resetLearning()"), engine.indexOf("public void resetLearning()") + 300);
   expect(learning).toContain('getSharedPreferences("word_learning", 0).edit().remove("enabled").apply()');
 });
@@ -140,7 +140,7 @@ test("Settings has both, each asking first on the app's own confirm page, with t
   expect(all).toContain('action="Wipe it all" cancel="Never mind"');
   expect(all).toContain('playHaptic("app_deleted")');
   expect(fresh).toContain('const val NOTE_TEXT = "Fresh start. Don\'t waste it."');
-  expect(read("android/kotlin/com/atlas/keyboard/GuideActivity.kt")).toContain("swapIn(body, FreshStart.take(this) ?: PLAYGROUND_BODY, 0)");
+  expect(read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt")).toContain("swapIn(body, FreshStart.take(this) ?: PLAYGROUND_BODY, 0)");
 });
 
 test("the boring guide and the release notes say where they are", () => {
@@ -152,7 +152,7 @@ test("the boring guide and the release notes say where they are", () => {
 
 test("Reset most things turns News back on, its default, and keeps what you dismissed", () => {
   // Bug hunt 2.1, #27: News is a switch, so it resets like every other; the news you dismissed or saw is yours and stays.
-  const news = read("android/kotlin/com/atlas/connected/Announcements.kt");
+  const news = read("android/kotlin/com/titankeys/connected/Announcements.kt");
   expect(news).toContain("fun enabled(context: Context) = Connected.preferences(context).getBoolean(ENABLED, true)");
   expect(news).toMatch(/fun resetSwitch\(context: Context\) \{\s*Connected\.preferences\(context\)\.edit\(\)\.remove\(ENABLED\)\.apply\(\)\s*Connected\.schedule\(context\)\s*\}/);
   expect(reset).toContain("Announcements.resetSwitch(context)");

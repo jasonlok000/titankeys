@@ -65,6 +65,22 @@ tk_touch_check_once() {
   return 0
 }
 
+# Taps the middle of TK_APP's own text field, only while TK_APP's window is in front and the field doesn't have the keyboard.
+tk_focus_field() {
+  local xml node x0 y0 x1 y1
+  grep -q " $TK_APP/" <<<"$(tk_front)" || return 1
+  tk_adb shell uiautomator dump /data/local/tmp/tk-ui.xml >/dev/null 2>&1
+  xml=$(tk_adb shell cat /data/local/tmp/tk-ui.xml | tr -d '\r')
+  tk_adb shell rm -f /data/local/tmp/tk-ui.xml
+  node=$(grep -oE "<node [^>]*class=\"android.widget.EditText\"[^>]*package=\"$TK_APP\"[^>]*>" <<<"$xml" | head -1)
+  [ -n "$node" ] || return 1
+  grep -q 'focused="true"' <<<"$node" && return 0
+  read -r x0 y0 x1 y1 < <(grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' <<<"$node" | grep -oE '[0-9]+' | tr '\n' ' ')
+  grep -q " $TK_APP/" <<<"$(tk_front)" || return 1
+  tk_adb shell input tap $(((x0 + x1) / 2)) $(((y0 + y1) / 2))
+  sleep 1
+}
+
 # Fails, with a STOP line, unless the checks pass. Another app in front, or no Debug field: TitanKeys Debug's screen is brought
 # back (twice at most) and checked again. Screen off, locked or navigation: one more try a second later.
 tk_touch_check() {
@@ -82,6 +98,8 @@ tk_touch_check() {
       echo "$why: bringing $TK_APP back"
       tk_adb shell am start -n "$TK_APP/$TK_TOUCH_ACTIVITY" >/dev/null 2>&1
       sleep 2
+      # Its screen in front, but no field of its own has the keyboard (as after Settings or a list): a tap on that field.
+      tk_focus_field
     elif [ $status = 1 ] && [ $waits -lt 1 ]; then
       waits=$((waits + 1))
       sleep 1

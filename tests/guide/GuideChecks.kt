@@ -339,6 +339,7 @@ fun main() {
     steeringToAWord()
     theKeysPart()
     theContactsPart()
+    setupHasOneDefinition()
     eachPageSaysWhereYouAre()
     theGuideForNewcomers()
     grabbingABunch()
@@ -1218,12 +1219,12 @@ private fun theKeysPart() {
     val parts = SetupPart.entries
     same(parts.indexOf(SetupPart.Keys), parts.indexOf(SetupPart.Back) + 1, "The keys come right after Back")
     fun ask(keysSet: Boolean, skipped: Set<SetupPart> = emptySet()) =
-        setupToAsk({ it != SetupPart.Keys || keysSet }, backDeclined = false) { it in skipped }
+        setupToAsk({ it != SetupPart.Keys || keysSet }, backDeclined = false, guide = true) { it in skipped }
     same(ask(keysSet = false), listOf(SetupPart.Keys), "It shows while Sym or fn isn't Programmable key")
     same(ask(keysSet = true), emptyList<SetupPart>(), "and hides once both are, or on a phone without them")
     same(ask(keysSet = false, skipped = setOf(SetupPart.Keys)), emptyList<SetupPart>(), "Skipped, it isn't asked again")
-    same(setupToAsk({ false }, backDeclined = true) { false }.contains(SetupPart.Back), false, "Back's Not now still counts")
-    same(setupToAsk({ false }, backDeclined = false) { false }, SetupPart.entries.toList(), "Nothing done: every part, in order")
+    same(setupToAsk({ false }, backDeclined = true, guide = true) { false }.contains(SetupPart.Back), false, "Back's Not now still counts")
+    same(setupToAsk({ false }, backDeclined = false, guide = true) { false }, SetupPart.entries.toList(), "Nothing done: every part, in order, in the guide")
     same(SetupPart.Keys.skip to SetupPart.KEYS_WARN_SKIP, "Not now" to "Skip anyway", "Not now, then the warning's Skip anyway")
     same("won't" in SetupPart.KEYS_WARN_BODY && SetupPart.KEYS_WARN_TITLE.endsWith("?"), true, "The warning says what won't work")
     same(SetupPart.Keys.body.contains("Programmable key") && SetupPart.Keys.action.contains("Shortcut keys"), true, "It names the mode and the page")
@@ -1364,7 +1365,7 @@ private fun eachPageSaysWhereYouAre() {
 /** Names from contacts (owner, #87): the last part, asked once, Yes or Not now. */
 private fun theContactsPart() {
     same(SetupPart.entries.last(), SetupPart.Contacts, "Contact names come last in setup, after the keys")
-    fun ask(answered: Boolean) = setupToAsk({ it != SetupPart.Contacts || answered }, backDeclined = false) { false }
+    fun ask(answered: Boolean) = setupToAsk({ it != SetupPart.Contacts || answered }, backDeclined = false, guide = true) { false }
     same(ask(answered = false), listOf(SetupPart.Contacts), "It shows until it's answered")
     same(ask(answered = true), emptyList<SetupPart>(), "and never again once it is")
     same(SetupPart.Contacts.skip, "Not now", "Not now moves on")
@@ -2054,4 +2055,30 @@ private fun theGuideForNewcomers() {
     val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     for (call in listOf("logMark(GuideLog.SLIDE, step.id)", "RawLog.MARK_ACTION", "GuideLog.missLabel(flow.step.id, verdict.miss ?: GuideMiss.Other)"))
         same(call in guide, true, "The guide logs: $call")
+}
+
+/**
+ * The front page, the playground and the guide decide setup by one definition (review, M2): Sym and fn and contact names are
+ * asked only in the guide's own setup, before the guide. A 2.1.0 user who updates with contacts unanswered and Sym and fn not set
+ * has setup done for the front page and the playground alike, so the playground never shows a setup slide that ✕ loops back to.
+ */
+private fun setupHasOneDefinition() {
+    val guideOnly = SetupPart.entries.filter { it.guideOnly }
+    same(guideOnly, listOf(SetupPart.Keys, SetupPart.Contacts), "Sym and fn, and contact names, are the guide's own")
+    // The updating user: the five parts done, the guide's two not.
+    val updated = { part: SetupPart -> !part.guideOnly }
+    same(setupToAsk(updated, backDeclined = false) { false }, emptyList<SetupPart>(), "The front page and the playground ask nothing")
+    same(setupToAsk(updated, backDeclined = false, guide = true) { false }, guideOnly, "The guide's own setup asks the two, before the guide")
+    // Every phone state: the playground's list is empty exactly when the front page sends you to the playground, as both read
+    // the same list, and the guide only ever adds its own two.
+    for (bits in 0 until (1 shl SetupPart.entries.size)) for (declined in listOf(false, true)) {
+        val done = { part: SetupPart -> bits and (1 shl part.ordinal) != 0 }
+        val playground = setupToAsk(done, declined) { false }
+        val guide = setupToAsk(done, declined, guide = true) { false }
+        same(playground.none { it.guideOnly }, true, "The playground never asks a guide-only part")
+        same(guide.filterNot { it.guideOnly }, playground, "The guide asks what the playground does, then its own two")
+    }
+    val activity = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    same(activity.contains("PhoneSetup.missing(this, guide = !playground)") && !activity.contains("PhoneSetup.missing(this)"), true,
+        "The playground reads the front page's list, the guide its own")
 }

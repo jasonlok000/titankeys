@@ -50,7 +50,9 @@ internal enum class GuideChapter(val label: String, val roast: String? = null) {
  * opens the page for each part, sees the switch go on, and comes back by itself, so that each part takes a touch or two.
  * [title] and [body] follow the same rules as a step's words. [help] shows if you come back with the part still not done.
  */
-internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null, val skip: String? = null) {
+internal enum class SetupPart(val title: String, val body: String, val action: String, val help: String? = null, val skip: String? = null,
+    /** Asked only in the guide's own setup, before the guide: never by the front page or the playground. See [setupToAsk]. */
+    val guideOnly: Boolean = false) {
     Enable("Turn the keyboard on.", "Flip TitanKeys Keyboard on in the list. You'll come straight back.", "Open the keyboard list",
         "Can't see it? Scroll down. Flip its switch, then press OK twice."),
     Choose("Make it your keyboard.", "Pick TitanKeys Keyboard in the list. That's it.", "Pick TitanKeys"),
@@ -66,12 +68,12 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
     // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.
     // Not now shows a warning first: see KEYS_WARN_TITLE. F (docs/words-m1.md).
     Keys("Set up Sym and fn.", "Set both to Programmable key. Sym opens the panel, fn works as Ctrl.", "Open Shortcut keys",
-        "Sym key and fn key are both on that page. Pick Programmable key for each.", skip = "Not now"),
+        "Sym key and fn key are both on that page. Pick Programmable key for each.", skip = "Not now", guideOnly = true),
     // Names from contacts, last (owner, #87). It says what it's for and that the names stay on the phone before Android asks.
     // Not now moves on, and the guide never asks again.
     // Its help shows if Android says no. F (docs/words-m1.md).
     Contacts("Teach it your contacts' names.", "Names swipe and get fixed right. They never leave your phone.", "Use my contacts",
-        "Android said no. You can turn it on later in Settings > Setup.", skip = "Not now"),
+        "Android said no. You can turn it on later in Settings > Setup.", skip = "Not now", guideOnly = true),
     ;
 
     companion object {
@@ -2093,9 +2095,16 @@ internal fun keyOff(step: GuideStep, skipped: Boolean, programmable: (String) ->
  * The parts of setup still to ask, in order (PhoneSetup.missing reads the phone for it): each that isn't [done], except Back
  * after "Not now" on its disclosure ([backDeclined]), and Sym and fn once [skipped] (owner, #72). Contact names count as done
  * once answered either way, or on already (owner, #87).
+ *
+ * The one definition of what setup needs, for the front page, the playground and the guide alike, so they can't disagree
+ * (review, M2: the front page said done while the playground asked for contacts, and ✕ looped back to it). Only the guide's own
+ * setup, before the guide, asks the [SetupPart.guideOnly] parts ([guide]); everywhere else they don't count, and Settings >
+ * Setup offers them.
  */
-internal fun setupToAsk(done: (SetupPart) -> Boolean, backDeclined: Boolean, skipped: (SetupPart) -> Boolean) =
-    SetupPart.entries.filterNot { done(it) || it == SetupPart.Back && backDeclined || it == SetupPart.Keys && skipped(it) }
+internal fun setupToAsk(done: (SetupPart) -> Boolean, backDeclined: Boolean, guide: Boolean = false, skipped: (SetupPart) -> Boolean) =
+    SetupPart.entries.filterNot {
+        it.guideOnly && !guide || done(it) || it == SetupPart.Back && backDeclined || it == SetupPart.Keys && skipped(it)
+    }
 
 internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLesson>? = step.lessons): String {
     val open = lessons.orEmpty()

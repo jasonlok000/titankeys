@@ -40,10 +40,14 @@ internal object PhoneSetup {
     /**
      * The parts that are not done yet, in the order that setup asks for them. Accessibility is optional: after "Not now" on
      * its disclosure ([BackDisclosureActivity]), setup goes on without it, and Settings > Setup can still ask again. Sym and fn
-     * can be skipped (owner, #72), and contact names are asked once (owner, #87).
+     * can be skipped (owner, #72), and contact names are asked once (owner, #87). Those two count only for the guide's own setup
+     * ([guide]): the front page and the playground leave them to Settings > Setup. See [setupToAsk].
      */
-    fun missing(context: Context) =
-        setupToAsk({ done(context, it) }, BackDisclosureActivity.declined(context)) { skipped(context, it) }
+    fun missing(context: Context, guide: Boolean = false) =
+        setupToAsk({ done(context, it) }, BackDisclosureActivity.declined(context), guide) { skipped(context, it) }
+
+    /** Setup still has a part that the front page and the playground need: the one answer both read (lib/front.ts). */
+    fun toDo(context: Context) = missing(context).isNotEmpty()
 
     /** [part] was skipped in the guide's setup, or for contact names, answered: the guide doesn't ask again. */
     fun skipped(context: Context, part: SetupPart) = preferences(context).getBoolean(skipKey(part), false)

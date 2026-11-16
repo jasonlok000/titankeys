@@ -42,6 +42,12 @@ export type State = {
   backService: boolean;
   /** "No thanks" on Accessibility's disclosure: setup goes on without it, as the guide's does (PhoneSetup.missing). */
   backDeclined: boolean;
+  /**
+   * Setup has a part still to do, as the playground decides it (PhoneSetup.toDo): Keyboard on, chosen, over other apps, Scroll
+   * assistant, and Accessibility or its "Not now". The guide's own setup also asks for Sym and fn and contact names, which never
+   * count here: Settings > Setup offers them.
+   */
+  setupToDo: boolean;
   /** The phone's ro.agui.touchpad_function, "yes" on a Titan with the touchpad, else empty. See lib/front.ts. */
   touchpadFunction: string;
   /** Build.DEVICE, "Titan_2" on the Titan 2 Elite. */

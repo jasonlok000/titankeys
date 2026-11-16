@@ -1028,7 +1028,7 @@ class GuideActivity : Activity() {
             playgroundStarting = -PLAYGROUND_QUIET_MILLIS
         } else guidesOpen++
         // During setup another keyboard may still be the phone's keyboard, and it would cover the slide.
-        if (PhoneSetup.missing(this).isEmpty()) field.requestFocus() else keyboardShown(false)
+        if (PhoneSetup.missing(this, guide = !playground).isEmpty()) field.requestFocus() else keyboardShown(false)
         field.changed = ::fieldChanged
         field.touched = ::fieldTouched
         field.addTextChangedListener(object : TextWatcher {
@@ -3035,7 +3035,8 @@ class GuideActivity : Activity() {
      */
     private fun checkKeyboard() {
         if (setupChanging) return
-        val missing = PhoneSetup.missing(this)
+        // The playground asks only what the front page does, so ✕ or Back from it never loops back to it (review, M2).
+        val missing = PhoneSetup.missing(this, guide = !playground)
         val shown = setupPart
         if (shown != null && shown !in missing) {
             // The part on the screen is done, by the guide's page or by hand.

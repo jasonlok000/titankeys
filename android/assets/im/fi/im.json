@@ -1,0 +1,28 @@
+{
+  "id": "fi",
+  "name": "Suomi",
+  "nameEnglish": "Finnish",
+  "label": "FI",
+  "locale": "fi",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "åä",
+    "o": "ö",
+    "s": "š",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_fi.combined"
+  }
+}

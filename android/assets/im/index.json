@@ -25,5 +25,257 @@
   "locale": "de",
   "script": "Latn",
   "engine": null
+ },
+ {
+  "id": "pt",
+  "name": "Português",
+  "nameEnglish": "Portuguese",
+  "label": "PT",
+  "locale": "pt",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "it",
+  "name": "Italiano",
+  "nameEnglish": "Italian",
+  "label": "IT",
+  "locale": "it",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "nl",
+  "name": "Nederlands",
+  "nameEnglish": "Dutch",
+  "label": "NL",
+  "locale": "nl",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "pl",
+  "name": "Polski",
+  "nameEnglish": "Polish",
+  "label": "PL",
+  "locale": "pl",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "tr",
+  "name": "Türkçe",
+  "nameEnglish": "Turkish",
+  "label": "TR",
+  "locale": "tr",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "sv",
+  "name": "Svenska",
+  "nameEnglish": "Swedish",
+  "label": "SV",
+  "locale": "sv",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "da",
+  "name": "Dansk",
+  "nameEnglish": "Danish",
+  "label": "DA",
+  "locale": "da",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "nb",
+  "name": "Norsk bokmål",
+  "nameEnglish": "Norwegian Bokmål",
+  "label": "NB",
+  "locale": "nb",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "fi",
+  "name": "Suomi",
+  "nameEnglish": "Finnish",
+  "label": "FI",
+  "locale": "fi",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "cs",
+  "name": "Čeština",
+  "nameEnglish": "Czech",
+  "label": "CS",
+  "locale": "cs",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "ro",
+  "name": "Română",
+  "nameEnglish": "Romanian",
+  "label": "RO",
+  "locale": "ro",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "hu",
+  "name": "Magyar",
+  "nameEnglish": "Hungarian",
+  "label": "HU",
+  "locale": "hu",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "id",
+  "name": "Bahasa Indonesia",
+  "nameEnglish": "Indonesian",
+  "label": "ID",
+  "locale": "id",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "hr",
+  "name": "Hrvatski",
+  "nameEnglish": "Croatian",
+  "label": "HR",
+  "locale": "hr",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "sl",
+  "name": "Slovenščina",
+  "nameEnglish": "Slovenian",
+  "label": "SL",
+  "locale": "sl",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "lv",
+  "name": "Latviešu",
+  "nameEnglish": "Latvian",
+  "label": "LV",
+  "locale": "lv",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "lt",
+  "name": "Lietuvių",
+  "nameEnglish": "Lithuanian",
+  "label": "LT",
+  "locale": "lt",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "ca",
+  "name": "Català",
+  "nameEnglish": "Catalan",
+  "label": "CA",
+  "locale": "ca",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "gl",
+  "name": "Galego",
+  "nameEnglish": "Galician",
+  "label": "GL",
+  "locale": "gl",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "et",
+  "name": "Eesti",
+  "nameEnglish": "Estonian",
+  "label": "ET",
+  "locale": "et",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "is",
+  "name": "Íslenska",
+  "nameEnglish": "Icelandic",
+  "label": "IS",
+  "locale": "is",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "af",
+  "name": "Afrikaans",
+  "nameEnglish": "Afrikaans",
+  "label": "AF",
+  "locale": "af",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "eo",
+  "name": "Esperanto",
+  "nameEnglish": "Esperanto",
+  "label": "EO",
+  "locale": "eo",
+  "script": "Latn",
+  "engine": null
+ },
+ {
+  "id": "ru",
+  "name": "Русский",
+  "nameEnglish": "Russian",
+  "label": "RU",
+  "locale": "ru",
+  "script": "Cyrl",
+  "engine": null
+ },
+ {
+  "id": "uk",
+  "name": "Українська",
+  "nameEnglish": "Ukrainian",
+  "label": "UK",
+  "locale": "uk",
+  "script": "Cyrl",
+  "engine": null
+ },
+ {
+  "id": "be",
+  "name": "Беларуская",
+  "nameEnglish": "Belarusian",
+  "label": "BE",
+  "locale": "be",
+  "script": "Cyrl",
+  "engine": null
+ },
+ {
+  "id": "bg",
+  "name": "Български",
+  "nameEnglish": "Bulgarian",
+  "label": "BG",
+  "locale": "bg",
+  "script": "Cyrl",
+  "engine": null
+ },
+ {
+  "id": "el",
+  "name": "Ελληνικά",
+  "nameEnglish": "Greek",
+  "label": "EL",
+  "locale": "el",
+  "script": "Grek",
+  "engine": null
  }
 ]

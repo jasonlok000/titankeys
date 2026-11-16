@@ -1,0 +1,31 @@
+{
+  "id": "tr",
+  "name": "Türkçe",
+  "nameEnglish": "Turkish",
+  "label": "TR",
+  "locale": "tr",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "â",
+    "c": "ç",
+    "g": "ğ",
+    "i": "ıî",
+    "o": "ö",
+    "s": "ş",
+    "u": "ü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": true
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_tr__legacy.combined"
+  }
+}

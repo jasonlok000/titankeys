@@ -1,0 +1,30 @@
+{
+  "id": "gl",
+  "name": "Galego",
+  "nameEnglish": "Galician",
+  "label": "GL",
+  "locale": "gl",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "á",
+    "e": "é",
+    "i": "íï",
+    "n": "ñ",
+    "o": "ó",
+    "u": "úü"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_gl__experimental.combined"
+  }
+}

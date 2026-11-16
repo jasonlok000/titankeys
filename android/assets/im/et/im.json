@@ -1,0 +1,29 @@
+{
+  "id": "et",
+  "name": "Eesti",
+  "nameEnglish": "Estonian",
+  "label": "ET",
+  "locale": "et",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "a": "ä",
+    "o": "õö",
+    "s": "š",
+    "u": "ü",
+    "z": "ž"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_et__experimental.combined"
+  }
+}

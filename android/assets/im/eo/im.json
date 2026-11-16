@@ -1,0 +1,30 @@
+{
+  "id": "eo",
+  "name": "Esperanto",
+  "nameEnglish": "Esperanto",
+  "label": "EO",
+  "locale": "eo",
+  "script": "Latn",
+  "keys": "qwerty",
+  "accents": {
+    "c": "ĉ",
+    "g": "ĝ",
+    "h": "ĥ",
+    "j": "ĵ",
+    "s": "ŝ",
+    "u": "ŭ"
+  },
+  "words": "words.combined",
+  "variants": null,
+  "rules": {
+    "capitalise": true,
+    "sentenceEnd": ".?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": null,
+  "source": {
+    "letters": "CLDR 49 exemplarCharacters",
+    "words": "main_eo__experimental.combined"
+  }
+}

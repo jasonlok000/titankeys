@@ -53,6 +53,7 @@ import com.titankeys.keyboard.Expansions
 import com.titankeys.keyboard.Snippets
 import com.titankeys.keyboard.Trace
 import com.titankeys.keyboard.TouchpadPreview
+import com.titankeys.keyboard.UpdateNotice
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -149,6 +150,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         // Settings load without waiting for the swipe engine; tell them when it finishes loading.
         typing.whenReady { _, _, _ -> publishState() }
         offerCrashReport()
+        UpdateNotice.ran(activity)
     }
 
     /**

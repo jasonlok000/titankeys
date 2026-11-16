@@ -72,10 +72,11 @@ object Connected {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return
         val service = ComponentName(context, ConnectedJob::class.java)
         fun ensure(id: Int, wanted: Boolean, build: () -> JobInfo) {
+            // A job set by 2.x names the class from before the rename (#81), so it's set again under the new name.
             val pending = scheduler.getPendingJob(id)
             if (!wanted) {
                 if (pending != null) scheduler.cancel(id)
-            } else if (pending == null) {
+            } else if (pending == null || pending.service != service) {
                 scheduler.schedule(build())
             }
         }

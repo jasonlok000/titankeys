@@ -95,6 +95,7 @@ test("the release manifest has exactly the expected components", () => {
     { tag: "service", name: "com.titankeys.keyboard.BackService", exported: "true" },
     { tag: "service", name: "com.titankeys.connected.ConnectedJob", exported: "false" },
     { tag: "receiver", name: "com.titankeys.connected.NewsReceiver", exported: "false" },
+    { tag: "receiver", name: "com.titankeys.keyboard.UpdateReceiver", exported: "false" },
     { tag: "receiver", name: "com.titankeys.keyboard.BugStopReceiver", exported: "false" },
     { tag: "provider", name: "com.titankeys.keyboard.CrashKeeper", exported: "false" },
     { tag: "provider", name: "com.titankeys.keyboard.BugRecordingProvider", exported: "false" },

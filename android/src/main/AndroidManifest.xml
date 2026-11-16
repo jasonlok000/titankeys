@@ -109,6 +109,14 @@
         <receiver
             android:name="com.titankeys.connected.NewsReceiver"
             android:exported="false" />
+        <!-- After an update: if the rename (#81) turned the keyboard or Back off, one quiet notification says so. -->
+        <receiver
+            android:name="com.titankeys.keyboard.UpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <!-- Record a bug (#64): the notification's Stop, and the read-only file lent to the app picked in the share sheet. -->
         <receiver
             android:name="com.titankeys.keyboard.BugStopReceiver"

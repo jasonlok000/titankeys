@@ -730,6 +730,7 @@ class TitanKeysIme : InputMethodService() {
         // The word menu, the Sym panel and the swipe's path all line up with the keys as Key calibration says.
         KeyCalibration.load(this)
         Connected.start(this)
+        UpdateNotice.ran(this)
         // A public release has no typing log: an old one from 2.0 goes, as nothing can show or export it any more.
         Thread {
             runCatching { RawLog.removeLeftovers(this) }

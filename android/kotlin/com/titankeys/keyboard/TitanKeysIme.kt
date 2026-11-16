@@ -3285,10 +3285,15 @@ class TitanKeysIme : InputMethodService() {
 
     /** What a letter key types in an input method with its own letters (Russian's й on Q), or null where it types what it shows. */
     private fun inputMethodLetter(event: KeyEvent): String? {
-        if (languages.current.keys == null || event.keyCode !in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) return null
-        val meta = event.metaState or modifiers.metaState
-        if (meta and (KeyEvent.META_ALT_MASK or KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) != 0) return null
+        if (!keysMapKey(event)) return null
         return languages.current.letter(printedLetter(event.keyCode), shiftOn(event))
+    }
+
+    /** A letter key the current input method's own letters type, so the app never gets it: see [KeysMapKeys]. */
+    private fun keysMapKey(event: KeyEvent): Boolean {
+        val meta = event.metaState or modifiers.metaState
+        return KeysMapKeys.keeps(languages.current.keys != null, event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z,
+            meta and KeyEvent.META_ALT_MASK != 0, meta and KeyEvent.META_CTRL_MASK != 0, meta and KeyEvent.META_META_MASK != 0)
     }
 
     /** Starts the hold timer for a letter that can become its symbol. True if this is a repeat of such a key, which types nothing. */
@@ -3734,9 +3739,13 @@ class TitanKeysIme : InputMethodService() {
             return true
         }
         val handled = key(carried)
-        if (handled) consumedKeys += keyCode
+        // In an input method with its own letters, a letter key is the keyboard's, also if nothing above typed it.
+        val kept = !handled && keysMapKey(carried)
+        if (kept && AppBuild.kind(this) == "debug") Log.w(LOG_TAG, "A letter key in ${languages.current.id} wasn't typed: kept from the app " +
+            "(Shift ${shiftOn(carried)})")
+        if (handled || kept) consumedKeys += keyCode
         showModifiers()
-        return handled || super.onKeyDown(keyCode, event)
+        return handled || kept || super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {

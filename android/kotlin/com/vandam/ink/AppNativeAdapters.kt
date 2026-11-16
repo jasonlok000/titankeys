@@ -155,9 +155,16 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         UpdateNotice.ran(activity)
     }
 
+    /** The crash or freeze report waiting for its offer, and the dialog showing it on the screen in front. */
+    private var crashOffer: String? = null
+    private var crashDialog: android.app.AlertDialog? = null
+
     /**
      * The crash offer (#74, #97), once, as the app opens after a crash or freeze: send the report through the form, where it's
      * attached, or let it go. Nothing is ever sent by itself.
+     *
+     * It shows on whichever TitanKeys screen is in front, so it's never under the playground, which is its own activity over
+     * this one (phone check, 2026-11-16). When another of the app's screens comes in front, the offer moves to it.
      */
     private fun offerCrashReport() {
         Thread {
@@ -165,21 +172,47 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             val report = CrashReport.pending(activity) ?: return@Thread
             activity.runOnUiThread {
                 if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                val froze = CrashReport.froze(report)
-                // The words are F's (docs/words-m1.md, #74 and #97).
-                android.app.AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                    .setTitle(if (froze) "TitanKeys froze last time." else "TitanKeys crashed last time.")
-                    .setMessage("Sorry about that. Send us the report so we can fix it? It has the error and the versions, " +
-                        "nothing you typed. Nothing goes unless you send it.")
-                    .setPositiveButton("Send it") { _, _ ->
-                        CrashReport.offered(activity)
-                        activity.startActivity(com.titankeys.connected.Connected.pageIntent(activity, REPORT_PAGE))
-                    }
-                    .setNegativeButton("No thanks") { _, _ -> CrashReport.clear(activity) }
-                    .setOnCancelListener { CrashReport.clear(activity) }
-                    .show()
+                crashOffer = report
+                showCrashOffer(frontScreen ?: activity)
             }
         }.start()
+    }
+
+    /** The app's screen in front: the last one resumed. One the offer doesn't show on waits for one it does. */
+    private var frontScreen: Activity? = null
+
+    private fun showCrashOffer(host: Activity) {
+        val report = crashOffer ?: return
+        if (crashDialog?.ownerActivity === host && crashDialog?.isShowing == true) return
+        if (host.isFinishing || host.isDestroyed || !CrashOfferHosts.shows(host)) return
+        // Moving it to another screen isn't an answer: dismiss() keeps the report, only a choice or Back clears it.
+        crashDialog?.dismiss()
+        val froze = CrashReport.froze(report)
+        // The words are F's (docs/words-m1.md, #74 and #97).
+        crashDialog = android.app.AlertDialog.Builder(host, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(if (froze) "TitanKeys froze last time." else "TitanKeys crashed last time.")
+            .setMessage("Sorry about that. Send us the report so we can fix it? It has the error and the versions, " +
+                "nothing you typed. Nothing goes unless you send it.")
+            .setPositiveButton("Send it") { _, _ ->
+                answeredCrashOffer()
+                CrashReport.offered(activity)
+                host.startActivity(com.titankeys.connected.Connected.pageIntent(activity, REPORT_PAGE))
+            }
+            .setNegativeButton("No thanks") { _, _ ->
+                answeredCrashOffer()
+                CrashReport.clear(activity)
+            }
+            .setOnCancelListener {
+                answeredCrashOffer()
+                CrashReport.clear(activity)
+            }
+            .create().apply { setOwnerActivity(host) }
+        crashDialog!!.show()
+    }
+
+    private fun answeredCrashOffer() {
+        crashOffer = null
+        crashDialog = null
     }
 
     private fun syncPreview() {
@@ -196,6 +229,8 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     }
 
     override fun onActivityResumed(target: Activity) {
+        frontScreen = target
+        if (crashOffer != null) showCrashOffer(target)
         if (target !== activity) return
         visible = true
         syncPreview()
@@ -211,6 +246,12 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     override fun onActivityStopped(target: Activity) = onActivityPaused(target)
 
     override fun onActivityDestroyed(target: Activity) {
+        if (frontScreen === target) frontScreen = null
+        // A dialog can't outlive its screen. The report stays for the next screen in front, which shows it as it resumes.
+        if (crashDialog?.ownerActivity === target) {
+            crashDialog?.dismiss()
+            crashDialog = null
+        }
         if (target !== activity) return
         activity.window.decorView.viewTreeObserver.removeOnWindowFocusChangeListener(windowFocus)
         visible = false
@@ -788,9 +829,15 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
 /** The Chinese variants Settings can set: Hong Kong, Taiwan and Simplified (docs/languages.md). */
 private val CHINESE_VARIANTS = setOf("zh_hk", "zh_tw", "zh_hans")
 
-private const val SEEN_NOTES = "seen_release_notes"
+private const val SEEN_NOTES = FreshStart.SEEN_NOTES
 /** The report form (#97), which attaches a kept crash report by itself. */
 private const val REPORT_PAGE = "/settings/report"
+
+/** The screens the crash offer shows on: the app's pages and the playground. Not the quick ones in between, as a disclosure. */
+internal object CrashOfferHosts {
+    fun shows(host: Activity) = host is MainActivity || host is com.titankeys.keyboard.GuideActivity
+}
+
 /** The boring guide's nerd screen has shown once. Only clearing the app's data brings it back. */
 private const val NERD_SEEN = "nerd_screen_seen"
 /** The other-phone warning has shown once (#75). */

@@ -77,8 +77,9 @@ test("every store is wiped, kept, or kept in part by the full wipe, and Reset mo
     const known = wiped.includes(name) || kept.includes(name) || partly.includes(name);
     expect({ name, known }).toEqual({ name, known: true });
   }
-  expect(kept.sort()).toEqual(["back_disclosure", "key_calibration"]);
-  expect(partly.sort()).toEqual(["app", "connected"]);
+  // What a fresh install doesn't have is listed and explained in fresh-start.test.ts.
+  expect(kept.sort()).toEqual(["key_calibration"]);
+  expect(partly.sort()).toEqual(["connected"]);
   const resetFiles = [...reset.matchAll(/getSharedPreferences\((\w+)/g)].map(m => m[1]);
   expect(resetFiles.sort()).toEqual(["HAPTICS", "TYPING"]);
   expect(reset).toContain('const val TYPING = "typing_settings"');

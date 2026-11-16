@@ -1,8 +1,7 @@
 import type { State } from "./titankeys";
 
-/** What the front page decides from: setup's parts, the guide, the release notes and the phone. */
-export type FrontState = Pick<State, "enabled" | "selected" | "overlay" | "scrollAssistant" | "backService" | "backDeclined"
-  | "guideDue" | "touchpadFunction" | "device" | "fakeOtherPhone" | "phoneWarningSeen">;
+/** What the front page decides from: setup, as the phone answers it, the guide, the release notes and the phone. */
+export type FrontState = Pick<State, "setupToDo" | "guideDue" | "touchpadFunction" | "device" | "fakeOtherPhone" | "phoneWarningSeen">;
 
 /**
  * A Titan 2 Elite: the touchpad's property says yes and the device is Titan_2. The same pair the touchpad itself needs
@@ -16,11 +15,12 @@ export const otherPhone = (state: Pick<State, "touchpadFunction" | "device" | "f
   state.fakeOtherPhone || !isTitan2Elite(state);
 
 /**
- * A part of setup is still to do. Accessibility counts as done after "No thanks" on its disclosure, as the guide's own setup
- * counts it (PhoneSetup.missing): Settings > Setup can still ask again, and the front page never loops back to setup for it.
+ * A part of setup is still to do, as the playground decides it: the phone answers from one definition (PhoneSetup.toDo, from
+ * GuideSteps' setupToAsk), so the front page and the playground can't disagree (review, M2: a 2.1.0 user with contacts
+ * unanswered was sent to the playground, which asked for them, and ✕ or Back looped). Accessibility counts as done after "Not now"
+ * on its disclosure. Sym and fn and contact names are asked only in the guide's own setup; Settings > Setup offers them too.
  */
-export const setupToDo = ({ enabled, selected, overlay, scrollAssistant, backService, backDeclined }: FrontState) =>
-  !enabled || !selected || !overlay || !scrollAssistant || !backService && !backDeclined;
+export const setupToDo = ({ setupToDo }: Pick<FrontState, "setupToDo">) => setupToDo;
 
 /**
  * The front page's choice, in order:

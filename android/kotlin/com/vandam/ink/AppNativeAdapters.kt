@@ -546,6 +546,8 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("scrollAssistant", PhoneSetup.scrollAssistant())
             .put("backService", BackService.enabled(activity))
             .put("backDeclined", BackDisclosureActivity.declined(activity))
+            // The front page's setup decision is the playground's own, from one definition (PhoneSetup.toDo, lib/front.ts).
+            .put("setupToDo", PhoneSetup.toDo(activity))
             // The front page decides from these whether this is a Titan 2 Elite (lib/front.ts).
             .put("touchpadFunction", systemProperty("ro.agui.touchpad_function"))
             .put("device", Build.DEVICE ?: "")

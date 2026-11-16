@@ -9,33 +9,58 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 /** A Titan 2 Elite with setup done, the guide seen and the warning never needed. */
 const done: FrontState = {
-  enabled: true, selected: true, overlay: true, scrollAssistant: true, backService: true, backDeclined: false,
-  guideDue: false, touchpadFunction: "yes", device: "Titan_2", fakeOtherPhone: false, phoneWarningSeen: false,
+  setupToDo: false, guideDue: false, touchpadFunction: "yes", device: "Titan_2", fakeOtherPhone: false, phoneWarningSeen: false,
 };
 
 test("setup done: the front page, which is the playground", () => {
   expect(frontChoice(done)).toBe("front");
 });
 
-test("a part to do: setup, whichever part it is", () => {
-  for (const part of ["enabled", "selected", "overlay", "scrollAssistant", "backService"] as const) {
-    expect({ part, choice: frontChoice({ ...done, [part]: false }) }).toEqual({ part, choice: "setup" });
-    // Setup comes before the guide's first opening, which then opens from it by itself.
-    expect({ part, choice: frontChoice({ ...done, [part]: false, guideDue: true }) }).toEqual({ part, choice: "setup" });
-  }
+test("a part to do: setup, and before the guide's first opening too", () => {
+  expect(frontChoice({ ...done, setupToDo: true })).toBe("setup");
+  // Setup comes before the guide's first opening, which then opens from it by itself.
+  expect(frontChoice({ ...done, setupToDo: true, guideDue: true })).toBe("setup");
 });
 
-test("Back declined with No thanks counts as done, as the guide's own setup counts it", () => {
-  expect(setupToDo({ ...done, backService: false, backDeclined: true })).toBe(false);
-  expect(frontChoice({ ...done, backService: false, backDeclined: true })).toBe("front");
-  // Declined, but another part to do: still setup.
-  expect(frontChoice({ ...done, backService: false, backDeclined: true, overlay: false })).toBe("setup");
-  // The guide's setup treats it the same way.
-  // PhoneSetup.missing hands the answer to GuideSteps' setupToAsk, which also passes skipped parts over (#72, #87).
-  expect(read("android/kotlin/com/titankeys/keyboard/PhoneSetup.kt"))
-    .toContain("setupToAsk({ done(context, it) }, BackDisclosureActivity.declined(context))");
-  expect(read("android/kotlin/com/titankeys/keyboard/GuideSteps.kt"))
-    .toContain("done(it) || it == SetupPart.Back && backDeclined");
+test("the front page and the playground decide setup by one definition, so they can't disagree (review, M2)", () => {
+  // The phone answers setupToDo from PhoneSetup.toDo, the playground's own list: GuideSteps' setupToAsk without the guide-only
+  // parts. A 2.1.0 user who updates with contacts unanswered and Sym and fn not set lands on the playground, which asks for
+  // neither, so ✕ or Back from it lands on the front page again, which is the playground: no loop.
+  const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
+  expect(adapter).toContain('.put("setupToDo", PhoneSetup.toDo(activity))');
+  const phone = read("android/kotlin/com/titankeys/keyboard/PhoneSetup.kt");
+  expect(phone).toContain("fun toDo(context: Context) = missing(context).isNotEmpty()");
+  expect(phone).toContain("fun missing(context: Context, guide: Boolean = false) =");
+  expect(phone).toContain("setupToAsk({ done(context, it) }, BackDisclosureActivity.declined(context), guide)");
+  const steps = read("android/kotlin/com/titankeys/keyboard/GuideSteps.kt");
+  expect(steps).toContain("it.guideOnly && !guide || done(it) || it == SetupPart.Back && backDeclined");
+  // Sym and fn, and contacts, are the guide's own: only the guide's setup before the guide asks them.
+  for (const part of ["Keys(", "Contacts("]) {
+    const at = steps.indexOf(`    ${part}"`);
+    expect({ part, guideOnly: steps.slice(at, steps.indexOf("),\n", at)).includes("guideOnly = true") }).toEqual({ part, guideOnly: true });
+  }
+  const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
+  expect(guide).toContain("val missing = PhoneSetup.missing(this, guide = !playground)");
+  expect(guide).not.toMatch(/PhoneSetup\.missing\(this\)/);
+  // The front page has no list of its own any more.
+  expect(read("lib/front.ts")).not.toContain("!enabled || !selected");
+  // Whoever skipped them, or never saw them, finds them in Settings > Setup.
+  const setup = read("app/settings/setup.tsx");
+  expect(setup).toContain("symKey");
+  expect(setup).toContain("contactsStep");
+});
+
+test("a 2.1.0 user who updates: setup done as the front page has it, so the playground, and leaving it lands there again", () => {
+  // Contacts unanswered and Sym and fn not set don't count for the front page (the phone says setupToDo false).
+  const updated = { ...done, setupToDo: false, guideDue: false };
+  expect(frontChoice(updated)).toBe("front");
+  // ✕ or Back from the playground brings the app's window to the front, which reads the same state: still the playground.
+  for (let leave = 0; leave < 3; leave++) expect(frontChoice(updated)).toBe("front");
+});
+
+test("Back declined with Not now counts as done, as the guide's own setup counts it", () => {
+  expect(setupToDo({ setupToDo: false })).toBe(false);
+  expect(read("android/kotlin/com/titankeys/keyboard/GuideSteps.kt")).toContain("it == SetupPart.Back && backDeclined");
   expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt"))
     .toContain('.put("backDeclined", BackDisclosureActivity.declined(activity))');
 });
@@ -82,12 +107,12 @@ test("a Titan 2 Elite is the touchpad's property and the device, the pair the to
 test("the other-phone warning shows once, before setup, and never blocks", () => {
   const other = { ...done, device: "husky", touchpadFunction: "" };
   expect(otherPhone(other)).toBe(true);
-  expect(frontChoice({ ...other, enabled: false, guideDue: true })).toBe("warning");
+  expect(frontChoice({ ...other, setupToDo: true, guideDue: true })).toBe("warning");
   // Once seen, everything goes on as on the Elite.
-  expect(frontChoice({ ...other, phoneWarningSeen: true, enabled: false, guideDue: true })).toBe("setup");
+  expect(frontChoice({ ...other, phoneWarningSeen: true, setupToDo: true, guideDue: true })).toBe("setup");
   expect(frontChoice({ ...other, phoneWarningSeen: true })).toBe("front");
   // Never on the Elite, seen or not.
-  expect(frontChoice({ ...done, enabled: false })).toBe("setup");
+  expect(frontChoice({ ...done, setupToDo: true })).toBe("setup");
   // Its one button only marks it seen.
   const page = read("app/index.tsx");
   const warning = page.slice(page.indexOf("function PhoneWarning()"), page.indexOf("\n}\n", page.indexOf("function PhoneWarning()")));

@@ -565,10 +565,20 @@ index 3999e45..35e86ab 100644
      }
  }
 diff --git a/crates/ink-core/src/native_editor.rs b/crates/ink-core/src/native_editor.rs
-index 813bb54..34aad4f 100644
+index 813bb54..d9b8d0a 100644
 --- a/crates/ink-core/src/native_editor.rs
 +++ b/crates/ink-core/src/native_editor.rs
-@@ -56,6 +56,7 @@ impl Engine {
+@@ -28,6 +28,9 @@ impl Engine {
+             return String::new();
+         };
+         let y = rect.y + if input.scrolling { self.scroll_origin - self.scroll_offset } else { 0.0 };
++        // A scrolled field is clipped to the scrolling area, as the canvas clips its label, so the native editor's text never
++        // draws over the pinned header (TitanKeys, report form at font scale 2.0).
++        let clip = self.scene.scroll_clip.filter(|_| input.scrolling);
+         let style = self.theme.text_input.resolve(self.focused_input == Some(state), options);
+         let role = style.font(&self.theme);
+         let font_size = self.scaled_font_in(style.size(), role).round();
+@@ -56,6 +59,7 @@ impl Engine {
              "label": options.label,
              "description": options.description,
              "error": options.error,
@@ -576,6 +586,15 @@ index 813bb54..34aad4f 100644
              "cursor": text[..text_cursor_boundary(text, self.focused_input_cursor)].encode_utf16().count(),
              "nativeEditor": self.native_editor_state == Some(state),
              "editor": {
+@@ -65,6 +69,8 @@ impl Engine {
+                 "lineHeight": self.scaled(style.line_height()),
+                 "baseline": (rect.height - font.height()) / 2.0 + font.ascent(),
+                 "bottomPadding": self.scaled(style.bottom_padding()),
++                "clipTop": clip.map(|clip| clip.y),
++                "clipBottom": clip.map(|clip| clip.y + clip.height),
+             },
+         }).to_string()
+     }
 diff --git a/crates/ink-core/src/react.rs b/crates/ink-core/src/react.rs
 index ea746fc..6e32d5f 100644
 --- a/crates/ink-core/src/react.rs
@@ -1011,7 +1030,7 @@ index c882a51..0b92d3b 100644
 +
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> = emptyMap()
 diff --git a/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt b/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
-index eb0a9b2..84f4951 100644
+index eb0a9b2..c293366 100644
 --- a/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
 +++ b/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
 @@ -46,6 +46,7 @@ private class SystemKeyboardAdapter(
@@ -1022,7 +1041,35 @@ index eb0a9b2..84f4951 100644
      private var inputId = -1
      private var nativeText = ""
      private var nativeCursor = 0
-@@ -333,6 +334,7 @@ private class SystemKeyboardAdapter(
+@@ -57,6 +58,9 @@ private class SystemKeyboardAdapter(
+     // The editor's font slot; -1 is Public Sans.
+     private var fontSlot = -1
+     private var minEditorLines = 1
++    // The scrolling area, in the container's pixels, that the editor is clipped to; NaN when its field doesn't scroll.
++    private var clipTop = Double.NaN
++    private var clipBottom = Double.NaN
+     private var maxEditorLines = 3
+     private var lineMeasurement: Triple<String, Int, Float>? = null
+     private var measuredLineCount = 1
+@@ -88,6 +92,7 @@ private class SystemKeyboardAdapter(
+         override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+             super.onLayout(changed, left, top, right, bottom)
+             if (action != 0) translationY = nativeBaseline - baseline
++            clipToScroll()
+         }
+ 
+         override fun onTouchEvent(event: MotionEvent): Boolean = active && super.onTouchEvent(event)
+@@ -299,6 +304,9 @@ private class SystemKeyboardAdapter(
+         if (params.width != width || params.height != height || params.leftMargin != left || params.topMargin != top) {
+             editor.layoutParams = FrameLayout.LayoutParams(width, height).apply { leftMargin = left; topMargin = top }
+         }
++        clipTop = bounds.optDouble("clipTop", Double.NaN)
++        clipBottom = bounds.optDouble("clipBottom", Double.NaN)
++        clipToScroll()
+         val slot = data.optInt("fontSlot", -1)
+         if (slot != fontSlot) {
+             fontSlot = slot
+@@ -333,6 +341,7 @@ private class SystemKeyboardAdapter(
          syncing = true
          val changed = inputId != id
          val textChanged = editor.text.toString() != text
@@ -1030,7 +1077,30 @@ index eb0a9b2..84f4951 100644
          val type = inputType()
          val typeChanged = editor.inputType != type
          if (typeChanged) {
-@@ -363,7 +365,7 @@ private class SystemKeyboardAdapter(
+@@ -353,6 +362,22 @@ private class SystemKeyboardAdapter(
+         }
+     }
+ 
++    /** Shows only the part of the editor inside the scrolling area, and no cursor once none of it is. */
++    private fun clipToScroll() {
++        if (clipTop.isNaN() || clipBottom.isNaN()) {
++            editor.clipBounds = null
++            editor.isCursorVisible = true
++            return
++        }
++        val params = editor.layoutParams as FrameLayout.LayoutParams
++        val height = params.height.coerceAtLeast(0)
++        val origin = params.topMargin + editor.translationY
++        val top = (clipTop - origin).roundToInt().coerceIn(0, height)
++        val bottom = (clipBottom - origin).roundToInt().coerceIn(top, height)
++        editor.clipBounds = android.graphics.Rect(0, top, params.width.coerceAtLeast(0), bottom)
++        editor.isCursorVisible = bottom > top
++    }
++
+     override fun framePresented() {
+         if (hideAfterFrame) {
+             // Keep the editor until the replacement Vulkan frame reaches the compositor.
+@@ -363,7 +388,7 @@ private class SystemKeyboardAdapter(
  
      private fun inputType(): Int = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT or
          (if (action == 0) InputType.TYPE_TEXT_FLAG_MULTI_LINE else 0) or

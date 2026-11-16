@@ -127,6 +127,28 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - A backup syncs Rime first, which drops any half-typed Chinese code at that moment.
   - The 4 missed joins are left to the 150 ms check, not joined outright, and the check gets no extra lead, so no right join
     is lost.
+- **M3: the six skipped languages on main** (`claude/m3-languages`, tk-languages): Serbian Cyrillic (СР) and Latin (SR),
+  Macedonian, Georgian, Bosnian and Kazakh, each from a source with a clear licence. 45 input methods. `bun run check`
+  (248), all 42 suites, the join checks and the build pass; the Debug APK is 159 MB. tk-languages' calls, to confirm:
+  - Serbian Cyrillic's label is СР and Serbian Latin's is SR.
+  - Serbian puts ж on Z instead of ѕ (not a Serbian letter); Macedonian holds ж on P.
+  - Kazakh uses Russian's keys, with its nine extra letters held on the nearest Russian letter (і on ы).
+  - Georgian's Shift gives a key's own second letter, and Georgian has no sentence capitals.
+  - Bosnian's and Macedonian's word lists come from film subtitles, so they lean towards everyday speech.
+- **Screen-off phone runs at the owner's word (about 07:55 to 08:09, on mobile data, battery 95% to 94%):** these fall in
+  #85's baseline day, so allow for them when the stats are read.
+  - **#83's phone replay** (main with the join-risk fix; `~/build/joins83/replay-report.json`): of 645 pairs, the first word
+    comes out right in 314 now, against 308 before #83 (+6), and 311 with a stricter lead of 2. 515 join now, 525 before.
+  - **The 150 ms check,** on pairs only it decides: it joins 6 missed joins, 5 right joins, 1 wrong join, 5 unclear and 20
+    others, and glues 2 of the pairs the owner kept apart. That's the same before #83, now and with a lead of 2: a stricter
+    lead loses 2 missed joins and stops neither glue.
+  - **The swipe suite's phone part** (saved words, and context): passes.
+  - **Fixed:** `phone-replay.sh` pointed at the old `.dev` replay tools, which don't follow the rename; it uses the repo's
+    copy now.
+- **New pilot study, #83 (owner, 2026-11-16 morning):** "do a pilot investigation to see whether the context engine could
+  predict whether the words should be joined or not, when they end on the top row and resume on the top row". With tk-joins,
+  branch `claude/m3-joins-context`: the context model's margin for the joined word against the two words, on the saved
+  top-row pairs, by label, alone and with the geometry. Counts only, no app code, no phone.
 - **F's words pass 3 on main at c508c31:** every "F: draft" in the language framework, Chinese, the licences and the report
   form is replaced (`docs/words-m1.md` has each line before and after). F's calls, to confirm:
   - The Yale input method is named 耶魯拼音, with "Cantonese, Yale" under it.

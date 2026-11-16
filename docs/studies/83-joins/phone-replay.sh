@@ -14,7 +14,8 @@
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../.." && pwd)
-base=/mnt/x/Atlas/.dev/swipe-baseline
+# The repo's own copy of the replay tools (#82), which follows the renamed packages; the old .dev copy doesn't.
+base=$repo/tools/dev/swipe-baseline
 OUT=${OUT:-$HOME/build/joins83}
 P=$OUT/private
 for f in attempts.jsonl pairs.jsonl live-rule.txt new-rule.txt; do

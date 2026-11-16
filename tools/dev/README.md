@@ -52,6 +52,43 @@ Every phone tool keeps these rules:
 
 adb can't press Sym, hold a key or touch the touchpad. Those checks need hands.
 
+## touch
+
+The touch simulator plays touches on the touchpad and presses on the keys, as the hardware itself sends them, so the checks that
+used to need hands run over adb: swipes, delete flicks, Space taps, a finger resting or lifting after a press, holds, Sym and fn.
+It needs no root. adb's shell may write to `/dev/input`, and Android reads what is written there as the touchpad's and the
+keyboard's own events.
+
+The keys are real, so they type in whatever is in front. Before every gesture and every setup key, `touchlib.sh` checks that
+the screen is awake and unlocked, no navigation app is running, TitanKeys Debug's window is in front and one of its own text
+fields has the keyboard. Otherwise nothing is sent. A check is tried twice, then the run stops. The release app is never a
+target: `TK_APP` must end in `.debug`. If the injector stops part way, it lets go of every key and lifts the finger.
+
+| Tool | Does | Needs |
+|---|---|---|
+| `test/run.sh` | The offline checks: the calibration against the app's own `TouchAlignment.java`, every key read back on itself, each gesture against the rules in `DeleteSwipe.kt` and `CursorGesture.kt`, and the injector's script format. | a JDK, a C compiler |
+| `build.sh` | Builds the injector, `tk-inject`, for the phone with the NDK. `touch.sh` builds and pushes it when it changes. | WSL, the NDK |
+| `keymap.sh` | Reads which codes the keyboard sends for Sym, fn and the rest from its key layout file, and checks the touchpad's range. Run it once. | the phone |
+| `touch.sh GESTURE...` | Plays gestures after the checks. At most 15 s for each call. | the phone |
+| `gestures.py GESTURE...` | Writes the script `touch.sh` plays, without the phone. See its help for every gesture. | |
+| `capture.sh SECONDS [--keys]` | Records real touches (and with `--keys`, keys) for `replay-getevent`. A capture with keys holds what was typed: keep it on your computer. | the phone |
+| `checks.py [NAME...]` | The first checks, each with a YES or NO read back from the field, or a screenshot to look at (`--list`). | the phone, a Debug field focused |
+
+Gestures, played in order, with `+MS` for a pause between two:
+
+- `swipe:WORD[:SPEED]`: through the word's key centres, at .012 keys a millisecond unless you set it.
+- `flick[:KEYS[:MS]]`: a level delete flick from Backspace.
+- `space:N`: 1, 2 or 3 taps on Space.
+- `key:NAME[:HOLD[:AFTER]]`: a press with the finger on the key. AFTER is `lift`, `rest`, `slide` or `none`.
+- `hold:LETTER[:MS]` and `touch:X,Y[:MS]`.
+- `replay-getevent:FILE` and `replay-rawlog:FILE[:FROM[:TO]]`.
+
+For example, `bash tools/dev/touch/touch.sh swipe:go +100 swipe:on` swipes "go" and "on" 100 ms apart.
+
+Positions are chosen where TitanKeys reads them, after the built-in calibration, and turned back into the touchpad's raw steps.
+The touchpad reports about every 9.5 ms, with a contact size of 2 or 3 while moving and 1 or 2 while still, as real captures do.
+A raw log replay reads only its touch and key lines; the rest, which can hold typed text, is skipped unread.
+
 ## preview
 
 Quick pages for look-only changes: calibration, guide drawings, overlays. A page reloads in seconds, where a build takes about 15 minutes. Tune it on the page, then build the result into TitanKeys once.

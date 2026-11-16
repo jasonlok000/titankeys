@@ -135,6 +135,13 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - Kazakh uses Russian's keys, with its nine extra letters held on the nearest Russian letter (і on ы).
   - Georgian's Shift gives a key's own second letter, and Georgian has no sentence capitals.
   - Bosnian's and Macedonian's word lists come from film subtitles, so they lean towards everyday speech.
+- **M3: the Chinese page opens on the first switch** (`claude/m3-chinese`, tk-gestures): the first switch to a Chinese input
+  method with no variant picked opens Settings > Chinese characters, once. All suites pass; the build needed a clean Ink
+  folder again (stale classes), then passed: `~/build/m1-apks/main-m3-chinese-debug.apk`. tk-gestures' calls, to confirm:
+  - Once ever, not once per Chinese input method. After that, the bar's choice is the only reminder.
+  - It opens once the input method has loaded, so on the very first switch "Warming up …" comes first.
+  - Reset most things clears the variant and the once, so the page opens again on the next switch.
+  - Open question: should turning Chinese on in Settings > Languages also open the page? Today it doesn't.
 - **Screen-off phone runs at the owner's word (about 07:55 to 08:09, on mobile data, battery 95% to 94%):** these fall in
   #85's baseline day, so allow for them when the stats are read.
   - **#83's phone replay** (main with the join-risk fix; `~/build/joins83/replay-report.json`): of 645 pairs, the first word

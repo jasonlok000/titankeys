@@ -3,13 +3,17 @@ package com.titankeys.keyboard
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
 import android.hardware.input.InputManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.Display
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.Surface
 import kotlin.math.hypot
 
 /**
@@ -38,6 +42,8 @@ class TouchFeed : BroadcastReceiver() {
         val xScale = (xRange?.range ?: RAW_MAX_X) / RAW_MAX_X
         val yScale = (yRange?.range ?: RAW_MAX_Y) / RAW_MAX_Y
         val diagonal = context.resources.displayMetrics.let { hypot(it.widthPixels.toFloat(), it.heightPixels.toFloat()) }
+        // The firmware's own shift, which Touchpad.firmwareOffset takes off again: real events carry it, so these do too.
+        val yOffset = firmwareOffset(context)
         val start = SystemClock.uptimeMillis() + intent.getLongExtra("delay", 0L).coerceIn(0L, MAX_MILLIS)
         val main = Handler(Looper.getMainLooper())
         var downTime = 0L
@@ -55,7 +61,7 @@ class TouchFeed : BroadcastReceiver() {
                 val properties = MotionEvent.PointerProperties().apply { id = 0; toolType = MotionEvent.TOOL_TYPE_FINGER }
                 val coords = MotionEvent.PointerCoords().apply {
                     x = at.x * xScale
-                    y = at.y * yScale
+                    y = at.y * yScale + yOffset
                     pressure = 1f
                     size = at.size / 255f
                     touchMajor = at.size / 255f * diagonal
@@ -94,6 +100,26 @@ class TouchFeed : BroadcastReceiver() {
         }.also { frames -> require(frames.zipWithNext().all { (a, b) -> b.millis >= a.millis }) }
     } catch (error: RuntimeException) {
         null
+    }
+
+    /**
+     * In Sliding Mode 1 the Titan 2's input reader shifts portrait touchpad positions down by a fixed amount, which
+     * Touchpad.firmwareOffset takes off again; the same rule here, so a built event lands where a finger's would.
+     */
+    private fun firmwareOffset(context: Context): Float {
+        val display = context.getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY) ?: return 0f
+        val forceScroll = try {
+            Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+                .invoke(null, "persist.sys.touchpad_forcescroll") as String
+        } catch (error: ReflectiveOperationException) {
+            null
+        }
+        if (Build.DEVICE != "Titan_2" || display.rotation != Surface.ROTATION_0 || forceScroll != "yes") return 0f
+        return when (display.mode.physicalHeight) {
+            1200 -> 240f
+            1440 -> 360f
+            else -> 0f
+        }
     }
 
     private fun touchpad(context: Context): InputDevice? {

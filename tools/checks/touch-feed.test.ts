@@ -31,3 +31,11 @@ test("TitanKeys never sets the hook: only TitanKeys Debug's block does, and the 
   expect(files("android/kotlin").filter(path => read(path).includes("TouchpadFeedHook")).sort()).toEqual([
     "android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt", "android/kotlin/com/titankeys/keyboard/TouchpadFeedHook.kt"]);
 });
+
+test("the feed shifts its events as the firmware shifts real ones, by Touchpad.kt's own rule", () => {
+  const feed = read("android/debug/recorder/TouchFeed.kt");
+  const touchpad = read("android/kotlin/com/titankeys/keyboard/Touchpad.kt");
+  for (const part of ['"persist.sys.touchpad_forcescroll"', "1200 -> 240f", "1440 -> 360f", "Surface.ROTATION_0", '"Titan_2"'])
+    for (const source of [feed, touchpad]) expect(source).toContain(part);
+  expect(feed).toContain("y = at.y * yScale + yOffset");
+});

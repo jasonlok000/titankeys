@@ -119,9 +119,12 @@ private fun fieldFor(step: GuideStep): Frame = when (step.id) {
     } else at(step, END_TEXT)
 }
 
-/** The steering slides' field, as GuideActivity seeds it: the last few lines finished so far, then the slide's own. */
-private fun steeringText(step: GuideStep) =
-    (GUIDE_STEPS.takeWhile { it.id != step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(4) + step.seed).joinToString("\n") + " "
+/**
+ * The steering slides' field, as GuideActivity seeds it: the last few lines finished so far, then the slide's own. The steer slide
+ * shows only its own line (owner, #66).
+ */
+private fun steeringText(step: GuideStep) = (if (step.id == "steer") emptyList() else
+    GUIDE_STEPS.takeWhile { it.id != step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(4)).plus(step.seed).joinToString("\n") + " "
 
 /** The field once the slide is passed: its line, finished. */
 private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) {
@@ -130,7 +133,7 @@ private fun passedField(step: GuideStep, before: Frame): Frame = when (step.id) 
     "menu" -> before
     "flick" -> at(step, "$FLICK_LINE ", FLICK_LINE.length - " word".length)
     "hold" -> at(step, "$HOLD_LINE ", "Delete ".length)
-    "steer" -> before.copy(start = before.start - 40, end = before.start - 40)
+    "steer" -> before.copy(start = (before.start - 12).coerceAtLeast(0), end = (before.start - 12).coerceAtLeast(0))
     "selectmore" -> before.copy(start = before.target!!.first, end = before.target.last + 1)
     "paste" -> at(step, "$PASTE_LINE ", PASTE_LINE.length)
     else -> if (step.symbol != null) at(step, step.line, gapCursor(step.line, step.symbol) + step.symbol.length) else before
@@ -455,13 +458,9 @@ private fun drawField(g: Graphics2D, frame: Frame, left: Int, top: Int, width: I
     var start = frame.start
     var target = frame.target
     if (frame.steer != SteerAim.None) {
-        val other = (cursorLine - 1).coerceAtLeast(0)
-        val otherEnd = (starts.getOrNull(other + 1) ?: all.length) - 1
-        fun x(at: Int): Float {
-            val line = starts.indexOfLast { it <= at }
-            return g.fontMetrics.stringWidth(all.substring(starts[line], at)).toFloat()
-        }
-        target = steerTarget(all, starts[other]..otherEnd, x(frame.start)) { x(it) }
+        // The cursor's own line, as the field wraps it: the target is left of the cursor there (owner, #66).
+        val lineEnd = (starts.getOrNull(cursorLine + 1) ?: all.length) - 1
+        target = steerTarget(all, starts[cursorLine]..lineEnd, frame.start)
         if (target == null) mark(g, "NO STEER TARGET", top)
         if (frame.steer == SteerAim.Entered && target != null) start = target.first + 2
     }

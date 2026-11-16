@@ -35,7 +35,8 @@ internal enum class GuideTone { Orange, Ink }
 internal enum class GuideChapter(val label: String, val roast: String? = null) {
     Typing("Typing", "OK, you're not that dumb."),
     Delete("Delete", "Fine, you're not useless. You delete stuff almost as fast as you screw it up."),
-    Steering("Steering", "Wow, you moved a cursor. The bar was on the floor and you still needed a run-up."),
+    // F: draft, the chapter is "Cursor", with no steering in it (owner, #66 and #90).
+    Steering("Cursor", "Wow, you moved a cursor. The bar was on the floor and you still needed a run-up."),
     Symbols("Symbols and emoji",
         "Holy shit, you found the clown. Took you long enough, and you see it in the mirror every day."),
     Clipboard("Copy and paste",
@@ -148,9 +149,10 @@ internal enum class GuideBar {
  * whole guide is one text in one field: each word that you swipe or type moves the line on to the next word, whatever the word was,
  * so that nothing waits on one word. After the last word it starts again.
  */
+// F: "move the cursor" in place of "steer" (#66), draft.
 internal object GuideScript {
     const val TEXT = "Nothing to unlearn: type with two hands or one, and TitanKeys fixes your typos as you go. Then swipe whole " +
-        "words on the same keys. Missed one? The right word is a tap away. Flick to delete, steer and pick from Space, and " +
+        "words on the same keys. Missed one? The right word is a tap away. Flick to delete, move the cursor and pick from Space, and " +
         "get every symbol and emoji without the screen. This is the ultimate keyboard, and these are the keys your Titan " +
         "deserves."
 
@@ -928,8 +930,12 @@ internal fun holdTarget(text: String, cursor: Int): IntRange? {
     return if (end > from) from until end else null
 }
 
-/** Slide 7's line, under the lines finished before it, so the cursor has somewhere to go. */
-internal const val STEER_LINE = "Hold the second tap to steer the cursor"
+/**
+ * Slide 7's line, alone in the field (owner, #66: "we only show one line now"). It keeps its first letter H, as the lines spell GO
+ * TOUCH GRASS NOW. Its target is a word of its own, see [steerTarget].
+ */
+// F: draft (#66), no "steer" in it. Any rewording keeps the H, and a word of four letters or more a word or so before the end.
+internal const val STEER_LINE = "Hold the second tap to move the cursor"
 
 /** Slide 8's line, with the words to grab in it. */
 internal const val GRAB_LINE = "Grab my whole heart with three taps"
@@ -1031,8 +1037,11 @@ internal val OLD_GUIDE_CLIPS = GUIDE_CLIPS.toSet() + PASTE_TEXT + setOf(
     "Next is not a personality.", "You're doing great.",
 )
 
-/** The words that the steer slide aims at are at least this many words from the cursor's column. */
-internal const val STEER_TARGET_WORDS = 3
+/**
+ * The word that the steer slide aims at has at least this many letters, so a short word like "the" or "to" is passed over and the
+ * target is the line's verb, about one word back from the cursor (owner, #66).
+ */
+internal const val STEER_TARGET_LETTERS = 4
 
 /** Swiped words that pass the swipe slide: the line's words after its first. */
 internal const val SWIPES_TO_PASS = 3
@@ -1160,21 +1169,20 @@ internal fun grabbed(text: String, aim: IntRange, start: Int, end: Int): Int {
 }
 
 /**
- * The steer slide's target: a word of three letters or more on the visible line that doesn't hold the cursor, [other], at least
- * [STEER_TARGET_WORDS] words from the word in the cursor's column, the nearest such. [x] says where a character of [text] starts on
- * its line, and [cursorX] where the cursor is. Only the word's letters are marked, not its marks.
+ * The steer slide's target, from the line's own words, so it follows the line if its words change (owner, #66): on the cursor's
+ * own line, [line], always to the left of [cursor], so the first move goes one way. It skips the word the cursor touches or is in,
+ * then takes the nearest word of [STEER_TARGET_LETTERS] letters or more: on "Hold the second tap to move the cursor", with the
+ * cursor at its end, that's "move". Only the word's letters are marked, not its marks. Null if the line has no such word.
  */
-internal fun steerTarget(text: String, other: IntRange, cursorX: Float, x: (Int) -> Float): IntRange? {
-    val words = Regex("\\S+").findAll(text).map { it.range }.filter { it.first in other }.toList()
-    if (words.isEmpty()) return null
-    val column = words.indexOfLast { x(it.first) <= cursorX }.coerceAtLeast(0)
-    val letters = words.mapIndexedNotNull { index, word ->
-        val first = (word.first..word.last).firstOrNull { text[it].isLetter() } ?: return@mapIndexedNotNull null
-        val last = (word.first..word.last).last { text[it].isLetter() }
-        (index to (first..last)).takeIf { abs(index - column) >= STEER_TARGET_WORDS && last - first + 1 >= 3 }
-    }
-    return letters.minByOrNull { abs(it.first - column) }?.second
-}
+internal fun steerTarget(text: String, line: IntRange, cursor: Int): IntRange? =
+    Regex("\\S+").findAll(text).map { it.range }
+        .filter { it.first in line && it.last + 1 < cursor }
+        .mapNotNull { word ->
+            val first = (word.first..word.last).firstOrNull { text[it].isLetter() } ?: return@mapNotNull null
+            val last = (word.first..word.last).last { text[it].isLetter() }
+            (first..last).takeIf { last - first + 1 >= STEER_TARGET_LETTERS }
+        }
+        .lastOrNull()
 
 /** The steer slide, with a word marked: the cursor has to land in it, and the slide passes as the finger lifts there. */
 private fun GuideMemory.steerToward(aim: IntRange, event: KeyboardEvent): GuideVerdict = when {
@@ -1447,7 +1455,8 @@ internal val GUIDE_STEPS = listOf(
     // STEERING: the slide's line again and again, with the cursor in the middle; the cursor gestures only.
     GuideStep(
         id = "steer", chapter = GuideChapter.Steering,
-        title = "Steer to the underlined word.",
+        // F: draft (#66).
+        title = "Get the cursor to the underlined word.",
         stages = listOf(
             GuideStage("Tap Space twice, and hold the second tap.") { event ->
                 when {
@@ -1457,7 +1466,7 @@ internal val GUIDE_STEPS = listOf(
                     else -> GuideVerdict.Wait
                 }
             },
-            // The screen underlines a word on the other line, and the cursor has to land in it.
+            // The screen underlines a word left of the cursor, on its line, and the cursor has to land in it.
             GuideStage("Now slide. Lift when the cursor's in it.") { event ->
                 val aim = target
                 when {
@@ -1870,7 +1879,8 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         }
         // A space that would type, from the key or a light tap, on a slide with no typing (owner, 2026-11-13).
         GuideLesson.Space.name -> when {
-            GuideLesson.Cursor in open -> "Typed spaces are blocked. Taps on Space steer."
+            // F: draft (#66).
+            GuideLesson.Cursor in open -> "Spaces are blocked. Taps on Space move the cursor."
             step.chapter in NOT_TYPING -> "Spaces are blocked here. Typing's done. Keep up."
             GuideLesson.Swipe in open -> "Spaces are blocked here. Swipes space themselves."
             step.chapter == GuideChapter.Symbols -> "Spaces are blocked here. Just the symbol."
@@ -1884,7 +1894,8 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             GuideChapter.Typing -> "Swiping's blocked here. Type it. Swiping's next."
             GuideChapter.Delete -> if (GuideLesson.Flick in open) "Swiping's blocked here. Flick from Backspace." else
                 "Swiping's blocked here. Backspace this one."
-            GuideChapter.Steering -> "Swiping's blocked here. Taps on Space steer."
+            // F: draft (#66).
+            GuideChapter.Steering -> "Swiping's blocked. Taps on Space move the cursor."
             else -> "Swiping's blocked on this slide. Not this way."
         }
         GuideLesson.BarTap.name -> when {

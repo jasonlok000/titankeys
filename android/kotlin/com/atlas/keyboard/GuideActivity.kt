@@ -3210,7 +3210,7 @@ class GuideActivity : Activity() {
 
     /**
      * Marks in orange what the slide aims at, in the field, and tells the slide (design v4): the stray letter on the Backspace slide,
-     * the last word on the flick slide, a word on the other line on the steer slide. The menu slide's TitanKeys is selected instead.
+     * the last word on the flick slide, a word left of the cursor on the steer slide. The menu slide's TitanKeys is selected instead.
      * Nothing on other slides, or once the guide's look is off.
      */
     private fun aim() {
@@ -3270,14 +3270,15 @@ class GuideActivity : Activity() {
 
     /** Puts [line] in the field again and again, with the cursor in the middle after a space. */
     private fun seedSteering(line: String) {
-        // The lines finished so far, then the slide's own: text to steer through that reads as the user's own, and never the
-        // same line again and again (owner, v5).
-        val before = GUIDE_STEPS.takeWhile { it.id != flow.step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(STEER_LINES_BEFORE)
+        // The lines finished so far, then the slide's own: text that reads as the user's own, and never the same line again and
+        // again (owner, v5). The steer slide shows only its own line (owner, #66: "we only show one line now").
+        val before = if (flow.step.id == "steer") emptyList() else
+            GUIDE_STEPS.takeWhile { it.id != flow.step.id }.map { it.line }.filter { it.isNotEmpty() }.takeLast(STEER_LINES_BEFORE)
         val text = (before + line).joinToString("\n") + " "
         field.setText(text)
         steerLength = text.length
         val middle = text.length / 2
-        // The cursor starts at the end of the slide's line; the word to steer to is on a line above.
+        // The cursor starts at the end of the slide's line; the word to move to is on its line, to the left (owner, #66).
         field.setSelection(text.length - 1)
         steerAim = null
         inSteerAim = false
@@ -3295,21 +3296,17 @@ class GuideActivity : Activity() {
     }
 
     /**
-     * The steer slide's word, once the field has its lines: on the visible line that doesn't hold the cursor, a few words from its
-     * column, so both stay in the two lines (design v4). The field shows those two lines.
+     * The steer slide's word, once the field has its line: on the cursor's own line as the field wraps it, left of the cursor,
+     * picked from the line's words by [steerTarget], so it follows the line if its words change (owner, #66).
      */
     private fun pickSteerAim() {
         if (flow.step.id != "steer" || playground) return
         val own = field.layout ?: return
         val cursor = field.selectionStart.coerceAtLeast(0)
         val cursorLine = own.getLineForOffset(cursor)
-        val other = if (cursorLine + 1 < own.lineCount) cursorLine + 1 else cursorLine - 1
-        if (other < 0) return
         val text = field.text.toString()
-        steerAim = steerTarget(text, own.getLineStart(other) until own.getLineEnd(other), own.getPrimaryHorizontal(cursor)) {
-            own.getPrimaryHorizontal(it)
-        }
-        field.scrollTo(0, own.getLineTop(min(cursorLine, other)))
+        steerAim = steerTarget(text, own.getLineStart(cursorLine) until own.getLineEnd(cursorLine), cursor)
+        field.scrollTo(0, own.getLineTop(cursorLine))
         inSteerAim = false
         aim()
     }

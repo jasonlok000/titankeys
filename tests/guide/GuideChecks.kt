@@ -1155,13 +1155,33 @@ private fun theCursorHasToMove() {
 
 private fun steeringToAWord() {
     fun title(verdict: GuideVerdict) = (verdict as? GuideVerdict.Hint)?.let { it.title ?: it.text }.orEmpty()
-    // A line of words, one character wide each, so a character's place is its index.
-    val text = "aa bb cc dd eee fff ggg hhh iii. jjj"
-    val word = steerTarget(text, 0 until text.length, 0f) { it.toFloat() }
-    same(word?.let { text.substring(it.first, it.last + 1) }, "eee", "Three words or more from the cursor's column, three letters or more")
-    same(steerTarget(text, 0 until text.length, 33f) { it.toFloat() }?.let { text.substring(it.first, it.last + 1) }, "ggg",
-        "counted either way from the column")
-    same(steerTarget("ab. cd ef gh iii.", 0 until 17, 0f) { it.toFloat() }, 13..15, "only its letters, not the full stop")
+    fun marked(text: String, cursor: Int = text.trimEnd().length, line: IntRange = text.indices) =
+        steerTarget(text, line, cursor)?.let { text.substring(it.first, it.last + 1) }
+    // The slide's own line, alone, with the cursor at its end, as GuideActivity seeds it (owner, #66).
+    same(marked(STEER_LINE), "move", "The target is the line's verb, about one word back from the cursor")
+    same(STEER_LINE.first(), 'H', "The line keeps its H for the finale's GO TOUCH GRASS NOW")
+    same(STEER_LINE.contains("steer", ignoreCase = true), false, "No steering in the line")
+    // No steering anywhere the guide talks (owner, #90: "change out the steering term"): titles, lines, stages, chips, chapters.
+    val slide = GUIDE_STEPS.find { it.id == "steer" }!!
+    same(slide.title to slide.chapter.label, "Get the cursor to the underlined word." to "Cursor", "The slide's title and chapter")
+    val said = GUIDE_STEPS.flatMap { step ->
+        listOfNotNull(step.title, step.body, step.done, step.praise, step.help, step.helpTitle, step.line, step.seed) +
+            step.stages.map { it.text } + GuideLesson.entries.map { blockedChip(step, it.name) }
+    } + GuideChapter.entries.mapNotNull { it.roast } + GuideChapter.entries.map { it.label } + GuideScript.TEXT
+    for (text in said) same(text.contains("steer", ignoreCase = true), false, "No steering in \"$text\"")
+    // It follows the line's words, so a reworded line still gets a word left of the cursor.
+    same(marked("Hold the second tap and drag it along"), "drag", "A reworded line: its own word, short ones passed over")
+    same(marked("Hold the second tap, then slide the cursor"), "slide", "and another")
+    val text = "$STEER_LINE "
+    val aim = steerTarget(text, text.indices, STEER_LINE.length)!!
+    same(aim.last < STEER_LINE.length, true, "Always to the left of the cursor")
+    same(marked("aaaa bbbb cccc dddd", 7), "aaaa", "Never the word the cursor is in")
+    same(marked("aaaa bbbb cccc dddd", 9), "aaaa", "nor the one it touches")
+    same(marked("aaaa bbbb. cc dd", 16), "bbbb", "Only its letters, not the full stop")
+    // Only the cursor's own line: a word on the line above is never the target.
+    val two = "Long words above\nHold it to go "
+    same(marked(two, two.trimEnd().length, two.indexOf("Hold") until two.length), "Hold", "The cursor's own line only")
+    same(marked("aaaa bbbb\nab cd ef", 18, 10 until 18), null, "A line with no such word marks nothing, and a real move passes")
 
     val steer = GuideFlow({ GuideSettings() })
     steer.start("steer")
@@ -1607,7 +1627,7 @@ private fun runThroughFixes() {
     same(step("menu").lessons.orEmpty().contains(GuideLesson.Space), false, "the menu slide's Space is blocked: it would replace TitanKeys")
     for (id in listOf("steer", "selectmore")) {
         same(step(id).lessons.orEmpty().contains(GuideLesson.Cursor), true, "$id still teaches the steering taps")
-        same(blockedChip(step(id), GuideLesson.Space.name), "Typed spaces are blocked. Taps on Space steer.", "Space on $id")
+        same(blockedChip(step(id), GuideLesson.Space.name), "Spaces are blocked. Taps on Space move the cursor.", "Space on $id")
     }
     same(blockedChip(step("swipe"), GuideLesson.Space.name), "Spaces are blocked here. Swipes space themselves.", "Space on swipe")
     same(keyboard.contains("keyCode == KeyEvent.KEYCODE_SPACE -> GuideLesson.Space"), true, "A pressed Space is its own lesson")

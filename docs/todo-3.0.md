@@ -48,6 +48,14 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   `bun run check` passes (222 tests) and the Debug build passes. #97's report route is deployed to the contributions Worker,
   and the routes answer correctly. Phone checks run through tk-screens, now the phone tester, on
   `~/build/m1-apks/main-2d54b0d-debug.apk`.
+- **The phone locked at about 02:03** (power button). It's behind a PIN, so the phone checks wait for the owner to unlock
+  it. They're queued with tk-screens, the phone tester. It charged to 77% by 02:57.
+- **gestures merged at 03:00:** #89, #93, #84. The owner's #84 recording showed nothing that tells resting from lifting
+  (12 of 17 presses seen, lift 123–136 ms after key-up at the same size in both halves), so rule (a) stands.
+- **Started on M2 work that doesn't need the phone:**
+  - tk-joins builds #83's two safe rules: join more (+4 missed), and join less by touch size (−7 wrong episodes, no
+    word changed).
+  - F writes the lines for #65, #97, the privacy policy and #75 and #86, then does the words pass once M1 is merged.
 - **#83's study says:**
   - 502 joins: 380 right, 64 wrong (46 episodes), 58 unclear; and 18 missed joins.
   - No rule cuts wrong joins without losing a right one.

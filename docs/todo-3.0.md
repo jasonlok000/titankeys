@@ -48,6 +48,39 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   `bun run check` passes (222 tests) and the Debug build passes. #97's report route is deployed to the contributions Worker,
   and the routes answer correctly. Phone checks run through tk-screens, now the phone tester, on
   `~/build/m1-apks/main-2d54b0d-debug.apk`.
+- **M1 gate report (03:35):**
+  - **Merged into main:** every M1 code branch.
+    - typing: #91, #77, #73, #85;
+    - gestures: #89, #93, #84;
+    - screens: #70, #71, #75, #86, #87's row;
+    - data: #65, #74, #97;
+    - guide: #66, #67, #68, #69, #72, #79, #87's step, and the owner's 01:52 notes;
+    - tools: #82.
+
+    Each branch's verify build passed. The full suite on merged main is running.
+  - **Studies merged:**
+    - #83, joins;
+    - #73, were/we're: yes at a 2.0 nats margin, 0 wrong changes and 13 of 15 fixed, on a small sample;
+    - #56, languages: 43 languages from data alone, about 160 MB with Chinese, all inside the app; Yale is rime-jyutping's,
+      LGPL, so it ships; Rime and OpenCC built for arm64; the variants convert correctly.
+  - **Deployed:** #97's report route on the contributions Worker.
+  - **Not done:**
+    - every phone check: the phone is locked;
+    - #81's code rename, now done first thing in M2;
+    - the Play bundle, because the private Ink in WSL lacks the TitanKeys patch, and fixing it would wipe its own
+      bundle patch. That's for the owner, since only the owner makes Play builds.
+  - **Waiting for the owner's hands:** #89, #93 and #84 by touch; #66's distance; #68's hunts; #72's Sym check; the panel
+    page lines while paging.
+- **M2, started 03:40, on code that doesn't need the phone:**
+  - tk-data: #81's code rename first, then each worker merges main in.
+  - tk-languages: the language framework, generic Latin languages, Settings > Languages with English spelling inside
+    (#80), and one keyboard-list entry per input method (#76).
+  - tk-gestures: Rime in the app (librime and OpenCC, Yale, Jyutping, Pinyin, the variants).
+  - tk-guide: #90.
+  - tk-typing: were/we're on more data, then the auto-change if it still makes no wrong change.
+  - F: the words pass on main (every `F:` draft, the three overflowing guide lines, "steer" outside the guide, and
+    CONTRIBUTING's Languages section).
+  - tk-joins: #83's rule, in progress.
 - **The phone locked at about 02:03** (power button). It's behind a PIN, so the phone checks wait for the owner to unlock
   it. They're queued with tk-screens, the phone tester. It charged to 77% by 02:57.
 - **gestures merged at 03:00:** #89, #93, #84. The owner's #84 recording showed nothing that tells resting from lifting
@@ -195,6 +228,14 @@ each generic language types its letters and accents over adb.
 12. The owner's go is taken as clearing the downloads and the phone test program listed under "Needs clearing".
 13. The workers draft user-facing text with `F:` markers. F's lines in `docs/words-m1.md` replace the drafts, either in the
     workers' branches or after merging.
+
+14. The #81 code rename runs at the start of M2, in parallel with the M2 workers. Each worker merges the renamed main into
+    their branch before reporting, since they know their own changes best.
+15. "Steer" also goes from Settings > Haptics, the Haptics lab and the README, for one word throughout. The published 2.1.0
+    release notes stay as they are.
+16. were/we're changes automatically only if a larger test set still gives no wrong change at the study's margin.
+17. Every language from the study ships inside the app; none is downloaded (43 Latin, Cyrillic and Greek languages plus
+    Chinese, about 160 MB in all).
 
 More calls get added here as the night goes.
 

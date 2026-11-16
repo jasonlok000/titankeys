@@ -18,7 +18,7 @@ The owner asked to "use the context model to change were/we're when we're highly
 
 - 2.0 nats, or 3.0 with Only fix when sure.
 - It waits for the 2 words after it, or a mark, like its/it's.
-- Typed words only: a swiped "were" never changes.
+- Swiped words too, but only the swipe's own pick: a word chosen from the bar, or fixed by hand, never changes ([73-swipes.md](73-swipes.md)).
 - It only adds the apostrophe: "we're" never becomes "were".
 - Backspace right after puts "were" back.
 - It's off in the guide.

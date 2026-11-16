@@ -2487,7 +2487,9 @@ private fun apostrophes(world: Realistic) {
     same(typist(onlySure, scoring(3.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "Only when sure: +3.5 is")
     same(typist(with = scoring(5.0)).type("Sorry, were going to ").backspace().text, "Sorry, were going to ",
         "Backspace right after puts \"were\" back")
-    same(typist(with = scoring(5.0)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, were going to ", "A swiped were never changes")
+    same(typist(with = scoring(2.5)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, we're going to ", "A swiped were at +2.5 changes")
+    same(typist(with = scoring(1.5)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, were going to ",
+        "A swiped were at +1.5 doesn't")
     same(typist(Lists(world.words, off = setOf(FixKind.CONTEXT_APOSTROPHES)), scoring(5.0)).type("Sorry, were going to ").text,
         "Sorry, were going to ", "Switched off, \"were\" stays")
     same(typist(with = scoring(5.0)).type("so were, ").text, "so were, ", "Too few words: \"were\" stays")
@@ -2512,7 +2514,40 @@ private fun apostrophes(world: Realistic) {
     same(typist().type("We were going to call you. ").text, "We were going to call you. ", "\"We were\" stays")
     for (text in listOf("put it there for now ", "their dog is here ", "the dog wagged it's tail ", "it was it's own thing "))
         same(typist().type(text).text, text, "Never changed: $text")
-    same(typist().type("Bring a coat, ").swipe("its").type("going to ").text, "Bring a coat, its going to ", "A swiped word never changes")
+
+    // Swiped words wait as typed ones do: the swipe picked from the words before only (owner, 2026-11-16).
+    val sure5 = scoring(5.0)
+    same(typist(with = sure5).type("Bring a coat, ").swipe("its").type("going to ").text, "Bring a coat, it's going to ",
+        "A swiped word gets its apostrophe from the typed words after it")
+    same(typist(with = sure5).type("Bring a coat, ").swipe("its").swipe("going").text, "Bring a coat, its going ",
+        "One swiped word after isn't enough yet")
+    same(typist(with = sure5).type("Bring a coat, ").swipe("its").swipe("going").swipe("to").text, "Bring a coat, it's going to ",
+        "and swiped words after it bring it too")
+    same(typist(with = sure5).type("Bring a coat, ").swipe("its").swipe("going").swipe("to").swipe("rain").text,
+        "Bring a coat, it's going to rain ", "and the swiped words after it go on as usual")
+    same(typist(with = sure5).swipe("its").type("going to ").text, "it's going to ", "A swiped word opening the text gets it too")
+    same(typist(with = sure5).type("Bring a coat, ").swipe("its").type("going to ").backspace().text, "Bring a coat, its going to ",
+        "Backspace right after puts the swiped word back")
+    same(typist(with = sure5).type("Bring a coat, its going to ").swipe("its").type("going to ").text,
+        "Bring a coat, it's going to it's going to ", "Typed and swiped words both wait")
+    same(typist(with = scoring(0.5)).type("Bring a coat, ").swipe("its").type("going to ").text, "Bring a coat, its going to ",
+        "A swiped word needs the same margin as a typed one")
+    same(typist(Lists(world.words, off = setOf(FixKind.CONTEXT_APOSTROPHES)), sure5).type("Bring a coat, ").swipe("its")
+        .type("going to ").text, "Bring a coat, its going to ", "Switched off, a swiped \"its\" stays")
+    same(typist(with = sure5).type("Bring a coat, ").swipe("it's").type("going to ").text, "Bring a coat, it's going to ",
+        "A swiped \"it's\" stays")
+    same(typist(with = scoring(-5.0)).type("Bring a coat, ").swipe("its").type("going to ").text, "Bring a coat, its going to ",
+        "A swiped word the model wants as it is stays")
+    // Never when the user chose: a word picked from the bar, or a swiped word fixed by hand.
+    same(typist(with = sure5).type("Bring a coat, ").swipe("its").choose(0).type("going to ").text, "Bring a coat, its going to ",
+        "A word chosen from the bar never changes")
+    run {
+        val fixed = typist(with = sure5).type("Bring a coat, ").swipe("itd")
+        fixed.composer.backspace(false)
+        fixed.settle()
+        fixed.backspace().type("s going to ")
+        same(fixed.text, "Bring a coat, its going to ", "A swiped word fixed by hand never changes")
+    }
 
     // When it lands: two words later, or sooner at the end of a sentence, and Backspace right after puts it back.
     val coat = typist().type("Bring a coat, its going ")

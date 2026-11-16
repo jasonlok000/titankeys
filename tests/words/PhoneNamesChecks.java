@@ -9,11 +9,12 @@ public final class PhoneNamesChecks {
         // As the base list has them, from english.combined.
         Map<String, Double> frequencies = new java.util.HashMap<>();
         String[] words = {"maps", "clock", "google", "messages", "the", "jason", "whatsapp", "spotify", "chrome", "youtube", "music",
-                "toggle", "rose", "bill", "hunter", "auto", "john"};
-        double[] values = {124, 123, 72, 121, 255, 112, 25, 25, 98, 109, 160, 77, 128, 131, 60, 120, 110};
+                "toggle", "rose", "bill", "hunter", "auto", "john", "espn"};
+        double[] values = {124, 123, 72, 121, 255, 112, 25, 25, 98, 109, 160, 77, 128, 131, 60, 120, 110, 90};
         for (int i = 0; i < words.length; i++) frequencies.put(words[i], values[i]);
         java.util.function.ToDoubleFunction<String> frequency = word -> frequencies.getOrDefault(word, 0d);
-        // The words that english.combined also writes in lowercase. "Jason", "WhatsApp" and "Spotify" it writes only with capitals.
+        // The words that english.combined also writes in lowercase. "Jason", "WhatsApp", "Spotify" and "ESPN" it writes only with
+        // capitals.
         java.util.Set<String> lowercase = java.util.Set.of("maps", "clock", "google", "messages", "the", "chrome", "music",
                 "toggle", "rose", "bill", "hunter", "auto");
         Names base = names -> PhoneNames.words(names, frequency, lowercase::contains);
@@ -65,7 +66,8 @@ public final class PhoneNamesChecks {
         check(!shouting.containsKey("john"), "An app \"JOHN\" leaves the dictionary's \"John\" alone: " + shouting);
         same(shouting.get("ikea"), "IKEA", "An app's word in capitals that the dictionary lacks keeps them");
         same(shouting.get("whatsapp"), "WhatsApp", "A capital inside a mixed word still makes a brand");
-        Map<String, String> saved = contactsOf.words(List.of("JOHN", "AUTO", "NGUYEN", "O'BRIEN", "WhatsApp"));
+        Map<String, String> saved = contactsOf.words(List.of("JOHN", "AUTO", "NGUYEN", "O'BRIEN", "WhatsApp", "ESPN Support"));
+        check(!saved.containsKey("espn"), "A contact \"ESPN\" leaves the dictionary's \"ESPN\" alone, never \"Espn\": " + saved);
         check(!saved.containsKey("auto"), "A contact \"AUTO\" leaves the dictionary's \"auto\" alone: " + saved);
         check(!"JOHN".equals(saved.get("john")), "A contact \"JOHN\" never gives \"JOHN\": " + saved);
         same(saved.get("nguyen"), "Nguyen", "A contact saved in capitals that the dictionary lacks gets a first capital");

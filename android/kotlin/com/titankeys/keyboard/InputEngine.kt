@@ -37,6 +37,15 @@ interface InputEngine {
     /** Turns the page of choices, forward or back. */
     fun page(forward: Boolean): EngineState
 
+    /**
+     * Up to [count] choices from choice [start], across every page, for the bar's row and its bigger menu (docs/languages.md,
+     * "Chinese on the bar"). Empty from an engine that has only the page in its state (Korean, Telex): the keyboard uses that.
+     */
+    fun choices(start: Int, count: Int): List<String> = emptyList()
+
+    /** Picks choice [index] counted across every page, as [choices] gives them. */
+    fun pickAt(index: Int): EngineState = pick(index)
+
     /** Drops whatever is being built, as when the field changes or the input method is switched away. */
     fun reset(): EngineState
 
@@ -60,6 +69,8 @@ interface InputEngine {
  * - [pages]: how many pages there are, or 0 when the engine can't tell (Rime can't): the bar then shows the page and an arrow.
  * - [handled]: false when the key meant nothing to the engine (Backspace with nothing built, for one), so the keyboard
  *   handles it as usual.
+ * - [typed]: the letters as typed, without the engine's spelling or spaces (Rime's input): "hello" where [code] is "he l lo".
+ * - [partial]: the choices cover only part of the code: the engine couldn't read the rest (Rime's "world" reads only "wo").
  */
 data class EngineState(
     val commit: String = "",
@@ -69,6 +80,8 @@ data class EngineState(
     val lastPage: Boolean = true,
     val handled: Boolean = true,
     val pages: Int = 0,
+    val typed: String = "",
+    val partial: Boolean = false,
 ) {
     /**
      * Where the choices are, for the bar: "1/3" when the engine knows how many pages there are, else the page and "›" while

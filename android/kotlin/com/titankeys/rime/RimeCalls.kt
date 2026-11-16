@@ -11,6 +11,10 @@ interface RimeCalls {
     fun process(keycode: Int, mask: Int): Boolean
     /** Picks a choice on the current page, from 0. */
     fun select(index: Int): Boolean
+    /** Picks a choice counted across every page, from 0. */
+    fun selectAt(index: Int): Boolean
+    /** Up to [count] choices from choice [start], across every page. */
+    fun choices(start: Int, count: Int): List<String>
     fun reset()
     fun read(): Raw?
     /**
@@ -35,6 +39,8 @@ interface RimeCalls {
         /** Choices a page, and how many there are in all: -1 when there are more than Rime counts (rime_jni.cc). */
         val pageSize: Int = 0,
         val total: Int = -1,
+        /** The choices cover only part of the code: Rime couldn't read the rest. */
+        val partial: Boolean = false,
     ) {
         /** How many pages of choices there are, or 0 when there are too many to count. */
         val pages get() = if (total > 0 && pageSize > 0) (total + pageSize - 1) / pageSize else 0
@@ -42,7 +48,7 @@ interface RimeCalls {
         companion object {
             /**
              * From rime_jni.cc's state(): { commit, input, preedit, int[] { page, lastPage, highlighted, caret, pageSize,
-             * total }, choices, comments }.
+             * total, partial }, choices, comments }.
              */
             fun of(a: Array<Any?>): Raw {
                 val numbers = a[3] as IntArray
@@ -58,6 +64,7 @@ interface RimeCalls {
                     comments = (a[5] as Array<String>).toList(),
                     pageSize = numbers[4],
                     total = numbers[5],
+                    partial = numbers.size > 6 && numbers[6] != 0,
                 )
             }
         }

@@ -1,6 +1,7 @@
 package com.titankeys.rime
 
 import android.content.Context
+import com.titankeys.keyboard.ChineseKeys
 import com.titankeys.keyboard.EngineState
 import com.titankeys.keyboard.InputEngine
 import com.titankeys.keyboard.InputMethod
@@ -11,8 +12,11 @@ import java.util.IdentityHashMap
  * Chinese through Rime (docs/languages.md, "How Rime plugs in"). A letter goes to Rime, which returns the code and the
  * choices for the picker. Space types the first choice, Enter types the code as typed letters, Backspace deletes from the
  * code. With no code typed, Space, Enter and Backspace are the keyboard's own. Punctuation goes through Rime's punctuator,
- * which gives Chinese marks (，。). A capital, or a character Rime has no key for, types as it is, after the code being
- * typed goes as its first choice.
+ * which gives Chinese marks (，。, and 「」 for quotes in Traditional, [ChineseKeys.marks]); with a code typed, its first
+ * choice goes first. Digits stay plain: with a code typed, its first choice goes, then the keyboard types the digit. A
+ * capital, or a character Rime has no key for, types as it is, after the code being typed goes as its first choice. The bar's
+ * row and its bigger menu read the choices across Rime's pages ([choices], [pickAt]; docs/languages.md, "Chinese on the
+ * bar").
  *
  * Until a Chinese variant is picked (Settings > Chinese characters, no default: owner, 2026-11-16), the code still builds,
  * but the only choice says to pick one ([NO_VARIANT]), and picking it or Space types nothing. Enter still types the code.
@@ -120,9 +124,34 @@ class RimeEngine(
             // Rime takes printable ASCII (digits pick a choice, punctuation becomes Chinese marks); capitals and anything else
             // type as they are.
             in 'A'..'Z' -> passOn()
-            in ' '..'~' -> if (char in '0'..'9' && !variantPicked && composing()) read(handled = true) else send(char.code)
+            in '0'..'9' -> when {
+                !composing() -> EngineState.UNHANDLED
+                !variantPicked -> read(handled = true)
+                else -> passOn()
+            }
+            ' ' -> send(char.code)
+            in '!'..'~' -> punctuation(char)
             else -> passOn()
         }
+    }
+
+    /** The variant that's on, or null before one is picked. */
+    private val variantOn: String? get() = synchronized(this) { ChineseVariant.entries.firstOrNull { options[it.option] == true }?.option }
+
+    /**
+     * A punctuation key: Rime's mark (，。), in the variant's quotes. With a code typed, its first choice goes first, never
+     * Rime's paging on - and =. Rime doesn't take it with plain punctuation on, and the keyboard types it as it is.
+     */
+    private fun punctuation(char: Char): EngineState {
+        var first = ""
+        if (composing()) {
+            if (!variantPicked) return read(handled = true)
+            rime.process(RimeKeys.SPACE, 0)
+            first = rime.read()?.commit.orEmpty()
+        }
+        val state = send(char.code)
+        val marks = ChineseKeys.marks(state.commit, variantOn)
+        return state.copy(commit = first + marks)
     }
 
     override fun space(): EngineState = when {
@@ -139,6 +168,18 @@ class RimeEngine(
         if (!ready || index < 0) return EngineState.UNHANDLED
         if (!variantPicked) return read(handled = true)
         return read(handled = rime.select(index))
+    }
+
+    override fun choices(start: Int, count: Int): List<String> {
+        if (!ready || start < 0 || count <= 0) return emptyList()
+        if (!variantPicked) return if (start == 0 && composing()) listOf(NO_VARIANT) else emptyList()
+        return rime.choices(start, count)
+    }
+
+    override fun pickAt(index: Int): EngineState {
+        if (!ready || index < 0) return EngineState.UNHANDLED
+        if (!variantPicked) return read(handled = true)
+        return read(handled = rime.selectAt(index))
     }
 
     override fun page(forward: Boolean): EngineState = when {
@@ -168,7 +209,8 @@ class RimeEngine(
     private fun read(handled: Boolean): EngineState {
         val raw = rime.read() ?: return EngineState(handled = handled)
         val code = if (raw.input.isEmpty()) "" else raw.preedit ?: raw.input
-        if (code.isNotEmpty() && !variantPicked) return EngineState(commit = raw.commit.orEmpty(), code = code, choices = listOf(NO_VARIANT), handled = handled)
+        if (code.isNotEmpty() && !variantPicked) return EngineState(commit = raw.commit.orEmpty(), code = code, choices = listOf(NO_VARIANT),
+            handled = handled, typed = raw.input)
         return EngineState(
             commit = raw.commit.orEmpty(),
             code = code,
@@ -177,6 +219,8 @@ class RimeEngine(
             lastPage = raw.lastPage,
             handled = handled,
             pages = raw.pages,
+            typed = raw.input,
+            partial = raw.partial,
         )
     }
 

@@ -17,6 +17,11 @@ fun main(args: Array<String>) {
     backspaceDeletesFromTheCode()
     aCapitalTypesTheCodeFirst()
     punctuationGoesThroughRime()
+    punctuationWithACodeTypesTheFirstChoiceFirst()
+    quotesFollowTheVariant()
+    plainPunctuationIsTheKeyboards()
+    digitsStayPlain()
+    choicesReadAcrossPages()
     pickingAndPaging()
     nothingBeforeStart()
     onlyARimeInputMethodStarts()
@@ -89,10 +94,25 @@ private class FakeRime : RimeCalls {
             RimeKeys.BACKSPACE -> if (code.isEmpty()) false else { code = code.dropLast(1); true }
             RimeKeys.PAGE_DOWN -> { page++; true }
             RimeKeys.PAGE_UP -> { if (page > 0) page--; true }
-            ','.code -> { commit = "，"; true }
+            ','.code, '"'.code -> if (options["ascii_punct"] == true) false
+                else { commit = (commit ?: "") + if (keycode == ','.code) "，" else "“"; true }
             else -> false
         }
     }
+
+    /** Every choice, across the three pages. */
+    private fun all() = if (code.isEmpty()) emptyList() else (0 until 24).map { "${code.uppercase()}$it" }
+
+    override fun selectAt(index: Int): Boolean {
+        val c = all()
+        if (index !in c.indices) return false
+        commit = c[index]
+        code = ""
+        page = 0
+        return true
+    }
+
+    override fun choices(start: Int, count: Int): List<String> = all().drop(start).take(count)
 
     override fun select(index: Int): Boolean {
         val c = choices()
@@ -242,6 +262,65 @@ fun punctuationGoesThroughRime() {
     val state = engine.key(',')
     check(state.handled, "a comma is Rime's")
     same("，", state.commit, "and comes out as a Chinese comma")
+}
+
+fun punctuationWithACodeTypesTheFirstChoiceFirst() {
+    val (engine, _) = started()
+    type(engine, "nei")
+    val state = engine.key(',')
+    check(state.handled, "a comma with a code typed is Rime's")
+    same("NEI0，", state.commit, "the code's first choice, then the mark")
+    same("", state.code, "and the code is gone")
+}
+
+fun quotesFollowTheVariant() {
+    same("「", started().first.key('"').commit, "Hong Kong quotes with 「」")
+    same("「", started(variant = ChineseVariant.Taiwan).first.key('"').commit, "so does Taiwan")
+    same("“", started(variant = ChineseVariant.Simplified).first.key('"').commit, "Simplified keeps “”")
+    same("「」『』", com.titankeys.keyboard.ChineseKeys.marks("“”‘’", "zh_hk"), "every quote")
+    same("你好", com.titankeys.keyboard.ChineseKeys.marks("你好", "zh_hk"), "nothing else changes")
+}
+
+fun plainPunctuationIsTheKeyboards() {
+    val (engine, _) = started()
+    engine.option(com.titankeys.keyboard.ChineseKeys.PLAIN_PUNCTUATION, true)
+    val state = engine.key(',')
+    check(!state.handled, "with plain punctuation, the keyboard types the comma as it is")
+    same("", state.commit, "and Rime types nothing")
+    type(engine, "nei")
+    val coded = engine.key(',')
+    check(!coded.handled, "with a code typed, the comma is still the keyboard's")
+    same("NEI0", coded.commit, "after the code's first choice")
+}
+
+fun digitsStayPlain() {
+    val (engine, _) = started()
+    same(EngineState.UNHANDLED, engine.key('1'), "with no code, a digit is the keyboard's, plain")
+    type(engine, "nei")
+    val state = engine.key('2')
+    check(!state.handled, "with a code typed, the keyboard types the digit")
+    same("NEI0", state.commit, "after the code's first choice, never the second choice Rime's 2 would pick")
+}
+
+fun choicesReadAcrossPages() {
+    val (engine, _) = started()
+    type(engine, "sik")
+    same(List(10) { "SIK$it" }, engine.choices(0, 10), "the row and the menu read past Rime's 8 a page")
+    same(listOf("SIK20", "SIK21", "SIK22", "SIK23"), engine.choices(20, 10), "up to the last")
+    val picked = engine.pickAt(9)
+    check(picked.handled, "a pick across pages is taken")
+    same("SIK9", picked.commit, "and types that choice")
+    same(emptyList<String>(), engine.choices(0, 10), "with no code, no choices")
+    val (none, _) = started()
+    none.option("zh_hk", false)
+    type(none, "nei")
+    same(listOf(RimeEngine.NO_VARIANT), none.choices(0, 10), "with no variant, only the line that asks for one")
+    val raw = RimeCalls.Raw.of(arrayOf(null, "world", "world", intArrayOf(0, 1, 0, 5, 8, 8, 1), arrayOf("喎"), arrayOf("")))
+    check(raw.partial, "rime_jni.cc says when the choices cover only part of the code")
+    check(!RimeCalls.Raw.of(arrayOf(null, "nei", "nei", intArrayOf(0, 1, 0, 3, 8, 8), arrayOf("你"), arrayOf(""))).partial,
+        "an older state without it reads as whole")
+    type(engine, "hello")
+    same("hello", engine.state().typed, "the letters as typed")
 }
 
 fun pickingAndPaging() {

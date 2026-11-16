@@ -29,6 +29,7 @@ const NOT_PHONE: Record<string, string> = {
   "tools/phone-lock.sh": "the lock itself; it only starts the local adb server",
   "tools/phone_lock.py": "the lock itself; it only starts the local adb server",
   "tools/corner_check.py": "reads a saved dumpsys file",
+  "tools/leak-paths.py": "reads a saved heap dump; its help only shows the adb commands that make one",
   "tools/dev/preview/server.py": "serves pages on this computer; open.sh sets up adb reverse",
 };
 const TAKES_PHONE_LOCK = /phone-lock\.sh|phone_lock|safety\.sh|touchlib\.sh|^from phone import|^import phone\b/m;

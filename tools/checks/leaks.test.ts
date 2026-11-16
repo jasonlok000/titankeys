@@ -16,6 +16,9 @@ test("a closed app screen leaves nothing in the playground's statics", () => {
   expect(guide).toMatch(/fun appScreenClosed\(activity: Activity\) \{\s*if \(playgroundAsker !== activity\) return\s*playgroundAsker = null\s*playgroundExit = null\s*waitingPlayground = null/);
   // The leak check's list holds the guides weakly, so it can never keep one itself.
   expect(guide).toContain("private val made = ArrayList<java.lang.ref.WeakReference<GuideActivity>>()");
+  // The text kept for the next playground only tells whether the same one came back, so it holds that one weakly.
+  expect(guide).toContain("val from: java.lang.ref.WeakReference<GuideActivity>)");
+  expect(guide).not.toMatch(/PlaygroundKept\([^)]*, this\)/);
 });
 
 test("the leak check is only in TitanKeys Debug, and only adb can send to it", () => {
@@ -24,5 +27,9 @@ test("the leak check is only in TitanKeys Debug, and only adb can send to it", (
   const entry = read("android/debug/recorder/manifest.xml").match(/<receiver\s+android:name="com\.titankeys\.keyboard\.LeakCheck"[^>]*\/>/)?.[0];
   expect(entry).toBeDefined();
   expect(entry).toContain('android:permission="android.permission.DUMP"');
-  expect(read("android/debug/recorder/LeakCheck.kt")).toContain('packageName.endsWith(".debug")');
+  const check = read("android/debug/recorder/LeakCheck.kt");
+  expect(check).toContain('packageName.endsWith(".debug")');
+  // Its heap dump goes to the app's own folder on the phone, and never into git: it holds typed text.
+  expect(check).toContain('getExternalFilesDir("leaks")');
+  expect(read(".gitignore")).toMatch(/^\*\.hprof$/m);
 });

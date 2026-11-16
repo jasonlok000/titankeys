@@ -479,6 +479,27 @@ def write_im(folder, im):
         f.write("\n")
 
 
+# Languages with more than one input method (owner, 2026-11-16: languages, then input methods, the Gboard way). Every other
+# input method is a language of its own, under its own name. A language's name is CLDR's for it in that language.
+LANGUAGES = {
+    "sr": {"name": "Српски", "nameEnglish": "Serbian", "label": "SR", "script": "Cyrl", "methods": ["sr", "sr-latn"]},
+    "zh": {"name": "中文", "nameEnglish": "Chinese", "label": "中", "script": "Hani",
+           "methods": ["yue-yale", "yue-jyutping", "zh-pinyin"]},
+}
+# Every language is marked experimental in the app but Chinese (owner, 2026-11-16); English is the keyboard's own.
+NOT_EXPERIMENTAL = {"zh"}
+
+
+def language_of(im):
+    """The language input method [im] belongs to, as the index gives it to Settings and the switcher."""
+    for ident, language in LANGUAGES.items():
+        if im["id"] in language["methods"]:
+            info = {key: language[key] for key in ("name", "nameEnglish", "label", "script")}
+            return {"id": ident, **info, "experimental": ident not in NOT_EXPERIMENTAL}
+    return {"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"], "script": im["script"],
+            "experimental": im["id"] not in NOT_EXPERIMENTAL}
+
+
 def write_index_and_list():
     entries = []
     for ident in sorted(os.listdir(ASSETS)):
@@ -489,7 +510,7 @@ def write_index_and_list():
         engine = im.get("engine")
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
-                        "engine": (next(iter(engine)) if isinstance(engine, dict) else engine)})
+                        "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im)})
     order = list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:

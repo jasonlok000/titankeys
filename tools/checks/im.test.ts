@@ -35,11 +35,30 @@ test("each input method's file has every field, and its folder is its id", () =>
   }
 });
 
-test("every input method's script has a header in Settings > Input methods, not its four-letter code", () => {
+type Lang = { id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean };
+const indexed: { id: string; name: string; language: Lang }[] = JSON.parse(read(`${folder}/index.json`));
+
+test("every language's script has a header in Settings > Languages, not its four-letter code", () => {
   const block = read("app/settings/languages.tsx").split("const SCRIPTS", 2)[1]!.split("};", 1)[0]!;
   const headers = new Set([...block.matchAll(/(\w{4}): "[^"]+"/g)].map(m => m[1]));
-  for (const im of ims) expect({ id: im.id, script: im.script, header: headers.has(im.script) })
-    .toEqual({ id: im.id, script: im.script, header: true });
+  for (const { language } of indexed) expect({ id: language.id, script: language.script, header: headers.has(language.script) })
+    .toEqual({ id: language.id, script: language.script, header: true });
+});
+
+test("each input method has a language: one per language, Serbian and Chinese grouping theirs, all but Chinese experimental", () => {
+  const byId = new Map<string, Lang>();
+  for (const { id, language } of indexed) {
+    for (const field of ["id", "name", "nameEnglish", "label", "script"] as const) expect({ id, field, text: typeof language[field] })
+      .toEqual({ id, field, text: "string" });
+    // A language is the same wherever it's given, and not experimental only for Chinese (owner, 2026-11-16).
+    expect(byId.get(language.id) ?? language).toEqual(language);
+    byId.set(language.id, language);
+    expect({ id, experimental: language.experimental }).toEqual({ id, experimental: language.id !== "zh" });
+  }
+  const methods = (language: string) => indexed.filter(e => e.language.id === language).map(e => e.id).sort();
+  expect(methods("sr")).toEqual(["sr", "sr-latn"]);
+  expect(methods("zh")).toEqual(["yue-jyutping", "yue-yale", "zh-pinyin"]);
+  expect(new Set([...byId.values()].map(l => l.label)).size).toBe(byId.size);
 });
 
 test("no two input methods share a label, and none takes English's", () => {

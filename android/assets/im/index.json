@@ -6,7 +6,15 @@
   "label": "ES",
   "locale": "es",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "es",
+   "name": "Español",
+   "nameEnglish": "Spanish",
+   "label": "ES",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "fr",
@@ -15,7 +23,15 @@
   "label": "FR",
   "locale": "fr",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "fr",
+   "name": "Français",
+   "nameEnglish": "French",
+   "label": "FR",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "de",
@@ -24,7 +40,15 @@
   "label": "DE",
   "locale": "de",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "de",
+   "name": "Deutsch",
+   "nameEnglish": "German",
+   "label": "DE",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "pt",
@@ -33,7 +57,15 @@
   "label": "PT",
   "locale": "pt",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "pt",
+   "name": "Português",
+   "nameEnglish": "Portuguese",
+   "label": "PT",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "it",
@@ -42,7 +74,15 @@
   "label": "IT",
   "locale": "it",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "it",
+   "name": "Italiano",
+   "nameEnglish": "Italian",
+   "label": "IT",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "nl",
@@ -51,7 +91,15 @@
   "label": "NL",
   "locale": "nl",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "nl",
+   "name": "Nederlands",
+   "nameEnglish": "Dutch",
+   "label": "NL",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "pl",
@@ -60,7 +108,15 @@
   "label": "PL",
   "locale": "pl",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "pl",
+   "name": "Polski",
+   "nameEnglish": "Polish",
+   "label": "PL",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "tr",
@@ -69,7 +125,15 @@
   "label": "TR",
   "locale": "tr",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "tr",
+   "name": "Türkçe",
+   "nameEnglish": "Turkish",
+   "label": "TR",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "sv",
@@ -78,7 +142,15 @@
   "label": "SV",
   "locale": "sv",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "sv",
+   "name": "Svenska",
+   "nameEnglish": "Swedish",
+   "label": "SV",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "da",
@@ -87,7 +159,15 @@
   "label": "DA",
   "locale": "da",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "da",
+   "name": "Dansk",
+   "nameEnglish": "Danish",
+   "label": "DA",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "nb",
@@ -96,7 +176,15 @@
   "label": "NB",
   "locale": "nb",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "nb",
+   "name": "Norsk bokmål",
+   "nameEnglish": "Norwegian Bokmål",
+   "label": "NB",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "fi",
@@ -105,7 +193,15 @@
   "label": "FI",
   "locale": "fi",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "fi",
+   "name": "Suomi",
+   "nameEnglish": "Finnish",
+   "label": "FI",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "cs",
@@ -114,7 +210,15 @@
   "label": "CS",
   "locale": "cs",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "cs",
+   "name": "Čeština",
+   "nameEnglish": "Czech",
+   "label": "CS",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "ro",
@@ -123,7 +227,15 @@
   "label": "RO",
   "locale": "ro",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "ro",
+   "name": "Română",
+   "nameEnglish": "Romanian",
+   "label": "RO",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "hu",
@@ -132,7 +244,15 @@
   "label": "HU",
   "locale": "hu",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "hu",
+   "name": "Magyar",
+   "nameEnglish": "Hungarian",
+   "label": "HU",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "id",
@@ -141,7 +261,15 @@
   "label": "ID",
   "locale": "id",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "id",
+   "name": "Indonesia",
+   "nameEnglish": "Indonesian",
+   "label": "ID",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "hr",
@@ -150,7 +278,15 @@
   "label": "HR",
   "locale": "hr",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "hr",
+   "name": "Hrvatski",
+   "nameEnglish": "Croatian",
+   "label": "HR",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "sl",
@@ -159,7 +295,15 @@
   "label": "SL",
   "locale": "sl",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "sl",
+   "name": "Slovenščina",
+   "nameEnglish": "Slovenian",
+   "label": "SL",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "lv",
@@ -168,7 +312,15 @@
   "label": "LV",
   "locale": "lv",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "lv",
+   "name": "Latviešu",
+   "nameEnglish": "Latvian",
+   "label": "LV",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "lt",
@@ -177,7 +329,15 @@
   "label": "LT",
   "locale": "lt",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "lt",
+   "name": "Lietuvių",
+   "nameEnglish": "Lithuanian",
+   "label": "LT",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "ca",
@@ -186,7 +346,15 @@
   "label": "CA",
   "locale": "ca",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "ca",
+   "name": "Català",
+   "nameEnglish": "Catalan",
+   "label": "CA",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "gl",
@@ -195,7 +363,15 @@
   "label": "GL",
   "locale": "gl",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "gl",
+   "name": "Galego",
+   "nameEnglish": "Galician",
+   "label": "GL",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "et",
@@ -204,7 +380,15 @@
   "label": "ET",
   "locale": "et",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "et",
+   "name": "Eesti",
+   "nameEnglish": "Estonian",
+   "label": "ET",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "is",
@@ -213,7 +397,15 @@
   "label": "IS",
   "locale": "is",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "is",
+   "name": "Íslenska",
+   "nameEnglish": "Icelandic",
+   "label": "IS",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "af",
@@ -222,7 +414,15 @@
   "label": "AF",
   "locale": "af",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "af",
+   "name": "Afrikaans",
+   "nameEnglish": "Afrikaans",
+   "label": "AF",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "eo",
@@ -231,7 +431,15 @@
   "label": "EO",
   "locale": "eo",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "eo",
+   "name": "Esperanto",
+   "nameEnglish": "Esperanto",
+   "label": "EO",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "sk",
@@ -240,7 +448,15 @@
   "label": "SK",
   "locale": "sk",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "sk",
+   "name": "Slovenčina",
+   "nameEnglish": "Slovak",
+   "label": "SK",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "az",
@@ -249,7 +465,15 @@
   "label": "AZ",
   "locale": "az",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "az",
+   "name": "Azərbaycan",
+   "nameEnglish": "Azerbaijani",
+   "label": "AZ",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "ga",
@@ -258,7 +482,15 @@
   "label": "GA",
   "locale": "ga",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "ga",
+   "name": "Gaeilge",
+   "nameEnglish": "Irish",
+   "label": "GA",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "eu",
@@ -267,7 +499,15 @@
   "label": "EU",
   "locale": "eu",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "eu",
+   "name": "Euskara",
+   "nameEnglish": "Basque",
+   "label": "EU",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "nn",
@@ -276,7 +516,15 @@
   "label": "NN",
   "locale": "nn",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "nn",
+   "name": "Norsk nynorsk",
+   "nameEnglish": "Norwegian Nynorsk",
+   "label": "NN",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "bs",
@@ -285,7 +533,15 @@
   "label": "BS",
   "locale": "bs",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "bs",
+   "name": "Bosanski",
+   "nameEnglish": "Bosnian",
+   "label": "BS",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "sr-latn",
@@ -294,7 +550,15 @@
   "label": "SR",
   "locale": "sr-Latn",
   "script": "Latn",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "sr",
+   "name": "Српски",
+   "nameEnglish": "Serbian",
+   "label": "SR",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "ru",
@@ -303,7 +567,15 @@
   "label": "RU",
   "locale": "ru",
   "script": "Cyrl",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "ru",
+   "name": "Русский",
+   "nameEnglish": "Russian",
+   "label": "RU",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "uk",
@@ -312,7 +584,15 @@
   "label": "UK",
   "locale": "uk",
   "script": "Cyrl",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "uk",
+   "name": "Українська",
+   "nameEnglish": "Ukrainian",
+   "label": "UK",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "be",
@@ -321,7 +601,15 @@
   "label": "BE",
   "locale": "be",
   "script": "Cyrl",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "be",
+   "name": "Беларуская",
+   "nameEnglish": "Belarusian",
+   "label": "BE",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "bg",
@@ -330,7 +618,15 @@
   "label": "BG",
   "locale": "bg",
   "script": "Cyrl",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "bg",
+   "name": "Български",
+   "nameEnglish": "Bulgarian",
+   "label": "BG",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "el",
@@ -339,7 +635,15 @@
   "label": "EL",
   "locale": "el",
   "script": "Grek",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "el",
+   "name": "Ελληνικά",
+   "nameEnglish": "Greek",
+   "label": "EL",
+   "script": "Grek",
+   "experimental": true
+  }
  },
  {
   "id": "sr",
@@ -348,7 +652,15 @@
   "label": "СР",
   "locale": "sr",
   "script": "Cyrl",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "sr",
+   "name": "Српски",
+   "nameEnglish": "Serbian",
+   "label": "SR",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "mk",
@@ -357,7 +669,15 @@
   "label": "MK",
   "locale": "mk",
   "script": "Cyrl",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "mk",
+   "name": "Македонски",
+   "nameEnglish": "Macedonian",
+   "label": "MK",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "kk",
@@ -366,7 +686,15 @@
   "label": "KK",
   "locale": "kk",
   "script": "Cyrl",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "kk",
+   "name": "Қазақ тілі",
+   "nameEnglish": "Kazakh",
+   "label": "KK",
+   "script": "Cyrl",
+   "experimental": true
+  }
  },
  {
   "id": "ka",
@@ -375,7 +703,15 @@
   "label": "KA",
   "locale": "ka",
   "script": "Geor",
-  "engine": null
+  "engine": null,
+  "language": {
+   "id": "ka",
+   "name": "ქართული",
+   "nameEnglish": "Georgian",
+   "label": "KA",
+   "script": "Geor",
+   "experimental": true
+  }
  },
  {
   "id": "ko",
@@ -384,7 +720,15 @@
   "label": "한",
   "locale": "ko",
   "script": "Kore",
-  "engine": "hangul"
+  "engine": "hangul",
+  "language": {
+   "id": "ko",
+   "name": "한국어",
+   "nameEnglish": "Korean",
+   "label": "한",
+   "script": "Kore",
+   "experimental": true
+  }
  },
  {
   "id": "vi",
@@ -393,7 +737,15 @@
   "label": "VI",
   "locale": "vi",
   "script": "Latn",
-  "engine": "telex"
+  "engine": "telex",
+  "language": {
+   "id": "vi",
+   "name": "Tiếng Việt",
+   "nameEnglish": "Vietnamese",
+   "label": "VI",
+   "script": "Latn",
+   "experimental": true
+  }
  },
  {
   "id": "yue-yale",
@@ -402,7 +754,15 @@
   "label": "耶",
   "locale": "yue",
   "script": "Hani",
-  "engine": "rime"
+  "engine": "rime",
+  "language": {
+   "id": "zh",
+   "name": "中文",
+   "nameEnglish": "Chinese",
+   "label": "中",
+   "script": "Hani",
+   "experimental": false
+  }
  },
  {
   "id": "yue-jyutping",
@@ -411,7 +771,15 @@
   "label": "粵",
   "locale": "yue",
   "script": "Hani",
-  "engine": "rime"
+  "engine": "rime",
+  "language": {
+   "id": "zh",
+   "name": "中文",
+   "nameEnglish": "Chinese",
+   "label": "中",
+   "script": "Hani",
+   "experimental": false
+  }
  },
  {
   "id": "zh-pinyin",
@@ -420,6 +788,14 @@
   "label": "拼",
   "locale": "zh",
   "script": "Hani",
-  "engine": "rime"
+  "engine": "rime",
+  "language": {
+   "id": "zh",
+   "name": "中文",
+   "nameEnglish": "Chinese",
+   "label": "中",
+   "script": "Hani",
+   "experimental": false
+  }
  }
 ]

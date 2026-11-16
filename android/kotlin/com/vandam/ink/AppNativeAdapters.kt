@@ -639,6 +639,9 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("availableInputMethods", JSONArray(inputMethodIndex().entries.map {
                 JSONObject().put("id", it.id).put("name", it.name).put("nameEnglish", it.nameEnglish).put("label", it.label)
                     .put("script", it.script).put("engine", it.engine ?: JSONObject.NULL)
+                    .put("language", JSONObject().put("id", it.language.id).put("name", it.language.name)
+                        .put("nameEnglish", it.language.nameEnglish).put("label", it.language.label).put("script", it.language.script)
+                        .put("experimental", it.language.experimental))
             }))
             .put("chineseVariant", TypingSettings.chineseVariant(activity))
             .put("rawLogAvailable", RawLog.available(activity))
@@ -810,7 +813,9 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             "inputMethods" -> (value as JSONArray).let { list ->
                 val ids = inputMethodIndex().on(InputMethodIndex.setting(List(list.length()) { list.getString(it) })).map { it.id }
                 TypingSettings.inputMethods(activity, InputMethodIndex.setting(ids))
-                InputMethodList.enable(activity, ids)
+                // Android's list has one TitanKeys entry, the input method typing: still on, or now the first that is.
+                InputMethodList.enable(activity, listOf(inputMethodIndex().current(InputMethodIndex.setting(ids),
+                    TypingSettings.currentInputMethod(activity)).id))
             }
             "chineseVariant" -> TypingSettings.chineseVariant(activity, (value as String).takeIf { it in CHINESE_VARIANTS }.orEmpty())
             "rawLog" -> RawLog.enabled(activity, value as Boolean)

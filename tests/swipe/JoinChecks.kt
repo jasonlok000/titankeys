@@ -38,14 +38,12 @@ private fun stroke(x0: Float, y0: Float, x1: Float, y1: Float, millis: Int, stil
 private const val FLICKER = 90L
 
 private fun syntheticChecks() {
-    // A swipe across the middle row, then the same finger back 100 ms later, 0.2 keys on, still travelling.
+    // A swipe across the middle row, then a touch 100 ms later, 0.2 keys on, landing already moving. Its shape can't tell
+    // a lost finger from the next word, so it isn't joined here: Composer's 150 ms check of both readings decides.
     val middle = stroke(.2f, .5f, .5f, .5f, 300)
-    check("a dropout mid-pad joins", middle.sameStroke(stroke(.52f, .5f, .7f, .5f, 200), 100, FLICKER, Float.NaN))
-    check("a dropout mid-pad could continue", middle.couldContinue(.52f, .5f, 100, FLICKER))
+    check("a quick moving touch mid-pad isn't joined by its shape", !middle.sameStroke(stroke(.52f, .5f, .7f, .5f, 200), 100, FLICKER, Float.NaN))
+    check("a quick moving touch mid-pad doesn't carry the trail on", !middle.couldContinue(.52f, .5f, 100, FLICKER))
     check("a touch landing still mid-pad stays apart", !middle.sameStroke(stroke(.52f, .5f, .7f, .5f, 200, still = 6), 100, FLICKER, Float.NaN))
-    check("a dropout needs under 150 ms", !middle.sameStroke(stroke(.52f, .5f, .7f, .5f, 200), 150, FLICKER, Float.NaN))
-    check("a dropout needs 2 keys or less", !middle.sameStroke(stroke(.75f, .5f, .9f, .5f, 200), 100, FLICKER, Float.NaN))
-    check("a dropout ignores the end size", middle.sameStroke(stroke(.52f, .5f, .7f, .5f, 200), 100, FLICKER, 3f))
 
     // A swipe that runs off the top edge and comes back 200 ms later, carrying on the same way.
     val upward = stroke(.4f, .6f, .45f, .2f, 300)
@@ -55,6 +53,16 @@ private fun syntheticChecks() {
     check("a full-size end over 150 ms before stays apart", !upward.sameStroke(back, 200, FLICKER, 2f))
     check("a full-size end 150 ms before still joins", upward.sameStroke(back, 150, FLICKER, 2f))
     check("the three-argument call leaves the size out", upward.sameStroke(back, 200, FLICKER))
+
+    // The review's examples of quick separate words, as shapes on the letter grid (key centres, rows at 1/6, 1/2, 5/6).
+    // "go", then "on" from next to O 100 ms later: a new word lands still and heads back down.
+    val go = stroke(.5f, .5f, .85f, .17f, 250)
+    check("go, then on from beside O landing still, stays apart", !go.sameStroke(stroke(.86f, .2f, .7f, .83f, 250, still = 5), 100, FLICKER, Float.NaN))
+    // "in", then "to" 120 ms later: far from where "in" ended, so only the check of both readings could join them.
+    val inWord = stroke(.75f, .17f, .7f, .83f, 200)
+    val to = stroke(.45f, .17f, .85f, .17f, 200)
+    check("in, then to, isn't joined by its shape", !inWord.sameStroke(to, 120, FLICKER, Float.NaN))
+    check("in, then to, doesn't carry the trail on", !inWord.couldContinue(.45f, .17f, 120, FLICKER))
 
     // A flicker joins wherever it is, whatever the size.
     check("a flicker still joins", middle.sameStroke(stroke(.51f, .5f, .51f, .5f, 10), 50, FLICKER, 3f))
@@ -96,15 +104,16 @@ private fun fixtureChecks(path: String) {
         }
         if (joins != logged) outcome.merge(label + if (joins) " joined" else " cut", 1, Int::plus)
     }
-    check("the fixture has its 614 pairs", lines == 614)
+    check("the fixture has its 645 pairs", lines == 645)
     println("fixture: $lines pairs, changes ${outcome.toSortedMap()}")
     // The study's counts (docs/studies/83-joins.md). Any change here needs the study run again.
     check("1 right join lost, which hadn't changed the word", outcome["right-join cut"] == 1)
     check("7 wrong joins cut", outcome["wrong-join cut"] == 7)
     check("2 unclear joins cut", outcome["unclear cut"] == 2)
-    check("4 missed joins found", outcome["missed-join joined"] == 4)
+    // Nothing new joins by its shape: a quick touch nearby goes to Composer's check of both readings, as before #83.
+    check("no missed join is joined by its shape", outcome["missed-join joined"] == null)
     check("no pair the owner kept apart joined", outcome["right-non-join joined"] == null)
-    check("5 other pairs joined", outcome["other joined"] == 5)
+    check("no other pair joined", outcome["other joined"] == null)
 }
 
 fun main(args: Array<String>) {

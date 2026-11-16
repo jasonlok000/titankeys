@@ -1,12 +1,10 @@
 {
  "pairs": 2306,
- "pairs whose decision changes": 19,
+ "pairs whose decision changes": 10,
  "counts": {
-  "headline": 9,
+  "headline": 6,
   "missed joins": 18,
-  "missed joins joined": 4,
   "others": 666,
-  "others joined": 5,
   "right joins": 380,
   "right joins cut": 1,
   "right joins cut 2.x": 1,

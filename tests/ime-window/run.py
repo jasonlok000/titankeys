@@ -7,8 +7,10 @@ The check does not type, submit forms, or change keyboard settings.
 """
 
 import argparse
+import os
 import re
 import subprocess
+import sys
 import time
 
 

@@ -342,3 +342,160 @@ This slide pastes with fn and V and needs no panel. If one opens anyway:
 | Symbols | No panel needed here. Sym twice closes it. Then hold fn and press V. |
 | Emoji or clipboard | No panel needed here. Sym closes it. Then hold fn and press V. |
 | Quick settings | No panel needed here. Alt, then Sym twice, closes it. Then hold fn and press V. |
+
+## #97: the report form
+
+Replaces the `F:` drafts in app/settings/report.tsx, lib/report.ts, AppNativeAdapters.kt (the crash offer), ConnectedAdapter.kt
+(the email fallback), app/settings/feedback.tsx and lib/bug-text.ts. Lines marked "(stays)" are the draft's, kept.
+
+**The form** (app/settings/report.tsx):
+
+| Place | Line |
+| --- | --- |
+| Title | Report a bug |
+| Title, from Suggest an idea | Suggest an idea |
+| Subtitle | It comes straight to us, sealed so only we can read it. Nothing goes until you press Send. |
+| Section | What's it about? (stays) |
+| Field, a bug | What happened? (stays) |
+| Its placeholder | What you did, and what went wrong (stays) |
+| Field, an idea | Your idea (stays) |
+| Its placeholder | What should TitanKeys do? (stays) |
+| Field | What did you expect? (stays) |
+| Its placeholder (new) | What should have happened |
+| Field | Your email, if you want a reply (stays) |
+| Its placeholder | Optional (stays) |
+| Email doesn't look like one | That email doesn't look right. (stays) |
+| Section | Sent with it (stays) |
+| The versions line | TitanKeys {version}, {phone}, Android {android} (stays) |
+| The recording's switch | The recording (stays) |
+| Its note, from Record a bug | From Record a bug. It has your touches and keys, so it can show what you typed while it ran. |
+| Its note, otherwise | Your last Record a bug. It has your touches and keys, so it can show what you typed while it ran. |
+| Crash note | The crash report: where it crashed, and the versions. Nothing you typed. (stays) |
+| Freeze note | The freeze report: where it froze, and the versions. Nothing you typed. (stays) |
+| Button | Send (stays) |
+| Button, while sending | Sending… (stays) |
+
+**The kinds** (lib/report.ts), in order:
+
+| id | Label |
+| --- | --- |
+| `word` | Wrong word or fix |
+| `swiping` | Swiping |
+| `touchpad` | Touchpad and Space taps |
+| `keyboard` | Keyboard didn't show, or vanished |
+| `crash` | Crash or freeze |
+| `guide` | The guide |
+| `settings` | Settings |
+| `idea` | An idea |
+| `other` | Something else |
+
+**After Send:**
+
+| Place | Line |
+| --- | --- |
+| Sent: title | Sent |
+| Sent: subtitle | Thanks. It's with us now, and only we can read it. (stays) |
+| Sent: button | Done |
+| Not sent: title | Couldn't send it (stays) |
+| Not sent, too big | It's too big to send from here. It's kept on your phone, so you can email it instead. (stays) |
+| Not sent, no connection or busy | No connection, or our server's busy. It's kept on your phone. Try again later, or email it instead. |
+| Button | Email it instead (stays) |
+| Button, when not sent for the connection | Try again (stays) |
+| No mail app | No mail app here. Send it to titankeys@everyones-niche.com from wherever you do email. (stays, from #74) |
+| Button | Copy address, then Copied. (stays, from #74) |
+
+**The email fallback** (ConnectedAdapter.kt, `reportEmail`): the subjects stay as drafted ("TitanKeys idea", "TitanKeys crash,
+{version}", "TitanKeys bug, {version}"). Body:
+
+> Your report from TitanKeys is attached. Anything to add? Write it here.
+
+**The crash offer** (AppNativeAdapters.kt):
+
+| Place | Line |
+| --- | --- |
+| Title, crash | TitanKeys crashed last time. (stays) |
+| Title, freeze | TitanKeys froze last time. (stays) |
+| Body | Sorry about that. Send us the report so we can fix it? It has the error and the versions, nothing you typed. Nothing goes unless you send it. |
+| Button | Send it (stays) |
+| Second button | No thanks (stays) |
+
+**Send feedback** (app/settings/feedback.tsx):
+
+| Place | Line |
+| --- | --- |
+| Subtitle | Goes straight to us from TitanKeys. A real person reads it. (stays; replaces #74's "Opens your mail app" subtitle above) |
+| Debug-only row | Crash TitanKeys (stays) |
+
+**Record a bug** (lib/bug-text.ts):
+
+| Place | Line |
+| --- | --- |
+| Fourth how-to line | Check what's in it, then send it to us or share it wherever you like. (stays) |
+| Warning, last line (clean zone) | TitanKeys only sends it if you press Send in the report form, sealed so only we can read it. Otherwise it stays on your phone. |
+| Main button | Send it (stays; it opens the form, so it replaces #74's "Email it") |
+| Second button | Share elsewhere (stays) |
+
+## #65: backup and restore
+
+Replaces the `F:` drafts in app/settings/data/*.tsx, BackupActivity.kt and BackupFile.kt. Plain, as it's about data. The
+owner's two Import words lines (`NOT_A_BACKUP`, `DAMAGED`) and row names ("Back up everything", "Restore") stay.
+
+| Place | Line |
+| --- | --- |
+| Behind the file picker, backing up | Backing up… (stays) |
+| Behind the file picker, restoring | Restoring… (stays) |
+| No file picker | Couldn't open the file picker. (stays) |
+| No file picked | Couldn't open that file. (stays) |
+| Saving failed | Couldn't save the backup. Try again. (stays) |
+| `TOO_NEW` | This backup comes from a newer TitanKeys. Update this one, then restore it. |
+| Backed up: title | Backed up (stays) |
+| Backed up: subtitle | Saved. Keep it somewhere safe. It holds your words, so only share it with people you'd show them to. |
+| Couldn't back up: title | Couldn't back up (stays) |
+| Couldn't restore: title | Couldn't restore (stays) |
+| Their button | Try again (stays) |
+| Restore confirm: title | Restore from a backup? (stays) |
+| Restore confirm: body | Your settings change to the backup's. Words, snippets, shorthand and app lists from it join yours, and nothing here is deleted. TitanKeys restarts when it's done. (stays) |
+| Restore confirm: buttons | Pick the file, and Never mind (stays) |
+| Restored: title | Restored (stays) |
+| Restored: subtitle | Your settings, words and lists from the backup are back. Anything here that wasn't in it is still here. |
+| Snippets imported: title | Snippets imported (stays) |
+| Snippets imported: subtitle | The snippets are in your list now. (stays) |
+
+## The privacy policy and README, for #97, #65 and #74
+
+Every fact stays as drafted, and these stay plain. I checked each draft, and only the README's Bug reports line changes:
+
+| Place | Line |
+| --- | --- |
+| Privacy "In short", the count | TitanKeys uses the internet for three things only. Each is strictly limited. (stays) |
+| Privacy "In short", Bug reports | **Bug reports:** only when you press Send in the report form, it sends what you wrote, sealed so only we can read it. (stays) |
+| Privacy "What stays on your phone", the crash report and backup items | (stay as drafted) |
+| Privacy, the report form section | (stays as drafted) |
+| README, the count | TitanKeys uses the internet for three things only, and each is strictly limited: (stays) |
+| README, Bug reports | **Bug reports, only when you press Send:** **Settings > Send feedback**, **Record a bug** and the crash offer open a form. It sends what you wrote, the versions and your phone's model, and a recording or crash report if one is attached, encrypted on your phone so only we can read it. If it can't be sent, you can email it instead. |
+
+The README line adds "and the crash offer", since the privacy policy says the crash offer opens the same form.
+
+Outside the drafts: the privacy policy's permissions table says "the keys that you push", and CONTRIBUTING says "press".
+Suggested: "To send Back, and to read the keys that you press while the Sym panel is open or in a launcher search. It doesn't
+read the screen."
+
+## #75 and #86, against the drafts in the code
+
+**#75, the other-phone screen** (app/index.tsx). It's a full screen with big text, so the body is shorter than my first one
+above. These replace both.
+
+| Place | Line |
+| --- | --- |
+| Title | This isn't a Titan 2 Elite |
+| Body | TitanKeys is made for its touch keys, so swiping, Space taps and flicks won't work here. Typing on the keys should. Carry on at your own risk. |
+| Button | Carry on anyway |
+| Setup line (`otherPhoneNote`) | This isn't a Titan 2 Elite, so swiping, Space taps and flicks won't work here. |
+
+The draft's "Everything else does" is left out: it promises more than we've checked on other phones.
+
+**#86, the sample line** (`barTextSizeSample`): use the one above, "Pick a size and type here. Stop squin", in place of the draft.
+
+## #82: CONTRIBUTING's tools line
+
+> The maintainer's own build and phone tools are in [tools/dev](tools/dev/README.md). You don't need them to contribute. (stays)

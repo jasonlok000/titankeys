@@ -3,108 +3,81 @@
 when you leave the app and come back, Settings opens without the field or the keyboard, and closing Settings brings the
 playground back with its field focused.
 
-Opens the front page if the playground isn't on screen. APP=com.titankeys.debug checks the debug build instead.
+It opens the front page itself, chooses the app's keyboard only for its own steps and gives the phone its keyboard back after,
+types only into the playground's own field, and deletes only what it typed: never a select-all. Every press goes through
+tools/checks/phone.py's guards, which stop the check if another app comes to the front. APP=com.titankeys.debug checks the
+debug build instead.
 """
 
-import os
 import re
-import subprocess
 import time
-import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from phone import APP, app_keyboard, delete, field_with_hint, guard, hierarchy, home, open_page, shell, tap, type_text
 
 # The playground's hint, read from the app so that a new wording can't leave this check looking for the old one.
 GUIDE = Path(__file__).resolve().parents[2] / "android/kotlin/com/titankeys/keyboard/GuideActivity.kt"
 HINT = re.search(r'FIELD_HINT = "([^"]+)"', GUIDE.read_text(encoding="utf-8")).group(1)
-APP = os.environ.get("APP", "com.titankeys")
-
-
-def shell(*args):
-    return subprocess.check_output(["adb", "shell", *args], text=True)
-
-
-def hierarchy():
-    shell("uiautomator", "dump", "/sdcard/titankeys-home-focus-check.xml")
-    return ET.fromstring(shell("cat", "/sdcard/titankeys-home-focus-check.xml"))
+TYPED = "hello"
 
 
 def editor():
-    return next(
-        node.attrib for node in hierarchy().iter("node")
-        if node.attrib.get("class") == "android.widget.EditText"
-        and node.attrib.get("hint") == HINT
-    )
+    """The playground's field, or None."""
+    return field_with_hint(HINT)
 
 
 def wait_for_editor(tries=12):
     for _ in range(tries):
-        try:
-            return editor()
-        except StopIteration:
-            time.sleep(1)
+        found = editor()
+        if found:
+            return found
+        time.sleep(1)
     raise SystemExit("FAIL: the playground did not open")
 
 
+def text_of(field):
+    """The field's own text: an empty field reports its hint as its text."""
+    return "" if field.get("text") in ("", HINT) else field.get("text", "")
+
+
 def centre(text):
-    """The middle of the first view that shows [text]."""
+    """The middle of the first view of the app's that shows [text]."""
     for node in hierarchy().iter("node"):
-        if node.attrib.get("text") == text:
+        if node.attrib.get("text") == text and node.attrib.get("package") == APP:
             x1, y1, x2, y2 = map(int, re.findall(r"\d+", node.attrib["bounds"]))
             return (x1 + x2) // 2, (y1 + y2) // 2
     raise SystemExit(f"FAIL: nothing on screen shows {text!r}")
 
 
 def launch():
-    """Opens TitanKeys as the launcher does, which brings back the screen you left."""
+    """Opens the app as the launcher does, which brings back the screen you left."""
     shell("am", "start", "-a", "android.intent.action.MAIN",
           "-c", "android.intent.category.LAUNCHER", "-n", f"{APP}/com.vandam.ink.MainActivity")
     time.sleep(1)
 
 
-def open_front_page():
-    """Opens the front page, which opens the playground. The launcher alone would bring back the last Settings page."""
-    shell("am", "start", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER",
-          "-f", "0x30000000", "-n", f"{APP}/com.vandam.ink.MainActivity", "--es", "com.vandam.ink.notification.HREF", "/")
-    time.sleep(1)
-
-
-def tap(x, y):
-    shell("input", "tap", str(x), str(y))
-    time.sleep(.5)
-
-
-def main():
-    try:
-        editor()
-    except StopIteration:
-        # No force-stop: that turns off the keyboard and its Accessibility service until the user turns them on again.
-        open_front_page()
-        time.sleep(2)
-    # A force-stopped keyboard hands the phone to another keyboard until its app runs again, so this is read after the launch.
-    keyboard = shell("settings", "get", "secure", "default_input_method").strip()
-    if not keyboard.startswith(f"{APP}/"):
-        raise SystemExit(f"SKIP: {APP} is not the current keyboard ({keyboard}), so TitanKeys shows setup, not the playground")
+def check():
+    # The front page, which opens the playground. No force-stop: that turns the keyboard and its Accessibility service off.
+    open_page("/", wait=3)
     initial = wait_for_editor()
+    guard("reading the playground")
     assert initial["focused"] == "true", "The playground's field did not take focus"
-    original = initial["text"]
-    inserted = not original
-    if inserted:
-        shell("input", "text", "hello")
-        time.sleep(.8)
-    before = editor()["text"]
-    assert not inserted or before.lower() == "hello", "Test text was not entered"
+    # Its own text only: a field that already holds text is left as it is, and the check types nothing into it.
+    typed = TYPED if text_of(initial) == "" else ""
+    if typed:
+        type_text(typed)
+    before = text_of(editor())
+    assert not typed or before.lower() == typed, "Test text was not entered"
 
-    shell("input", "keyevent", "HOME")
+    home()
     time.sleep(.8)
     launch()
     after = wait_for_editor()
-    assert after["focused"] == "true" and after["text"] == before, "App return lost text or focus"
+    assert after["focused"] == "true" and text_of(after) == before, "App return lost text or focus"
     print("PASS app return keeps the playground's text and focus", flush=True)
-    if inserted:
-        shell("input", "keycombination", "113", "29")
-        shell("input", "keyevent", "67")
-        time.sleep(.5)
-        assert editor()["text"] == original, "Could not restore the original playground text"
+    if typed:
+        delete(len(typed))
+        assert text_of(editor()) == "", "Could not take out the test text"
 
     tap(*centre("Settings"))
     time.sleep(1)
@@ -123,6 +96,12 @@ def main():
     shell("am", "start", "-W", "-n", f"{APP}/com.vandam.ink.MainActivity")
     assert wait_for_editor()["focused"] == "true", "The playground did not come back after the app's own screen opened"
     print("PASS the playground comes back after the app's own screen opens over it", flush=True)
+
+
+def main():
+    # The app's keyboard only for these steps; the phone's own keyboard comes back after, even when a step fails.
+    with app_keyboard():
+        check()
 
 
 if __name__ == "__main__":

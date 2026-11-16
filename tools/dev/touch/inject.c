@@ -5,7 +5,7 @@
 // as the hardware's own. `sendevent` starts one process per event, far too slow for a swipe; this plays a whole gesture from one
 // file.
 //
-// Usage: tk-inject [--dry-run] SCRIPT
+// Usage: tk-inject [--dry-run] SCRIPT, or tk-inject --serve NAME... (see main)
 // The script, one line each, '#' for comments:
 //   dev N NAME             device N is the input device called NAME: only "touchPad" and "TitanKey" are allowed
 //   MS N TYPE CODE VALUE   at MS milliseconds from the start (a decimal), write that event to device N
@@ -158,19 +158,13 @@ static int fail(int line, const char *what) {
   return 2;
 }
 
-int main(int argc, char **argv) {
-  int dry = argc == 3 && strcmp(argv[1], "--dry-run") == 0;
-  if (argc != 2 + dry) {
-    fprintf(stderr, "usage: tk-inject [--dry-run] SCRIPT\n");
-    return 2;
-  }
-  FILE *in = strcmp(argv[1 + dry], "-") == 0 ? stdin : fopen(argv[1 + dry], "r");
-  if (!in) { perror(argv[1 + dry]); return 2; }
-  Event *events = calloc(MAX_EVENTS, sizeof *events);
-  if (!events) return 2;
-  int count = 0, line_no = 0, declared[MAX_DEVICES] = {0};
+// Reads a script into events, with its devices' names in script_names (by the script's own numbers). 0, or 2 on a bad script.
+static int load(FILE *in, Event *events, int *count, char script_names[MAX_DEVICES][64]) {
+  int line_no = 0, declared[MAX_DEVICES] = {0};
   char line[512];
   double last = 0;
+  *count = 0;
+  for (int d = 0; d < MAX_DEVICES; d++) script_names[d][0] = 0;
   while (fgets(line, sizeof line, in)) {
     line_no++;
     char *text = line;
@@ -182,7 +176,7 @@ int main(int argc, char **argv) {
       if (!allowed(name)) return fail(line_no, "only touchPad and TitanKey may be written");
       if (declared[n]) return fail(line_no, "device declared twice");
       declared[n] = 1;
-      snprintf(names[n], sizeof names[n], "%s", name);
+      snprintf(script_names[n], 64, "%s", name);
       continue;
     }
     Event e;
@@ -193,52 +187,56 @@ int main(int argc, char **argv) {
     if (e.type != EV_SYN && e.type != EV_KEY && e.type != EV_ABS) return fail(line_no, "only SYN, KEY and ABS events");
     if (e.code < 0 || e.code >= MAX_KEYS) return fail(line_no, "bad code");
     if (e.type == EV_KEY && forbidden(e.code)) return fail(line_no, "power, home, back, app switch and volume keys are never sent");
-    if (count >= MAX_EVENTS) return fail(line_no, "too many events");
+    if (*count >= MAX_EVENTS) return fail(line_no, "too many events");
     last = e.ms;
-    events[count++] = e;
+    events[(*count)++] = e;
   }
-  if (in != stdin) fclose(in);
-  if (dry) {
-    for (int d = 0; d < MAX_DEVICES; d++) if (declared[d]) printf("dev %d %s\n", d, names[d]);
-    for (int i = 0; i < count; i++)
-      printf("%.3f %d %d %d %d\n", events[i].ms, events[i].dev, events[i].type, events[i].code, events[i].value);
-    fprintf(stderr, "%d events, %.1f ms\n", count, count ? events[count - 1].ms : 0.0);
-    return 0;
-  }
-  struct sigaction action;
-  memset(&action, 0, sizeof action);
-  action.sa_handler = on_signal;
-  sigaction(SIGINT, &action, NULL);
-  sigaction(SIGTERM, &action, NULL);
-  sigaction(SIGHUP, &action, NULL);
-  signal(SIGPIPE, SIG_IGN);
-  int twins = 0;
+  return 0;
+}
+
+static int twins = 0;
+
+// The open device called NAME (a slot of fds and names), opening it, or a twin of it, if it isn't open yet. -1 if it can't be.
+static int device(const char *name) {
+  int free_slot = -1;
   for (int d = 0; d < MAX_DEVICES; d++) {
-    if (!declared[d]) continue;
-    fds[d] = open_named(names[d], O_RDWR);
-    if (fds[d] < 0) {
-      fds[d] = open_twin(names[d]);
-      twins += fds[d] >= 0;
-    }
-    if (fds[d] < 0) {
-      fprintf(stderr, "no input device called %s that can be written, nor a twin of it through /dev/uinput\n", names[d]);
-      release_all();
-      return 3;
+    if (fds[d] >= 0 && strcmp(names[d], name) == 0) return d;
+    if (fds[d] < 0 && free_slot < 0) free_slot = d;
+  }
+  if (free_slot < 0) return -1;
+  int fd = open_named(name, O_RDWR);
+  if (fd < 0) {
+    fd = open_twin(name);
+    if (fd >= 0) {
+      twins++;
+      // Android takes a moment to add a new device and load its configuration; events before that would be lost.
+      struct timespec settle = {0, 800 * 1000000L};
+      nanosleep(&settle, NULL);
     }
   }
-  // Android takes a moment to add a new device and load its configuration; events before that would be lost.
-  if (twins) {
-    struct timespec settle = {0, 800 * 1000000L};
-    nanosleep(&settle, NULL);
+  if (fd < 0) {
+    fprintf(stderr, "no input device called %s that can be written, nor a twin of it through /dev/uinput\n", name);
+    return -1;
+  }
+  fds[free_slot] = fd;
+  snprintf(names[free_slot], sizeof names[free_slot], "%s", name);
+  return free_slot;
+}
+
+// Plays events, their devices numbered as the script numbers them and found among the open ones by name. Lets go of all after.
+static int play(Event *events, int count, char script_names[MAX_DEVICES][64]) {
+  int slot[MAX_DEVICES];
+  for (int d = 0; d < MAX_DEVICES; d++) {
+    slot[d] = -1;
+    if (script_names[d][0] && (slot[d] = device(script_names[d])) < 0) return 3;
   }
   struct timespec start, now;
   clock_gettime(CLOCK_MONOTONIC, &start);
   double late_most = 0;
   int status = 0;
   for (int i = 0; i < count && !stop; i++) {
-    double at = events[i].ms;
     struct timespec when = start;
-    long long ns = (long long)(at * 1e6) + when.tv_nsec;
+    long long ns = (long long)(events[i].ms * 1e6) + when.tv_nsec;
     when.tv_sec += ns / 1000000000LL;
     when.tv_nsec = ns % 1000000000LL;
     while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &when, NULL) == EINTR && !stop) {}
@@ -246,21 +244,87 @@ int main(int argc, char **argv) {
     clock_gettime(CLOCK_MONOTONIC, &now);
     double late = (now.tv_sec - when.tv_sec) * 1e3 + (now.tv_nsec - when.tv_nsec) / 1e6;
     if (late > late_most) late_most = late;
-    if (write_event(events[i].dev, events[i].type, events[i].code, events[i].value) < 0) {
-      fprintf(stderr, "writing to %s failed: %s\n", names[events[i].dev], strerror(errno));
+    int d = slot[events[i].dev];
+    if (write_event(d, events[i].type, events[i].code, events[i].value) < 0) {
+      fprintf(stderr, "writing to %s failed: %s\n", names[d], strerror(errno));
       status = 4;
       break;
     }
   }
   release_all();
-  // A twin goes when its file closes: after a moment, so Android reads the last events from it first.
-  if (twins) {
-    struct timespec drain = {0, 150 * 1000000L};
-    nanosleep(&drain, NULL);
-    for (int d = 0; d < MAX_DEVICES; d++) if (fds[d] >= 0) { ioctl(fds[d], UI_DEV_DESTROY); close(fds[d]); }
-  }
   if (stop) { fprintf(stderr, "stopped\n"); status = 130; }
   printf("played %d events, %.1f ms, at most %.2f ms late%s\n", count, count ? events[count - 1].ms : 0.0, late_most,
          twins ? ", through uinput twins" : "");
+  fflush(stdout);
+  return status;
+}
+
+// Removes the twins: after a moment, so Android reads their last events first. The kernel would on exit anyway.
+static void close_all(void) {
+  if (twins) {
+    struct timespec drain = {0, 150 * 1000000L};
+    nanosleep(&drain, NULL);
+  }
+  for (int d = 0; d < MAX_DEVICES; d++) if (fds[d] >= 0) { ioctl(fds[d], UI_DEV_DESTROY); close(fds[d]); fds[d] = -1; }
+}
+
+int main(int argc, char **argv) {
+  struct sigaction action;
+  memset(&action, 0, sizeof action);
+  action.sa_handler = on_signal;
+  sigaction(SIGINT, &action, NULL);
+  sigaction(SIGTERM, &action, NULL);
+  sigaction(SIGHUP, &action, NULL);
+  signal(SIGPIPE, SIG_IGN);
+  Event *events = calloc(MAX_EVENTS, sizeof *events);
+  char script_names[MAX_DEVICES][64];
+  int count, status = 0;
+  if (!events) return 2;
+  // --serve NAME...: opens those devices (or their twins) once and keeps them, then plays each "play PATH" line from standard
+  // input until "quit" or its end. A twin made once lives through the session, so the phone's input reader configures it again
+  // when it next reconfigures (the screen going off and on), as it does the real touchpad, and its heights come right.
+  if (argc >= 3 && strcmp(argv[1], "--serve") == 0) {
+    for (int i = 2; i < argc; i++) {
+      if (!allowed(argv[i])) { fprintf(stderr, "only touchPad and TitanKey may be written\n"); close_all(); return 2; }
+      if (device(argv[i]) < 0) { close_all(); return 3; }
+    }
+    printf("ready\n");
+    fflush(stdout);
+    char line[600];
+    while (!stop && fgets(line, sizeof line, stdin)) {
+      line[strcspn(line, "\r\n")] = 0;
+      if (strcmp(line, "quit") == 0) break;
+      if (strncmp(line, "play ", 5) != 0) { printf("error: play PATH or quit\n"); fflush(stdout); continue; }
+      FILE *in = fopen(line + 5, "r");
+      if (!in) { printf("error: can't open %s\n", line + 5); fflush(stdout); continue; }
+      status = load(in, events, &count, script_names);
+      fclose(in);
+      if (status) { printf("error: bad script\n"); fflush(stdout); continue; }
+      status = play(events, count, script_names);
+      if (status == 130) break;
+    }
+    release_all();
+    close_all();
+    return status;
+  }
+  int dry = argc == 3 && strcmp(argv[1], "--dry-run") == 0;
+  if (argc != 2 + dry) {
+    fprintf(stderr, "usage: tk-inject [--dry-run] SCRIPT | tk-inject --serve NAME...\n");
+    return 2;
+  }
+  FILE *in = strcmp(argv[1 + dry], "-") == 0 ? stdin : fopen(argv[1 + dry], "r");
+  if (!in) { perror(argv[1 + dry]); return 2; }
+  status = load(in, events, &count, script_names);
+  if (in != stdin) fclose(in);
+  if (status) return status;
+  if (dry) {
+    for (int d = 0; d < MAX_DEVICES; d++) if (script_names[d][0]) printf("dev %d %s\n", d, script_names[d]);
+    for (int i = 0; i < count; i++)
+      printf("%.3f %d %d %d %d\n", events[i].ms, events[i].dev, events[i].type, events[i].code, events[i].value);
+    fprintf(stderr, "%d events, %.1f ms\n", count, count ? events[count - 1].ms : 0.0);
+    return 0;
+  }
+  status = play(events, count, script_names);
+  close_all();
   return status;
 }

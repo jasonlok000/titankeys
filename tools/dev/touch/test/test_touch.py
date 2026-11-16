@@ -237,6 +237,9 @@ def main():
         result = inject(bad)
         check(result.returncode != 0 and why in result.stderr, f"injector should refuse ({why}): {result.stderr!r}")
 
+    serve = subprocess.run([injector, "--serve", "gpio-keys"], capture_output=True, text=True, input="quit\n")
+    check(serve.returncode != 0 and "only touchPad and TitanKey" in serve.stderr, f"--serve took another device: {serve.stderr!r}")
+
     print("Touch simulator checks passed" if failures == 0 else f"{failures} touch simulator checks failed")
     sys.exit(1 if failures else 0)
 

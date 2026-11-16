@@ -67,7 +67,9 @@ What works today and what doesn't (phone run, 2026-11-16):
 - A held Sym opens the Sym panel, not the switch overlay. Why isn't known yet.
 - The touchpad doesn't work yet. The phone's input reader sets a new touchpad's height before it knows the display, and only
   sets it again at its next reconfiguration (screen off and on). Until then the twin's heights come out upside down and squeezed,
-  so no touch lands on a key. A brief screen recording didn't trigger the reconfiguration.
+  so no touch lands on a key. A brief screen recording didn't trigger the reconfiguration. `serve.sh start` keeps one twin of
+  each device alive for the whole session instead; after the owner turns the screen off and on once (the tools never do),
+  `serve.sh status` shows whether the twin's height is right, and `touch.sh` plays through it until `serve.sh stop`. Untried.
 
 The keys are real, so they type in whatever is in front. Before every gesture and every setup key, `touchlib.sh` checks that
 the screen is awake and unlocked, no navigation app is running, TitanKeys Debug's window is in front and one of its own text
@@ -86,6 +88,8 @@ read back each time, and at once whenever the front stops being Debug. Every too
 | `touch.sh GESTURE...` | Plays gestures after the checks. At most 15 s for each call. | the phone |
 | `gestures.py GESTURE...` | Writes the script `touch.sh` plays, without the phone. See its help for every gesture. | |
 | `capture.sh SECONDS [--keys]` | Records real touches (and with `--keys`, keys) for `replay-getevent`. A capture with keys holds what was typed: keep it on your computer. | the phone |
+| `serve.sh start\|status\|stop` | Keeps the twins alive for a session, so the touchpad's can be set right once (see above). | the phone |
+| `languages.py [ID...]` | Types each input method's test with the phone's own keys, switching with Alt+Sym, and reads the field back against its `im.json` (`--list`). | the phone, the input methods on |
 | `checks.py [NAME...]` | The first checks, each with a YES or NO read back from the field, or a screenshot to look at (`--list`). | the phone, a Debug field focused |
 
 Gestures, played in order, with `+MS` for a pause between two:

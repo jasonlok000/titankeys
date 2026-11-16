@@ -162,6 +162,7 @@ tk_touch_ready() {
 # DELAY_MS after the start, while the gesture is still on screen (see tk_touch_shot).
 tk_touch_play() {
   tk_touch_ready || return 1
+  [ -f "$TK_TOUCH_DIR/serving" ] && { tk_serve_play "$@"; return; }
   tk_adb push -q "$1" "$TK_PHONE_SCRIPT" >/dev/null || return 3
   if [ -n "${3:-}" ]; then
     local raw="$TK_TOUCH_DIR/shots/raw-$3.png"
@@ -174,6 +175,30 @@ tk_touch_play() {
     return $status
   fi
   tk_adb shell "$TK_PHONE_INJECT $TK_PHONE_SCRIPT; s=\$?; rm -f $TK_PHONE_SCRIPT; exit \$s"
+}
+
+# tk_touch_play through serve.sh's injector, whose twins already exist (so no settle time). Waits for its "played" line.
+tk_serve_play() {
+  local in=/data/local/tmp/tk-serve.in log=/data/local/tmp/tk-serve.log path="/data/local/tmp/tk-serve-$$.tki"
+  local last seconds before
+  last=$(tail -1 "$1" | cut -d' ' -f1)
+  seconds=$(awk "BEGIN{print int($last/1000) + 5}")
+  tk_adb push -q "$1" "$path" >/dev/null || return 3
+  before=$(tk_adb shell "grep -c '^played' $log" | tr -d '\r')
+  if [ -n "${3:-}" ]; then
+    mkdir -p "$TK_TOUCH_DIR/shots"
+    tk_adb shell "echo 'play $path' >> $in; sleep $(awk "BEGIN{print $2/1000}"); screencap -p /data/local/tmp/tk-touch.png"
+    tk_adb pull -q /data/local/tmp/tk-touch.png "$TK_TOUCH_DIR/shots/raw-$3.png" >/dev/null
+    tk_adb shell rm -f /data/local/tmp/tk-touch.png
+    tk_touch_shot "$TK_TOUCH_DIR/shots/raw-$3.png"
+  else
+    tk_adb shell "echo 'play $path' >> $in"
+  fi
+  for ((i = 0; i < seconds * 10; i++)); do
+    [ "$(tk_adb shell "grep -c '^played' $log" | tr -d '\r')" -gt "$before" ] && break
+    sleep .1
+  done
+  tk_adb shell "grep '^played\|^error\|failed\|stopped' $log | tail -1; rm -f $path" | tr -d '\r'
 }
 
 # The screenshot without the status bar, which can show notifications. The keyboard stays: it is what these checks look at,

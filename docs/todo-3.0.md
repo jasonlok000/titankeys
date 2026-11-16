@@ -24,7 +24,23 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - Left as it is: #78.
 - **Moved to 3.0:** #34, #36. Parked with no milestone: #33, #48, #51.
 
-## Milestones (internal, waiting for the owner's explicit go)
+## Tonight's run (M1, started 01:25 on the owner's go)
+
+- **Workers,** all Opus 5.5 at medium effort, each in its own worktree branched from main at 817b878:
+  - tk-typing: #91, #77, #73, #85.
+  - tk-gestures: #89, #93, #84.
+  - tk-screens: #71 with #70, #86, #87's row, #75.
+  - tk-data: #65, #74.
+  - tk-guide: #68, #69, #67, #66 with "steer" out, #72, #87's step, #79.
+  - tk-tools: #82.
+  - tk-languages: the #56 study.
+  - tk-joins: the #83 study.
+  - F writes `docs/words-m1.md`.
+- **Phone:** reached at 100.98.104.89:5555 again (the owner sent Wireless debugging's port at 01:20, after a restart). At 01:25 it was at 2% and not charging.
+- **07:30:** a background timer resets the battery stats, with release TitanKeys as the keyboard, then logs to the scratchpad.
+- **Analytics** is #96, with questions for the owner.
+
+## Milestones (internal; the owner gave the go at 01:20)
 
 Each milestone has a gate: a list of what must be true before the next one starts. At each gate the Orchestrator writes a
 report here: what passed, what's waiting for the owner's hands, and every call the Orchestrator made. Workers run as separate
@@ -141,6 +157,14 @@ each generic language types its letters and accents over adb.
 8. Analytics gets an issue with questions. No analytics code until it's answered.
 9. Issues are closed once merged and checked on the phone. Those waiting for the owner's hands stay open, with a comment saying
    so.
+
+10. The folder move (#81) waits for the owner's next presence. It needs a message from the owner halfway, and workers
+    inside X:\Atlas would break.
+11. The #83 study goes to a new worker in auto mode, not the old Swiping engine session, so it can't stall on a permission
+    prompt overnight.
+12. The owner's go is taken as clearing the downloads and the phone test program listed under "Needs clearing".
+13. The workers draft user-facing text with `F:` markers. F's lines in `docs/words-m1.md` replace the drafts, either in the
+    workers' branches or after merging.
 
 More calls get added here as the night goes.
 

@@ -253,6 +253,10 @@ TitanKeys is built on the work of these projects:
 - [DistilGPT-2](https://huggingface.co/distilbert/distilgpt2): the next-word model (Apache 2.0)
 - [ONNX Runtime](https://github.com/microsoft/onnxruntime): runs these two models on the phone (MIT). See [`licences/Swipe-engine-2-models.md`](licences/Swipe-engine-2-models.md)
 - [gemoji](https://github.com/github/gemoji): the emoji names for shortcodes such as `:smile:` (MIT). See [`licences/gemoji-MIT.txt`](licences/gemoji-MIT.txt)
+<!-- F: draft, the Chinese credits (#56) -->
+- [Rime](https://github.com/rime/librime) with [OpenCC](https://github.com/BYVoid/OpenCC): typing Chinese, and its Simplified, Hong Kong and Taiwan characters (BSD-3-Clause and Apache 2.0). Their versions, libraries and build: [`native/rime/SOURCES.md`](native/rime/SOURCES.md)
+- [rime-cantonese](https://github.com/rime/rime-cantonese): the Cantonese words for Yale and Jyutping (CC BY 4.0, place names ODbL 1.0)
+- [rime-jyutping](https://github.com/rime/rime-jyutping), [rime-luna-pinyin](https://github.com/rime/rime-luna-pinyin), [rime-essay](https://github.com/rime/rime-essay) and [rime-prelude](https://github.com/rime/rime-prelude): the Yale spelling rules, the Pinyin words and Rime's shared files (LGPL-3.0). See [`licences/Rime-data-LGPL-3.0.txt`](licences/Rime-data-LGPL-3.0.txt)
 
 TitanKeys is powered by FUTO Swipe. "Titan 2 Elite" is a product of Unihertz.
 

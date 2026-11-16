@@ -1,0 +1,45 @@
+# TitanKeys: Mandarin, Pinyin. Built from rime-luna-pinyin's luna_pinyin schema
+# (LGPL-3.0), without its stroke reverse lookup and custom phrases.
+schema:
+  schema_id: tk_pinyin
+  name: 拼音
+  version: "2026.11.16"
+  description: Mandarin, Pinyin (luna_pinyin)
+
+__include: tk_variants:/
+
+engine:
+  processors: [ ascii_composer, recognizer, key_binder, speller, punctuator, selector, navigator, express_editor ]
+  segmentors: [ ascii_segmentor, matcher, abc_segmentor, punct_segmentor, fallback_segmentor ]
+  translators: [ punct_translator, script_translator ]
+  filters:
+    - simplifier@zh_hans
+    - simplifier@zh_hk
+    - simplifier@zh_tw
+    - uniquifier
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " '"
+  algebra:
+    __patch:
+      - pinyin:/abbreviation
+      - pinyin:/spelling_correction
+      - pinyin:/key_correction
+
+translator:
+  dictionary: luna_pinyin
+  prism: tk_pinyin
+  preedit_format:
+    - xform/([nl])v/$1ü/
+    - xform/([nl])ue/$1üe/
+    - xform/([jqxy])v/$1u/
+
+# Mandarin uses OpenCC's regional sets; Taiwan includes Taiwan's phrases (軟件 → 軟體).
+zh_hans: { option_name: zh_hans, opencc_config: t2s.json, tips: none }
+zh_hk:   { option_name: zh_hk,   opencc_config: t2hk.json, tips: none }
+zh_tw:   { option_name: zh_tw,   opencc_config: tk_t2twp.json, tips: none }
+
+punctuator: { import_preset: symbols }
+key_binder: { import_preset: default }
+recognizer: { import_preset: default }

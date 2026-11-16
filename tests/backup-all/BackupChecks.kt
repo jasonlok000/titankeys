@@ -33,10 +33,16 @@ fun main() {
         "words" to mapOf("words" to listOf(mapOf("word" to "titankeys", "spelling" to "TitanKeys", "uses" to 3.0, "day" to 20400.0, "weight" to 0.25))))
     val pairs = listOf(BackupFile.WordPair("good", "morning", 4, 1_763_000_000_000L), BackupFile.WordPair("i'm", "here", 1, 5L))
     val included = BackupFile.included(phone, debug = true)
-    val contents = BackupFile.Contents("3.0.0", "debug", "2026-11-16", included, words, pairs)
+    // Rime's snapshots of Chinese learned words: tab-separated, with its own header lines.
+    val chinese = mapOf("jyut6ping3.userdb.txt" to "# Rime user dictionary\n#@/db_name\tjyut6ping3.userdb\nnei hou \t你好\tc=3 d=0.9 t=12\n",
+        "luna_pinyin.userdb.txt" to "ni hao \t你好\tc=1 d=1 t=2\n")
+    val contents = BackupFile.Contents("3.0.0", "debug", "2026-11-16", included, words, pairs, chinese)
     val text = BackupFile.write(contents)
     val back = BackupFile.read(text)
     same(back, Picked.Backup(contents), "Every part comes back as it went out")
+    val noChinese = text.substringBefore("  \"chineseWords\"").trimEnd().removeSuffix(",") + "\n}\n"
+    same((BackupFile.read(noChinese) as Picked.Backup).contents.chineseWords, emptyMap<String, String>(),
+        "A backup from before Chinese has no Chinese words, and still restores")
     same(text.contains("\"format\": \"titankeys-backup\""), true, "The file names its format")
     same(text.contains("\"version\": 1"), true, "The file has its version")
     same(BackupFile.name(2026, 11, 6), "titankeys-backup-2026-11-06.json", "The file's name has the date")

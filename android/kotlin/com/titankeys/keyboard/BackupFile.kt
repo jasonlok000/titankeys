@@ -8,8 +8,8 @@ import com.titankeys.connected.Json
  * nothing on the phone is deleted. For a clean copy, Reset literally everything comes first.
  *
  * In: every setting and switch, haptics, saved, learned, favourite, blocked and unsaved words, refused fixes, autocorrect learning,
- * word case, the word pairs that next-word suggestions learned, snippets and their start, shorthand, the app lists, emoji recents,
- * whether the guide was seen, and in TitanKeys Debug the key calibration. Out: the clipboard, recordings, Share swipes' ID, consent
+ * word case, the word pairs that next-word suggestions learned, Chinese learned words (Rime's own snapshots, see RimeBackup),
+ * snippets and their start, shorthand, the app lists, emoji recents, whether the guide was seen, and in TitanKeys Debug the key calibration. Out: the clipboard, recordings, Share swipes' ID, consent
  * and sent list, the Accessibility disclosure's answer (Google Play wants it asked on each phone), phone checks (they describe this
  * phone) and the swipe models (they ship with the app).
  *
@@ -115,6 +115,8 @@ internal object BackupFile {
         "bug-recording" to "recordings stay on the phone",
         "crash-" to "a crash report belongs to this phone",
         "report-outbox" to "a bug report waiting to be sent belongs to this phone",
+        // Rime's folder: its learned words go in through its own snapshots (RimeBackup); its data comes with the app.
+        "engines" to null,
     )
 
     /** One learned word pair: [next] came after [first]. */
@@ -129,6 +131,8 @@ internal object BackupFile {
         /** The engine's own words export, as it wrote it, or null if the words couldn't be read. */
         val words: Map<String, Any?>?,
         val pairs: List<WordPair>,
+        /** Rime's snapshots of its learned words, by file name, as RimeBackup has them: none if Chinese was never typed. */
+        val chineseWords: Map<String, String> = emptyMap(),
     )
 
     /** What a picked file turned out to be. */
@@ -169,6 +173,7 @@ internal object BackupFile {
             },
             "words" to contents.words,
             "wordPairs" to contents.pairs.map { listOf(it.first, it.next, it.count, it.lastUsed) },
+            "chineseWords" to contents.chineseWords.toSortedMap(),
         )
         return StringBuilder().also { json(root, it, 0) }.append('\n').toString()
     }
@@ -270,8 +275,10 @@ internal object BackupFile {
             val pair = item as List<Any?>
             WordPair(pair[0] as String, pair[1] as String, (pair[2] as Double).toInt(), (pair[3] as Double).toLong())
         }
+        // Older backups have no Chinese words.
+        val chinese = (root["chineseWords"] as? Map<String, Any?> ?: emptyMap()).mapValues { (_, text) -> text as String }
         return Contents(root["app"] as? String ?: "", root["build"] as? String ?: "", root["created"] as? String ?: "",
-            preferences, root["words"] as? Map<String, Any?>, pairs)
+            preferences, root["words"] as? Map<String, Any?>, pairs, chinese)
     }
 
     /** A setting's value as its type, or null for a type this version doesn't know, which is skipped. */

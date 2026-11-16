@@ -1,0 +1,15 @@
+# TitanKeys: shared parts of every Chinese schema.
+# The Chinese variant is one setting for every Chinese input method. The app
+# sets exactly one of these options on each session (RimeSetOption).
+# Rime's word lists are Traditional; each variant converts with OpenCC.
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 中, A ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - options: [ zh_hk, zh_tw, zh_hans ]
+    reset: 0
+    states: [ 香港繁體, 臺灣正體, 简体 ]
+  - name: ascii_punct
+    states: [ 。，, ．， ]

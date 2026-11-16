@@ -31,6 +31,8 @@ internal object FreshStart {
         "refused_fixes", "favourite_words", "snippets", "autocorrect_learning", "emoji", "easter_egg", "clipboard", "phone_checks",
         // The dictionary words the word menu's Unsave took out, and the one-time repair of saved words' case having run.
         "unsaved_words", "word_case",
+        // What the keyboard last set Android's keyboard list to: with it gone, the setting decides again.
+        "keyboard_list",
     )
 
     /** Files kept whole: the key calibration, and the Accessibility disclosure's answer. */

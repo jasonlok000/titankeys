@@ -760,7 +760,8 @@ class TitanKeysIme : InputMethodService() {
         touchpad = Touchpad(getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY))
         editor = ConnectionEditor(::getCurrentInputConnection, ::getCurrentInputEditorInfo,
             { delay, action -> main.postDelayed(action, delay) }, { enterApps })
-        languages = Languages(this, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains)) { inputMethodChanged(it) }
+        languages = Languages(this, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains),
+            { InputMethodList.idOf(currentInputMethodSubtypeOrNull()) }) { inputMethodChanged(it) }
         languages.preparing = { showPreparing(it) }
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
@@ -3545,8 +3546,8 @@ class TitanKeysIme : InputMethodService() {
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
-        if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) == method.id) return
-        runCatching { switchInputMethod(id, subtype) }
+        if (InputMethodList.idOf(currentInputMethodSubtypeOrNull()) != method.id && runCatching { switchInputMethod(id, subtype) }.isFailure) return
+        languages.toldAndroid(method.id)
     }
 
     /**
@@ -3566,11 +3567,14 @@ class TitanKeysIme : InputMethodService() {
     private fun currentInputMethodSubtypeOrNull() =
         runCatching { getSystemService(InputMethodManager::class.java)?.currentInputMethodSubtype }.getOrNull()
 
-    /** Android's keyboard list switched to another of TitanKeys' entries: it types from now on, if it's on. */
+    /**
+     * Android's keyboard list switched to another of TitanKeys' entries: it types from now on, if it's on. Android also says its
+     * old entry as the keyboard starts, which mustn't undo a restore or Settings (Languages.androidSays).
+     */
     override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype) {
         super.onCurrentInputMethodSubtypeChanged(newSubtype)
         val id = InputMethodList.idOf(newSubtype) ?: return
-        if (::languages.isInitialized && languages.on.any { it.id == id }) languages.switchTo(id)
+        if (::languages.isInitialized) languages.androidSays(id)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

@@ -18,9 +18,9 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * The crash offer (#74). APKs from GitHub get no Android vitals, so TitanKeys keeps the last crash's report on the phone, and on
- * the next open of the app asks once whether to email it. It's never sent by itself, and it's deleted once it's handed to the
- * mail app or dismissed.
+ * The crash offer (#74, #97). APKs from GitHub get no Android vitals, so TitanKeys keeps the last crash's report on the phone,
+ * and on the next open of the app asks once whether to send it. Yes opens the report form with it attached. It's never sent by
+ * itself, and it's deleted once it's sent or dismissed; one offered and not sent goes at the open after.
  *
  * A crash's report is where it happened in the code: each exception's class and its stack, never its message, which could hold
  * text, so nothing typed goes in. Freezes, and crashes in native code, come from Android's own exit records.
@@ -30,9 +30,11 @@ object CrashReport {
     private const val FILE = "crash-report.txt"
     /** When the exit records were last read, so each freeze is offered once. */
     private const val CHECKED = "crash-checked"
+    /** The report was offered and the form opened, so the next open lets it go. */
+    private const val OFFERED = "crash-offered"
     /** The cache folder of the copy lent to the mail app. */
     private const val LENT = "crash-report"
-    private val LENT_NAME = Regex("titankeys-(crash|freeze)-[0-9-]+\\.txt")
+    private val LENT_NAME = Regex("titankeys-(crash|freeze|report)-[0-9-]+\\.(txt|zip)")
     private const val FROZE = "Froze"
     /** Plenty for a stack, and the file stays small. */
     private const val MAX_CHARS = 24_000
@@ -59,28 +61,41 @@ object CrashReport {
         } catch (_: Exception) {
             // Exit records are a bonus. A crash report still shows.
         }
+        if (File(context.noBackupFilesDir, OFFERED).isFile) {
+            clear(context)
+            return null
+        }
+        return held(context)
+    }
+
+    /** The kept report, for the form to attach, whether or not it was offered. */
+    fun held(context: Context): String? {
         val file = File(context.noBackupFilesDir, FILE)
         return if (file.isFile) file.readText().take(MAX_CHARS) else null
     }
 
+    /** The user chose to send it: the form has it now, and if it isn't sent, the next open lets it go. */
+    fun offered(context: Context) {
+        File(context.noBackupFilesDir, OFFERED).writeText("")
+    }
+
     fun clear(context: Context) {
         File(context.noBackupFilesDir, FILE).delete()
+        File(context.noBackupFilesDir, OFFERED).delete()
     }
 
     /** Whether [report] is a freeze's, which the offer names as one. */
     fun froze(report: String) = report.startsWith(FROZE)
 
     /**
-     * The report as a file to attach, named for when it was sent, in a cache folder of its own that [CrashKeeper] lends read-only
-     * to the mail app. The kept report is deleted at once; this copy stays only until the app next opens, as the mail app may
-     * still be reading it.
+     * A copy of [file], a report the form couldn't send (#97), to attach to a mail, in a cache folder of its own that
+     * [CrashKeeper] lends read-only to the mail app. The copy stays only until the app next opens, as the mail app may still
+     * be reading it.
      */
-    fun lend(context: Context, report: String): Pair<Uri, String> {
+    fun lend(context: Context, file: File): Pair<Uri, String> {
         val folder = File(context.cacheDir, LENT).apply { deleteRecursively(); mkdirs() }
-        val name = "titankeys-${if (froze(report)) "freeze" else "crash"}-" +
-            SimpleDateFormat("yyyyMMdd-HHmm", Locale.ROOT).format(Date()) + ".txt"
-        File(folder, name).writeText(report)
-        clear(context)
+        val name = "titankeys-report-" + SimpleDateFormat("yyyyMMdd-HHmm", Locale.ROOT).format(Date()) + "." + file.extension
+        file.copyTo(File(folder, name))
         return Uri.Builder().scheme("content").authority("${context.packageName}.crashkeeper").appendPath(name).build() to name
     }
 
@@ -160,7 +175,7 @@ object CrashReport {
 
 /**
  * Puts [CrashReport]'s handler in place as TitanKeys' process starts, before the keyboard, the app or a service: Android starts
- * a process's content providers first. It also lends the report to the mail app the user sends it with, and nothing else:
+ * a process's content providers first. It also lends a report to the mail app the user sends it with, and nothing else:
  * read-only, not exported, and only the one file named in the link, which Android grants for that mail alone.
  */
 class CrashKeeper : ContentProvider() {
@@ -188,7 +203,7 @@ class CrashKeeper : ContentProvider() {
         }
     }
 
-    override fun getType(uri: Uri) = "text/plain"
+    override fun getType(uri: Uri) = if (uri.lastPathSegment.orEmpty().endsWith(".zip")) "application/zip" else "text/plain"
     override fun insert(uri: Uri, values: ContentValues?): Uri? = throw UnsupportedOperationException()
     override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?) = 0
     override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?) = 0

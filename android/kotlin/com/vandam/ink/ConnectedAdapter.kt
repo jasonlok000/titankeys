@@ -10,9 +10,14 @@ import android.provider.Settings
 import com.atlas.connected.Announcements
 import com.atlas.connected.Connected
 import com.atlas.connected.Contributions
+import com.atlas.connected.ReportUpload
+import com.atlas.connected.Reports
+import com.atlas.keyboard.AppBuild
 import com.atlas.keyboard.BugRecording
+import com.atlas.keyboard.CrashReport
 import com.atlas.keyboard.Haptic
 import com.atlas.keyboard.Haptics
+import com.atlas.keyboard.Mail
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -76,10 +81,40 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
                     BugRecording.delete(activity)
                     "null"
                 }
-                // Email it (#74): "false" if the phone has no mail app.
-                "bugEmail" -> BugRecording.email(activity, data.getString("subject"), data.getString("text")).toString()
                 "bugShare" -> {
                     BugRecording.share(activity, data.getString("subject"), data.getString("text"))
+                    "null"
+                }
+                // The report form (#97): what it can attach, then Send, and email if Send couldn't go.
+                "reportState" -> reportState().toString()
+                "reportSend" -> {
+                    Thread {
+                        val outcome = try {
+                            sendReport(data)
+                        } catch (error: Exception) {
+                            android.util.Log.w("TitanKeysReport", "Could not make the report", error)
+                            "kept"
+                        }
+                        activity.runOnUiThread { complete(NativeResult.Success(JSONObject.quote(outcome))) }
+                    }.start()
+                    return
+                }
+                "reportEmail" -> {
+                    val kept = Reports.kept(activity.noBackupFilesDir) ?: throw IllegalStateException("No report is waiting")
+                    val (uri, name) = CrashReport.lend(activity, kept)
+                    // F: draft subject and body; the subjects follow F's mail lines for #74.
+                    val version = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: ""
+                    val subject = when (data.optString("kind")) {
+                        "idea" -> "TitanKeys idea"
+                        "crash" -> "TitanKeys crash, $version"
+                        else -> "TitanKeys bug, $version"
+                    }
+                    val sent = Mail.attach(activity, subject, "The report from TitanKeys' form is attached.", uri, name, "application/zip")
+                    if (sent) Reports.forget(activity.noBackupFilesDir)
+                    sent.toString()
+                }
+                "reportForget" -> {
+                    Reports.forget(activity.noBackupFilesDir)
                     "null"
                 }
                 "dismissEntry" -> {
@@ -118,6 +153,55 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
             .put("contributorId", Contributions.contributorId(activity) ?: "")
             .put("serverReady", Connected.CONTRIBUTIONS_URL.isNotEmpty())
             .put("privacyUrl", Connected.PRIVACY_URL)
+    }
+
+    /** What the report form can attach, and what it shows is sent with it. */
+    private fun reportState(): JSONObject = JSONObject()
+        .put("recording", !BugRecording.recording && BugRecording.size(activity) > 0)
+        .put("crash", CrashReport.held(activity) != null)
+        .put("froze", CrashReport.held(activity)?.let(CrashReport::froze) ?: false)
+        .put("kept", Reports.kept(activity.noBackupFilesDir) != null)
+        .put("version", activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "")
+        .put("phone", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
+        .put("android", android.os.Build.VERSION.RELEASE)
+
+    /**
+     * Packs, seals and sends the form's report. "sent"; "kept" if it couldn't go and waits in the outbox for email; "large"
+     * if it's too big to send, kept the same way. Off the main thread.
+     */
+    private fun sendReport(data: JSONObject): String {
+        val kind = data.getString("kind").takeIf { it in Reports.KINDS } ?: "other"
+        val state = reportState()
+        val fields = linkedMapOf(
+            "kind" to kind,
+            "what" to data.optString("what"),
+            "expected" to data.optString("expected"),
+            "email" to data.optString("email").trim(),
+            "version" to state.getString("version"),
+            "build" to AppBuild.kind(activity),
+            "phone" to state.getString("phone"),
+            "android" to state.getString("android"),
+            "sent" to java.time.Instant.now().toString(),
+        )
+        val attachments = ArrayList<Pair<String, ByteArray>>()
+        if (data.optBoolean("recording")) BugRecording.attachment(activity)?.let { attachments += "recording.jsonl" to it }
+        val crash = if (data.optBoolean("crash")) CrashReport.held(activity) else null
+        crash?.let { attachments += "crash.txt" to it.toByteArray() }
+        val zip = Reports.pack(Reports.json(fields), attachments)
+        val name = "titankeys-report.zip"
+        val sent = try {
+            ReportUpload.upload(Reports.newId(), zip)
+        } catch (_: Reports.TooLarge) {
+            Reports.keep(activity.noBackupFilesDir, name, zip)
+            return "large"
+        }
+        if (!sent) {
+            Reports.keep(activity.noBackupFilesDir, name, zip)
+            return "kept"
+        }
+        Reports.forget(activity.noBackupFilesDir)
+        if (crash != null) CrashReport.clear(activity)
+        return "sent"
     }
 
     /** Record a bug: whether it runs and for how long, or what the finished file holds. */

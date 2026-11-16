@@ -21,9 +21,13 @@
     <h3>In short</h3>
     <ul>
       <li>What you type stays on your phone. TitanKeys never sends it.</li>
-      <li>TitanKeys uses the internet for two things only. Both are strictly limited.</li>
+      <!-- F: draft for #97, was "two things only. Both are strictly limited." -->
+      <li>TitanKeys uses the internet for three things only. Each is strictly limited.</li>
       <li><strong>News:</strong> once a day at most, it downloads a short signed list of news from this website. It sends
         nothing about you. You can turn it off.</li>
+      <!-- F: draft for #97. -->
+      <li><strong>Bug reports:</strong> only when you press Send in the report form, it sends what you wrote, sealed so
+        only we can read it.</li>
       <li><strong>Swipe contributions:</strong> only if you agree, it sends examples of your swipes to train the swipe
         models. They're encrypted on your phone. You can stop and delete them at any time.</li>
       <li>We don't sell, rent or share data.</li>
@@ -39,11 +43,11 @@
     <li>A bug recording, if you make one in Settings &gt; Record a bug. It holds your touches, key presses and what the
       keyboard did, for 3 minutes at most, never in password or private fields. It doesn't save your text, but the keys and
       word choices it records can show most of what you typed while it ran. Only share it with people you'd show that to.
-      It stays on your phone until you share it yourself, and TitanKeys never uploads it.</li>
+      It stays on your phone unless you send it to us with the report form, below, or share it yourself.</li>
     <!-- F: drafts for #65 and #74. Clean zone. -->
     <li>A crash report, if TitanKeys crashes or freezes: where in its code it happened, and the versions of TitanKeys,
-      Android and your phone. Never anything you typed. The next time you open TitanKeys, it asks once whether to email it
-      to us, and deletes it from the phone when you answer.</li>
+      Android and your phone. Never anything you typed. The next time you open TitanKeys, it asks once whether to send it
+      to us with the report form, and deletes it from the phone once it's sent or you say no.</li>
     <li>A backup file, if you make one in Settings &gt; Your words &gt; Back up everything. It holds your settings, your
       words, the word pairs, snippets and shorthand, but not the clipboard or recordings. It isn't encrypted, and it goes
       only where you save it.</li>
@@ -149,13 +153,34 @@
       deleted later, send us the ID as the Contact section says, and we delete everything for it.</li>
   </ul>
 
-  <!-- F: draft for #74. Clean zone. -->
-  <h2>Feedback by email</h2>
-  <p>Settings &gt; Send feedback, <em>Email it</em> in Record a bug, and the crash offer open your own mail app with our
-  address, <a href="mailto:titankeys@everyones-niche.com">titankeys@everyones-niche.com</a>, filled in. TitanKeys sends
-  nothing itself: you read the mail and send it, or don't. A bug report fills in the TitanKeys version, your phone's model
-  and the Android version, and you can change or remove them before you send. We use what you send only to fix and improve
-  TitanKeys, and we don't share it.</p>
+  <!-- F: drafts for #97 and #74. Clean zone. -->
+  <h2>What TitanKeys sends when you report a bug: the report form</h2>
+  <p>Settings &gt; Send feedback, Record a bug and the crash offer open a form in TitanKeys. Nothing is sent until you
+  press <em>Send</em>.</p>
+  <h3>What is sent</h3>
+  <ul>
+    <li>The kind of problem you picked, and what you wrote: what happened, and what you expected.</li>
+    <li>Your email address, only if you typed one, so that we can reply.</li>
+    <li>The TitanKeys version and build, your phone's model, the Android version, and when it was sent. The form shows
+      these before you send.</li>
+    <li>A bug recording, only if one is attached in the form. You can take it off before you send. It holds your touches,
+      key presses and what the keyboard did, as above, so it can show what you typed while it ran.</li>
+    <li>A crash report, only if the form came from the crash offer: where in TitanKeys' code it crashed or froze. Never
+      anything you typed.</li>
+  </ul>
+  <h3>How it's protected and how long it's kept</h3>
+  <ul>
+    <li>On your phone, the report is put in one file and sealed with our public key, the same way as swipe contributions.
+      Only our private key, kept offline, can open it. It goes over HTTPS to the same small server on Cloudflare, which
+      stores it sealed and can't read it. The server counts requests the same way, to stop abuse.</li>
+    <li>We use it only to fix and improve TitanKeys, and to reply if you gave an email address. We don't share it.</li>
+    <li>On the server: until we download it, and at most 2 years. We delete reports we've dealt with.</li>
+  </ul>
+  <h3>When it can't be sent</h3>
+  <p>With no connection, or if our server is busy, the report stays on your phone, and the form offers to email it
+  instead. That opens your own mail app with the report attached and our address,
+  <a href="mailto:titankeys@everyones-niche.com">titankeys@everyones-niche.com</a>, filled in. Nothing goes until you send
+  the mail yourself.</p>
 
   <h2>Permissions</h2>
   <table>

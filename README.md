@@ -186,10 +186,12 @@ Atlas is a great keyboard, and TitanKeys only exists because Julian built it and
 
 What you type stays on your phone. The swipe engine and both language models run on the phone, and nothing you type is ever sent.
 
-TitanKeys uses the internet for two things only, and both are strictly limited:
+<!-- F: drafts for #97: "three things" and the Bug reports line. -->
+TitanKeys uses the internet for three things only, and each is strictly limited:
 
 - **News:** at most once a day, it downloads a short signed list of news from the TitanKeys website, such as a new version. It sends nothing about you or your phone. It shows as a silent notification, never while you type, and you can turn it off in **Settings > News**.
 - **Swipe contributions, only if you agree:** you can send examples of your swipes to help train the swipe models. It's off until you agree on a screen that says exactly what is sent: the swipe path, the kept word if it's a dictionary word, and the engine's numbers, never the text around it. Examples are encrypted on your phone, sent on Wi-Fi, used only for training, and you can stop and delete them at any time.
+- **Bug reports, only when you press Send:** **Settings > Send feedback** and **Record a bug** open a form. It sends what you wrote, the versions and your phone's model, and a recording or crash report if one is attached, encrypted on your phone so only we can read it. If it can't be sent, you can email it instead.
 
 The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it.
 

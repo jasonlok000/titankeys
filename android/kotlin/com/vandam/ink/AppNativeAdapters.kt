@@ -42,7 +42,6 @@ import com.atlas.keyboard.KeyCalibrationActivity
 import com.atlas.keyboard.KeyCapture
 import com.atlas.keyboard.Keys
 import com.atlas.keyboard.Layout
-import com.atlas.keyboard.Mail
 import com.atlas.keyboard.PhoneNameSource
 import com.atlas.keyboard.PhoneChecks
 import com.atlas.keyboard.PhoneSetup
@@ -153,8 +152,8 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
     }
 
     /**
-     * The crash offer (#74), once, as the app opens after a crash or freeze: email the report, or let it go. Either way the
-     * report is deleted, and nothing is ever sent by itself.
+     * The crash offer (#74, #97), once, as the app opens after a crash or freeze: send the report through the form, where it's
+     * attached, or let it go. Nothing is ever sent by itself.
      */
     private fun offerCrashReport() {
         Thread {
@@ -162,25 +161,15 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             val report = CrashReport.pending(activity) ?: return@Thread
             activity.runOnUiThread {
                 if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
-                val version = installedVersion()
                 val froze = CrashReport.froze(report)
-                // F's lines (docs/words-m1.md, #74).
+                // F's titles (docs/words-m1.md, #74). F: the body's "Email us" and the button became the form's (#97): drafts.
                 android.app.AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                     .setTitle(if (froze) "TitanKeys froze last time." else "TitanKeys crashed last time.")
-                    .setMessage("Sorry about that. Email us the report so we can fix it? It has the error and the versions, " +
+                    .setMessage("Sorry about that. Send us the report so we can fix it? It has the error and the versions, " +
                         "nothing you typed. It's only sent if you send it.")
-                    .setPositiveButton("Email it") { _, _ ->
-                        val (file, name) = CrashReport.lend(activity, report)
-                        val subject = if (froze) "TitanKeys freeze, $version" else "TitanKeys crash, $version"
-                        val body = (if (froze) "What were you doing when it froze?" else "What were you doing when it crashed?") +
-                            "\n\n\nThe report is attached. It has the error and the versions, nothing you typed."
-                        if (!Mail.attach(activity, subject, body, file, name, "text/plain")) {
-                            activity.getSystemService(ClipboardManager::class.java)
-                                .setPrimaryClip(ClipData.newPlainText("TitanKeys crash report", report))
-                            // F: draft, for a phone with no mail app.
-                            android.widget.Toast.makeText(activity, "No mail app here. The report is copied: send it to ${Mail.ADDRESS}.",
-                                android.widget.Toast.LENGTH_LONG).show()
-                        }
+                    .setPositiveButton("Send it") { _, _ ->
+                        CrashReport.offered(activity)
+                        activity.startActivity(com.atlas.connected.Connected.pageIntent(activity, REPORT_PAGE))
                     }
                     .setNegativeButton("No thanks") { _, _ -> CrashReport.clear(activity) }
                     .setOnCancelListener { CrashReport.clear(activity) }
@@ -339,8 +328,6 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
                     }
                     null
                 }
-                // Send feedback (#74): the mail app, with our address. "false" if the phone has none.
-                "mail" -> Mail.compose(activity, data.getString("subject"), data.getString("body")).toString()
                 "copyText" -> {
                     activity.getSystemService(ClipboardManager::class.java)
                         .setPrimaryClip(ClipData.newPlainText(data.getString("label"), data.getString("text")))
@@ -750,5 +737,7 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
 }
 
 private const val SEEN_NOTES = "seen_release_notes"
+/** The report form (#97), which attaches a kept crash report by itself. */
+private const val REPORT_PAGE = "/settings/report"
 /** The boring guide's nerd screen has shown once. Only clearing the app's data brings it back. */
 private const val NERD_SEEN = "nerd_screen_seen"

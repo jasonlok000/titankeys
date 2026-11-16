@@ -108,6 +108,7 @@ internal object BackupFile {
         "rawlog" to "recordings stay on the phone",
         "bug-recording" to "recordings stay on the phone",
         "crash-" to "a crash report belongs to this phone",
+        "report-outbox" to "a bug report waiting to be sent belongs to this phone",
     )
 
     /** One learned word pair: [next] came after [first]. */

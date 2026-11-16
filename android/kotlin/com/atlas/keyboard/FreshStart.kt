@@ -45,7 +45,7 @@ internal object FreshStart {
     )
 
     /** Files and folders of data, by the start of their names, in the app's no-backup folder, its files and its cache. */
-    private val NO_BACKUP_DATA = listOf("contributions", "word-accuracy-v1", "user_ngrams.db", "clipboard-history", "personal-words-v1", "crash-")
+    private val NO_BACKUP_DATA = listOf("contributions", "word-accuracy-v1", "user_ngrams.db", "clipboard-history", "personal-words-v1", "crash-", "report-outbox")
     private val FILES_DATA = listOf("config", "rawlog", "bug-recording")
     private val CACHE_DATA = listOf("bug-recording", "crash-report")
 

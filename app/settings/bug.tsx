@@ -1,30 +1,25 @@
 import { useEffect, useState } from "react";
-import { Field, Screen, Section, useSnapshot } from "ink";
+import { Field, Screen, Section, navigate, useSnapshot } from "ink";
 import { MUTED, useAccent } from "../../lib/brand";
-import { bugState, deleteBug, emailBug, shareBug, startBug, stopBug } from "../../lib/bug";
+import { bugState, deleteBug, shareBug, startBug, stopBug } from "../../lib/bug";
 import { bugText as text, duration } from "../../lib/bug-text";
 import { allowNotifications } from "../../lib/connected";
 import { StatusLine } from "../../lib/contribute";
 import { Note, Notes } from "../../lib/note";
 import { playHaptic } from "../../lib/app-haptics";
-import { FEEDBACK_ADDRESS, copyText, state as atlasState } from "../../lib/atlas";
 
-/** BugRecording.ZIP_OVER_BYTES: a bigger recording is zipped before it's attached, which takes a moment. */
-const ZIP_OVER_BYTES = 10 * 1024 * 1024;
+/** The report form, with the recording attached by itself (#97). */
+const sendIt = () => navigate({ path: "/settings/report", params: { kind: "recording" } });
 
 /**
- * Record a bug (#64): record, stop, look at what's in it, then email it to us (#74) or share it through Android's share sheet.
- * With no mail app, the page shows the address, and Share elsewhere is right there.
+ * Record a bug (#64): record, stop, and the report form opens with the recording attached (#97). Back here, see what's in
+ * it, send it, or share it through Android's share sheet.
  */
 export default function RecordBug() {
   const accent = useAccent();
   const result = useSnapshot(bugState);
-  const app = useSnapshot(atlasState);
   // While it records, the time left counts down here too, as the notification may be off.
   const [now, setNow] = useState(0);
-  const [noMail, setNoMail] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [zipping, setZipping] = useState(false);
   const recording = result.status === "ready" && result.data.recording;
   useEffect(() => {
     if (!recording) return;
@@ -43,7 +38,7 @@ export default function RecordBug() {
     return <Screen title={text.title} subtitle={text.subtitle}>
       <Section title={text.recordingTitle}>
         <StatusLine label={text.recordingTitle} value={text.left(left)} colour={accent} />
-        <Field label={text.stop} onPress={() => void stopBug()}>{""}</Field>
+        <Field label={text.stop} onPress={() => void stopBug().then(sendIt)}>{""}</Field>
       </Section>
     </Screen>;
   }
@@ -62,21 +57,7 @@ export default function RecordBug() {
     <Section title={text.warningTitle}>
       <Notes lines={text.warning} />
     </Section>
-    <Field label={text.email} onPress={() => {
-      const about = app.status === "ready" ? app.data : null;
-      const details = about ? `TitanKeys version: ${about.version}\nPhone: ${about.phone}\nAndroid: ${about.android}` : "";
-      setZipping((summary.bytes ?? 0) > ZIP_OVER_BYTES);
-      void emailBug(text.emailSubject(about?.version ?? ""), text.emailText(details))
-        .then(sent => setNoMail(!sent))
-        .finally(() => setZipping(false));
-    }}>{""}</Field>
-    {zipping && <Note>{text.zipping}</Note>}
-    {noMail && <>
-      <Note>{text.noMail(FEEDBACK_ADDRESS)}</Note>
-      <Note>{text.noMailRecording}</Note>
-      <Field label={copied ? text.copied : text.copyAddress}
-        onPress={() => void copyText("TitanKeys feedback address", FEEDBACK_ADDRESS).then(() => setCopied(true))}>{""}</Field>
-    </>}
+    <Field label={text.send} onPress={sendIt}>{""}</Field>
     <Field label={text.share} onPress={() => void shareBug(text.shareSubject, text.shareText)}>{""}</Field>
     <Field label={text.again} onPress={() => void startBug()}>{""}</Field>
     <Field label={text.delete} onPress={() => void deleteBug().then(() => playHaptic("app_deleted"))}>{""}</Field>

@@ -21,8 +21,9 @@ The form describes **the Play build only**, and every version of it on Play. If 
 | Contribution queue on the phone | Not until it is sent | Only what is sent (below) |
 | **Announcements (#42)** | A download only. The request carries no ID, no cookie and a plain user agent. | No user data is sent. See the IP note below. |
 | **Contributions (#34)** | Yes, if the user agrees | **Yes** (below) |
-| Send feedback, Record a bug's Email it, and the crash offer (#74): open the user's mail app to titankeys@everyones-niche.com, with the phone model and versions filled in, and a recording or crash report attached where there is one | Only when the user taps it, reads the mail and sends it from their own mail app. TitanKeys sends nothing itself and has no SDK or server for it. | No: a user-initiated action through another app. |
-| Crash report kept on the phone (#74): where the crash happened in the code, and the versions, never typed text | No, until the user emails it as above | No |
+| **Report form (#97):** Send feedback, Record a bug and the crash offer. The kind picked, what the user wrote, an optional email address for a reply, the versions, build and phone model, and a bug recording or crash report if attached | **Yes**, only when the user presses Send. Sealed on the phone with the contributions key, sent to the same Worker (`POST /v1/report`). | **Yes** (below) |
+| Email, the form's backup (#74): when the report can't be sent, the user's mail app opens to titankeys@everyones-niche.com with it attached | Only when the user sends the mail from their own mail app. TitanKeys sends nothing by mail itself. | No: a user-initiated action through another app. |
+| Crash report kept on the phone (#74): where the crash happened in the code, and the versions, never typed text | No, until the user sends it with the form | Only what the form sends |
 | Back up everything (#65): a JSON file of settings, words and lists | No: a file the user saves where they pick | No |
 | Typing log (#16) | No (export is a file the user saves) | No. But see the open question about leaving it out of the Play build. |
 
@@ -45,18 +46,19 @@ Answer **"not collected"** for everything except the rows marked **Collected**.
 | Category | Data type | Answer | What it covers |
 |---|---|---|---|
 | Location | Approximate, Precise | Not collected | |
-| Personal info | All (name, email, user IDs, address, phone, and so on) | Not collected | The contributor ID is random and not tied to a person, so it is not a "User ID" (Google: "identifiers that relate to an identifiable person"). |
+| **Personal info** | **Email address** | **Collected, optional** | Only if the user types one in the report form (#97), so that we can reply. |
+| Personal info | All others (name, user IDs, address, phone, and so on) | Not collected | The contributor ID is random and not tied to a person, so it is not a "User ID" (Google: "identifiers that relate to an identifiable person"). |
 | Financial info | All | Not collected | |
 | Health and fitness | All | Not collected | |
 | Messages | Emails, SMS or MMS, Other in-app messages | Not collected | No text around the word, and no typed text, is ever sent. |
 | Photos and videos, Audio, Files and docs, Calendar | All | Not collected | |
 | Contacts | Contacts | Not collected | Read on the phone only, with the user's opt-in and Android's Contacts permission, to recognise first and last names as words. Never sent or shared. |
-| **App activity** | **App interactions** | **Collected** | The swipe path, with times from the start of the swipe, the touch sizes, the ranker's 18 numbers, and how the word was settled (kept, picked from the strip, or corrected). |
+| **App activity** | **App interactions** | **Collected** | The swipe path, with times from the start of the swipe, the touch sizes, the ranker's 18 numbers, and how the word was settled (kept, picked from the strip, or corrected). A bug recording sent with the report form (#97) also holds touches, key presses and the keyboard's decisions. **Uncertain:** a recording can show what was typed while it ran; declaring it here and under Other user-generated content is the cautious choice. |
 | App activity | In-app search history, Other actions | Not collected | |
 | App activity | Installed apps | Not collected | Home-screen app names are read on the phone to recognise them as words. Never sent or shared. |
-| **App activity** | **Other user-generated content** | **Collected** | The kept word, only when it is a dictionary word. **Uncertain:** a single dictionary word could also be seen as part of "App interactions". Declaring it here is the cautious choice. |
+| **App activity** | **Other user-generated content** | **Collected** | The kept word, only when it is a dictionary word. **Uncertain:** a single dictionary word could also be seen as part of "App interactions". Declaring it here is the cautious choice. Also what the user writes in the report form (#97), and a bug recording if attached. |
 | Web browsing | Web browsing history | Not collected | |
-| App info and performance | Crash logs | Not collected | |
+| **App info and performance** | **Crash logs** | **Collected, optional** | Only a crash or freeze report the user sends with the report form (#97): where in the code it happened, and the versions. Never typed text. |
 | **App info and performance** | **Diagnostics** | **Collected** | The app version, the build (GitHub, Play or debug), the model versions and the phone model. **Uncertain:** Google has no data type for a phone model. Diagnostics is the closest, and declaring it is the cautious choice. |
 | App info and performance | Other app performance data | Not collected | |
 | **Device or other IDs** | **Device or other IDs** | **Collected** | The random contributor ID. Google: "identifiers that relate to an individual device, browser or app", with an app instance ID among its examples. |
@@ -71,6 +73,15 @@ The same answers for all four (App interactions, Other user-generated content, D
 | Is this data processed ephemerally? | **No.** It is kept for training. |
 | Is collection required, or can users choose? | **Users can choose** (optional). Off by default; "I agree" or "No thanks"; can stop at any time. |
 | Why is this data collected? | **Analytics.** Google: "Used to collect data about how users use the app or how it performs." Training the models to recognise swipes better fits this best. **Judgment call:** some developers would also tick "App functionality", because the trained models power the swipe feature. Don't tick Advertising, Personalization, Account management, Developer communications or Fraud prevention. |
+
+**The report form (#97)** adds Email address and Crash logs, and adds to App interactions, Other user-generated content and Diagnostics. For what it sends:
+
+| Question | Answer |
+|---|---|
+| Collected or shared? | **Collected.** Not shared. Sealed on the phone; Cloudflare stores it as a service provider and can't read it. |
+| Is this data processed ephemerally? | **No.** Kept until the owner has dealt with the report, at most 2 years. |
+| Is collection required, or can users choose? | **Users can choose.** Nothing is sent until Send; the email address and the recording are optional. |
+| Why is this data collected? | **App functionality** (fixing bugs) and **Developer communications** (a reply, if an email address was given). **Uncertain:** Google's purposes have no "bug reports"; these two are the closest. |
 
 ### What the listing will then show (roughly)
 

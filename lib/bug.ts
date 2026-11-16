@@ -35,12 +35,3 @@ export const startBug = () => run("bugStart");
 export const stopBug = () => run("bugStop");
 export const deleteBug = () => run("bugDelete");
 export const shareBug = (subject: string, text: string) => run("bugShare", { subject, text });
-
-/** Opens the mail app with the recording attached and our address filled in (#74). False if the phone has no mail app. */
-export async function emailBug(subject: string, text: string) {
-  try {
-    return await bug("bugEmail", { subject, text }) === "true";
-  } finally {
-    await bugState.refresh();
-  }
-}

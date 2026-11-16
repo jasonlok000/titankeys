@@ -14,7 +14,7 @@ Thank you for your help with TitanKeys. This guide tells you how to report a pro
 
 TitanKeys has these goals:
 
-- **Private:** What the user types stays on the device. TitanKeys uses the internet only as the [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says: signed news, and swipe contributions only with consent. Do not add other network calls, analytics, or tracking.
+- **Private:** What the user types stays on the device. TitanKeys uses the internet only as the [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says: signed news, swipe contributions only with consent, and bug reports only when the user presses Send. Do not add other network calls, analytics, or tracking.
 - **Simple:** Write clear code. Clear code is better than clever code.
 - **Made for the Titan 2 Elite:** Each feature must operate well with the physical keyboard.
 

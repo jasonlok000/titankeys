@@ -295,13 +295,8 @@ export async function backup(mode: "backup" | "restore"): Promise<"backup" | "wo
   }
 }
 
-/** Our address for feedback (#74). Every public contact address is this one. */
+/** Our address for feedback (#74), which the report form offers when it can't send (#97). Every public contact address is this one. */
 export const FEEDBACK_ADDRESS = "titankeys@everyones-niche.com";
-
-/** Opens the mail app to FEEDBACK_ADDRESS. False if the phone has no mail app. */
-export async function sendMail(subject: string, body: string) {
-  return await atlas("mail", { subject, body }) === "true";
-}
 
 export const copyText = (label: string, text: string) => atlas("copyText", { label, text });
 

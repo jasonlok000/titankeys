@@ -23,14 +23,28 @@ test("every activity wraps its base context in FixedScale, at Normal", () => {
   expect(read("android/kotlin/com/atlas/keyboard/FixedScale.kt")).toContain("    fun wrap(base: Context): Context {");
 });
 
-test("Bar text size grows only the keyboard's bar, the next time it shows", () => {
+test("Bar text size grows only the keyboard's bar, at once while it's up (#86)", () => {
   // Settings, the boring guide and every other Ink screen stay unscaled: the patch's user scale stays 1.
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   expect(adapter).toContain('internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.UNSCALED');
   expect(adapter).not.toContain("activity.applyUserScale()");
   expect(adapter).toContain('"barTextSize" -> FixedScale.size(activity, FixedScale.Size.of(value as String))');
   const ime = read("android/kotlin/com/atlas/keyboard/AtlasIme.kt");
-  expect(ime).toContain("if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())");
+  // The next field start catches up, and a keyboard that's up hears the pick and makes the bar again at once.
+  expect(ime.match(/if \(FixedScale\.size\(this\) != viewSize\) setInputView\(onCreateInputView\(\)\)/g)?.length).toBe(2);
+  expect(ime).toContain("barSize = FixedScale.listen(this) { main.post(::followBarSize) }");
+  expect(ime).toContain("barSize?.let { FixedScale.stopListening(this, it) }");
+  const follow = ime.slice(ime.indexOf("private fun followBarSize()"), ime.indexOf("override fun onStartInputView"));
+  expect(follow).toContain("if (!isInputViewShown || field.exact) return");
+  const scale = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
+  expect(scale).toContain("if (key == SIZE || key == null) changed()");
+  // The page tries it: a field at the top with a sample line, opening the keyboard by itself, and no "catches up" note.
+  const tryPage = read("app/settings/bar-text-size.tsx");
+  expect(tryPage.indexOf("<TextInput")).toBeGreaterThan(-1);
+  expect(tryPage.indexOf("<TextInput")).toBeLessThan(tryPage.indexOf("<SettingsChoices"));
+  expect(tryPage).toMatch(/<TextInput value=\{text\}[^>]*autoFocus/);
+  expect(tryPage).toContain("useState(barTextSizeSample)");
+  expect(tryPage).not.toContain("catches up the next time it shows");
   // The page lists the sizes FixedScale knows, smallest first, by the same fresh ids.
   const kotlin = read("android/kotlin/com/atlas/keyboard/FixedScale.kt");
   const sizes = [...kotlin.matchAll(/^\s+(\w+)\("(\w+)", (SMALLER|NORMAL|BIGGER)\)/gm)].map(match => [match[1], match[2], match[3]]);

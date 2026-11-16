@@ -28,6 +28,9 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     /** Only the input method's own words show on the bar: English's sentence starts don't, for one. */
     override fun allowed(word: String) = if (other) list()?.contains(word) == true else english.allowed(word)
     override fun fixAllowed(typed: String, fix: String) = if (other) false else english.fixAllowed(typed, fix)
+    /** Whether [word] is in English's own list, whatever input method types: Chinese offers it as a choice ([EnglishOffer]). */
+    fun englishKnown(word: String) = english.known(word)
+
     override fun known(word: String) = if (other) list()?.contains(word) == true else english.known(word)
     override fun sentenceStarts(): List<String> = if (other) emptyList() else english.sentenceStarts()
     override fun typed(word: String, rememberCase: Boolean) { if (!other) english.typed(word, rememberCase) }

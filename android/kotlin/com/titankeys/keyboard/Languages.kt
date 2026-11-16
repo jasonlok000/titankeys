@@ -122,11 +122,15 @@ internal class Languages(
         if (synced != syncStore().getString(SYNCED, null)) syncStore().edit().putString(SYNCED, synced).apply()
     }
 
-    /** The Chinese variant: exactly one of zh_hk, zh_tw and zh_hans on, from Settings. None until the user picks one. */
+    /**
+     * The Chinese variant: exactly one of zh_hk, zh_tw and zh_hans on, from Settings. None until the user picks one. And plain
+     * punctuation, Rime's ascii_punct, off unless Settings turns it on.
+     */
     fun variant() {
         val engine = loadedEngine ?: return
         val chosen = TypingSettings.chineseVariant(context)
         for (option in CHINESE_VARIANTS) engine.option(option, option == chosen)
+        engine.option(ChineseKeys.PLAIN_PUNCTUATION, TypingSettings.chinesePlainPunctuation(context))
     }
 
     /** Switches to input method [id], saved for next time. Its files load in the background; English is at once. */
@@ -212,15 +216,22 @@ internal sealed interface LanguagePicker {
     }
 
     /**
-     * An engine's choices for the text being built, from the left. Letters go on building it, so a choice is picked with Space:
-     * the one a resting finger marks, or else the first.
+     * An engine's choices for the text being built (docs/languages.md, "Chinese on the bar"): over W to O from the left, each
+     * as wide as it needs, the input method's [mark] over Q, and P's cue when the engine has more than the row shows. [listed]
+     * are the engine's first choices, across its pages; [english] is the letters offered as an English word, second
+     * ([EnglishOffer]), or null. Space picks the first; a tap, Shift + key, a hold or a flick picks the one over a key.
      */
-    class Choices(val state: EngineState) : LanguagePicker {
-        private val columns = Picker.pageColumns(state.choices.size)
-        override val notice = Strip.Notice.Picker(state.choices.take(columns.size), columns.map { it..it },
-            lead = state.code, leadMark = state.pageMark)
-        /** The choice over key [column], or -1. */
-        fun choiceAt(column: Int) = columns.indexOf(column)
+    class Choices(val state: EngineState, listed: List<String>, val english: String? = null, mark: String = "") : LanguagePicker {
+        val items = EnglishOffer.withWord(listed.take(ChineseRow.ASK), english)
+        private val columns = ChineseRow.place(items)
+        override val notice = Strip.Notice.Picker(items.take(columns.size), columns, lead = state.code, mark = mark,
+            more = listed.size > columns.size - (if (english != null && columns.size > EnglishOffer.PLACE) 1 else 0))
+        /** The row's item over key [column], or -1. */
+        fun choiceAt(column: Int) = ChineseRow.choiceAt(column, columns)
+        /** Whether row item [item] is the English word. */
+        fun isEnglish(item: Int) = english != null && item == EnglishOffer.PLACE && item < items.size
+        /** The engine's own place for row item [item], counted across its pages: the English word moves the rest one on. */
+        fun engineIndex(item: Int) = if (english != null && item > EnglishOffer.PLACE) item - 1 else item
     }
 
     /** The switch overlay on a held Sym: each input method that's on, the current one marked. */

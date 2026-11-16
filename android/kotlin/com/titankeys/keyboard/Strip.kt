@@ -64,10 +64,17 @@ class Strip(
          * one in use, as the overlay's input method.
          */
         data class Picker(val items: List<String>, val columns: List<IntRange>, val current: Int = -1,
-                          /** An engine's code being typed, over Q and W, left of the choices. */
+                          /**
+                           * An engine's code being typed: it floats on a thin line just above the bar's left edge, over the app
+                           * ([drawCodeLine]), so the app never resizes (docs/languages.md, "Chinese on the bar").
+                           */
                           val lead: String = "",
-                          /** Where the choices are, after the code: "2›" or "1/3". */
-                          val leadMark: String = "") : Notice {
+                          /** Where the choices are, after the code: "2›" or "1/3". Unused by Chinese, whose row has no pages. */
+                          val leadMark: String = "",
+                          /** The input method's mark over Q (耶, 粵, 拼), in the accent, as Shift's arrow shows. */
+                          val mark: String = "",
+                          /** The engine has more choices than the row shows: P shows the cue ([ChineseRow.MORE_CUE]). */
+                          val more: Boolean = false) : Notice {
             override val word get() = ""
         }
     }
@@ -309,6 +316,8 @@ class Strip(
             if (field == value) return
             field = value
             render()
+            // The code's line floats over the app, in the effects layer: see [drawCodeLine].
+            effects?.invalidate()
         }
 
     /**
@@ -914,21 +923,14 @@ class Strip(
         pickerText.textSize = wordPixels()
         val baseline = StripFit.baseline(line, pickerText.textSize, floor)
         val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, barHeight.toFloat(), inside))
-        if (picker.lead.isNotEmpty() || picker.leadMark.isNotEmpty()) {
-            // The code as typed, muted, and the page in the accent, over Q and W; a long code shrinks to fit.
-            val left = maxOf(menuColumn(0).first, side.toFloat())
-            val right = menuColumn(Picker.FIRST_CHOICE - 1).second - dp(4)
-            val mark = if (picker.leadMark.isEmpty()) "" else " " + picker.leadMark
-            val codeWidth = pickerText.measureText(picker.lead)
-            val total = codeWidth + pickerText.measureText(mark)
-            val scale = if (total > right - left && total > 0f) (right - left) / total else 1f
-            canvas.save()
-            canvas.scale(scale, scale, left, baseline)
-            pickerText.color = look.muted
-            canvas.drawText(picker.lead, left, baseline, pickerText)
+        // The input method's mark over Q, in the accent, and P's cue when there are more choices: each kept to its key.
+        if (picker.mark.isNotEmpty()) {
             pickerText.color = look.accent
-            canvas.drawText(mark, left + codeWidth, baseline, pickerText)
-            canvas.restore()
+            drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)
+        }
+        if (picker.more) {
+            pickerText.color = look.muted
+            drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)
         }
         for ((index, item) in picker.items.withIndex()) {
             val columns = picker.columns.getOrNull(index) ?: continue
@@ -950,6 +952,70 @@ class Strip(
             canvas.drawText(item, (left + right) / 2 - width / 2, baseline, pickerText)
             canvas.restore()
         }
+    }
+
+    /** [text] centred over key [column] on the bar's line, shrunk to the key, in [pickerText]'s colour. */
+    private fun drawOnKey(canvas: Canvas, text: String, column: Int, baseline: Float) {
+        val left = maxOf(menuColumn(column).first, side.toFloat())
+        val right = minOf(menuColumn(column).second, (width - side).toFloat())
+        val room = right - left - dp(4)
+        val textWidth = pickerText.measureText(text)
+        val scale = if (textWidth > room && textWidth > 0f) room / textWidth else 1f
+        canvas.save()
+        canvas.scale(scale, scale, (left + right) / 2, baseline)
+        canvas.drawText(text, (left + right) / 2 - textWidth / 2, baseline, pickerText)
+        canvas.restore()
+    }
+
+    /** A touch on the screen that picks one of the picker's items: its place in the items. Set by the keyboard. */
+    var pickerTap: ((Int) -> Unit)? = null
+    /** The picker item a touch went down on, which it picks if it lifts there too. */
+    private var pickerTouched = -1
+
+    /** The picker's item under [x], or -1. */
+    private fun pickerItemAt(x: Float): Int {
+        val picker = notice as? Notice.Picker ?: return -1
+        for ((index, columns) in picker.columns.withIndex()) {
+            if (index >= picker.items.size) break
+            if (x >= menuColumn(columns.first).first && x <= menuColumn(columns.last).second) return index
+        }
+        return -1
+    }
+
+    private val codeText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val codeBox = android.graphics.RectF()
+
+    /**
+     * The code being typed, on a thin line just above the bar's left edge, over the app (docs/languages.md, "Chinese on the
+     * bar"): muted, on the bar's black, as wide as the code. It's drawn in the see-through effects layer, so the app never
+     * resizes; only while a code is typed. A long code shrinks to the bar's width.
+     */
+    private fun drawCodeLine(canvas: Canvas, layer: android.view.View) {
+        val picker = notice as? Notice.Picker ?: return
+        if (picker.lead.isEmpty() || noticeRow.visibility != VISIBLE || !isShown) return
+        getLocationInWindow(stripAt)
+        layer.getLocationInWindow(layerAt)
+        val x = (stripAt[0] - layerAt[0]).toFloat()
+        val y = (stripAt[1] - layerAt[1]).toFloat()
+        codeText.typeface = typeface
+        codeText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, CODE_SIZE, resources.displayMetrics)
+        val height = dp(CODE_LINE_DP).toFloat()
+        val pad = dp(CODE_PAD_DP).toFloat()
+        val inset = maxOf(menuColumn(0).first, side.toFloat())
+        val left = x + inset
+        val most = width - 2 * inset - 2 * pad
+        val textWidth = codeText.measureText(picker.lead)
+        val scale = if (textWidth > most && textWidth > 0f) most / textWidth else 1f
+        val top = y - height - dp(CODE_GAP_DP)
+        codeBox.set(left, top, left + textWidth * scale + 2 * pad, top + height)
+        menuPaint.color = (look.paper and 0xFFFFFF) or (CODE_BACK_ALPHA shl 24)
+        canvas.drawRoundRect(codeBox, height / 2, height / 2, menuPaint)
+        codeText.color = look.muted
+        val baseline = top + height / 2 - (codeText.ascent() + codeText.descent()) / 2
+        canvas.save()
+        canvas.scale(scale, scale, left + pad, baseline)
+        canvas.drawText(picker.lead, left + pad, baseline, codeText)
+        canvas.restore()
     }
 
     /** The buttons that a notice shows, from the left. */
@@ -1279,6 +1345,7 @@ class Strip(
      * the marks over the word, the book, the hearts and the torn page. See [MenuEffects].
      */
     fun drawEffects(canvas: Canvas, layer: android.view.View) {
+        drawCodeLine(canvas, layer)
         val shown = scene ?: return
         if (notice !is Notice.Menu || noticeRow.visibility != VISIBLE || !isShown) return
         getLocationInWindow(stripAt)
@@ -1336,6 +1403,18 @@ class Strip(
     private var menuTouched: Action? = null
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (notice is Notice.Picker && pickerTap != null) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> pickerTouched = pickerItemAt(event.x)
+                MotionEvent.ACTION_UP -> {
+                    val item = pickerTouched
+                    pickerTouched = -1
+                    if (item >= 0 && pickerItemAt(event.x) == item) pickerTap?.invoke(item)
+                }
+                MotionEvent.ACTION_CANCEL -> pickerTouched = -1
+            }
+            return true
+        }
         if (notice !is Notice.Menu) return super.onTouchEvent(event)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> menuTouched = menuActionAt(event.x)
@@ -1379,6 +1458,8 @@ class Strip(
         }
         // A touch on one of the menu's buttons is the bar's, which draws them. Beside them it closes the menu, as before.
         if (event.actionMasked == MotionEvent.ACTION_DOWN && menuActionAt(event.x) != null) return true
+        // A touch on the picker's items is the bar's, which draws them over the keys.
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && pickerTap != null && pickerItemAt(event.x) >= 0) return true
         return gesture.showing || super.onInterceptTouchEvent(event)
     }
 
@@ -1693,6 +1774,13 @@ class Strip(
         private const val MENU_SLIDE_DP = 40
         private const val MENU_SLIDE_MILLIS = 220L
         private const val MENU_WORD_TOP = 2
+        /** The code's line above the bar: its height, its gap over the bar, its sides' padding, in dp, and its text, in sp. */
+        private const val CODE_LINE_DP = 22
+        private const val CODE_GAP_DP = 3
+        private const val CODE_PAD_DP = 8
+        private const val CODE_SIZE = 13f
+        /** How opaque the line's black is over the app. */
+        private const val CODE_BACK_ALPHA = 230
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

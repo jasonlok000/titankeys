@@ -162,11 +162,11 @@ private class AtlasAdapter(private val activity: MainActivity) : NativeAdapter, 
             activity.runOnUiThread {
                 if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
                 val froze = CrashReport.froze(report)
-                // F's titles (docs/words-m1.md, #74). F: the body's "Email us" and the button became the form's (#97): drafts.
+                // The words are F's (docs/words-m1.md, #74 and #97).
                 android.app.AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                     .setTitle(if (froze) "TitanKeys froze last time." else "TitanKeys crashed last time.")
                     .setMessage("Sorry about that. Send us the report so we can fix it? It has the error and the versions, " +
-                        "nothing you typed. It's only sent if you send it.")
+                        "nothing you typed. Nothing goes unless you send it.")
                     .setPositiveButton("Send it") { _, _ ->
                         CrashReport.offered(activity)
                         activity.startActivity(com.atlas.connected.Connected.pageIntent(activity, REPORT_PAGE))

@@ -15,10 +15,10 @@ of the line, after "follows", and "cursor" is the word right before it (6 letter
 | Place | Today | New |
 | --- | --- | --- |
 | `STEER_LINE` | Hold the second tap to steer the cursor | Hold the second tap and the cursor follows |
-| `steer` slide title | Steer to the underlined word. | Move the cursor to the underlined word. |
+| `steer` slide title | Steer to the underlined word. | Put the cursor in the underlined word. |
 | `GuideChapter.Steering` label | Steering | Cursor |
-| Space blocked, cursor slide (GuideSteps.kt, `GuideLesson.Space`) | Typed spaces are blocked. Taps on Space steer. | Typed spaces are blocked. Taps on Space move the cursor. |
-| Swipe blocked, cursor chapter (`GuideLesson.Swipe`) | Swiping's blocked here. Taps on Space steer. | Swiping's blocked here. Taps on Space move the cursor. |
+| Space blocked, cursor slide (GuideSteps.kt, `GuideLesson.Space`) | Typed spaces are blocked. Taps on Space steer. | Spaces are blocked. Space taps move the cursor. |
+| Swipe blocked, cursor chapter (`GuideLesson.Swipe`) | Swiping's blocked here. Taps on Space steer. | Swiping's blocked. Space taps move the cursor. |
 | `GuideScript.TEXT` (if it still shows anywhere) | …Flick to delete, steer and pick from Space, and… | …Flick to delete, move the cursor from Space, and… |
 
 The slide's stages, done line, praise, help and hints don't say steer, so they stay as they are ("Tap Space twice, and hold the
@@ -46,7 +46,7 @@ The chapter's roast ("Wow, you moved a cursor…") stays too.
 | --- | --- | --- |
 | Menu slide, stage 2 | Press I to save it. | Press I/K to save it. |
 | Menu slide, stage 3 | Press I again to favourite it. | Press I/K again to favourite it. |
-| Menu slide, praise | O steps it back down. P closes the menu. | O/L steps it back down. P/Backspace closes the menu. |
+| Menu slide, praise | O steps it back down. P closes the menu. | O/L steps it down. P/Backspace closes the menu. |
 | Chip after Block | Blocked TitanKeys? Rude. I brings it back. | Blocked TitanKeys? Rude. I/K brings it back. |
 | Chip after Unblock | Unblocked. Now I saves it. | Unblocked. Now I/K saves it. |
 | `MENU_UNSAVED` | Unsaved. Cold. I, then I again. | Unsaved. Cold. I/K, then I/K again. |
@@ -280,7 +280,7 @@ The & is the first symbol of the first group, on its first page.
 | Panel closed | Press Sym. |
 | Symbols, first group, first page | It's on this page. Find & and press its key. |
 | Symbols, first group, a later page | Too far. Swipe down on the keys or press Backspace. |
-| Symbols, another group | Wrong group. The & leads the first one. Swipe left or right on the keys, or slide along the bottom row. |
+| Symbols, another group | Wrong group. The &'s in the first. Swipe left or right on the keys. |
 | Emoji | Emoji already? Patience. Sym again closes them. |
 | Clipboard or quick settings | Wrong page. Alt goes back to the symbols. |
 | Leaving without picking | Sym twice closes it. |
@@ -291,17 +291,17 @@ The ∞ is on the first group's second page. These replace the stage line, the h
 
 | Place or state | Line |
 | --- | --- |
-| Stage 1 (panel closed) | Press Sym, then swipe up on the keys or press Enter for the next page. |
+| Stage 1 (panel closed) | Press Sym. Then swipe up on the keys, or Enter. |
 | Symbols, first group, first page | Not on this page. Swipe up on the keys or press Enter. |
 | Symbols, first group, second page | It's on this page. Find ∞ and press its key. |
 | Symbols, first group, a later page | Too far. Swipe down on the keys or press Backspace. |
-| Symbols, another group | Wrong group. The ∞ is in the first one. Swipe left or right on the keys, or slide along the bottom row. |
+| Symbols, another group | Wrong group. The ∞'s in the first. Swipe left or right on the keys. |
 | Emoji | Not emoji. Sym closes them. Then press Sym once. |
 | Clipboard or quick settings | Wrong page. Alt goes back to the symbols. |
 | Leaving without picking | Sym twice closes it. |
-| `WEIRD_HUNT` hint | It's not on the first page. Swipe up on the keys, or press Enter. |
+| `WEIRD_HUNT` hint | Not on page one. Swipe up on the keys, or Enter. |
 | `WEIRD_HUNT` skip | Page two, near √ and ≈. Or skip it. It's ok. (stays) |
-| Praise | Swipe up or down on the keys for pages, or press Enter or Backspace. The bottom row, groups. |
+| Praise | Swipe up or down on the keys to turn pages. |
 
 ### Sign it with 🤡, the clown hunt (`clown`)
 
@@ -311,11 +311,11 @@ The 🤡 is in the Smileys group (the skip line says near 💩). Recent comes fi
 | --- | --- |
 | Panel closed | Press Sym twice for the emoji. |
 | Symbols | That's symbols. Press Sym again for the emoji. |
-| Emoji, Recent | That's Recent. Swipe left or right on the keys, or slide along the bottom row, to Smileys. |
+| Emoji, Recent | That's Recent. Swipe left or right on the keys to Smileys. |
 | Emoji, Smileys, before the clown's page | Not on this page. Swipe up on the keys or press Enter. |
 | Emoji, Smileys, the clown's page | It's on this page. Find 🤡 and press its key. |
 | Emoji, Smileys, past the clown's page | Too far. Swipe down on the keys or press Backspace. |
-| Emoji, another group | Wrong group. The clown's in Smileys. Swipe left or right on the keys, or slide along the bottom row. |
+| Emoji, another group | Wrong group. The clown's in Smileys. Swipe left or right on the keys. |
 | Clipboard or quick settings | Wrong page. Alt goes back to the symbols, then Sym for the emoji. |
 | Leaving without picking | Sym closes the emoji. |
 

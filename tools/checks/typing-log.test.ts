@@ -93,7 +93,7 @@ describe("record a bug", () => {
     const words = await text("lib/bug-text.ts");
     expect(words).toContain("someone can work out what you typed");
     expect(words).toContain("Password and private fields are never recorded");
-    expect(words).toContain("TitanKeys doesn't upload it");
+    expect(words).toContain("TitanKeys only sends it if you press Send in the report form");
     expect(words.toLowerCase().includes("anonym")).toBe(false);
   });
 

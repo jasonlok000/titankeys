@@ -108,8 +108,7 @@ export default function BoringGuide() {
       <Topic title="New words">{"TitanKeys learns the new words you type, so it suggests them next time. Turn that off with Learn new words I type in Settings > Your words. Typing in password fields and private fields teaches it nothing."}</Topic>
       <Topic title="Saved and blocked words">{"Saved words always show up. Blocked words never do. Both lists are in Settings > Your words, where you can add or remove words. The word menu on the bar fills them too."}</Topic>
       <Topic title="Names from your contacts">{"Turn on Names from my contacts in Settings > Your words, and the names on your phone swipe right, with their capitals. They stay on your phone."}</Topic>
-      {/* F: draft (#65): Export words and Import words became Back up everything and Restore, with snippets and settings in it. */}
-      <Topic title="Backup">{"Your words > Back up everything saves one file with your words, snippets, shorthand, app lists and settings. Restore brings it back, on this phone or a new one. Remove learned words wipes everything TitanKeys learned from you."}</Topic>
+      <Topic title="Backup">{"Settings > Your words > Back up everything saves one file with your words, snippets, shorthand, app lists and settings. Keep it somewhere safe. Restore brings it back, on this phone or a new one: your settings change to the backup's, and its words and lists join yours. Remove learned words wipes everything TitanKeys learned from you."}</Topic>
     </Section>
     <Section title="Look and feel">
       <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>

@@ -1094,7 +1094,7 @@ private fun thePlaygroundKeepsItsText() {
     val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
     fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
     same(body("override fun onPause()").contains("if (playground && started && !settingUp && !leftByBack)\n            playgroundKept = PlaygroundKept(" +
-        "field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource, this)"), true,
+        "field.text.toString(), field.selectionEnd, passage, passageFrom, passageText, passageSource,\n                java.lang.ref.WeakReference(this))"), true,
         "Out of sight, the playground keeps its text, its cursor and its line")
     val show = body("private fun showPlayground()")
     same(show.contains("if (kept != null) keepPlayground(kept) else startPassage(PlaygroundText.make("), true,
@@ -1103,7 +1103,7 @@ private fun thePlaygroundKeepsItsText() {
     val keep = body("private fun keepPlayground(kept: PlaygroundKept)")
     same(listOf("seeding = true", "field.setText(kept.text)", "seeding = false", "passage = kept.passage", "passageFrom = kept.passageFrom")
         .all { it in keep }, true, "The text goes back quietly, and the line follows on from where it was")
-    same(body("override fun onResume()").contains("if (playgroundKept?.from === this) playgroundKept = null"), true,
+    same(body("override fun onResume()").contains("if (playgroundKept?.from?.get() === this) playgroundKept = null"), true,
         "The same playground back in sight has its own text still, so its copy is let go")
     val back = body("override fun onBackPressed()")
     same(back.indexOf("leftByBack = true") in 0 until back.indexOf("finishAffinity()") &&

@@ -161,7 +161,13 @@ tk_touch_install() {
 # The gate, then Debug as the keyboard (unless a runner holds it on), then the gate again with it. On the way out, release.
 tk_touch_ready() {
   tk_touch_check || return 1
-  [ "${TK_IME_HELD:-}" = 1 ] && return 0
+  if [ "${TK_IME_HELD:-}" = 1 ]; then
+    # A check that failed on the way (the field lost its focus, another app came up) put release TitanKeys back first, and a
+    # runner that holds Debug never got it again: its keys went to release (2026-11-16). Debug comes back here, read back.
+    [ "$(tk_ime_now)" = "$TK_DEBUG_IME" ] && return 0
+    tk_ime_debug && tk_touch_check
+    return
+  fi
   tk_ime_debug || return 1
   tk_touch_check
 }

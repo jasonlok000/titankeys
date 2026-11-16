@@ -118,6 +118,8 @@ read back each time, and at once whenever the front stops being Debug. Every too
 | `serve.sh start\|status\|stop` | Keeps the twins alive for a session, so the touchpad's can be set right once (see above). | the phone |
 | `languages.py [ID...]` | Types each input method's test with the phone's own keys, switching with Alt+Sym, and reads the field back against its `im.json` (`--list`). | the phone, the input methods on |
 | `checks.py [NAME...]` | The first checks, each with a YES or NO read back from the field, or a screenshot to look at (`--list`). | the phone, a Debug field focused |
+| `checks.py --batch NAME` | A whole batch on its own, for a long unattended slot: Debug is the keyboard from start to end (release TitanKeys only at the end), the gates still run before every gesture, and one report goes to `$TK_OUT/touch/report-NAME-TIME.md` with each result, its screenshot and what's left for the owner's hands. Batches: `chinese-ui`. | the phone |
+| `chinese_checks.py` | The Chinese bar's checks for `--batch chinese-ui`: the row, Space, a hold and a flick up that pick, the bigger menu on a held P, Enter, a comma, the English word. The keyboard twin's Shift can't be used on this phone, so the Shift checks are listed for hands. | the phone, Yale on |
 | `guide_checks.py` | The guide's checks (#66 steer, #67 triple Space, #68 hunts, #69 paste), #84's word menu pill and a look at the right Shift, run through `checks.py`. Each opens TitanKeys Debug's guide at its slide (`android/debug/recorder/GuideStart.kt`, only adb, only Debug) and reads the guide's own lines back. | the phone |
 
 Gestures, played in order, with `+MS` for a pause between two:

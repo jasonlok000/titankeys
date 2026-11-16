@@ -25,3 +25,32 @@ wait
 grep -q "inner ran" "$work/lock.out" || { echo "FAIL a tool started inside a run waited for the lock"; exit 1; }
 held && { echo "FAIL the phone lock is still held after the run"; exit 1; }
 echo "Phone lock checks passed"
+
+# A runner holding Debug on gets it back when a failed check on the way put release TitanKeys back (2026-11-16), and only then.
+ready() {
+  NOW=$1 TK_IME_HELD=1 bash -c '. tools/dev/env.sh; . tools/dev/phone/safety.sh; . tools/dev/touch/touchlib.sh
+    tk_touch_check() { return 0; }; tk_ime_now() { echo "$NOW"; }; tk_ime_debug() { echo "debug picked"; }
+    tk_touch_ready'
+}
+[ "$(ready com.titankeys/com.atlas.keyboard.AtlasIme)" = "debug picked" ] || { echo "FAIL a held Debug wasn't picked again after release came back"; exit 1; }
+[ -z "$(ready com.titankeys.debug/com.titankeys.keyboard.TitanKeysIme)" ] || { echo "FAIL Debug was picked again while it was already the keyboard"; exit 1; }
+echo "Held Debug checks passed"
+
+# A batch: every named one loads, its gestures build, and its report says each result once, with what's left for hands.
+TK_OUT="$work/out" python3 - <<'PY'
+import os, sys
+sys.path.insert(0, "tools/dev/touch")
+import checks
+sys.modules["checks"] = checks
+for name, module_name in checks.BATCHES.items():
+    module = __import__(module_name)
+    assert module.BATCH, f"{name}: no checks"
+    assert module.duration(*module.code("hold:p:800")) > 1400, f"{name}: the code and a held P take too little time"
+checks.record("one", True, "fine", "one")
+checks.record("two", None, "look", "two")
+path = checks.report("test", "now", ["by hand"])
+text = open(path, encoding="utf-8").read()
+for want in ("1 YES, 0 NO, 1 to look at", "- **YES** one: fine (`shots/one.png`)", "- **LOOK** two: look", "- by hand"):
+    assert want in text, f"the report lacks {want!r}:\n{text}"
+print("Batch checks passed")
+PY

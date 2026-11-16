@@ -3573,7 +3573,11 @@ class AtlasIme : InputMethodService() {
         if (KeyCapture.waiting?.invoke(event) == true) return true
         // Back closes the picker, and its release goes with it.
         if (keyCode == KeyEvent.KEYCODE_BACK && openPicker() != null) {
-            if (event.repeatCount == 0) closePicker()
+            if (event.repeatCount == 0) {
+                // An engine's code goes with its choices.
+                if (picker is LanguagePicker.Choices) languages.engine?.reset()
+                closePicker()
+            }
             pickerKey = keyCode
             return true
         }

@@ -475,12 +475,14 @@ public final class SwipeTyping {
 
     /**
      * The spelling that the user gave a saved word when it has capitals, such as "Lok" for "lok", or null. Only while
-     * learning is on, as the saved words only count then.
+     * learning is on, as the saved words only count then. Else a name on this phone's capitals, unless the user saved the
+     * word in lowercase: their own spelling wins (#91).
      */
     public String savedSpelling(String word) {
         String key = SwipeWords.normalise(word);
         String saved = learningEnabled ? savedCapitals.get(key) : null;
         if (saved != null) return saved;
+        if (savedLowercase(key)) return null;
         String name = phoneNames.get(key);
         return name == null || name.equals(key) ? null : name;
     }
@@ -490,8 +492,12 @@ public final class SwipeTyping {
      * the earlier ones, so turning contacts off clears theirs at once. The engines take them before the next swipe.
      */
     public void phoneNames(Map<String, String> contacts, Map<String, String> apps) {
-        phoneNames = Map.copyOf(PhoneNames.merged(apps, contacts));
-        phoneNameOrder = PhoneNames.order(contacts, apps);
+        Map<String, String> names = Map.copyOf(PhoneNames.merged(apps, contacts));
+        List<String> order = PhoneNames.order(contacts, apps);
+        // The engines take the names again only when they changed: an edit to a contact's number changes none (#85).
+        if (names.equals(phoneNames) && order.equals(phoneNameOrder)) return;
+        phoneNames = names;
+        phoneNameOrder = order;
         namesRevision++;
     }
 
@@ -515,8 +521,15 @@ public final class SwipeTyping {
     /** A swiped or completed word in a name's own capitals, when it is a name on this phone written in lowercase. */
     private String nameCase(String word) {
         if (!word.equals(word.toLowerCase(Locale.ROOT))) return word;
-        String name = phoneNames.get(SwipeWords.normalise(word));
+        String key = SwipeWords.normalise(word);
+        if (savedLowercase(key)) return word;
+        String name = phoneNames.get(key);
         return name == null ? word : name;
+    }
+
+    /** The user saved this word in lowercase while learning is on, so a name's capitals never replace it. */
+    private boolean savedLowercase(String key) {
+        return learningEnabled && activeWords.contains(key) && !savedCapitals.containsKey(key);
     }
 
     /** The spelling of a name, such as "Monday" for "monday", or null for any other word. */

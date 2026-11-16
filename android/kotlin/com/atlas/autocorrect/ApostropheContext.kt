@@ -112,6 +112,37 @@ class ApostropheContext(
         /** Whether only the words around [word] can say if it's missing an apostrophe. */
         fun isTarget(word: String) = word.lowercase() in CANDIDATES
 
+        /**
+         * The other form of each pair, both ways, that the bar offers while the word is being typed (#73). Offered only: a tap is
+         * the user's choice. "were" and "we're" are here, though the model never changes them. "they're" offers "their".
+         */
+        val OTHER_FORMS: Map<String, String> = run {
+            val pairs = CANDIDATES.flatMap { (plain, forms) -> forms.map { plain to it } } + ("were" to "we're")
+            val other = LinkedHashMap<String, String>()
+            for ((plain, form) in pairs) {
+                other.putIfAbsent(plain, form)
+                other.putIfAbsent(form, plain)
+            }
+            other
+        }
+
+        /** The bar's second place, which it draws on the left (Strip's WORD_ORDER): the middle is the first. */
+        const val LEFT_PLACE = 1
+
+        /**
+         * [suggestions] for [typed], the word being typed, with its pair's other form in the bar's left place: "it's" while you
+         * type "its", and "its" while you type "it's". If the other form is already first, the typed form takes the left place.
+         */
+        fun offerOther(suggestions: List<String>, typed: String): List<String> {
+            val other = OTHER_FORMS[typed.lowercase().replace('’', '\'')] ?: return suggestions
+            if (suggestions.isEmpty()) return suggestions
+            val shown = if (typed.startsWith("I'") || typed.startsWith("I’")) other else cased(other, typed, false)
+            val first = suggestions[0]
+            val left = if (first.equals(shown, ignoreCase = true)) typed else shown
+            val rest = suggestions.drop(1).filterNot { it.equals(left, ignoreCase = true) }
+            return listOf(first) + left + rest
+        }
+
         /** [form] in [typed]'s case: "I'll" always has its capital, and a capital or [opening] a sentence gives the first one. */
         fun cased(form: String, typed: String, opening: Boolean): String = when {
             form.startsWith("i'") -> "I" + form.drop(1)
@@ -124,12 +155,15 @@ class ApostropheContext(
 
         /**
          * Reads [rest], the text between a waiting word and the cursor. It's ready once [wanted] words after it have ended with a
-         * space or a mark, or sooner at a . ! ? or line break, which ends the sentence: words past that never count. The words come
-         * as written, with any mark stuck to the last one ("free.", "to,"), as the study read them: "you're free." beats "your free."
-         * by far more than "you're free" does.
+         * space, or sooner at any mark: a comma, semicolon, colon, dash, bracket, quote, . ! ? or a line break (#73). Words past it
+         * never count, and with too few words before it for the model, the word stays as typed. A hyphen inside a word
+         * ("well-known") is part of the word, not a mark. The words come as written, with the mark stuck to the last one ("free.",
+         * "to,"), as the study read them: "you're free." beats "your free." by far more than "you're free" does.
          */
         fun following(rest: String, wanted: Int): Following {
             if (rest.isEmpty() || rest[0].isLetterOrDigit() || rest[0] == '\'' || rest[0] == '’') return Following.Drop
+            // A hyphen straight after the word joins it to another, or may: "its-" is no longer the word that waited.
+            if (rest[0] in HYPHENS && (rest.length == 1 || isWordLetter(rest[1]))) return Following.Drop
             fun ready(end: Int) = Following.Ready(rest.substring(0, rest.firstFrom(end) { it.isWhitespace() }))
             var at = 0
             var words = 0
@@ -137,9 +171,11 @@ class ApostropheContext(
             while (true) {
                 val gap = at
                 while (at < rest.length && !isWordLetter(rest[at])) at++
-                if (rest.substring(gap, at).any { it == '\n' || it in ContextWindow.SENTENCE_MARKS }) return ready(end)
+                if (rest.substring(gap, at).any { !it.isWhitespace() || it == '\n' }) return ready(end)
                 if (at == rest.length) return Following.Wait
-                while (at < rest.length && isWordLetter(rest[at])) at++
+                // A hyphen between letters keeps the word going, and one at the cursor may still get the rest of the word.
+                while (at < rest.length && (isWordLetter(rest[at]) || rest[at] in HYPHENS && isWordLetter(rest[at - 1])
+                        && (at + 1 == rest.length || isWordLetter(rest[at + 1])))) at++
                 // A word that runs to the cursor is still being typed.
                 if (at == rest.length) return Following.Wait
                 words++
@@ -156,5 +192,8 @@ class ApostropheContext(
         }
 
         private fun isWordLetter(c: Char) = c.isLetterOrDigit() || c == '\'' || c == '’'
+
+        /** A hyphen, which joins two words into one when it has letters on both sides. A dash on its own is a mark. */
+        private val HYPHENS = setOf('-', '‐')
     }
 }

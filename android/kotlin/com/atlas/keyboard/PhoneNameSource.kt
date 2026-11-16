@@ -28,14 +28,17 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
     private val worker = Executors.newSingleThreadExecutor { task -> Thread(task, "phone-names").apply { isDaemon = true } }
     @Volatile private var apps: Map<String, String> = emptyMap()
     @Volatile private var contacts: Map<String, String> = emptyMap()
-    private var started = false
+    @Volatile private var started = false
     private var watchingContacts = false
+    // A sync or an app update sends changes in bursts: read the names once it settles, not for each one (#85).
+    private val appsSettle = settle { refreshApps() }
+    private val contactsSettle = settle { refreshContacts() }
 
     private val packages = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = refreshApps()
+        override fun onReceive(context: Context, intent: Intent) = appsSettle.poke()
     }
     private val contactChanges = object : ContentObserver(main) {
-        override fun onChange(selfChange: Boolean) = refreshContacts()
+        override fun onChange(selfChange: Boolean) = contactsSettle.poke()
     }
     private val settingChanged = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == TypingSettings.CONTACT_NAMES) refreshContacts()
@@ -59,15 +62,29 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
         }
     }
 
+    /** Stops for good: the keyboard is going. Its thread ends, so nothing of the keyboard stays held by it (#85). */
     fun stop() {
         if (!started) return
         started = false
         context.unregisterReceiver(packages)
         TypingSettings.settings(context).unregisterOnSharedPreferenceChangeListener(settingChanged)
         watchContacts(false)
+        appsSettle.stop()
+        contactsSettle.stop()
+        worker.shutdownNow()
     }
 
-    private fun refreshApps() = worker.execute {
+    private fun settle(work: () -> Unit) =
+        Settle(SETTLE_MILLIS, { run, millis -> main.postDelayed(run, millis) }, { main.removeCallbacks(it) }, work)
+
+    /** Runs [work] on the names' thread while it runs. After [stop] a late call, such as the engine getting ready, does nothing. */
+    private fun onWorker(work: () -> Unit) {
+        if (!started) return
+        try { worker.execute { if (started) work() } }
+        catch (_: java.util.concurrent.RejectedExecutionException) {}
+    }
+
+    private fun refreshApps() = onWorker {
         apps = try {
             PhoneNames.words(appLabels(), { typing.baseFrequency(it).toDouble() }, typing::baseLowercase)
         } catch (error: RuntimeException) {
@@ -77,10 +94,10 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
         publish()
     }
 
-    private fun refreshContacts() = worker.execute {
+    private fun refreshContacts() = onWorker {
         val allowed = contactsAllowed(context)
         contacts = if (allowed) try {
-            PhoneNames.words(contactNames(), { typing.baseFrequency(it).toDouble() }, typing::baseLowercase)
+            PhoneNames.words(contactNames(), { typing.baseFrequency(it).toDouble() }, typing::baseLowercase, true)
         } catch (error: RuntimeException) {
             Log.w(TAG, "Could not read the contacts' names", error)
             emptyMap()
@@ -124,6 +141,8 @@ class PhoneNameSource(private val context: Context, private val typing: SwipeTyp
 
     companion object {
         private const val TAG = "PhoneNames"
+        /** How long contacts and apps must stay unchanged before their names are read again. */
+        private const val SETTLE_MILLIS = 3000L
 
         /** The setting is on and Android allows reading contacts. */
         fun contactsAllowed(context: Context) = TypingSettings.contactNames(context)

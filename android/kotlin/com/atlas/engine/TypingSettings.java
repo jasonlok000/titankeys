@@ -18,7 +18,9 @@ public final class TypingSettings {
     private static final String DEFAULT_TAP_KEYS = "";
     // The defaults follow how the Titan 2 Elite is set up by the person who made TitanKeys: holding a letter for its symbol,
     // fn as Ctrl, suggestions in an empty home search, and American spelling. Scroll assistant and the typing log stay off.
-    private static final int DEFAULT_HOLD_SYMBOL_MILLIS = 250;
+    // Hold for symbols starts at Medium, 400 ms (owner, #77, 3.0). It is stored only once someone picks a time, so everyone who
+    // never did moves from 2.x's 250 ms with the update, and a stored choice stays.
+    public static final int DEFAULT_HOLD_SYMBOL_MILLIS = HoldEngine.DEFAULT_MILLIS;
 
     public static boolean autoCapitalise(Context context) {
         return preferences(context).getBoolean("auto_capitalise", true);

@@ -51,7 +51,7 @@ public final class HoldEngineChecks {
 
     private static void holdTime() {
         HoldEngine e = new HoldEngine(out);
-        check(e.threshold() == 300, "The hold time starts at 300 ms");
+        check(e.threshold() == 400, "The hold time starts at 400 ms");
         e.threshold(199);
         check(e.threshold() == 200, "The hold time is at least 200 ms");
         e.threshold(1001);
@@ -62,13 +62,14 @@ public final class HoldEngineChecks {
         check(e.threshold() == 1000, "1000 ms is allowed");
         check(HoldEngine.clamp(0) == HoldEngine.MIN_MILLIS && HoldEngine.clamp(5000) == HoldEngine.MAX_MILLIS, "A saved value stays in range");
 
+        check(HoldEngine.DEFAULT_MILLIS == 400, "Hold for symbols starts at Medium, 400 ms (#77)");
         e = engine(HoldEngine.DEFAULT_MILLIS);
         down(e, S, 1000);
-        up(e, S, 1299);
-        check(drain().isEmpty(), "299 ms keeps the letter");
+        up(e, S, 1399);
+        check(drain().isEmpty(), "399 ms keeps the letter");
         down(e, S, 2000);
-        up(e, S, 2300);
-        check(drain().equals("hold:47"), "300 ms is a hold");
+        up(e, S, 2400);
+        check(drain().equals("hold:47"), "400 ms is a hold");
         e.threshold(200);
         down(e, S, 3000);
         up(e, S, 3199);

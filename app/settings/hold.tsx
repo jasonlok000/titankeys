@@ -3,7 +3,7 @@ import { DurationPage, ms } from "../../lib/duration";
 
 export const holdLabel = ({ holdSymbols, holdSymbolMillis }: State) => holdSymbols ? ms(holdSymbolMillis) : "Off";
 
-/** The keyboard takes 200 to 1000 ms (HoldEngine.clamp), and 250 is its default. */
+/** The keyboard takes 200 to 1000 ms (HoldEngine.clamp), and 400, Medium, is its default (TypingSettings.DEFAULT_HOLD_SYMBOL_MILLIS). */
 export default function Hold() {
   return <DurationPage title="Hold for symbols"
     subtitle="Hold a letter to type the symbol printed on it. Pick how long you hold."

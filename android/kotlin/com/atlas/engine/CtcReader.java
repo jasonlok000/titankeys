@@ -22,6 +22,8 @@ public final class CtcReader implements AutoCloseable {
         env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         options.setIntraOpNumThreads(threads);
+        // Threads sleep between runs rather than spin, which kept the CPU awake after each swipe for nothing (#85).
+        options.addConfigEntry("session.intra_op.allow_spinning", "0");
         options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
         session = env.createSession(model.getPath(), options);
         keys = OnnxTensor.createTensor(env, FloatBuffer.wrap(CtcWords.titanKeys()), new long[]{1, 64, 2});

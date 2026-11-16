@@ -1,0 +1,630 @@
+{
+ "pairs": 2306,
+ "labels": {
+  "joined: right join": 380,
+  "joined: unclear": 58,
+  "apart: other": 666,
+  "apart: right non-join": 1120,
+  "joined: wrong join": 64,
+  "apart: missed join": 18
+ },
+ "wrong join episodes": 46,
+ "joins with contact size logged": {
+  "right join": 162,
+  "unclear": 29,
+  "wrong join": 27
+ },
+ "joins by version": {
+  "1.2.0": 332,
+  "2.0.0": 145,
+  "2.1.0": 25
+ },
+ "logged joins the app's sameStroke reproduces": 483,
+ "apart pairs inside today's window (couldContinue)": {
+  "other": 25,
+  "right non-join": 35,
+  "missed join": 2
+ },
+ "rules": {
+  "C1 a second touch over 250 ms later": {
+   "right joins": 380,
+   "right joins kept": 369,
+   "right lost 1.2": 5,
+   "headline": -2,
+   "unclear joins": 58,
+   "unclear cut": 2,
+   "wrong joins": 64,
+   "wrong joins cut": 9,
+   "wrong cut 1.2": 5,
+   "right lost 2.x": 6,
+   "wrong cut 2.x": 4,
+   "wrong episodes cut": 8
+  },
+  "C2 over 150 ms later and the first word was clear": {
+   "right joins": 380,
+   "right joins kept": 376,
+   "right lost 1.2": 2,
+   "headline": 4,
+   "unclear joins": 58,
+   "unclear cut": 1,
+   "wrong joins": 64,
+   "wrong joins cut": 8,
+   "wrong cut 1.2": 4,
+   "right lost 2.x": 2,
+   "wrong cut 2.x": 4,
+   "wrong episodes cut": 8
+  },
+  "C3 first word clear and second swipe long (5+ keys)": {
+   "right joins": 380,
+   "right joins kept": 368,
+   "right lost 1.2": 10,
+   "headline": -4,
+   "unclear joins": 58,
+   "unclear cut": 0,
+   "wrong joins": 64,
+   "wrong joins cut": 7,
+   "wrong cut 1.2": 4,
+   "right lost 2.x": 2,
+   "wrong cut 2.x": 3,
+   "wrong episodes cut": 7
+  },
+  "C4 the second touch lands still (new words land still)": {
+   "right joins": 380,
+   "right joins kept": 332,
+   "right lost 1.2": 33,
+   "headline": -34,
+   "unclear joins": 58,
+   "unclear cut": 13,
+   "wrong joins": 64,
+   "wrong joins cut": 11,
+   "wrong cut 1.2": 3,
+   "right lost 2.x": 15,
+   "wrong cut 2.x": 8,
+   "wrong episodes cut": 11
+  },
+  "C5 a still flicker off the top row (resting finger)": {
+   "right joins": 380,
+   "right joins kept": 376,
+   "right lost 1.2": 4,
+   "headline": -3,
+   "unclear joins": 58,
+   "unclear cut": 0,
+   "wrong joins": 64,
+   "wrong joins cut": 16,
+   "wrong cut 1.2": 16,
+   "right lost 2.x": 0,
+   "wrong episodes cut": 1
+  },
+  "C2+C5": {
+   "right joins": 380,
+   "right joins kept": 372,
+   "right lost 1.2": 6,
+   "headline": 1,
+   "unclear joins": 58,
+   "unclear cut": 1,
+   "wrong joins": 64,
+   "wrong joins cut": 24,
+   "wrong cut 1.2": 20,
+   "right lost 2.x": 2,
+   "wrong cut 2.x": 4,
+   "wrong episodes cut": 9
+  },
+  "C6 over 150 ms later and the first ended with a full-size touch (2+ steps)": {
+   "right joins": 380,
+   "right joins kept": 379,
+   "right lost 1.2": 0,
+   "headline": 6,
+   "unclear joins": 58,
+   "unclear cut": 2,
+   "wrong joins": 64,
+   "right lost 2.x": 1,
+   "wrong joins cut": 7,
+   "wrong cut 2.x": 7,
+   "wrong episodes cut": 7
+  },
+  "C7 C2 or C6": {
+   "right joins": 380,
+   "right joins kept": 376,
+   "right lost 1.2": 2,
+   "headline": 8,
+   "unclear joins": 58,
+   "unclear cut": 3,
+   "wrong joins": 64,
+   "wrong joins cut": 12,
+   "wrong cut 1.2": 4,
+   "right lost 2.x": 2,
+   "wrong cut 2.x": 8,
+   "wrong episodes cut": 12
+  },
+  "A1 lands moving within 150 ms, 2 keys or less, anywhere on the pad": {
+   "other pairs joined": 6,
+   "right non-joins joined": 0,
+   "headline": 3,
+   "missed joins": 18,
+   "missed found": 4,
+   "wrong episodes cut": 0
+  },
+  "A2 lands moving within 150 ms, anywhere (no distance limit)": {
+   "other pairs joined": 19,
+   "right non-joins joined": 1,
+   "headline": 5,
+   "missed joins": 18,
+   "missed found": 8,
+   "wrong episodes cut": 0
+  },
+  "A3 today's window widened to the whole top row when it lands moving": {
+   "other pairs joined": 7,
+   "right non-joins joined": 0,
+   "headline": 3,
+   "missed joins": 18,
+   "missed found": 3,
+   "wrong episodes cut": 0
+  },
+  "A4 within 100 ms, 2 keys or less, anywhere": {
+   "other pairs joined": 8,
+   "right non-joins joined": 0,
+   "headline": 2,
+   "missed joins": 18,
+   "missed found": 3,
+   "wrong episodes cut": 0
+  }
+ },
+ "features (p10, median, p90)": {
+  "gap": {
+   "right join": [
+    29,
+    67,
+    143
+   ],
+   "unclear": [
+    29,
+    85,
+    190
+   ],
+   "right non-join in window": [
+    171,
+    285,
+    381
+   ],
+   "wrong join": [
+    9,
+    86,
+    258
+   ],
+   "missed join": [
+    10,
+    123,
+    218
+   ]
+  },
+  "a_end_y": {
+   "right join": [
+    0.1544,
+    0.2119,
+    0.3192
+   ],
+   "unclear": [
+    0.1544,
+    0.2089,
+    0.4846
+   ],
+   "right non-join in window": [
+    0.1682,
+    0.2576,
+    0.3133
+   ],
+   "wrong join": [
+    0.1544,
+    0.2473,
+    0.8839
+   ],
+   "missed join": [
+    0.1667,
+    0.2488,
+    0.4531
+   ]
+  },
+  "b_start_y": {
+   "right join": [
+    0.1544,
+    0.1575,
+    0.2193
+   ],
+   "unclear": [
+    0.1544,
+    0.1697,
+    0.4147
+   ],
+   "right non-join in window": [
+    0.1544,
+    0.2193,
+    0.2488
+   ],
+   "wrong join": [
+    0.1544,
+    0.1758,
+    0.8839
+   ],
+   "missed join": [
+    0.1544,
+    0.2488,
+    0.5158
+   ]
+  },
+  "jump_keys": {
+   "right join": [
+    0.4209,
+    1.3428,
+    2.5734
+   ],
+   "unclear": [
+    0.4302,
+    1.0266,
+    2.5369
+   ],
+   "right non-join in window": [
+    0.4564,
+    2.0074,
+    3.1168
+   ],
+   "wrong join": [
+    0.0545,
+    1.0047,
+    2.7273
+   ],
+   "missed join": [
+    0.188,
+    1.9256,
+    4.7593
+   ]
+  },
+  "a_end_speed": {
+   "right join": [
+    0.0043,
+    0.0165,
+    0.0302
+   ],
+   "unclear": [
+    0.0056,
+    0.0159,
+    0.0285
+   ],
+   "right non-join in window": [
+    0.0068,
+    0.015,
+    0.022
+   ],
+   "wrong join": [
+    0.001,
+    0.0148,
+    0.0283
+   ],
+   "missed join": [
+    0.0029,
+    0.0135,
+    0.0244
+   ]
+  },
+  "b_start_speed": {
+   "right join": [
+    0.0004,
+    0.0072,
+    0.0147
+   ],
+   "unclear": [
+    0.0002,
+    0.0066,
+    0.0126
+   ],
+   "right non-join in window": [
+    0.0001,
+    0.0004,
+    0.0067
+   ],
+   "wrong join": [
+    0.0,
+    0.0011,
+    0.0091
+   ],
+   "missed join": [
+    0.0001,
+    0.0042,
+    0.0123
+   ]
+  },
+  "carries_on": {
+   "right join": [
+    -0.9011,
+    0.9754,
+    0.9995
+   ],
+   "unclear": [
+    -0.999,
+    0.9367,
+    0.9971
+   ],
+   "right non-join in window": [
+    -0.9997,
+    -0.9495,
+    0.981
+   ],
+   "wrong join": [
+    -0.9604,
+    0.8488,
+    0.9993
+   ],
+   "missed join": [
+    -0.9993,
+    0.4574,
+    0.9876
+   ]
+  },
+  "reverses": {
+   "right join": [
+    -0.9977,
+    -0.7746,
+    0.9016
+   ],
+   "unclear": [
+    -0.9997,
+    -0.713,
+    0.987
+   ],
+   "right non-join in window": [
+    -0.9456,
+    0.3983,
+    0.98
+   ],
+   "wrong join": [
+    -0.9834,
+    -0.4379,
+    0.494
+   ],
+   "missed join": [
+    -0.9956,
+    -0.045,
+    0.9471
+   ]
+  },
+  "a_len": {
+   "right join": [
+    1.4865,
+    5.5068,
+    13.7775
+   ],
+   "unclear": [
+    1.6352,
+    7.1129,
+    14.0694
+   ],
+   "right non-join in window": [
+    2.7221,
+    5.4673,
+    10.4535
+   ],
+   "wrong join": [
+    2.3939,
+    5.9893,
+    12.96
+   ],
+   "missed join": [
+    2.7717,
+    5.0862,
+    11.8592
+   ]
+  },
+  "b_len": {
+   "right join": [
+    0.4899,
+    3.8359,
+    9.308
+   ],
+   "unclear": [
+    0.0831,
+    2.5548,
+    8.7271
+   ],
+   "right non-join in window": [
+    2.784,
+    6.9282,
+    12.9532
+   ],
+   "wrong join": [
+    0.0,
+    0.8298,
+    6.7147
+   ],
+   "missed join": [
+    1.5328,
+    4.1379,
+    9.7011
+   ]
+  },
+  "b_dur": {
+   "right join": [
+    76,
+    266,
+    562
+   ],
+   "unclear": [
+    75,
+    219,
+    524
+   ],
+   "right non-join in window": [
+    248,
+    428,
+    848
+   ],
+   "wrong join": [
+    10,
+    95,
+    466
+   ],
+   "missed join": [
+    103,
+    381,
+    609
+   ]
+  },
+  "a_margin": {
+   "right join": [
+    0.7424,
+    5.4971,
+    16.35
+   ],
+   "unclear": [
+    1.1119,
+    5.5525,
+    15.589
+   ],
+   "right non-join in window": [
+    3.6282,
+    22.9944,
+    32.0204
+   ],
+   "wrong join": [
+    1.2961,
+    5.4255,
+    19.0359
+   ],
+   "missed join": [
+    0.8065,
+    5.983,
+    17.9322
+   ]
+  },
+  "a_path_per_letter": {
+   "right join": [
+    -3.2973,
+    -1.1084,
+    -0.0237
+   ],
+   "unclear": [
+    -3.2552,
+    -1.7537,
+    -0.0402
+   ],
+   "right non-join in window": [
+    -1.0235,
+    -0.0519,
+    -0.0012
+   ],
+   "wrong join": [
+    -2.3976,
+    -0.7583,
+    -0.0382
+   ],
+   "missed join": [
+    -2.1158,
+    -0.8609,
+    -0.0301
+   ]
+  },
+  "b_margin": {
+   "right join": [
+    1.1871,
+    9.7783,
+    24.9568
+   ],
+   "unclear": [
+    0.5422,
+    7.2103,
+    19.6691
+   ],
+   "right non-join in window": [
+    0.9565,
+    25.8708,
+    42.6131
+   ],
+   "wrong join": [
+    1.8176,
+    4.2638,
+    13.6128
+   ],
+   "missed join": [
+    0.8656,
+    7.1483,
+    20.6504
+   ]
+  },
+  "a_end_size": {
+   "right join": [
+    1.0,
+    1.5714,
+    2.1429
+   ],
+   "unclear": [
+    1.0,
+    1.5714,
+    2.0
+   ],
+   "right non-join in window": [
+    1.4286,
+    2.0,
+    2.0
+   ],
+   "wrong join": [
+    1.2857,
+    1.8571,
+    2.2857
+   ],
+   "missed join": [
+    1.0,
+    1.7143,
+    2.0
+   ]
+  },
+  "b_start_size": {
+   "right join": [
+    1.0,
+    1.5,
+    2.1667
+   ],
+   "unclear": [
+    1.0,
+    1.8333,
+    2.0
+   ],
+   "right non-join in window": [
+    1.4286,
+    2.0,
+    2.0
+   ],
+   "wrong join": [
+    1.0,
+    1.6667,
+    2.0
+   ],
+   "missed join": [
+    1.0,
+    2.0,
+    2.3333
+   ]
+  }
+ },
+ "group sizes": {
+  "right join": 380,
+  "unclear": 58,
+  "right non-join in window": 35,
+  "wrong join": 64,
+  "missed join": 18
+ },
+ "share landing moving (0.004 keys/ms or more)": {
+  "right join": 0.74,
+  "unclear": 0.6,
+  "right non-join in window": 0.14,
+  "wrong join": 0.33,
+  "missed join": 0.56
+ },
+ "share with a tiny second touch": {
+  "right join": 0.07,
+  "unclear": 0.09,
+  "right non-join in window": 0.0,
+  "wrong join": 0.45,
+  "missed join": 0.0
+ },
+ "right joins that changed the word": 359,
+ "kept pairs ending and starting on the top row, inside today's window": 35,
+ "kept pairs ending and starting on the top row, gap 400 ms or less": 89
+}

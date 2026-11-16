@@ -1587,7 +1587,8 @@ class GuideActivity : Activity() {
             // gives back would drop the keys by its height (owner, 2026-11-11). They keep the most room the keyboard took.
             // Only the keyboard's own height counts: an open panel is much taller, and keeping its room after it closed squashed the
             // keys and left a gap for the rest of the guide (owner, v5: slide 12). The panel's room counts only while it's open.
-            val room = GuideRoom.room(bars.bottom, panelOpen, steadyBottom, dp(PANEL_EXTRA), keep = guideLooks == true || playground)
+            val room = GuideRoom.room(bars.bottom, panelOpen, steadyBottom, dp(PANEL_EXTRA), keep = guideLooks == true || playground,
+                follow = playground)
             // A panel's room arrives before the keyboard says the panel is open: the drawing hides at once, so its rows never peek
             // above the panel or get cut by it (owner, v5.3).
             panelRoom = room.sized

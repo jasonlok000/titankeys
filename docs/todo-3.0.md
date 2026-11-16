@@ -442,6 +442,12 @@ More calls get added here as the night goes.
   - The WSL distro export and import.
   - The 07:30 battery reset.
 
+## Later, after the languages work on the phone (owner, 2026-11-16)
+
+- **Refine the languages** once the owner has seen them working: a context model like English's next-word model to help
+  autocorrect and suggestions in other languages (maybe in 3.0), and other optimizing.
+- **Download on demand** stays a future option, only if the app's size ever passes Play's limit.
+
 ## Blocked, or not the Orchestrator's to finish
 
 - **Waiting on others:**

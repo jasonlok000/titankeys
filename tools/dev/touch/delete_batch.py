@@ -215,8 +215,8 @@ def check_dominoes_every_streak():
                   f"a flick just after the dominoes: {before_flick} words, then {after_flick}")
 
 
-BATCH = [check_flick_dots, check_full_hold, check_select_all, check_dominoes, check_99_words, check_key_ends_dominoes,
-         check_uncapped_delete]
+# The dominoes are dropped (owner, 2026-11-17 evening; E removes them): their checks are out, the uncapped delete stays.
+BATCH = [check_flick_dots, check_full_hold, check_select_all, check_uncapped_delete]
 # check_dominoes_every_streak is out: the owner's call of 2026-11-17 (55e7054e) plays them once a streak, past 100 words, live
 # through the hold. batch2_checks' 250-word hold checks that.
 

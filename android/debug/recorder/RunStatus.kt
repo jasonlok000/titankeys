@@ -56,7 +56,6 @@ class RunStatus : BroadcastReceiver() {
             .setStyle(Notification.BigTextStyle().bigText(if (note.isEmpty()) counts else "$counts\n$note"))
             .setOngoing(!status.done)
             .setOnlyAlertOnce(true)
-            .setSilent(true)
             .build()
         notifications.notify(ID, notification)
         Log.d(TAG, "run status: $title; $counts")

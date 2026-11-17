@@ -209,3 +209,18 @@ The six share Chinese's bar. Each has its own first line, then the shared block.
 - **Cangjie's example:** hqi is languages.md's own (竹手戈), and 我 is its Cangjie code. Worth a type on the phone.
 - **Zhuyin:** "some keys have two" follows the schema's comments (ㄐㄓ on J, ㄑㄔ on V, ㄒㄕ on C, ㄥㄦ on L).
 - **Accented capitals:** "Shift gives the capital one" follows "with Shift or Caps on, the accents show in capitals".
+
+**Checked (E, 2026-11-17)** with `rime_tool` on the shipped data, and in the code for Japanese. The Chinese and Japanese facts above are right as written:
+- **Typed examples:**
+  - Yale: neihou and leihou both give 你好, zungman gives 中文 (z for j, l for n, initials only), and diuneiloumou with one Space gives 屌你老母.
+  - Jyutping neihou and Pinyin nihao give 你好, toneless.
+  - Cangjie hqi gives 我.
+  - Quick hi gives 的 first, then 我, the first and last keys of 我's hqi. Quick's codes are two keys, and more share one, as the draft says.
+  - Zhuyin nefhwf and nehw both give 你好: tones optional, D ˊ, F ˇ, J ˋ, S ˙.
+- **Code lines** (`rime_tool preedit`): Cangjie hqi shows 竹手戈, Quick hi 竹戈, Zhuyin nefhwf ㄋㄧˇ ㄏㄠˇ (jxlxn ㄓㄨㄥ ㄨㄣ), Yale and Jyutping "nei hou".
+- **Japanese:**
+  - kyou → きょう, nn → ん and - → ー are Mozc's QWERTY table and `MozcEngine`.
+  - Whole sentences come first in its choices.
+  - Next words follow each pick (Mozc's zero-query suggestions).
+  - Enter types the romaji.
+  - Japanese's and Chinese's full stop is 。 (`fullStop` in their im.json).

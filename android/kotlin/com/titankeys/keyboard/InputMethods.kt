@@ -186,6 +186,16 @@ object SwitchOverlay {
         }
     }
 
+    /**
+     * The mark at Q (owner, 2026-11-17: "If only one input method is in one language, the q sign shd show the language icon
+     * instead"): the language's own mark where it has one input method on (中 with only Yale on, СР with only Serbian
+     * Cyrillic), else the input method's (耶, 粵 with two Chinese on).
+     */
+    fun markLabel(on: List<InputMethodIndex.Entry>, current: String, currentLabel: String): String {
+        val language = on.firstOrNull { it.id == current }?.language ?: return currentLabel
+        return if (on.count { it.language.id == language.id } == 1) language.label else currentLabel
+    }
+
     /** The row the switcher opens on: with one language on, straight to its input methods. */
     fun opening(languages: List<InputMethodIndex.LanguageOn>) = languages.singleOrNull()?.takeIf { it.methods.size > 1 }
 

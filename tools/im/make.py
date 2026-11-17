@@ -703,7 +703,7 @@ def write_im(folder, im):
 # Languages with more than one input method (owner, 2026-11-16: languages, then input methods, the Gboard way). Every other
 # input method is a language of its own, under its own name. A language's name is CLDR's for it in that language.
 LANGUAGES = {
-    "sr": {"name": "Српски", "nameEnglish": "Serbian", "label": "SR", "script": "Cyrl", "methods": ["sr", "sr-latn"]},
+    "sr": {"name": "Српски", "nameEnglish": "Serbian", "label": "СР", "script": "Cyrl", "methods": ["sr", "sr-latn"]},
     "zh": {"name": "中文", "nameEnglish": "Chinese", "label": "中", "script": "Hani",
            "methods": ["yue-yale", "yue-jyutping", "zh-pinyin"]},
 }

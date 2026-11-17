@@ -1471,6 +1471,8 @@ class TitanKeysIme : InputMethodService() {
         // The guide and the playground teach English, so they type it whatever input method is on.
         languages.englishOnly = inGuide || inPractice
         languages.refresh()
+        // Which input methods are on may have changed, and with them the mark at Q.
+        if (::languages.isInitialized) showInputMark()
         languages.variant()
         val english = languages.current.isEnglish
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
@@ -3679,7 +3681,7 @@ class TitanKeysIme : InputMethodService() {
         }
         if (state.composing || state.choices.isNotEmpty()) {
             val listed = languages.engine?.choices(0, ChineseRow.ASK + 1).orEmpty().ifEmpty { state.choices }
-            showPicker(LanguagePicker.Choices(state, listed, englishFor(state, listed), languages.current.label))
+            showPicker(LanguagePicker.Choices(state, listed, englishFor(state, listed), markLabel()))
         } else closePicker()
     }
 
@@ -3707,9 +3709,11 @@ class TitanKeysIme : InputMethodService() {
      * 2026-11-17: "The Yale Chinese indicator is not showing in the suggestion").
      */
     private fun showInputMark() {
-        val current = languages.current
-        strip?.inputMark = if (current.isEnglish) "" else current.label
+        strip?.inputMark = if (languages.current.isEnglish) "" else markLabel()
     }
+
+    /** The mark at Q: the language's where it has one input method on, else the input method's ([SwitchOverlay.markLabel]). */
+    private fun markLabel() = SwitchOverlay.markLabel(languages.on, languages.current.id, languages.current.label)
 
     /** Chinese's and Japanese's bigger menu, that Sym opens while a code is typed, in the Sym panel's place: see [ChoicesMenu]. */
     private var choicesMenu: ChoicesMenu? = null

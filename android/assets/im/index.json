@@ -555,7 +555,7 @@
    "id": "sr",
    "name": "Српски",
    "nameEnglish": "Serbian",
-   "label": "SR",
+   "label": "СР",
    "script": "Cyrl",
    "experimental": true
   }
@@ -657,7 +657,7 @@
    "id": "sr",
    "name": "Српски",
    "nameEnglish": "Serbian",
-   "label": "SR",
+   "label": "СР",
    "script": "Cyrl",
    "experimental": true
   }

@@ -40,7 +40,8 @@ test("the mark sits over Q and the more cue over P", () => {
   expect(picker).toContain("drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)");
   // Orange while a code is typed: Sym opens more, though Sym isn't under it.
   expect(picker).toContain("pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted");
-  expect(body(ime, "engineState")).toContain("languages.current.label");
+  // The language's mark where it has one input method on, else the input method's (owner, 2026-11-17).
+  expect(body(ime, "engineState")).toContain("markLabel()");
 });
 
 test("Space picks the first choice: a resting finger doesn't change that", () => {
@@ -113,7 +114,7 @@ test("the row shows no hover; the bigger menu does", () => {
 });
 
 test("the mark shows whenever an input method that isn't English types, the idle bar included", () => {
-  expect(body(ime, "showInputMark")).toContain("strip?.inputMark = if (current.isEnglish) \"\" else current.label");
+  expect(body(ime, "showInputMark")).toContain("strip?.inputMark = if (languages.current.isEnglish) \"\" else markLabel()");
   expect(body(ime, "inputMethodChanged")).toContain("showInputMark()");
   expect(body(strip, "dispatchDraw")).toContain("drawInputMark(canvas)");
 });

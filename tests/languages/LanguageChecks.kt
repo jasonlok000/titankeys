@@ -473,6 +473,15 @@ private fun hindiRulesType() {
     for (c in "agar") engine.key(c)
     same("the word on the bar keeps its virama until Space", engine.code(), "अगर्")
     same("Space writes it without, and the space", engine.space().commit, "अगर ")
+    // The bar shows what Space types first (#98): the word as Space writes it, then the list's.
+    val hiWords = java.util.Locale.forLanguageTag("hi")
+    val listed = RulesComposer(rules, WordList.read(sequenceOf(" word=नमस्ते,f=200", " word=अगरबत्ती,f=100"), hiWords))
+    same("The row starts with the word as Space writes it", "agar".map { listed.key(it) }.last().choices.first(), "अगर")
+    same("Picking it writes it as Space does", listed.pick(0).commit, "अगर ")
+    // A slipped key: the word one slip away, on the bar only. Space writes what was typed.
+    val slipped = "namastr".map { listed.key(it) }.last().choices
+    same("A neighbouring key's word is offered after the word as typed", slipped.drop(1), listOf("नमस्ते"))
+    same("Space writes what was typed", listed.space().commit, rules.spell("namastr "))
     for (c in "namastee") engine.key(c)
     same("Backspace takes the last key off", engine.backspace().code, "नमस्ते")
     same("a mark no rule takes ends the word", engine.key('!').commit, "नमस्ते")
@@ -679,8 +688,16 @@ private fun telexMarksAndTones() {
     same("The tone key marks the code", engine.key('s').code, "tiếng")
     same("Backspace takes the last key off", engine.backspace().code, "tiêng")
     engine.reset()
-    same("Unmarked code offers the marked word", "tieng".map { engine.key(it) }.last().choices, listOf("tiếng"))
-    same("Picking writes it with a space", engine.pick(0).commit, "tiếng ")
+    // The bar shows what Space types first (#98): the word as typed, then the list's.
+    same("Unmarked code offers the marked word, after the word as typed", "tieng".map { engine.key(it) }.last().choices,
+        listOf("tieng", "tiếng"))
+    same("Picking writes it with a space", engine.pick(1).commit, "tiếng ")
+    "tieng".forEach { engine.key(it) }
+    same("Picking the first writes the word as typed, as Space does", engine.pick(0).commit, "tieng ")
+    // A slipped key: the word one slip away, on the bar only. Space writes what was typed.
+    val slips = TelexComposer(WordList.read(sequenceOf(" word=xin,f=200"), vi))
+    same("A neighbouring key's word is offered after the word as typed", "xon".map { slips.key(it) }.last().choices, listOf("xon", "xin"))
+    same("Space writes what was typed", slips.space().commit, "xon")
     // The bigger menu, opened with a swipe up: the word list's words past the bar's eight, and a pick from any of them.
     val many = TelexComposer(WordList.read(("bcdgklmnp".flatMap { c -> "aeiou".map { v -> "ta$c$v" } }).asSequence()
         .mapIndexed { i, w -> " word=$w,f=${1000 - i}" }, vi))

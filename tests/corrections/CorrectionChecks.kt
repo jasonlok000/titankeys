@@ -136,6 +136,7 @@ fun main(args: Array<String>) {
         100.0 * total.spaceWrong / total.slips, 100.0 * total.barRight / total.slips,
         100.0 * total.accentsRight / maxOf(1, total.accents), 100.0 * total.rightChanged / maxOf(1, total.right)))
     check("English isn't one of them: it keeps its own corrector", !LanguageCorrections.corrects(InputMethod.ENGLISH))
+    engineSlips(folder)
     check("Space's wrong changes stay near zero where it puts fixes in", total.spaceWrong <= LanguageCorrections.MOST_WRONG * total.slips)
     val file = File(folder, LanguageCorrections.BAR_ONLY_FILE)
     if (write) {
@@ -152,4 +153,116 @@ fun main(args: Array<String>) {
         kotlin.system.exitProcess(1)
     }
     println("Correction checks passed")
+}
+
+/** Telex keys for a Vietnamese [word]: â aa, ă aw, ơ ow, ư uw, đ dd, and its tone's key last. Null where a letter has none. */
+private fun telexKeys(word: String): String? {
+    val tones = mapOf('́' to 's', '̀' to 'f', '̉' to 'r', '̃' to 'x', '̣' to 'j')
+    val marks = mapOf('̂' to null, '̆' to 'w', '̛' to 'w')
+    val out = StringBuilder()
+    var tone: Char? = null
+    for (c in java.text.Normalizer.normalize(word, java.text.Normalizer.Form.NFD)) {
+        when {
+            c in tones -> tone = tones[c]
+            c == '̂' -> out.append(out.last())
+            c in marks -> out.append(marks[c])
+            c == 'đ' -> out.append("dd")
+            c in 'a'..'z' -> out.append(c)
+            else -> return null
+        }
+    }
+    tone?.let { out.append(it) }
+    return out.toString()
+}
+
+private val RULE_KEYS = ('a'..'z') + listOf('~', '.', '^', '_')
+
+/** Keys that type [word] through [rules] by sound, as tests/languages finds them: a search over the keys. */
+private fun ruleKeys(rules: Rules, word: String): String? {
+    var beam = listOf("" to Rules.State("", ""))
+    repeat(word.length * 3 + 2) {
+        val next = ArrayList<Triple<String, Rules.State, Int>>()
+        for ((keys, state) in beam) for (k in RULE_KEYS) {
+            val after = rules.step(state, k)
+            if (rules.step(after, ' ').text.removeSuffix(" ") == word) return keys + k
+            val common = after.text.commonPrefixWith(word).length
+            if (after.text.length - common > rules.maxKeyLength) continue
+            next += Triple(keys + k, after, common * 10 - keys.length)
+        }
+        beam = next.sortedByDescending { it.third }.distinctBy { it.second }.take(24).map { it.first to it.second }
+        if (beam.isEmpty()) return null
+    }
+    return null
+}
+
+/** One slip in a word's [keys]: a neighbouring key, a key left out, two swapped. */
+private fun keySlips(keys: String, random: Random): List<String> {
+    val out = ArrayList<String>()
+    if (keys.length >= 3) {
+        val at = 1 + random.nextInt(keys.length - 1)
+        val near = ('a'..'z').filter { it != keys[at] && com.titankeys.autocorrect.KeyNeighbours.near(it, keys[at]) }
+        if (near.isNotEmpty()) out += keys.substring(0, at) + near[random.nextInt(near.size)] + keys.substring(at + 1)
+    }
+    if (keys.length >= 4) {
+        val at = 1 + random.nextInt(keys.length - 1)
+        out += keys.removeRange(at, at + 1)
+        val swap = 1 + random.nextInt(keys.length - 2)
+        out += keys.substring(0, swap) + keys[swap + 1] + keys[swap] + keys.substring(swap + 2)
+    }
+    return out
+}
+
+/**
+ * Hindi and Vietnamese, whose engines build the words: the commonest words' keys with one slip, typed into the engine. Before,
+ * only the list's words starting like the word were offered; now one slip undone is offered too, on the bar only. Space always
+ * writes what the keys spell.
+ */
+private fun engineSlips(folder: File) {
+    println("\nengines   slips  on the bar before  on the bar now  Space changes  ms a key  slowest key")
+    for (id in listOf("hi", "vi")) {
+        val dir = File(folder, id)
+        val method = InputMethod.parse(File(dir, "im.json").readText())
+        val list = File(dir, method.words!!).useLines { WordList.read(it, method.javaLocale) }
+        val rules = if (id == "hi") Rules.parse(File(dir, method.engineArg ?: "rules.json").readText()) else null
+        fun engine(): InputEngine = if (rules != null) RulesComposer(rules, list) else TelexComposer(list)
+        fun spoken(keys: String) = if (rules != null) rules.spell("$keys ").removeSuffix(" ") else TelexComposer.spell(keys)
+        val common = ArrayList<Pair<String, Int>>()
+        list.forEachWord { word, frequency -> if (word.length in 3..10) common += word to frequency }
+        val random = Random(id.hashCode())
+        var slips = 0
+        var before = 0
+        var now = 0
+        var spaceChanged = 0
+        var keyNanos = 0L
+        var keysTyped = 0
+        var slowest = 0L
+        for (word in common.sortedByDescending { it.second }.map { it.first }.distinct().take(WORDS)) {
+            val keys = (if (rules != null) ruleKeys(rules, word) else telexKeys(word))?.takeIf { spoken(it) == word } ?: continue
+            for (slip in keySlips(keys, random)) {
+                val typed = spoken(slip)
+                // A slip that spells a word, or the start of one, is no slip the bar can tell.
+                if (typed == word || list.has(typed)) continue
+                slips++
+                val engine = engine()
+                var state = EngineState()
+                for (k in slip) {
+                    val start = System.nanoTime()
+                    state = engine.key(k)
+                    val took = System.nanoTime() - start
+                    keyNanos += took
+                    keysTyped++
+                    slowest = maxOf(slowest, took)
+                }
+                if (list.complete(typed, 8).any { it.equals(word, ignoreCase = true) }) before++
+                if (state.choices.any { it.equals(word, ignoreCase = true) }) now++
+                // Space writes the keys' word, never a choice.
+                val written = engine.space().commit.trimEnd()
+                if (written != typed) spaceChanged++
+            }
+        }
+        println("%-8s %6d  %16.1f%%  %13.1f%%  %13d  %8.2f  %8.1f ms".format(id, slips, 100.0 * before / maxOf(1, slips),
+            100.0 * now / maxOf(1, slips), spaceChanged, keyNanos / 1e6 / maxOf(1, keysTyped), slowest / 1e6))
+        check("$id: Space never puts a slip's choice in", spaceChanged == 0) { "$spaceChanged" }
+        check("$id: the bar offers more right words than before", now >= before)
+    }
 }

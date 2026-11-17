@@ -1,12 +1,12 @@
 # How-tos for each input method (drafts)
 
 The owner (2026-11-17): "we shd have basic instructions in text in each language specifically." One short how-to per input
-method in `android/assets/im/`, for Settings > Languages. In English, for people new to the phone, and only what's special
-to that input method. Typing, swiping, the switcher on a held Sym and the gestures are the guide's job, so none of that is
-here.
+method in `android/assets/im/` (54 on 340455b4), for each language's page in Settings. They're in English, for people new
+to the phone, and say only what's special to that input method. Typing, swiping, the switcher on a held Sym and the gestures
+are the guide's job, so none of that is here.
 
-The facts are from [languages.md](languages.md) and each `im.json` (accents, keys, rules). G wires them in; nothing here is
-in the app yet.
+The facts are from [languages.md](languages.md) and each `im.json` (holds, keys, rules) on 340455b4. C copies the lines into
+`tools/im/howto.json`.
 
 ## Latin letters with accents
 
@@ -20,7 +20,7 @@ These share one template. Only the examples change, taken from each `im.json`'s 
 | `es` | hold N for ñ, A for á, U for ú or ü | A sentence that opens with ¿ or ¡ still gets its capital. |
 | `fr` | hold E for é, è, ê or ë, C for ç, O for ô or œ | |
 | `de` | hold S for ß, A for ä, O for ö, U for ü | |
-| `pt` | hold A for á, à, â or ã, C for ç, O for õ | Brasil or Portugal? Pick your spelling in the language's page. |
+| `pt` | hold A for á, à, â or ã, C for ç, O for õ | Brasil or Portugal? Pick your spelling on this page. |
 | `it` | hold E for é or è, A for à, O for ò | |
 | `nl` | hold E for é or ë, I for ï, O for ö | |
 | `pl` | hold A for ą, L for ł, Z for ź or ż | |
@@ -41,7 +41,7 @@ These share one template. Only the examples change, taken from each `im.json`'s 
 | `lv` | hold A for ā, E for ē, K for ķ | |
 | `lt` | hold A for ą, E for ę or ė, U for ų or ū | |
 | `et` | hold O for õ or ö, A for ä, U for ü | |
-| `ca` | hold A for à, E for é or è, C for ç | |
+| `ca` | hold A for à or á, E for é or è, C for ç | |
 | `gl` | hold N for ñ, A for á, O for ó | |
 | `is` | hold D for ð, T for þ, A for á or æ | |
 | `af` | hold E for é, ê or ë, O for ó or ö | |
@@ -58,31 +58,35 @@ These share one template. Only the examples change, taken from each `im.json`'s 
 
 ## Cyrillic
 
+The first-use hint for these seven is "Missing a letter? Hold a key to find it." in place of "Hold a letter for its
+accents.", since a hold here gives letters the keys have no room for, not accents. Greek keeps the accents line.
+
+Each how-to ends with the same line: "Rest a finger on the key under the letter on the bar, then press it."
+
 ### `ru` Russian
 
 > The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц, A is ф. The letters without a key of their own are held:
-> ж or э on L, б or ю on M, х or ъ on P, ё on T. Rest a finger on the key under the letter on the bar, then press it.
+> ж or э on L, б or ю on M, х or ъ on P, ё on T.
 
 ### `uk` Ukrainian
 
 > The keys follow the Ukrainian PC layout (ЙЦУКЕН): Q is й, W is ц, S is і. The letters without a key of their own are held:
-> ж or є on L, б or ю on M, х or ї on P, ґ on U. Rest a finger on the key under the letter on the bar, then press it.
+> ж or є on L, б or ю on M, х, ї or the apostrophe on P, ґ on U.
 
 ### `be` Belarusian
 
 > The keys follow the Belarusian PC layout (ЙЦУКЕН): Q is й, B is і, O is ў. The letters without a key of their own are
-> held: ж or э on L, б or ю on M, х on P, ё on T. Rest a finger on the key under the letter on the bar, then press it.
+> held: э or ж on L, б or ю on M, х or the apostrophe on P, ё on T.
 
 ### `kk` Kazakh
 
 > The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц. Kazakh's own letters are held: ә on F, і on S, ң on Y,
-> ғ on U, ү or ұ on E, қ on R, ө on J, һ on H. So are ж or э on L, б or ю on M, х or ъ on P, ё on T. Rest a finger on the
-> key under the letter on the bar, then press it.
+> ғ on U, ұ or ү on E, қ on R, ө on J, һ on H. So are ж or э on L, б or ю on M, х or ъ on P, ё on T.
 
 ### `bg` Bulgarian
 
 > Each key types the letter that sounds like it: A is а, B is б, D is д. The odd ones: Q is ч, W is ш, X is ж, Y is ъ.
-> Hold M for ь or ю, and P for я or щ.
+> Hold M for ю or ь, and P for я or щ.
 
 ### `sr` Serbian, Cyrillic
 
@@ -92,7 +96,7 @@ These share one template. Only the examples change, taken from each `im.json`'s 
 ### `mk` Macedonian
 
 > Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ѕ. Hold L for ч or
-> ќ, and P for ш, ѓ or ж.
+> ќ, and P for ш, ж or ѓ.
 
 ## Greek
 
@@ -115,15 +119,17 @@ These share one template. Only the examples change, taken from each `im.json`'s 
 
 > The keys follow Thai's Kedmanee layout, and Shift gives each key's second letter. The keys a PC has and the Titan
 > doesn't, digits included, are held: hold a key for its third letter, and Shift + hold for its fourth. Thai has no spaces
-> between words, so the bar finds the word you're typing. Double Space types two spaces, as Thai has no full stop.
+> between words, so the bar finds the word you're typing, and next words come after a space. Double Space types two
+> spaces, as Thai has no full stop.
 
 ## Hindi (experimental)
 
 ### `hi` Hindi
 
 > Type Hindi by how it sounds, in English letters: namaste becomes नमस्ते. Capitals are sounds of their own (namaH,
-> maChiyoM), so Shift changes the letter. The word builds above the bar, and words that fit show on the bar. Double Space
-> types "। ". To keep a word's last virama, end it with ~ (agar~).
+> maChiyoM), so Shift changes the letter. The bar starts with what Space will write, then words that fit, then a likely
+> word if you slipped. Tap one to pick it, or swipe up for more. Double Space types "। ", and a word ending in ~ keeps its
+> last virama (agar~).
 
 ## Hebrew (experimental)
 
@@ -138,66 +144,68 @@ These share one template. Only the examples change, taken from each `im.json`'s 
 ### `ko` Korean
 
 > The keys follow Korean's 2-set layout (두벌식): Q is ㅂ, A is ㅁ, K is ㅏ. Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on
-> O and P. Type the letters one by one: the syllable builds above the bar and goes in once the next letter can't join it.
-> Backspace takes off the last letter typed.
+> O and P. The syllable builds above the bar and goes in once the next letter can't join it. The bar starts with what Space
+> will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more.
 
 ## Vietnamese
 
 ### `vi` Vietnamese
 
 > Type in Telex. Letters: aa is â, aw ă, ee ê, oo ô, ow ơ, uw ư, dd đ. Tones go after the word's letters: s sắc, f huyền,
-> r hỏi, x ngã, j nặng, and z takes the tone off. Press the same key again to undo its mark. The word builds above the bar,
-> and words that fit show on the bar. Backspace takes off the last key.
+> r hỏi, x ngã, j nặng, and z takes the tone off. Press the same key again to undo its mark. The bar starts with what Space
+> will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more.
 
 ## Chinese
 
-The three share Chinese's bar. Only the first line differs.
+The six share Chinese's bar. Each has its own first line, then the shared block.
 
 ### `yue-yale` Cantonese, Yale
 
-> Type Cantonese in Yale, with no tones: neih hou for 你好.
+> Type Cantonese in Yale, no tones needed: neihou for 你好. Z works for j, and n and l stand in for each other. A whole phrase can go in one run,
+> no spaces: diuneiloumou.
 
 ### `yue-jyutping` Cantonese, Jyutping
 
-> Type Cantonese in Jyutping, with no tones: nei hou for 你好.
+> Type Cantonese in Jyutping, no tones needed: neihou for 你好. A whole phrase can go in one run, no spaces.
 
 ### `zh-pinyin` Mandarin, Pinyin
 
-> Type Mandarin in Pinyin, with no tones: ni hao for 你好.
+> Type Mandarin in Pinyin, no tones needed: nihao for 你好. A whole phrase can go in one run, no spaces.
 
-**Then, for all three:**
+### `zh-cangjie` Chinese, Cangjie
 
-> First, pick your characters in the language's page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and
-> the choices sit over the top row. Space types the first one. For another, tap it, or flick up from the key under it. Sym
-> shows more choices: Enter or a swipe up turns the page. Enter types the code as letters. Double Space types 。.
+> Type each character's Cangjie code, up to five keys: the code shows as its radicals as you type (hqi is 竹手戈, for 我).
+
+### `zh-quick` Chinese, Quick
+
+> Type Quick (速成): each character is the first and last keys of its Cangjie code, two at most. Many characters share a
+> code, so you'll pick from the bar more often than in Cangjie.
+
+### `zh-zhuyin` Mandarin, Zhuyin (Hsu layout)
+
+> Type Zhuyin on the Hsu (許氏) layout, not the Daqian one: each key types the symbol that sounds like it, and some keys have
+> two. Tones are optional: D for ˊ, F for ˇ, J for ˋ, S for ˙. The code shows as Zhuyin as you type (ㄋㄧˇ ㄏㄠˇ).
+
+**Then, for all six:**
+
+> First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the
+> choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the
+> keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double
+> Space types 。.
 
 ## Japanese (experimental)
 
 ### `ja` Japanese
 
 > Type Japanese in romaji: kyou becomes きょう, nn ん, and - ー. Choices sit over the top row, whole sentences first. Space
-> types the first one. For another, tap it, or flick up from the key under it. Sym shows more choices: Enter or a swipe up
-> turns the page. Enter types the romaji as letters. Double Space types 。.
+> types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns
+> the page. Next words follow each pick. Enter types the romaji as letters, and double Space types 。.
 
-## The first-use hint in Cyrillic
+## To check before they go in
 
-The bar's first-use hint, "Hold a letter for its accents.", reads wrong in `be`, `bg`, `kk`, `mk`, `ru`, `sr` and `uk`: a hold
-there gives letters the keys have no room for (ж, э, х, ъ), not accents. For those seven:
-
-> Missing a letter? Hold a key to find it.
-
-A plainer one, if that's too cute for a hint: "Hold a key for the letters with no key." Greek keeps the accents line, since
-its holds are accents (ά, έ).
-
-## To check before G wires these in
-
-- **Picking from the row:** languages.md's "Chinese on the bar" (2026-11-17) says Space, a tap, or a flick up from the key
-  under a choice, with Sym for the bigger menu while a code is typed. Its Japanese section still says "hold P for the bigger
-  menu" and "Shift picks". The drafts follow the newer Chinese section.
-- **"Swipe up for more":** swipes on the keys never turn the row's pages. They do turn the bigger menu's, so the drafts say
-  "Sym shows more choices: Enter or a swipe up turns the page".
-- **Vietnamese and Hindi choices:** languages.md says Space alone writes Telex's word as typed, and that Hindi's Space goes
-  through the rules. Whether their choices are picked like Chinese's (tap or flick up) needs a look on the phone, so the
-  drafts only say "words that fit show on the bar".
-- **Jyutping with no tones:** rime-cantonese takes tones as letters (v, x, q) but doesn't need them. To confirm on the phone.
+- **Yale's z, n and l:** from `tk_yale.schema.yaml` (`derive/^j/z/`, and n and l both ways, initials only).
+- **Quick:** "first and last keys of its Cangjie code" is Quick's standard rule; languages.md only says "two letters a
+  character".
+- **Cangjie's example:** hqi is languages.md's own (竹手戈), and 我 is its Cangjie code. Worth a type on the phone.
+- **Zhuyin:** "some keys have two" follows the schema's comments (ㄐㄓ on J, ㄑㄔ on V, ㄒㄕ on C, ㄥㄦ on L).
 - **Accented capitals:** "Shift gives the capital one" follows "with Shift or Caps on, the accents show in capitals".

@@ -127,6 +127,8 @@ test("librime-predict is built in, with each language's table, its licence and c
     const count = new Map<string, number>();
     for (const [word] of rows) count.set(word, (count.get(word) ?? 0) + 1);
     expect(Math.max(...count.values())).toBeLessThanOrEqual(8);
+    // No emoji among the next words, as Mozc's are left out too (owner and Orchestrator, 2026-11-17).
+    expect(rows.filter(row => /\p{Extended_Pictographic}|\uFE0F/u.test(row[1]))).toEqual([]);
   }
   // Its licence, and the Licences page: the plugin, and Tatoeba's sentences behind the tables.
   expect(read("licences/Rime-predict-BSD-3-Clause.txt")).toContain("BSD 3-Clause License");

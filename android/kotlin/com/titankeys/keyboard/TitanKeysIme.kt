@@ -126,6 +126,9 @@ class TitanKeysIme : InputMethodService() {
     private var barLogged: String? = null
     /** The units picked in this field, Chinese's and Japanese's words for the gestures and the bar ([PickedWords]). */
     private val pickedWords = PickedWords()
+    /** A held Backspace's repeats, where Android sends none ([BackspaceRepeat]), and its first press, which they copy. */
+    private val backspaceRepeat = BackspaceRepeat()
+    private var heldBackspace: KeyEvent? = null
     private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
     /** The key that last picked from the panel or turned its page, so its repeats type nothing once the panel has closed. */
@@ -2428,6 +2431,9 @@ class TitanKeysIme : InputMethodService() {
     private var barSelected: String? = null
 
     override fun onFinishInput() {
+        // A held Backspace stops with its field.
+        backspaceRepeat.up()
+        main.removeCallbacks(repeatBackspace)
         closeMenu()
         barSelected = null
         strip?.selected = null
@@ -4269,6 +4275,28 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode != KeyEvent.KEYCODE_DEL) return keyDown(keyCode, event)
+        // A held Backspace repeats, as on a PC: Android's own repeats where they come, else TitanKeys' ([BackspaceRepeat]).
+        val handled = keyDown(keyCode, event)
+        if (backspaceRepeat.down(event.repeatCount, handled && editing)) {
+            main.removeCallbacks(repeatBackspace)
+            main.postDelayed(repeatBackspace, android.view.ViewConfiguration.getKeyRepeatTimeout().toLong())
+        } else if (event.repeatCount > 0 && !backspaceRepeat.sending) main.removeCallbacks(repeatBackspace)
+        return handled
+    }
+
+    /** The held Backspace's next repeat, through the same path as Android's ([BackspaceRepeat]). */
+    private val repeatBackspace: Runnable = Runnable {
+        val count = backspaceRepeat.next()
+        if (count < 0 || !editing) return@Runnable
+        val now = SystemClock.uptimeMillis()
+        val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL, 0)
+        backspaceRepeat.send { onKeyDown(KeyEvent.KEYCODE_DEL, KeyEvent.changeTimeRepeat(heldBackspace ?: down, now, count)) }
+        main.postDelayed(repeatBackspace, android.view.ViewConfiguration.getKeyRepeatDelay().toLong())
+    }
+
+    private fun keyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DEL && event.repeatCount == 0 && !backspaceRepeat.sending) heldBackspace = KeyEvent(event)
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym down, repeat ${event.repeatCount}: shown $isInputViewShown, " +
             "panel ${modifiers.panel}, guide $inGuide, menu $menuOpen, waiting ${pendingInput.size}")
         // The panel's mark of the key under a resting finger stays while a key is down, as when it toggles a quick setting.
@@ -4446,7 +4474,12 @@ class TitanKeysIme : InputMethodService() {
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
         }
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
-        if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
+        if (keyCode == KeyEvent.KEYCODE_DEL) {
+            modifiers.backspaceReleased()
+            backspaceRepeat.up()
+            heldBackspace = null
+            main.removeCallbacks(repeatBackspace)
+        }
         if (lockedKeys.remove(keyCode)) return true
         if (editing && chineseKeyUp(keyCode)) return true
         // Sym's release always ends its press first, so the next Sym is never swallowed ([SymPress]).

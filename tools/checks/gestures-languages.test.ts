@@ -9,7 +9,8 @@ const read = (path: string) => readFileSync(join(root, path), "utf8");
 const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
 
 test("a flick with a code pending clears the code and leaves the field alone", () => {
-  const flick = ime.slice(ime.indexOf("if (outcome.deletesWord) {"), ime.indexOf("val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)"));
+  const start = ime.indexOf("if (outcome.deletesWord) {");
+  const flick = ime.slice(start, ime.indexOf("val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)", start));
   expect(flick).toContain("val choices = openPicker() as? LanguagePicker.Choices");
   expect(flick).toMatch(/languages\.engine\?\.reset\(\)\s*closePicker\(\)\s*if \(choices\.state\.composing\) \{[\s\S]*?return\s*\}/);
 });

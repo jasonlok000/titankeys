@@ -3539,14 +3539,7 @@ class TitanKeysIme : InputMethodService() {
                     is SwitchPick.To -> languages.on.firstOrNull { it.id == next.id } ?: return
                     null -> return
                 }
-                if (entry.id == languages.current.id) return
-                languages.switchTo(entry.id)
-                // The bar says, for a moment, which input method types now. F (docs/words-m1.md).
-                strip?.let { strip ->
-                    strip.notice = Strip.Notice.Line("${entry.name} it is.")
-                    main.removeCallbacks(endTeamsEgg)
-                    main.postDelayed(endTeamsEgg, SWITCHED_NOTICE_MILLIS)
-                }
+                switchLanguage(entry)
             }
         }
     }
@@ -3794,10 +3787,26 @@ class TitanKeysIme : InputMethodService() {
             symLog("Sym held, but no overlay: already let go")
             return
         }
-        symLog("Sym held: the input method overlay opens")
         haptics.play(Haptic.HeldSymbol)
         val on = InputMethodIndex.group(languages.on)
+        // Two languages: the other one at once, no switcher.
+        SwitchOverlay.toggle(on, languages.current.id, languages.lastUsed)?.let { id ->
+            symLog("Sym held: two languages, so $id types now")
+            languages.on.firstOrNull { it.id == id }?.let(::switchLanguage)
+            return
+        }
+        symLog("Sym held: the input method overlay opens")
         showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), languages.current.id))
+    }
+
+    /**
+     * Switches to input method [entry]. The language mark on the bar shows which types now; the bar says nothing more (owner,
+     * 2026-11-16: "I don't like the XX it is wording"). A screen reader hears it: "Typing in Spanish". F: draft.
+     */
+    private fun switchLanguage(entry: InputMethodIndex.Entry) {
+        if (entry.id == languages.current.id) return
+        languages.switchTo(entry.id)
+        strip?.announceForAccessibility("Typing in ${entry.nameEnglish}")
     }
 
     /**
@@ -4579,7 +4588,6 @@ class TitanKeysIme : InputMethodService() {
         /** How long the word on Teams shows. */
         private const val TEAMS_EGG_MILLIS = 500L
         /** How long the bar says which input method types, after a switch in the overlay. */
-        private const val SWITCHED_NOTICE_MILLIS = 1500L
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"
         private const val EGG_BOOT_STARTED = "teams_boot_started"

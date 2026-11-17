@@ -149,6 +149,17 @@ object SwitchOverlay {
         return List(shown) { FIRST + width * it until FIRST + width * (it + 1) }
     }
 
+    /**
+     * With exactly two languages on, a held Sym switches to the other at once, with no switcher (owner, 2026-11-16: "if
+     * there's only two languages, holding sym shd switch between them by itself"): to its input method last used ([lastUsed],
+     * by language), or else its first. Null with any other number, where the switcher opens.
+     */
+    fun toggle(languages: List<InputMethodIndex.LanguageOn>, current: String, lastUsed: Map<String, String>): String? {
+        if (languages.size != 2) return null
+        val other = languages.firstOrNull { on -> on.methods.none { it.id == current } } ?: languages[1]
+        return lastUsed[other.language.id]?.takeIf { id -> other.methods.any { it.id == id } } ?: other.methods.first().id
+    }
+
     /** The row the switcher opens on: with one language on, straight to its input methods. */
     fun opening(languages: List<InputMethodIndex.LanguageOn>) = languages.singleOrNull()?.takeIf { it.methods.size > 1 }
 

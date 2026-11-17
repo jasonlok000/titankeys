@@ -137,8 +137,12 @@ internal class Languages(
         if (id != target) use(id)
     }
 
+    /** Each language's input method last typed with, by language id, for the two-language toggle ([SwitchOverlay.toggle]). */
+    val lastUsed = HashMap<String, String>()
+
     private fun use(id: String) {
         target = id
+        InputMethodList.index(context)[id]?.let { lastUsed[it.language.id] = id }
         val ticket = ++loading
         if (id == InputMethod.ENGLISH_ID) {
             apply(InputMethod.ENGLISH, null, ticket)

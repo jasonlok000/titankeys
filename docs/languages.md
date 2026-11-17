@@ -312,8 +312,13 @@ suggestion when there's nothing typed"; #56, [the study](studies/56-chinese-pred
   for the start of a text.
 - **Not shown before a variant is picked:** they'd be Rime's Traditional.
 - **Japanese** has them too, from Mozc itself ("Japanese").
-- **Limits:** Rime looks up the whole last commit, so after a phrase of several words committed at once there's often
-  nothing to suggest. Moving the cursor doesn't clear them, as it doesn't clear a code.
+- **A phrase committed at once** (我哋今日, a whole sentence before Space): librime-predict looks up the whole last commit,
+  which its table rarely has, so TitanKeys then tries what the phrase ends with, longest first, down to its last character
+  (`native/rime/tk_predict.h`, in the app's JNI layer and the PC tool): 我哋今日 → 係 嘅 下晝. They're Rime's own choices, so
+  Space, a pick and Escape work as for any. On held-out Common Voice sentences, cut into phrase commits of 2 to 4 words,
+  suggestions show after 94% of them (none before), and the next character is among the first 3 for 7.2% in Cantonese and
+  4.1% in Mandarin, as for words committed one at a time (8.3% and 4.3%; `native/rime/predict_fallback.py`).
+- **Limits:** Moving the cursor doesn't clear them, as it doesn't clear a code.
 
 **Checks and renders:** `tests/chinese` checks the places, the pages, the keys that pick, the marks and the English word;
 `tests/rime` the engine's keys; `tools/checks/chinese.test.ts` keeps the keyboard's wiring to this design. `bash

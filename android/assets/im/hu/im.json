@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -28,17 +28,17 @@
     "words": "main_hu__experimental.combined"
   },
   "starters": [
-    "az",
-    "egy",
-    "teljes",
-    "és",
     "a",
+    "az",
+    "ez",
+    "egy",
+    "nem",
+    "ha",
+    "de",
+    "azt",
     "mint",
-    "például",
-    "való",
-    "ki",
-    "el",
-    "nélkül",
-    "ami"
+    "ezt",
+    "és",
+    "ennek"
   ]
 }

@@ -26,7 +26,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -36,17 +36,17 @@
     "words": "main_cs.combined"
   },
   "starters": [
-    "a",
     "v",
-    "se",
     "na",
+    "a",
+    "podle",
     "je",
-    "z",
-    "s",
-    "do",
-    "byl",
-    "i",
+    "to",
+    "po",
+    "když",
     "ve",
-    "jako"
+    "ale",
+    "jak",
+    "i"
   ]
 }

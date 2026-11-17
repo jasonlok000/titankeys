@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -27,17 +27,17 @@
     "words": "main_ro.combined"
   },
   "starters": [
-    "de",
-    "care",
-    "și",
-    "cu",
     "în",
-    "sau",
-    "se",
+    "de",
+    "nu",
     "la",
-    "din",
-    "pe",
     "un",
-    "despre"
+    "este",
+    "o",
+    "cu",
+    "pentru",
+    "pe",
+    "a",
+    "dacă"
   ]
 }

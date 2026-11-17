@@ -44,7 +44,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -55,17 +55,17 @@
     "words": "main_be.combined"
   },
   "starters": [
-    "і",
     "у",
-    "на",
-    "што",
-    "з",
-    "не",
-    "гэта",
-    "да",
+    "і",
     "а",
-    "за",
+    "але",
+    "я",
+    "гэта",
+    "на",
+    "калі",
     "як",
-    "па"
+    "ён",
+    "мы",
+    "паводле"
   ]
 }

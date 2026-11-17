@@ -16,7 +16,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -26,17 +26,17 @@
     "words": "main_sl.combined"
   },
   "starters": [
-    "je",
-    "in",
     "v",
+    "leta",
     "na",
-    "se",
-    "so",
-    "ki",
+    "po",
+    "to",
+    "med",
     "za",
-    "pa",
-    "z",
-    "s",
-    "tudi"
+    "ko",
+    "ta",
+    "od",
+    "pri",
+    "zaradi"
   ]
 }

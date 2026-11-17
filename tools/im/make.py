@@ -797,6 +797,26 @@ STARTER_SOURCES = {
     "bs": ("frequencywords/bs_full.txt", "counts"),
     "he": ("frequencywords/he_full.txt", "counts"),
 }
+# The rest start sentences the way their writers do (Orchestrator, 2026-11-17: the commonest words made odd starters, Korean's
+# particles, Bulgarian's tie of 4,500 words at the top, Russian's "года"): the words that most often begin a sentence in the
+# Leipzig Corpora Collection's sentences for the language (CC BY 4.0), in the input method's own list, in lower case. A list's
+# commonest words stay the fallback for a language without a corpus here (Thai, whose sentences have no spaces).
+STARTER_CORPORA = {
+    "af": "afr_mixed_2019_1M", "az": "aze_wikipedia_2021_1M", "be": "bel_newscrawl_2015_1M", "bg": "bul_news_2022_1M",
+    "bs": "bos_wikipedia_2021_300K", "ca": "cat_wikipedia_2021_1M", "cs": "ces_news_2024_1M", "da": "dan_newscrawl_2023_1M",
+    "de": "deu_news_2024_1M", "el": "ell_news_2024_1M", "eo": "epo_newscrawl_2017_1M", "es": "spa_news_2024_1M",
+    "et": "est_newscrawl_2017_1M", "eu": "eus_wikipedia_2021_300K", "fi": "fin_news_2022_1M", "fr": "fra_news_2024_1M",
+    "ga": "gle_newscrawl_2014_300K", "gl": "glg_wikipedia_2021_300K", "he": "heb_wikipedia_2021_1M", "hi": "hin_news_2022_1M",
+    "hr": "hrv_wikipedia_2021_1M", "hu": "hun_news_2024_1M", "id": "ind_news_2024_1M", "is": "isl_newscrawl_2011_1M",
+    "it": "ita_news_2024_1M", "ka": "kat_newscrawl_2016_1M", "kk": "kaz_newscrawl_2016_1M", "ko": "kor_news_2022_1M",
+    "lt": "lit_news_2020_1M", "lv": "lav_newscrawl_2016_1M", "mk": "mkd_wikipedia_2021_300K", "nb": "nob_newscrawl_2019_1M",
+    "nl": "nld_news_2024_1M", "nn": "nno_wikipedia_2021_300K", "pl": "pol_news_2024_1M", "pt": "por-br_newscrawl_2011_1M",
+    "ro": "ron_news_2024_1M", "ru": "rus_news_2024_1M", "sk": "slk_newscrawl_2016_1M", "sl": "slv_wikipedia_2021_1M",
+    "sr": "srp_wikipedia_2021_1M", "sr-latn": "srp_wikipedia_2021_1M", "sv": "swe_news_2023_1M", "tr": "tur_news_2024_1M",
+    "uk": "ukr_news_2024_1M", "vi": "vie_news_2022_1M",
+}
+STARTER_CREDIT = ("Starters: the words that most often begin a sentence in the Leipzig Corpora Collection's {corpus} "
+                  "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0.")
 # Japanese has no frequency list split into words that we ship, and Mozc's costs rank homophones, not common words, so its
 # starters are picked by hand: common ways to start a sentence, for the owner to confirm.
 JAPANESE_STARTERS = ["私", "今日", "はい", "これ", "それ", "何", "今", "また", "でも", "ありがとう", "そう", "明日"]
@@ -855,6 +875,86 @@ def top_words(path, kind):
     raise ValueError(kind)
 
 
+# A word with its combining marks (Hindi's vowel signs, Thai's tones): Python's \w has letters, not marks.
+MARKS = "".join(re.escape(chr(c)) for c in range(0x300, 0x10000) if unicodedata.category(chr(c)).startswith("M"))
+WORD_WITH_MARKS = re.compile("[^\\W\\d_](?:[^\\W\\d_]|[" + MARKS + "]|'(?=[^\\W\\d_]))*")
+# Sentence starts a corpus has that no one types first: news and Wikipedia boilerplate, and names a script without capitals
+# can't tell apart (Korean's 윤, a president's name).
+STARTER_SKIP = {
+    "sk": {"prečítajte", "foto"},  # "Prečítajte si aj", a news site's links; photo credits
+    "bs": {"napomena"},  # Wikipedia's "Napomena:" notes
+    "is": {"innlent"},  # a news section's label, "Innlent"
+    "eu": {"familiak"},  # Wikipedia's taxonomy lines
+    "mk": {"проучување"},  # Wikipedia's "Проучување" headings
+    "ga": {"net"},  # web boilerplate
+    "ko": {"윤"},
+}
+
+
+def lower_word(word, ident):
+    """[word] in lower case, Turkish's and Azerbaijani's dotted and dotless i kept apart."""
+    if ident in ("tr", "az"):
+        word = word.replace("I", "ı").replace("İ", "i")
+    return word.lower()
+
+
+def sentence_starts(path, ident, listed):
+    """The words that begin [path]'s sentences ("id<TAB>sentence"), most often first: each sentence's first word in lower case,
+    where the input method's list has it ([listed]). A name is left out: a word written with a capital more often than not in
+    the middle of a sentence (Suomen, Azərbaycan). So is a prefix before a hyphen or a number (Hebrew's ב-2019). Serbian in
+    Latin letters reads Serbian's Cyrillic, spelled in Latin."""
+    starts, capital, small = {}, {}, {}
+    skip = STARTER_SKIP.get(ident, set())
+    for line in open(path, encoding="utf-8"):
+        text = line.split("\t", 1)[-1].rstrip("\n").translate(APOSTROPHES)
+        words = list(WORD_WITH_MARKS.finditer(text))
+        if not words:
+            continue
+        for match in words[1:]:
+            token = match.group(0)
+            key = lower_word(token, ident)
+            if token[0] != key[0]:
+                capital[key] = capital.get(key, 0) + 1
+            else:
+                small[key] = small.get(key, 0) + 1
+        first = words[0]
+        # Only a sentence that starts with its word: not one that starts with a number, a dash or a quote's name.
+        if text[:first.start()].strip(" \"'“„«»”(–-") or text[first.end():first.end() + 1] in ("-", "–") or \
+                text[first.end():first.end() + 1].isdigit():
+            continue
+        key = lower_word(first.group(0), ident)
+        word = (serbian_latin(key) or key) if ident == "sr-latn" else key
+        if word in listed and word not in skip:
+            starts[(word, key)] = starts.get((word, key), 0) + 1
+    ranked = []
+    for (word, key), _ in sorted(starts.items(), key=lambda w: -w[1]):
+        if capital.get(key, 0) <= small.get(key, 0) and word not in ranked:
+            ranked.append(word)
+    return ranked
+
+
+def listed_words(path):
+    """Every word of a words.combined, in lower case where the list has it so."""
+    words = set()
+    for line in open(path, encoding="utf-8"):
+        if line.startswith(" word="):
+            words.add(line.strip().split(",")[0][5:])
+    return words
+
+
+# Opening marks: a sentence may start after these and still get its capital ("¿Qué", «Привет», „Hallo“, "Hi"). Every quote
+# mark is passed over, opening or closing, since a closing one before a sentence's end or after it changes nothing.
+QUOTES = "\"“”„«»"
+
+
+def opening_marks(im):
+    rules = im["rules"]
+    if not rules.get("capitalise"):
+        return rules.get("openingMarks", "")
+    own = rules.get("openingMarks", "")
+    return own + "".join(c for c in QUOTES if c not in own)
+
+
 def simplified(data):
     """Traditional to Simplified, character by character, from OpenCC's TSCharacters.txt (its first choice)."""
     table = {}
@@ -873,15 +973,33 @@ def write_starters(data):
         if not os.path.isfile(path):
             continue
         im = json.load(open(path, encoding="utf-8"))
+        im["rules"]["openingMarks"] = opening_marks(im)
+        corpus = STARTER_CORPORA.get(ident)
+        credit = None
         if ident in STARTER_SOURCES:
             file, kind = STARTER_SOURCES[ident]
             source = os.path.normpath(os.path.join(data, file)) if file else ""
+            ranked = top_words(source, kind)
+        elif corpus and im.get("words"):
+            sentences = os.path.normpath(os.path.join(data, "..", "leipzig", corpus + "-sentences.txt"))
+            ranked = sentence_starts(sentences, ident, listed_words(os.path.join(ASSETS, ident, im["words"])))
+            credit = STARTER_CREDIT.format(corpus=corpus)
         elif im.get("words"):
-            source, kind = os.path.join(ASSETS, ident, im["words"]), "list"
+            ranked = top_words(os.path.join(ASSETS, ident, im["words"]), "list")
         else:
+            ranked = []
+        notice_path = os.path.join(ASSETS, ident, "NOTICE")
+        if os.path.isfile(notice_path):
+            parts = [p for p in open(notice_path, encoding="utf-8").read().strip("\n").split("\n\n")
+                     if not p.startswith("Starters: ")]
+            open(notice_path, "w", encoding="utf-8", newline="\n").write(notice(parts + ([credit] if credit else [])))
+        if not ranked and not (ident in STARTER_SOURCES):
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                json.dump(im, f, ensure_ascii=False, indent=2)
+                f.write("\n")
             continue
         starters = []
-        for word in top_words(source, kind):
+        for word in ranked:
             if is_word(word) and word not in starters:
                 starters.append(word)
             if len(starters) == STARTERS:
@@ -935,6 +1053,7 @@ def write_im(folder, im):
         if im["name"] != cldr:
             sys.exit("%s: its name %r isn't CLDR's %r" % (im["id"], im["name"], cldr))
         im["source"] = {"name": "CLDR 49 localeDisplayNames: " + cldr, **im["source"]}
+    im["rules"]["openingMarks"] = opening_marks(im)
     with open(os.path.join(folder, "im.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(im, f, ensure_ascii=False, indent=2)
         f.write("\n")

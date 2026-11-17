@@ -26,6 +26,7 @@ import { languagesLabel } from "./languages";
 import { tapKeysLabel } from "./tap-keys";
 import { RESET_NOTE, resetDone } from "./reset-most";
 import { Note } from "../../lib/note";
+import { Needs, needs, useRecheck } from "../../lib/system-needs";
 
 // Links into Settings land with their parent pages under them, so ← and Back go up and never to the front page.
 setRouteParents(parentOf);
@@ -38,6 +39,8 @@ export default function Settings() {
   const closeAction = { icon: close, onPress: () => replace("/") };
   // The note after a reset stays until you leave Settings.
   useEffect(() => () => { resetDone.shown = false; }, []);
+  // A setting turned on in Android's own screens shows at once when Settings comes back (lib/system-needs.tsx).
+  useRecheck(state);
   if (result.status !== "ready") return <Screen title="Settings" rightAction={closeAction} />;
   const settings = result.data;
   return <Screen title="Settings" rightAction={closeAction}>
@@ -71,6 +74,7 @@ export default function Settings() {
         onChange={shiftBackspaceWord => save.run({ shiftBackspaceWord })} />
       <Toggle label={altSymLabel} subtitle={altSymNote} value={settings.altSymNextKeyboard}
         onChange={altSymNextKeyboard => save.run({ altSymNextKeyboard })} />
+      <Needs list={needs.altSym(settings)} />
     </Section>
     {/* The bar is words, the Shift, Alt and Ctrl chips and the clip offer. Each setting here hides all of it, so each
         says "the bar", and the bar is turned off in this one place only. */}
@@ -85,6 +89,8 @@ export default function Settings() {
     <Section title="Touchpad">
       <Toggle label="Swipe to type words" value={settings.swipeTyping}
         onChange={swipeTyping => save.run({ swipeTyping })} />
+      {/* What stops the touchpad reaching TitanKeys at all, under its first row (lib/system-needs.tsx). */}
+      <Needs list={needs.touchpad(settings)} />
       <Toggle label={cursorLabel} value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
       {(settings.swipeTyping || settings.cursorControl)
@@ -92,6 +98,8 @@ export default function Settings() {
       <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
       <Toggle label={scrollLabel} value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
+      {/* Only Accessibility here: the overlay shows above, and the keyboard itself under Setup. */}
+      <Needs list={needs.scrollBlock(settings).filter(need => need.id === "backService")} />
       {/* Key calibration is only in TitanKeys Debug, as the Haptics lab is, so it shows with the Haptics lab. */}
       {settings.hapticsLab && <Field label="Key calibration" onPress={() => void showKeyCalibration()} />}
     </Section>
@@ -100,6 +108,7 @@ export default function Settings() {
         onChange={doublePressLocks => save.run({ doublePressLocks })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
+      <Needs list={needs.fnAsCtrl(settings)} />
       <Toggle label={altBackspaceLabel} subtitle={altBackspaceNote} value={settings.altBackspaceForward}
         onChange={altBackspaceForward => save.run({ altBackspaceForward })} />
     </Section>
@@ -119,6 +128,7 @@ export default function Settings() {
     </Section>
     <Section title="Help">
       <Field label="Setup" href="/settings/setup">{setupLabel(settings)}</Field>
+      <Needs list={needs.keyboard(settings)} />
       <Field label="Guide" href="/settings/guide" />
       <Field label={newsText.title} href="/settings/news" />
       <Field label="Send feedback" href="/settings/feedback" />

@@ -5,11 +5,11 @@ size yet. That's kinda easily solvable." This is that solution, ready for when i
 
 ## Answer
 
-**Move the big data into four install-time asset packs.**
+**Move the big data into five install-time asset packs.**
 
-- **Base module:** 41.4 MB to download, from 212 MB.
-- **Each pack:** 11 to 74 MB.
-- **What Play sends a Titan:** 201.8 MB in all, the same as today's one APK, since nothing is removed, only split.
+- **Base module:** 41.8 MB to download, from 290 MB (re-measured on main 4080d2d8, after the next-word tables and Mandarin's grammar came in).
+- **Each pack:** 11 to 98 MB.
+- **What Play sends a Titan:** 283.7 MB in all, the same as today's one APK, since nothing is removed, only split.
 - **App code:** no change. Install-time packs arrive with the app as split APKs. Their assets keep the same paths and are read through the app's `AssetManager`, which is how every big file is read today:
   - Rime's and Mozc's data: `RimeData`, copied out with `assets.open`.
   - The swipe models: `ModelAssets.install`.
@@ -23,31 +23,33 @@ size yet. That's kinda easily solvable." This is that solution, ready for when i
 | Each asset pack | 1.5 GB |
 | All modules and install-time packs together | 4 GB |
 
-So today's 212 MB bundle may already be within the base limit. The 200 MB figure (docs/todo-3.0.md) may be older guidance. The packs keep the base small either way, which helps a first download on mobile data.
+So today's 290 MB bundle may already be within the base limit. The 200 MB figure (docs/todo-3.0.md) may be older guidance. The packs keep the base small either way, which helps a first download on mobile data.
 
 ## The packs
 
 | Pack | Takes | To download (compressed) | On the phone |
 |---|---|---:|---:|
 | `swipe2_pack` | `assets/swipe2/`: engine 2.0's models, the predictor among them. The files are moved, not changed | 74.0 MB | 74.0 MB |
-| `rime_pack` | `assets/rime/` (the tables, `tk_yue.gram`, the next-word tables) and `assets/rime.sha256` | 62.2 MB | 62.6 MB |
+| `rime_pack` | `assets/rime/` (the tables, both grammars `tk_yue.gram` and `zh-hant-t-essay-bgw.gram`, Chinese's next-word tables) and `assets/rime.sha256` | 97.8 MB | 98.2 MB |
+| `next_words_pack` | every input method's next-word tables, `assets/im/*/pairs.txt` (docs/next-words.md) | 45.8 MB | 45.8 MB |
 | `mozc_pack` | `assets/mozc/` (`mozc.data`) and `assets/mozc.sha256` | 13.2 MB | 13.2 MB |
 | `swipe_pack` | `assets/swipe/` (the swipe models and English's list) | 10.9 MB | 10.9 MB |
-| **Base module** | everything else: code, native libraries (32 MB), the input methods' word lists, autocorrect | **41.4 MB** | 62.0 MB (two APKs: the master, and the arm64 libraries) |
-| **All, on a Titan** (arm64, Android 15, 440 dpi) | | **201.8 MB** | 212.7 MB |
+| **Base module** | everything else: code, native libraries (32 MB), the input methods' word lists, autocorrect | **41.8 MB** | 62.4 MB (two APKs: the master, and the arm64 libraries) |
+| **All, on a Titan** (arm64, Android 15, 440 dpi) | | **283.7 MB** | 297.6 MB |
 
 The figures:
 - **To download:** bundletool's `get-size total` for the Titan's device spec. A pack's figure is its module's total minus the base's.
 - **On the phone:** the APKs that `extract-apks` gives for that spec.
-- **The source:** TitanKeys Debug from main a329c913 (222.7 MB as one APK).
+- **The source:** TitanKeys Debug from main 4080d2d8 (304.5 MB as one APK). The first measure, on main a329c913 before the
+  next-word tables and Mandarin's grammar, had a 41.4 MB base and 201.8 MB in all.
 
 Each pack is compressed (`installTimeAssetModuleDefaultCompression: COMPRESSED`). bundletool leaves install-time packs uncompressed unless told to, and that would have nearly doubled them on the phone (the Rime pack would be 120.7 MB). Nothing reads these files in place: the app copies them out, so compressing them costs nothing.
 
 ## Checks
 
-- **Bundle:** `bundletool build-bundle` makes the `.aab` (202.2 MB) from the base and the four packs.
+- **Bundle:** `bundletool build-bundle` makes the `.aab` (284.0 MB) from the base and the five packs.
 - **APK sets:** `build-apks` makes the full APK set and the Titan's set, signed with a throwaway key made for the run. No release key is involved.
-- **Assets:** all 255 assets of the APK are in the Titan's set exactly once, byte for byte the same. So every `assets.open` path the app uses is still there, now spread across the split APKs.
+- **Assets:** all 304 assets of the APK are in the Titan's set exactly once, byte for byte the same. So every `assets.open` path the app uses is still there, now spread across the split APKs.
 - **Not done:** an install on a phone. `install-apks` needs a device, and phone work goes through the phone slot. That check is to install the Titan's set and type in Chinese, Japanese and with a swipe; everything should work on first use as it does now.
 
 ## How it would go into the Play build

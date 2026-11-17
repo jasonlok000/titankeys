@@ -92,18 +92,27 @@ def sentences(paths):
 
 
 def thai_split(run, words):
-    """Longest word-list match from the left; an unknown letter becomes a break."""
-    out, i = [], 0
-    while i < len(run):
-        for j in range(min(len(run), i + words.longest), i, -1):
-            if run[i:j] in words.exact:
-                out.append(run[i:j])
-                i = j
-                break
-        else:
+    """The keyboard's own split (WordBreak.words in WordList.kt), so the table's words are the ones it looks up: the cheapest
+    split into the list's words of two letters or more, a word costing 1 and a stray letter 3; a stray letter is a break.
+    A greedy longest match from the left made single consonants (ย, ต, ค) "words" at sentences' starts."""
+    n = len(run)
+    longest = min(words.longest, 24)
+    cost = [0] + [1 << 30] * n
+    back = [-1] * (n + 1)
+    for i in range(1, n + 1):
+        cost[i], back[i] = cost[i - 1] + 3, -1
+        for j in range(max(0, i - longest), i):
+            if cost[j] + 1 < cost[i] and i - j > 1 and run[j:i] in words.exact:
+                cost[i], back[i] = cost[j] + 1, j
+    out, i = [], n
+    while i > 0:
+        if back[i] < 0:
             out.append(None)
-            i += 1
-    return out
+            i -= 1
+        else:
+            out.append(run[back[i]:i])
+            i = back[i]
+    return out[::-1]
 
 
 def tokens(line, words, script):

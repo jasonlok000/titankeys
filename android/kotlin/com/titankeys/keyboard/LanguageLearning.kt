@@ -54,10 +54,17 @@ class LanguageLearning {
 
     fun isHidden(word: String) = word.lowercase() in hidden
 
-    /** [next] was kept after [previous], or at a sentence's start when [previous] is null. [known]: the list has it. */
-    fun kept(previous: String?, next: String, known: Boolean) {
+    /**
+     * [next] was kept after [previous], or at a sentence's start when [previous] is null. [known]: the list has it. Not
+     * [paired]: the word alone, after something that isn't a word (a stray letter in Thai).
+     */
+    fun kept(previous: String?, next: String, known: Boolean, paired: Boolean = true) {
         if (next.isBlank() || next.length > MAX_LENGTH) return
         words.merge(next, if (known) UNKNOWN_USES else 1, Int::plus)
+        if (!paired) {
+            trim()
+            return
+        }
         if (previous == null) starts.merge(next, 1, Int::plus)
         else if (previous.length <= MAX_LENGTH) pairs.getOrPut(previous) { HashMap() }.merge(next, 1, Int::plus)
         trim()

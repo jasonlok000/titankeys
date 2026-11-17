@@ -9,6 +9,14 @@ java -cp "$work" com.titankeys.engine.AlignmentDump android/assets/calibration/t
 cc -O2 -Wall -Wextra -Werror -o "$work/tk-inject" tools/dev/touch/inject.c
 python3 tools/dev/touch/test/test_touch.py "$work/alignment.txt" "$work/tk-inject"
 
+# The key feed's script (TitanKeys Debug's KeyFeed): Shift's meta state, Android's repeats, bad scripts refused.
+if [ -n "${KOTLIN_HOME:-}" ]; then
+  "$KOTLIN_HOME/bin/kotlinc" -nowarn -d "$work/keyfeed" android/debug/recorder/KeyFeedPlan.kt tools/dev/touch/test/KeyFeedChecks.kt 2>&1 | grep -v '^warning' || true
+  java -cp "$work/keyfeed:${KOTLIN_STDLIB:-$KOTLIN_HOME/lib/kotlin-stdlib.jar}" com.titankeys.keyboard.KeyFeedChecksKt
+else
+  echo "Key feed checks NOT run: set KOTLIN_HOME to your Kotlin compiler directory"
+fi
+
 # The phone lock: a tool holds it for its whole run and gives it back at the end, and one it starts doesn't wait for it.
 # On a lock file of its own, never the real one.
 export TK_BUILD="$work/build"

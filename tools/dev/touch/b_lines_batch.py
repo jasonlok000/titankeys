@@ -4,8 +4,8 @@
    one character, leaving 我 (O). B, 981a474e and 87e6db26.
 2. A Space touch with a code pending picks nothing: neihou pending, a tap in Space's touch zone leaves the field empty (O);
    Space then picks (O, Chinese characters). B, 981a474e.
-3. 速成 and 倉頡, a finger resting on N: 弓 in TitanKeysBar's lines, right after the switch (NO expected until B's fix) and
-   after a key (O). B, b0cf670e.
+3. 速成 and 倉頡, B's radical preview in the code's tab (7f5a5a10): a grey dotted 弓 alone on N with nothing typed; 竹, a gap
+   and a grey 手; no flash in fast typing; gone on lift (J, shots; YES where TitanKeysBar logs 弓).
 4. Quick (速成): hqi and Space type 我 (O).
 5. The playground (the app's front page) types in the input methods that are on, and a held Sym switches there: English and
    Russian on, a held Sym, Q types й (O). Only what the check typed is deleted, never a select-all: the field is the owner's.
@@ -58,26 +58,31 @@ def check_space_touch_keeps_code():
 
 
 def radical_shown():
-    """Whether TitanKeysBar logged 弓 (N's radical) since the log was cleared: on the bar or as a mark."""
+    """Whether TitanKeysBar logged 弓 (N's radical) since the log was cleared. The preview draws in the code's tab (B, 7f5a5a10),
+    which may not log: then the shot is the judge."""
     return any("弓" in (" ".join(line[2]) if line[0] == "bar" else line[1]) for line in ib.bar_lines())
 
 
 def check_radical_hover():
-    """A finger resting on N shows its radical 弓, judged from TitanKeysBar: right after the switch with no key pressed (the
-    owner sees it only after a key: NO expected until B's fix), and again after a key."""
+    """B's radical preview in the code's tab, in 速成 and 倉頡 (7f5a5a10): after a still rest of 180 ms the rested key's radical
+    shows in grey with a dotted underline. Shots judge what the log can't show."""
     for im, name in (("zh-quick", "quick"), ("zh-cangjie", "cangjie")):
+        # 1. Nothing typed, right after the switch: a grey dotted 弓 alone on N.
         ib.start(["en", im], im)
         adb("logcat", "-c")
-        play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot=f"radical-{name}-first", at=900)
-        first = radical_shown()
-        play("key:a", "+400", *[g for _ in range(3) for g in ("key:del", "+90")], "+300")
-        adb("logcat", "-c")
-        play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot=f"radical-{name}-after-key", at=900)
-        after = radical_shown()
-        record(f"radical-{name}-first", first, f"{im}, no key yet, resting on N: 弓 {'shown' if first else 'not shown'}",
-               f"radical-{name}-first")
-        record(f"radical-{name}-after-key", after, f"{im}, after a key, resting on N: 弓 {'shown' if after else 'not shown'}",
-               f"radical-{name}-after-key")
+        play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot=f"radical-{name}-alone", at=900)
+        record(f"radical-{name}-alone", True if radical_shown() else None,
+               "nothing typed, resting on N: a grey dotted 弓 alone in the tab, no glow", f"radical-{name}-alone")
+        # 2. 竹 typed (H), resting on Q: 竹, a gap, then a grey 手.
+        play("key:h", "+300", "touch:0.05,0.125:1500", "+300", shot=f"radical-{name}-after-code", at=1100)
+        record(f"radical-{name}-after-code", None, "竹 typed, resting on Q: 竹, a gap, a grey dotted 手", f"radical-{name}-after-code")
+        # 3. Fast typing: no preview flashes between keys (a shot mid-typing).
+        play(*[g for k in "abcde" for g in (f"key:{k}:50:none", "+40")], shot=f"radical-{name}-fast", at=300)
+        record(f"radical-{name}-fast", None, "typing fast: no grey preview between keys", f"radical-{name}-fast")
+        play(*[g for _ in range(10) for g in ("key:del", "+60")])
+        # 4. Gone on lift: rest on N, lift, a shot 400 ms after.
+        play(f"touch:{N_KEY[0]},{N_KEY[1]}:800", "+600", shot=f"radical-{name}-lift", at=1200)
+        record(f"radical-{name}-lift", None, "after the finger lifts from N: no 弓 left", f"radical-{name}-lift")
 
 
 def check_quick():

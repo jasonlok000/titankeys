@@ -216,7 +216,22 @@ def check_dominoes_every_streak():
 
 
 # The dominoes are dropped (owner, 2026-11-17 evening; E removes them): their checks are out, the uncapped delete stays.
-BATCH = [check_flick_dots, check_full_hold, check_select_all, check_uncapped_delete]
+def check_dots_cap():
+    """E's 5 s cap (fff4b1c7): a 10 s hold's dots end within 5 s (J, a shot at 6 s), and deleting goes on: a 10 s hold takes
+    clearly more words than a 5 s one (O)."""
+    gone = []
+    for hold_ms, shot in ((5000, None), (10000, "dots-cap")):
+        before = long_text("dots-cap")
+        if before is None:
+            return
+        checks.play(f"flick:3.2:90:{hold_ms}", "+800", shot=shot, at=6000)
+        gone.append(words(before) - words(checks.field()))
+    record("dots-cap-deleting", gone[1] >= gone[0] * 1.5, f"5 s held: {gone[0]} words; 10 s held: {gone[1]} (deleting goes on)")
+    record("dots-cap-shot", None, "6 s into a 10 s hold: no dots left, deleting still going", "dots-cap")
+
+
+# The dominoes are gone (fff4b1c7): their checks are out; the uncapped delete and the 5 s dots cap stay.
+BATCH = [check_flick_dots, check_full_hold, check_select_all, check_uncapped_delete, check_dots_cap]
 # check_dominoes_every_streak is out: the owner's call of 2026-11-17 (55e7054e) plays them once a streak, past 100 words, live
 # through the hold. batch2_checks' 250-word hold checks that.
 

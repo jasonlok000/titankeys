@@ -10,7 +10,8 @@ from checks import Stop, play, record
 WORDS = {"es": "hola", "fr": "bonjour", "ko": "gksrnr"}
 HANDS = ["A password field: the bar stays empty (no starters, no next words)",
          "Spanish: block a word from its menu, and it never shows on the bar again",
-         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it"]
+         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it",
+         "Japanese: Shift closes the bigger menu (the keyboard twin's Shift can't be used here)"]
 
 
 def keys(word):
@@ -141,3 +142,58 @@ def check_japanese_menu():
 
 
 BATCH += [check_korean_polish, check_japanese_menu]
+
+
+def check_japanese_polish():
+    """B's Japanese polish: nihon's choices over W to O (J), Space types 日本, Enter types the romaji, Backspace leaves "niho"
+    (O); a flick with a code clears only the code (O); ohayou + Space types おはよう and ございます follows (J), Space types it
+    (O); a digit (Alt + W) clears the suggestions (J); "." and "," (Alt + M, Alt + N) type 。 and 、 (O); a swipe up opens the
+    menu and a second turns its page (J)."""
+    def fresh_ja():
+        language_checks.fresh()
+        if not language_checks.turn_on(["en", "ko", "ja"], "ja"):
+            raise Stop("the field didn't start with ja")
+        language_checks.fresh()
+    field = language_checks.checks.field
+    fresh_ja()
+    moves = keys("nihon") + ["+800"]
+    play(*moves, "key:space", "+500", shot="ja-nihon-row", at=len(moves) * 80 + 500)
+    text = field()
+    record("ja-nihon-row", None, "nihon typed: the choices over W to O", "ja-nihon-row")
+    record("ja-nihon-space", text == "日本", f"nihon + Space typed {text!r}, wanted '日本'")
+    fresh_ja()
+    play(*keys("nihon"), "+400", "key:enter", "+500")
+    text = field()
+    record("ja-nihon-enter", text == "nihon", f"nihon + Enter typed {text!r}, wanted the romaji 'nihon'")
+    fresh_ja()
+    play(*keys("nihon"), "+400", "key:del", "+300", "key:enter", "+500")
+    text = field()
+    record("ja-nihon-backspace", text == "niho", f"nihon, Backspace, then Enter for the code typed {text!r}, wanted 'niho'")
+    fresh_ja()
+    play(*keys("ohayou"), "+500", "key:space", "+500")
+    before = field()
+    play(*keys("nihon"), "+400", "flick", "+500")
+    text = field()
+    record("ja-code-flick", text == before, f"{before!r}, a code, then a flick left {text!r}: only the code goes")
+    fresh_ja()
+    play(*keys("ohayou"), "+500", "key:space", "+900", shot="ja-ohayou-next", at=len(keys("ohayou")) * 80 + 1200)
+    first = field()
+    play("key:space", "+500")
+    second = field()
+    record("ja-ohayou", first == "おはよう", f"ohayou + Space typed {first!r}, wanted 'おはよう'", "ja-ohayou-next")
+    record("ja-ohayou-next", second.startswith("おはよう") and "ございます" in second,
+           f"the bar offered ございます (the shot); Space again typed {second!r}", "ja-ohayou-next")
+    fresh_ja()
+    play(*keys("ohayou"), "+500", "key:space", "+700", "chord:alt+w", "+600", shot="ja-digit", at=len(keys("ohayou")) * 80 + 1700)
+    record("ja-digit", None, f"a digit after a pick (field {field()!r}): the suggestions are gone", "ja-digit")
+    fresh_ja()
+    play(*keys("nihon"), "+400", "key:space", "+300", "chord:alt+m", "+300", "chord:alt+n", "+500")
+    text = field()
+    record("ja-marks", text == "日本。、", f"日本, then . and , typed {text!r}, wanted '日本。、'")
+    fresh_ja()
+    moves = keys("kyou") + ["+400", "swipeup:b", "+700"]
+    play(*moves, "swipeup:b", "+700", "key:sym", "+400", shot="ja-menu-page2", at=len(moves) * 80 + 900)
+    record("ja-menu-page2", None, "kyou, a swipe up opens the menu, a second turns to its next page (2/N)", "ja-menu-page2")
+
+
+BATCH += [check_japanese_polish]

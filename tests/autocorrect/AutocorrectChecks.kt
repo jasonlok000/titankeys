@@ -2850,6 +2850,7 @@ fun main() {
     composerFlow(world)
     markSpacing(world)
     eachLanguageEndsItsSentences(world)
+    aSwitchRefreshesTheBar(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)
     expansions(world)
@@ -2911,4 +2912,40 @@ private fun eachLanguageEndsItsSentences(world: Realistic) {
     } finally {
         com.titankeys.engine.SentenceCase.ends(".?!", "")
     }
+}
+
+/**
+ * The owner (2026-11-17): "right after switching keyboard the suggestion doesn't change and it stuck on like Chinese". An input
+ * method switch changes the words the composer asks (LanguageWords, in place), and the keyboard then calls wordsChanged: the
+ * bar loses the old input method's words at once and shows the new one's, and an answer still on its way for the old one
+ * never lands. Without the call, the old words stayed until the next key or touch.
+ */
+private fun aSwitchRefreshesTheBar(world: Realistic) {
+    val bars = mapOf("zh" to listOf("我", "係", "你"), "en" to listOf("I", "the", "hello"), "ja" to listOf("私", "今日", "はい"),
+        "ko" to listOf("이", "그는", "또"))
+    for ((from, to) in listOf("zh" to "en", "en" to "zh", "ja" to "en", "ko" to "en")) {
+        val words = FakeWords(Lists(world.words)).also { it.completions = bars.getValue(from) }
+        val typist = Typist(world, words = words)
+        same(typist.bar, bars.getValue(from), "$from: its own words on an empty field")
+        // The switch: the words change under the composer, as LanguageWords does.
+        words.completions = bars.getValue(to)
+        typist.settle()
+        same(typist.bar, bars.getValue(from), "$from to $to: without being told, the bar keeps $from's words (the bug)")
+        typist.composer.wordsChanged()
+        typist.settle()
+        same(typist.bar, bars.getValue(to), "$from to $to: told of the switch, the bar shows $to's words")
+    }
+    // An answer for the old input method still on its way when the switch comes never lands.
+    val words = FakeWords(Lists(world.words)).also { it.completions = bars.getValue("en") }
+    val typist = Typist(world, words = words)
+    words.completions = null
+    typist.type("he")
+    val late = words.unanswered.removeLastOrNull()
+    same(late != null, true, "a completion waits for its answer")
+    words.completions = bars.getValue("zh")
+    typist.composer.wordsChanged()
+    typist.settle()
+    late?.invoke(listOf("hello", "help", "here"))
+    typist.settle()
+    same(typist.bar.none { it in listOf("hello", "help", "here") }, true, "the old input method's late answer doesn't land: ${typist.bar}")
 }

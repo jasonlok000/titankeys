@@ -4137,6 +4137,9 @@ class TitanKeysIme : InputMethodService() {
         closePicker()
         strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
+        // The bar's words were the last input method's (its choices, starters, next words, or a late answer): they go, and the
+        // new one's come (Composer.wordsChanged). Before the keys that waited for the load go on, so theirs are the new one's.
+        if (editing) composer.wordsChanged()
         loadEnded()
         if (editing) showHoldHint()
         openChinesePage(method)

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.InputMethodSubtype
+import com.titankeys.engine.TypingSettings
 import java.util.Locale
 
 /**
@@ -81,6 +82,15 @@ internal object InputMethodList {
         val info = own(context) ?: return null
         context.getSystemService(InputMethodManager::class.java).getEnabledInputMethodSubtypeList(info, false).mapNotNull(::idOf)
     }.getOrNull()
+
+    /**
+     * The Rime schemas of the input methods that are on (Settings > Languages), `"engine": { "rime": "<schema>" }`: what
+     * Rime's data copy keeps (RimeAssets.schemasOn; docs/studies/3.0-storage.md).
+     */
+    fun rimeSchemasOn(context: Context): Set<String> = index(context).on(TypingSettings.inputMethods(context))
+        .filter { it.engine == com.titankeys.rime.RimeEngine.ENGINE }
+        .mapNotNull { entry -> load(context, entry.id)?.engineArg }
+        .toSet()
 
     /** TitanKeys' own id in Android's keyboard list. */
     fun ownId(context: Context): String? = own(context)?.id

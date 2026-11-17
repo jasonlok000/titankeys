@@ -761,6 +761,8 @@ class TitanKeysIme : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         Calibration.init(this)
+        // Rime's data copy keeps only the Chinese input methods that are on (docs/studies/3.0-storage.md).
+        com.titankeys.rime.RimeAssets.schemasOn = InputMethodList::rimeSchemasOn
         // The word menu, the Sym panel and the swipe's path all line up with the keys as Key calibration says.
         KeyCalibration.load(this)
         Connected.start(this)

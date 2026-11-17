@@ -181,3 +181,26 @@ test("the keyboard shows the suggestions as choices, and clears them Rime's way 
   // A panel symbol sends Space only for a code: with suggestions it would pick one.
   expect(ime).toContain("engineState(if (choices.state.composing) it.space() else it.reset())");
 });
+
+test("the app copies only the Chinese input methods that are on, file by file (docs/studies/3.0-storage.md)", () => {
+  const files = new Set(lines(read("android/assets/rime.sha256")).map(line => line.path));
+  const groups = new Map<string, string[]>();
+  for (const line of read("android/assets/rime.schemas").trimEnd().split("\n")) {
+    const [schema, path] = line.split("\t");
+    expect(files.has(path)).toBe(true);
+    groups.set(schema, [...(groups.get(schema) ?? []), path]);
+  }
+  expect([...groups.keys()].sort()).toEqual(["tk_cangjie", "tk_jyutping", "tk_pinyin", "tk_quick", "tk_yale", "tk_zhuyin"]);
+  // Yale's: Cantonese's table and grammar, never Mandarin's.
+  expect(groups.get("tk_yale")).toContain("build/jyut6ping3.table.bin");
+  expect(groups.get("tk_yale")).toContain("tk_yue.gram");
+  expect(groups.get("tk_yale")).not.toContain("zh-hant-t-essay-bgw.gram");
+  expect(groups.get("tk_pinyin")).toContain("zh-hant-t-essay-bgw.gram");
+  const assets = read("android/kotlin/com/titankeys/rime/RimeAssets.kt");
+  expect(assets).toContain("data.install(manifest, groups, schemas)");
+  expect(read("android/kotlin/com/titankeys/keyboard/InputMethodList.kt")).toContain(".filter { it.engine == com.titankeys.rime.RimeEngine.ENGINE }");
+  expect(read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt")).toContain("com.titankeys.rime.RimeAssets.schemasOn = InputMethodList::rimeSchemasOn");
+  const data = read("android/kotlin/com/titankeys/rime/RimeData.kt");
+  expect(data).toContain('val fresh = File(target.parentFile, ".${target.name}.new")');
+  expect(data).not.toContain("shared.deleteRecursively()");
+});

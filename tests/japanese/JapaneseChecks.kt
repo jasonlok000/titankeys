@@ -21,6 +21,7 @@ fun main() {
     mozcStaysOpenWhileAnEngineUsesIt()
     japaneseUsesTheChineseBar()
     kanaToRomaji()
+    nextWordsAfterAPick()
     println("Japanese checks passed")
 }
 
@@ -34,27 +35,33 @@ private fun <T> same(expected: T, actual: T, what: String) {
 
 /**
  * A stand-in for Mozc: letters build a preedit (the letters in capitals), with twelve choices made from it; picking choice 1
- * takes a part ("PART") and leaves か; any other pick takes its choice and ends the text.
+ * takes a part ("PART") and leaves か; any other pick takes its choice and ends the text. With [suggests] on, a pick that ends
+ * the text offers three next words, as Mozc's zero query does ("NEXT0" to "NEXT2"), and picking one offers three more.
  */
 private class FakeMozc : MozcCalls {
     val calls = mutableListOf<String>()
     var opened = 0
     var preedit = ""
+    var suggests = false
+    private var next = emptyList<String>()
     private var commit: String? = null
 
-    fun choices() = if (preedit.isEmpty()) emptyList() else List(12) { "${preedit}$it" }
+    fun choices() = if (preedit.isEmpty()) next else List(12) { "${preedit}$it" }
 
     override fun open(data: String, profile: String): Boolean { opened++; calls += "open"; return true }
     override fun close() { calls += "close" }
-    override fun key(char: Char): Boolean { calls += "key $char"; preedit += char.uppercaseChar(); return true }
+    override fun key(char: Char): Boolean { calls += "key $char"; next = emptyList(); preedit += char.uppercaseChar(); return true }
     override fun pick(index: Int): Boolean {
         calls += "pick $index"
         val c = choices()
         if (index !in c.indices) return false
-        if (index == 1) { commit = (commit ?: "") + "PART"; preedit = "か" } else { commit = (commit ?: "") + c[index]; preedit = "" }
+        if (index == 1 && preedit.isNotEmpty()) { commit = (commit ?: "") + "PART"; preedit = "か"; return true }
+        commit = (commit ?: "") + c[index]
+        preedit = ""
+        next = if (suggests) List(3) { "NEXT$it" } else emptyList()
         return true
     }
-    override fun reset() { calls += "reset"; preedit = "" }
+    override fun reset() { calls += "reset"; preedit = ""; next = emptyList() }
     override fun read(): MozcCalls.Raw {
         val out = MozcCalls.Raw(commit, preedit, choices())
         commit = null
@@ -194,4 +201,45 @@ fun kanaToRomaji() {
     same("dhisuko", KanaRomaji.of("ディスコ"), "Mozc's own spellings: dhi")
     same("wo,ha.", KanaRomaji.of("を、は。"), "を, and the marks")
     same(null, KanaRomaji.of("漢字"), "kanji aren't kana")
+}
+
+fun nextWordsAfterAPick() {
+    val (engine, mozc) = started(FakeMozc().apply { suggests = true })
+    type(engine, "ne")
+    val picked = engine.space()
+    same("NE0", picked.commit, "Space types the first choice")
+    same("", picked.code, "nothing is typed after it")
+    same(listOf("NEXT0", "NEXT1", "NEXT2"), picked.choices, "and Mozc's next words are the bar's choices")
+    same(listOf("NEXT1", "NEXT2"), engine.choices(1, 8), "the bigger menu reads them too")
+    // Space picks the first suggestion, and a pick offers the next ones.
+    val next = engine.space()
+    same("NEXT0", next.commit, "Space picks the first suggestion")
+    same(3, next.choices.size, "and the next ones come")
+    same("NEXT2", engine.pickAt(2).commit, "a tap or the menu picks any")
+    // A letter starts new text over them; the suggestions don't come back with it.
+    val letter = engine.key('k')
+    same("K", letter.code, "a letter starts new text")
+    check(letter.choices.none { it.startsWith("NEXT") }, "without the suggestions")
+    engine.reset()
+    // Any other key clears them, and is the keyboard's own.
+    type(engine, "ne"); engine.space()
+    mozc.calls.clear()
+    val mark = engine.key('.')
+    same("。", mark.commit, "a mark is typed")
+    same(emptyList<String>(), mark.choices, "and the suggestions are gone")
+    check("reset" in mozc.calls, "in Mozc too, so they don't come back")
+    type(engine, "ne"); engine.space()
+    val back = engine.backspace()
+    check(!back.handled && back.choices.isEmpty(), "Backspace clears them, then deletes as usual")
+    same(EngineState.UNHANDLED, engine.backspace(), "and after that it's the keyboard's")
+    type(engine, "ne"); engine.space()
+    val enter = engine.enter()
+    check(!enter.handled && enter.choices.isEmpty(), "Enter clears them, then is the keyboard's")
+    type(engine, "ne"); engine.space()
+    same(EngineState.UNHANDLED, engine.key('5'), "a digit clears them and is the keyboard's")
+    same(EngineState.UNHANDLED, engine.space(), "after which Space is the keyboard's again")
+    // A new field starts with none.
+    type(engine, "ne"); engine.space()
+    same(emptyList<String>(), engine.reset().choices, "a new field starts with none")
+    engine.stop()
 }

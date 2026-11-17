@@ -296,7 +296,8 @@ suggestion when there's nothing typed"; #56, [the study](studies/56-chinese-pred
 - **Where they come from:** Rime's own add-on, librime-predict, with a table per language (`native/rime/predict.py`, from
   Tatoeba's sentences): the last committed word, and the words that followed it most often, at most 8. Rime gives them as
   its choices with nothing typed, through the same OpenCC filters, so they come in the variant.
-- **On the bar:** over W to O, as wide as they need, exactly as a code's choices; the bigger menu (Sym) reads them too.
+- **On the bar:** over W to O, as wide as they need, exactly as a code's choices; the bigger menu (Shift, a swipe up)
+  reads them too.
 - **Picking:** Space picks the first, at the left; a tap or the bigger menu picks any. A picked suggestion is committed like
   any word, so the next ones follow it.
 - **Going away:** a letter starts a new code, and the code's choices take the bar. Any other key (Backspace, Enter, a digit,
@@ -304,6 +305,7 @@ suggestion when there's nothing typed"; #56, [the study](studies/56-chinese-pred
 - **Nothing typed yet in the field:** the bar stays empty (owner). A new field, and Back, clear them; the table has no entry
   for the start of a text.
 - **Not shown before a variant is picked:** they'd be Rime's Traditional.
+- **Japanese** has them too, from Mozc itself ("Japanese").
 - **Limits:** Rime looks up the whole last commit, so after a phrase of several words committed at once there's often
   nothing to suggest. Moving the cursor doesn't clear them, as it doesn't clear a code.
 
@@ -483,16 +485,22 @@ Japanese schema. One input method, 日本語, its mark あ, marked experimental 
 
 **On the bar, exactly as Chinese** ("Chinese on the bar"), through `InputEngine`: the text being built floats above the bar
 (hiragana, with the romaji not yet a kana at its end), the mark sits over Q, the choices over W to O as wide as they need,
-the five ways to pick, and hold P for the bigger menu. `ChineseKeys.usesBar` names the engines that type this way: Rime and
+the ways to pick, and Shift, a swipe up or a tap on `⋯` for the bigger menu. `ChineseKeys.usesBar` names the engines that type this way: Rime and
 Mozc. The English word is Chinese's alone: Mozc offers the letters as they are among its own choices.
 
 **Mozc's Android way:** choices as you type, whole sentences first, and the parts of a sentence among them. A pick of a
 part types it and leaves the rest to convert, so a sentence that's wrong in one place is fixed there. Mozc learns what's
 picked.
 
+**Next words:** after a pick, Mozc offers the words that may come next, its own zero-query suggestions from its dictionary
+and what it learned (おはよう → ございます, よろしく → お願いします, ありがとう → ございます), on the bar as Chinese's next words
+are and with the same keys: Space picks the first, a tap or the bigger menu any, a letter starts new text, any other key
+clears them, and a new field starts with none ("Next-word suggestions"; #56). Some are emoji (☀ after おはよう), as in Mozc's
+own Android keyboard. `mozc_tool --next` shows them on the PC.
+
 **Keys:**
 - Letters are romaji through Mozc's QWERTY table (`kyou` → きょう, `nn` → ん, `-` → ー inside a word). No capitals: Shift
-  picks, as in Chinese.
+  opens the bigger menu, as in Chinese.
 - **Space** types the first choice. **Enter** types the romaji as typed. **Backspace** takes off the last romaji letter:
   Mozc starts again from the letters left, so it never takes a whole kana.
 - **Punctuation** is Japanese, full-width (、。「」・〜, and ？！ and the rest in their full-width forms), like Chinese's;

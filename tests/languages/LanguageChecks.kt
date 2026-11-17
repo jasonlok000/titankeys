@@ -1052,6 +1052,9 @@ private fun typingRowsFit(method: InputMethod) {
     check("${method.id}: only English has swiping and shorthand", listOf("swipe", "shorthand").none { it in rows })
     // Fix typos shows where the language corrects (LanguageCorrections.corrects: a list and no engine), and nowhere else.
     same("${method.id}: Fix typos where it corrects", "fixes" in rows, method.words != null && method.engine == null)
+    // Hindi's and Vietnamese's engines build the words: their slipped-key choice is only ever a suggestion on the bar, never put in
+    // by Space, so it isn't under Fix typos, and their pages don't show it (D, 2026-11-17).
+    if (method.id == "hi" || method.id == "vi") check("${method.id}: no Fix typos row", "fixes" !in rows)
     check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
     check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
 }

@@ -214,7 +214,8 @@ CHECKS = {
 BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guide": "guide_batch", "gestures": "gesture_batch",
            "re-tests": "retest_batch", "space-middle": "space_batch", "languages-page": "page_batch",
            "switcher": "switcher_checks", "bar-words": "bar_checks",
-           "settings-warnings": "settings_checks", "leak-85": "leak_batch"}
+           "settings-warnings": "settings_checks", "leak-85": "leak_batch",
+           "gestures-fix": "gesture_fix_batch"}
 
 
 def report(name, stamp, hands):

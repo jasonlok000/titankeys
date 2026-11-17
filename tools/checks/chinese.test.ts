@@ -208,3 +208,15 @@ test("Enter never sends while a code is pending or the bigger menu is open: the 
   // A picker shown again as it was still counts as the bar's: equal, not only the same object.
   expect(body(ime, "openPicker")).toContain("if (strip?.notice == open.notice) return open");
 });
+
+test("a Space touch never picks a code: only a press does, so a steer or a select keeps it on the bar (owner, 2026-11-17)", () => {
+  expect(ime).toContain(
+    'if (key == " " && engine != null && (openPicker() as? LanguagePicker.Choices)?.state?.composing == true) return',
+  );
+  // The steer and the select themselves never reach the engine.
+  for (const name of ["startWordDrag", "registerGesture"]) expect(body(ime, name)).not.toContain("engine");
+});
+
+test("a flick with a code takes only what's pending, through the engine (owner, 2026-11-17)", () => {
+  expect(ime).toContain("if (choices.state.composing && engine != null) engineState(engine.flick()) else {");
+});

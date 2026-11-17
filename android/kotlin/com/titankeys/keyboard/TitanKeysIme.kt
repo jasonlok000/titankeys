@@ -3427,13 +3427,18 @@ class TitanKeysIme : InputMethodService() {
                 // A guide slide that doesn't teach this yet: the swipe or the flick does nothing, and the slide says so, once.
                 if (refuse(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
-                    // A code being built (Chinese, Japanese, Korean's syllable, Telex's word) goes whole, and the field stays as it
-                    // is (owner: "a flick should also delete the entire key code too"); a second flick deletes from the field.
+                    // A code being built (Chinese, Japanese, Korean's syllable, Telex's word) goes, and the field stays as it is
+                    // (owner: "a flick should also delete the entire key code too"); in Rime only what's pending goes, then a picked
+                    // word a flick. Once nothing is built, a flick deletes from the field.
                     // Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
                     val choices = openPicker() as? LanguagePicker.Choices
                     if (choices != null) {
-                        languages.engine?.reset()
-                        closePicker()
+                        // A code with part of it picked loses only what's pending; each flick after takes a picked word.
+                        val engine = languages.engine
+                        if (choices.state.composing && engine != null) engineState(engine.flick()) else {
+                            engine?.reset()
+                            closePicker()
+                        }
                         if (choices.state.composing) {
                             haptics.play(Haptic.DeleteFlick)
                             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
@@ -3487,6 +3492,9 @@ class TitanKeysIme : InputMethodService() {
                 // A touch that typed a key: a step, as light as a tap keyboard's, since the touchpad has no click of its own.
                 haptics.play(Haptic.TapKey)
                 val engine = languages.engine
+                // A Space touch never picks: only a press does, so the taps of a steer or a select leave the code on the bar (owner,
+                // 2026-11-17). A later pick goes in at the cursor, over a selection if there is one.
+                if (key == " " && engine != null && (openPicker() as? LanguagePicker.Choices)?.state?.composing == true) return
                 if (engine != null) {
                     // A tap goes to the engine as a key would: Space picks, a letter builds the code. Chinese has no capitals.
                     val shifted = modifiers.shift != Modifiers.Level.Off && !ChineseKeys.usesBar(languages.current)

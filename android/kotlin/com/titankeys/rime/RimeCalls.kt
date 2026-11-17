@@ -18,6 +18,8 @@ interface RimeCalls {
     fun reset()
     /** A word typed outside Rime (a pick from the bar): Rime offers its next words. True if any came. */
     fun predictAfter(text: String): Boolean = false
+    /** A flick: the code still pending goes and what was picked of it stays; with none pending, the last picked word goes. */
+    fun dropLast(): Boolean = false
     fun read(): Raw?
     /**
      * Rime's own backup of the learned words: merges every snapshot in the user folder's sync/ and writes its own there.

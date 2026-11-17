@@ -2715,6 +2715,67 @@ private fun bugHunt(world: Realistic) {
         loader.split("!retry.mayLoad(SystemClock.uptimeMillis())").size == 3, "#39: the loader waits on the retry, and never gives up")
 }
 
+/**
+ * #98, the owner: "when pressing space, the middle suggestion in the bar is indeed what's being typed out." For every way a word
+ * gets to Space, the word Space leaves is the bar's middle word (the bar's first word: InputMethods.BarOrder puts rank 0 in the
+ * middle). Each case is set up to just before Space, and must show a bar to compare with.
+ */
+private fun spaceTypesTheMiddleWord(world: Realistic) {
+    val completions = listOf("hello", "help", "the", "Jasper", "Zorblat")
+    // The cases where the typed word may lose the middle place get completions that start as the word does, as the real lists' do.
+    fun typist(lists: Lists = Lists(world.words), autocorrect: Autocorrect? = world.autocorrect(lists), field: Field = Typist.FIELD,
+               autoCapitalise: Boolean = false, offered: List<String> = completions) =
+        Typist(world, autocorrect, field, lists, autoCapitalise, FakeWords(lists).also { it.completions = offered })
+
+    fun check(case: String, typist: Typist) {
+        val bar = typist.bar
+        val middle = bar.firstOrNull()
+        if (middle == null) {
+            failures += "#98 $case: the bar showed nothing, so there is no middle word to compare with"
+            return
+        }
+        val before = typist.text
+        val after = typist.type(" ").text
+        val left = after.trimEnd().substringAfterLast(' ')
+        same(left, middle, "#98 $case: Space types the bar's middle word (bar $bar, \"$before\" -> \"$after\")")
+    }
+
+    // Typing a word: kept, completed, fixed.
+    for (word in listOf("hello", "hel", "teh", "recieve", "wrld", "the", "yeahh", "becase")) check("typing \"$word\"", typist().type("so $word"))
+    // After a swipe, Space keeps the swiped word, which is the bar's middle word.
+    check("after a swiped \"hello\"", typist().type("so ").swipe("hello"))
+    check("after a swiped word made longer", typist().type("so ").swipe("hello").type("s"))
+    check("after a swiped word cut short and retyped", typist().type("so ").swipe("hello").backspace().backspace().type("p"))
+    // After a correction: the next word, and a fix taken back with Backspace.
+    check("the word after a fix", typist().type("so teh recieve"))
+    check("a fix taken back with Backspace", typist(offered = listOf("tehran")).type("so teh ").backspace())
+    // The apostrophe offers, the other form in the left place.
+    for (word in listOf("its", "dont", "im", "whats", "were", "lets")) check("the apostrophe word \"$word\"", typist().type("so $word"))
+    // A contact's name and a saved word.
+    val names = Lists(world.words, phoneNames = mapOf("jasper" to "Jasper"))
+    check("a contact's name", typist(names).type("so jasper"))
+    check("a contact's name half typed", typist(names).type("so jasp"))
+    val saved = Lists(world.words).also { it.habits.add("Zorblat") }
+    check("a saved word", typist(saved).type("so zorblat"))
+    check("a saved word half typed", typist(saved).type("so zorbl"))
+    // Caps and Shift, and automatic capitals at a sentence's start.
+    check("Shift on the first letter", typist().type("so Teh"))
+    check("Caps on the whole word", typist().type("so TEH"))
+    val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
+    check("automatic capitals at the start", typist(field = sentences, autoCapitalise = true).type("teh"))
+    // Another language: there is no typo corrector, only completions (LanguageWords). Also a field that turns fixes off.
+    check("a language with no corrector", typist(autocorrect = null, offered = listOf("hello", "help", "held")).type("so hel"))
+    check("a field with typo fixes off",
+        typist(field = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PERSON_NAME, 0),
+            offered = listOf("hello", "help", "held")).type("so hel"))
+    // Words the bar leaves off: a blocked word typed, and a fix hidden while it waits to be forgotten.
+    val blocked = typist(offered = listOf("tehran")).also { it.words.blocked += "teh" }
+    check("a blocked word typed", blocked.type("so teh"))
+    val hidden = typist(offered = listOf("tehran")).type("so teh")
+    hidden.composer.hide("the")
+    check("its fix hidden from the bar", hidden)
+}
+
 fun main() {
     val world = Realistic()
     favourites()
@@ -2730,6 +2791,7 @@ fun main() {
     fieldReports(world)
     ownerTypos(world)
     singleLetters(world)
+    spaceTypesTheMiddleWord(world)
     capitalI(world)
     apostrophes(world)
     fixSwitches(world)

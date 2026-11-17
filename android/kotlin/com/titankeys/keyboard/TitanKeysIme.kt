@@ -124,6 +124,8 @@ class TitanKeysIme : InputMethodService() {
     private var barWords = emptyList<String>()
     /** TitanKeys Debug's last bar log line ([BarLog]), so only a change is logged. */
     private var barLogged: String? = null
+    /** The units picked in this field, Chinese's and Japanese's words for the gestures and the bar ([PickedWords]). */
+    private val pickedWords = PickedWords()
     private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
     /** The key that last picked from the panel or turned its page, so its repeats type nothing once the panel has closed. */
@@ -826,7 +828,7 @@ class TitanKeysIme : InputMethodService() {
         composer.commaSpace = { TypingSettings.commaSpaceIn(this, languages.languageId) }
         // Each language's own full stop for a double space, and its own words for the gestures that take one (owner, 2026-11-16).
         composer.fullStopMark = { languages.current.rules.fullStop }
-        editor.wordBreaker = { IcuWords.of(languages.current.javaLocale) }
+        editor.wordBreaker = ::wordBreaker
         composer.sentenceCapitals = { TypingSettings.autoCapitaliseIn(this, languages.languageId) && languages.current.rules.capitalise }
         // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
         composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
@@ -1468,6 +1470,8 @@ class TitanKeysIme : InputMethodService() {
         closePicker()
         // Text an engine was building belongs to the field before.
         if (::languages.isInitialized) languages.engine?.reset()
+        // The units picked belong to the field before ([PickedWords]), unless the same one restarts.
+        if (!restarting) pickedWords.clear()
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
@@ -3013,7 +3017,7 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun selectWord(inFront: Boolean = false, nothing: () -> Unit = {}) = changeSelection { text, start, end, _ ->
         // In Chinese, Japanese or Thai a run of letters can be a sentence: the language's word breaks pick one word in it.
-        val breaks = IcuWords.of(languages.current.javaLocale)
+        val breaks = wordBreaker()
         val word = if (inFront) WordSelection.atOrBefore(text, start, end, breaks) else WordSelection.at(text, start, end, breaks)
         haptics.play(Haptic.picked(found = word != null))
         if (word == null) {
@@ -3025,6 +3029,21 @@ class TitanKeysIme : InputMethodService() {
         word
     }
 
+    /**
+     * The word breaks every word gesture uses (three taps, a slide, a flick, Ctrl + Backspace): in Chinese and Japanese, the units
+     * as picked, then ICU's ([PickedWords]); elsewhere ICU's, which only narrow a run of a script without spaces ([WordBreaks]).
+     */
+    private fun wordBreaker(): WordBreaker {
+        val icu = IcuWords.of(languages.current.javaLocale)
+        return if (spacelessWords()) pickedWords.breaker(icu) else icu
+    }
+
+    /** Whether Chinese or Japanese types, whose words are units ([PickedWords]). */
+    private fun spacelessWords() = ::languages.isInitialized && (ChineseKeys.isChinese(languages.current) || languages.current.id == "ja")
+
+    /** The word that ends at the end of [before], as the gestures take it: the bar's word in Chinese and Japanese (B's call). */
+    fun chineseLastWord(before: String): String? = pickedWords.lastWord(before, IcuWords.of(languages.current.javaLocale))
+
     /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
     private fun startWordDrag() {
         GestureDisplay.selectionEnd = SelectionEnd.stored(Haptics.selectionEndId(this))
@@ -3032,7 +3051,8 @@ class TitanKeysIme : InputMethodService() {
         selectionWall.left()
         rememberCursor()
         changeSelection { text, start, end, offset ->
-            val word = WordSelection.at(text, start, end) ?: (start to end)
+            // The same word three taps take ([wordBreaker]): in Chinese a unit, not the whole run.
+            val word = WordSelection.at(text, start, end, wordBreaker()) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
             showWordText(text, start, end, word)
             word
@@ -3043,7 +3063,7 @@ class TitanKeysIme : InputMethodService() {
     private fun extendWords(direction: Int) = enqueue {
         changeSelection { text, start, end, offset ->
             val anchor = wordAnchor ?: return@changeSelection null
-            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction)
+            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction, wordBreaker())
             if (range == start to end) {
                 // Nothing more that way: the selection reached an end of the text. It plays once, until it moves away.
                 if (selectionWall.reached()) haptics.play(Haptic.SelectionEnd)
@@ -3897,6 +3917,8 @@ class TitanKeysIme : InputMethodService() {
             val text = state.commit
             rawLog?.committed(languages.current.engine, text)
             if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
+            // What was picked stays one word for every gesture and the bar ([PickedWords]).
+            pickedWords.picked(text)
         }
         if (state.composing || state.choices.isNotEmpty()) {
             val listed = languages.engine?.choices(0, ChineseRow.ASK + 1).orEmpty().ifEmpty { state.choices }

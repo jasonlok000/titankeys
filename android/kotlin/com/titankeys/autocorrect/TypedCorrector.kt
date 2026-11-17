@@ -41,26 +41,6 @@ interface Lexicon {
     fun usable(word: String): Boolean = true
 }
 
-/** Which letters sit next to each other on the Titan 2 Elite, diagonals included. */
-object KeyNeighbours {
-    private val near = BooleanArray(26 * 26)
-
-    init {
-        val keys = ArrayList<Triple<Int, Int, Int>>()
-        for (row in 0..2) for ((column, key) in Layout.rows[row].withIndex())
-            if (Layout.isLetter(key)) keys += Triple(key[0] - 'A', row, column)
-        for (first in keys) for (second in keys) if (first.first != second.first
-            && hypot((first.second - second.second).toDouble(), (first.third - second.third).toDouble()) <= 1.5)
-            near[first.first * 26 + second.first] = true
-    }
-
-    fun near(a: Char, b: Char): Boolean {
-        val first = a.lowercaseChar() - 'a'
-        val second = b.lowercaseChar() - 'a'
-        return first in 0..25 && second in 0..25 && near[first * 26 + second]
-    }
-}
-
 /** A word in the list, with how common it is. */
 data class DictionaryEntry(val word: String, val frequency: Int)
 
@@ -99,9 +79,12 @@ class CorrectionData private constructor(
         /** TitanKeys' own key names, which its users type about, though the list rates them rarer than [MIN_FREQUENCY]. */
         private val KEY_NAMES = setOf("backspace", "touchpad")
 
-        /** Reads the English data files, which [open] finds by name, and indexes [lexicon]. */
-        fun read(lexicon: Lexicon, open: (String) -> Reader): CorrectionData {
-            val pairs = open("en_pairs.txt").useLines { PairCounts.parse(it) }
+        /**
+         * Reads the English data files, which [open] finds by name as text and [openBytes] as bytes (the compact
+         * en_pairs.bin), and indexes [lexicon].
+         */
+        fun read(lexicon: Lexicon, openBytes: (String) -> java.io.InputStream, open: (String) -> Reader): CorrectionData {
+            val pairs = openBytes("en_pairs.bin").use { PairCounts.readBinary(it) }
             val triples = open("en_triples.txt").useLines { TripleCounts.parse(it) }
             val confusions = open("en_confusions.txt").useLines { ConfusionTable.parse(it) }
             val misspellings = open("en_misspellings.txt").useLines { lines ->

@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -28,17 +28,17 @@
     "words": "main_de__legacy.combined"
   },
   "starters": [
-    "der",
-    "und",
     "die",
+    "der",
+    "das",
     "in",
-    "von",
-    "den",
-    "des",
+    "es",
     "im",
-    "mit",
-    "ist",
-    "dem",
-    "das"
+    "und",
+    "ein",
+    "auch",
+    "sie",
+    "er",
+    "mit"
   ]
 }

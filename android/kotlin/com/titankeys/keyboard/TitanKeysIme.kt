@@ -761,6 +761,8 @@ class TitanKeysIme : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         Calibration.init(this)
+        // Rime's data copy keeps only the Chinese input methods that are on (docs/studies/3.0-storage.md).
+        com.titankeys.rime.RimeAssets.schemasOn = InputMethodList::rimeSchemasOn
         // The word menu, the Sym panel and the swipe's path all line up with the keys as Key calibration says.
         KeyCalibration.load(this)
         Connected.start(this)
@@ -890,6 +892,13 @@ class TitanKeysIme : InputMethodService() {
             idleBarTriggerRegistered = true
             // The touch simulator's events enter where the firmware's do: this window's touchpad path (TouchpadFeedHook).
             TouchpadFeedHook.dispatch = { event -> window.callback?.dispatchGenericMotionEvent(event) == true }
+            // Its keys enter where Android's do for the keyboard: onKeyDown and onKeyUp. One the keyboard doesn't take goes on
+            // to the app, as Android would send it (KeyFeedHook).
+            KeyFeedHook.dispatch = { event ->
+                val taken = if (event.action == KeyEvent.ACTION_DOWN) onKeyDown(event.keyCode, event) else onKeyUp(event.keyCode, event)
+                if (!taken) currentInputConnection?.sendKeyEvent(event)
+                taken
+            }
         }
         updateOverlay()
         loadEmoji()
@@ -2720,6 +2729,8 @@ class TitanKeysIme : InputMethodService() {
         else if (cursorGesture.tripled) main.postAtTime(confirmTriple, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
             lastTouch = pending.points
+            // A tap or a swipe while the input method loads waits behind the same stop as a key ([waitForLoad]).
+            waitForLoad("A touch")
             if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
                 contact.settle(pending, pending.deadline)
                 return@let
@@ -3165,6 +3176,7 @@ class TitanKeysIme : InputMethodService() {
 
     private fun clearSettlements() {
         inputGeneration++
+        loadGate.clear()
         drainScheduled = false
         settlements.values.forEach(main::removeCallbacks)
         settlements.clear()
@@ -3213,6 +3225,28 @@ class TitanKeysIme : InputMethodService() {
             }
             pendingInput.removeFirst()
         }
+    }
+
+    /** The queue's stop while an input method loads ([EngineWait]): the keys and touches typed meanwhile wait behind it. */
+    private val loadGate = LoadGate { PendingInput(false, null) }
+
+    /**
+     * A key or a touch on the touchpad while the input method is still loading, as a field starts or after a switch: it and
+     * whatever follows wait in the queue until it's ready, so the first letter goes into the engine's code (or is the input
+     * method's own letter) rather than into the field as English. Shown keyboard or not. Not in exact typing, which types
+     * English anyway.
+     */
+    private fun waitForLoad(what: String) {
+        if (field.exact || !::languages.isInitialized || !languages.loadingNow || loadGate.closed(pendingInput) || !makeRoom()) return
+        if (loadGate.before(true, pendingInput)) Log.i(LOG_TAG, "$what waits: the input method is still loading")
+    }
+
+    /** The load ended, ready or not: what waited goes on, to the engine if it started. */
+    private fun loadEnded() {
+        val stop = loadGate.open(languages.loadingNow, pendingInput) ?: return
+        Log.i(LOG_TAG, "What waited goes to ${languages.current.id}")
+        stop.ready = true
+        drainInput()
     }
 
     private fun makeRoom(): Boolean {
@@ -3981,6 +4015,7 @@ class TitanKeysIme : InputMethodService() {
         closePicker()
         strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
+        loadEnded()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
@@ -4142,6 +4177,7 @@ class TitanKeysIme : InputMethodService() {
             consumedKeys += keyCode
             return true
         }
+        if (!carried.isSystem) waitForLoad("Key ${carried.keyCode}")
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(carried)
             consumedKeys += keyCode
@@ -4628,6 +4664,7 @@ class TitanKeysIme : InputMethodService() {
         editing = false
         // It holds this keyboard, which must go with it (#85).
         TouchpadFeedHook.dispatch = null
+        KeyFeedHook.dispatch = null
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null

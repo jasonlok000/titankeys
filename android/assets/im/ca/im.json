@@ -7,11 +7,11 @@
   "script": "Latn",
   "keys": "qwerty",
   "accents": {
-    "a": "àáä",
+    "a": "àá",
     "c": "ç",
     "e": "éè",
     "i": "íï",
-    "o": "óòöø",
+    "o": "óò",
     "u": "úü"
   },
   "words": "words.combined",
@@ -19,7 +19,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -29,17 +29,17 @@
     "words": "main_ca__experimental.combined"
   },
   "starters": [
-    "de",
-    "com",
-    "no",
-    "es",
-    "un",
-    "té",
-    "una",
-    "en",
-    "per",
+    "el",
     "la",
-    "seva",
-    "va"
+    "en",
+    "els",
+    "a",
+    "les",
+    "va",
+    "es",
+    "és",
+    "de",
+    "per",
+    "també"
   ]
 }

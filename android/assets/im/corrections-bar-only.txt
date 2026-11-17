@@ -1,5 +1,2 @@
 # Input methods whose corrections show on the bar only: Space never puts them in. Written by
 # tests/corrections/run.sh --write: each made more than 0.5% wrong changes on its slips there.
-el
-gl
-sk

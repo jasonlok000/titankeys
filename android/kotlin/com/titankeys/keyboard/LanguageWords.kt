@@ -58,7 +58,7 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         // empty"). The field's own rules still keep the bar empty in passwords and the other fields without words.
         if (prefix.isEmpty()) {
             val start = com.titankeys.engine.SwipeTyping.startsSentence(before)
-            val previous = if (start) null else lastWord(before.trimEnd()).takeIf { it.isNotEmpty() }
+            val previous = if (start) null else previousWord(before.trimEnd())
             result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, rules))
             return
         }
@@ -73,7 +73,17 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         if (!other) return english.prefix(before)
         val run = lastWord(before, apostrophes)
         val list = list()
-        return if (wordBreak && list != null) WordBreak.last(run, list::has, list::hasPrefix) else run
+        return if (wordBreak && list != null) WordBreak.last(run, { WordBreak.word(it, list::has) }, list::hasPrefix) else run
+    }
+
+    /**
+     * The word a word that just ended follows, for its next words: the last run of letters, or in Thai, which has no spaces
+     * between words, that run's last word ([WordBreak.lastWord]); null where there's none.
+     */
+    fun previousWord(before: String): String? {
+        val run = lastWord(before, apostrophes).takeIf { it.isNotEmpty() } ?: return null
+        val list = list()
+        return if (wordBreak && list != null) WordBreak.lastWord(run, { WordBreak.word(it, list::has) }) else run
     }
 
     override fun prepare(text: String, cancelled: AtomicBoolean) { if (!other) english.prepare(text, cancelled) }
@@ -103,7 +113,20 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     override fun keptPair(previous: String?, next: String) {
         if (!other) return english.keptPair(previous, next)
         val learning = learning?.takeIf { mayLearn() } ?: return
-        learning.kept(previous, next, known = list()?.contains(next) == true || next in starters)
+        val list = list()
+        if (wordBreak && list != null) {
+            // Thai: what's kept between two spaces is a phrase, so each of its words is learned after the one before it, and
+            // a stray letter breaks the chain. Only the list's words: a phrase is never learned as one word.
+            val isWord = { piece: String -> WordBreak.word(piece, list::has) }
+            var before = previous?.let { WordBreak.lastWord(it, isWord) }
+            // A sentence's start only where the whole phrase starts one; after a stray letter, a word alone.
+            var paired = previous == null || before != null
+            for (piece in WordBreak.words(next, isWord)) {
+                if (piece != null) learning.kept(before, piece, known = true, paired = paired)
+                before = piece
+                paired = piece != null
+            }
+        } else learning.kept(previous, next, known = list?.contains(next) == true || next in starters)
         learned()
     }
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {

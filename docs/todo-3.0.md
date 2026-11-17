@@ -330,10 +330,18 @@ Every worker was told to commit its work in progress to its own branch and stop 
 
 ## App size and Google Play (found 2026-11-17)
 
-The Debug APK is about 212 MB after the Chinese work and the Cantonese grammar (179 MB before), over Google Play's 200 MB
-download limit for an app's base. The owner: "Don't worry about size yet. That's kinda easily solvable." For the Play build:
-the Chinese data, Mozc's dictionary and the grammar move to Play Asset Delivery packs, or download on demand (the owner's
-earlier idea). The GitHub APK can stay whole.
+The Debug APK is about 212 MB after the Chinese work and the Cantonese grammar (179 MB before), which looked over Google Play's 200 MB
+limit; B read Google's current page on 2026-11-17: the base module may be 500 MB, each asset pack 1.5 GB, 4 GB in all. The owner: "Don't worry about size yet. That's kinda easily solvable." For the Play build: B's prototype (docs/play/asset-packs.md, tools/dev/build/play-packs.sh) moves the big data into four
+install-time packs; the base download is then 41.4 MB, 201.8 MB in all on a Titan, with no app change. Not yet installed on
+a phone. The GitHub APK can stay whole.
+
+## For the owner's hands (collected 2026-11-17)
+
+- Export TitanKeys Debug's typing log (Settings > Typing log > Export log), for J's #83 rerun with text since 11-11.
+- The phone read 51 C on the charger at 04:19, not charging, with MediaTek's battery warning up since 02:49; it blocked the second
+  half of the night's runs. Let it cool before the next slot.
+- Shift opening and closing the Chinese menu (the twin's Shift can't be used); Georgian Shift+W types its letter; blocking a
+  Spanish word from its menu; the saved-words list.
 
 ## Milestones (internal; the owner gave the go at 01:20)
 

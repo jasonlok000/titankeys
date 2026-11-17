@@ -41,6 +41,10 @@ internal class Languages(
     val engine: InputEngine? get() = if (englishOnly) null else loadedEngine
     val words = LanguageWords(english) { slot.list }
 
+    /** Whether typing waits for an input method that's loading, and goes to it once it's ready ([EngineWait]). */
+    private val engineWait = EngineWait()
+    val loadingNow get() = !englishOnly && engineWait.waiting
+
     /** The current input method's word list, once loaded: null for English and for one without a list. */
     val list: WordList? get() = if (englishOnly) null else slot.list
 
@@ -202,6 +206,7 @@ internal class Languages(
         val listTicket = slot.begin(id)
         // The last input method's next-word table goes with its list.
         if (id != loaded.id) words.nextWords = null
+        engineWait.loading(ticket, id)
         if (id == InputMethod.ENGLISH_ID) {
             apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return
@@ -223,6 +228,7 @@ internal class Languages(
                 InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
             }
             main.post {
+                engineWait.loaded(ticket)
                 if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded in ${SystemClock.elapsedRealtime() - startedAt} ms: ${
                     if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
                     else "${words?.size ?: 0} words, no engine"
@@ -263,6 +269,7 @@ internal class Languages(
     fun stop() {
         saveLearning()
         loading++
+        engineWait.stop()
         slot.clear()
         loadedEngine?.stop()
         loadedEngine = null

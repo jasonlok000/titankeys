@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -28,17 +28,17 @@
     "words": "main_it.combined"
   },
   "starters": [
-    "di",
-    "e",
     "il",
     "la",
     "in",
+    "e",
+    "i",
+    "per",
+    "non",
     "a",
-    "del",
-    "che",
+    "le",
     "un",
-    "è",
-    "della",
-    "per"
+    "ma",
+    "è"
   ]
 }

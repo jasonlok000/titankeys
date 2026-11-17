@@ -32,6 +32,25 @@ test("TitanKeys never sets the hook: only TitanKeys Debug's block does, and the 
     "android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt", "android/kotlin/com/titankeys/keyboard/TouchpadFeedHook.kt"]);
 });
 
+// The key feed (KeyFeed.kt, TK_KEYFEED=1 in touch.sh): the same rules. It plays keys, Shift included, into the keyboard's own key
+// handling, so TitanKeys must never have it.
+test("the key feed is only in TitanKeys Debug, only adb can send to it, and only Debug sets its hook", () => {
+  for (const file of ["KeyFeed.kt", "KeyFeedPlan.kt"])
+    expect(existsSync(join(root, "android/kotlin/com/titankeys/keyboard", file))).toBe(false);
+  expect(read("android/src/main/AndroidManifest.xml")).not.toContain("KeyFeed");
+  const entry = read("android/debug/recorder/manifest.xml").match(/<receiver\s+android:name="com\.titankeys\.keyboard\.KeyFeed"[^>]*\/>/)?.[0];
+  expect(entry).toBeDefined();
+  expect(entry).toContain('android:permission="android.permission.DUMP"');
+  expect(read("android/debug/recorder/KeyFeed.kt")).toContain('packageName.endsWith(".debug")');
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+  const sets = [...ime.matchAll(/KeyFeedHook\.dispatch = \{/g)].map(match => match.index!);
+  expect(sets.length).toBe(1);
+  const debugBlock = ime.lastIndexOf("if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) {", sets[0]);
+  expect(debugBlock).toBeGreaterThan(-1);
+  expect(ime.slice(debugBlock, sets[0]).split("{").length).toBe(ime.slice(debugBlock, sets[0]).split("}").length + 1);
+  expect(ime).toContain("KeyFeedHook.dispatch = null");
+});
+
 test("the feed shifts its events as the firmware shifts real ones, by Touchpad.kt's own rule", () => {
   const feed = read("android/debug/recorder/TouchFeed.kt");
   const touchpad = read("android/kotlin/com/titankeys/keyboard/Touchpad.kt");

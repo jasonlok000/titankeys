@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -28,17 +28,17 @@
     "words": "main_et__experimental.combined"
   },
   "starters": [
-    "ja",
-    "on",
-    "ei",
-    "et",
-    "ka",
     "kui",
-    "oli",
-    "ning",
     "see",
-    "siis",
-    "oma",
-    "mis"
+    "ja",
+    "aga",
+    "kas",
+    "ma",
+    "nii",
+    "ta",
+    "ka",
+    "kuid",
+    "ei",
+    "samas"
   ]
 }

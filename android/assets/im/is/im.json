@@ -21,7 +21,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -31,17 +31,17 @@
     "words": "main_is__experimental.combined"
   },
   "starters": [
-    "að",
-    "og",
+    "það",
     "í",
-    "á",
-    "er",
-    "sem",
-    "til",
-    "um",
+    "hann",
+    "þetta",
+    "ég",
+    "þá",
+    "meira",
+    "en",
     "við",
-    "ekki",
-    "með",
-    "en"
+    "þar",
+    "hún",
+    "að"
   ]
 }

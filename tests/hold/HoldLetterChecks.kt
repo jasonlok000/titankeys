@@ -13,7 +13,8 @@ private fun same(actual: Any?, expected: Any?, message: String) {
 }
 
 private class FakeEditor : Editor {
-    private val owner = Any()
+    /** The field's connection: a new one when another field starts. */
+    var owner = Any()
     var text = ""
     /** Where the user has moved the cursor to, or null when it follows the typing. */
     var cursor: Int? = null
@@ -124,6 +125,7 @@ fun main() {
     symbolAfterASwipeMovesBeforeTheSpace()
     aLetterThatHasMovedStays()
     exactTyping()
+    aClosedFieldIsLetGo()
     println("PASS: hold letter checks")
 }
 
@@ -276,4 +278,21 @@ private fun exactTyping() {
         same(it.modifiers.panel, Modifiers.Panel.Symbols, "Exact typing: Sym opens the panel")
         same(it.sent, emptyList<String>(), "Exact typing: Sym never goes to the app")
     }
+}
+
+/**
+ * #85: a closed screen's field isn't kept. The keyboard runs in the same process as TitanKeys' own screens, where a field's
+ * connection holds its text box and the whole screen, so the last field's identity holds its connection weakly.
+ */
+private fun aClosedFieldIsLetGo() {
+    val typist = Typist().type("ab")
+    val closed = java.lang.ref.WeakReference(typist.editor.owner)
+    // The screen closes, and no other field takes the focus (TitanKeys Debug's own screen has none): nothing starts after it.
+    typist.editor.owner = Any()
+    for (attempt in 1..10) {
+        if (closed.get() == null) break
+        System.gc()
+        System.runFinalization()
+    }
+    same(closed.get() == null, true, "A field that closed isn't held by the keyboard")
 }

@@ -47,7 +47,7 @@ echo "$BOOST_SHA256  $WORK/src/boost-1.92.0.tar.xz" | sha256sum -c --quiet
 # The tree CMake builds: TitanKeys' CMakeLists.txt and sources, Trime's cmake/ helpers, and the fetched sources.
 TREE="$WORK/tree"
 rm -rf "$TREE"; mkdir -p "$TREE"
-cp "$HERE/CMakeLists.txt" "$HERE/rime_jni.cc" "$HERE/rime_tool.cc" "$TREE/"
+cp "$HERE/CMakeLists.txt" "$HERE/rime_jni.cc" "$HERE/rime_tool.cc" "$HERE/tk_predict.h" "$TREE/"
 cp -r "$WORK/src/trime/app/src/main/jni/cmake" "$TREE/cmake"
 ln -s "$WORK/src/librime" "$TREE/librime"
 ln -s "$WORK/src/snappy" "$TREE/snappy"

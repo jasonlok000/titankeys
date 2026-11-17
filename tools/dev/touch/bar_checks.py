@@ -10,8 +10,8 @@ from checks import Stop, play, record
 WORDS = {"es": "hola", "fr": "bonjour", "ko": "gksrnr"}
 HANDS = ["A password field: the bar stays empty (no starters, no next words)",
          "Spanish: block a word from its menu, and it never shows on the bar again",
-         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it",
-         "Japanese: Shift closes the bigger menu (the keyboard twin's Shift can't be used here)"]
+         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it"]
+# Japanese's Shift on the bigger menu is the shift batch's (shift_checks.py, through the key feed).
 
 
 def keys(word):
@@ -200,3 +200,221 @@ def check_japanese_polish():
 
 
 BATCH += [check_japanese_polish]
+
+
+def check_accents():
+    """H's accents (no repeat, over W to O): in Spanish a W held 2 s types exactly one "w" (O); in French a held O shows its
+    accents over I and O and nothing over P (J), and a held A over W, E and R and nothing over Q (J)."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "es", "fr"], "es"):
+        return record("accents-es", False, "the field didn't start with es")
+    language_checks.fresh()
+    play("hold:w:2000", "+500")
+    text = language_checks.checks.field()
+    record("accents-es-w", text == "w", f"W held 2 s in Spanish typed {text!r}, wanted exactly 'w'")
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "es", "fr"], "fr"):
+        return record("accents-fr", False, "the field didn't start with fr")
+    for letter, want in (("o", "the accents over I and O, nothing over P"), ("a", "over W, E and R, nothing over Q")):
+        language_checks.fresh()
+        play(f"key:{letter}:900:none", "+400", shot=f"accents-fr-{letter}", at=1100)
+        record(f"accents-fr-{letter}", None, f"{letter.upper()} held in French: {want}", f"accents-fr-{letter}")
+        play("key:del", "+300", "key:del", "+300")
+
+
+def check_language_settings():
+    """H's per-language settings: with a second language on, Settings > Typing reads "Typing in each language: English, …"
+    (J), and French's page shows the one-time line and its rows: Fix typos, Capital letter, Space after a sentence, Space after
+    , ; :, Double Space (J). The languages go on through InputMethodsSet; Settings is only looked at and tapped through."""
+    import retest_batch
+    import guide_checks
+    language_checks.fresh()
+    language_checks.turn_on(["en", "fr"], "en")
+    retest_batch.own_screen()
+    adb = language_checks.adb
+    adb("shell", "am", "start", "-n", f"{language_checks.checks.APP}/com.vandam.ink.MainActivity")
+    import time
+    time.sleep(3)
+    adb("shell", "input", "tap", "952", "166")  # SETTINGS
+    time.sleep(2)
+    record("settings-typing", None, 'Settings: the Typing row reads "Typing in each language: English, …"',
+           guide_checks.shot("settings-typing"))
+    row = retest_batch.row_at("Français") or retest_batch.row_at("French")
+    if row is None:
+        typing = retest_batch.row_at("Typing in each language")
+        if typing:
+            adb("shell", "input", "tap", str(typing[0]), str(typing[1]))
+            time.sleep(2)
+            row = retest_batch.row_at("Français") or retest_batch.row_at("French")
+    if row:
+        adb("shell", "input", "tap", str(row[0]), str(row[1]))
+        time.sleep(2)
+        record("settings-french", None, "French's page: the one-time line, then Fix typos, Capital letter, Space after a"
+               " sentence, Space after , ; :, Double Space", guide_checks.shot("settings-french"))
+    else:
+        record("settings-french", None, "French's page wasn't found by its name on screen: for the owner's hands")
+    for _ in range(4):
+        if f" {language_checks.checks.APP}/" in language_checks.languages.front():
+            adb("shell", "input", "keyevent", "4")
+            time.sleep(1)
+
+
+BATCH += [check_accents, check_language_settings]
+
+
+def restarted_hidden(on, current):
+    """The input methods on, the keyboard's process restarted by an install of the same APK (never a force stop), Debug's field
+    focused and the keyboard hidden, TitanKeysIM's log cleared: the moment before the first touch or key."""
+    import os
+    import time
+    adb = language_checks.adb
+    apk = os.environ.get("TK_BATCH_APK", os.path.expanduser("~/build/m1-apks/main-next-debug.apk"))
+    language_checks.fresh()
+    if not language_checks.turn_on(on, current):
+        raise Stop(f"the field didn't start with {current}")
+    out = adb("install", "-r", apk)  # through checks.adb, as every phone step here (the run holds the phone lock)
+    if "Success" not in out:
+        raise Stop(f"the same APK didn't install again: {out.strip()[-80:]}")
+    time.sleep(3)
+    language_checks.languages.logs_on(True)
+    adb("logcat", "-c")
+    language_checks.checks.keyboard("debug")
+    if not language_checks.languages.in_field():
+        raise Stop("not in the Space gestures field after the install")
+    language_checks.checks.guarded("keyevent", "4")  # Back hides the keyboard; the field keeps its focus
+    time.sleep(1)
+
+
+def waits_lines():
+    return [line.split(":", 1)[-1].strip() for line in language_checks.languages.log_lines() if "TitanKeysIM" in line
+            and ("waits" in line or "What waited" in line)]
+
+
+def check_first_key():
+    """C's touch waits (every input method but English): restarted, keyboard hidden, the first input lands in the input method.
+    Yale: a touchpad tap on N becomes Yale's code, not a plain n (J: the shot; O: the field stays empty), and TitanKeysIM says
+    "A touch waits: the input method is still loading" and "What waited goes to yue-yale" (O). Russian: the first key, Q, types
+    й (O), and TitanKeysIM says "Key 45 waits: …" and "What waited goes to ru" (O)."""
+    restarted_hidden(["en", "yue-yale"], "yue-yale")
+    play("touch:0.65,0.625:80", "+1500", shot="first-touch", at=1200)  # N's middle on the touchpad
+    text = language_checks.checks.field()
+    lines = waits_lines()
+    record("first-touch", text == "", f"a tap on N after the restart left the field {text!r}: Yale's code on the bar (the shot)",
+           "first-touch")
+    record("first-touch-log", "A touch waits: the input method is still loading" in lines
+           and "What waited goes to yue-yale" in lines, f"TitanKeysIM: {lines}")
+    restarted_hidden(["en", "ru"], "ru")
+    play("key:q", "+1500")
+    text = language_checks.checks.field()
+    lines = waits_lines()
+    record("first-key-ru", text == "й", f"Q after the restart typed {text!r}, wanted 'й'")
+    record("first-key-ru-log", "Key 45 waits: the input method is still loading" in lines
+           and "What waited goes to ru" in lines, f"TitanKeysIM: {lines}")
+
+
+def check_sym_then_type():
+    """Sym to Yale (two languages on, a held Sym switches) and N at once: the first letter is in the code (J)."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "yue-yale"], "en"):
+        return record("sym-then-type", False, "the field didn't start with en")
+    language_checks.fresh()
+    play("key:sym:900:none", "+30", "key:n", "+90", "key:e", "+90", "key:i", "+700", shot="sym-then-type", at=1600)
+    record("sym-then-type", None, "a held Sym to Yale, then nei at once: the code shows nei, its n included", "sym-then-type")
+
+
+def check_slips():
+    """Belarusian гэ offers гэта (J); Hindi namastr shows नमस्ते on the bar (J) and Space keeps what was typed (O); Vietnamese
+    xon shows xin (J). The keyboard's log has no per-key timing, so the slips aren't timed."""
+    language_checks.fresh()
+    if language_checks.turn_on(["en", "be", "hi", "vi"], "be"):
+        language_checks.fresh()
+        # г is U; э is L's second accent: L held, then O, the key under it (H's accents over W to O, as French O's over I, O).
+        play("key:u", "+90", "hold:l:900", "+300", "key:o", "+800", shot="slip-be", at=2100)
+        text = language_checks.checks.field()
+        record("slip-be", None if text == "гэ" else False, f"typed {text!r} (wanted гэ): гэта offered on the bar", "slip-be")
+    for im, typed, want in (("hi", "namastr", "नमस्ते"), ("vi", "xon", "xin")):
+        language_checks.fresh()
+        if not language_checks.turn_on(["en", "be", "hi", "vi"], im):
+            record(f"slip-{im}", False, f"the field didn't start with {im}")
+            continue
+        language_checks.fresh()
+        moves = keys(typed) + ["+800"]
+        play(*moves, shot=f"slip-{im}", at=len(moves) * 80 + 500)
+        record(f"slip-{im}", None, f"{typed} typed: {want} on the bar", f"slip-{im}")
+        if im == "hi":
+            play("key:space", "+500")
+            text = language_checks.checks.field()
+            record("slip-hi-space", bool(text.strip()) and text.strip() != want,
+                   f"Space after namastr typed {text!r}: what was typed, not {want}")
+
+
+BATCH += [check_first_key, check_sym_then_type, check_slips]
+
+
+def check_thai_hebrew_hindi():
+    """C's polish (2026-11-17). Thai: an empty field shows no single letter on the bar (J); after ไป and Space, next words, not
+    starters (J; the owner's ฉันไปโรงเรียน needs Shift for ฉ and โ, which the keyboard twin can't use here). Hebrew: a word's
+    best guess in the middle, the second on the right (J); a steer to the right moves the cursor back through Hebrew text (O: a
+    letter typed after it lands inside the word); after את and Space, כל is offered (J). Hindi: ki + Space types कि (O), and
+    the bar shows वह, इस (J)."""
+    field = language_checks.checks.field
+    on = ["en", "th", "he", "hi"]
+
+    def start(im):
+        language_checks.fresh()
+        if not language_checks.turn_on(on, im):
+            raise Stop(f"the field didn't start with {im}")
+        language_checks.fresh()
+
+    start("th")
+    play("+800", shot="th-empty", at=500)
+    record("th-empty", None, "Thai, empty field: no single letter on the bar", "th-empty")
+    play(*keys("wx"), "+300", "key:space", "+900", shot="th-next", at=len(keys("wx")) * 80 + 1000)  # ไป
+    record("th-next", None, "after ไป and Space: next words on the bar, not starters", "th-next")
+
+    start("he")
+    play(*keys("aku"), "+800", shot="he-guesses", at=len(keys("aku")) * 80 + 600)  # שלו
+    record("he-guesses", None, "שלו typed: the best guess in the middle, the second on the right", "he-guesses")
+    language_checks.fresh()
+    play(*keys("akuo"), "+600")  # שלום
+    word = field()
+    play("spacehold:2:1.5", "+600", "key:f", "+500")  # steer right, then כ as a marker
+    after = field()
+    inside = after != word + "כ" and "כ" in after and after.replace("כ", "", 1) == word
+    record("he-steer", inside, f"{word!r}, a steer to the right, then כ: {after!r} (the כ inside the word: the cursor went back)")
+    language_checks.fresh()
+    play(*keys("tq"), "key:space", "+900", shot="he-next", at=len(keys("tq")) * 80 + 1000)  # את
+    record("he-next", None, "after את and Space: כל offered", "he-next")
+
+    start("hi")
+    play(*keys("ki"), "+400", "key:space", "+900", shot="hi-next", at=len(keys("ki")) * 80 + 1100)
+    text = field()
+    record("hi-ki", text.strip() == "कि", f"ki + Space typed {text!r}, wanted 'कि'")
+    record("hi-next", None, "after कि: वह and इस on the bar", "hi-next")
+
+
+BATCH += [check_thai_hebrew_hindi]
+# Thai's ฉันไปโรงเรียน (ฉ and โ on Shift) is the shift batch's (shift_checks.py, through the key feed).
+
+
+def check_empty_fields():
+    """C's first-look fixes: an empty field's starters. Thai: สวัสดี, ขอบคุณ, ฉัน (J). Slovak: no "Prečítajte" (J). Pinyin: 我,
+    是, 你, with no 的 (J). Only Serbian (Latin) on, nothing else: the mark at Q reads SR (J)."""
+    for im, want in (("th", "สวัสดี, ขอบคุณ, ฉัน"), ("sk", "no \"Prečítajte\""), ("zh-pinyin", "我, 是, 你, and no 的")):
+        language_checks.fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"empty-{im}", False, f"the field didn't start with {im}")
+            continue
+        language_checks.fresh()
+        play("+800", shot=f"empty-{im}", at=500)
+        record(f"empty-{im}", None, f"{im}, empty field: {want}", f"empty-{im}")
+    language_checks.fresh()
+    if language_checks.turn_on(["sr-latn"], "sr-latn"):
+        language_checks.fresh()
+        play("+800", shot="empty-sr-latn-only", at=500)
+        record("mark-sr-latn", None, "only Serbian (Latin) on: the mark at Q reads SR", "empty-sr-latn-only")
+    else:
+        record("mark-sr-latn", False, "the field didn't start with sr-latn alone")
+
+
+BATCH += [check_empty_fields]

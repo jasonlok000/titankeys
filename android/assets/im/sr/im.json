@@ -42,7 +42,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -53,17 +53,17 @@
     "words": "main_sr.combined"
   },
   "starters": [
-    "је",
-    "и",
     "у",
-    "се",
     "на",
-    "су",
-    "да",
-    "од",
-    "а",
+    "након",
     "за",
-    "године",
-    "са"
+    "међутим",
+    "то",
+    "од",
+    "током",
+    "када",
+    "он",
+    "као",
+    "по"
   ]
 }

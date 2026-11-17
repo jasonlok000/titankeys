@@ -47,7 +47,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!;",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -58,17 +58,17 @@
     "words": "main_el__legacy.combined"
   },
   "starters": [
-    "και",
-    "του",
-    "της",
-    "το",
-    "την",
-    "από",
-    "με",
-    "να",
-    "που",
     "ο",
-    "τον",
-    "των"
+    "το",
+    "οι",
+    "δεν",
+    "και",
+    "τα",
+    "σε",
+    "για",
+    "με",
+    "είναι",
+    "στο",
+    "σύμφωνα"
   ]
 }

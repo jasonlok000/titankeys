@@ -27,7 +27,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -37,17 +37,17 @@
     "words": "main_sk__experimental.combined"
   },
   "starters": [
-    "sa",
-    "je",
-    "si",
-    "som",
     "na",
-    "že",
-    "čo",
-    "nie",
+    "podľa",
+    "ak",
     "ako",
-    "tak",
+    "je",
     "ale",
-    "by"
+    "po",
+    "aj",
+    "za",
+    "pri",
+    "do",
+    "pre"
   ]
 }

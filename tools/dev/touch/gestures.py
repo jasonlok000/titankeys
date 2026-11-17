@@ -202,6 +202,8 @@ class Script:
         self.touching = False
         self.frame = 0
         self.uses_keys = False
+        # The keys by name, for TitanKeys Debug's key feed (keyfeed_text).
+        self.named_keys = []
         # Positions in TitanKeys' space, with times, for the checks.
         self.trace = []
 
@@ -244,6 +246,7 @@ class Script:
         if code is None:
             raise SystemExit(f"no key code for {name!r}: pass --keymap from keymap.sh")
         self.uses_keys = True
+        self.named_keys.append((round(self.t, 3), name.lower(), down))
         self._event(KEYBOARD, EV_KEY, code, 1 if down else 0)
         self._event(KEYBOARD, EV_SYN, SYN_REPORT, 0)
 
@@ -261,6 +264,18 @@ class Script:
             out.append("dev 1 TitanKey")
         out += [f"{t:.3f} {d} {ty} {c} {v}" for t, d, ty, c, v in lines]
         return "\n".join(out) + "\n"
+
+    def keyfeed_text(self):
+        """The keys for TitanKeys Debug's key feed (android/debug/recorder/KeyFeed.kt): "D ms NAME" as a key goes down, "U ms NAME"
+        as it comes up, separated by ";", with Android's key names. It plays them into the keyboard itself, Shift included,
+        without the injector's twin keyboard, whose Shift takes the field's focus on the Titan 2 Elite."""
+        out = []
+        for t, name, down in self.named_keys:
+            android = KEYFEED_NAMES.get(name) or (name.upper() if len(name) == 1 and name.isalpha() else None)
+            if android is None:
+                raise SystemExit(f"the key feed has no name for {name!r}")
+            out.append(f"{'D' if down else 'U'} {round(t)} {android}")
+        return ";".join(out)
 
     def feed_text(self):
         """The touchpad's frames for TitanKeys Debug's touch feed (android/debug/recorder/TouchFeed.kt): "D ms x y size" as a
@@ -501,6 +516,11 @@ class Script:
         self.lift()
 
 
+# The key feed's names (KeyEvent's, without KEYCODE_) for the keymap's: the Titan 2 Elite's Shift is its right one (keymap.sh),
+# its Sym and fn reach the keyboard as SYM and FUNCTION.
+KEYFEED_NAMES = {"space": "SPACE", "enter": "ENTER", "del": "DEL", "shift": "SHIFT_RIGHT", "alt": "ALT_LEFT", "sym": "SYM",
+                 "fn": "FUNCTION"}
+
 # Android key codes for the keymap's names, for the raw log's key lines.
 ANDROID_CODES = {**{c: 29 + i for i, c in enumerate("abcdefghijklmnopqrstuvwxyz")},
                  "space": 62, "enter": 66, "del": 67, "shift": 59, "alt": 57, "sym": 63, "fn": 119}
@@ -604,9 +624,16 @@ def main():
     parser.add_argument("--keymap", help="key=code lines from keymap.sh")
     parser.add_argument("--out", help="where to write the script (default: standard output)")
     parser.add_argument("--feed-out", help="write the touches here for TitanKeys Debug's touch feed, and only the keys to --out")
+    parser.add_argument("--keyfeed-out", help="write the keys here for TitanKeys Debug's key feed, and none to --out")
     parser.add_argument("gestures", nargs="+")
     args = parser.parse_args()
     script = build(args)
+    if args.keyfeed_out:
+        with open(args.keyfeed_out, "w", encoding="utf-8") as out:
+            out.write(script.keyfeed_text())
+        # The keys go through the feed, so the injector gets none: no twin keyboard comes.
+        script.lines = [line for line in script.lines if line[1] != KEYBOARD]
+        script.uses_keys = False
     text = script.text(touches=not args.feed_out)
     if args.feed_out:
         with open(args.feed_out, "w", encoding="utf-8") as out:

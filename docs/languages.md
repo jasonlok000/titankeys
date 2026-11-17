@@ -115,7 +115,7 @@ The fields:
 | `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 8, one per key column from W to O. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
-| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`); `fullStop`, what a double Space types: `". "` unless set, `"。"` with no space for Chinese and Japanese, `"। "` for Hindi, `""` for Thai, which has none, so two Spaces stay spaces |
+| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (Spanish's ¿¡, and in every script with capitals the quote marks " “ ” „ « », so «Привет» and „Hallo“ get their capital), and whether apostrophes are part of words (French: `l'eau`); `fullStop`, what a double Space types: `". "` unless set, `"。"` with no space for Chinese and Japanese, `"। "` for Hindi, `""` for Thai, which has none, so two Spaces stay spaces |
 | `engine` | `null`, `"rime"` with its schema (`{ "rime": "tk_yale" }`), or the name of a built-in engine (`"hangul"`, `"telex"`) |
 | `source` | Where the letters and words come from, for the licences page and for contributors |
 
@@ -201,10 +201,18 @@ data-only language is one command plus a check by eye. Where the data comes from
   language changes only that.
 - `tests/corrections` measures every language on made-up slips of its commonest words. A language whose Space would make
   more than 0.5% wrong changes gets its fixes on the bar only (`android/assets/im/corrections-bar-only.txt`, which
-  `run.sh --write` writes from the measure): Greek, Galician and Slovak today. Over all 44, on 36,760 slips, Space puts
-  in the right word for 56.4% and a wrong one for 0.1%, never changes a word typed right, and the right word is on the bar
-  for 91.3%.
+  `run.sh --write` writes from the measure): none today. Over all 44, on 37,114 slips, Space puts in the right word for
+  61.2% and a wrong one for 0.1%, never changes a word typed right, and the right word is on the bar for 92.0%.
+- Eleven lists whose own frequencies put foreign and unaccented junk on top are ranked by Leipzig's sentences for their
+  language, keeping only the words those use (`RANK_BY` in tools/im/make.py; their starters stay their own list's): af,
+  bs, ca, el, ga, gl, he, is, lv, nn and sk. Greek, Galician and Slovak, bar only before, now let Space fix.
 - Kept-once words are each language's own (`KeptOnceStore.languageKey`).
+- **Hindi and Vietnamese** build their words in an engine, so the corrector above doesn't see them. Their choices are the
+  list's words that start like the word being built, so one wrong key (tirng for tieng) left nothing to pick. Where nothing
+  starts like it and it's no word itself, the engine tries its keys with one slip undone (a neighbouring key, a key too
+  many or left out, two swapped), spells each, and offers the commonest that's a word: one choice on the bar, never put in by
+  Space (`EngineSlips`). On one-slip keys of the commonest words, the right word is on the bar for 76% in Hindi (5.7% before)
+  and 81% in Vietnamese (15.5% before); about 3 ms and 1 ms a key on the PC.
 
 The bar, its hover and the picking come from the word menu's code (see "Where it goes in the code").
 
@@ -306,8 +314,13 @@ suggestion when there's nothing typed"; #56, [the study](studies/56-chinese-pred
   for the start of a text.
 - **Not shown before a variant is picked:** they'd be Rime's Traditional.
 - **Japanese** has them too, from Mozc itself ("Japanese").
-- **Limits:** Rime looks up the whole last commit, so after a phrase of several words committed at once there's often
-  nothing to suggest. Moving the cursor doesn't clear them, as it doesn't clear a code.
+- **A phrase committed at once** (我哋今日, a whole sentence before Space): librime-predict looks up the whole last commit,
+  which its table rarely has, so TitanKeys then tries what the phrase ends with, longest first, down to its last character
+  (`native/rime/tk_predict.h`, in the app's JNI layer and the PC tool): 我哋今日 → 係 嘅 下晝. They're Rime's own choices, so
+  Space, a pick and Escape work as for any. On held-out Common Voice sentences, cut into phrase commits of 2 to 4 words,
+  suggestions show after 94% of them (none before), and the next character is among the first 3 for 7.2% in Cantonese and
+  4.1% in Mandarin, as for words committed one at a time (8.3% and 4.3%; `native/rime/predict_fallback.py`).
+- **Limits:** Moving the cursor doesn't clear them, as it doesn't clear a code.
 
 **Checks and renders:** `tests/chinese` checks the places, the pages, the keys that pick, the marks and the English word;
 `tests/rime` the engine's keys; `tools/checks/chinese.test.ts` keeps the keyboard's wiring to this design. `bash
@@ -450,7 +463,7 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   end rewrites them, as jquery.ime does (namaste is नमस्ते). The same runner takes any other script's rule file later.
 - **The word being typed** is the engine's code, on the bar, worked out again from the keys, so Backspace takes the last key
   off. Space goes through the rules too, so a word's last virama goes (agar is अगर, agar~ keeps it), as jquery.ime does.
-  The word list's words that start with it are the choices, as Telex's are. Shift letters are their own sounds (namaH,
+  The word list's words that start with it are the choices, after the word as Space writes it, as Telex's are (#98). Shift letters are their own sounds (namaH,
   maChiyoM), so there are no sentence capitals.
 - **Measured** (`tests/languages`): jquery.ime's own Hindi test cases pass 100 of 101 when exported to `$HI_FIXTURES` (the
   one left is a browser's line break, \r written as \n); typing the 300 commonest words by sound, a search finds keys
@@ -540,8 +553,11 @@ the phone on the first use. The whole debug APK is 167.4 MB, under Google Play's
 The owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty at all times
 unless it's like password or whatever. if not hard then it should be learning from the user too."
 
-- **Starters:** each input method's commonest words, in its `im.json` (`"starters"`), written by `tools/im/make.py
-  --starters`: from its own word list; Korean from FrequencyWords; Cantonese and Mandarin from Rime's essays, with a
+- **Starters:** the words each input method's sentences most often begin with, in its `im.json` (`"starters"`), written by
+  `tools/im/make.py --starters`: from the Leipzig Corpora Collection's sentences for the language (`STARTER_CORPORA`, CC BY 4.0,
+  credited in its NOTICE), only the words in its own list, in lower case, leaving out names (a word written with a capital
+  more often than not mid-sentence) and a few corpus labels (`STARTER_SKIP`); Thai, whose sentences have no spaces, from its
+  list's commonest words; Cantonese and Mandarin from Rime's essays, with a
   Simplified copy through OpenCC's character table (`"startersSimplified"`, for that variant); Japanese picked by hand (Mozc's
   costs rank homophones, not common words).
 - **On the bar** (`BarWords`, through `LanguageWords`): at a sentence's start, the user's own sentence starts and then the
@@ -555,8 +571,8 @@ unless it's like password or whatever. if not hard then it should be learning fr
   words and as another is switched to: on the phone only, in the backup, kept by Reset most things and cleared by Reset
   literally everything, as English's learned words are. Learn new words I type turns it off for every language.
 - Chinese and Japanese: the starters show on an empty bar; after a pick, Rime's and Mozc's own next words show (D's work).
-- **Next-word tables** (J's, from the Leipzig Corpora Collection): `pairs.txt` in an input method's folder (`pairs-pt-BR.txt`
-  for a variant), in English's `en_pairs.txt` format: "first second<TAB>count", '#' lines for the source, `<s>` for a
+- **Next-word tables** (J's, from the Leipzig Corpora Collection): `pairs.bin` in an input method's folder (`pairs-pt-BR.bin`
+  for a variant), compact (every word once in UTF-8, next words as word numbers; docs/next-words.md): `<s>` for a
   sentence's start, lower case where the script has case, the top 8 next words per first word. `NextWords` reads it with the
   word list on a switch and frees it with the list; the bar puts its next words after the user's own and before the starters.
   An input method without one has the starters and the user's own, as before.
@@ -588,7 +604,8 @@ Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tes
   tones, z to take the tone off; the same key again undoes its mark and types the key. The tone goes where the spelling
   puts it, in the older style most people write (hòa, thúy). The word being typed shows on the bar, worked out again from
   the keys typed, so Backspace takes the last key off. The word list's words that are the code without marks, or start
-  with it, are its choices, picked with the finger and Space; Space alone writes the word as typed. Telex is an engine
+  with it, are its choices, after the word as typed, which is what Space writes, so the bar shows what Space types (#98);
+  picked with the finger and Space. Telex is an engine
   rather than letters typed into the field and then rewritten, because a tone typed at the end of a word changes a vowel
   in its middle: the engine keeps the whole word until it's done, and the keyboard's own suggestions never see half a word.
 

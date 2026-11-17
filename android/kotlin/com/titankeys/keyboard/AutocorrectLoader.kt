@@ -65,7 +65,9 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
     private fun load(words: TypedPredictions, request: Int) {
         val lexicon = PhoneLexicon(typing, words, FavouriteWords.get(context))
         val data = try {
-            CorrectionData.read(lexicon) { name -> InputStreamReader(context.assets.open("autocorrect/$name"), Charsets.UTF_8) }
+            CorrectionData.read(lexicon, { name -> context.assets.open("autocorrect/$name") }) { name ->
+                InputStreamReader(context.assets.open("autocorrect/$name"), Charsets.UTF_8)
+            }
         } catch (error: IOException) {
             Log.w("TitanKeys", "Could not read the autocorrect data", error)
             null

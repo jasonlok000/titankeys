@@ -1,3 +1,5 @@
 Key layout: Kedmanee (Thai Industrial Standard TIS 820-2538), as xkeyboard-config's symbols/th gives it (https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config), with the keys the Titan doesn't have held on its letter keys.
 
 Words: PyThaiNLP's corpus (https://github.com/PyThaiNLP/pythainlp), via HeliBoard's aosp-dictionaries (main_th.combined), CC0 1.0.
+
+Next words (pairs.bin): counts of word pairs from the Leipzig Corpora Collection's tha_newscrawl_2011_100K (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. Built by tools/im/next_words.py; only the counts of the most common word pairs are included.

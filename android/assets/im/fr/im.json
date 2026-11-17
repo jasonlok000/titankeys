@@ -20,7 +20,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -30,17 +30,17 @@
     "words": "main_fr.combined"
   },
   "starters": [
-    "de",
-    "la",
-    "et",
     "le",
-    "à",
-    "des",
-    "en",
+    "la",
     "les",
-    "du",
-    "est",
+    "il",
+    "en",
+    "c'est",
+    "ce",
+    "mais",
     "un",
-    "dans"
+    "une",
+    "pour",
+    "on"
   ]
 }

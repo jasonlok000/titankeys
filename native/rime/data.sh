@@ -32,6 +32,10 @@ HKCANCOR=https://raw.githubusercontent.com/fcbond/hkcancor/39aeadf920e0b5ca93d0a
 HKCANCOR_SHA256=09223963b8756254e15353cad843f8a4b0cbc4b9223dc8a8fa27fb1cf846057e
 VOICE=https://raw.githubusercontent.com/common-voice/common-voice/4ea23d2d30222e9324eb964365b9a0f22e3d5f3a/server/data/zh-HK/sentence-collector.txt
 VOICE_SHA256=0c537e9d65c1f1de10d70a1e0989d929b557628d975bf480d8b3b6fcc6291f26
+# Mandarin's grammar model for librime-octagram, lotem/rime-octagram-data's Traditional word model (LGPL-3.0), as upstream
+# Rime offers it: for Pinyin and Zhuyin (docs/studies/56-mandarin-dictionary.md).
+MANDARIN_GRAMMAR=https://raw.githubusercontent.com/lotem/rime-octagram-data/97bf55046aad163c3d1881abae5312040b1bbed9/zh-hant-t-essay-bgw.gram
+MANDARIN_GRAMMAR_SHA256=0488ebd6688f900a39200f2b794f2f99bcbf1e8fc27280ae4a2324b08b1559c1
 
 download() { # file url sha256
   local file="$WORK/src/$1"
@@ -152,6 +156,10 @@ if [ ! -s "$WORK/grammar/$GRAMMAR_KEY.gram" ]; then
   cp "$D/tk_yue.gram" "$WORK/grammar/$GRAMMAR_KEY.gram"
 fi
 cp "$WORK/grammar/$GRAMMAR_KEY.gram" tk_yue.gram
+# Mandarin's, for Pinyin and Zhuyin: lotem's word model, as it is. On held-out Tatoeba phrases it takes Space's first choice
+# from 54.0% to 59.9% right in Pinyin and from 49.5% to 55.4% in Zhuyin (docs/studies/56-mandarin-dictionary.md).
+download zh-hant-t-essay-bgw.gram "$MANDARIN_GRAMMAR" "$MANDARIN_GRAMMAR_SHA256"
+cp "$WORK/src/zh-hant-t-essay-bgw.gram" .
 
 # Rime records each source file's time in what it compiles. Every file gets one fixed time, so two runs give the same bytes.
 # On the phone Rime never deploys (rime_jni.cc), so the copies' own times don't matter.
@@ -237,6 +245,9 @@ phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
 phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
 # With the grammar model, a phrase the word weights alone got wrong (你識咗反美).
 phrase tk_jyutping zh_hk neisikzofaanmei 你食咗飯未
+# And Mandarin's grammar, in Pinyin and Zhuyin: phrases the dictionary alone got wrong (你八门凯这…, 猫儿在意自伤睡觉).
+phrase tk_pinyin zh_hans nibamenkaizhezhenshitaibuxiaoxinle 你把门开着真是太不小心了
+phrase tk_zhuyin zh_hans mwlziezckcxajew 猫儿在椅子上睡觉
 
 # 対, the Japanese form of 對, is off deui's first page in every variant.
 for v in zh_hk zh_tw zh_hans; do
@@ -265,6 +276,10 @@ next tk_pinyin zh_tw "wo" esc space "為 母親 什麼都"
 next tk_cangjie zh_hk "hqi" reset space "哋 喺 嘅"
 next tk_quick zh_hk "hqi" reset space "哋 喺 嘅"
 next tk_zhuyin zh_tw "nehw" reset space "何塞 幸福 幾次"
+# A phrase committed at once: its next words from what it ends with (tk_predict.h), which Escape clears as any others.
+next tk_yale zh_hk "ngodeigamyat" esc space "係 嘅 下晝"
+next tk_yale zh_hk "ngodeigamyat" esc esc ""
+next tk_pinyin zh_hk "womenyiqi" esc space "去 一邊 來"
 rm -rf "$D/try"; mkdir -p "$D/try"
 fresh="$("$TOOL" try "$D/phone" "$D/try" tk_yale zh_hk "" 8 2>/dev/null | sed 's/^[^:]*://')"
 [ -z "$fresh" ] || { echo "FAIL suggestions with nothing committed: $fresh" >&2; exit 1; }
@@ -290,4 +305,34 @@ grep -q "$learned" "$D/two/sync/titankeys/jyut6ping3.userdb.txt" \
 cd "$REPO"
 # The list the app copies by (RimeData), and that tools/checks/rime.test.ts checks the shipped data against.
 (cd android/assets/rime && find . -type f | LC_ALL=C sort | sed 's#^\./##' | xargs sha256sum) > android/assets/rime.sha256
+# Which files each schema needs, from its compiled config: its dictionary's table and reverse table, its prism, its grammar
+# model and its next-word table. The app copies those of the input methods that are on, and every file in no schema
+# (RimeData; docs/studies/3.0-storage.md).
+python3 -I - android/assets/rime > android/assets/rime.schemas <<'PY'
+import os, re, sys
+root = sys.argv[1]
+build = os.path.join(root, 'build')
+for name in sorted(os.listdir(build)):
+    if not (name.startswith('tk_') and name.endswith('.schema.yaml')):
+        continue
+    schema = name[:-len('.schema.yaml')]
+    text = open(os.path.join(build, name), encoding='utf-8').read()
+    def value(key):
+        m = re.search(r'^\s+' + key + r':\s*"?([^"\s]+)"?\s*$', text, re.M)
+        return m.group(1) if m else None
+    files = []
+    dictionary = value('dictionary')
+    if dictionary:
+        files += [f'build/{dictionary}.table.bin', f'build/{dictionary}.reverse.bin']
+    files.append(f'build/{value("prism") or schema}.prism.bin')
+    if value('language'):
+        files.append(value('language') + '.gram')
+    if value('db'):
+        files.append(value('db'))
+    for path in files:
+        if not os.path.isfile(os.path.join(root, path)):
+            sys.exit(f'{schema}: {path} is missing')
+        print(f'{schema}	{path}')
+PY
+
 echo "built android/assets/rime ($(du -sb android/assets/rime | cut -f1) bytes, $(wc -l < android/assets/rime.sha256) files)"

@@ -13,6 +13,8 @@ Chinese, Japanese and Hindi type their first word from a code, picked with Space
 code and leaves the field alone (CODE_FLICK, D's list as of main 3593072b). In Chinese, Japanese and Thai a flick and three taps go
 by ICU's word breaks: two known words with no space, and the flick leaves the first.
 """
+import os
+
 import checks
 import language_checks
 from checks import Stop, play, record
@@ -31,6 +33,9 @@ JOINED = {"yue-yale": ("neihou", "ngodei"), "yue-jyutping": ("neihou", "ngodei")
 # A flick with a code pending clears the whole code and leaves the field alone (D): the code each types.
 CODE_FLICK = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "ko": "gksrnr",
               "vi": "tieeng", "hi": "namaste"}
+# The touchpad ignores touches for 500 ms after steady typing (Contact.TYPING_COOLDOWN_MILLIS, by design): a flick waits this
+# long after the last key, in the same gesture script (2026-11-17's night run flicked at 400 ms, and its flicks were NO).
+FLICK_AFTER_TYPING = "+800"
 # Two plain words' keys for the rest: the first is typed with a Space after it, the second is what the flick takes.
 FIRST, SECOND = "qwe", "asd"
 
@@ -73,16 +78,22 @@ def flick(im):
         play(*keys(SECOND), "+400")
         typed = checks.field()
         name = f"flick-{im}"
-    play("flick", "+500", shot=name, at=200)
+    play(FLICK_AFTER_TYPING, "flick", "+500", shot=name, at=1000)
     after = checks.field()
     record(name, bool(before) and typed != before and after == before,
            f"{before!r} then {typed!r}; the flick left {after!r}", name)
 
 
 def double_space(im):
-    """Double Space after a word: the language's own full stop (D's list), read back."""
+    """Double Space right after a word: the language's own full stop (D's list), read back. A typed word gets no Space of its
+    own first (the night run's "qwe   " made no stop, as a double Space only does right after a word); a picked one's Space
+    only picks."""
     language_checks.fresh()
-    before = first_word(im)
+    if im in CODES:
+        before = first_word(im)
+    else:
+        play(*keys(FIRST), "+300")
+        before = checks.field()
     play("key:space", "+90", "key:space", "+500")
     text = checks.field()
     want = STOPS.get(im, PLAIN_STOP)
@@ -110,7 +121,7 @@ def code_flick(im):
     """A flick with a code pending clears the whole code and leaves the field alone."""
     language_checks.fresh()
     before = first_word(im)
-    play(*keys(CODE_FLICK[im]), "+400", "flick", "+500", shot=f"code-flick-{im}", at=600)
+    play(*keys(CODE_FLICK[im]), FLICK_AFTER_TYPING, "flick", "+500", shot=f"code-flick-{im}", at=1000)
     text = checks.field()
     record(f"code-flick-{im}", text == before, f"field {before!r}, a code, then a flick: {text!r} (the bar is the shot)",
            f"code-flick-{im}")
@@ -120,14 +131,21 @@ def check_every_language():
     """Every input method, in the languages batch's sets with English, each with its flick, double Space and three taps."""
     for group in language_checks.sets():
         for im in group:
+            if checks.past_cutoff():
+                raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the languages didn't run")
             try:
                 if not language_checks.turn_on(["en", *group], im):
                     record(f"gestures-{im}", False, f"the field didn't start with {im}")
                     continue
-                flick(im)
-                double_space(im)
-                three_taps(im)
-                if im in CODE_FLICK:
+                # TK_GESTURE_ONLY=flick,stop runs only those (the night run's harness fix, 2026-11-17).
+                only = set(filter(None, os.environ.get("TK_GESTURE_ONLY", "").split(",")))
+                if not only or "flick" in only:
+                    flick(im)
+                if not only or "stop" in only:
+                    double_space(im)
+                if not only or "taps" in only:
+                    three_taps(im)
+                if im in CODE_FLICK and (not only or "code-flick" in only):
                     code_flick(im)
             except Stop:
                 raise

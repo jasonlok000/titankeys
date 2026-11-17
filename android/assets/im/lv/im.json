@@ -24,7 +24,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -35,16 +35,16 @@
   },
   "starters": [
     "un",
-    "ir",
-    "ar",
-    "no",
-    "gadā",
-    "par",
-    "arī",
-    "bija",
-    "gada",
-    "kas",
+    "ja",
+    "bet",
+    "tas",
     "kā",
-    "tika"
+    "tā",
+    "taču",
+    "par",
+    "vai",
+    "lai",
+    "savukārt",
+    "arī"
   ]
 }

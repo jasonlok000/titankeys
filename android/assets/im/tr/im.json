@@ -20,7 +20,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -30,17 +30,17 @@
     "words": "main_tr__legacy.combined"
   },
   "starters": [
-    "ve",
-    "bir",
-    "de",
-    "da",
-    "ile",
-    "olarak",
     "bu",
-    "için",
-    "olan",
-    "vardır",
-    "yoktur",
-    "sonra"
+    "ancak",
+    "bir",
+    "ayrıca",
+    "işte",
+    "biz",
+    "son",
+    "her",
+    "o",
+    "özellikle",
+    "yeni",
+    "bunun"
   ]
 }

@@ -76,7 +76,9 @@ private class Realistic {
     val lists = Lists(words)
     val heapBefore = used()
     val loadStart = System.nanoTime()
-    val data = CorrectionData.read(lists) { File("android/assets/autocorrect/$it").reader(Charsets.UTF_8) }
+    val data = CorrectionData.read(lists, { File("android/assets/autocorrect/$it").inputStream() }) {
+        File("android/assets/autocorrect/$it").reader(Charsets.UTF_8)
+    }
     val loadMillis = (System.nanoTime() - loadStart) / 1_000_000
     val heapAfter = used()
     val learned = ArrayList<String>()
@@ -2845,6 +2847,13 @@ private fun eachLanguageEndsItsSentences(world: Realistic) {
         com.titankeys.engine.SentenceCase.ends(".?!", "¿¡")
         same(starts("Hola. ¿"), true, "Spanish: the capital goes after the ¿ that opens a sentence")
         same(starts("Hola, ¿"), false, "but a ¿ mid-sentence starts none")
+        // Quotes open a sentence too, in every language with capitals (make.py's QUOTES).
+        com.titankeys.engine.SentenceCase.ends(".?!", "\"“”„«»")
+        same(starts("«"), true, "Russian: a message that starts with « gets its capital after it")
+        same(starts("Он ушёл. «"), true, "and so does a sentence after a full stop")
+        same(starts("Он сказал «"), false, "but a quote mid-sentence starts none")
+        same(starts("Er sagte: „Ja.“ "), true, "German: after a quote's closing mark and its full stop, a capital")
+        same(starts("ein „"), false, "and „ mid-sentence starts none")
         com.titankeys.engine.SentenceCase.ends(".?!", "")
         same(starts("one; "), false, "English: ; ends no sentence")
         same(starts("Hola. ¿"), false, "and ¿ opens nothing")

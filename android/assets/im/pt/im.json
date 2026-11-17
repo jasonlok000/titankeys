@@ -38,5 +38,19 @@
     "name": "CLDR 49 localeDisplayNames: Português",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_pt_BR.combined"
-  }
+  },
+  "starters": [
+    "de",
+    "e",
+    "a",
+    "o",
+    "do",
+    "da",
+    "em",
+    "que",
+    "uma",
+    "um",
+    "com",
+    "no"
+  ]
 }

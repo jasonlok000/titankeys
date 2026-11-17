@@ -5,25 +5,32 @@ with English, through Debug's InputMethodsSet:
 
 - a flick at the end of a typed line takes the last word, by the language's own word breaks: the field goes back to what it
   held before that word was typed;
-- double Space after a word types the language's own full stop: 。 in Chinese and Japanese, । in Hindi, none in Thai, "."
-  elsewhere;
+- double Space after a word types the language's own full stop: "。" in Chinese and Japanese, "। " in Hindi, a plain space in
+  Thai, ". " elsewhere;
 - three Space taps pick one word (a screenshot: the field's text can't show a selection).
 
-Chinese and Japanese type their first word from a code, picked with Space. A flick with a code pending (it clears the whole
-code) comes with D's build: CODE_FLICK lists the input methods it runs in once that's on main.
+Chinese, Japanese and Hindi type their first word from a code, picked with Space. With a code pending, a flick clears the whole
+code and leaves the field alone (CODE_FLICK, D's list as of main 3593072b). In Chinese, Japanese and Thai a flick and three taps go
+by ICU's word breaks: two known words with no space, and the flick leaves the first.
 """
 import checks
 import language_checks
 from checks import Stop, play, record
 
-# The full stop double Space types, by input method; "." for the rest.
-STOPS = {"yue-yale": "。", "yue-jyutping": "。", "zh-pinyin": "。", "ja": "。", "hi": "।", "th": ""}
-# Codes for the input methods that type through one, picked with Space.
-CODES = {"yue-yale": "nei", "yue-jyutping": "nei", "zh-pinyin": "ni", "ja": "nihon"}
-# Where a flick with a code pending clears the code: on once D's build is on main (2026-11-17).
-CODE_FLICK = []
-# Judged by the screenshot: words without spaces, split by a dictionary.
-LOOK_FLICK = {"th"}
+# What double Space after a word leaves at the end of the field, by input method (D, main 3593072b): "。" with no space in
+# Chinese and Japanese, "। " in Hindi, a plain second space in Thai (it types no mark), ". " in the rest.
+STOPS = {"yue-yale": "。", "yue-jyutping": "。", "zh-pinyin": "。", "ja": "。", "hi": "। ", "th": "  "}
+PLAIN_STOP = ". "
+# The input methods whose words come from a code, picked with Space; "nihon" picks 日本 in Japanese.
+CODES = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "hi": "namaste"}
+# Two known words typed with no space between: ICU's dictionary breaks them apart, and a flick takes only the second.
+# In Chinese and Japanese the second comes after the first is picked, while next-word suggestions show (no code): a flick
+# then clears them and deletes a word as usual.
+JOINED = {"yue-yale": ("neihou", "ngodei"), "yue-jyutping": ("neihou", "ngodei"), "zh-pinyin": ("nihao", "women"),
+          "ja": ("watashi", "nihon"), "th": ("gik", "wx")}  # Thai: เรา then ไป, on Kedmanee's plain layer
+# A flick with a code pending clears the whole code and leaves the field alone (D): the code each types.
+CODE_FLICK = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "ko": "gksrnr",
+              "vi": "tieeng", "hi": "namaste"}
 # Two plain words' keys for the rest: the first is typed with a Space after it, the second is what the flick takes.
 FIRST, SECOND = "qwe", "asd"
 
@@ -41,7 +48,7 @@ def keys(word):
 
 
 def first_word(im):
-    """The first word, then a Space: typed, or picked from a code. Returns what the field holds then."""
+    """The first word, then a Space: typed, or picked from a code (Space picks and types no space). Returns the field then."""
     if im in CODES:
         play(*keys(CODES[im]), "+500", "key:space", "+500")
     else:
@@ -50,42 +57,62 @@ def first_word(im):
 
 
 def flick(im):
+    """A flick at the end of a typed line takes the last word. In Chinese, Japanese and Thai by ICU's breaks: two words with no
+    space, and the flick leaves the first."""
     language_checks.fresh()
-    before = first_word(im)
-    play(*keys(CODES.get(im, SECOND)), "+400")
-    typed = checks.field()
-    play("flick", "+500", shot=f"flick-{im}", at=200)
+    if im in JOINED:
+        first, second = JOINED[im]
+        picked = im != "th"
+        play(*keys(first), *(["+500", "key:space"] if picked else []), "+500")
+        before = checks.field()
+        play(*keys(second), *(["+500", "key:space"] if picked else []), "+500")
+        typed = checks.field()
+        name = f"flick-suggestions-{im}" if picked else f"flick-{im}"
+    else:
+        before = first_word(im)
+        play(*keys(SECOND), "+400")
+        typed = checks.field()
+        name = f"flick-{im}"
+    play("flick", "+500", shot=name, at=200)
     after = checks.field()
-    if im in CODES or im in LOOK_FLICK:
-        # A pending code isn't in the field (the flick before D's build may take the word before it instead); Thai's breaks come
-        # from a dictionary, which made-up keys don't follow.
-        return record(f"flick-{im}", None, f"{before!r} + a code, flick: {after!r} (the shot shows the bar)", f"flick-{im}")
-    record(f"flick-{im}", after == before, f"{before!r} then {typed!r}; the flick left {after!r}", f"flick-{im}")
+    record(name, bool(before) and typed != before and after == before,
+           f"{before!r} then {typed!r}; the flick left {after!r}", name)
 
 
 def double_space(im):
+    """Double Space after a word: the language's own full stop (D's list), read back."""
     language_checks.fresh()
-    first_word(im)
+    before = first_word(im)
     play("key:space", "+90", "key:space", "+500")
-    text = checks.field().rstrip(" ")
-    stop = STOPS.get(im, ".")
-    ok = (not text.endswith((".", "。", "।"))) if stop == "" else text.endswith(stop)
-    record(f"stop-{im}", ok, f"double Space after a word: {text!r}, the stop wanted {stop or 'none'!r}")
+    text = checks.field()
+    want = STOPS.get(im, PLAIN_STOP)
+    # The first word's own Space is there already when it was typed rather than picked.
+    ok = text.startswith(before.rstrip(" ")) and text.endswith(want)
+    record(f"stop-{im}", ok, f"after {before!r}, double Space: {text!r}, wanted it to end {want!r}")
 
 
 def three_taps(im):
+    """Three Space taps pick one word (by ICU's breaks in Chinese, Japanese and Thai): the screenshot shows the pick."""
     language_checks.fresh()
-    first_word(im)
-    play(*keys(CODES.get(im, SECOND)), "+400", "key:space", "+400")
+    if im in JOINED:
+        first, second = JOINED[im]
+        picked = im != "th"
+        play(*keys(first), *(["+500", "key:space"] if picked else []), "+400",
+             *keys(second), *(["+500", "key:space"] if picked else []), "+400")
+    else:
+        first_word(im)
+        play(*keys(SECOND), "+400", "key:space", "+400")
     play("space:3", "+600", shot=f"taps-{im}", at=450)
     record(f"taps-{im}", None, "three Space taps: one word picked", f"taps-{im}")
 
 
 def code_flick(im):
+    """A flick with a code pending clears the whole code and leaves the field alone."""
     language_checks.fresh()
-    play(*keys(CODES[im]), "+400", "flick", "+500", shot=f"code-flick-{im}", at=600)
+    before = first_word(im)
+    play(*keys(CODE_FLICK[im]), "+400", "flick", "+500", shot=f"code-flick-{im}", at=600)
     text = checks.field()
-    record(f"code-flick-{im}", text == "", f"a flick with the code pending left the field {text!r}; the bar is the shot",
+    record(f"code-flick-{im}", text == before, f"field {before!r}, a code, then a flick: {text!r} (the bar is the shot)",
            f"code-flick-{im}")
 
 

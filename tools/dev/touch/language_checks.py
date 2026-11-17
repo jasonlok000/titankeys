@@ -20,8 +20,8 @@ from checks import Stop, adb, play, record
 
 RECEIVER = f"{checks.APP}/com.titankeys.keyboard.InputMethodsSet"
 # How many languages go on with English at a time, each with all its input methods: seven, as Settings kept eight on at most
-# (2026-11-16). The switcher shows four languages once C's cap is on main (owner, 2026-11-17): TK_LANG_SET_SIZE=3 then.
-SET_SIZE = int(os.environ.get("TK_LANG_SET_SIZE", "7"))
+# (2026-11-16). Since C's cap (main e133d51a, owner 2026-11-17) the switcher shows four: three with English, the default.
+SET_SIZE = int(os.environ.get("TK_LANG_SET_SIZE", "3"))
 MAX_ON = int(os.environ.get("TK_LANG_MAX_ON", "7"))
 
 

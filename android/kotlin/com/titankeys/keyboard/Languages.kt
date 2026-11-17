@@ -142,6 +142,7 @@ internal class Languages(
      * punctuation, Rime's ascii_punct, off unless Settings turns it on.
      */
     fun variant() {
+        barWords()
         val engine = loadedEngine ?: return
         val chosen = TypingSettings.chineseVariant(context)
         for (option in CHINESE_VARIANTS) engine.option(option, option == chosen)
@@ -154,6 +155,9 @@ internal class Languages(
         TypingSettings.currentInputMethod(context, id)
         if (id != target) use(id)
     }
+
+    /** Each language's input method last typed with, by language id, for the two-language toggle ([SwitchOverlay.toggle]). */
+    val lastUsed = HashMap<String, String>()
 
     /** Engines kept warm for the input methods that are on, one for each engine: see [warmUp]. */
     private val warm = HashMap<String, InputEngine>()
@@ -190,8 +194,11 @@ internal class Languages(
 
     private fun use(id: String) {
         target = id
+        InputMethodList.index(context)[id]?.let { lastUsed[it.language.id] = id }
         val ticket = ++loading
         val listTicket = slot.begin(id)
+        // The last input method's next-word table goes with its list.
+        if (id != loaded.id) words.nextWords = null
         if (id == InputMethod.ENGLISH_ID) {
             apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return
@@ -206,6 +213,8 @@ internal class Languages(
             val method = InputMethodList.load(context, id)
             // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
             val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
+            // Its next-word table, where J's tables have one: the bar's words after a word ([NextWords]).
+            val pairs = method?.let { InputMethodList.nextWords(context, it, it.variants.firstOrNull()?.id) }
             // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
             val engine = method?.engine?.let { name ->
                 InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
@@ -215,7 +224,7 @@ internal class Languages(
                     if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
                     else "${words?.size ?: 0} words, no engine"
                 }")
-                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine)
+                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs)
                 else {
                     engine?.stop()
                     Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
@@ -225,7 +234,8 @@ internal class Languages(
         }
     }
 
-    private fun apply(method: InputMethod, words: WordList?, ticket: Int, listTicket: Int, engine: InputEngine? = null) {
+    private fun apply(method: InputMethod, words: WordList?, ticket: Int, listTicket: Int, engine: InputEngine? = null,
+                      pairs: NextWords? = null) {
         if (ticket != loading) {
             engine?.stop()
             return
@@ -235,9 +245,11 @@ internal class Languages(
         variant()
         loaded = method
         slot.done(listTicket, words)
+        this.words.nextWords = pairs
         this.words.other = !current.isEnglish
         this.words.wordBreak = current.rules.wordBreak
         this.words.apostrophes = current.rules.apostrophes
+        barWords()
         changed(method)
     }
 
@@ -246,6 +258,7 @@ internal class Languages(
      * a new keyboard, and this one's data mustn't stay with it.
      */
     fun stop() {
+        saveLearning()
         loading++
         slot.clear()
         loadedEngine?.stop()
@@ -254,6 +267,52 @@ internal class Languages(
         warm.clear()
         loader.shutdownNow()
         live.remove(this)
+    }
+
+    /** The input method whose learning [words] holds now, and the changes not written yet. */
+    private var learningFor: String? = null
+    private var unsaved = 0
+
+    /**
+     * The current input method's starters and what it learned, for the bar's words ([LanguageWords]): Chinese's in Simplified
+     * for that variant. Its learning is read from the `language_learning` store as it's switched to, and written back every
+     * few words and as another is switched to. With Learn new words off, nothing is learned.
+     */
+    private fun barWords() {
+        val method = loaded
+        words.starters = if (method.startersSimplified.isNotEmpty() && TypingSettings.chineseVariant(context) == "zh_hans")
+            method.startersSimplified else method.starters
+        words.capitals = method.rules.capitalise
+        if (learningFor == method.id) return
+        saveLearning()
+        learningFor = method.id
+        words.learning = if (method.isEnglish) null else LearnedWords.of(context, method.id)
+        words.learned = {
+            if (++unsaved >= SAVE_EVERY) saveLearning()
+        }
+        words.mayLearn = ::learningOn
+        val typing = com.titankeys.engine.SwipeTyping.get(context)
+        val favourites = FavouriteWords.get(context)
+        words.rules = WordRules(typing::blockedWord, favourites::contains)
+    }
+
+    /** Whether the user lets TitanKeys learn their words: the same switch as English's, Learn new words I type. */
+    private fun learningOn() = com.titankeys.engine.SwipeTyping.get(context).learningEnabled()
+
+
+    /** The word menu changed what the current input method knows: written at once. */
+    fun learningChanged() {
+        unsaved++
+        saveLearning()
+    }
+
+    /** Writes what the current input method learned. */
+    fun saveLearning() {
+        val id = learningFor ?: return
+        val learning = words.learning ?: return
+        if (unsaved == 0) return
+        unsaved = 0
+        LearnedWords.save(context, id)
     }
 
     /** What this keyboard holds of its input methods, for LeakCheck. */
@@ -279,6 +338,9 @@ internal class Languages(
 
 /** Every keyboard's [Languages] still in memory, weakly, for TitanKeys Debug's LeakCheck: one, or none, is right. */
 private val live = java.util.Collections.synchronizedMap(java.util.WeakHashMap<Languages, Unit>())
+
+/** How many learned words go by before they're written. */
+private const val SAVE_EVERY = 5
 
 /** Where [KeyboardListSync]'s entry is kept: Android's list is this phone's, so it isn't in the backup. */
 internal const val KEYBOARD_LIST = "keyboard_list"

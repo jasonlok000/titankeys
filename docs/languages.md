@@ -187,7 +187,9 @@ data-only language is one command plus a check by eye. Where the data comes from
   accented form of a word is weighed (casti: části and částí); how common a word is breaks a close call.
 - Space puts a fix in only at English's Only fix when sure margins; otherwise it types what was typed, and the likeliest
   word shows on the bar beside the completions (#98: the middle word is what Space types).
-- A word kept twice after its fix was taken back is learned for that language and never fixed again.
+- A word kept twice after its fix was taken back is saved for that language (`LearnedWords`, as the word menu's Save, in
+  Settings > Saved words) and never fixed again. A fix never puts in a blocked word or one unsaved in that language, and a
+  favourite wins a close call (`LanguageWords.usable` and `favourite`).
 - It follows Settings' Autocorrect switch, as English does. `tests/corrections` measures every language on made-up slips of
   its commonest words: on 36,760 slips Space makes 0.2% wrong changes, never changes a word typed right, and the right
   word is on the bar for 91%.
@@ -303,8 +305,20 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
 - The experimental mark stays in Settings: the switcher shows labels only.
-- After a switch, the bar says for a moment which input method types now. A lasting mark on the bar for anything but English
-  comes later; its accessibility text says it in full: "Typing in Spanish".
+- **The language mark over Q** (owner, 2026-11-17; drawn in [design/language-mark-built.svg](design/language-mark-built.svg)):
+  - It overlays over Q and never pushes the words; a long left word sends it small into the corner.
+  - **Shift shows only where it changes what a key types** (`InputMethod.shiftMatters`): capitals, Shift letters
+    (Georgian, Thai) or an engine that reads Shift (Korean, Hindi, Vietnamese). Not in Hebrew, where Shift types the same
+    letter, nor in Chinese and Japanese, where it opens the bigger menu. Alt always shows.
+  - **At a sentence start** the mark stays big, and Shift's automatic arrow goes small and muted above it, like a superscript.
+  - **A tap on the mark switches input method within the language,** never the language: with two on, to the other; with
+    three or more, the language's row in the switcher; with one, nothing (`SwitchOverlay.markTap`). Only the mark drawn over
+    Q takes a touch. No hover effect.
+- **Two languages on:** a held Sym switches to the other one at once, with no switcher, to the input method last used in
+  it (or its first), as `SwitchOverlay.toggle` decides (owner, 2026-11-16). Three or more open the switcher. The input
+  methods last used are remembered while the keyboard runs.
+- After a switch, the bar says nothing (owner, 2026-11-16: "I don't like the XX it is wording"): the language mark at Q
+  shows which types. A screen reader hears "Typing in Spanish" (F: draft).
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
@@ -486,6 +500,45 @@ for 買える, 景観 for 警官), the second choice or a pick away.
 **Size** (measured in this build's APK, 2026-11-16): `libmozc_tk.so` 2.83 MB, stored as it is (the study's 5.33 MB before
 only `JNI_OnLoad` was exported), and `mozc.data` 18.96 MB, 13.19 MB compressed: 16.0 MB in the APK, and 19 MB copied out on
 the phone on the first use. The whole debug APK is 167.4 MB, under Google Play's 200 MB.
+
+## The bar's words in every language
+
+The owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty at all times
+unless it's like password or whatever. if not hard then it should be learning from the user too."
+
+- **Starters:** each input method's commonest words, in its `im.json` (`"starters"`), written by `tools/im/make.py
+  --starters`: from its own word list; Korean from FrequencyWords; Cantonese and Mandarin from Rime's essays, with a
+  Simplified copy through OpenCC's character table (`"startersSimplified"`, for that variant); Japanese picked by hand (Mozc's
+  costs rank homophones, not common words).
+- **On the bar** (`BarWords`, through `LanguageWords`): at a sentence's start, the user's own sentence starts and then the
+  starters, with a capital where the script has them; after a word, the words the user typed after it and then the
+  starters; while a word is typed, the user's words that start with it and then the list's. Nothing to offer leaves the bar
+  empty; it never shows English. Passwords and the other fields without words keep an empty bar, as before. English is
+  unchanged: its own engine answers.
+- **Learning** (`LanguageLearning`): every word kept, with the one before it or a sentence start, per input method. A word
+  the list lacks counts from its second use, so a typo typed once never shows. Bounded (2,000 words, 5,000 pairs, 200
+  sentence starts; the least used go). Kept in the `language_learning` store, one key per input method, written every five
+  words and as another is switched to: on the phone only, in the backup, kept by Reset most things and cleared by Reset
+  literally everything, as English's learned words are. Learn new words I type turns it off for every language.
+- Chinese and Japanese: the starters show on an empty bar; after a pick, Rime's and Mozc's own next words show (D's work).
+- **Next-word tables** (J's, from the Leipzig Corpora Collection): `pairs.txt` in an input method's folder (`pairs-pt-BR.txt`
+  for a variant), in English's `en_pairs.txt` format: "first second<TAB>count", '#' lines for the source, `<s>` for a
+  sentence's start, lower case where the script has case, the top 8 next words per first word. `NextWords` reads it with the
+  word list on a switch and frees it with the list; the bar puts its next words after the user's own and before the starters.
+  An input method without one has the starters and the user's own, as before.
+- **Blocked words, Favourites and the user's own words in every language** (owner, 2026-11-17: "The dictionary and favorite
+  systems should still work for other languages"). Blocked words and Favourites stay one shared set each (`WordRules`): words
+  rarely collide across languages, and one set keeps Settings, the backup and the word menu as they are. A blocked word never
+  shows in any language; a favourite comes first among the bar's three (`Favourites.first`). The word menu works on a word in
+  any language: Block and Favourite use the shared sets; Save and Unsave act on that language's own words (saved words never
+  fade; Unsave hides a list word until it's saved again). `LearnedWords` keeps one copy for the keyboard and Settings: Saved
+  words lists every language's own words under its name, with remove; Remove all learned words clears them too. D's fixes
+  ask `LanguageWords.usable` and `favourite`. Export words carries English's only (its file is the engine's); Back up
+  everything carries every language's.
+- **Korean** has a word list now: the Leipzig Corpora Collection's 2022 Korean news (CC BY 4.0), the 100,000 commonest
+  words of whole syllables. Its engine offers the words that start with the word so far, the syllables written and the one
+  being built, by its letters: ㅎㅏ offers 하고 and 한국 (a lone initial matches as the initial its syllables split into). A
+  choice writes the rest of the word and a space.
 
 ## Korean and Vietnamese
 

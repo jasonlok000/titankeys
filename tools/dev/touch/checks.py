@@ -212,7 +212,8 @@ CHECKS = {
 # Named batches: a module whose BATCH is its checks in order, and optional HANDS (what only the owner's hands can check) and
 # finish() (a tidy end).
 BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guide": "guide_batch", "gestures": "gesture_batch",
-           "re-tests": "retest_batch", "space-middle": "space_batch", "languages-page": "page_batch"}
+           "re-tests": "retest_batch", "space-middle": "space_batch", "languages-page": "page_batch",
+           "switcher": "switcher_checks", "bar-words": "bar_checks"}
 
 
 def report(name, stamp, hands):

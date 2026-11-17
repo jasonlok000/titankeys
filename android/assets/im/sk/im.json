@@ -35,5 +35,19 @@
     "name": "CLDR 49 localeDisplayNames: Slovenčina",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_sk__experimental.combined"
-  }
+  },
+  "starters": [
+    "sa",
+    "je",
+    "si",
+    "som",
+    "na",
+    "že",
+    "čo",
+    "nie",
+    "ako",
+    "tak",
+    "ale",
+    "by"
+  ]
 }

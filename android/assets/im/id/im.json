@@ -20,5 +20,19 @@
     "name": "CLDR 49 localeDisplayNames: Indonesia",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_id__experimental.combined"
-  }
+  },
+  "starters": [
+    "yang",
+    "dan",
+    "di",
+    "dengan",
+    "ini",
+    "dari",
+    "untuk",
+    "pada",
+    "dalam",
+    "tidak",
+    "itu",
+    "adalah"
+  ]
 }

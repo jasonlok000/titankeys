@@ -867,7 +867,7 @@ class TitanKeysIme : InputMethodService() {
             }
         }
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
-        languageCorrection = LanguageCorrection(this)
+        languageCorrection = LanguageCorrection(this, languages.words)
         // Another input method's likeliest word for a slip shows on the bar, even where Space won't put it in.
         languages.words.suggest = { word, before -> languageCorrection.autocorrect?.corrector?.suggestion(word, before) }
         phoneNames = PhoneNameSource(this, SwipeTyping.get(this)).also { it.start() }
@@ -1292,6 +1292,7 @@ class TitanKeysIme : InputMethodService() {
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
         words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }
+        words.markTap = { enqueue { tapMark() } }
         words.pickerTap = { index ->
             enqueue {
                 openPicker()?.let { open ->
@@ -1315,8 +1316,14 @@ class TitanKeysIme : InputMethodService() {
         words.effects = effects
         words.menuBeat = ::menuBeat
         words.menuPress = { haptics.play(Haptic.MenuPress) }
-        // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen].
-        return FrameLayout(ui).apply {
+        // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen]. Its root feels every tap on the
+        // screen that plays nothing of its own ([TapHaptics]).
+        return TapHaptics(ui) { downTime ->
+            val own = haptics.playedSince(downTime)
+            if (!own) haptics.play(Haptic.ScreenTap)
+            if (AppBuild.kind(this) == "debug") Log.i("TitanKeysTap", if (own) "the tap played its own haptic" else "screen_tap played")
+        }.apply {
+            if (AppBuild.kind(this@TitanKeysIme) == "debug") log = { line -> Log.i("TitanKeysTap", line) }
             addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
             addView(effects, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
@@ -1474,6 +1481,8 @@ class TitanKeysIme : InputMethodService() {
         // The guide and the playground teach English, so they type it whatever input method is on.
         languages.englishOnly = inGuide || inPractice
         languages.refresh()
+        // Which input methods are on may have changed, and with them the mark at Q.
+        if (::languages.isInitialized) showInputMark()
         languages.variant()
         val english = languages.current.isEnglish
         // Each input method's own sentence ends and opening marks, for capitals and spaces (Greek's ;, Hindi's ।, Spanish's ¿¡).
@@ -1935,6 +1944,17 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun menuFor(word: String): Strip.Notice.Menu {
         val typing = SwipeTyping.get(this)
+        // Another language: the word's place is in its own list and what it learned; Blocked words and Favourites are shared.
+        otherLearning()?.let { learning ->
+            val saved = learning.isSaved(word)
+            return Strip.Notice.Menu(word, MenuKeys.step(
+                blocked = typing.blockedWord(word),
+                favourite = FavouriteWords.get(this).contains(word),
+                saved = saved,
+                learned = !saved && learning.knows(word),
+                builtIn = languages.words.listed(word),
+                unsaved = learning.isHidden(word)))
+        }
         val step = pendingWords[word.lowercase()] ?: MenuKeys.step(
             blocked = typing.blockedWord(word),
             favourite = FavouriteWords.get(this).contains(word),
@@ -2111,7 +2131,11 @@ class TitanKeysIme : InputMethodService() {
             }
             val column = Picker.column(key)
             val mark = column.takeIf { c -> open.notice.columns.any { c in it } } ?: -1
-            if (!quiet && mark >= 0 && mark != strip.pickerMark) haptics.play(Haptic.MenuMark)
+            // The tick plays as the mark moves to another tile, as the panels' mark does, not for another key under the same
+            // tile: the switcher's tiles are two to eight keys wide (owner, 2026-11-17).
+            val tile = open.notice.columns.indexOfFirst { mark in it }
+            val before = open.notice.columns.indexOfFirst { strip.pickerMark in it }
+            if (!quiet && tile >= 0 && tile != before) haptics.play(Haptic.MenuMark)
             strip.pickerMark = mark
             return
         }
@@ -2170,7 +2194,17 @@ class TitanKeysIme : InputMethodService() {
      * Save, from not saved: TitanKeys knows the word now. A dictionary word you took out comes back, in the dictionary's own case;
      * any other word goes into Saved words in its own case ([keptCase]). The menu stays open, and I is Favourite now.
      */
+    /** What the input method typing now learned, when it isn't English; null for English, whose engine keeps its own. */
+    private fun otherLearning() = if (::languages.isInitialized && languages.words.other) languages.words.learning else null
+
     private fun saveWord(held: HeldWord) {
+        otherLearning()?.let { learning ->
+            learning.save(keptCase(held))
+            languages.learningChanged()
+            composer.unhide(held.word)
+            menuPressed(held, MenuKeys.Button.Save)
+            return
+        }
         val typing = SwipeTyping.get(this)
         pendingWords[held.word.lowercase()] = MenuKeys.Step.Saved
         val done: (String?) -> Unit = { error -> if (error != null) failed(held, "save", error) else settled(held.word, MenuKeys.Step.Saved) }
@@ -2185,6 +2219,13 @@ class TitanKeysIme : InputMethodService() {
      * back, and Save brings it back at once. It leaves the bar's words in this field too.
      */
     private fun unsaveWord(held: HeldWord) {
+        otherLearning()?.let { learning ->
+            learning.unsave(held.word, listed = languages.words.listed(held.word))
+            languages.learningChanged()
+            composer.hide(held.word)
+            menuPressed(held, MenuKeys.Button.Unsave)
+            return
+        }
         pendingWords[held.word.lowercase()] = MenuKeys.Step.New
         SwipeTyping.get(this).unsaveWord(held.word) { error ->
             if (error != null) failed(held, "unsave", error) else settled(held.word, MenuKeys.Step.New)
@@ -2211,6 +2252,15 @@ class TitanKeysIme : InputMethodService() {
     private fun unfavouriteWord(held: HeldWord) {
         if (!FavouriteWords.get(this).remove(held.word)) {
             haptics.play(Haptic.WordNotSaved)
+            return
+        }
+        // Another language: a favourite it didn't otherwise know goes into its saved words.
+        otherLearning()?.let { learning ->
+            if (!learning.knows(held.word) && (!languages.words.listed(held.word) || learning.isHidden(held.word))) {
+                learning.save(keptCase(held))
+                languages.learningChanged()
+            }
+            menuPressed(held, MenuKeys.Button.Unfavourite)
             return
         }
         val typing = SwipeTyping.get(this)
@@ -3625,14 +3675,7 @@ class TitanKeysIme : InputMethodService() {
                     is SwitchPick.To -> languages.on.firstOrNull { it.id == next.id } ?: return
                     null -> return
                 }
-                if (entry.id == languages.current.id) return
-                languages.switchTo(entry.id)
-                // The bar says, for a moment, which input method types now. F (docs/words-m1.md).
-                strip?.let { strip ->
-                    strip.notice = Strip.Notice.Line("${entry.name} it is.")
-                    main.removeCallbacks(endTeamsEgg)
-                    main.postDelayed(endTeamsEgg, SWITCHED_NOTICE_MILLIS)
-                }
+                switchLanguage(entry)
             }
         }
     }
@@ -3691,7 +3734,7 @@ class TitanKeysIme : InputMethodService() {
         }
         if (state.composing || state.choices.isNotEmpty()) {
             val listed = languages.engine?.choices(0, ChineseRow.ASK + 1).orEmpty().ifEmpty { state.choices }
-            showPicker(LanguagePicker.Choices(state, listed, englishFor(state, listed), languages.current.label))
+            showPicker(LanguagePicker.Choices(state, listed, englishFor(state, listed), markLabel()))
         } else closePicker()
     }
 
@@ -3719,9 +3762,11 @@ class TitanKeysIme : InputMethodService() {
      * 2026-11-17: "The Yale Chinese indicator is not showing in the suggestion").
      */
     private fun showInputMark() {
-        val current = languages.current
-        strip?.inputMark = if (current.isEnglish) "" else current.label
+        strip?.inputMark = if (languages.current.isEnglish) "" else markLabel()
     }
+
+    /** The mark at Q: the language's where it has one input method on, else the input method's ([SwitchOverlay.markLabel]). */
+    private fun markLabel() = SwitchOverlay.markLabel(languages.on, languages.current.id, languages.current.label)
 
     /** Chinese's and Japanese's bigger menu, that Sym opens while a code is typed, in the Sym panel's place: see [ChoicesMenu]. */
     private var choicesMenu: ChoicesMenu? = null
@@ -3832,10 +3877,46 @@ class TitanKeysIme : InputMethodService() {
             symLog("Sym held, but no overlay: already let go")
             return
         }
-        symLog("Sym held: the input method overlay opens")
         haptics.play(Haptic.HeldSymbol)
-        val on = InputMethodIndex.group(languages.on)
+        val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
+        // Two languages: the other one at once, no switcher.
+        SwitchOverlay.toggle(on, languages.current.id, languages.lastUsed)?.let { id ->
+            symLog("Sym held: two languages, so $id types now")
+            languages.on.firstOrNull { it.id == id }?.let(::switchLanguage)
+            return
+        }
+        symLog("Sym held: the input method overlay opens")
         showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), languages.current.id))
+    }
+
+    /**
+     * A tap on the language mark: the language's other input method, or its row in the switcher with three or more
+     * ([SwitchOverlay.markTap]). One input method: nothing, no haptic.
+     */
+    private fun tapMark() {
+        if (!editing || !::languages.isInitialized) return
+        val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
+        when (val pick = SwitchOverlay.markTap(on, languages.current.id)) {
+            is SwitchPick.To -> {
+                haptics.play(Haptic.MenuPress)
+                languages.on.firstOrNull { it.id == pick.id }?.let(::switchLanguage)
+            }
+            is SwitchPick.Row -> {
+                haptics.play(Haptic.MenuPress)
+                showPicker(LanguagePicker.Switch(on, pick.language, languages.current.id))
+            }
+            null -> {}
+        }
+    }
+
+    /**
+     * Switches to input method [entry]. The language mark on the bar shows which types now; the bar says nothing more (owner,
+     * 2026-11-16: "I don't like the XX it is wording"). A screen reader hears it: "Typing in Spanish". F: draft.
+     */
+    private fun switchLanguage(entry: InputMethodIndex.Entry) {
+        if (entry.id == languages.current.id) return
+        languages.switchTo(entry.id)
+        strip?.announceForAccessibility("Typing in ${entry.nameEnglish}")
     }
 
     /**
@@ -4520,10 +4601,9 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun showModifierBar() {
-        val bar = ModifierBar.of(modifiers, restingKey) { Keys.letter(it, KeyEvent.META_ALT_ON) }
-        // In Chinese, Shift is no capital (it picks the choice over a key), so its bar doesn't cover the choices or the words.
-        val chinese = ::languages.isInitialized && ChineseKeys.usesBar(languages.current)
-        strip?.modifiers = if (bar != null && chinese && bar.chips.all { it == ModifierBar.SHIFT || it == ModifierBar.CAPS }) null else bar
+        // Shift and Caps show only where Shift changes what a key types: not in Hebrew, Chinese or Japanese.
+        val shiftShows = !::languages.isInitialized || languages.current.shiftMatters
+        strip?.modifiers = ModifierBar.of(modifiers, restingKey, shiftShows) { Keys.letter(it, KeyEvent.META_ALT_ON) }
     }
 
     override fun onDestroy() {
@@ -4621,7 +4701,6 @@ class TitanKeysIme : InputMethodService() {
         /** How long the word on Teams shows. */
         private const val TEAMS_EGG_MILLIS = 500L
         /** How long the bar says which input method types, after a switch in the overlay. */
-        private const val SWITCHED_NOTICE_MILLIS = 1500L
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"
         private const val EGG_BOOT_STARTED = "teams_boot_started"

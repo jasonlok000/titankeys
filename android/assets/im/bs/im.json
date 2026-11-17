@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Bosanski",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "bs_full.txt"
-  }
+  },
+  "starters": [
+    "da",
+    "je",
+    "ne",
+    "se",
+    "i",
+    "u",
+    "to",
+    "sam",
+    "na",
+    "ti",
+    "mi",
+    "za"
+  ]
 }

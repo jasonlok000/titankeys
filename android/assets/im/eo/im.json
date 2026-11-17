@@ -27,5 +27,19 @@
     "name": "CLDR 49 localeDisplayNames: Esperanto",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_eo__experimental.combined"
-  }
+  },
+  "starters": [
+    "la",
+    "ke",
+    "al",
+    "de",
+    "kaj",
+    "estas",
+    "je",
+    "estis",
+    "tiu",
+    "por",
+    "oni",
+    "li"
+  ]
 }

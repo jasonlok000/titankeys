@@ -109,6 +109,20 @@ def check_89_flick_end():
     record("89-flick-end", after == text[:-len("dog")], f"{len(text)} -> {len(after)} characters", "89-flick-dots")
 
 
+def check_89_long_delete():
+    """#89: a flick with the finger left down deletes word by word, the chomper eating a dot for each, for 10 s at most: then
+    it stops though the finger stays. 400 words can't all go in 10 s, so some must be left."""
+    text = " ".join(["the quick brown fox jumps over the lazy dog"] * 45)
+    before = set_text(text)
+    if len(before) != len(text):
+        return record("89-long-delete", None, f"setup typed {len(before)} characters, not {len(text)}: check autocorrect")
+    play("flick:3.2:90:14000", shot="89-chomper", at=3000)
+    after = field()
+    gone = len(text) - len(after)
+    record("89-long-delete", 0 < gone < len(text) and text.startswith(after),
+           f"{gone} of {len(text)} characters deleted in a 14 s hold (stops at 10 s); the chomper is the shot", "89-chomper")
+
+
 def check_89_long_word():
     """#89: a flick on a word of 300 letters takes all of it, and nothing before it."""
     text = "start " + "abcdefghij" * 30
@@ -183,6 +197,7 @@ def check_sym_log():
 CHECKS = {
     "89-flick-end": check_89_flick_end,
     "89-long-word": check_89_long_word,
+    "89-long-delete": check_89_long_delete,
     "93-flick-then-swipe": check_93_flick_then_swipe,
     "83-pairs": check_83_pairs,
     "swiped-its": check_swiped_apostrophe,

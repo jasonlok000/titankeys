@@ -35,6 +35,8 @@ LOOK = {
     "yue-yale": ("n e i h o u", "Yale: choices over W to O (the chinese-ui batch checks the rest)"),
     "yue-jyutping": ("n e i h o u", "Jyutping: choices over W to O"),
     "zh-pinyin": ("n i h a o", "Pinyin: 你好 among the choices"),
+    # Hindi types by sound (jquery.ime's rules), so its keys aren't a table to read back against.
+    "hi": ("n a m a s t e", "Hindi by sound: नमस्ते in the field"),
 }
 # Space after a code picks: Japanese's first choice, read back.
 PICKS = {"ja": "n i h o n g o"}
@@ -54,7 +56,9 @@ def expected(im, keys):
             out += " "
         else:
             value = table.get(key, key) if isinstance(table, dict) else key
-            out += value.split("/")[0]
+            # A key's letters as "a/A", or as a list (newer im.json files): what it types plain comes first either way.
+            value = value[0] if isinstance(value, list) else value.split("/")[0]
+            out += value
     return out
 
 

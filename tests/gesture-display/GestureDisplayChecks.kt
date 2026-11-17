@@ -1400,13 +1400,15 @@ private fun anyNumberOfWordsShowsItsDots() {
     var shown = 0
     repeat(100) {
         flicks.wordDeleted(now, 7)
-        isTrue(flicks.dots > shown, "Flick ${it + 1} adds its dots: ${flicks.dots}")
+        // Each joins the stream, which lasts 5 s at most (DOTS_MOST); then the next starts a new one.
+        isTrue(flicks.dots > shown || !flicks.chained && flicks.dots == 7, "Flick ${it + 1} adds its dots: ${flicks.dots}")
         shown = flicks.dots
-        same(flicks.chained, it > 0, "Every flick after the first joins the one stream")
         flicks.run(now, now + 184)
         now += 200
     }
-    landsAll(flicks, now)
+    // The last stream ends within 5 s, cut short there if it must be (DOTS_MOST).
+    flicks.run(now, now + 5_100)
+    same(flicks.scene, Scene.None, "The flicks' last stream ends within 5 s")
 }
 
 /** Each dot's landing, in real ms after the stream started. */
@@ -2050,7 +2052,8 @@ private fun aLongRunOfWordsShowsEveryDot() {
         flicks.run(now, now + 144)
         now += 160
     }
-    flicks.landsEvery(now, "#89: 200 flicks along the run")
+    flicks.run(now, now + 5_100)
+    same(flicks.scene, Scene.None, "#89: 200 flicks along the run: the last stream ends within 5 s")
 }
 
 /** #89: a field that gives no text still shows a dot when a flick deletes in it. */

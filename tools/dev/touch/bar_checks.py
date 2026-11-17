@@ -107,7 +107,10 @@ def check_korean_polish():
     language_checks.fresh()
     moves = keys("dkssudgkt") + ["+800"]  # ㅇ ㅏ ㄴ ㄴ ㅕ ㅇ ㅎ ㅏ ㅅ
     play(*moves, shot="ko-annyeong", at=len(moves) * 80 + 500)
-    record("ko-annyeong", None, "ㅇㅏㄴㄴㅕㅇㅎㅏㅅ typed: 안녕하세요 among the choices", "ko-annyeong")
+    record("ko-annyeong", None, "안녕하 then ㅅ (C's #98 fix): the row starts with 안녕핫, 안녕하세요 among the rest", "ko-annyeong")
+    play("key:space", "+500")
+    text = language_checks.checks.field()
+    record("ko-annyeong-space", text.rstrip(" ") == "안녕핫", f"Space after 안녕하 + ㅅ typed {text!r}: it writes 핫, 안녕핫")
     language_checks.fresh()
     play(*keys("gks"), "key:del", "+200", "key:space", "+500")  # 한, Backspace, Space
     text = language_checks.checks.field()

@@ -178,4 +178,7 @@ fun radicalsOnlyInCangjieAndQuick() {
     same("日", ChineseKeys.radical(method("tk_cangjie"), "A"), "Cangjie's A")
     same("難", ChineseKeys.radical(method("tk_cangjie"), "X"), "Cangjie's X")
     same(null, ChineseKeys.radical(method("tk_yale"), "N"), "Yale types letters")
+    // No key yet: the preview needs only the input method and the rested key, no engine state, so it shows from the first rest.
+    same("弓", RadicalPreview.of(method("tk_quick"), "N"), "the first rest after a switch previews 弓")
+    same(180L, RadicalPreview.REST_MILLIS, "only after a still rest, so quick typing never flashes it")
 }

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radical preview</title>
+<style>
+  /* The code's tab (Strip.drawCodeLine) over the app, at the phone's size: 1 dp = 1 CSS px in Chrome on the phone. */
+  @font-face { font-family:Inter; font-weight:400; src:url(inter_regular.otf); }
+  html, body { margin:0; background:#1B1918; font-family:Inter, system-ui, sans-serif; color:#EDE6E0; }
+  .case { padding:18px 16px 0; }
+  .label { font:500 13px Inter, sans-serif; opacity:.7; margin-bottom:12px; }
+  .tab { display:inline-flex; align-items:center; height:34px; padding:0 12px; border-radius:10px; background:#000;
+         font-size:22px; line-height:34px; }
+  .tab.typed { box-shadow:0 0 8px 2px rgba(239,128,78,.6); }
+  .code { color:#fff; }
+  /* The preview: the bar's neutral grey at 45%, a thin dotted underline, a 4 dp gap after a code. No glow, no motion. */
+  .next { color:rgba(128,128,128,.45); text-decoration:underline dotted rgba(128,128,128,.45); text-decoration-thickness:1px;
+          text-underline-offset:4px; }
+  .code + .next { margin-left:4px; }
+  .bar { margin-top:6px; height:44px; background:#000; display:flex; align-items:center; gap:22px; padding:0 16px; font-size:20px; color:#fff; }
+  .bar .mark { color:#EF804E; font-size:15px; }
+</style>
+</head>
+<body>
+  <div class="case">
+    <div class="label">速成, nothing typed, a finger resting on N</div>
+    <div class="tab"><span class="next">弓</span></div>
+    <div class="bar"><span class="mark">速</span><span>我</span><span>你</span><span>佢</span><span>係</span></div>
+  </div>
+  <div class="case">
+    <div class="label">速成, h typed (竹), a finger resting on Q</div>
+    <div class="tab typed"><span class="code">竹</span><span class="next">手</span></div>
+    <div class="bar"><span class="mark">速</span><span>的</span><span>我</span><span>笑</span><span>算</span></div>
+  </div>
+  <div class="case">
+    <div class="label">速成, hq typed (竹手), a finger resting on I</div>
+    <div class="tab typed"><span class="code">竹手</span><span class="next">戈</span></div>
+    <div class="bar"><span class="mark">速</span><span>我</span><span>俄</span><span>鵝</span></div>
+  </div>
+</body>
+</html>

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.os.SystemClock
 import android.text.TextUtils
@@ -325,6 +326,18 @@ class Strip(
         val top = baseline + LIT_GAP_DP * density
         canvas.drawRect(left, top, right, top + LIT_DP * density, litPaint)
     }
+
+    /**
+     * Cangjie's and Quick's next key, a rested key's radical ([RadicalPreview]): faded at the end of the code's tab, or the tab
+     * alone with nothing typed. Empty for none.
+     */
+    private val nextKeyLine = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    var nextKey: String = ""
+        set(value) {
+            if (field == value) return
+            field = value
+            effects?.invalidate()
+        }
 
     /** A word's menu or a notice about a word, in the place of everything else. */
     var notice: Notice? = null
@@ -1115,8 +1128,10 @@ class Strip(
      * resizes; only while a code is typed. A long code shrinks to the bar's width.
      */
     private fun drawCodeLine(canvas: Canvas, layer: android.view.View) {
-        val picker = notice as? Notice.Picker ?: return
-        if (picker.lead.isEmpty() || noticeRow.visibility != VISIBLE || !isShown) return
+        val picker = notice as? Notice.Picker
+        val lead = picker?.lead.orEmpty().takeIf { picker != null && noticeRow.visibility == VISIBLE }.orEmpty()
+        val next = nextKey.takeIf { showSuggestions }.orEmpty()
+        if ((lead.isEmpty() && next.isEmpty()) || !isShown) return
         getLocationInWindow(stripAt)
         layer.getLocationInWindow(layerAt)
         val x = (stripAt[0] - layerAt[0]).toFloat()
@@ -1129,7 +1144,11 @@ class Strip(
         val inset = maxOf(menuColumn(0).first, side.toFloat())
         val left = x + inset
         val most = width - 2 * inset - 2 * pad
-        val textWidth = codeText.measureText(picker.lead)
+        val leadWidth = codeText.measureText(lead)
+        // The preview stands apart from what's typed (owner, 2026-11-17: "it needs to be visually different"): a small gap.
+        val gap = if (lead.isNotEmpty() && next.isNotEmpty()) dp(NEXT_KEY_GAP_DP).toFloat() else 0f
+        val nextWidth = codeText.measureText(next)
+        val textWidth = leadWidth + gap + nextWidth
         val scale = if (textWidth > most && textWidth > 0f) most / textWidth else 1f
         val radius = dp(CODE_RADIUS_DP).toFloat()
         // On its own over the app: black, with a soft orange glow around it (owner, 2026-11-17: "I think the glow acc looks
@@ -1137,7 +1156,8 @@ class Strip(
         val above = y - height - dp(CODE_GAP_DP)
         codeBox.set(left, above, left + textWidth * scale + 2 * pad, above + height)
         menuPaint.color = look.paper or (0xFF shl 24)
-        menuPaint.setShadowLayer(dp(CODE_GLOW_DP).toFloat(), 0f, 0f, GuideMotion.faded(look.accent, CODE_GLOW_ALPHA))
+        // The glow says a code is typed: with only a preview, the frame stays and the glow is off.
+        if (lead.isNotEmpty()) menuPaint.setShadowLayer(dp(CODE_GLOW_DP).toFloat(), 0f, 0f, GuideMotion.faded(look.accent, CODE_GLOW_ALPHA))
         canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
         menuPaint.clearShadowLayer()
         val top = codeBox.top
@@ -1145,7 +1165,18 @@ class Strip(
         val baseline = top + height / 2 - (codeText.ascent() + codeText.descent()) / 2
         canvas.save()
         canvas.scale(scale, scale, left + pad, baseline)
-        canvas.drawText(picker.lead, left + pad, baseline, codeText)
+        canvas.drawText(lead, left + pad, baseline, codeText)
+        if (next.isNotEmpty()) {
+            // Grey, not the typed code's colour, at 45%, with a thin dotted underline: a preview, never a typed key.
+            val at = left + pad + leadWidth + gap
+            codeText.color = GuideMotion.faded(look.muted, NEXT_KEY_ALPHA)
+            canvas.drawText(next, at, baseline, codeText)
+            nextKeyLine.color = codeText.color
+            nextKeyLine.strokeWidth = dp(1).toFloat().coerceAtLeast(1f)
+            nextKeyLine.pathEffect = android.graphics.DashPathEffect(floatArrayOf(dp(2).toFloat(), dp(2).toFloat()), 0f)
+            val under = baseline + codeText.descent() / 2
+            canvas.drawLine(at, under, at + nextWidth, under, nextKeyLine)
+        }
         canvas.restore()
     }
 
@@ -1930,6 +1961,10 @@ class Strip(
         /** The line's soft orange glow: its reach in dp and its strength. */
         private const val CODE_GLOW_DP = 8
         private const val CODE_GLOW_ALPHA = .6f
+        /** How strongly the next key's radical shows in the code's tab: a preview, not typed yet. */
+        const val NEXT_KEY_ALPHA = 0.45f
+        /** The gap before the preview, after a typed code. */
+        const val NEXT_KEY_GAP_DP = 4
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

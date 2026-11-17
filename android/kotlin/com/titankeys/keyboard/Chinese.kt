@@ -261,3 +261,15 @@ object EnglishOffer {
     fun withWord(choices: List<String>, word: String?): List<String> =
         if (word == null) choices else choices.toMutableList().apply { add(minOf(PLACE, size), word) }
 }
+
+/**
+ * Cangjie's and Quick's next-key preview (owner, 2026-11-17): a finger resting still on a letter shows that key's radical,
+ * faded, at the end of the code's tab, after the code typed so far, or alone with nothing typed. Only after [REST_MILLIS]
+ * still, so quick typing never flashes it; a lift or another key changes it, and a press types as usual.
+ */
+object RadicalPreview {
+    const val REST_MILLIS = 180L
+
+    /** The radical to preview for a finger on [key] in [method], or null where there's none. */
+    fun of(method: InputMethod, key: String): String? = ChineseKeys.radical(method, key)
+}

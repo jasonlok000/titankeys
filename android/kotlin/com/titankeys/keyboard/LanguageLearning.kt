@@ -227,6 +227,14 @@ class NextWords private constructor(
     /** How many words have next words. */
     val size get() = nextStart.size - 1
 
+    /** Each word with next words ("<s>" for a sentence's start), each next word, and its place among them from 0 (D's corrections). */
+    fun forEach(action: (first: String, next: String, rank: Int) -> Unit) {
+        for (first in 0 until size) {
+            val word = word(first)
+            for (at in nextStart[first] until nextStart[first + 1]) action(word, word(nexts[at]), at - nextStart[first])
+        }
+    }
+
     /** What its arrays take, in bytes: the heap it holds, give or take a few object headers. */
     val bytes get() = words.size + 4L * (wordStart.size + nextStart.size + nexts.size)
 

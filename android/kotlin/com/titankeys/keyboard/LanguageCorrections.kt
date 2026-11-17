@@ -4,6 +4,7 @@ import com.titankeys.autocorrect.CorrectionData
 import com.titankeys.autocorrect.FixKind
 import com.titankeys.autocorrect.Lexicon
 import com.titankeys.autocorrect.NoisyChannel
+import com.titankeys.autocorrect.PairCounts
 import com.titankeys.autocorrect.RecentWords
 import com.titankeys.autocorrect.TypedCorrector
 import java.text.Normalizer
@@ -46,19 +47,23 @@ object LanguageCorrections {
     /**
      * The corrector for [method]'s [list]. [learned] says whether the user learned or saved a word in this language, which
      * is then never fixed; [usable] whether a fix may put a word in (not a blocked word, nor one the user unsaved); [favourite]
-     * whether the user made it a favourite, which wins a close call; [typos] whether Fix typos is on. It's always as strict as
-     * English's Only fix when sure: with no word pairs to tell close words apart, a fix must clearly beat every other. It
-     * reads the whole list, so it runs away from the keyboard.
+     * whether the user made it a favourite, which wins a close call; [typos] whether Fix typos is on; [pairs] the input method's
+     * word pairs (its pairs.txt, J's next-word table), which weigh a slip's candidates by the word before, as English's do. It's
+     * always as strict as English's Only fix when sure: the pairs hold only each word's commonest followers, far fewer than
+     * English's, so a fix must still clearly beat every other. It reads the whole list, so it runs away from the keyboard.
      */
     fun corrector(method: InputMethod, list: WordList, learned: (String) -> Boolean, rejected: MutableSet<String>,
                   recent: RecentWords, typos: () -> Boolean = { true }, usable: (String) -> Boolean = { true },
-                  favourite: (String) -> Boolean = { false }, spaceFixes: Boolean = true): TypedCorrector {
+                  favourite: (String) -> Boolean = { false }, spaceFixes: Boolean = true,
+                  pairs: PairCounts? = null): TypedCorrector {
         val lexicon = ListLexicon(list, learned, typos, usable, favourite)
         val keys = keys(method)
         val keysOf = { word: String -> String(CharArray(word.length) { keys.key(word[it]) }) }
         // How common a word is stands in for English's next-word model: between two close slips, the commoner word wins.
         val chance = { _: String, word: String -> list.frequency(word) / FREQUENCY_PER_NAT }
-        return TypedCorrector(lexicon, CorrectionData.forLanguage(lexicon, keysOf), rejected, recent, nextWordChance = chance,
+        val data = if (pairs == null) CorrectionData.forLanguage(lexicon, keysOf)
+            else CorrectionData.forLanguage(lexicon, keysOf, pairs = pairs)
+        return TypedCorrector(lexicon, data, rejected, recent, nextWordChance = chance,
             keys = keys, spaceFixes = spaceFixes)
     }
 
@@ -71,8 +76,29 @@ object LanguageCorrections {
 
     /** In the input methods' folder, android/assets/im. */
     const val BAR_ONLY_FILE = "corrections-bar-only.txt"
+    /**
+     * The input methods whose word pairs add wrong changes, measured mid-sentence by tests/corrections (more than
+     * [MOST_ADDED_WRONG] in 600 words): their corrector goes without pairs. Read as [barOnly] is.
+     */
+    const val NO_PAIRS_FILE = "corrections-no-pairs.txt"
+    const val MOST_ADDED_WRONG = 1
+    /** Space's most wrong changes mid-sentence, of a language's slips, before its fixes go on the bar only (Master, 2026-11-17). */
+    const val MID_SENTENCE_MOST_WRONG = 0.01
     /** The most wrong changes, of a language's slips, for Space to put fixes in (owner, 2026-11-17: near zero). */
     const val MOST_WRONG = 0.005
+
+    /**
+     * A next-word table ([NextWords], pairs.bin) as word-pair counts for the noisy channel: the table keeps only each word's
+     * commonest followers in order, not their counts, so each counts by its place, halving down the list (256 for the first).
+     */
+    fun pairs(table: NextWords): PairCounts {
+        val lines = ArrayList<String>()
+        table.forEach { first, next, rank -> lines += "$first $next\t${PAIR_TOP shr rank}" }
+        return PairCounts.parse(lines.asSequence())
+    }
+
+    /** The count a table's first follower stands for: see [pairs]. */
+    private const val PAIR_TOP = 256
 
     /** AOSP's word lists rate words from 0 to 255 on a log scale, about this many steps a nat. */
     private const val FREQUENCY_PER_NAT = 16.0

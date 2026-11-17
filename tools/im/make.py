@@ -136,7 +136,18 @@ RANK_BY = {
     "ga": "gle_newscrawl_2014_300K", "gl": "glg_wikipedia_2021_300K", "he": "heb_wikipedia_2021_1M",
     "is": "isl_newscrawl_2011_1M", "lv": "lav_newscrawl_2016_1M", "nn": "nno_wikipedia_2021_300K",
     "sk": "slk_newscrawl_2016_1M",
+    # The second pass (2026-11-17): each of these fixed more slips ranked this way, with Space's wrong changes still at 0.5% or
+    # under; the others fixed fewer, and keep their own frequencies.
+    "cs": "ces_news_2024_1M", "eo": "epo_newscrawl_2017_1M", "es": "spa_news_2024_1M", "et": "est_newscrawl_2017_1M",
+    "id": "ind_news_2024_1M", "kk": "kaz_newscrawl_2016_1M", "lt": "lit_news_2020_1M", "mk": "mkd_wikipedia_2021_300K",
+    "pl": "pol_news_2024_1M", "ru": "rus_news_2024_1M", "tr": "tur_news_2024_1M",
+    # The third (2026-11-17), measured mid-sentence: their own lists' rare forms (Ukrainian's "ставмося") made Space pick wrong
+    # words 1.0% of the time or more; ranked, Ukrainian went from 3.0% to 0.3%, and the others under 1.0% but Serbian (1.2%).
+    "bg": "bul_news_2022_1M", "hr": "hrv_wikipedia_2021_1M", "hu": "hun_news_2024_1M", "ro": "ron_news_2024_1M",
+    "sr": "srp_wikipedia_2021_1M", "uk": "ukr_news_2024_1M",
 }
+# Ranked lists whose held accents still come from their own list: letters its words use that the corpus doesn't.
+OWN_ACCENTS = {"tr"}
 LEIPZIG_RANK = ("Ranked by how often each word appears in the Leipzig Corpora Collection's {corpus} "
                 "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0, and only the words it uses kept. D. Goldhahn, T. Eckart "
                 "and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 "
@@ -395,11 +406,13 @@ def build_latin(data, ident):
     main, aux = cldr_letters(data, locale)
     head, words = read_counts(data, file, locale, main + aux) if extra.get("counts") else read_words(data, file)
     ranking = []
+    own = words
     words = reranked(data, ident, words, ranking)
     if extra.get("transliterate") == "sr":
         words = transliterated(words)
         head = "dictionary=main:sr_Latn,locale=sr_Latn,description=Srpski"
-    common = common_letters(words, lower(locale))
+    # Turkish keeps the î its own list's loanwords use, which the news corpus never does (Master, 2026-11-17).
+    common = common_letters(own if ident in OWN_ACCENTS else words, lower(locale))
     # CLDR's letters first, in its order, then any other letter the word list uses often (é in Afrikaans).
     ordered = main + sorted(c for c in common if c not in main)
     accents = latin_accents(ordered)
@@ -799,14 +812,6 @@ STARTER_SOURCES = {
     "zh-zhuyin": ("../src/rime-essay/essay.txt", "essay"),
     "ja": ("", "fixed"),
     "th": ("", "fixed"),
-    # The lists ranked by Leipzig's sentences ([RANK_BY]) keep the starters of their own list: news and Wikipedia put
-    # prepositions on top, where the chat-like lists had "som", "čo" and "nie" (Slovak), the ways to start a message.
-    **{ident: ("aosp-dictionaries/wordlists/%s.combined" % name, "list") for ident, name in {
-        "af": "main_af__experimental", "ca": "main_ca__experimental", "el": "main_el__legacy", "ga": "main_ga",
-        "gl": "main_gl__experimental", "is": "main_is__experimental", "lv": "main_lv", "nn": "main_nn",
-        "sk": "main_sk__experimental"}.items()},
-    "bs": ("frequencywords/bs_full.txt", "counts"),
-    "he": ("frequencywords/he_full.txt", "counts"),
 }
 # The rest start sentences the way their writers do (Orchestrator, 2026-11-17: the commonest words made odd starters, Korean's
 # particles, Bulgarian's tie of 4,500 words at the top, Russian's "года"): the words that most often begin a sentence in the

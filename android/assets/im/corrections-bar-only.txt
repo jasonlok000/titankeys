@@ -1,2 +1,3 @@
 # Input methods whose corrections show on the bar only: Space never puts them in. Written by
-# tests/corrections/run.sh --write: each made more than 0.5% wrong changes on its slips there.
+# CORRECTIONS_SENTENCES=<Leipzig folder> tests/corrections/run.sh --write: each made 1.0% or more wrong changes mid-sentence.
+sr

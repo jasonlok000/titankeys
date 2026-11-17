@@ -56,11 +56,12 @@ class InputMethodIndex(entries: List<Entry>) {
 
     /**
      * The input methods that are on, in the overlay's order, from the setting's text (ids with commas between). Unknown ids
-     * are dropped, as are repeats and any past [InputMethod.MAX_ON]. English is on when nothing else is.
+     * are dropped, as are repeats; none is dropped for being past a limit, which Settings keeps when turning one on
+     * ([InputMethod.MAX_LANGUAGES]). English is on when nothing else is.
      */
     fun on(setting: String?): List<Entry> {
         val wanted = setting.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        val known = wanted.mapNotNull { byId[it] }.take(InputMethod.MAX_ON)
+        val known = wanted.mapNotNull { byId[it] }
         return known.ifEmpty { listOf(ENGLISH) }
     }
 
@@ -99,12 +100,14 @@ class InputMethodIndex(entries: List<Entry>) {
 
         /**
          * Turns [id] on or off in the setting [current], keeping the order: a newly turned on one goes last. English can't be
-         * turned off while it's the only one, and nothing goes past [InputMethod.MAX_ON]. Returns the new setting, or null if
-         * the change isn't allowed.
+         * turned off while it's the only one; a fifth language, or a fifth input method in one language, can't be turned on
+         * ([InputMethod.MAX_LANGUAGES], [InputMethod.MAX_PER_LANGUAGE]), going by [languageOf]. Returns the new setting, or null
+         * if the change isn't allowed.
          */
-        fun toggle(current: List<String>, id: String, on: Boolean): List<String>? = when {
+        fun toggle(current: List<String>, id: String, on: Boolean, languageOf: (String) -> String = { it }): List<String>? = when {
             on && id in current -> current
-            on && current.size >= InputMethod.MAX_ON -> null
+            on && languageOf(id) !in current.map(languageOf) && current.map(languageOf).distinct().size >= InputMethod.MAX_LANGUAGES -> null
+            on && current.count { languageOf(it) == languageOf(id) } >= InputMethod.MAX_PER_LANGUAGE -> null
             on -> current + id
             id !in current -> current
             current.size == 1 -> null
@@ -141,13 +144,22 @@ object SwitchOverlay {
     /** The rows of letters that pick: the top two. */
     const val ROWS = 2
 
-    /** The key columns each of [count] places spans, in order, from W. */
+    /**
+     * The key columns each of [count] places spans, centred within W to O, every place the same whole number of keys (owner,
+     * 2026-11-17): one takes W to O, two four keys each, three two each over E to I, four two each.
+     */
     fun columns(count: Int): List<IntRange> {
-        val shown = count.coerceIn(0, InputMethod.MAX_ON)
+        val shown = count.coerceIn(0, InputMethod.MAX_LANGUAGES)
         if (shown == 0) return emptyList()
-        val width = (LAST - FIRST + 1) / shown
-        return List(shown) { FIRST + width * it until FIRST + width * (it + 1) }
+        val keys = LAST - FIRST + 1
+        val width = keys / shown
+        val start = FIRST + (keys - width * shown) / 2
+        return List(shown) { start + width * it until start + width * (it + 1) }
     }
+
+    /** What the switcher shows: the first four languages on, each with its first four input methods. A setting may hold more. */
+    fun shown(languages: List<InputMethodIndex.LanguageOn>) = languages.take(InputMethod.MAX_LANGUAGES)
+        .map { it.copy(methods = it.methods.take(InputMethod.MAX_PER_LANGUAGE)) }
 
     /**
      * With exactly two languages on, a held Sym switches to the other at once, with no switcher (owner, 2026-11-16: "if

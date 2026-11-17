@@ -137,19 +137,36 @@ private fun turningOnAndOff() {
     same("on goes last", InputMethodIndex.toggle(listOf("en"), "es", true), listOf("en", "es"))
     same("the only one can't go off", InputMethodIndex.toggle(listOf("en"), "en", false), null)
     same("English can go off with another on", InputMethodIndex.toggle(listOf("en", "es"), "en", false), listOf("es"))
-    val eight = List(8) { "x$it" }
-    same("a ninth is refused", InputMethodIndex.toggle(eight, "es", true), null)
+    // At most four languages, and four input methods within one (owner, 2026-11-17), with no other total.
+    val language = { id: String -> when { id.startsWith("yue") || id.startsWith("zh") -> "zh"; id.startsWith("sr") -> "sr"; else -> id } }
+    val tests = listOf("en", "vi", "yue-yale", "yue-jyutping", "zh-pinyin", "ja")
+    same("A's largest set, six in four languages, stays on", tests.fold(listOf<String>()) { on, id -> InputMethodIndex.toggle(on, id, true, language)!! }, tests)
+    same("a fifth language is refused", InputMethodIndex.toggle(tests, "es", true, language), null)
+    same("another input method of a language on is fine", InputMethodIndex.toggle(listOf("en", "es", "ru", "zh-pinyin"), "yue-yale", true, language),
+        listOf("en", "es", "ru", "zh-pinyin", "yue-yale"))
+    same("a fifth in one language is refused", InputMethodIndex.toggle(listOf("zh1", "zh2", "zh3", "zh4"), "zh5", true) { "zh" }, null)
+    same("a setting with more than four keeps them all", INDEX.on("en,es,fr,de,it,pt").size, 6)
     same("move up", InputMethodIndex.move(listOf("en", "es", "fr"), "fr", up = true), listOf("en", "fr", "es"))
     same("the first can't move up", InputMethodIndex.move(listOf("en", "es"), "en", up = true), listOf("en", "es"))
 }
 
 private fun theOverlaySpansTwoKeysWhenFewAreOn() {
-    // Spread evenly over W to O (owner, 2026-11-16): 2 take 4 keys each, 3 take 2 each with the rest empty, 4 take 2 each.
-    same("two on", SwitchOverlay.columns(2), listOf(1..4, 5..8))
-    same("three on", SwitchOverlay.columns(3), listOf(1..2, 3..4, 5..6))
-    same("four on", SwitchOverlay.columns(4), listOf(1..2, 3..4, 5..6, 7..8))
-    same("five on", SwitchOverlay.columns(5), listOf(1..1, 2..2, 3..3, 4..4, 5..5))
-    same("eight on reach O", SwitchOverlay.columns(8).last(), 8..8)
+    // Centred within W to O, every tile the same whole number of keys (owner, 2026-11-17): 1 = W–O, 2 = four keys each,
+    // 3 = two each over E–I, 4 = two each. W is column 1 and O column 8, so the margins left of W and right of O are equal.
+    same("one: W to O", SwitchOverlay.columns(1), listOf(1..8))
+    same("two: four keys each", SwitchOverlay.columns(2), listOf(1..4, 5..8))
+    same("three: two each over E to I", SwitchOverlay.columns(3), listOf(2..3, 4..5, 6..7))
+    same("four: two each", SwitchOverlay.columns(4), listOf(1..2, 3..4, 5..6, 7..8))
+    for (count in 1..4) {
+        val columns = SwitchOverlay.columns(count)
+        same("$count: centred, as many keys left of the first as right of the last", columns.first().first - 1, 8 - columns.last().last)
+        same("$count: every tile as wide", columns.map { it.last - it.first }.distinct().size, 1)
+    }
+    same("more than four: the first four", SwitchOverlay.columns(6).size, 4)
+    same("W picks nothing with three", SwitchOverlay.choice("W", 3), -1)
+    same("E picks the first of three", SwitchOverlay.choice("E", 3), 0)
+    same("D, under E, too", SwitchOverlay.choice("D", 3), 0)
+    same("Y picks the second of three", SwitchOverlay.choice("Y", 3), 1)
     same("W picks the first of two", SwitchOverlay.choice("W", 2), 0)
     same("R picks the first of two too", SwitchOverlay.choice("R", 2), 0)
     same("T picks the first of two", SwitchOverlay.choice("T", 2), 0)
@@ -157,9 +174,10 @@ private fun theOverlaySpansTwoKeysWhenFewAreOn() {
     same("O picks the second of two", SwitchOverlay.choice("O", 2), 1)
     same("S, on the second row, picks as W does", SwitchOverlay.choice("S", 2), 0)
     same("Q picks nothing", SwitchOverlay.choice("Q", 2), -1)
-    same("I picks nothing with three on", SwitchOverlay.choice("I", 3), -1)
+    same("I picks the third of three", SwitchOverlay.choice("I", 3), 2)
+    same("O picks nothing with three", SwitchOverlay.choice("O", 3), -1)
     same("Z's row picks nothing", SwitchOverlay.choice("X", 2), -1)
-    same("O picks the eighth of eight", SwitchOverlay.choice("O", 8), 7)
+    same("O picks the fourth of four", SwitchOverlay.choice("O", 4), 3)
 }
 
 /** Languages, then input methods: Serbian and Chinese group theirs, and the switcher's second row shows them. */

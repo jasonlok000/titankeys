@@ -1308,8 +1308,9 @@ class TitanKeysIme : InputMethodService() {
         words.effects = effects
         words.menuBeat = ::menuBeat
         words.menuPress = { haptics.play(Haptic.MenuPress) }
-        // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen].
-        return FrameLayout(ui).apply {
+        // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen]. Its root feels every tap on the
+        // screen that plays nothing of its own ([TapHaptics]).
+        return TapHaptics(ui) { downTime -> if (!haptics.playedSince(downTime)) haptics.play(Haptic.ScreenTap) }.apply {
             addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
             addView(effects, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
@@ -2098,7 +2099,11 @@ class TitanKeysIme : InputMethodService() {
             }
             val column = Picker.column(key)
             val mark = column.takeIf { c -> open.notice.columns.any { c in it } } ?: -1
-            if (!quiet && mark >= 0 && mark != strip.pickerMark) haptics.play(Haptic.MenuMark)
+            // The tick plays as the mark moves to another tile, as the panels' mark does, not for another key under the same
+            // tile: the switcher's tiles are two to eight keys wide (owner, 2026-11-17).
+            val tile = open.notice.columns.indexOfFirst { mark in it }
+            val before = open.notice.columns.indexOfFirst { strip.pickerMark in it }
+            if (!quiet && tile >= 0 && tile != before) haptics.play(Haptic.MenuMark)
             strip.pickerMark = mark
             return
         }
@@ -3798,7 +3803,7 @@ class TitanKeysIme : InputMethodService() {
             return
         }
         haptics.play(Haptic.HeldSymbol)
-        val on = InputMethodIndex.group(languages.on)
+        val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
         // Two languages: the other one at once, no switcher.
         SwitchOverlay.toggle(on, languages.current.id, languages.lastUsed)?.let { id ->
             symLog("Sym held: two languages, so $id types now")
@@ -3815,7 +3820,7 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun tapMark() {
         if (!editing || !::languages.isInitialized) return
-        val on = InputMethodIndex.group(languages.on)
+        val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
         when (val pick = SwitchOverlay.markTap(on, languages.current.id)) {
             is SwitchPick.To -> {
                 haptics.play(Haptic.MenuPress)

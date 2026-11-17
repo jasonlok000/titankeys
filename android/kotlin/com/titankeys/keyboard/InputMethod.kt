@@ -109,8 +109,13 @@ data class InputMethod(
 
     companion object {
         const val ENGLISH_ID = "en"
-        /** The most input methods on at once: the overlay's places, W to O. */
-        const val MAX_ON = 8
+        /**
+         * The most languages on, and the most input methods on within one language (owner, 2026-11-17: "Don't allow selecting
+         * more than 4"). No other total: four languages of four each can be on. Settings refuses a fifth; a setting that has
+         * more (a restore, an old one) keeps them, and the switcher shows the first four of each.
+         */
+        const val MAX_LANGUAGES = 4
+        const val MAX_PER_LANGUAGE = 4
         /** The longest label the overlay can show over its key. */
         const val MAX_LABEL = 3
         /** The most accents on one key: one per key column. */

@@ -209,6 +209,11 @@ enum class Haptic(val id: String, val group: HapticGroup, val family: Family, va
     ClipUnpinned("clip_unpinned", HapticGroup.Panels, Family.Release),
     ClipboardCleared("clipboard_cleared", HapticGroup.Panels, Family.Gone),
 
+    /**
+     * A finger tapped something the keyboard draws, on the touchscreen: a tile, a button, an item, anywhere ([TapHaptics]),
+     * where that tap plays nothing of its own (owner, 2026-11-17: "For tapping gives haptics, shd be globally"). A light tick.
+     */
+    ScreenTap("screen_tap", HapticGroup.Other, Family.Texture),
     /** Record a bug started: it locks in. Its id is the old "Record a bug starts or stops", so its switch stays. */
     BugRecordingStarted("bug_recording", HapticGroup.Other, Family.Lock),
     /** Record a bug stopped: it lets go. */
@@ -705,6 +710,9 @@ class Haptics(private val context: Context) {
     private var tail: Runnable? = null
     /** When the last haptic played, an uptime. */
     private var lastPlayedAt = Long.MIN_VALUE / 2
+
+    /** Whether any haptic played at or after [time] (uptime): a tap that played its own, which [TapHaptics] doesn't double. */
+    fun playedSince(time: Long) = lastPlayedAt >= time
     private val dotTicks = PendingTicks({ tick, at -> main.postDelayed(tick, at) }, main::removeCallbacks)
     private val previewTicks = PendingTicks({ tick, at -> main.postDelayed(tick, at) }, main::removeCallbacks)
     /** When each tick of the hold under way played, as uptimes: its flick and its words. A dot's tick keeps clear of them. */

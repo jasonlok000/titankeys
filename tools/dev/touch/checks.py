@@ -31,9 +31,9 @@ class Stop(Exception):
     pass
 
 
-def adb(*args):
+def adb(*args, timeout=60):
     command = ["adb"] + (["-s", SERIAL] if SERIAL else []) + list(args)
-    return subprocess.run(command, capture_output=True, text=True, timeout=60).stdout.replace("\r", "")
+    return subprocess.run(command, capture_output=True, text=True, timeout=timeout).stdout.replace("\r", "")
 
 
 def play(*gestures, shot=None, at=0):

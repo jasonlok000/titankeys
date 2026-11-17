@@ -79,7 +79,7 @@ def dump_histogram():
     time.sleep(20)  # the dump is written off the main thread
     local = tempfile.mkdtemp(prefix="tk-heap-")
     try:
-        adb("pull", LEAKS, local)
+        adb("pull", LEAKS, local, timeout=900)  # 150 MB and more takes minutes over Wi-Fi
         dumps = [os.path.join(root, f) for root, _, files in os.walk(local) for f in files if f.endswith(".hprof")]
         if not dumps:
             return "no .hprof came"

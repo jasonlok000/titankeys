@@ -31,7 +31,7 @@ def check_settings_warnings():
     retest_batch.own_screen()
     adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
     time.sleep(3)
-    step("tap", "952", "166")  # SETTINGS, top right
+    retest_batch.open_settings(step)
     found = set()
     for n in range(SCREENS):
         name = guide_checks.shot(f"settings-{n:02d}")

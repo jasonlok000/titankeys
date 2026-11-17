@@ -78,7 +78,7 @@ def settings_fix_typos():
     try:
         if f" {APP}/" not in languages.front():
             raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
-        adb("shell", "input", "tap", "952", "166")
+        retest_batch.open_settings(lambda *c: (adb("shell", "input", *c), time.sleep(1.5)))
         time.sleep(1.5)
         for _ in range(6):
             xml = switcher_checks.screen_dump()

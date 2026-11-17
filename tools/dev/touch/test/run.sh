@@ -75,6 +75,16 @@ owner() {
 [ "$(owner com.android.launcher3/com.android.launcher3.Launcher)" = "$(printf 'free\ngone')" ] || { echo "FAIL the home screen was waited for"; exit 1; }
 [ "$(owner com.titankeys/com.vandam.ink.MainActivity)" = "$(printf 'owner\nstayed')" ] || { echo "FAIL release TitanKeys' screen wasn't left to the owner"; exit 1; }
 owner com.anthropic.claude/x | grep -q SENT && { echo "FAIL the wait sent something to the phone"; exit 1; }
+# A Settings page TitanKeys Debug opened is the run's (one Back); one the owner opened isn't. As dumpsys prints them (2026-11-17).
+opened() {
+  FROM=$1 bash -c '. tools/dev/env.sh; . tools/dev/phone/safety.sh; . tools/dev/touch/touchlib.sh
+    tk_adb() { printf "%s\n" "  * Hist #0: ActivityRecord{44175795 u0 com.android.settings/.SubSettings t38722}" \
+      "      launchedFromUid=10338 launchedFromPackage=$FROM launchedFromFeature=null userId=0" \
+      "    topResumedActivity=ActivityRecord{44175795 u0 com.android.settings/.SubSettings t38722}"; }
+    tk_debug_opened && echo debug || echo owner'
+}
+[ "$(opened com.titankeys.debug)" = debug ] || { echo "FAIL a page Debug opened wasn't seen as the run's"; exit 1; }
+[ "$(opened com.android.settings)" = owner ] || { echo "FAIL a page the owner opened was taken for the run's"; exit 1; }
 echo "Owner wait checks passed"
 
 # A batch: every named one loads, its gestures build, and its report says each result once, with what's left for hands.

@@ -52,15 +52,27 @@ object LanguageCorrections {
      */
     fun corrector(method: InputMethod, list: WordList, learned: (String) -> Boolean, rejected: MutableSet<String>,
                   recent: RecentWords, typos: () -> Boolean = { true }, usable: (String) -> Boolean = { true },
-                  favourite: (String) -> Boolean = { false }): TypedCorrector {
+                  favourite: (String) -> Boolean = { false }, spaceFixes: Boolean = true): TypedCorrector {
         val lexicon = ListLexicon(list, learned, typos, usable, favourite)
         val keys = keys(method)
         val keysOf = { word: String -> String(CharArray(word.length) { keys.key(word[it]) }) }
         // How common a word is stands in for English's next-word model: between two close slips, the commoner word wins.
         val chance = { _: String, word: String -> list.frequency(word) / FREQUENCY_PER_NAT }
         return TypedCorrector(lexicon, CorrectionData.forLanguage(lexicon, keysOf), rejected, recent, nextWordChance = chance,
-            keys = keys)
+            keys = keys, spaceFixes = spaceFixes)
     }
+
+    /**
+     * The input methods whose corrections show on the bar only, never put in by Space: those whose Space made more than
+     * [MOST_WRONG] wrong changes on tests/corrections' slips, which writes the list ([BAR_ONLY_FILE], one id a line).
+     */
+    fun barOnly(lines: Sequence<String>): Set<String> =
+        lines.map { it.substringBefore('#').trim() }.filter { it.isNotEmpty() }.toSet()
+
+    /** In the input methods' folder, android/assets/im. */
+    const val BAR_ONLY_FILE = "corrections-bar-only.txt"
+    /** The most wrong changes, of a language's slips, for Space to put fixes in (owner, 2026-11-17: near zero). */
+    const val MOST_WRONG = 0.005
 
     /** AOSP's word lists rate words from 0 to 255 on a log scale, about this many steps a nat. */
     private const val FREQUENCY_PER_NAT = 16.0

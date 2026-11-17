@@ -236,6 +236,11 @@ class TypedCorrector(
      * own rules (two-letter words, for one) stay out ([CorrectionData.forLanguage]).
      */
     private val keys: NoisyChannel.Keys = NoisyChannel.Keys.ENGLISH,
+    /**
+     * Whether Space may put a fix in. Another input method whose fixes were measured too often wrong shows them on the bar only
+     * ([suggestion]): Space then always types what was typed (corrections-bar-only.txt).
+     */
+    private val spaceFixes: Boolean = true,
 ) {
     private val english = keys === NoisyChannel.Keys.ENGLISH
 
@@ -352,7 +357,7 @@ class TypedCorrector(
      * before it if the user typed that word, because a swiped word must not change.
      */
     fun check(word: String, before: String, typedPrevious: String?): Fix? =
-        firstFix(word, before, typedPrevious)?.takeUnless { it.word == it.typed }
+        if (!spaceFixes) null else firstFix(word, before, typedPrevious)?.takeUnless { it.word == it.typed }
 
     /**
      * The shorthand step alone: [word], after [before], spelled out as its full word, or null to keep it. It runs on its own while

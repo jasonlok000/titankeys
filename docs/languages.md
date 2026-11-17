@@ -197,9 +197,14 @@ data-only language is one command plus a check by eye. Where the data comes from
 - A word kept twice after its fix was taken back is saved for that language (`LearnedWords`, as the word menu's Save, in
   Settings > Saved words) and never fixed again. A fix never puts in a blocked word or one unsaved in that language, and a
   favourite wins a close call (`LanguageWords.usable` and `favourite`).
-- It follows Settings' Autocorrect switch, as English does. `tests/corrections` measures every language on made-up slips of
-  its commonest words: on 36,760 slips Space makes 0.2% wrong changes, never changes a word typed right, and the right
-  word is on the bar for 91%.
+- It follows Settings' Autocorrect switch, as English does, read in one place (`LanguageCorrection.on`) so a switch for each
+  language changes only that.
+- `tests/corrections` measures every language on made-up slips of its commonest words. A language whose Space would make
+  more than 0.5% wrong changes gets its fixes on the bar only (`android/assets/im/corrections-bar-only.txt`, which
+  `run.sh --write` writes from the measure): Greek, Galician and Slovak today. Over all 44, on 36,760 slips, Space puts
+  in the right word for 56.4% and a wrong one for 0.1%, never changes a word typed right, and the right word is on the bar
+  for 91.3%.
+- Kept-once words are each language's own (`KeptOnceStore.languageKey`).
 
 The bar, its hover and the picking come from the word menu's code (see "Where it goes in the code").
 

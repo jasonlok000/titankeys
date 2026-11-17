@@ -9,10 +9,13 @@ import kotlin.random.Random
  * its commonest words with made-up slips (a neighbouring key, a letter left out, two letters swapped, an accent left off), and
  * the words themselves typed right. Space must almost never make a wrong change; the right word should often be on the bar.
  *
- * Usage: java CorrectionChecksKt android/assets/im
+ * A language whose Space would make more than [LanguageCorrections.MOST_WRONG] wrong changes gets its fixes on the bar only: Space
+ * never puts them in. This measures each language as if Space did, and the list it makes must match
+ * android/assets/im/corrections-bar-only.txt; with --write, it writes that list.
+ *
+ * Usage: java CorrectionChecksKt android/assets/im [--write]
  */
 private const val WORDS = 300
-private const val MOST_WRONG = 0.02
 
 private var failures = 0
 
@@ -67,9 +70,11 @@ private class Tally {
 }
 
 fun main(args: Array<String>) {
-    val folder = File(args.firstOrNull() ?: "android/assets/im")
-    println("language  slips  Space right  Space wrong  on the bar  accents fixed  right words changed")
+    val folder = File(args.firstOrNull { !it.startsWith("--") } ?: "android/assets/im")
+    val write = "--write" in args
+    println("language  slips  measured wrong  Space         Space right  Space wrong  on the bar  accents fixed  right words changed")
     val total = Tally()
+    val barOnly = sortedSetOf<String>()
     for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
         val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
         if (!LanguageCorrections.corrects(method)) continue
@@ -106,19 +111,42 @@ fun main(args: Array<String>) {
             }
         }
         fun pct(part: Int, whole: Int) = if (whole == 0) "   -  " else "%5.1f%%".format(100.0 * part / whole)
-        println("%-8s %6d  %11s  %11s  %10s  %13s  %19s".format(method.id, tally.slips, pct(tally.spaceRight, tally.slips),
-            pct(tally.spaceWrong, tally.slips), pct(tally.barRight, tally.slips), pct(tally.accentsRight, tally.accents),
-            pct(tally.rightChanged, tally.right)))
-        check("${method.id}: Space's wrong changes stay rare", tally.spaceWrong <= MOST_WRONG * tally.slips) { "${tally.spaceWrong} of ${tally.slips}" }
+        // Too many wrong changes: the bar shows the fixes, and Space types what was typed.
+        val bar = tally.spaceWrong > LanguageCorrections.MOST_WRONG * tally.slips
+        val measuredWrong = tally.spaceWrong
+        if (bar) {
+            barOnly += method.id
+            val barCorrector = LanguageCorrections.corrector(method, list, { false }, HashSet(), RecentWords(), spaceFixes = false)
+            check("${method.id}: on the bar only, Space never puts a fix in", sample.none { word ->
+                slips(word, method, Random(method.id.hashCode())).any { barCorrector.check(it.typed, "", null) != null } })
+            tally.spaceRight = 0
+            tally.spaceWrong = 0
+            tally.accentsRight = 0
+        }
+        println("%-8s %6d  %14s  %-12s  %11s  %11s  %10s  %13s  %19s".format(method.id, tally.slips, pct(measuredWrong, tally.slips),
+            if (bar) "bar only" else "puts fixes in", pct(tally.spaceRight, tally.slips), pct(tally.spaceWrong, tally.slips),
+            pct(tally.barRight, tally.slips), pct(tally.accentsRight, tally.accents), pct(tally.rightChanged, tally.right)))
         check("${method.id}: a word typed right is never changed", tally.rightChanged == 0) { "${tally.rightChanged} of ${tally.right}" }
         total.slips += tally.slips; total.spaceRight += tally.spaceRight; total.spaceWrong += tally.spaceWrong
         total.barRight += tally.barRight; total.accents += tally.accents; total.accentsRight += tally.accentsRight
         total.right += tally.right; total.rightChanged += tally.rightChanged
     }
-    println("all      %6d  %10.1f%%  %10.1f%%  %9.1f%%  %12.1f%%  %18.1f%%".format(total.slips, 100.0 * total.spaceRight / total.slips,
+    println("all      %6d  %14s  %-12s  %10.1f%%  %10.1f%%  %9.1f%%  %12.1f%%  %18.1f%%".format(total.slips, "", "",
+        100.0 * total.spaceRight / total.slips,
         100.0 * total.spaceWrong / total.slips, 100.0 * total.barRight / total.slips,
         100.0 * total.accentsRight / maxOf(1, total.accents), 100.0 * total.rightChanged / maxOf(1, total.right)))
     check("English isn't one of them: it keeps its own corrector", !LanguageCorrections.corrects(InputMethod.ENGLISH))
+    check("Space's wrong changes stay near zero where it puts fixes in", total.spaceWrong <= LanguageCorrections.MOST_WRONG * total.slips)
+    val file = File(folder, LanguageCorrections.BAR_ONLY_FILE)
+    if (write) {
+        file.writeText("# Input methods whose corrections show on the bar only: Space never puts them in. Written by\n" +
+            "# tests/corrections/run.sh --write: each made more than 0.5% wrong changes on its slips there.\n" +
+            barOnly.joinToString("") { "$it\n" })
+        println("wrote ${file.path}: ${barOnly.joinToString(" ")}")
+    } else {
+        val listed = if (file.exists()) file.useLines { LanguageCorrections.barOnly(it) } else emptySet<String>()
+        check("${LanguageCorrections.BAR_ONLY_FILE} is the measured list (run.sh --write)", listed == barOnly) { "has $listed, measured $barOnly" }
+    }
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)

@@ -1504,7 +1504,7 @@ class TitanKeysIme : InputMethodService() {
         // English's autocorrect and shorthand are English's own. Other input methods with a word list fix slips on their keys,
         // conservatively, with the same corrector on their own list (LanguageCorrections; owner, 2026-11-17).
         val corrects = TypingSettings.autocorrect(this) && english
-        val language = if (!english && TypingSettings.autocorrect(this)) languageCorrection.use(languages.current, languages.list)
+        val language = if (!english && languageCorrection.on(languages.current)) languageCorrection.use(languages.current, languages.list)
             else null.also { languageCorrection.clear() }
         // Spell out shorthand is its own setting: with Fix typos off, the word data spells out shorthand alone (bug hunt #13).
         val shorthandAlone = !corrects && TypingSettings.expandShorthand(this) && english

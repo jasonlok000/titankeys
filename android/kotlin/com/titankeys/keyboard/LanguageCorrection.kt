@@ -7,6 +7,7 @@ import android.util.Log
 import com.titankeys.autocorrect.Autocorrect
 import com.titankeys.autocorrect.KeptOnceStore
 import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypingSettings
 
 /**
  * The current input method's corrections on the phone ([LanguageCorrections]), for every input method other than English that
@@ -37,7 +38,8 @@ class LanguageCorrection(private val context: Context, private val words: Langua
         id = method.id
         this.list = list
         val made = Autocorrect(
-            KeptOnceStore(context.getSharedPreferences(KeptOnceStore.PREFS_NAME, Context.MODE_PRIVATE)),
+            KeptOnceStore(context.getSharedPreferences(KeptOnceStore.PREFS_NAME, Context.MODE_PRIVATE),
+                key = KeptOnceStore.languageKey(method.id)),
             { word -> LearnedWords.learn(context, method.id, word) },
             { typing.learningEnabled() },
         )
@@ -47,7 +49,7 @@ class LanguageCorrection(private val context: Context, private val words: Langua
             val corrector = try {
                 LanguageCorrections.corrector(method, list, words::known, made.rejected, made.recent,
                     typos = { typing.fixOn(com.titankeys.autocorrect.FixKind.TYPOS.id) }, usable = words::usable,
-                    favourite = words::favourite)
+                    favourite = words::favourite, spaceFixes = method.id !in barOnly)
             } catch (error: OutOfMemoryError) {
                 Log.w("TitanKeys", "Not enough memory for ${method.id}'s corrections", error)
                 null
@@ -59,6 +61,19 @@ class LanguageCorrection(private val context: Context, private val words: Langua
         }
         return made
     }
+
+    /** The input methods whose fixes Space never puts in, only the bar shows ([LanguageCorrections.barOnly]). */
+    private val barOnly: Set<String> by lazy {
+        runCatching {
+            context.assets.open("im/${LanguageCorrections.BAR_ONLY_FILE}").bufferedReader().useLines(LanguageCorrections::barOnly)
+        }.getOrDefault(emptySet())
+    }
+
+    /**
+     * Whether [method] corrects at all: Settings' Autocorrect switch. The one place to read it, so a switch for each language
+     * (claude/m3-settings-per-language) changes only this.
+     */
+    fun on(method: InputMethod): Boolean = TypingSettings.autocorrect(context)
 
     /** The input method went: its corrections go with it. */
     fun clear() {

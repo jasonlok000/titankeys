@@ -13,4 +13,4 @@ keyboard=$root/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$root/com/titankeys/autocorrect" "$keyboard/Layout.kt" "$keyboard/InputMethod.kt" "$keyboard/InputMethods.kt" "$keyboard/WordList.kt" \
   "$keyboard/LanguageCorrections.kt" "$root/com/titankeys/connected/Json.kt" tests/corrections/CorrectionChecks.kt
-java -Xmx2g -cp "$work:$stdlib:$sdk/platforms/android-36/android.jar" com.titankeys.keyboard.CorrectionChecksKt android/assets/im
+java -Xmx2g -cp "$work:$stdlib:$sdk/platforms/android-36/android.jar" com.titankeys.keyboard.CorrectionChecksKt android/assets/im "$@"

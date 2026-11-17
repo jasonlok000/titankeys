@@ -10,13 +10,15 @@ import android.content.SharedPreferences
  */
 class KeptOnceStore(
     private val prefs: SharedPreferences?,
-    private val today: () -> Long = { System.currentTimeMillis() / DAY_MILLIS }
+    private val today: () -> Long = { System.currentTimeMillis() / DAY_MILLIS },
+    /** Where in [prefs] the words are: English's own, or another input method's ([languageKey]). */
+    private val key: String = KEY,
 ) {
     private val memory = mutableSetOf<String>()
 
     /** Stored as "word|epochDay" so entries can expire and the oldest can be dropped first. */
     private fun entries(): Map<String, Long> =
-        (prefs?.getStringSet(KEY, emptySet()) ?: memory).mapNotNull { raw ->
+        (prefs?.getStringSet(key, emptySet()) ?: memory).mapNotNull { raw ->
             val separator = raw.lastIndexOf('|')
             if (separator <= 0) return@mapNotNull null
             raw.substring(separator + 1).toLongOrNull()?.let { day -> raw.substring(0, separator) to day }
@@ -40,7 +42,7 @@ class KeptOnceStore(
             .map { "${it.key}|${it.value}" }
             .toSet()
         if (prefs != null) {
-            prefs.edit().putStringSet(KEY, next).apply()
+            prefs.edit().putStringSet(key, next).apply()
         } else {
             memory.clear()
             memory.addAll(next)
@@ -55,5 +57,8 @@ class KeptOnceStore(
         private const val DAY_MILLIS = 86_400_000L
 
         fun inMemory() = KeptOnceStore(null)
+
+        /** Another input method's kept-once words, beside English's in the same file: each language keeps its own. */
+        fun languageKey(id: String) = "${KEY}_$id"
     }
 }

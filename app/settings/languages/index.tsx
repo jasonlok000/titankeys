@@ -1,6 +1,6 @@
 import { Row, Screen, Section, navigate, useSnapshot } from "ink";
 import { chevronRight } from "ink/icons";
-import { type InputMethodEntry, type Language, type State, state } from "../../../lib/titankeys";
+import { type InputMethodEntry, type Language, type LanguageValues, type State, state } from "../../../lib/titankeys";
 import { Note } from "../../../lib/note";
 
 /**
@@ -34,6 +34,18 @@ export const languagesOn = (settings: State): LanguageRow[] => {
   const order = settings.inputMethods.map(id => settings.availableInputMethods.find(im => im.id === id)?.language.id);
   return rows.filter(row => row.on.length > 0).sort((a, b) => order.indexOf(a.language.id) - order.indexOf(b.language.id));
 };
+
+/**
+ * Whether the typing settings that differ by language live on each language's page (owner, 2026-11-17): yes as soon as
+ * anything but English alone is on. With English alone, Settings' main page shows them as it always has.
+ */
+export const typingPerLanguage = (settings: State) => {
+  const on = languagesOn(settings);
+  return !(on.length === 1 && on[0].language.id === "en");
+};
+
+/** A language's own typing values: today's single values until it sets its own (TypingSettings.PER_LANGUAGE). */
+export const languageValues = (settings: State, id: string): LanguageValues => settings.languageSettings[id] ?? settings;
 
 /**
  * Scripts whose letters Ink can't place yet: it draws text without shaping, so Devanagari's vowel signs would sit after

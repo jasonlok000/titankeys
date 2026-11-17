@@ -22,7 +22,7 @@ import { sentenceSpacesLabel } from "./sentence-spaces";
 import { setupLabel } from "./setup";
 import { shorthandLabel } from "./shorthand/index";
 import { snippetsLabel } from "./snippets/index";
-import { languagesLabel } from "./languages";
+import { languageValues, languagesLabel, typingPerLanguage } from "./languages";
 import { tapKeysLabel } from "./tap-keys";
 import { RESET_NOTE, resetDone } from "./reset-most";
 import { Note } from "../../lib/note";
@@ -40,31 +40,38 @@ export default function Settings() {
   useEffect(() => () => { resetDone.shown = false; }, []);
   if (result.status !== "ready") return <Screen title="Settings" rightAction={closeAction} />;
   const settings = result.data;
+  // With anything but English alone on, the typing settings that differ by language are on each language's page (owner,
+  // 2026-11-17), and Typing is one row that opens them. With English alone, they're here, and they are English's own values.
+  const perLanguage = typingPerLanguage(settings);
+  const english = languageValues(settings, "en");
   return <Screen title="Settings" rightAction={closeAction}>
     {/* First in Settings (owner, 2026-11-16: "Languages shd be first in settings"). F (docs/words-m1.md). */}
     <Section title="Languages">
       {/* Languages, then input methods, the Gboard way: English spelling and Chinese characters are on their language's page. */}
       <Field label="Languages" href="/settings/languages">{languagesLabel(settings)}</Field>
     </Section>
-    <Section title="Typing">
-      <Toggle label="Fix typos as you type" value={settings.autocorrect}
+    {perLanguage ? <Section title="Typing">
+      {/* F: draft. A door, with the languages it opens on. */}
+      <Field label="Typing in each language" href="/settings/languages">{languagesLabel(settings)}</Field>
+    </Section> : <Section title="Typing">
+      <Toggle label="Fix typos as you type" value={english.autocorrect}
         onChange={autocorrect => save.run({ autocorrect })} />
-      {settings.autocorrect && <Field label="What gets fixed" href="/settings/fixes">{fixesLabel(settings)}</Field>}
-      <Toggle label="Capital letter to start a sentence" value={settings.autoCapitalise}
+      {english.autocorrect && <Field label="What gets fixed" href="/settings/fixes">{fixesLabel(settings)}</Field>}
+      <Toggle label="Capital letter to start a sentence" value={english.autoCapitalise}
         onChange={autoCapitalise => save.run({ autoCapitalise })} />
-      <Field label="Space after a sentence" href="/settings/sentence-spaces">{sentenceSpacesLabel(settings)}</Field>
-      <Toggle label="Space after , ; :" value={settings.commaSpace}
+      <Field label="Space after a sentence" href="/settings/sentence-spaces">{sentenceSpacesLabel(settings, "en")}</Field>
+      <Toggle label="Space after , ; :" value={english.commaSpace}
         onChange={commaSpace => save.run({ commaSpace })} />
-      <Toggle label="Double Space types a full stop" value={settings.autoPunctuation}
+      <Toggle label="Double Space types a full stop" value={english.autoPunctuation}
         onChange={autoPunctuation => save.run({ autoPunctuation })} />
-      <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>
-    </Section>
+      <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings, "en")}</Field>
+    </Section>}
     {/* The same topics, in the same order, as the boring guide's Shortcuts and Symbols sections. */}
     <Section title="Shortcuts">
       <Field label="Snippets" href="/settings/snippets">{snippetsLabel(settings)}</Field>
       <Toggle label="Type :name: for an emoji" value={settings.shortcodes}
         onChange={shortcodes => save.run({ shortcodes })} />
-      <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>
+      {!perLanguage && <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>}
       <Field label="Exact typing (experimental)" href="/settings/exact-apps">{exactAppsLabel(settings)}</Field>
       {/* Built in, each with its switch (owner, 2026-11-13). They count only while the first key is held. */}
       <Toggle label={shiftBackspaceLabel} subtitle={shiftBackspaceNote} value={settings.shiftBackspaceWord}
@@ -83,8 +90,8 @@ export default function Settings() {
       {settings.suggestionBar && <Field label={barTextSizeTitle} href="/settings/bar-text-size">{barTextSizeLabel(settings)}</Field>}
     </Section>
     <Section title="Touchpad">
-      <Toggle label="Swipe to type words" value={settings.swipeTyping}
-        onChange={swipeTyping => save.run({ swipeTyping })} />
+      {!perLanguage && <Toggle label="Swipe to type words" value={settings.swipeTyping}
+        onChange={swipeTyping => save.run({ swipeTyping })} />}
       <Toggle label={cursorLabel} value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
       {(settings.swipeTyping || settings.cursorControl)

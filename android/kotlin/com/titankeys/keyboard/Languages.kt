@@ -58,6 +58,9 @@ internal class Languages(
 
     /** The input method typing now. English until the settings say otherwise, and always in the guide. */
     val current: InputMethod get() = if (englishOnly) InputMethod.ENGLISH else loaded
+    /** The language typing now, whose own typing settings apply (TypingSettings.PER_LANGUAGE): Chinese's input methods share one. */
+    val languageId: String get() = on.firstOrNull { it.id == current.id }?.language?.id ?: InputMethod.ENGLISH_ID
+
     /** The input methods that are on, in the overlay's order. */
     var on: List<InputMethodIndex.Entry> = listOf(InputMethodIndex.ENGLISH)
         private set

@@ -782,19 +782,19 @@ class TitanKeysIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
             { modifiers.autoShifted }) { barWords = it; strip?.words = it }
-        composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
+        composer.autoPunctuation = { TypingSettings.autoPunctuationIn(this, languages.languageId) }
         composer.sentenceSpaces = {
-            when (TypingSettings.sentenceSpaces(this)) {
+            when (TypingSettings.sentenceSpacesIn(this, languages.languageId)) {
                 "two" -> 2
                 "none" -> 0
                 else -> 1
             }
         }
-        composer.commaSpace = { TypingSettings.commaSpace(this) }
+        composer.commaSpace = { TypingSettings.commaSpaceIn(this, languages.languageId) }
         // Each language's own full stop for a double space, and its own words for the gestures that take one (owner, 2026-11-16).
         composer.fullStopMark = { languages.current.rules.fullStop }
         editor.wordBreaker = { IcuWords.of(languages.current.javaLocale) }
-        composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) && languages.current.rules.capitalise }
+        composer.sentenceCapitals = { TypingSettings.autoCapitaliseIn(this, languages.languageId) && languages.current.rules.capitalise }
         // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
         composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
         composer.onStroke = Trace::stroke
@@ -1482,7 +1482,7 @@ class TitanKeysIme : InputMethodService() {
         val english = languages.current.isEnglish
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
-        holdSymbols = TypingSettings.holdSymbols(this)
+        holdSymbols = TypingSettings.holdSymbolsIn(this, languages.languageId)
         holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
@@ -1494,7 +1494,7 @@ class TitanKeysIme : InputMethodService() {
         contact.swipes = TypingSettings.swipeTyping(this) && field.words && english
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         // Autocorrect and shorthand are English's: other input methods only offer words on the bar (docs/languages.md).
-        val corrects = TypingSettings.autocorrect(this) && english
+        val corrects = TypingSettings.autocorrectIn(this, languages.languageId) && english
         // Spell out shorthand is its own setting: with Fix typos off, the word data spells out shorthand alone (bug hunt #13).
         val shorthandAlone = !corrects && TypingSettings.expandShorthand(this) && english
         composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
@@ -3016,13 +3016,13 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun quickSettingOn(item: QuickSetting) = when (item) {
-        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this)
+        QuickSetting.Autocorrect -> TypingSettings.autocorrectIn(this, languages.languageId)
         QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this)
         QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this)
-        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this)
-        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this)
+        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitaliseIn(this, languages.languageId)
+        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuationIn(this, languages.languageId)
         QuickSetting.Vibration -> Haptics.enabled(this)
-        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this)
+        QuickSetting.HoldSymbols -> TypingSettings.holdSymbolsIn(this, languages.languageId)
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this)
         QuickSetting.ScrollAssistant -> !TypingSettings.touchpadOnlyInFields(this)
@@ -3030,18 +3030,27 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun writeQuickSetting(item: QuickSetting, on: Boolean) = when (item) {
-        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this, on)
+        QuickSetting.Autocorrect -> languageSetting({ TypingSettings.autocorrectIn(this, it, on) }) { TypingSettings.autocorrect(this, on) }
         QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this, on)
         QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this, on)
-        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this, on)
-        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this, on)
+        QuickSetting.AutoCapitalise -> languageSetting({ TypingSettings.autoCapitaliseIn(this, it, on) }) { TypingSettings.autoCapitalise(this, on) }
+        QuickSetting.AutoPunctuation -> languageSetting({ TypingSettings.autoPunctuationIn(this, it, on) }) { TypingSettings.autoPunctuation(this, on) }
         // Only the master switch: each haptic's own switch stays as it is, for when it is on again.
         QuickSetting.Vibration -> Haptics.enabled(this, on)
-        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this, on)
+        QuickSetting.HoldSymbols -> languageSetting({ TypingSettings.holdSymbolsIn(this, it, on) }) { TypingSettings.holdSymbols(this, on) }
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
         QuickSetting.ScrollAssistant -> TypingSettings.touchpadOnlyInFields(this, !on)
         QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard, QuickSetting.Clipboard -> Unit
+    }
+
+    /**
+     * A quick setting that each language keeps for itself sets the typing language's own value. While that's the only language on,
+     * Settings' main page shows the setting, so its plain value follows too (TypingSettings.PER_LANGUAGE).
+     */
+    private fun languageSetting(own: (String) -> Unit, plain: () -> Unit) {
+        own(languages.languageId)
+        if (languages.on.map { it.language.id }.distinct().size <= 1) plain()
     }
 
     /** The key that toggled a quick setting, whose release must not start the mark's wait: see [keepPanelHover]. */
@@ -3305,7 +3314,7 @@ class TitanKeysIme : InputMethodService() {
                     val shifted = modifiers.shift != Modifiers.Level.Off
                     // An input method with its own letters types its letter (Russian's й on Q), in its own capitals.
                     val word = languages.current.letter(key[0], shifted)
-                        ?: if ((key == "I" && TypingSettings.autoCapitalise(this) && languages.current.isEnglish) || shifted) key else key.lowercase()
+                        ?: if ((key == "I" && TypingSettings.autoCapitaliseIn(this, languages.languageId) && languages.current.isEnglish) || shifted) key else key.lowercase()
                     composer.type(word, letterTap = true)
                 }
                 modifiers.consume()
@@ -4546,7 +4555,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun sentenceStartHere(): Boolean {
-        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitalise(this) ||
+        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitaliseIn(this, languages.languageId) ||
             !languages.current.rules.capitalise) return false
         val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0) ?: return false
         return SwipeTyping.startsSentence(before)

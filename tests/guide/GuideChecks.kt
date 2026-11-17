@@ -1043,8 +1043,18 @@ private fun chapterOne() {
         setOf(GuideLesson.BarHold)), "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(setOf(GuideLesson.Backspace),
         setOf(GuideLesson.Flick), setOf(GuideLesson.Flick, GuideLesson.DeleteHold)), "Delete unlocks Backspace, the flick, then its hold")
-    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons }, List(2) { setOf(GuideLesson.Cursor) },
-        "Steering unlocks only the cursor gestures")
+    // The cursor slide bans three taps, which select (owner, 2026-11-16); the select slide opens them.
+    same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Steering }.map { it.lessons },
+        listOf(setOf(GuideLesson.Cursor), setOf(GuideLesson.Cursor, GuideLesson.Select)), "Steering unlocks only the cursor gestures")
+    val steerStep = GUIDE_STEPS.first { it.id == "steer" }
+    same(blockedChip(steerStep, GuideLesson.Select.name), "That's three taps, not two. Hold the second one.",
+        "Three taps on the cursor slide: refused, and said")
+    GuideHooks.lessons = steerStep.lessons
+    same(GuideHooks.allows(GuideLesson.Cursor) to GuideHooks.allows(GuideLesson.Select), true to false, "The cursor slide's lock")
+    GuideHooks.lessons = null
+    val ime = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
+    same(Regex("""inGuide && !guideAllows\(GuideLesson\.Select\)""").findAll(ime).count(), 3,
+        "The keyboard refuses three taps where the slide doesn't open them: as the third lands, as it registers, as it slides")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Symbols }.map { it.lessons }, listOf(setOf(GuideLesson.Alt),
         setOf(GuideLesson.HoldSymbol), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym), setOf(GuideLesson.Sym)),
         "Symbols unlocks Alt, then a held key, then Sym, one at a time")
@@ -1310,7 +1320,8 @@ private fun steeringToAWord() {
     steer.seed("x".repeat(60), 10)
     steer.aim(30..33)
     steer.event(CursorStarted(false))
-    same(steer.instruction, "Now slide. Lift when the cursor's in it.", "With a word marked, the slide asks for it")
+    // The mode started: the slide says so, and which way the marked word is, here to the right (owner, 2026-11-16).
+    same(steer.instruction, "Cursor mode on. Slide right, lift in the word.", "With a word marked, the slide says which way")
     steer.event(FieldChanged("x".repeat(60), 20, 20))
     same(title(steer.event(Moved(20f, lifted = true))).startsWith("Not there yet"), true, "Short of the word")
     steer.event(CursorStarted(false))
@@ -2163,39 +2174,81 @@ private fun theGuideForNewcomers() {
     same((steer.event(Moved(1f, lifted = true)) as GuideVerdict.Hint).let { it.text to it.miss },
         tapMissLine(GuideMiss.NoSlide, 2) to GuideMiss.NoSlide, "Held, then lifted before the slide")
 
-    // The tap meter: each tap lights its step as it comes down, the hold lights the rest.
+    // The tap meter: each tap lights its box as it comes down, the hold lights the last, at the keyboard's own gap.
     val meter = TapMeter(2)
     same(meter.landed to meter.held, 0 to false, "Nothing yet")
-    meter.down(1_000)
+    same(meter.down(1_000), false, "The first tap is never slow")
     same(meter.landed, 1, "The first tap lights 1 as it lands")
     meter.up(1_080, tap = true)
-    meter.down(1_200)
-    same(meter.landed, 2, "The second, soon after, lights 2")
+    same(meter.down(1_200), false, "The second, 120 ms on, is quick enough")
+    same(meter.landed, 2, "and lights 2")
     meter.hold()
-    same(listOf(0, 1, 2).map(meter::lit), listOf(true, true, true), "Held: 1, 2 and the hold all lit")
+    same(listOf(0, 1).map(meter::lit), listOf(true, true), "Held: 1 and \"2 · HOLD\" lit")
     meter.up(2_000, tap = false)
     same(meter.landed to meter.held, 0 to false, "A lift after the hold starts again")
     meter.down(3_000)
     meter.up(3_080, tap = true)
-    meter.down(3_080 + TapMeter.TAP_GAP_MILLIS + 1)
-    same(meter.landed, 1, "A tap long after the last is a first tap again")
-    meter.up(4_000, tap = false)
+    same(TapMeter.TAP_GAP_MILLIS, 200L, "The meter counts a next tap as the keyboard does")
+    same(meter.down(3_080 + TapMeter.TAP_GAP_MILLIS + 100), true, "A next tap 300 ms on is too slow, and says so (owner, 2026-11-16)")
+    same(meter.landed, 1, "and lights only 1, as the keyboard didn't count it")
+    meter.up(3_480, tap = true)
+    same(meter.down(3_480 + TapMeter.SLOW_MILLIS + 1), false, "Much later, it's a new start, not a slow tap")
+    meter.up(5_000, tap = false)
     same(meter.landed, 0, "A touch that isn't a tap starts again")
     val three = TapMeter(3)
     for (t in 0 until 4) {
-        three.down(t * 200L)
-        three.up(t * 200L + 80, tap = true)
+        three.down(t * 150L)
+        three.up(t * 150L + 60, tap = true)
     }
     same(three.landed <= 3, true, "Never more than the slide's taps")
+    same(tapMissLine(GuideMiss.Slow, 2), "That's too slow, not quick taps. Tap faster.", "The slow line (F: draft)")
+    // The keyboard's own gap, which the meter follows.
+    same("private const val MAX_DRAG_GAP_MILLIS = 200L" in File("android/kotlin/com/titankeys/keyboard/CursorGesture.kt").readText(), true,
+        "The keyboard takes a next tap up to 200 ms after the last")
+    val activityText = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    same("if (tapMeter?.down(now) == true && flow.stage == 0 && !passed && !settingUp)" in activityText, true, "The slide says it")
 
-    // The drawing's own showing: the taps land in turn, the last stays down and is held, then it slides.
-    same(GuideTapDrawing.demo(0f, 2, drag = true).landed, 0, "The showing starts with nothing lit")
-    same(GuideTapDrawing.demo(.2f, 2, drag = true).let { it.landed to it.held }, 1 to false, "then 1")
-    same(GuideTapDrawing.demo(.5f, 2, drag = true).let { it.landed to it.held }, 2 to true, "then 2, held")
-    same(GuideTapDrawing.demo(.7f, 2, drag = true).slide > 0f, true, "then the slide to the left")
-    same(GuideTapDrawing.demo(.99f, 2, drag = true).slide, 1f, "all the way")
-    same(GuideTapDrawing.demo(.43f, 3, drag = true).let { it.landed to it.held }, 3 to false, "The select slide's third tap lands")
-    same(GuideTapDrawing.Pose(2, 1).let { listOf(it.lit(0), it.lit(1), it.lit(2)) }, listOf(true, false, false), "Pose: 1 lit")
+    // The drawing: the last tap and its hold are one box, "2 · HOLD" (owner, 2026-11-16).
+    same(List(2) { GuideTapDrawing.label(it, 2) }, listOf("1", "2 · HOLD"), "The cursor slide's boxes")
+    same(List(3) { GuideTapDrawing.label(it, 3) }, listOf("1", "2", "3 · HOLD"), "The select slide's")
+    same(GuideTapDrawing.Pose(2, 2).let { it.holding to it.lit(1) }, true to false, "The last tap down: its box half lights")
+    same(GuideTapDrawing.Pose(2, 2, held = true).let { it.holding to it.lit(1) }, false to true, "held, it fills")
+    same(GuideTapDrawing.Pose(2, 1).let { listOf(it.lit(0), it.lit(1)) }, listOf(true, false), "Pose: 1 lit")
+    // Its showing, at the keyboard's own speed: taps 90 ms down, 110 ms apart, inside the keyboard's 200 ms.
+    same(GuideTapDrawing.DEMO_GAP_MILLIS < TapMeter.KEYBOARD_GAP_MILLIS && GuideTapDrawing.DEMO_TAP_MILLIS <= 130, true,
+        "The showing's taps are as quick as the keyboard needs")
+    same(GuideTapDrawing.demoAt(0, 2, drag = true).let { it.landed to it.press }, 1 to 1f, "The showing starts with 1 down")
+    same(GuideTapDrawing.demoAt(150, 2, drag = true).let { it.landed to it.press }, 1 to 0f, "lifts")
+    same(GuideTapDrawing.demoAt(210, 2, drag = true).let { it.landed to it.holding }, 2 to true, "the second lands, its box half lit")
+    same(GuideTapDrawing.demoAt(200 + 130, 2, drag = true).held, true, "and fills as the keyboard registers the hold")
+    same(GuideTapDrawing.demoAt(200 + 120 + 500 + 450, 2, drag = true).slide > 0f, true, "then the slide to the left")
+    same(GuideTapDrawing.demoAt(200 + 120 + 500 + 900 + 100, 2, drag = true).slide, 1f, "all the way")
+    same(GuideTapDrawing.demoAt(GuideTapDrawing.demoMillis(2, true), 2, drag = true).landed, 1, "and again")
+    same(GuideTapDrawing.demoAt(410, 3, drag = true).let { it.landed to it.held }, 3 to false, "The select slide's third tap lands")
+    same("GuideTapDrawing.demoAt(now - cueStart, taps.count, taps.drag)" in File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText(),
+        true, "The keys show it at that speed, not slowed like the ghost finger")
+
+    // The mode started: which mode, and which way to slide, toward the marked words (owner, 2026-11-16).
+    val grab = GuideFlow({ GuideSettings() })
+    grab.start("selectmore")
+    grab.seed("x".repeat(60), 20)
+    grab.aim(21..40)
+    grab.event(CursorStarted(true))
+    same(grab.instruction, "Select mode on. Slide right, lift at the end.", "Select mode, the words to the right")
+    val back = GuideFlow({ GuideSettings() })
+    back.start("steer")
+    back.seed("x".repeat(60), 50)
+    back.aim(10..14)
+    back.event(CursorStarted(false))
+    same(back.instruction, "Cursor mode on. Slide left, lift in the word.", "Cursor mode, the word to the left")
+    for (line in listOf(modeStartLine(true, true), modeStartLine(false, false))) same(line.length <= LINE_MOST, true, "\"$line\" is one line")
+
+    // Passed, the slide's patch stays (owner, 2026-11-16: "Keep the touch zone after its finished").
+    val keysView = File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText()
+    same("if (cue !is GuideCue.Taps && zoneCue !is GuideCue.Taps) return" in keysView &&
+        "if (cue !is GuideCue.Flick && zoneCue !is GuideCue.Flick) return" in keysView, true, "The patches draw from the passed slide's cue too")
+    same("keys.zoneCue = flow.step.cue" in activityText && "keys.zoneCue = if (passed && !playground) flow.step.cue else null" in activityText,
+        true, "set as the slide passes, cleared on the next")
     // The ghost finger no longer draws the taps: the drawing does, from the first try.
     val view = File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText()
     same("if (cue is GuideCue.Taps) return" in view && "drawTapSteps(canvas, now)" in view, true, "The thumb replaces the ghost finger")

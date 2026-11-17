@@ -28,8 +28,6 @@ export type State = {
   whatsNew: boolean;
   /** The interactive guide has not opened yet, so it opens by itself after setup. */
   guideDue: boolean;
-  /** The boring guide's nerd screen has shown once, so it never shows again until the app's data is cleared. */
-  nerdSeen: boolean;
   phone: string;
   android: string;
   enabled: boolean;
@@ -391,14 +389,6 @@ export async function markNotesSeen() {
   }
 }
 
-/** The boring guide's nerd screen has shown: it won't show again. */
-export async function markNerdSeen() {
-  try {
-    await titankeys("nerdSeen");
-  } finally {
-    await state.refresh();
-  }
-}
 
 /** Opens the interactive guide. It starts where you stopped, or from the beginning if you finished it. */
 export const openGuide = () => titankeys("guide");

@@ -1584,7 +1584,7 @@ internal val GUIDE_STEPS = listOf(
         seed = GRAB_LINE,
         cue = GuideCue.Taps(3, drag = true),
         needs = GuideNeed.CursorControl,
-        lessons = setOf(GuideLesson.Cursor),
+        lessons = setOf(GuideLesson.Cursor, GuideLesson.Select),
         // The marked words, "my whole heart", as the real select takes them (build #8 pass: it selected the last word).
         demo = GuideDemo.SelectTarget,
     ),
@@ -1914,7 +1914,7 @@ private fun menuBlocked(lesson: String): String? = when (lesson) {
     GuideLesson.Typing.name -> "That's typing, not a tap on TitanKeys."
     GuideLesson.Swipe.name -> "That's a swipe, not a tap on TitanKeys."
     GuideLesson.Space.name -> "That's a space, not a tap on TitanKeys."
-    GuideLesson.Cursor.name -> "That's a Space tap, not a tap on TitanKeys."
+    GuideLesson.Cursor.name, GuideLesson.Select.name -> "That's a Space tap, not a tap on TitanKeys."
     GuideLesson.Backspace.name -> "That's Backspace, not a tap on TitanKeys."
     GuideLesson.Flick.name, GuideLesson.DeleteHold.name -> "That's deleting, not a tap on TitanKeys."
     // Only another word on the bar: TitanKeys itself, selected, opens its menu at a tap.
@@ -2119,6 +2119,8 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             GuideLesson.Space.name -> return tapMissLine(GuideMiss.Press, taps.count)
             GuideLesson.Typing.name -> return tapMissLine(GuideMiss.Typing, taps.count)
             GuideLesson.Swipe.name -> return tapMissLine(GuideMiss.Swipe, taps.count)
+            // Three taps on the two-tap slide, refused (owner, 2026-11-16).
+            GuideLesson.Select.name -> return tapMissLine(GuideMiss.Extra, taps.count, landed = taps.count + 1)
         }
     }
     // Every line says what it was, and what the slide wants instead: "that's an X, not a Y" (owner, #90).
@@ -2162,7 +2164,7 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
         }
         GuideLesson.DeleteHold.name -> if (step.id == "flick") "That's a held flick, not a flick. Flick and lift." else
             "That's a held flick, not this slide's move."
-        GuideLesson.Cursor.name -> "That's a Space tap, not this slide's move."
+        GuideLesson.Cursor.name, GuideLesson.Select.name -> "That's a Space tap, not this slide's move."
         GuideLesson.Alt.name -> "That's Alt, not this slide's move."
         GuideLesson.Sym.name -> "That's Sym, not this slide's move."
         GuideLesson.HoldSymbol.name -> "That's a held key, not this slide's move."
@@ -2248,7 +2250,22 @@ internal class GuideFlow(
 
     /** The stage of the slide, and what it says and shows now: only the instruction that is needed. */
     val stage get() = memory.stage
-    val instruction get() = step.stages.getOrNull(memory.stage)?.text ?: step.body
+    val instruction get() = modeLine ?: step.stages.getOrNull(memory.stage)?.text ?: step.body
+
+    /**
+     * On a Space-tap slide that slides, once the taps started the cursor or the select mode: that it started, and which way to
+     * slide, toward the marked words (owner, 2026-11-16: "tell me to slid left or right depending on where the word is when the
+     * cursor mode or select mode is triggered"). Null elsewhere.
+     */
+    val modeLine: String? get() {
+        val taps = step.cue as? GuideCue.Taps ?: return null
+        if (!taps.drag || memory.stage != 1) return null
+        val aim = memory.target
+        val at = memory.cursor
+        // With nothing marked or no cursor known, the words to the left, as the cursor slide marks them.
+        val left = if (aim == null || at < 0) true else if (taps.count >= 3) aim.last < at else aim.first < at
+        return modeStartLine(words = taps.count >= 3, left = left)
+    }
     val cue get() = step.stages.getOrNull(memory.stage)?.cue ?: step.cue
     /** What the drawing of the keys shows on its keys now, if anything. See [GuideStage.labels]. */
     val labels get() = step.stages.getOrNull(memory.stage)?.labels

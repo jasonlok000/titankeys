@@ -12,7 +12,9 @@ package com.titankeys.keyboard
  * the other (owner, 2026-11-13: a lone Space typed into the steering lines). [Backspace] is the key itself; the flick is [Flick].
  */
 internal enum class GuideLesson {
-    Swipe, BarTap, BarHold, Flick, Cursor, Alt, Sym, HoldSymbol, Enter, Ctrl, Typing, Space, Backspace, DeleteHold
+    Swipe, BarTap, BarHold, Flick, Cursor, Alt, Sym, HoldSymbol, Enter, Ctrl, Typing, Space, Backspace, DeleteHold,
+    /** Three taps on Space, which select: only where [Cursor] is open too. The cursor slide opens [Cursor] alone. */
+    Select,
 }
 
 internal object GuideHooks {

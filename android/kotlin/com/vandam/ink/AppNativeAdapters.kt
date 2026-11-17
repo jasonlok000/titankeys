@@ -416,10 +416,6 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                     FreshStart.wipe(activity)
                     "null"
                 }
-                "nerdSeen" -> {
-                    appPreferences().edit().putBoolean(NERD_SEEN, true).apply()
-                    "null"
-                }
                 "phoneWarningSeen" -> {
                     appPreferences().edit().putBoolean(PHONE_WARNING_SEEN, true).apply()
                     "null"
@@ -573,7 +569,6 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("version", installedVersion())
             .put("whatsNew", whatsNew())
             .put("guideDue", GuideActivity.due(activity))
-            .put("nerdSeen", appPreferences().getBoolean(NERD_SEEN, false))
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("android", Build.VERSION.RELEASE)
             .put("enabled", PhoneSetup.enabled(activity))
@@ -836,8 +831,6 @@ internal object CrashOfferHosts {
     fun shows(host: Activity) = host is MainActivity || host is com.titankeys.keyboard.GuideActivity
 }
 
-/** The boring guide's nerd screen has shown once. Only clearing the app's data brings it back. */
-private const val NERD_SEEN = "nerd_screen_seen"
 /** The other-phone warning has shown once (#75). */
 private const val PHONE_WARNING_SEEN = "phone_warning_seen"
 /** TitanKeys Debug's switch that fakes another phone (#75). */

@@ -71,6 +71,8 @@ private data class Frame(
     val zones: Boolean = false,
     /** The Space-tap slides' thumb and steps (#90): see GuideTapDrawing. */
     val taps: GuideTapDrawing.Pose? = null,
+    /** Passed on a Space-tap slide: the patch stays, with no thumb (owner, 2026-11-16). */
+    val patch: Boolean = false,
 )
 
 private enum class SteerAim { None, Start, Entered }
@@ -152,7 +154,8 @@ private fun framesFor(step: GuideStep): List<Frame> {
             spot = if (passed) null else spot?.keys?.firstOrNull(), zones = field.zones,
             together = if (passed || spot?.together != true) emptyList() else spot.keys.drop(1),
             // The Space-tap slides show the thumb on the patch from the first try (#90), resting until the taps land.
-            taps = (step.cue as? GuideCue.Taps)?.takeIf { !passed }?.let { GuideTapDrawing.Pose(it.count) })
+            taps = (step.cue as? GuideCue.Taps)?.takeIf { !passed }?.let { GuideTapDrawing.Pose(it.count) },
+            patch = passed && step.cue is GuideCue.Taps)
     }
     val frames = ArrayList<Frame>()
     val first = step.stages.firstOrNull()?.text ?: step.body
@@ -204,8 +207,13 @@ private fun framesFor(step: GuideStep): List<Frame> {
         for (landed in 1..taps.count) frames += frame("1-taps-$landed", step.title, stage.text, stage = stage)
             .copy(taps = GuideTapDrawing.Pose(taps.count, landed, press = 1f))
         frames += frame("1-taps-held", step.title, stage.text, stage = stage).copy(taps = GuideTapDrawing.Pose(taps.count, taps.count, held = true, press = 1f))
-        frames += frame("1-taps-slide", step.title, stage.text, stage = stage).copy(taps = GuideTapDrawing.demo(.85f, taps.count, taps.drag))
+        frames += frame("1-taps-slide", step.title, stage.text, stage = stage).copy(taps = GuideTapDrawing.demoAt((taps.count - 1) * 200L + 120 + 500 + 700, taps.count, taps.drag))
         frames += frame("1-taps-beside", step.title, stage.text, tapMissLine(GuideMiss.Beside, taps.count), stage = stage)
+        frames += frame("1-taps-slow", step.title, stage.text, tapMissLine(GuideMiss.Slow, taps.count), stage = stage)
+            .copy(taps = GuideTapDrawing.Pose(taps.count, 1, press = 1f))
+        // The mode started: which mode, and which way (owner, 2026-11-16). F: draft.
+        frames += frame("2-mode", step.title, modeStartLine(words = taps.count >= 3, left = taps.count < 3), stage = step.stages[1])
+            .copy(taps = GuideTapDrawing.Pose(taps.count, taps.count, held = true, press = 1f))
     }
     // A swipe far from its word, on the swipe slide: its line (#90). The drawing of the two paths is the phone's own.
     if (step.id == "swipe") frames += frame("3-chip-far", step.title, step.stages.first().text, SWIPE_COACH)
@@ -547,6 +555,7 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
     V2.keys(g, top, lit = setOfNotNull(frame?.spot) + frame?.together.orEmpty(), held = frame?.held?.toSet() ?: emptySet(), hints = frame?.labels,
         corners = corners, zones = frame?.zones == true)
     frame?.taps?.let { drawTaps(g, top, it) }
+    if (frame?.taps == null && frame?.patch == true) drawTaps(g, top, null)
     if (corners) V2.note(g, "render note: the corner symbols here are approximate; the phone reads its own", side, top - dp(6))
     // Each key's label must fit in its key.
     frame?.labels?.values?.forEach { hint ->
@@ -559,11 +568,12 @@ private fun drawKeys(g: Graphics2D, top: Int, side: Int, frame: Frame?) {
  * The Space-tap slides' patch and the real GuideTapDrawing over it, on the stand-in Canvas. The patch is CursorGesture's zone
  * (not compiled for these checks: the same numbers, copied) down to GuideKeyboardView's ZONE_BOTTOM, as drawTapZone has it.
  */
-private fun drawTaps(g: Graphics2D, top: Int, pose: GuideTapDrawing.Pose) {
+private fun drawTaps(g: Graphics2D, top: Int, pose: GuideTapDrawing.Pose?) {
     val zone = V2.KEYS.area(.36f, .5f, .64f, .885f)
     val box = RectF(zone.left, top + zone.top, zone.right, top + zone.bottom)
     g.color = V2.alpha(V2.ORANGE, .2f)
     g.fill(RoundRectangle2D.Float(box.left, box.top, box.right - box.left, box.bottom - box.top, dp(8).toFloat(), dp(8).toFloat()))
+    if (pose == null) return
     val layer = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
     val reach = V2.KEYS.x(.5f) - V2.KEYS.x(.5f - .32f)
     TAP_DRAWING.draw(Canvas(layer), box, pose, DP, Paint.ORANGE, 0xFF000000.toInt(), Paint.CREAM, reach)

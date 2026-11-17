@@ -530,6 +530,10 @@ class TitanKeysIme : InputMethodService() {
             refuseSpaceGesture()
             return
         }
+        if (drag.words && inGuide && !guideAllows(GuideLesson.Select)) {
+            refuseSpaceGesture(GuideLesson.Select)
+            return
+        }
         // A slide before the hold registered still steers nothing where there is no text. Selecting was decided on landing.
         if (!gestureEmpty && !gestureRegistered && !drag.words && nothingHere(words = false)) nothingToPick()
         if (gestureEmpty) {
@@ -576,6 +580,10 @@ class TitanKeysIme : InputMethodService() {
             refuseSpaceGesture()
             return
         }
+        if (words && inGuide && !guideAllows(GuideLesson.Select)) {
+            refuseSpaceGesture(GuideLesson.Select)
+            return
+        }
         // Selecting was decided as the touch landed, in [pickOnLand]. Steering with no text at all does nothing but say no.
         if (!words && nothingHere(words = false)) {
             nothingToPick()
@@ -618,6 +626,12 @@ class TitanKeysIme : InputMethodService() {
         // A guide slide that doesn't teach it yet: the taps glowed as they counted, and the third is refused as it lands.
         if (inGuide && !guideAllows(GuideLesson.Cursor)) {
             refuseSpaceGesture()
+            return
+        }
+        // The cursor slide teaches two taps only: three, which select, are refused there (owner, 2026-11-16: "for double tap space
+        // it shd ban triple space").
+        if (inGuide && !guideAllows(GuideLesson.Select)) {
+            refuseSpaceGesture(GuideLesson.Select)
             return
         }
         // The mark at the selection's moving end, as the Haptics lab tried it in TitanKeys Debug.
@@ -2007,9 +2021,12 @@ class TitanKeysIme : InputMethodService() {
         return true
     }
 
-    /** A Space gesture refused: the rest of the touch neither steers, nor selects, nor types. Its glow goes with the lift. */
-    private fun refuseSpaceGesture() {
-        refuse(GuideLesson.Cursor)
+    /**
+     * A Space gesture refused: the rest of the touch neither steers, nor selects, nor types. Its glow goes with the lift. [lesson]
+     * is what the slide locks: the Space taps, or only the three that select ([GuideLesson.Select]).
+     */
+    private fun refuseSpaceGesture(lesson: GuideLesson = GuideLesson.Cursor) {
+        refuse(lesson)
         gestureEmpty = true
         gestureRegistered = true
         main.removeCallbacks(registerGestureLater)

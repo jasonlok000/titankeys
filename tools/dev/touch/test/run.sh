@@ -150,5 +150,17 @@ languages.in_field()
 languages.adb, languages.time.sleep = real_languages_adb, real_sleep
 starts = [args for args in sent if args[:2] == ("shell", "am")]
 assert starts and all("--activity-reorder-to-front" in args for args in starts), starts
+# The interactions batch reads TitanKeysBar's lines (the format it was written for, D's line) and builds its longest calls.
+import interactions_batch as ib
+ib.adb = lambda *args: ("11-17 08:00:00.000 1 2 D TitanKeysBar: bar: yue-yale 你 | 呢 | 尼\n"
+                        "11-17 08:00:00.100 1 2 D TitanKeysBar: bar notice: Warming up Yale…\n"
+                        "11-17 08:00:00.200 1 2 D TitanKeysBar: bar: en - | did | -")
+assert ib.bar_lines() == [("bar", "yue-yale", ["你", "呢", "尼"]), ("notice", "Warming up Yale…"), ("bar", "en", ["-", "did", "-"])], ib.bar_lines()
+# Sym has no Linux code (keymap.sh reads it from the phone), so offline only the moves without it.
+for moves in ([*ib.keys("neihou"), "+500", "swipeup:b", "+700", "key:s", "+500"],
+              [*ib.keys("hello"), "key:space", "+90", *ib.keys("there"), "+800", "flick", "+600"]):
+    built = subprocess.run([sys.executable, "tools/dev/touch/gestures.py", "--out", os.path.join(os.environ["TK_OUT"], "ib.tki"), *moves],
+                           capture_output=True, text=True)
+    assert built.returncode == 0, f"the interactions batch's gestures don't build: {built.stderr[-300:]}"
 print("Batch checks passed")
 PY

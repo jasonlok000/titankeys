@@ -190,6 +190,17 @@ def check_yale_codes():
         record(f"yale-{typed}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}", f"yale-{typed}")
 
 
+def check_next_words():
+    """B's next-word fallback: in Yale, ngodeigamyat + Space types 我哋今日 (O), and the bar then shows 係, 嘅 and 下晝 (J)."""
+    import language_checks
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+    fresh()
+    play(*[f"key:{k}" for k in "ngodeigamyat"], "+500", "key:space", "+900", shot="yale-next-words", at=12 * 80 + 1300)
+    text = read()
+    record("yale-ngodeigamyat", (text or "").strip() == "我哋今日", f"ngodeigamyat + Space typed {text!r}, wanted '我哋今日'")
+    record("yale-next-words", None, "after 我哋今日: 係, 嘅 and 下晝 on the bar", "yale-next-words")
+
+
 def check_shape_codes():
     """Cangjie (hqi + Space types 我) and Zhuyin on the Hsu layout (ne, ㄋㄧ, + Space types one character), each with starters
     on an empty field first."""
@@ -263,7 +274,7 @@ def check_english():
 
 
 BATCH = [check_yale, check_row, check_space, check_tap, check_yale_codes, check_swipe_up, check_menu, check_sym_panel, check_enter,
-         check_comma, check_english, check_shape_codes,
+         check_comma, check_english, check_shape_codes, check_next_words,
          check_suggestions]
 
 

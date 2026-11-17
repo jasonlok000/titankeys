@@ -104,7 +104,9 @@ LATIN = {
 NATIONAL = {
     "ru": ("Русский", "Russian", "РУ", "ru", "main_ru", AOSP, "russian", {"p": "хъ", "l": "жэ", "m": "бю", "t": "ё"}),
     "uk": ("Українська", "Ukrainian", "УК", "uk", "main_uk__experimental", LEIPZIG, "ukrainian", {"p": "хї", "l": "жє", "m": "бю", "u": "ґ"}),
-    "be": ("Беларуская", "Belarusian", "БЕ", "be", "main_be", None, "belarusian", {"p": "х", "l": "жэ", "m": "бю", "t": "ё"}),
+    # GrammarDB's 4 million forms have one frequency, so they're ranked by Leipzig's Belarusian news (J's find, 2026-11-17).
+    "be": ("Беларуская", "Belarusian", "БЕ", "be", "main_be", None, "belarusian", {"p": "х", "l": "жэ", "m": "бю", "t": "ё"},
+           {"rank_by": "leipzig/bel_newscrawl_2015_1M/bel_newscrawl_2015_1M-sentences.txt"}),
     "bg": ("Български", "Bulgarian", "БГ", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "ью"}),
     "el": ("Ελληνικά", "Greek", "ΕΛ", "el", "main_el__legacy", AOSP, "greek", {}),
     "sr": ("Српски", "Serbian, Cyrillic", "СР", "sr", "main_sr", AOSP, "serbian_and_montenegrin_cyrillic",
@@ -118,9 +120,36 @@ NATIONAL = {
            "georgian", {}, {"counts": True, "script": "Geor", "capitalise": False}),
 }
 BELARUSIAN = ("Belarusian word forms from GrammarDB (https://github.com/Belarus/GrammarDB), via HeliBoard's aosp-dictionaries "
-              "({file}), CC BY-SA 4.0.")
+              "({file}), CC BY-SA 4.0. Ranked by how often each form appears in the Leipzig Corpora Collection's "
+              "bel_newscrawl_2015_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and "
+              "U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. "
+              "LREC 2012.")
 
 CLDR_NOTICE = "Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. Copyright Unicode, Inc."
+
+# Lists whose own frequencies left junk on top (foreign and unaccented words, as Slovak's est and jane), so corrections fixed
+# few slips or too often wrongly: each is ranked by how often its words appear in the Leipzig Corpora Collection's sentences
+# for that language, and words the corpus never uses are left out (tests/corrections; owner's go via the Master, 2026-11-17).
+# The sentences files are the ones the next-word tables use, in <data dir>/leipzig/.
+RANK_BY = {
+    "af": "afr_mixed_2019_1M", "bs": "bos_wikipedia_2021_300K", "ca": "cat_wikipedia_2021_1M", "el": "ell_news_2024_1M",
+    "ga": "gle_newscrawl_2014_300K", "gl": "glg_wikipedia_2021_300K", "he": "heb_wikipedia_2021_1M",
+    "is": "isl_newscrawl_2011_1M", "lv": "lav_newscrawl_2016_1M", "nn": "nno_wikipedia_2021_300K",
+    "sk": "slk_newscrawl_2016_1M",
+}
+LEIPZIG_RANK = ("Ranked by how often each word appears in the Leipzig Corpora Collection's {corpus} "
+                "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0, and only the words it uses kept. D. Goldhahn, T. Eckart "
+                "and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 "
+                "Languages. LREC 2012.")
+
+
+def reranked(data, ident, words, notices):
+    """[words] ranked by [RANK_BY]'s corpus for [ident], with its credit added to [notices]; as they are for other lists."""
+    corpus = RANK_BY.get(ident)
+    if not corpus:
+        return words
+    notices.append(LEIPZIG_RANK.format(corpus=corpus))
+    return ranked_by_corpus(data, words, "leipzig/%s-sentences.txt" % corpus)
 KCM_NOTICE = "Key layout: Android's {file} (platform/frameworks/base, InputDevices), Apache License 2.0."
 
 
@@ -164,7 +193,7 @@ def parse_set(text):
     return [c for c in result if len(c) == 1 and c.isalpha()]
 
 
-def read_words(data, name):
+def read_words(data, name, limit=MAX_WORDS):
     path = os.path.join(data, "aosp-dictionaries", "wordlists", name + ".combined")
     head, words = "", []
     with open(path, encoding="utf-8") as f:
@@ -186,7 +215,42 @@ def read_words(data, name):
         if word not in seen:
             seen.add(word)
             unique.append((word, freq))
-    return head, unique[:MAX_WORDS]
+    return head, unique if limit is None else unique[:limit]
+
+
+APOSTROPHES = str.maketrans({"’": "'", "ʼ": "'"})
+CORPUS_WORD = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)*")
+
+
+def ranked_by_corpus(data, words, sentences):
+    """[words] (GrammarDB's forms, all f=100 in alphabetical order, or a list whose own frequencies are poor: [RANK_BY]),
+    ranked by how often each appears in a Leipzig sentences file ("id<TAB>sentence"): the [MAX_WORDS] most used, on HeliBoard's scale as
+    [read_counts]. A capital at a sentence's start counts for the word in lower case. Only the list's forms count, so the
+    corpus's own spellings (Belarusian news in Taraškievica) never become words."""
+    counts = {}
+    with open(os.path.join(data, sentences), encoding="utf-8") as f:
+        for line in f:
+            text = line.split("\t", 1)[-1].translate(APOSTROPHES)
+            for token in CORPUS_WORD.findall(text):
+                counts[token] = counts.get(token, 0) + 1
+    seen = []
+    for word, _ in words:
+        key = word.translate(APOSTROPHES)
+        n = counts.get(key, 0)
+        if key.islower():
+            n += counts.get(key[0].upper() + key[1:], 0)
+        if n:
+            seen.append((word, n))
+    ranked = sorted(seen, key=lambda w: -w[1])[:MAX_WORDS]
+    return scaled(ranked)
+
+
+def scaled(ranked):
+    """Counts, most first, as AOSP's frequencies: HeliBoard's scale, the log of the count from 15 to 254."""
+    import math
+    low, high = math.log(max(ranked[-1][1], 1)), math.log(ranked[0][1])
+    span = max(high - low, 1)
+    return [(w, int((math.log(n) - low) * (254 - 15) / span + 15)) for w, n in ranked]
 
 
 def read_counts(data, name, locale, letters):
@@ -203,11 +267,7 @@ def read_counts(data, name, locale, letters):
             if not count.isdigit() or not word or any(c not in allowed for c in word):
                 continue
             counts[word] = counts.get(word, 0) + int(count)
-    ranked = sorted(counts.items(), key=lambda w: -w[1])[:MAX_WORDS]
-    import math
-    low, high = math.log(max(ranked[-1][1], 1)), math.log(ranked[0][1])
-    span = max(high - low, 1)
-    words = [(w, int((math.log(n) - low) * (254 - 15) / span + 15)) for w, n in ranked]
+    words = scaled(sorted(counts.items(), key=lambda w: -w[1])[:MAX_WORDS])
     return "dictionary=main:%s,locale=%s,description=%s" % (locale, locale, locale), words
 
 
@@ -320,6 +380,8 @@ def build_latin(data, ident):
     os.makedirs(folder, exist_ok=True)
     main, aux = cldr_letters(data, locale)
     head, words = read_counts(data, file, locale, main + aux) if extra.get("counts") else read_words(data, file)
+    ranking = []
+    words = reranked(data, ident, words, ranking)
     if extra.get("transliterate") == "sr":
         words = transliterated(words)
         head = "dictionary=main:sr_Latn,locale=sr_Latn,description=Srpski"
@@ -342,6 +404,7 @@ def build_latin(data, ident):
         words_file = "words.combined"
         file = os.path.basename(file) if extra.get("counts") else file + ".combined"
         notices.append("Words: " + source.format(file=file))
+        notices += ranking
     rules = {"capitalise": True, "sentenceEnd": ".?!", "openingMarks": extra.get("openingMarks", ""),
              "apostrophes": extra.get("apostrophes", True)}
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Latn",
@@ -355,9 +418,13 @@ def build_latin(data, ident):
 # android/assets/rime. Yale first, the owner's input method. F (docs/words-m1.md).
 # id: (name, English name, label, locale, Rime schema, sources)
 CHINESE = {
+    # F: draft. The words.hk and grammar credits in Yale's and Jyutping's (#56).
     "yue-yale": ("耶魯拼音", "Cantonese, Yale", "耶", "yue", "tk_yale",
-                 "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"),
-    "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping", "rime-cantonese (CC BY 4.0)"),
+                 "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"
+                 ", with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"),
+    "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping",
+                     "rime-cantonese (CC BY 4.0)"
+                     ", with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"),
     "zh-pinyin": ("漢語拼音", "Mandarin, Pinyin", "拼", "zh", "tk_pinyin",
                   "rime-luna-pinyin and rime-essay (LGPL-3.0)"),
     # Hong Kong's standard shape-based input methods, and Taiwan's Zhuyin on the Hsu layout, which fits the Titan's 26 letters
@@ -449,7 +516,13 @@ def build_national(data, ident):
     folder = os.path.join(ASSETS, ident)
     os.makedirs(folder, exist_ok=True)
     main, _ = cldr_letters(data, locale)
-    head, words = read_counts(data, file, locale, main) if extra.get("counts") else read_words(data, file)
+    if extra.get("rank_by"):
+        head, words = read_words(data, file, limit=None)
+        words = ranked_by_corpus(data, words, extra["rank_by"])
+    else:
+        head, words = read_counts(data, file, locale, main) if extra.get("counts") else read_words(data, file)
+    ranking = []
+    words = reranked(data, ident, words, ranking)
     if extra.get("own_letters"):
         # AOSP's Serbian list has a few words in Latin letters ("a" among them), which its Cyrillic keys can't type.
         own = set(main)
@@ -495,7 +568,7 @@ def build_national(data, ident):
                       "source": {"letters": "CLDR 49 exemplarCharacters", "keys": "keyboard_layout_%s.kcm" % layout,
                                  "words": shown}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
+        notice([CLDR_NOTICE, layout_line, "Words: " + source_line] + ranking))
 
 
 # Korean's word list (Leipzig Corpora Collection, CC BY 4.0), in the data dir.
@@ -685,6 +758,8 @@ def build_hebrew(data, ident):
     file = "frequencywords/he_full.txt"
     letters = [chr(c) for c in range(0x05D0, 0x05EB)] + ["'"]
     head, words = read_counts(data, file, "he", letters)
+    ranking = []
+    words = reranked(data, ident, words, ranking)
     write_words(folder, head, words)
     write_im(folder, {"id": ident, "name": cldr_name(data, "he"), "nameEnglish": "Hebrew", "label": "עב", "locale": "he",
                       "script": "Hebr", "keys": hebrew_keys(data), "accents": {}, "words": "words.combined", "variants": None,
@@ -693,7 +768,7 @@ def build_hebrew(data, ident):
                       "engine": None,
                       "source": {"keys": "xkeyboard-config symbols/il basic", "words": os.path.basename(file)}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")]))
+        notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")] + ranking))
 
 
 # Starter words (owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty"):
@@ -711,6 +786,14 @@ STARTER_SOURCES = {
     "zh-quick": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-zhuyin": ("../src/rime-essay/essay.txt", "essay"),
     "ja": ("", "fixed"),
+    # The lists ranked by Leipzig's sentences ([RANK_BY]) keep the starters of their own list: news and Wikipedia put
+    # prepositions on top, where the chat-like lists had "som", "čo" and "nie" (Slovak), the ways to start a message.
+    **{ident: ("aosp-dictionaries/wordlists/%s.combined" % name, "list") for ident, name in {
+        "af": "main_af__experimental", "ca": "main_ca__experimental", "el": "main_el__legacy", "ga": "main_ga",
+        "gl": "main_gl__experimental", "is": "main_is__experimental", "lv": "main_lv", "nn": "main_nn",
+        "sk": "main_sk__experimental"}.items()},
+    "bs": ("frequencywords/bs_full.txt", "counts"),
+    "he": ("frequencywords/he_full.txt", "counts"),
 }
 # Japanese has no frequency list split into words that we ship, and Mozc's costs rank homophones, not common words, so its
 # starters are picked by hand: common ways to start a sentence, for the owner to confirm.
@@ -726,7 +809,8 @@ def top_words(path, kind):
     if kind == "list":
         words = []
         for line in open(path, encoding="utf-8"):
-            if line.startswith(" word="):
+            # The shipped lists write " word=", some of HeliBoard's sources (Slovak's, Nynorsk's) "word=".
+            if line.lstrip(" ").startswith("word="):
                 fields = line.strip().split(",")
                 word = fields[0][5:]
                 freq = next((int(f[2:]) for f in fields if f.startswith("f=") and f[2:].isdigit()), 0)
@@ -809,6 +893,31 @@ def write_starters(data):
             f.write("\n")
 
 
+# How-tos (owner, 2026-11-17: "we shd have basic instructions in text in each language specifically"): a few lines per input
+# method for Settings > Languages, what's special to it. The text is F's (docs/howto-drafts.md), kept in tools/im/howto.json
+# (input method id: lines); this writes it into each im.json as "howTo" and the index carries it.
+HOWTO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "howto.json")
+
+
+def write_howto():
+    """Adds "howTo" to every im.json that howto.json has lines for, and takes it off the others."""
+    lines = json.load(open(HOWTO, encoding="utf-8"))
+    for ident in sorted(os.listdir(ASSETS)):
+        path = os.path.join(ASSETS, ident, "im.json")
+        if not os.path.isfile(path):
+            continue
+        im = json.load(open(path, encoding="utf-8"))
+        if lines.get(ident):
+            im["howTo"] = lines[ident]
+        elif "howTo" in im:
+            del im["howTo"]
+        else:
+            continue
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(im, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+
+
 # Input methods built by a function of their own.
 OWN = {"th": build_thai, "hi": build_hindi, "he": build_hebrew}
 
@@ -863,7 +972,8 @@ def write_index_and_list():
         engine = im.get("engine")
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
-                        "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im)})
+                        "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im),
+                        **({"howTo": im["howTo"]} if im.get("howTo") else {})})
     order = list(LATIN) + list(NATIONAL) + list(OWN) + list(ENGINES) + list(CHINESE) + list(JAPANESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:
@@ -906,6 +1016,11 @@ def main():
         write_starters(data)
         print("starters written")
         return
+    # make.py <data dir> --howto: only the how-tos, into every im.json and the index.
+    if sys.argv[2:] == ["--howto"]:
+        write_howto()
+        print("index:", len(write_index_and_list()), "input methods, how-tos written")
+        return
     wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(JAPANESE) + list(OWN)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
@@ -925,6 +1040,7 @@ def main():
             raise SystemExit("unknown input method " + ident)
         print("built", ident)
     write_starters(data)
+    write_howto()
     entries = write_index_and_list()
     print("index:", len(entries), "input methods")
 

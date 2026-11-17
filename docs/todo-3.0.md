@@ -328,6 +328,13 @@ Every worker was told to commit its work in progress to its own branch and stop 
     words; size no concern for now. C's bar-words reads them.
   - C: a language with one input method shows the language's mark at Q.
 
+## App size and Google Play (found 2026-11-17)
+
+The Debug APK is about 212 MB after the Chinese work and the Cantonese grammar (179 MB before), which looked over Google Play's 200 MB
+limit; B read Google's current page on 2026-11-17: the base module may be 500 MB, each asset pack 1.5 GB, 4 GB in all. The owner: "Don't worry about size yet. That's kinda easily solvable." For the Play build: B's prototype (docs/play/asset-packs.md, tools/dev/build/play-packs.sh) moves the big data into four
+install-time packs; the base download is then 41.4 MB, 201.8 MB in all on a Titan, with no app change. Not yet installed on
+a phone. The GitHub APK can stay whole.
+
 ## Milestones (internal; the owner gave the go at 01:20)
 
 Each milestone has a gate: a list of what must be true before the next one starts. At each gate the Orchestrator writes a

@@ -9,6 +9,8 @@
 #include <jni.h>
 #include <rime_api.h>
 
+#include "tk_predict.h"
+
 #include <mutex>
 #include <string>
 #include <vector>
@@ -110,14 +112,21 @@ jboolean key(JNIEnv*, jclass, jint keycode, jint mask) {
   std::lock_guard<std::mutex> guard(lock);
   RimeSessionId s = live();
   if (!s) return JNI_FALSE;
-  return rime->process_key(s, keycode, mask) ? JNI_TRUE : JNI_FALSE;
+  const auto* before = tk::LastCommit(s);
+  const bool taken = rime->process_key(s, keycode, mask);
+  // A phrase committed at once: its next words from what it ends with (tk_predict.h).
+  tk::PredictFromEnd(s, before);
+  return taken ? JNI_TRUE : JNI_FALSE;
 }
 
 jboolean pick(JNIEnv*, jclass, jint index) {
   std::lock_guard<std::mutex> guard(lock);
   RimeSessionId s = live();
   if (!s || index < 0) return JNI_FALSE;
-  return rime->select_candidate_on_current_page(s, (size_t)index) ? JNI_TRUE : JNI_FALSE;
+  const auto* before = tk::LastCommit(s);
+  const bool picked = rime->select_candidate_on_current_page(s, (size_t)index);
+  tk::PredictFromEnd(s, before);
+  return picked ? JNI_TRUE : JNI_FALSE;
 }
 
 // Picks choice [index] counted across every page, as choices() gives them.
@@ -125,7 +134,10 @@ jboolean pickAt(JNIEnv*, jclass, jint index) {
   std::lock_guard<std::mutex> guard(lock);
   RimeSessionId s = live();
   if (!s || index < 0) return JNI_FALSE;
-  return rime->select_candidate(s, (size_t)index) ? JNI_TRUE : JNI_FALSE;
+  const auto* before = tk::LastCommit(s);
+  const bool picked = rime->select_candidate(s, (size_t)index);
+  tk::PredictFromEnd(s, before);
+  return picked ? JNI_TRUE : JNI_FALSE;
 }
 
 // Up to [count] choices from choice [start], across every page: the bar's row and its bigger menu read past Rime's page.

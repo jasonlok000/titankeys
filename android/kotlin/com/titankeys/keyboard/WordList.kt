@@ -47,6 +47,23 @@ class WordList private constructor(
         return false
     }
 
+    /** How common [word] is, 0 to 255 as the list gives it, ignoring case; 0 where the list doesn't hold it. */
+    fun frequency(word: String): Int {
+        val key = fold(word, locale)
+        var at = lowerBound(key)
+        var best = 0
+        while (at < folded.size && folded[at] == key) {
+            val index = order[at++]
+            if (words[index].equals(word, ignoreCase = true)) best = maxOf(best, counts[index])
+        }
+        return best
+    }
+
+    /** Every word in lower case, with its frequency, for autocorrect's spelling index ([LanguageCorrections]). */
+    fun forEachWord(action: (String, Int) -> Unit) {
+        for (index in words.indices) action(words[index].lowercase(locale), counts[index])
+    }
+
     /** Whether any word starts with [prefix], ignoring accents and case. */
     fun hasPrefix(prefix: String): Boolean {
         val key = fold(prefix, locale)

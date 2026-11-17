@@ -36,6 +36,7 @@ private val RUSSIAN_KEYS = mapOf(
 
 fun main(args: Array<String>) {
     theFileReads()
+    howToReads()
     badFilesSayWhy()
     keysTypeTheirLetters()
     accentsKeepTheirOrderAndCase()
@@ -45,9 +46,11 @@ fun main(args: Array<String>) {
     aTapPicksTheTileUnderIt()
     languagesGroupTheirInputMethods()
     theAccentsSitOverTheHeldKey()
+    englishTypingRows()
     wordsCompleteIgnoringAccents()
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
+    keysWaitForALoadingEngine()
     aRestoredInputMethodTypes()
     thaiHoldsAndBreaks()
     hindiRulesType()
@@ -70,6 +73,15 @@ fun main(args: Array<String>) {
         kotlin.system.exitProcess(1)
     }
     println("languages: all passed")
+}
+
+/** An input method's how-to: an optional list of lines in its im.json and the index. */
+private fun howToReads() {
+    val method = InputMethod.parse(SPANISH.trimEnd().removeSuffix("}") + ""","howTo":["Hold a letter for its accents.","Shift gives the capital one."]}""")
+    same("an im.json's how-to", method.howTo, listOf("Hold a letter for its accents.", "Shift gives the capital one."))
+    same("none: empty", InputMethod.parse(SPANISH).howTo, emptyList<String>())
+    val index = InputMethodIndex.parse("""[{"id":"es","name":"Español","nameEnglish":"Spanish","label":"ES","locale":"es","script":"Latn","howTo":["Hold N for ñ."]}]""")
+    same("the index carries it", index["es"]?.howTo, listOf("Hold N for ñ."))
 }
 
 private fun theFileReads() {
@@ -120,6 +132,12 @@ private fun accentsKeepTheirOrderAndCase() {
     same("a key with nothing held", de.accentsOf('q', false), emptyList<String>())
     check("German has accents", de.hasAccents)
     check("English has none", !InputMethod.ENGLISH.hasAccents)
+    // A held letter with no accents types once in an input method with accents (owner, 2026-11-17): Spanish's W holds nothing,
+    // so TitanKeysIme.accentlessRepeat takes its repeats, while N still opens its accents.
+    val es = InputMethod.parse(SPANISH)
+    check("Spanish has accents", es.hasAccents)
+    same("Spanish w holds nothing", es.accentsOf('w', false), emptyList<String>())
+    same("Spanish n holds ñ", es.accentsOf('n', false), listOf("ñ"))
     same("a letter with a combining mark stays one", InputMethod.graphemes("éa"), listOf("é", "a"))
 }
 
@@ -259,9 +277,16 @@ private const val SPANISH_INDEX = """[{"id":"es","name":"Español","nameEnglish"
 private fun theAccentsSitOverTheHeldKey() {
     same("one accent over E", Picker.accentColumns(1, Picker.anyColumn("E")), listOf(2))
     same("two over U", Picker.accentColumns(2, Picker.anyColumn("U")), listOf(6, 7))
-    same("four over A move in from the edge", Picker.accentColumns(4, Picker.anyColumn("A")), listOf(0, 1, 2, 3))
-    same("four over P move in from the edge", Picker.accentColumns(4, Picker.anyColumn("P")), listOf(6, 7, 8, 9))
-    same("more than ten are cut", Picker.accentColumns(14, 3).size, 10)
+    // Never over Q's or P's column: W to O, the switcher's range (owner, 2026-11-17).
+    same("four over A move in to W", Picker.accentColumns(4, Picker.anyColumn("A")), listOf(1, 2, 3, 4))
+    same("four over P move in to end at O", Picker.accentColumns(4, Picker.anyColumn("P")), listOf(5, 6, 7, 8))
+    same("one over Q sits over W", Picker.accentColumns(1, Picker.anyColumn("Q")), listOf(1))
+    same("three over Q start at W", Picker.accentColumns(3, Picker.anyColumn("Q")), listOf(1, 2, 3))
+    same("one over P sits over O", Picker.accentColumns(1, Picker.anyColumn("P")), listOf(8))
+    same("three over P end at O", Picker.accentColumns(3, Picker.anyColumn("P")), listOf(6, 7, 8))
+    same("eight fill W to O", Picker.accentColumns(8, Picker.anyColumn("G")), (1..8).toList())
+    same("eight over Q still fill W to O", Picker.accentColumns(8, Picker.anyColumn("Q")), (1..8).toList())
+    same("more than eight are cut to eight", Picker.accentColumns(14, 3), (1..8).toList())
     val columns = Picker.accentColumns(2, Picker.anyColumn("U"))
     same("U picks the first, over itself", Picker.choice("U", columns), 0)
     same("I picks the second", Picker.choice("I", columns), 1)
@@ -448,6 +473,15 @@ private fun hindiRulesType() {
     for (c in "agar") engine.key(c)
     same("the word on the bar keeps its virama until Space", engine.code(), "अगर्")
     same("Space writes it without, and the space", engine.space().commit, "अगर ")
+    // The bar shows what Space types first (#98): the word as Space writes it, then the list's.
+    val hiWords = java.util.Locale.forLanguageTag("hi")
+    val listed = RulesComposer(rules, WordList.read(sequenceOf(" word=नमस्ते,f=200", " word=अगरबत्ती,f=100"), hiWords))
+    same("The row starts with the word as Space writes it", "agar".map { listed.key(it) }.last().choices.first(), "अगर")
+    same("Picking it writes it as Space does", listed.pick(0).commit, "अगर ")
+    // A slipped key: the word one slip away, on the bar only. Space writes what was typed.
+    val slipped = "namastr".map { listed.key(it) }.last().choices
+    same("A neighbouring key's word is offered after the word as typed", slipped.drop(1), listOf("नमस्ते"))
+    same("Space writes what was typed", listed.space().commit, rules.spell("namastr "))
     for (c in "namastee") engine.key(c)
     same("Backspace takes the last key off", engine.backspace().code, "नमस्ते")
     same("a mark no rule takes ends the word", engine.key('!').commit, "नमस्ते")
@@ -654,8 +688,16 @@ private fun telexMarksAndTones() {
     same("The tone key marks the code", engine.key('s').code, "tiếng")
     same("Backspace takes the last key off", engine.backspace().code, "tiêng")
     engine.reset()
-    same("Unmarked code offers the marked word", "tieng".map { engine.key(it) }.last().choices, listOf("tiếng"))
-    same("Picking writes it with a space", engine.pick(0).commit, "tiếng ")
+    // The bar shows what Space types first (#98): the word as typed, then the list's.
+    same("Unmarked code offers the marked word, after the word as typed", "tieng".map { engine.key(it) }.last().choices,
+        listOf("tieng", "tiếng"))
+    same("Picking writes it with a space", engine.pick(1).commit, "tiếng ")
+    "tieng".forEach { engine.key(it) }
+    same("Picking the first writes the word as typed, as Space does", engine.pick(0).commit, "tieng ")
+    // A slipped key: the word one slip away, on the bar only. Space writes what was typed.
+    val slips = TelexComposer(WordList.read(sequenceOf(" word=xin,f=200"), vi))
+    same("A neighbouring key's word is offered after the word as typed", "xon".map { slips.key(it) }.last().choices, listOf("xon", "xin"))
+    same("Space writes what was typed", slips.space().commit, "xon")
     // The bigger menu, opened with a swipe up: the word list's words past the bar's eight, and a pick from any of them.
     val many = TelexComposer(WordList.read(("bcdgklmnp".flatMap { c -> "aeiou".map { v -> "ta$c$v" } }).asSequence()
         .mapIndexed { i, w -> " word=$w,f=${1000 - i}" }, vi))
@@ -866,13 +908,113 @@ private fun koreanChoices() {
     check("하 offers 하고", "하고" in initial) { initial.joinToString(" ") }
     check("하 offers words that go on to 한", initial.any { it.startsWith("한") }) { initial.joinToString(" ") }
     korean.reset()
-    same("ㅎ alone offers words with ᄒ", HangulComposer(words).key('g').choices.all { it.startsWith("하") || it.first() in '하'..'힣' }, true)
+    same("ㅎ alone: ㅎ as typed, then words with ᄒ", HangulComposer(words).key('g').choices.let { it.first() == "ㅎ" && it.size > 1 } &&
+        HangulComposer(words).key('g').choices.drop(1).all { it.startsWith("하") || it.first() in '하'..'힣' }, true)
     for (c in "gksr") korean.key(c)
     val after = korean.key('n')
     check("한 written, 구 being built: 한국", after.choices.any { it.startsWith("한국") }) { after.choices.joinToString(" ") }
     val pick = korean.pick(after.choices.indexOfFirst { it.startsWith("한국") })
     check("a pick writes the rest of the word, after 한", pick.commit.startsWith("국") && pick.commit.endsWith(" ")) { pick.commit }
     same("then nothing is being built", korean.code(), "")
+
+    // The whole loop: 안녕하세요 typed jamo by jamo, the field getting each syllable as the next one starts.
+    val loop = HangulComposer(words)
+    val field = StringBuilder()
+    fun type(keys: String) { for (c in keys) loop.key(c).commit.let(field::append) }
+    type("dkssud")
+    same("안 written, 녕 on the bar", field.toString() + "|" + loop.code(), "안|녕")
+    same("Backspace takes 녕's last letter: 녀", loop.backspace().code, "녀")
+    type("dgk")
+    same("녕 again, then 하 being built", field.toString() + "|" + loop.code(), "안녕|하")
+    val row = loop.key('t').choices
+    check("안녕하 + ㅅ offers 안녕하세요", "안녕하세요" in row || loop.choices(0, 40).contains("안녕하세요")) {
+        (row + loop.choices(0, 40)).joinToString(" ")
+    }
+    same("the row's first is the word as typed, what Space writes (#98)", row.firstOrNull(), "안녕핫")
+    val menu = loop.choices(0, 40)
+    check("the bigger menu has more than the row", menu.size >= row.size) { "${menu.size} ${row.size}" }
+    val at = menu.indexOf("안녕하세요")
+    if (at >= 0) {
+        val picked = loop.pickAt(at).commit
+        same("a pick from the menu writes the rest after 안녕", picked, "하세요 ")
+    }
+    // Picking the word as typed writes it as Space does: the syllable being built, then the space.
+    val asTyped = HangulComposer(words)
+    for (c in "gks") asTyped.key(c)
+    same("a pick of the first, the word as typed: 한 and a space", asTyped.pickAt(0).commit, "한 ")
+    // A held letter's symbol: its jamo comes off the syllable, the syllable is written, the symbol goes on as usual.
+    val held = HangulComposer(words)
+    held.key('g'); held.key('k'); held.key('s')
+    same("한 being built", held.code(), "한")
+    held.backspace()
+    val ended = held.key('!')
+    same("the hold's symbol: 하 written first, the symbol goes on", ended.commit + "|" + ended.handled, "하|false")
+}
+
+/**
+ * The first key or touch in an input method other than English (owner, 2026-11-17): while it loads, at a field start or a
+ * switch, keys and touches wait, also with the keyboard hidden, and go on once the load ends. Only the last load counts.
+ */
+private fun keysWaitForALoadingEngine() {
+    val wait = EngineWait()
+    same("nothing loading: keys go on", wait.waiting, false)
+    wait.loading(1, waits = true)
+    same("Yale loading at a field start: keys wait", wait.waiting, true)
+    same("an older load's end lets nothing go", wait.loaded(0), false)
+    same("still waiting", wait.waiting, true)
+    same("its own load's end: the keys go on", wait.loaded(1), true)
+    same("and nothing waits after", wait.waiting, false)
+    wait.loading(2, waits = false)
+    same("English: nothing waits", wait.waiting, false)
+    wait.loading(3, waits = true)
+    wait.loading(4, waits = true)
+    same("a switch overtook the load: its end doesn't count", wait.loaded(3), false)
+    same("the newer one's does", wait.loaded(4), true)
+    wait.loading(5, waits = true)
+    wait.loading(6, waits = false)
+    same("a switch to English overtook it: nothing waits", wait.waiting, false)
+    wait.loading(7, waits = true)
+    wait.stop()
+    same("the keyboard going: nothing waits", wait.waiting, false)
+
+    // By input method: every one but English waits, with an engine or its own letters, so a first key is never English's.
+    for (id in listOf("ru", "el", "yue-yale", "ko", "es")) {
+        wait.loading(10, id)
+        same("$id loading: the first key waits", wait.waiting, true)
+        wait.loaded(10)
+    }
+    wait.loading(11, InputMethod.ENGLISH_ID)
+    same("English loading: nothing waits", wait.waiting, false)
+    // Russian's first key while it loads: it waits behind the stop, and then it's Russian's й, not q.
+    val russian = InputMethod.parse(File("android/assets/im/ru/im.json").readText())
+    same("and after the load, Russian's Q is й", russian.letter('Q', shift = false), "й")
+    // Greek's first key the same: its A is α once loaded, where it would have been English's a.
+    val greek = InputMethod.parse(File("android/assets/im/el/im.json").readText())
+    same("and Greek's A is α", greek.letter('A', shift = false), "α")
+
+    // The queue's stop, keys and touches alike, in the order typed.
+    var made = 0
+    val gate = LoadGate { "stop${++made}" }
+    val queue = ArrayDeque<String>()
+    same("nothing loading: no stop", gate.before(false, queue), false)
+    queue += "a typed before the load"
+    same("the first key while loading puts the stop in", gate.before(true, queue), true)
+    queue += "key n"
+    same("a touch after it doesn't put another", gate.before(true, queue), false)
+    queue += "touch: a tap on g"
+    same("the queue: what came first, the stop, then the key and the touch", queue.toList(),
+        listOf("a typed before the load", "stop1", "key n", "touch: a tap on g"))
+    same("still loading (a field start's new load): the stop stays shut", gate.open(true, queue), null)
+    same("the load ends: the stop opens", gate.open(false, queue), "stop1")
+    same("and only once", gate.open(false, queue), null)
+    queue.clear()
+    gate.before(true, queue)
+    queue.clear()
+    gate.clear()
+    same("the queue emptied at a field start: a new touch puts a new stop in", gate.before(true, queue), true)
+    same("a fresh stop", queue.toList(), listOf("stop3"))
+    queue.clear()
+    same("a stop the queue dropped never opens", gate.open(false, queue), null)
 }
 
 /** The bar's words in another input method, and what it learns from the user. */
@@ -957,6 +1099,10 @@ private fun everyInputMethodInTheFolder(folder: File) {
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         theNameShows(method, index[method.id])
+        // The picker shows at most eight accents, W to O: a letter with more would lose some (owner, 2026-11-17).
+        val crowded = method.accents.filterValues { it.size > Picker.ACCENTS }
+        check("${method.id}: no letter has more than ${Picker.ACCENTS} accents", crowded.isEmpty()) { crowded.keys.joinToString(" ") }
+        typingRowsFit(method)
         if (method.keys != null) {
             same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
             val unshifted = ('a'..'z').filter { method.letter(it, true).isNullOrEmpty() }
@@ -1019,4 +1165,36 @@ private fun eachLanguageHasItsFullStop(folder: File) {
         check("${method.id}'s full stop", method.rules.fullStop == expected) { "'${method.rules.fullStop}', expected '$expected'" }
     }
     check("English's full stop", InputMethod.ENGLISH.rules.fullStop == ". ")
+}
+
+/**
+ * The typing settings a language's page shows once a second language is on (owner, 2026-11-17): only the ones that work in it,
+ * from its own rules (LanguageSettings).
+ */
+private fun typingRowsFit(method: InputMethod) {
+    val rows = LanguageSettings.rows(method)
+    val expected = when (method.id) {
+        "fr" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace")
+        // A held letter's symbol goes through the engine as its own mark, so the hold row stays.
+        "zh-pinyin", "yue-yale", "yue-jyutping", "ja" -> listOf("doubleSpace", "hold")
+        "th" -> listOf("fixes", "commaSpace")
+        "ka" -> listOf("fixes", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        "id" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        else -> null
+    }
+    if (expected != null) same("${method.id}: its page's typing settings", rows, expected)
+    check("${method.id}: only English has swiping and shorthand", listOf("swipe", "shorthand").none { it in rows })
+    // Fix typos shows where the language corrects (LanguageCorrections.corrects: a list and no engine), and nowhere else.
+    same("${method.id}: Fix typos where it corrects", "fixes" in rows, method.words != null && method.engine == null)
+    // Hindi's and Vietnamese's engines build the words: their slipped-key choice is only ever a suggestion on the bar, never put in
+    // by Space, so it isn't under Fix typos, and their pages don't show it (D, 2026-11-17).
+    if (method.id == "hi" || method.id == "vi") check("${method.id}: no Fix typos row", "fixes" !in rows)
+    check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
+    check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
+}
+
+private fun englishTypingRows() {
+    same("English: every typing setting on its page", LanguageSettings.rows(InputMethod.ENGLISH),
+        listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand"))
+    same("English's Double Space types a full stop", LanguageSettings.stop(InputMethod.ENGLISH), ".")
 }

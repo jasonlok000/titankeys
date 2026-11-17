@@ -163,6 +163,8 @@ def check_all():
     method, to go on after a run that ended part way."""
     for group in sets():
         for im in group:
+            if checks.past_cutoff():
+                raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the input methods didn't run")
             try:
                 one(im, ["en", *group])
             except Stop:

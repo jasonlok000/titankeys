@@ -155,6 +155,10 @@ export type State = {
   availableInputMethods: InputMethodEntry[];
   /** The Chinese variant for every Chinese input method, or "" until the user picks one: there's no default. */
   chineseVariant: ChineseVariant | "";
+  /** Each language's own typing values, by the language's id. */
+  languageSettings: Record<string, LanguageValues>;
+  /** The line saying the typing settings moved into each language has shown, the first time a second language was on. */
+  languageNoteSeen: boolean;
   /** Records touches, keys and typed text in a log on this phone. */
   /** This build has the full typing log: only TitanKeys Debug does. */
   rawLogAvailable: boolean;
@@ -172,10 +176,25 @@ export type State = {
  */
 export type InputMethodEntry = {
   id: string; name: string; nameEnglish: string; label: string; script: string; engine: string | null; language: Language;
+  /** A few lines on what's special to typing it, for its language's page (tools/im/howto.json); empty where it has none. */
+  howTo: string[];
 };
 
-/** A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16). */
-export type Language = { id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean };
+/**
+ * A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16).
+ * [settings] are the typing settings its page shows once a second language is on, and [stop] is what Double Space types in it
+ * (LanguageSettings.kt).
+ */
+export type Language = {
+  id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean;
+  settings: LanguageSetting[]; stop: string;
+};
+
+/** The typing settings that can live on a language's page (LanguageSettings.kt). */
+export type LanguageSetting = "fixes" | "capitals" | "doubleSpace" | "sentenceSpaces" | "commaSpace" | "hold" | "swipe" | "shorthand";
+
+/** A language's own values for them: today's single value until the language sets its own (TypingSettings.PER_LANGUAGE). */
+export type LanguageValues = Pick<State, "autocorrect" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "holdSymbols">;
 
 export type ChineseVariant = "zh_hk" | "zh_tw" | "zh_hans";
 
@@ -202,6 +221,8 @@ export type HapticsLab = {
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
+  /** A language's page: its own values, by language id. A write sends only the ones that changed. */
+  languageSettings: Record<string, Partial<LanguageValues>>;
 };
 
 /**
@@ -454,6 +475,12 @@ export const allowBack = () => titankeys("backService");
 /** The other-phone warning's button: it never shows again. */
 export async function markPhoneWarningSeen() {
   await titankeys("phoneWarningSeen");
+  await state.refresh();
+}
+
+/** The line saying the typing settings moved into each language: it shows once. */
+export async function markLanguageNoteSeen() {
+  await titankeys("languageNoteSeen");
   await state.refresh();
 }
 

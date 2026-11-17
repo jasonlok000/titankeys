@@ -1,5 +1,7 @@
+import { useRouteParams } from "ink";
 import type { SentenceSpaces, State } from "../../lib/titankeys";
 import { ChoicePage } from "../../lib/choice";
+import { languageValues } from "./languages/index";
 
 const options = [
   { value: "one" as const, label: "One space" },
@@ -7,13 +9,17 @@ const options = [
   { value: "none" as const, label: "Don't add spaces" },
 ];
 
-export const sentenceSpacesLabel = ({ sentenceSpaces }: State) =>
-  options.find(option => option.value === sentenceSpaces)?.label ?? "One space";
+/** The value, or [language]'s own where its page shows the row (TypingSettings.PER_LANGUAGE). */
+export const sentenceSpacesLabel = (settings: State, language?: string) => {
+  const { sentenceSpaces } = language ? languageValues(settings, language) : settings;
+  return options.find(option => option.value === sentenceSpaces)?.label ?? "One space";
+};
 
 export default function SentenceSpacesPage() {
+  const language = useRouteParams().language as string | undefined;
   return <ChoicePage<SentenceSpaces> title="Space after a sentence"
     subtitle="Type . ? or ! and the next letter you type gets its space. Numbers, links, ... and Mr. stay as you type them."
     options={options}
-    read={({ sentenceSpaces }) => sentenceSpaces}
-    write={sentenceSpaces => ({ sentenceSpaces })} />;
+    read={settings => (language ? languageValues(settings, language) : settings).sentenceSpaces}
+    write={sentenceSpaces => language ? { languageSettings: { [language]: { sentenceSpaces } } } : { sentenceSpaces }} />;
 }

@@ -353,7 +353,8 @@ public final class SwipeTyping {
 
     public void complete(String before, AtomicBoolean cancelled, boolean sentenceCapitalisation, Callback callback) {
         final EnglishSpelling.Variant variant = TypingSettings.spelling(context);
-        final boolean autoCapitalise = sentenceCapitalisation && TypingSettings.autoCapitalise(context);
+        // English's own value: this is English's engine (TypingSettings.PER_LANGUAGE).
+        final boolean autoCapitalise = sentenceCapitalisation && TypingSettings.autoCapitaliseIn(context, "en");
         InferenceTiming.Request timing = new InferenceTiming.Request();
         worker.execute(() -> {
             timing.start();

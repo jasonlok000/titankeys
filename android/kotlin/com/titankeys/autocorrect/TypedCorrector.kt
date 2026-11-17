@@ -37,26 +37,8 @@ interface Lexicon {
     fun onlyWhenSure(): Boolean = false
     /** Calls [action] with each word in lowercase and its frequency. */
     fun forEachWord(action: (String, Int) -> Unit)
-}
-
-/** Which letters sit next to each other on the Titan 2 Elite, diagonals included. */
-object KeyNeighbours {
-    private val near = BooleanArray(26 * 26)
-
-    init {
-        val keys = ArrayList<Triple<Int, Int, Int>>()
-        for (row in 0..2) for ((column, key) in Layout.rows[row].withIndex())
-            if (Layout.isLetter(key)) keys += Triple(key[0] - 'A', row, column)
-        for (first in keys) for (second in keys) if (first.first != second.first
-            && hypot((first.second - second.second).toDouble(), (first.third - second.third).toDouble()) <= 1.5)
-            near[first.first * 26 + second.first] = true
-    }
-
-    fun near(a: Char, b: Char): Boolean {
-        val first = a.lowercaseChar() - 'a'
-        val second = b.lowercaseChar() - 'a'
-        return first in 0..25 && second in 0..25 && near[first * 26 + second]
-    }
+    /** Whether a fix may put in [word]: another input method's blocked or unsaved words may not. English checks its own. */
+    fun usable(word: String): Boolean = true
 }
 
 /** A word in the list, with how common it is. */
@@ -81,6 +63,13 @@ class CorrectionData private constructor(
     val shorthand: Map<String, String?>,
     /** Common words by first letter, for the last-resort fix. */
     val longWords: Map<Char, List<DictionaryEntry>>,
+    /**
+     * Another input method's words by their keys ([forLanguage]): what [spelling] holds is each word as the keys that type it, so
+     * every accented form of the same keys is a candidate (casti finds both části and částí), and [keysOf] makes a typed word's.
+     * Null for English, whose index holds the words themselves.
+     */
+    val byKeys: Map<String, List<String>>? = null,
+    val keysOf: ((String) -> String)? = null,
 ) {
     companion object {
         private const val PREFIX_LENGTH = 4
@@ -135,6 +124,31 @@ class CorrectionData private constructor(
             return CorrectionData(pairs, triples, confusions, misspellings, known, names, slang, shortWords,
                 spelling, contractions, possessives, shorthand, longWords)
         }
+
+        /**
+         * The data for another input method's words (owner, 2026-11-17: "Basic Correction ... shd be built"): only its own word
+         * list, as the spelling index. None of English's word pairs, misspellings, names or shorthand, so only a slip on the
+         * keys is ever fixed, by the same noisy channel. The [most] commonest words of letters only are indexed: the lists hold
+         * up to 100,000, and the index's deletes for all of them would not fit beside the keyboard.
+         */
+        fun forLanguage(lexicon: Lexicon, keysOf: (String) -> String, most: Int = LANGUAGE_WORDS): CorrectionData {
+            val words = ArrayList<DictionaryEntry>()
+            lexicon.forEachWord { word, frequency -> if (word.length >= 2 && word.all { it.isLetter() }) words += DictionaryEntry(word, frequency) }
+            val spelling = SymSpell(maxEditDistance = 2, prefixLength = PREFIX_LENGTH)
+            val byKeys = HashMap<String, MutableList<String>>()
+            for (entry in words.sortedByDescending { it.frequency }.take(most)) {
+                val keys = keysOf(entry.word)
+                val same = byKeys.getOrPut(keys) { ArrayList(1) }
+                if (same.isEmpty()) spelling.addWord(keys, entry.frequency)
+                if (entry.word !in same) same += entry.word
+            }
+            return CorrectionData(PairCounts.parse(emptySequence()), TripleCounts.parse(emptySequence()),
+                ConfusionTable.parse(emptySequence()), emptyMap(), KnownWords.parse(emptySequence()), KnownWords.parse(emptySequence()),
+                KnownWords.parse(emptySequence()), emptyMap(), spelling, emptyMap(), emptyMap(), emptyMap(), emptyMap(), byKeys, keysOf)
+        }
+
+        /** How many of a language's words the spelling index holds: see [forLanguage]. */
+        const val LANGUAGE_WORDS = 30_000
     }
 }
 
@@ -197,7 +211,19 @@ class TypedCorrector(
     continuation: ContinuationScorer? = null,
     /** Which words around a word the model reads for its apostrophe. */
     window: ContextWindow = ContextWindow.SENTENCE,
+    /**
+     * The keys behind the letters: English's, or another input method's, where only a slip on the keys is fixed and English's
+     * own rules (two-letter words, for one) stay out ([CorrectionData.forLanguage]).
+     */
+    private val keys: NoisyChannel.Keys = NoisyChannel.Keys.ENGLISH,
+    /**
+     * Whether Space may put a fix in. Another input method whose fixes were measured too often wrong shows them on the bar only
+     * ([suggestion]): Space then always types what was typed (corrections-bar-only.txt).
+     */
+    private val spaceFixes: Boolean = true,
 ) {
+    private val english = keys === NoisyChannel.Keys.ENGLISH
+
     /** The last [typed] characters of the text should become [word]. */
     class Fix(val typed: String, val word: String)
 
@@ -205,7 +231,7 @@ class TypedCorrector(
     class Review(val word: String, val fix: String, val original: String, val replaced: String, val reviewedLast: Boolean)
 
     private val channel = NoisyChannel(::candidates, KeyNeighbours::near, data.pairs::count, data.triples::count, contextWeight,
-        lexicon::favourite, lexicon::onlyWhenSure)
+        lexicon::favourite, lexicon::onlyWhenSure, keys)
 
     private val apostrophes = continuation?.let { scorer ->
         ApostropheContext(scorer, window) { if (lexicon.onlyWhenSure()) ApostropheContext.SURE_MARGIN else ApostropheContext.MARGIN }
@@ -229,10 +255,16 @@ class TypedCorrector(
     )
 
     /** Dictionary words within two edits, for the channel. Names are left to [nameSlip]. */
-    private fun candidates(typed: String): List<String> =
-        data.spelling.lookup(typed, MAX_CANDIDATES).mapNotNull { item ->
+    private fun candidates(typed: String): List<String> {
+        val byKeys = data.byKeys
+        val keysOf = data.keysOf
+        // Another input method's: the words typed with keys close to the typed word's, every accented form of them.
+        if (byKeys != null && keysOf != null)
+            return data.spelling.lookup(keysOf(typed), MAX_CANDIDATES).flatMap { byKeys[it.term].orEmpty() }.filter(lexicon::usable)
+        return data.spelling.lookup(typed, MAX_CANDIDATES).mapNotNull { item ->
             data.contractions[item.term] ?: item.term.takeIf { lexicon.name(it) == null }
         }
+    }
 
     private fun isKnown(word: String) = lexicon.known(word) || word in data.known || word in data.slang || lexicon.acronym(word) ||
         isShorthand(word)
@@ -287,11 +319,25 @@ class TypedCorrector(
     fun listed(word: String) = lexicon.known(word)
 
     /**
+     * The word most likely meant by the made-up [word], for the bar, even where Space won't put it in because another is about as
+     * likely: other input methods show it beside their completions. Null for a known word, a learned one, one Backspace took
+     * back, or where no word is a likely slip.
+     */
+    fun suggestion(word: String, before: String): String? {
+        val lower = word.lowercase()
+        if (word.length < 2 || !word.all { it.isLetter() } || isKnown(word) || lexicon.personal(word) || lower in rejected) return null
+        val previous = previousWordFor(before)
+        val chance = nextWordChance?.let { model -> { candidate: String -> model(before, candidate) } }
+        return channel.pick(lower, previous, wordBeforePrevious(before, previous), next = null, chance = chance)?.let(channel::likelyFix)
+            ?.let { recased(it, word) }
+    }
+
+    /**
      * The first check, when a typed [word] ends. [before] is the text before it, and [typedPrevious] is the word
      * before it if the user typed that word, because a swiped word must not change.
      */
     fun check(word: String, before: String, typedPrevious: String?): Fix? =
-        firstFix(word, before, typedPrevious)?.takeUnless { it.word == it.typed }
+        if (!spaceFixes) null else firstFix(word, before, typedPrevious)?.takeUnless { it.word == it.typed }
 
     /**
      * The shorthand step alone: [word], after [before], spelled out as its full word, or null to keep it. It runs on its own while
@@ -394,15 +440,16 @@ class TypedCorrector(
         }
         val previous = previousWordFor(before)
         val beforePrevious = wordBeforePrevious(before, previous)
-        val casual = word.all { it.isLowerCase() } || isSentenceStartCapital(word, before)
+        // A script without capitals (Hebrew, Georgian) has no lower case either: in another language, no capital is casual.
+        val casual = word.all { it.isLowerCase() } || !english && word.none { it.isUpperCase() } || isSentenceStartCapital(word, before)
         if (casual && on(FixKind.TYPOS)) {
-            twoLetterFix(lower, lexicon::frequency, KeyNeighbours::near) { contextFit(it, previous, beforePrevious) }
+            if (english) twoLetterFix(lower, lexicon::frequency, KeyNeighbours::near) { contextFit(it, previous, beforePrevious) }
                 ?.let { return Fix(word, recased(it, word)) }
             if (letters && word.length >= 2) {
                 val chance = nextWordChance?.let { model -> { candidate: String -> model(before, candidate) } }
                 val fixed = channel.pick(lower, previous, beforePrevious, next = null, chance = chance)?.let(channel::confidentFix)
                     // A capitalised first word may be a name ("Mennad"): only a likely slip to a common word.
-                    ?.takeIf { word.first().isLowerCase() || isPlausibleForCasing(word, spelled(it)) }
+                    ?.takeIf { word.first().isLowerCase() || !english && !word.first().isUpperCase() || isPlausibleForCasing(word, spelled(it)) }
                     ?.takeUnless { isLikelyCompound(lower, it) }
                 if (fixed != null) return Fix(word, recased(fixed, word))
             }
@@ -933,8 +980,15 @@ class TypedCorrector(
         internal fun isCapitalizedName(word: String, textBeforeWord: String): Boolean {
             if (word.firstOrNull()?.isUpperCase() != true) return false
             val previous = textBeforeWord.trimEnd(' ').lastOrNull() ?: return false
-            return previous != '\n' && previous !in ".!?"
+            // The input method's own sentence ends: Greek's ; and Hindi's । end a sentence too.
+            return previous != '\n' && !sentenceEnd(previous)
         }
+
+        /**
+         * Whether a mark ends a sentence in the input method typing now: English's, until the keyboard points it at its
+         * SentenceCase, which has each input method's own (im.json's sentenceEnd).
+         */
+        @Volatile var sentenceEnd: (Char) -> Boolean = { it in ".!?。！？" }
 
         /** The lowercase word before the one just typed, [PairCounts.SENTENCE_START] at a sentence start, or null after symbols. */
         internal fun previousWordFor(textBeforeWord: String): String? {

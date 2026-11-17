@@ -18,6 +18,8 @@ class InputMethodIndex(entries: List<Entry>) {
         val locale: String,
         val script: String,
         val engine: String? = null,
+        /** Its how-to's lines for Settings, from the index ([InputMethod.howTo]); empty where it has none. */
+        val howTo: List<String> = emptyList(),
         /** The language it types: Serbian's Cyrillic and Latin, Chinese's Yale, Jyutping and Pinyin share one. */
         val language: Language = Language(id, name, nameEnglish, label, script, experimental = id != InputMethod.ENGLISH_ID),
     )
@@ -86,11 +88,14 @@ class InputMethodIndex(entries: List<Entry>) {
                 fun text(key: String) = entry[key] as? String ?: throw Json.Error("$key must be text")
                 val language = entry["language"] as? Map<*, *>
                 val id = text("id")
-                if (language == null) Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String)
+                val howTo = (entry["howTo"] as? List<*>)?.map { it as? String ?: throw Json.Error("howTo must list text") }.orEmpty()
+                if (language == null) Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"),
+                    entry["engine"] as? String, howTo = howTo)
                 else {
                     fun of(key: String) = language[key] as? String ?: throw Json.Error("language.$key must be text")
                     Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String,
-                        Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
+                        howTo = howTo,
+                        language = Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
                 }
             })
         }
@@ -239,15 +244,21 @@ object Picker {
     fun anyColumn(key: String): Int = column(key, Layout.rows.size)
 
     /**
-     * The columns of [count] accents of the key in column [held]: centred over it, moved in to stay on the keys. More than
-     * ten are cut to ten.
+     * The columns of [count] accents of the key in column [held]: centred over it, moved in to stay between W and O, the
+     * switcher's range, never over Q's or P's column (owner, 2026-11-17). More than [ACCENTS] are cut to that many: no input
+     * method has a letter with more (tests/languages).
      */
     fun accentColumns(count: Int, held: Int): List<Int> {
-        val shown = count.coerceIn(0, COLUMNS)
+        val shown = count.coerceIn(0, ACCENTS)
         if (shown == 0) return emptyList()
-        val start = (held - (shown - 1) / 2).coerceIn(0, COLUMNS - shown)
+        val start = (held - (shown - 1) / 2).coerceIn(FIRST_ACCENT, FIRST_ACCENT + ACCENTS - shown)
         return List(shown) { start + it }
     }
+
+    /** Accents start at W's column at the leftmost. */
+    const val FIRST_ACCENT = 1
+    /** The most accents a key shows: W to O. */
+    const val ACCENTS = COLUMNS - 2
 
     /** An engine's first choice sits over E: Q and W show the code being typed and the page. */
     const val FIRST_CHOICE = 2

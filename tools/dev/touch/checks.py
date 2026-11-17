@@ -238,9 +238,10 @@ def run_batch(name):
     module = importlib.import_module(BATCHES[name])
     stamp = time.strftime("%Y%m%d-%H%M%S")
     stopped = None
-    keyboard("debug")
-    os.environ["TK_IME_HELD"] = "1"
     try:
+        # Inside the try: a gate that fails here still gets its report and release back (2026-11-16, after a crash dialog).
+        keyboard("debug")
+        os.environ["TK_IME_HELD"] = "1"
         for check in module.BATCH:
             try:
                 check()

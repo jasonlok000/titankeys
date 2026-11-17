@@ -133,6 +133,10 @@ def one(im, on):
 def check_all():
     """Every input method, seven at a time with English, each typing in turn."""
     ids = [im for im in all_ids() if im != "en"]
+    # TK_LANG_FROM=ID starts at that input method, to go on after a run that ended part way.
+    start = os.environ.get("TK_LANG_FROM")
+    if start in ids:
+        ids = ids[ids.index(start):]
     for start in range(0, len(ids), SET_SIZE):
         group = ids[start:start + SET_SIZE]
         for im in group:

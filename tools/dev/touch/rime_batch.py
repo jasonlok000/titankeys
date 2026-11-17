@@ -1,11 +1,12 @@
 """B's per-schema Rime copy (main 0e5ea510), for checks.py --batch rime-files: Rime's shared folder only holds what the Chinese
 input methods that are on need. TitanKeys Debug isn't debuggable, so run-as can't list its files: B's Debug-only receiver does.
-Its name and answer are settings until B's receiver is on main: RIME_RECEIVER (a component) answering one file a line, "BYTES
-NAME", in the broadcast's data, lines split by ";" or newlines. Without it, each check says so instead of failing.
+B's RimeFiles (no extras, DUMP-protected) answers one file a line, "BYTES NAME" with NAME the path under shared/, sorted, in
+the broadcast's data; empty before the first copy. Without it, the check says so instead of failing.
 
-1. Yale only, after the first key: the shared folder is about 54 MB and has no zh-hant-t-essay-bgw.gram (O).
-2. Pinyin on too, typed in: the grammar file appears (O).
-3. Yale off, Pinyin typing: jyut6ping3's table and tk_yue.gram are gone (O).
+1. Yale only, after the first key: about 54 MB, with jyut6ping3.table.bin and tk_yue.gram, without luna_pinyin.table.bin and
+   zh-hant-t-essay-bgw.gram (O).
+2. Pinyin on too, typed in: luna_pinyin.table.bin and the grammar appear (O).
+3. Yale and Jyutping off, Pinyin typing: jyut6ping3's files and tk_yue.gram are gone (O).
 The finish puts the owner's languages back.
 """
 import os
@@ -18,6 +19,9 @@ from checks import APP, adb, play, record
 RIME_RECEIVER = os.environ.get("TK_RIME_RECEIVER", f"{APP}/com.titankeys.keyboard.RimeFiles")
 GRAMMAR = "zh-hant-t-essay-bgw.gram"
 YALE_SIZE_MB = (49, 59)  # "about 54 MB"
+# B's list (2026-11-17), by file name under shared/: Yale's own, and what only Pinyin brings.
+YALE = ["jyut6ping3.table.bin", "tk_yue.gram"]
+PINYIN = ["luna_pinyin.table.bin", GRAMMAR]
 
 
 def files():
@@ -44,21 +48,24 @@ def typed_in(on, current):
 
 
 def check_rime_files():
-    if files() is None:
-        return record("rime-files", None, f"B's receiver ({RIME_RECEIVER}) isn't in this build: these checks wait for it")
+    """The first keys come before the first read: B's receiver answers empty data while nothing is copied yet, and only a
+    missing receiver answers no data at all."""
     typed_in(["en", "yue-yale"], "yue-yale")
-    listed = files() or {}
+    listed = files()
+    if listed is None:
+        return record("rime-files", None, f"B's receiver ({RIME_RECEIVER}) isn't in this build: these checks wait for it")
     mb = sum(listed.values()) / 1048576
-    record("rime-yale-only", YALE_SIZE_MB[0] <= mb <= YALE_SIZE_MB[1] and GRAMMAR not in listed,
-           f"Yale only: {mb:.1f} MB in {len(listed)} files; {GRAMMAR} {'there' if GRAMMAR in listed else 'absent'}")
+    wanted, unwanted = [n for n in YALE if n not in listed], [n for n in PINYIN if n in listed]
+    record("rime-yale-only", YALE_SIZE_MB[0] <= mb <= YALE_SIZE_MB[1] and not wanted and not unwanted,
+           f"Yale only: {mb:.1f} MB in {len(listed)} files; missing {wanted or 'none'}; Pinyin's there: {unwanted or 'none'}")
     typed_in(["en", "yue-yale", "zh-pinyin"], "zh-pinyin")
     listed = files() or {}
-    record("rime-pinyin-grammar", GRAMMAR in listed, f"Pinyin on and typed in: {GRAMMAR} "
-           f"{'there, ' + str(listed.get(GRAMMAR)) + ' bytes' if GRAMMAR in listed else 'absent'}")
-    typed_in(["en", "zh-pinyin"], "zh-pinyin")
+    missing = [n for n in PINYIN if n not in listed]
+    record("rime-pinyin-grammar", not missing, f"Pinyin on and typed in: {len(listed)} files; Pinyin's missing: {missing or 'none'}")
+    typed_in(["en", "zh-pinyin"], "zh-pinyin")  # Jyutping off too: it shares jyut6ping3 and tk_yue.gram
     listed = files() or {}
-    left = sorted(name for name in listed if "jyut6ping3" in name or name == "tk_yue.gram")
-    record("rime-yale-off", not left, f"Yale off, Pinyin typing: jyut6ping3's and tk_yue.gram's files left: {left or 'none'}")
+    left = sorted(name for name in listed if name.startswith("jyut6ping3") or name == "tk_yue.gram")
+    record("rime-yale-off", not left, f"Yale and Jyutping off, Pinyin typing: jyut6ping3's and tk_yue.gram's files left: {left or 'none'}")
 
 
 def finish():

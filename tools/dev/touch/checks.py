@@ -230,6 +230,18 @@ def report(name, stamp, hands):
     return path
 
 
+def to_field():
+    """Back out of TitanKeys Debug's other screens (Settings, the guide) so the gate can bring its field's screen: an am start
+    only brings the task forward, with whatever screen is on top of it (2026-11-16, after About). Never Back over another app."""
+    field_screen = os.environ.get("TK_TOUCH_ACTIVITY", "")
+    for _ in range(5):
+        front = next((line for line in adb("shell", "dumpsys", "window").splitlines() if "mCurrentFocus" in line), "")
+        if (field_screen and field_screen in front) or f" {APP}/" not in front:
+            return
+        adb("shell", "input", "keyevent", "4")
+        time.sleep(1.2)
+
+
 def run_batch(name):
     """Runs a batch on its own: Debug is the keyboard from the start to the end, and release TitanKeys comes back only then.
     The gates still run before every gesture. A check that breaks is a NO and the batch goes on; a STOP ends it. The report is
@@ -240,6 +252,7 @@ def run_batch(name):
     stopped = None
     try:
         # Inside the try: a gate that fails here still gets its report and release back (2026-11-16, after a crash dialog).
+        to_field()
         keyboard("debug")
         os.environ["TK_IME_HELD"] = "1"
         for check in module.BATCH:

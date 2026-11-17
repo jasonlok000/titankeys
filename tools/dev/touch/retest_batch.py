@@ -17,6 +17,7 @@ REPO = languages.REPO
 def own_screen():
     """Debug in front again (a tool may leave the launcher there): the gate brings its screen back, then its field."""
     guide_checks.leave_guide()
+    checks.to_field()
     checks.keyboard("debug")
     if not languages.in_field():
         raise Stop(f"not on TitanKeys Debug's own screen: {languages.front().strip()}")

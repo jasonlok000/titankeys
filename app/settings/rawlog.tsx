@@ -2,6 +2,7 @@ import { Field, Screen, Section, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
 import { type State, exportRawLog, state, update } from "../../lib/titankeys";
 import { fileSize } from "../../lib/size";
+import { Note } from "../../lib/note";
 
 const title = "Typing log";
 const subtitle = "A record of your touches on the keys, the keys you press and the text you type, to help make TitanKeys better. It skips password, email, web address and private fields.";
@@ -24,6 +25,8 @@ export default function RawLog() {
   return <Screen title={title} subtitle={subtitle} note={note}>
     <Section title="Recording">
       <Toggle label="Record my typing" value={rawLog} onChange={rawLog => save.run({ rawLog })} />
+      {/* F: draft. The owner's call for Debug (2026-11-17): on by default, for good. */}
+      <Note>{rawLog ? "On from the start in TitanKeys Debug, and it stays on until you turn it off." : "Off. In TitanKeys Debug it starts on; turn it back on here."}</Note>
     </Section>
     <Section title="Log">
       <Field label="Log size">{fileSize(rawLogBytes)}</Field>

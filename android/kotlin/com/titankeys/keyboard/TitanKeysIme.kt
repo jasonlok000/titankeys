@@ -3476,8 +3476,10 @@ class TitanKeysIme : InputMethodService() {
         }
         haptics.play(Haptic.HeldSymbol)
         KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
+        // Any engine's held letter is in the code it's building, not the field (Korean's syllable, Telex's and Hindi's word): it
+        // comes off there, what was built is written, then the symbol. Replacing the field's last letter would take an earlier one.
         val engine = languages.engine
-        if (!field.exact && engine != null && ChineseKeys.usesBar(languages.current)) {
+        if (!field.exact && engine != null) {
             if (pendingInput.isNotEmpty()) enqueue { heldSymbolThroughEngine(engine, text) } else heldSymbolThroughEngine(engine, text)
             return
         }

@@ -22,23 +22,23 @@ const body = (source: string, name: string) => {
   throw new Error(`no end to ${name}`);
 };
 
-test("the code floats over the app, above the bar's left edge, only while a code is typed", () => {
+test("the code is a tab on the bar's left edge, over the app, only while a code is typed", () => {
   expect(body(strip, "drawEffects")).toContain("drawCodeLine(canvas, layer)");
   const line = body(strip, "drawCodeLine");
   expect(line).toContain("picker.lead.isEmpty()");
-  expect(line).toContain("val top = y - height");
-  // At the bar's size and full brightness, on black with a soft orange glow; a joined tab behind CODE_TAB (owner, 2026-11-17).
+  // At the bar's size and full brightness, in the bar's black, joined to it; the floating glow is gone (owner, 2026-11-17).
   expect(line).toContain("codeText.textSize = wordPixels()");
   expect(line).toContain("codeText.color = look.ink");
-  expect(line).toContain("menuPaint.setShadowLayer(");
-  expect(strip).toContain("const val CODE_TAB = false");
+  expect(line).toContain("codeBox.set(left, y - height, left + textWidth * scale + 2 * pad, y + radius)");
+  expect(strip).not.toContain("setShadowLayer(");
+  expect(strip).not.toContain("CODE_TAB");
 });
 
 test("the mark sits over Q and the more cue over P", () => {
   const picker = body(strip, "drawPicker");
   expect(picker).toContain("drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)");
   expect(picker).toContain("drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)");
-  // Orange while a code is typed: Sym opens more, though Sym isn't under it.
+  // Orange while a code is typed: Shift opens more, though Shift isn't under it.
   expect(picker).toContain("pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted");
   expect(body(ime, "engineState")).toContain("languages.current.label");
 });
@@ -91,16 +91,23 @@ test("the menu's P counts its pages from the first", () => {
   expect(menu).toContain("val COUNTED = 10 * PER_PAGE");
 });
 
-test("with a code typed, Sym or a tap on the more cue opens the bigger menu; Sym closes it; Shift and P are nothing special", () => {
+test("either Shift, or a tap on the more cue, opens the bigger menu with choices on the bar; Shift closes it; Sym is the panel", () => {
   const keys = body(ime, "chineseKey");
-  // A short Sym: the menu, from Sym's release, after it waited for a hold that would open the switcher.
-  expect(keys).toContain("if (event.keyCode != KeyEvent.KEYCODE_SYM || openPicker() !is LanguagePicker.Choices) return false");
-  expect(keys).toContain("if (symCanWait()) return false");
-  expect(body(ime, "symReleased")).toContain("if (symOpensChoices()) return true");
-  expect(body(ime, "symOpensChoices")).toContain("openPicker() !is LanguagePicker.Choices");
-  // With the menu open, Sym is its ✕.
+  // Either Shift, with a code typed or suggestions on the bar, opens and closes it (owner, 2026-11-17).
+  expect(keys).toContain("if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {");
+  expect(keys).toContain("choicesMenuOpen -> closeChoicesMenu()");
+  expect(keys).toContain("openPicker() is LanguagePicker.Choices -> openChoicesMenu()");
+  // Its repeats and release are the menu's, so Shift itself never comes on.
+  expect(keys).toContain("if (event.repeatCount > 0) return menuShift == keyCode");
+  expect(body(ime, "chineseKeyUp")).toContain("if (keyCode != menuShift) return false");
+  expect(body(ime, "onKeyUp")).toContain("if (editing && chineseKeyUp(keyCode)) return true");
+  // Sym is always the Sym panel; with the menu open, it's the menu's ✕.
+  expect(keys).not.toContain("KEYCODE_SYM");
+  expect(ime).not.toContain("symOpensChoices");
+  expect(ime).not.toContain("symCanWait");
   expect(body(ime, "choicesMenuKey")).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
-  expect(keys).not.toContain("KEYCODE_SHIFT");
+  // A symbol picked from the panel types the code's first choice first; suggestions with no code are cleared.
+  expect(body(ime, "typePanelItem")).toContain("engineState(if (choices.state.composing) it.space() else it.reset())");
   expect(keys).not.toContain("KEYCODE_P");
   expect(ime).toContain("words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }");
   expect(body(strip, "onTouchEvent")).toContain("moreTap?.invoke()");

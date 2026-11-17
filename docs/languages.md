@@ -187,10 +187,10 @@ concept test" and "The rest of the Chinese proposal agreed"). It holds for every
 Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffer` in `keyboard/`.
 
 **The bar while a code is typed:**
-- **The code** floats just above the bar's left edge, only while a code is typed: in the bar's black, with a soft orange glow,
-  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; a tab joined to the bar's top is the
-  other look, `Strip.CODE_TAB`, while the owner chooses). It's drawn in the see-through layer over the app (the word menu's
-  effects layer), so the app never resizes. With no code, nothing floats,
+- **The code** sits in a tab joined to the bar's top-left edge, only while a code is typed: the bar's black, rounded on top,
+  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly, then "do the second for the tab" over
+  a line floating with a glow). It's drawn in the see-through layer over the app (the word menu's effects layer), so the app
+  never resizes. With no code, there's no tab,
   and the bar shows its suggestions: no language name, no tint ("keep it using the orange black theme").
 - **The language mark at Q:** the input method's label (耶, 粵, 拼, あ, ES) in the accent over Q, as Shift's arrow and Caps
   show today, whenever an input method that isn't English types, the idle bar included (owner, 2026-11-17: "The Yale Chinese
@@ -214,12 +214,13 @@ not working but honestly bad idea. Abandon it", "唔要hold key 揀字"):
   symbol goes through the engine, as Alt's does (a mark as Chinese writes it, the code's first choice first).
 - The row shows no hover (owner, 2026-11-17): only the bigger menu does.
 
-**The bigger menu: Sym, while a code is typed** (owner, 2026-11-17: "Let's use sym and not shift. but only when a code is
-being typed. The reasoning being that the emojis and symbols shold not be typed anyways when there's still code"). A short
-Sym opens it, Sym again closes it, and a held Sym still opens the language switcher; with no code typed, Sym is the Sym panel
-as always. A tap on the more cue `⋯` at P opens it too. The cue is orange while a code is typed, meaning Sym opens more,
-though Sym isn't under it ("not like the hover type of highlight but maybe more like just make it orange"). Shift does nothing
-special, and P is only a letter ("Abandon p too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
+**The bigger menu: Shift** (owner, 2026-11-17: "use the original shift as the plan instead. No hover effect needed for
+the shift because it's at the blind spot", after trying Sym). Either Shift opens it while choices are on the bar, a code's or
+the suggestions', and either Shift closes it; Shift itself never comes on for that press. Sym is always the Sym panel: with a
+code typed, a symbol picked there types the code's first choice first, then the symbol, as the comma does; with suggestions
+and no code, they're cleared, not picked. A tap on the more cue `⋯` at P opens the menu too. The cue is orange while a code is
+typed, meaning Shift opens more, though Shift isn't under it ("not like the hover type of highlight but maybe more like just
+make it orange"). P is only a letter ("Abandon p too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
 - The choices fill the three letter rows over the keys (W to O, S to L, Z to M), each as wide as it needs, as in the row.
   P shows the page ("2/5").
 - A press of the key under a choice picks it, and so does a tap on the screen. A resting finger highlights the choice over

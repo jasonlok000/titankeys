@@ -1072,21 +1072,11 @@ class Strip(
         val textWidth = codeText.measureText(picker.lead)
         val scale = if (textWidth > most && textWidth > 0f) most / textWidth else 1f
         val radius = dp(CODE_RADIUS_DP).toFloat()
-        if (CODE_TAB) {
-            // A tab joined to the bar's top-left: the bar's black, rounded on top only.
-            val top = y - height
-            codeBox.set(left, top, left + textWidth * scale + 2 * pad, y + radius)
-            menuPaint.color = look.paper or (0xFF shl 24)
-            canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
-        } else {
-            // On its own over the app: black, with a soft orange glow around it.
-            val top = y - height - dp(CODE_GAP_DP)
-            codeBox.set(left, top, left + textWidth * scale + 2 * pad, top + height)
-            menuPaint.color = look.paper or (0xFF shl 24)
-            menuPaint.setShadowLayer(dp(CODE_GLOW_DP).toFloat(), 0f, 0f, GuideMotion.faded(look.accent, CODE_GLOW_ALPHA))
-            canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
-            menuPaint.clearShadowLayer()
-        }
+        // A tab joined to the bar's top-left, the bar's own black, rounded on top only (owner, 2026-11-17: "do the second for
+        // the tab"). It reaches into the bar, so its bottom corners hide behind the bar's black.
+        codeBox.set(left, y - height, left + textWidth * scale + 2 * pad, y + radius)
+        menuPaint.color = look.paper or (0xFF shl 24)
+        canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
         val top = codeBox.top
         codeText.color = look.ink
         val baseline = top + height / 2 - (codeText.ascent() + codeText.descent()) / 2
@@ -1856,14 +1846,8 @@ class Strip(
         private const val INPUT_MARK_SMALL = .6f
         /** The code's line above the bar: its height, its gap over the bar, its sides' padding, in dp, and its text, in sp. */
         private const val CODE_LINE_DP = 34
-        private const val CODE_GAP_DP = 6
         private const val CODE_PAD_DP = 12
         private const val CODE_RADIUS_DP = 10
-        /** The floating line's soft orange glow: its reach in dp and its strength. */
-        private const val CODE_GLOW_DP = 8
-        private const val CODE_GLOW_ALPHA = .6f
-        /** The code as a tab joined to the bar instead of floating with a glow: the owner is choosing (2026-11-17). */
-        const val CODE_TAB = false
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

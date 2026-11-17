@@ -6,7 +6,10 @@ import language_checks
 
 
 def english():
-    """English types, whatever the last batch left on."""
+    """English types, whatever the last batch left on, in Debug's Space gestures field."""
+    language_checks.guide_checks.leave_guide()
+    if not language_checks.languages.in_field():
+        raise checks.Stop(f"not in the Space gestures field: {language_checks.languages.front().strip()}")
     language_checks.turn_on(["en"], "en")
 
 

@@ -48,7 +48,11 @@ def code(*after):
 
 
 def fresh():
-    """No code pending and an empty field, so one check's leftovers never reach the next."""
+    """No code pending and an empty field, so one check's leftovers never reach the next, in Debug's Space gestures field (the
+    guide's and the playground's type English only)."""
+    guide_checks.leave_guide()
+    if not languages.in_field():
+        raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
     play(*CLEAR_CODE)
     checks.set_text("")
 

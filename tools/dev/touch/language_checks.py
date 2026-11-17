@@ -14,6 +14,7 @@ import os
 import time
 
 import checks
+import guide_checks
 import languages
 from checks import Stop, adb, play, record
 
@@ -63,18 +64,21 @@ def expected(im, keys):
 
 
 def turn_on(on, current):
-    """Sets the input methods on and the one typing, then waits for Android's entry and the keyboard to follow."""
+    """Sets the input methods on and the one typing, then starts the field anew so the keyboard reads them: release TitanKeys,
+    then Debug again (Android's own entry doesn't move the keyboard; 2026-11-16's first run). The keyboard's own log line says
+    which input method the field started with."""
+    languages.logs_on(True)
     out = adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "on", ",".join(on), "--es", "current", current)
     if "typing " + current not in out:
         raise Stop(f"InputMethodsSet didn't take {current}: {out.strip()[-200:]}")
-    ids = languages.subtype_ids()
+    seen = len(languages.log_lines())
+    checks.keyboard("release")
+    checks.keyboard("debug")
     for _ in range(10):
-        if ids.get(languages.current_subtype()) == current:
+        if any(f"field start: {current} (" in line for line in languages.log_lines()[seen:]):
             return True
         time.sleep(.5)
-    # The keyboard reads the setting at the next field start: Debug again, read back.
-    checks.keyboard("debug")
-    return ids.get(languages.current_subtype()) == current
+    return False
 
 
 def gestures(keys):
@@ -85,6 +89,10 @@ def gestures(keys):
 
 
 def fresh():
+    """Debug's Space gestures field in front (the guide's and the playground's type English only), no code, empty."""
+    guide_checks.leave_guide()
+    if not languages.in_field():
+        raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
     play(*[g for _ in range(20) for g in ("key:del", "+60")])
     checks.set_text("")
 
@@ -97,8 +105,11 @@ def log_since(seen):
 
 def one(im, on):
     seen = len(languages.log_lines())
+    guide_checks.leave_guide()
+    if not languages.in_field():
+        raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
     if not turn_on(on, im):
-        return record(f"lang-{im}", False, f"Android's entry didn't follow to {im}; the log: {log_since(seen)}")
+        return record(f"lang-{im}", False, f"the field didn't start with {im}; the log: {log_since(seen)}")
     fresh()
     if im in LOOK:
         keys, what = LOOK[im]

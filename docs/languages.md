@@ -260,7 +260,7 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 
 ## Settings > Languages
 
-Languages, then input methods, the Gboard way (owner, 2026-11-16). Settings' Languages section has one row, Languages,
+Languages, then input methods, the Gboard way (owner, 2026-11-16). Settings' Languages section, first in Settings, has one row, Languages,
 with the names of the ones that are on.
 
 **Languages** (`app/settings/languages/index.tsx`):

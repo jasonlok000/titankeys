@@ -68,18 +68,30 @@ def read_words(path):
     return words
 
 
+TURKIC = {"tr", "az"}
+
+
+def lower(word, turkic=False):
+    """Lower case as the keyboard looks words up (NextWords): Turkish and Azerbaijani have İ→i and I→ı, where Python's own
+    rules would give i with a combining dot, and i."""
+    if turkic:
+        word = word.replace("İ", "i").replace("I", "ı")
+    return word.lower()
+
+
 class Words:
-    def __init__(self, words):
+    def __init__(self, words, turkic=False):
+        self.turkic = turkic
         self.exact = words
         self.lower = {}
         for w in sorted(words, key=lambda w: -words[w]):
-            self.lower.setdefault(w.lower(), w)
+            self.lower.setdefault(lower(w, turkic), w)
         self.longest = max((len(w) for w in words), default=0)
 
     def find(self, token):
         if token in self.exact:
             return token
-        return self.lower.get(token.lower())
+        return self.lower.get(lower(token, self.turkic))
 
 
 def sentences(paths):
@@ -137,16 +149,16 @@ def tokens(line, words, script):
     return out
 
 
-def lowered(words):
+def lowered(words, turkic=False):
     """Lower case, as PairCounts looks words up (no change where the script has no case)."""
-    return [w.lower() if w is not None else None for w in words]
+    return [lower(w, turkic) if w is not None else None for w in words]
 
 
 def count(lines, words, script):
     pairs = Counter()
     for line in lines:
         prev = START
-        for w in lowered(tokens(line, words, script)):
+        for w in lowered(tokens(line, words, script), words.turkic):
             if w is not None and prev is not None:
                 pairs[(prev, w)] += 1
             prev = w
@@ -181,12 +193,13 @@ def korean_words(lines, vocabulary):
 
 def word_lists(im, folder, args, lines):
     """(variant, words) for each table to build: Portuguese has one per variant; Korean without a list uses the corpus."""
+    turkic = im.get("id") in TURKIC
     if args.words:
-        return [("", Words(read_words(args.words)))]
+        return [("", Words(read_words(args.words), turkic))]
     if im.get("variants") and all(v.get("words") for v in im["variants"]):
-        return [(v["id"], Words(read_words(os.path.join(folder, v["words"])))) for v in im["variants"]]
+        return [(v["id"], Words(read_words(os.path.join(folder, v["words"])), turkic)) for v in im["variants"]]
     if im.get("words"):
-        return [("", Words(read_words(os.path.join(folder, im["words"]))))]
+        return [("", Words(read_words(os.path.join(folder, im["words"])), turkic))]
     if im.get("script") == "Kore":
         return [("", korean_words(lines, args.vocabulary))]
     raise SystemExit(f"{im['id']} has no word list")
@@ -217,8 +230,8 @@ def build(args):
         rows = sorted(((a, b, kept[(a, b)]) for a, bs in nexts.items() for b in bs), key=lambda r: (r[0], -r[2], r[1]))
         if out.endswith(".bin"):
             write_binary(out, nexts)
-        if args.text or not out.endswith(".bin"):
-            text = args.text or out
+        if args.text_out or not out.endswith(".bin"):
+            text = args.text_out or out
             with open(text, "w", encoding="utf-8", newline="\n") as f:
                 f.write(f"# {im['nameEnglish']}{' (' + variant + ')' if variant else ''} next words: the {args.top} most common words"
                         f" after each word. See NOTICE.\n")
@@ -239,7 +252,7 @@ def check(args):
         res = Counter()
         for line in held:
             prev = START
-            for w in lowered(tokens(line, words, script)):
+            for w in lowered(tokens(line, words, script), words.turkic):
                 if w is not None and prev is not None:
                     kind = "start" if prev == START else "inside"
                     res[kind + " pairs"] += 1
@@ -338,7 +351,8 @@ def main():
     p.add_argument("text", nargs="+")
     p.add_argument("--words")
     p.add_argument("--out", help="the table, pairs.bin by default; a .txt name writes the readable text instead")
-    p.add_argument("--text", help="also write the readable text table here")
+    # Its own name: "text" is the corpus files.
+    p.add_argument("--text", dest="text_out", help="also write the readable text table here")
     p.add_argument("--top", type=int, default=8)
     p.add_argument("--min", type=int, default=2)
     p.add_argument("--every", type=int, default=10)

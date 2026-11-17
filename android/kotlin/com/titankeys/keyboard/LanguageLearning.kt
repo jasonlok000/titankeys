@@ -217,10 +217,12 @@ class NextWords private constructor(
     /** First word i's next words are [nexts] from [nextStart][i] to [nextStart][i + 1]. First words are words 0 until [size]. */
     private val nextStart: IntArray,
     private val nexts: IntArray,
+    /** Turkish or Azerbaijani: İ lowers to i and I to ı, as tools/im/next_words.py lowered the table. */
+    private val turkic: Boolean = false,
 ) {
     /** The words that most often follow [previous], or start a sentence when it's null. */
     fun after(previous: String?): List<String> {
-        val first = find((previous?.lowercase() ?: START).toByteArray(Charsets.UTF_8))
+        val first = find((previous?.let { lower(it, turkic) } ?: START).toByteArray(Charsets.UTF_8))
         if (first < 0) return emptyList()
         return (nextStart[first] until nextStart[first + 1]).map { word(nexts[it]) }
     }
@@ -273,7 +275,14 @@ class NextWords private constructor(
         private const val VERSION = 1
 
         /** The asset: "TKNW", a version, then the arrays as tools/im/next_words.py's write_binary lays them out. */
-        fun readBinary(input: java.io.InputStream): NextWords {
+        /** The input methods whose tables lower İ to i and I to ı: Turkish and Azerbaijani. */
+        val TURKIC = setOf("tr", "az")
+
+        /** Lower case as the tables are written: Turkish rules for [turkic], else Kotlin's own (as Python's for the rest). */
+        fun lower(word: String, turkic: Boolean): String =
+            if (turkic) word.replace('İ', 'i').replace('I', 'ı').lowercase() else word.lowercase()
+
+        fun readBinary(input: java.io.InputStream, turkic: Boolean = false): NextWords {
             val bytes = input.readBytes()
             val buffer = java.nio.ByteBuffer.wrap(bytes)
             val magic = ByteArray(4).also { buffer.get(it) }
@@ -293,7 +302,7 @@ class NextWords private constructor(
             // 2026-11-17: a start past the end loaded, then threw while typing).
             require(starts(wordStart, byteCount) && starts(nextStart, nextCount) && firstCount <= wordCount &&
                 nexts.all { it in 0 until wordCount }) { "A damaged next-word table" }
-            return NextWords(words, wordStart, nextStart, nexts).also { live[it] = "${it.size} first words" }
+            return NextWords(words, wordStart, nextStart, nexts, turkic).also { live[it] = "${it.size} first words" }
         }
 
         /** [starts] begin at 0, never go back, and end at [end]: a table's offsets, as the tool writes them. */

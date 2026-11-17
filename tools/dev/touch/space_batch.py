@@ -45,6 +45,8 @@ def check_swiped():
     """After a swipe, and a swiped word made longer."""
     case("swiped-hello", ["swipe:hello"], "hello")
     case("swiped-longer", ["swipe:hello", "+300", *keys("s")])
+    # #98's case 4: a swiped word cut short and retyped is corrected as a swipe, where Space keeps it as it stands.
+    case("swiped-retyped", ["swipe:hello", "+300", "key:del:60:none", "+90", "key:del:60:none", "+90", *keys("p")])
 
 
 def check_after_fix():

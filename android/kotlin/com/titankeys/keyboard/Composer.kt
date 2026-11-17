@@ -1073,11 +1073,20 @@ class Composer(
 
     /** Leaves [word] off the bar until [unhide], while it waits to be forgotten. */
     fun hide(word: String) {
-        if (hidden.add(word.lowercase())) show(composition.alternatives)
+        if (hidden.add(word.lowercase())) showAgain()
     }
 
     fun unhide(word: String) {
-        if (hidden.remove(word.lowercase())) show(composition.alternatives)
+        if (hidden.remove(word.lowercase())) showAgain()
+    }
+
+    /** While a word is typed, its middle word is worked out again: it may be the hidden fix, which Space then skips (#98). */
+    private fun showAgain() {
+        val typed = composition as? Composition.Typed
+        if (typed == null || typed.trailingSpace) return show(composition.alternatives)
+        val again = ApostropheContext.offerOther(spaceFirst(typed.alternatives, typed.snapshot, typed.prefix, false), typed.prefix)
+        composition = Composition.Typed(typed.prefix, false, typed.snapshot, again)
+        show(again)
     }
 
     private fun chooseAlternative(index: Int) {
@@ -1496,10 +1505,13 @@ class Composer(
     private fun keptLowercase(word: String, before: String) =
         TypedCorrector.capitalI(word) != null && lowercaseI == (before + word).takeLast(Editor.CONTEXT_LENGTH)
 
-    /** The typed word that ends at the cursor, as it stands in the text. Null if the text there is anything else. */
-    private fun typedWordAt(anchor: Snapshot): String? {
+    /**
+     * The typed word that ends at the cursor, as it stands in the text. Null if the text there is anything else, or, unless
+     * [anyway], if nothing may change it.
+     */
+    private fun typedWordAt(anchor: Snapshot, anyway: Boolean = false): String? {
         val before = anchor.before
-        if (corrector() == null && shorthandCorrector() == null && !capitalsOn() || before == null || !anchor.available || !anchor.knownSelection || anchor.selected) return null
+        if (!anyway && corrector() == null && shorthandCorrector() == null && !capitalsOn() || before == null || !anchor.available || !anchor.knownSelection || anchor.selected) return null
         if (anchor.after?.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) return null
         val raw = manualWord.current()
         val start = before.length - raw.length
@@ -1535,7 +1547,8 @@ class Composer(
         val fix = (if (corrector != null) corrector.check(word, before.dropLast(word.length), endedWord?.word)
             else shorthandCorrector()?.shorthandFix(word, before.dropLast(word.length)) ?: capitalI(word, before.dropLast(word.length)))
             ?: return null
-        return fix.takeIf { before.endsWith(it.typed) && allowedFix(it) }
+        // A word hidden from the bar while it waits to be forgotten isn't put in by Space either (#98).
+        return fix.takeIf { before.endsWith(it.typed) && allowedFix(it) && it.word.lowercase() !in hidden }
     }
 
     /**
@@ -1878,15 +1891,27 @@ class Composer(
     }
 
     /**
-     * The owner's rule: the bar's middle word is what Space will put in. That is autocorrect's fix for the typed word, or the
-     * typed word itself when there is nothing to fix, so it goes first, and the other words follow without it.
+     * The owner's rule (#98): the bar's middle word is what Space will put in. That is autocorrect's fix for the typed word, or the
+     * word as typed when Space keeps it: with nothing to fix, with no corrector (every language but English, Fix typos off, a field
+     * that turns fixes off), or once Backspace took a fix back. It goes first, and the other words follow without it.
      */
-    private fun spaceFirst(found: List<String>, anchor: Snapshot): List<String> {
-        val word = typedWordAt(anchor) ?: return found
-        val fix = findFix(word, anchor)
-        // Without the word data the bar stays as it was, unless Space would give "i" its capital.
-        if (fix == null && corrector() == null) return found
-        val space = fix?.word ?: word
+    private fun spaceFirst(found: List<String>, anchor: Snapshot, prefix: String, guided: Boolean): List<String> {
+        val word = typedWordAt(anchor)
+        // A swiped word being fixed by hand isn't autocorrected: Space keeps it as it stands (endingWord).
+        val fix = word?.takeIf { correcting == null }?.let { findFix(it, anchor) }
+        val space = fix?.word ?: when {
+            // Before the word data loads, the bar stays as it was, unless Space would give "i" its capital.
+            corrector() == null && autocorrect != null && field.autocorrect -> return found
+            // A word nothing completes keeps the starts that follow it.
+            corrector() == null && found.isEmpty() -> return found
+            word != null -> word
+            // The guide places its own word.
+            guided -> return found
+            // A word Backspace put back: Space keeps it as it stands.
+            restoredWord?.let { prefix.equals(it, ignoreCase = true) } == true -> prefix
+            // Nothing may change the word, so Space keeps it as typed.
+            else -> typedWordAt(anchor, anyway = true) ?: return found
+        }
         return listOf(space) + found.filterNot { it.equals(space, ignoreCase = true) }
     }
 
@@ -1954,7 +1979,7 @@ class Composer(
             // While a word of a pair is being typed, its other form waits in the bar's left place (#73): a choice, never a fix. Not
             // in the guide, where that place may hold the guide's word.
             val suggestions = if (trailingSpace) guided
-                else spaceFirst(guided, anchor).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
+                else spaceFirst(guided, anchor, prefix, guided !== found).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
             if (suggestions.isEmpty()) {
                 offerStarts(anchor)
                 return@complete

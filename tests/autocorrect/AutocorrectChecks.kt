@@ -1383,7 +1383,7 @@ private fun theGuideOffersItsWord(world: Realistic) {
     same(guide(miss = true).swipe("tp").bar.take(2), listOf("tp", "to"), "A swipe that read another word puts that in first")
     same(guide().type("tp").bar.firstOrNull(), "to", "Typed letters that are not the guide's word have it on the strip")
     same(guide().type("tp").choose(0).text, "to ", "One touch puts it in place of the letters")
-    same(guide().type("to").bar.contains("to"), false, "Letters that are the guide's word need nothing more")
+    same(guide().type("to").bar.drop(1).contains("to"), false, "Letters that are the guide's word need nothing more")
     same(Typist(world, null).swipe("tp").bar, listOf("tp"), "Outside the guide nothing is added")
 }
 
@@ -1406,7 +1406,8 @@ private fun suggestionBar(world: Realistic) {
         same(loading.text, "He the ", "A start can be chosen while the models load")
         words.completions = listOf("real")
         loading.type("x")
-        same(loading.bar, listOf("real"), "Real words take over once the models answer")
+        // #98: Space keeps "x", so it is the middle word, with the real words beside it.
+        same(loading.bar, listOf("x", "real"), "Real words take over once the models answer")
         val answered = typist(fakeWords().also { it.completions = null })
         answered.words.unanswered.removeLast()(listOf("real", "words"))
         same(answered.bar, listOf("real", "words"), "A completion that was waiting replaces the starts")
@@ -1517,7 +1518,8 @@ private fun suggestionBar(world: Realistic) {
     run {
         val words = fakeWords().also { it.completions = listOf("the", "then") }
         val typist = typist(words).type("teh")
-        same(typist.composer.shownWord(0), "the" to "Teh", "A held fix names the letters it would replace")
+        // #98: with no corrector, Space keeps "Teh", so it is the middle word and "the" is beside it.
+        same(typist.composer.shownWord(1), "the" to "Teh", "A held fix names the letters it would replace")
     }
 
     // Every start was blocked, or the search words were.
@@ -1591,7 +1593,8 @@ private fun suggestionBar(world: Realistic) {
         val typist = typist(words).swipe("hello")
         typist.backspace()
         typist.backspace()
-        same(typist.choose(1).text, "Hell the ", "A start can follow a swiped word that is being fixed")
+        // #98: Space keeps "Hell" as it stands, so it is the middle word; the start follows it.
+        same(typist.choose(typist.bar.indexOf("the")).text, "Hell the ", "A start can follow a swiped word that is being fixed")
         same(words.corrected.toList(), emptyList<String>(), "A start says nothing about the swipe before it")
         same(words.typed.toList(), emptyList<String>(), "A start does not save what was being fixed")
     }
@@ -2746,6 +2749,8 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     check("after a swiped \"hello\"", typist().type("so ").swipe("hello"))
     check("after a swiped word made longer", typist().type("so ").swipe("hello").type("s"))
     check("after a swiped word cut short and retyped", typist().type("so ").swipe("hello").backspace().backspace().type("p"))
+    // A swiped word being fixed by hand, where autocorrect would fix the letters as they stand ("hell" as "he'll").
+    check("after a swiped word cut short", typist().type("so ").swipe("hello").backspace())
     // After a correction: the next word, and a fix taken back with Backspace.
     check("the word after a fix", typist().type("so teh recieve"))
     check("a fix taken back with Backspace", typist(offered = listOf("tehran")).type("so teh ").backspace())

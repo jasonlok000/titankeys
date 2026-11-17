@@ -718,7 +718,7 @@ class Composer(
         // Holding the key takes the spaces out with the letter, so its symbol lands straight after the mark.
         typedKey = if (letterTap) null else TypedKey(spaces + typed.substring(typed.offsetByCodePoints(typed.length, -1)), snapshot(),
             spaceBefore, fullStopBefore, corrected)
-        typedMark = if (!letterTap && text.length == 1 && text[0] in SPACED_MARKS) snapshot() else null
+        typedMark = if (!letterTap && text.length == 1 && spacedMark(text[0])) snapshot() else null
         if (spaces.isNotEmpty()) {
             val accepted = snapshot()
             spaced = Spaced(accepted.selection.end - typed.length - spaces.length, before.orEmpty().last(), spaces, text, typed,
@@ -784,7 +784,7 @@ class Composer(
         val text = (if (leading) " " else "") + symbol + if (space) " " else ""
         if (!edit(EditCause.Symbol, 0, text, if (reuseSpace) 1 else 0)) return
         automaticSpace = null
-        typedMark = if (text.length == 1 && text[0] in SPACED_MARKS) snapshot() else null
+        typedMark = if (text.length == 1 && spacedMark(text[0])) snapshot() else null
         val ended = wordEnded(ending, fix, text, null) ?: return
         if (ended.changed) {
             confirmState(snapshot())
@@ -2084,9 +2084,9 @@ class Composer(
         if (!Character.isLetter(letter.codePointAt(0))) return ""
         val before = anchor.before ?: return ""
         val mark = before.lastOrNull() ?: return ""
-        val count = when (mark) {
-            in SENTENCE_MARKS -> sentenceSpaces()
-            in SPACED_MARKS -> if (commaSpace()) 1 else 0
+        val count = when {
+            sentenceMark(mark) -> sentenceSpaces()
+            spacedMark(mark) -> if (commaSpace()) 1 else 0
             else -> 0
         }
         val word = before.dropLast(1)
@@ -2159,7 +2159,7 @@ class Composer(
     /** The space before a word that a swipe, a tap or a pick puts in. After a sentence, Two spaces gives two. */
     private fun wordSpace(before: String): String {
         val space = SwipeTyping.prefix(before)
-        val sentence = space.isNotEmpty() && field.markSpaces && sentenceSpaces() == 2 && before.last() in SENTENCE_MARKS
+        val sentence = space.isNotEmpty() && field.markSpaces && sentenceSpaces() == 2 && sentenceMark(before.last())
             && SwipeTyping.startsSentence(before + space)
         return if (sentence) "  " else space
     }
@@ -2197,10 +2197,13 @@ class Composer(
         /** Marks that end a typed word, which autocorrect then checks. */
         private const val TYPED_WORD_ENDS = "$WORD_CLOSERS\"”"
         private val WORD_OPENERS = charArrayOf('"', '\'', '(', '[', '{', '“', '‘')
-        /** Marks that end a sentence, which Space after a sentence follows. */
-        private const val SENTENCE_MARKS = ".?!"
+        /**
+         * A mark that ends a sentence in the input method typing now, which Space after a sentence follows: . ? ! and the input
+         * method's own, as Greek's ; and Hindi's । ([com.titankeys.engine.SentenceCase]). Full-width marks take no space.
+         */
+        private fun sentenceMark(mark: Char) = com.titankeys.engine.SentenceCase.isSpacedEnd(mark.code)
         /** Marks whose next letter may bring a space: the sentence marks, and those that Space after , ; : follows. */
-        private const val SPACED_MARKS = "$SENTENCE_MARKS,;:"
+        private fun spacedMark(mark: Char) = sentenceMark(mark) || mark in ",;:"
         /** Abbreviations that a full stop doesn't end, such as Mr. Single letters, as in e.g. and J. Smith, count as well. */
         private val NO_SPACE_ABBREVIATIONS = setOf("mr", "mrs", "ms", "mx", "dr", "prof", "st", "jr", "sr", "vs", "cf", "viz",
             "eg", "ie", "approx", "fig")

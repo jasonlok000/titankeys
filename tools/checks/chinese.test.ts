@@ -27,14 +27,19 @@ test("the code floats over the app, above the bar's left edge, only while a code
   const line = body(strip, "drawCodeLine");
   expect(line).toContain("picker.lead.isEmpty()");
   expect(line).toContain("val top = y - height");
-  // The bar no longer draws the code over Q and W.
-  expect(body(strip, "drawPicker")).not.toContain("picker.lead");
+  // At the bar's size and full brightness, on black with a soft orange glow; a joined tab behind CODE_TAB (owner, 2026-11-17).
+  expect(line).toContain("codeText.textSize = wordPixels()");
+  expect(line).toContain("codeText.color = look.ink");
+  expect(line).toContain("menuPaint.setShadowLayer(");
+  expect(strip).toContain("const val CODE_TAB = false");
 });
 
 test("the mark sits over Q and the more cue over P", () => {
   const picker = body(strip, "drawPicker");
   expect(picker).toContain("drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)");
   expect(picker).toContain("drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)");
+  // Orange while a code is typed: Sym opens more, though Sym isn't under it.
+  expect(picker).toContain("pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted");
   expect(body(ime, "engineState")).toContain("languages.current.label");
 });
 
@@ -50,26 +55,34 @@ test("a tap on the screen picks the choice under it", () => {
   expect(body(strip, "onTouchEvent")).toContain("pickerTap?.invoke(item)");
 });
 
-test("Shift + the key under a choice picks it, and Shift alone does nothing special", () => {
+test("Shift + a key and holding a key don't pick (owner, 2026-11-17: abandoned); a letter is the letter, Shift or not", () => {
   const key = body(ime, "engineKey");
-  expect(key).toContain("if (shifted && choices != null && item >= 0)");
-  expect(key).toContain("engine.key(printedLetter(event.keyCode))");
+  expect(key).toContain("else -> if (chinese && letter && !alt) engine.key(printedLetter(event.keyCode)) else {");
+  expect(key).not.toContain("shifted");
+  expect(ime).not.toContain("holdToPick");
   // Shift's own bar doesn't cover the choices in Chinese.
   expect(body(ime, "showModifierBar")).toContain("ModifierBar.SHIFT || it == ModifierBar.CAPS");
 });
 
-test("holding the key under a choice picks it, and hold for symbols is off in Chinese", () => {
-  expect(body(ime, "canHold")).toContain("if (ChineseKeys.usesBar(languages.current)) return false");
-  expect(body(ime, "holdToPick")).toContain("TypingSettings.holdSymbolMillis(this)");
-  // The letter the press typed goes again before the pick.
-  expect(ime).toMatch(/engine\.backspace\(\)\n\s+pick\(held\.choices, held\.item\)/);
-  expect(body(ime, "chineseKeyUp")).toContain("cancelHoldPick()");
+test("hold for symbols is back in Chinese: the letter leaves the code, the symbol goes through the engine", () => {
+  expect(body(ime, "canHold")).not.toContain("usesBar");
+  expect(body(ime, "replaceHeldLetter")).toContain("heldSymbolThroughEngine(engine, text)");
+  const held = body(ime, "heldSymbolThroughEngine");
+  expect(held).toContain("engineState(engine.backspace())");
+  expect(held).toContain("engine.key(text[0])");
 });
 
-test("a flick up picks, and the row never pages", () => {
+test("a flick up picks, short as a real finger's, each logged, and the row never pages", () => {
   const swipes = body(ime, "pageChoices");
   expect(swipes).toContain("ChineseKeys.flickColumn(");
+  expect(swipes).toContain("choicesLog(\"flick from");
   expect(swipes).not.toContain("engine.page(");
+  // A flick up from the top row leaves the touchpad within about half a key: the row asks for a quarter.
+  expect(body(ime, "setPaging")).toContain("ChineseKeys.FLICK_KEYS else Contact.PAGE_KEYS");
+  expect(read("android/kotlin/com/titankeys/keyboard/Chinese.kt")).toContain("const val FLICK_KEYS = .25f");
+  const contact = read("android/kotlin/com/titankeys/keyboard/Contact.kt");
+  expect(contact).toContain("val swiped = touching.travel >= pageKeys && last.time - first.time <= PAGE_MILLIS");
+  expect(contact).toContain("pageLog?.invoke(");
 });
 
 test("the menu's P counts its pages from the first", () => {
@@ -78,18 +91,45 @@ test("the menu's P counts its pages from the first", () => {
   expect(menu).toContain("val COUNTED = 10 * PER_PAGE");
 });
 
-test("only holding P opens the bigger menu", () => {
-  const callers = [...ime.matchAll(/openChoicesMenu\(\)/g)].length;
-  // Its definition and the one call, in P's hold.
-  expect(callers).toBe(2);
-  expect(ime).toMatch(/private val pHeld = Runnable \{[\s\S]*?openChoicesMenu\(\)/);
-  expect(body(ime, "chineseKey")).toContain("KeyEvent.KEYCODE_P");
-  // Before the hold, P is the letter p, ahead of any key that comes first.
-  expect(body(ime, "typeWaitingP")).toContain("it.key('p')");
+test("with a code typed, Sym or a tap on the more cue opens the bigger menu; Sym closes it; Shift and P are nothing special", () => {
+  const keys = body(ime, "chineseKey");
+  // A short Sym: the menu, from Sym's release, after it waited for a hold that would open the switcher.
+  expect(keys).toContain("if (event.keyCode != KeyEvent.KEYCODE_SYM || openPicker() !is LanguagePicker.Choices) return false");
+  expect(keys).toContain("if (symCanWait()) return false");
+  expect(body(ime, "symReleased")).toContain("if (symOpensChoices()) return true");
+  expect(body(ime, "symOpensChoices")).toContain("openPicker() !is LanguagePicker.Choices");
+  // With the menu open, Sym is its ✕.
+  expect(body(ime, "choicesMenuKey")).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
+  expect(keys).not.toContain("KEYCODE_SHIFT");
+  expect(keys).not.toContain("KEYCODE_P");
+  expect(ime).toContain("words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }");
+  expect(body(strip, "onTouchEvent")).toContain("moreTap?.invoke()");
+  expect(ime).not.toContain("pHeld");
 });
 
-test("the menu: a press picks, Enter and Backspace turn pages, Sym is the ✕, Back closes", () => {
+test("the row shows no hover; the bigger menu does", () => {
+  expect(body(ime, "markMenu")).toContain("if (open is LanguagePicker.Choices) {\n                strip.pickerMark = -1");
+  expect(body(ime, "markMenu")).toContain("menu.hover = key");
+});
+
+test("the mark shows whenever an input method that isn't English types, the idle bar included", () => {
+  expect(body(ime, "showInputMark")).toContain("strip?.inputMark = if (current.isEnglish) \"\" else current.label");
+  expect(body(ime, "inputMethodChanged")).toContain("showInputMark()");
+  expect(body(strip, "dispatchDraw")).toContain("drawInputMark(canvas)");
+});
+
+
+test("engines get ready in the background, before the switch", () => {
+  const languages = read("android/kotlin/com/titankeys/keyboard/Languages.kt");
+  expect(body(languages, "refresh")).toContain("warmUp()");
+  expect(body(languages, "warmUp")).toContain("it.warm(m, java.io.File(context.filesDir, \"engines/$name\"))");
+  // Rime's warm selects no schema: the engine that types owns its one session.
+  expect(body(read("android/kotlin/com/titankeys/rime/RimeEngine.kt"), "warm")).not.toContain("select(");
+});
+
+test("the menu: a press picks, Enter and Backspace turn pages, each key logged, Sym is the ✕, Back closes", () => {
   const keys = body(ime, "choicesMenuKey");
+  expect(keys).toContain("choicesLog(\"menu key $keyCode");
   expect(keys).toContain("KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (menu.next())");
   expect(keys).toContain("KeyEvent.KEYCODE_DEL -> if (menu.previous())");
   expect(keys).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");

@@ -187,11 +187,14 @@ concept test" and "The rest of the Chinese proposal agreed"). It holds for every
 Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffer` in `keyboard/`.
 
 **The bar while a code is typed:**
-- **The code** floats on a thin line just above the bar's left edge, muted, only while a code is typed. It's drawn in the
-  see-through layer over the app (the word menu's effects layer), so the app never resizes. With no code, nothing floats,
+- **The code** floats just above the bar's left edge, only while a code is typed: in the bar's black, with a soft orange glow,
+  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; a tab joined to the bar's top is the
+  other look, `Strip.CODE_TAB`, while the owner chooses). It's drawn in the see-through layer over the app (the word menu's
+  effects layer), so the app never resizes. With no code, nothing floats,
   and the bar shows its suggestions: no language name, no tint ("keep it using the orange black theme").
-- **The language mark at Q:** the input method's label (耶, 粵, 拼) in the accent over Q, as Shift's arrow and Caps show
-  today, while the choices are on the bar.
+- **The language mark at Q:** the input method's label (耶, 粵, 拼, あ, ES) in the accent over Q, as Shift's arrow and Caps
+  show today, whenever an input method that isn't English types, the idle bar included (owner, 2026-11-17: "The Yale Chinese
+  indicator is not showing in the suggestion"). A word whose text reaches under Q pushes it small into the corner.
 - **The choices sit over W to O,** from the left, each as wide as it needs: one key for one or two characters, two keys for
   three or four (屌你老母 over two), and so on (`ChineseRow.keys`: a Chinese character counts two, a Latin letter one, four to
   a key). They fill W to O in order; a choice too wide for the room left waits for the bigger menu, and shorter ones after it
@@ -199,20 +202,24 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
   no paging in the row.
 - **P has no choice.** It shows a small "more" cue (`⋯`) when the engine has more choices than the row shows.
 
-**Picking from the row,** all of these at once:
-- **Space** picks the first choice. A resting finger doesn't change that ("no marking first").
+**Picking from the row** (the owner's tries on the phone, 2026-11-17, dropped Shift + key and holding a key: "Shift select
+not working but honestly bad idea. Abandon it", "唔要hold key 揀字"):
+- **Space** picks the first choice.
 - **A tap on the screen** on a choice picks it.
-- **Shift + the key under a choice** picks it (the top two rows, W to O and S to L, as the word menu's buttons). Shift alone
-  does nothing special: Chinese has no capitals, and English is its own keyboard.
-- **Holding the key under a choice** picks it (a concept test, owner: "we can remove it if it doesn't work well"). The letter
-  the press typed into the code goes again first. Hold for symbols is off in every Chinese input method, so a hold means
-  one thing.
-- **A flick up on the touchpad** from the key under a choice picks it (also a concept test). Swipes on the keys never turn
-  the row's pages.
-- A resting finger still marks the choice over its key, in the word menu's pill, to show what Shift, a hold or a flick
-  would pick.
+- **A flick up on the touchpad** from the key under a choice picks it (the top two rows). It needs only a quarter of a key
+  (`ChineseKeys.FLICK_KEYS`): a finger flicking up from the top row leaves the touchpad within about half a key, under a page
+  turn's length, so the owner's flicks went unseen ("flick not working"). Each flick's reading is in TitanKeys Debug's log
+  (`adb logcat -s TitanKeysChoices`). Swipes on the keys never turn the row's pages.
+- **Hold for symbols is back** in Chinese, as in every language: a held letter's press goes out of the code again, and its
+  symbol goes through the engine, as Alt's does (a mark as Chinese writes it, the code's first choice first).
+- The row shows no hover (owner, 2026-11-17): only the bigger menu does.
 
-**The bigger menu: hold P.** Like the Sym panel's emoji and symbol pages, in the panel's place:
+**The bigger menu: Sym, while a code is typed** (owner, 2026-11-17: "Let's use sym and not shift. but only when a code is
+being typed. The reasoning being that the emojis and symbols shold not be typed anyways when there's still code"). A short
+Sym opens it, Sym again closes it, and a held Sym still opens the language switcher; with no code typed, Sym is the Sym panel
+as always. A tap on the more cue `⋯` at P opens it too. The cue is orange while a code is typed, meaning Sym opens more,
+though Sym isn't under it ("not like the hover type of highlight but maybe more like just make it orange"). Shift does nothing
+special, and P is only a letter ("Abandon p too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
 - The choices fill the three letter rows over the keys (W to O, S to L, Z to M), each as wide as it needs, as in the row.
   P shows the page ("2/5").
 - A press of the key under a choice picks it, and so does a tap on the screen. A resting finger highlights the choice over
@@ -220,7 +227,8 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 - Enter turns to the next page and Backspace to the one before, the Sym panel's own keys; a swipe up on the keys turns to
   the next and down to the one before.
 - Sym is the ✕: it closes the menu, and so does Back. A pick closes it too.
-- Only holding P opens it: no flick from P, no swipe ("actions told apart only by speed are hard to learn").
+- No swipe opens it ("actions told apart only by speed are hard to learn"). Each key it takes is in TitanKeys Debug's log, with
+  its key code: the owner's Enter once sent where the touch feed's paged, and the log will say what the real key sends.
 
 **Keys while a code is typed:**
 - **Enter** types the code as letters. **Backspace** takes off the last code letter.
@@ -235,6 +243,13 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 
 **Not in the row or the menu:** the variant isn't shown (it's in Settings). Shift's own bar never shows in Chinese, so it
 doesn't cover the choices; Alt's and Ctrl's still do while they're down, for their symbols and shortcuts.
+
+**Ready before the switch:** every engine an input method that's on uses gets ready in the background as the keyboard starts
+and at each field start (`Languages.warmUp`, `InputEngine.warm`): Rime unpacks its 40 MB the first time and opens, selecting
+no schema, as the engine that types owns Rime's one session; Mozc copies and loads its data. A switch then only selects the
+schema. The log says how long each took (`adb logcat -s TitanKeysIM`: "Engine rime warm in … ms", "Input method … loaded in …
+ms"). The first unpack can't move to the install, where no app code runs; it now happens as the keyboard first starts with a
+Chinese input method on, not at the first switch.
 
 **Checks and renders:** `tests/chinese` checks the places, the pages, the keys that pick, the marks and the English word;
 `tests/rime` the engine's keys; `tools/checks/chinese.test.ts` keeps the keyboard's wiring to this design. `bash

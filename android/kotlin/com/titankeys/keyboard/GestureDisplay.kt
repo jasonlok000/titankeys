@@ -555,8 +555,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     private var topPace = 0f
     private var dotPace = 1f
 
-    /** One word of [letters] went. In a hold that is one more word; a flick that lifted gets a brief flourish. */
-    fun wordDeleted(now: Long, letters: Int = 1) {
+    /**
+     * One word of [letters] went. In a hold that is one more word, which the chomper eats; a flick that lifted gets a brief
+     * flourish: always the same row of [CHOMP_DOTS] dots, eaten one by one, whatever it deleted (#89, owner, 2026-11-16: dots
+     * counted from the text didn't show on a long text). [letters] is kept for the callers, and no longer counts.
+     */
+    fun wordDeleted(now: Long, @Suppress("UNUSED_PARAMETER") letters: Int = 1) {
         if (scene == Scene.DeleteHold && !leaving) {
             deleted++
             held += letters.coerceAtLeast(1)
@@ -565,10 +569,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             if (!allowed || live) return
             // Dots still playing take the new ones at the end of their queue, and go on.
             if (scene == Scene.DeleteFlick && dots > 0 && !still && now - flourishAt < doneAt) {
-                chain(letters, (now - flourishAt).toFloat())
+                chain(CHOMP_DOTS, (now - flourishAt).toFloat())
                 return
             }
-            setGroups(listOf(letters))
+            setGroups(listOf(CHOMP_DOTS))
             startFlourish(Scene.DeleteFlick, now)
             dotPace = 1f
             fromHold = false
@@ -749,7 +753,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         var first = Float.NaN
         for (index in 0 until dots) {
             val land = dotLand[index]
-            if (land - lastTick < DOT_LAND_GAP - .5f) continue
+            // To a hundredth of a millisecond, so a tick 29.6 ms on, which rounds to 29, waits for the next dot.
+            if (land - lastTick < DOT_LAND_GAP - .01f) continue
             lastTick = land
             if (land <= at) continue
             if (first.isNaN()) first = land
@@ -792,7 +797,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      */
     fun deleteEnded(now: Long = lastFrame): Boolean {
         if (scene != Scene.DeleteHold || leaving) return false
-        if (held.isEmpty()) {
+        // The chomper ends with the delete: a lift, or the hold's 10 s (DeleteHold.MOST_MILLIS). Nothing more plays after it,
+        // however much the hold took (#89, owner, 2026-11-16).
+        if (CHOMP_HOLD || held.isEmpty()) {
+            if (glowHeld) fadeGlow(now)
             leave()
             return false
         }
@@ -1320,6 +1328,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (!motion) target else target + (value - target) * exp(-elapsed / millis)
 
     companion object {
+        /** The dots a delete flick shows, always: a fixed row that the chomper eats (#89, owner, 2026-11-16). */
+        const val CHOMP_DOTS = 6
+        /** A held delete shows the chomper eating while it deletes, and ends with it, with no dots after the lift (#89). */
+        const val CHOMP_HOLD = true
         /** How many words fit across the strip. */
         const val VISIBLE_WORDS = 7f
         /** The letters of each word in the line of text that the cursor moves through, with one space after each word. */

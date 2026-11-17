@@ -2336,6 +2336,8 @@ class GuideActivity : Activity() {
         val menuWaits = flow.step.bar == GuideBar.Menu && flow.stage > 0 && !menuSettled()
         val shown = ghostCue(if (playground || passed || menuWaits) GuideCue.Free else flow.cue)
         if (shown != keys.cue) keys.show(shown)
+        // Passed, the slide's patch stays where its touches counted (owner, 2026-11-16).
+        keys.zoneCue = if (passed && !playground) flow.step.cue else null
         keys.face = if (playground || passed || menuWaits) null else flow.labels
         if (menuWaits && menuOpenSince >= 0) {
             main.removeCallbacks(menuHint)
@@ -3548,7 +3550,9 @@ class GuideActivity : Activity() {
             contactFirst = points.firstOrNull()
             contactTrail.clear()
             contactWord = expectedWord()
-            tapMeter?.down(now)
+            // A tap meant as the next one, but too late for the keyboard: the slide says so (owner, 2026-11-16).
+            if (tapMeter?.down(now) == true && flow.stage == 0 && !passed && !settingUp)
+                tapMeter?.let { missed(GuideMiss.Slow, tapMissLine(GuideMiss.Slow, it.taps)) }
         }
         contactTrail += points
         val meter = tapMeter
@@ -4180,6 +4184,8 @@ class GuideActivity : Activity() {
         main.removeCallbacks(showHelp)
         hideHint()
         hint.setOnClickListener(null)
+        // The patch where the slide's touches counted stays (owner, 2026-11-16: "Keep the touch zone after its finished").
+        keys.zoneCue = flow.step.cue
         // The pass beat, all at once: the title becomes the success line with a pop and a check that draws in, the chapter steps
         // forward with a glow, Skip turns into a filled Next with one pulse, and the phone celebrates. Nothing else moves.
         haptics.celebrate()

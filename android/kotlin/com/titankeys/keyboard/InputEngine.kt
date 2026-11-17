@@ -55,6 +55,13 @@ interface InputEngine {
      */
     fun option(name: String, on: Boolean)
 
+    /**
+     * Gets the engine's data and library ready in the background, before anyone types with it, so a switch to it never waits
+     * (owner, 2026-11-17: "is the loading for the engine on load avoidable?"). Unlike [start], it chooses nothing that typing
+     * would see (Rime's schema): the engine that types starts as usual, and finds the work done. [stop] frees it.
+     */
+    fun warm(method: InputMethod, dataDir: java.io.File): Boolean = start(method, dataDir)
+
     /** Frees what [start] loaded. The engine may be started again later. */
     fun stop()
 }

@@ -7,9 +7,9 @@ Shift's meta state and all, without a twin. Each check turns its input method on
 (language_checks.turn_on), in Debug's Space gestures field, types, and reads the field back; the menu's opening and closing is
 read from the keyboard's own TitanKeysChoices lines, and a screenshot shows it.
 """
+import functools
 import json
 import os
-import time
 
 import checks
 import language_checks
@@ -19,14 +19,29 @@ from checks import adb, play, record
 CHOICES_TAG = "TitanKeysChoices"
 
 
+def keyfed(check):
+    """The check's keys go through the key feed, whoever runs the batch (slot5 runs every batch from one loop): TK_KEYFEED is set
+    for the check alone and taken off after it, even when it stops, so no other batch's keys go that way."""
+    @functools.wraps(check)
+    def run():
+        before = os.environ.get("TK_KEYFEED")
+        os.environ["TK_KEYFEED"] = "1"
+        try:
+            return check()
+        finally:
+            if before is None:
+                os.environ.pop("TK_KEYFEED", None)
+            else:
+                os.environ["TK_KEYFEED"] = before
+    return run
+
+
 def setup():
-    os.environ["TK_KEYFEED"] = "1"
     adb("shell", "setprop", f"log.tag.{CHOICES_TAG}", "I")
     languages.logs_on(True)
 
 
 def finish():
-    os.environ.pop("TK_KEYFEED", None)
     adb("shell", "setprop", f"log.tag.{CHOICES_TAG}", "''")
     try:
         # The owner's languages as they were before the batches (2026-11-16), as the other batches' finish puts them back.
@@ -36,8 +51,8 @@ def finish():
 
 
 def start(im):
-    """Its input method on with English and typing, in an empty field."""
-    setup()  # in every check, so a check that runs without the first still plays its keys through the key feed
+    """Its input method on with English and typing, in an empty field; the menu's log lines let through."""
+    setup()
     if not language_checks.turn_on(["en", im], im):
         raise checks.Stop(f"the field didn't start with {im}")
     language_checks.fresh()
@@ -119,5 +134,6 @@ def check_japanese_menu():
     menu_by_shift("ja", "nihongo", "japanese")
 
 
-BATCH = [check_thai_shift, check_thai_phrase, check_georgian_shift, check_chinese_menu, check_japanese_menu]
+BATCH = [keyfed(check) for check in (check_thai_shift, check_thai_phrase, check_georgian_shift, check_chinese_menu,
+                                       check_japanese_menu)]
 HANDS = []

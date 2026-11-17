@@ -206,7 +206,7 @@ internal class Languages(
         val listTicket = slot.begin(id)
         // The last input method's next-word table goes with its list.
         if (id != loaded.id) words.nextWords = null
-        engineWait.loading(ticket, id != InputMethod.ENGLISH_ID)
+        engineWait.loading(ticket, id)
         if (id == InputMethod.ENGLISH_ID) {
             apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return

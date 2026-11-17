@@ -977,6 +977,21 @@ private fun keysWaitForALoadingEngine() {
     wait.stop()
     same("the keyboard going: nothing waits", wait.waiting, false)
 
+    // By input method: every one but English waits, with an engine or its own letters, so a first key is never English's.
+    for (id in listOf("ru", "el", "yue-yale", "ko", "es")) {
+        wait.loading(10, id)
+        same("$id loading: the first key waits", wait.waiting, true)
+        wait.loaded(10)
+    }
+    wait.loading(11, InputMethod.ENGLISH_ID)
+    same("English loading: nothing waits", wait.waiting, false)
+    // Russian's first key while it loads: it waits behind the stop, and then it's Russian's й, not q.
+    val russian = InputMethod.parse(File("android/assets/im/ru/im.json").readText())
+    same("and after the load, Russian's Q is й", russian.letter('Q', shift = false), "й")
+    // Greek's first key the same: its A is α once loaded, where it would have been English's a.
+    val greek = InputMethod.parse(File("android/assets/im/el/im.json").readText())
+    same("and Greek's A is α", greek.letter('A', shift = false), "α")
+
     // The queue's stop, keys and touches alike, in the order typed.
     var made = 0
     val gate = LoadGate { "stop${++made}" }

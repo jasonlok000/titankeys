@@ -855,3 +855,10 @@ The owner answered the questions on GitHub; anything skipped takes the issue's d
 - **Dominoes, after trying them** (owner, 2026-11-17: "it showed up once and then stopped showing again. And it's blocking my delete. It also finishes reli quickly. It's a Easter egg we could take our time."). Every 100-word streak plays it; it never blocks a delete; it runs about 2.5× longer. E fixes it.
 - **Debug's logs always on** (owner, 2026-11-17: "for all future debugging builds let's have log on by default indefinitely."). TitanKeys Debug logs typing by default, with no time limit; the release build is unchanged. G builds it.
 - **Owner's notes from trying the 5f4d7224 build** (2026-11-17): "89 the visual shd be cap but the actual deleting shdnt b capped." (the hold deletes as long as the finger stays; only the animation is capped; E). "When I type di, I see do in the middle, but space still types di anyways." (#98 broken; D). "right after switching keyboard the suggestion doesn't change and it stuck on like Chinese" (C). "I'm still seeing loading for Yale btw." (B). "Those kind of stuff is what u need to test out later in a detailed interaction test" (A's interactions batch). "If log is fully recorded can you check what I did that's not intended by yourself? Or do I need a signal to be clearer for the timestamp?" (G: a Debug-only log pull and a marker gesture).
+
+## Chinese bar after a pick, and how many words it shows (2026-11-17, office)
+
+Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get updated after pressed and types a space.  also there shd be more than 3 words for chinese for suggestion."
+
+- Bug (B): picking the first Chinese candidate leaves the bar unchanged and types a space. The bar must switch to next words for the picked word.
+- Master's call: in Chinese (and Japanese, if it uses the three-slot bar) the bar shows as many candidates as fit, in rank order, each wide enough to tap; swipe up still opens the full list. Alphabet languages keep three.

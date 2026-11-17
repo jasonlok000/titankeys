@@ -11,7 +11,10 @@ test("Backspace asks the modifiers what it does, once a press, after exact typin
   // The press's choice lives in the modifiers, and Backspace's release clears it (bug hunt #38).
   expect(ime).toContain("when (modifiers.backspacePress(event.repeatCount, event.metaState, TypingSettings.altBackspaceForward(this),");
   expect(ime).toContain("TypingSettings.shiftBackspaceWord(this))) {");
-  expect(ime).toContain("if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()");
+  expect(ime).toMatch(/if \(keyCode == KeyEvent\.KEYCODE_DEL\) \{\s*modifiers\.backspaceReleased\(\)/);
+  // A held Backspace repeats, as on a PC: TitanKeys' own repeats where Android sends none, through the same path (BackspaceRepeat).
+  expect(ime).toContain("if (backspaceRepeat.down(event.repeatCount, handled && editing)) {");
+  expect(ime).toContain("backspaceRepeat.send { onKeyDown(KeyEvent.KEYCODE_DEL, KeyEvent.changeTimeRepeat(heldBackspace ?: down, now, count)) }");
   expect(ime.indexOf("if (field.exact) return exactKey(event)")).toBeLessThan(ime.indexOf("modifiers.backspacePress("));
 });
 

@@ -2859,6 +2859,7 @@ fun main() {
     ownerTypos(world)
     singleLetters(world)
     spaceTypesTheMiddleWord(world)
+    heldBackspaceRepeats(world)
     capitalI(world)
     apostrophes(world)
     fixSwitches(world)
@@ -2910,5 +2911,23 @@ private fun eachLanguageEndsItsSentences(world: Realistic) {
         same(starts("你好。"), true, "A full-width mark ends a sentence in every language")
     } finally {
         com.titankeys.engine.SentenceCase.ends(".?!", "")
+    }
+}
+
+/**
+ * Holding Backspace deletes on and on, as on a PC (owner, 2026-11-17: "long pressing backspace doesn't delete word repeately like
+ * on a pc only one character"). Android sends the hold's repeats about every 50 ms, faster than the app reports each delete, so
+ * each repeat must still delete: 20 repeats on a 40-letter line, the app's reports arriving only after them, take 20 letters.
+ */
+private fun heldBackspaceRepeats(world: Realistic) {
+    val line = "the quick brown fox jumps over the lazy"
+    for (settled in listOf(true, false)) {
+        val typist = Typist(world).type(line)
+        for (repeat in 0 until 20) {
+            typist.composer.backspace(false)
+            if (settled) typist.settle()
+        }
+        typist.settle()
+        same(typist.text, line.dropLast(20), "Held Backspace: 20 repeats delete 20 letters (${if (settled) "each reported" else "reports after"})")
     }
 }

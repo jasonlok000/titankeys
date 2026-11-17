@@ -22,6 +22,7 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    heldBackspaceRepeats()
     shiftShowsOnlyWhereItMatters()
     aLostFirstBackspaceDecidesAfresh()
     tappedShiftOrCapsLeavesSteeringAndShortcutsAlone()
@@ -1583,4 +1584,19 @@ private fun theShortcutsSwitchOff() {
         press(SYM)
         same(modifiers.takeKeyboardSwitch(), true, "On, Alt + Sym switches")
     }
+}
+
+/** Holding Backspace repeats it (owner, 2026-11-17), TitanKeys' repeats only where Android sends none ([BackspaceRepeat]). */
+private fun heldBackspaceRepeats() {
+    val repeat = BackspaceRepeat()
+    same(repeat.down(0, handled = true), true, "A press the keyboard took repeats after the wait")
+    same(repeat.next() == 1 && repeat.next() == 2, true, "Each repeat counts on")
+    var inner = true
+    repeat.send { inner = repeat.down(3, handled = true) }
+    same(!inner && repeat.next() == 3, true, "Its own repeat coming back through the keys doesn't stop it")
+    repeat.up()
+    same(repeat.next(), -1, "Let go: no more")
+    same(repeat.down(0, handled = false), false, "A press the app took isn't repeated by TitanKeys")
+    repeat.down(0, handled = true)
+    same(!repeat.down(1, handled = true) && repeat.next() == -1, true, "Android's own repeat arrives: TitanKeys stops, never twice")
 }

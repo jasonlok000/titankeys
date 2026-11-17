@@ -72,16 +72,32 @@ test("hold for symbols is back in Chinese: the letter leaves the code, the symbo
   expect(held).toContain("engine.key(text[0])");
 });
 
-test("a flick up picks, short as a real finger's, each logged, and the row never pages", () => {
+test("a swipe up opens the bigger menu, a page turn's length, each logged; no flick picks, and the row never pages", () => {
   const swipes = body(ime, "pageChoices");
-  expect(swipes).toContain("ChineseKeys.flickColumn(");
-  expect(swipes).toContain("choicesLog(\"flick from");
+  expect(swipes).toContain("val swipe = ChineseKeys.swipe(across, down, choicesMenuOpen)");
+  // In every input method with choices on the bar (owner, 2026-11-17: "Also for other relevant language"); Korean has none.
+  expect(swipes).toContain("ChineseKeys.Swipe.OpenMenu -> if (open.items.isNotEmpty()) openChoicesMenu()");
+  expect(swipes).not.toContain("usesBar");
+  // The open menu takes keys in any of them, but Shift opens it only in Chinese and Japanese, where it types no capitals.
+  const keys = body(ime, "chineseKey");
+  expect(keys).toContain("if (!ChineseKeys.usesBar(languages.current) && !choicesMenuOpen) return false");
+  expect(keys).toContain("openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()");
+  for (const f of ["Telex.kt", "Rules.kt"]) {
+    const engine = read(`android/kotlin/com/titankeys/keyboard/${f}`);
+    expect(engine).toContain("override fun choices(start: Int, count: Int): List<String> {");
+    expect(engine).toContain("override fun pickAt(index: Int): EngineState {");
+  }
+  expect(swipes).toContain("choicesLog(\"swipe:");
+  expect(swipes).not.toContain("pick(");
   expect(swipes).not.toContain("engine.page(");
-  // A flick up from the top row leaves the touchpad within about half a key: the row asks for a quarter.
-  expect(body(ime, "setPaging")).toContain("ChineseKeys.FLICK_KEYS else Contact.PAGE_KEYS");
-  expect(read("android/kotlin/com/titankeys/keyboard/Chinese.kt")).toContain("const val FLICK_KEYS = .25f");
+  // The owner dropped flick-to-pick (2026-11-17): no shorter distance for the bar's choices.
+  const chinese = read("android/kotlin/com/titankeys/keyboard/Chinese.kt");
+  expect(chinese).not.toContain("FLICK_KEYS");
+  expect(chinese).not.toContain("flickColumn");
+  expect(body(ime, "setPaging")).not.toContain("pageKeys");
   const contact = read("android/kotlin/com/titankeys/keyboard/Contact.kt");
-  expect(contact).toContain("val swiped = touching.travel >= pageKeys && last.time - first.time <= PAGE_MILLIS");
+  expect(contact).toContain("val swiped = touching.travel >= PAGE_KEYS && last.time - first.time <= PAGE_MILLIS");
+  expect(contact).not.toContain("var pageKeys");
   expect(contact).toContain("pageLog?.invoke(");
 });
 
@@ -96,7 +112,6 @@ test("either Shift, or a tap on the more cue, opens the bigger menu with choices
   // Either Shift, with a code typed or suggestions on the bar, opens and closes it (owner, 2026-11-17).
   expect(keys).toContain("if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {");
   expect(keys).toContain("choicesMenuOpen -> closeChoicesMenu()");
-  expect(keys).toContain("openPicker() is LanguagePicker.Choices -> openChoicesMenu()");
   // Its repeats and release are the menu's, so Shift itself never comes on.
   expect(keys).toContain("if (event.repeatCount > 0) return menuShift == keyCode");
   expect(body(ime, "chineseKeyUp")).toContain("if (keyCode != menuShift) return false");
@@ -142,8 +157,9 @@ test("the menu: a press picks, Enter and Backspace turn pages, each key logged, 
   expect(keys).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
   expect(keys).toContain("pickFromMenu(index)");
   expect(ime).toContain("if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen) {");
-  // Swipes up and down turn its pages, the Sym panel's way.
-  expect(body(ime, "pageChoices")).toContain("if (EmojiPages.forward(down)) choicesMenu?.next() else choicesMenu?.previous()");
+  // Swipes up and down turn its pages, the Sym panel's way (EmojiPages.forward: up goes forward).
+  expect(body(ime, "pageChoices")).toContain("ChineseKeys.Swipe.NextPage -> if (choicesMenu?.next() == true)");
+  expect(body(ime, "pageChoices")).toContain("ChineseKeys.Swipe.PageBefore -> if (choicesMenu?.previous() == true)");
   // It sits in the Sym panel's place, and the bar hides under it as under the panel.
   expect(ime).toContain("addView(keys)\n            addView(choices)");
   expect(ime).toContain("strip?.visibility = if (panelOpen || choicesMenuOpen) View.GONE else View.VISIBLE");

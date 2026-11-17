@@ -206,21 +206,25 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 not working but honestly bad idea. Abandon it", "唔要hold key 揀字"):
 - **Space** picks the first choice.
 - **A tap on the screen** on a choice picks it.
-- **A flick up on the touchpad** from the key under a choice picks it (the top two rows). It needs only a quarter of a key
-  (`ChineseKeys.FLICK_KEYS`): a finger flicking up from the top row leaves the touchpad within about half a key, under a page
-  turn's length, so the owner's flicks went unseen ("flick not working"). Each flick's reading is in TitanKeys Debug's log
-  (`adb logcat -s TitanKeysChoices`). Swipes on the keys never turn the row's pages.
+- **No flick picks** (owner, 2026-11-17: "Abandon the flick to select concept"), and swipes on the keys never turn the row's
+  pages: a swipe up opens the bigger menu instead (below).
 - **Hold for symbols is back** in Chinese, as in every language: a held letter's press goes out of the code again, and its
   symbol goes through the engine, as Alt's does (a mark as Chinese writes it, the code's first choice first).
 - The row shows no hover (owner, 2026-11-17): only the bigger menu does.
 
-**The bigger menu: Shift** (owner, 2026-11-17: "use the original shift as the plan instead. No hover effect needed for
-the shift because it's at the blind spot", after trying Sym). Either Shift opens it while choices are on the bar, a code's or
-the suggestions', and either Shift closes it; Shift itself never comes on for that press. Sym is always the Sym panel: with a
-code typed, a symbol picked there types the code's first choice first, then the symbol, as the comma does; with suggestions
-and no code, they're cleared, not picked. A tap on the more cue `⋯` at P opens the menu too. The cue is orange while a code is
-typed, meaning Shift opens more, though Shift isn't under it ("not like the hover type of highlight but maybe more like just
-make it orange"). P is only a letter ("Abandon p too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
+**The bigger menu: Shift** (owner, 2026-11-17: "use the original shift as the plan instead. No hover effect needed for the
+shift because it's at the blind spot", after trying Sym). Either Shift opens it while choices are on the bar, a code's or
+the suggestions', and either Shift closes it; Shift itself never comes on for that press. Sym is always the Sym panel: with
+a code typed, a symbol picked there types the code's first choice first, then the symbol, as the comma does; with
+suggestions and no code, they're cleared, not picked. A swipe up on the touchpad opens it too, a page turn's length or more,
+so a resting finger or a word's swipe can't (owner, 2026-11-17: "swiping up would expand the word list for Chinese"), and so
+does a tap on the more cue `⋯` at P. The cue is orange while a code is typed, meaning Shift opens more, though Shift isn't
+under it ("not like the hover type of highlight but maybe more like just make it orange"). P is only a letter ("Abandon p
+too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
+- **Every input method with choices on the bar has it** (owner, 2026-11-17: "Also for other relevant language"): Chinese,
+  Japanese, Vietnamese (Telex) and Hindi, which fill it from their word lists past the bar's eight. A swipe up opens it in
+  all of them; Shift only in Chinese and Japanese, since in Vietnamese it types capitals and in Hindi its own sounds. Korean
+  builds a syllable with no choices, so a swipe up there opens nothing.
 - The choices fill the three letter rows over the keys (W to O, S to L, Z to M), each as wide as it needs, as in the row.
   P shows the page ("2/5").
 - A press of the key under a choice picks it, and so does a tap on the screen. A resting finger highlights the choice over
@@ -228,8 +232,8 @@ make it orange"). P is only a letter ("Abandon p too"). Like the Sym panel's emo
 - Enter turns to the next page and Backspace to the one before, the Sym panel's own keys; a swipe up on the keys turns to
   the next and down to the one before.
 - Sym is the ✕: it closes the menu, and so does Back. A pick closes it too.
-- No swipe opens it ("actions told apart only by speed are hard to learn"). Each key it takes is in TitanKeys Debug's log, with
-  its key code: the owner's Enter once sent where the touch feed's paged, and the log will say what the real key sends.
+- A swipe up opens it only at a page turn's length, never a short flick's ("actions told apart only by speed are hard to
+  learn"). Each key and swipe it takes is in TitanKeys Debug's log, with its key code: the owner's Enter once sent where the touch feed's paged, and the log will say what the real key sends.
 
 **Keys while a code is typed:**
 - **Enter** types the code as letters. **Backspace** takes off the last code letter.

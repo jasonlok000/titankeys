@@ -3451,13 +3451,9 @@ class TitanKeysIme : InputMethodService() {
         setPaging()
     }
 
-    /**
-     * Swipes on the keys go to the panel or the bar's overlay while one is open. With choices on the bar, a flick up picks:
-     * shorter than a page turn, as a finger flicking up from the top row leaves the touchpad within about half a key.
-     */
+    /** Swipes on the keys go to the panel or the bar's overlay while one is open, a page turn's length or more. */
     private fun setPaging() {
         contact.paging = Overlays.paging(openOverlay, panelOpen)
-        contact.pageKeys = if (!panelOpen && picker is LanguagePicker.Choices && !choicesMenuOpen) ChineseKeys.FLICK_KEYS else Contact.PAGE_KEYS
         contact.pageLog = if (picker is LanguagePicker.Choices && AppBuild.kind(this) == "debug") { line -> choicesLog(line) } else null
     }
 
@@ -3482,32 +3478,26 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * A swipe on the keys with an engine's choices on the bar (docs/languages.md, "Chinese on the bar"). With the bigger menu
-     * open it turns the menu's page: up for the next, down for the one before, the Sym panel's own direction
-     * ([EmojiPages.forward]). Otherwise a flick up from the key under a choice picks it (the owner's concept test), and any
-     * other swipe does nothing: the row never pages. True if it was taken.
+     * A swipe on the keys with an engine's choices on the bar, a code's or suggestions', in any input method that has them:
+     * Chinese, Japanese, Vietnamese and Hindi (docs/languages.md, "Chinese on the bar"). A swipe up opens the bigger menu, as
+     * Shift and the more cue do, and with the menu open, up and down turn its pages
+     * ([ChineseKeys.swipe]). The row itself never pages, and nothing on it is picked by a swipe (owner, 2026-11-17: "Abandon
+     * the flick to select concept"). True if it was taken.
      */
     private fun pageChoices(points: List<Sample>): Boolean {
         val open = openPicker() as? LanguagePicker.Choices ?: return false
         val down = (points.last().y - points.first().y) * 4
         val across = (points.last().x - points.first().x) * 10
-        if (choicesMenuOpen) {
-            // Mostly sideways is no page: a slip, or a swipe meant for something else.
-            if (kotlin.math.abs(down) * 10 < kotlin.math.abs(across) * 4 || kotlin.math.abs(down) < Contact.PAGE_KEYS / 2f) return true
-            val turned = if (EmojiPages.forward(down)) choicesMenu?.next() else choicesMenu?.previous()
-            if (turned == true) haptics.play(Haptic.PanelPage)
-            return true
+        val swipe = ChineseKeys.swipe(across, down, choicesMenuOpen)
+        choicesLog("swipe: %.2f keys across, %.2f rows down, %d ms: %s%s".format(across, down,
+            points.last().time - points.first().time, swipe, if (open.items.isEmpty()) ", but no choices to show" else ""))
+        when (swipe) {
+            // Korean's syllable has no choices: nothing to open.
+            ChineseKeys.Swipe.OpenMenu -> if (open.items.isNotEmpty()) openChoicesMenu()
+            ChineseKeys.Swipe.NextPage -> if (choicesMenu?.next() == true) haptics.play(Haptic.PanelPage)
+            ChineseKeys.Swipe.PageBefore -> if (choicesMenu?.previous() == true) haptics.play(Haptic.PanelPage)
+            ChineseKeys.Swipe.Nothing -> {}
         }
-        val start = Layout.keyAt(points.first().x, points.first().y)
-        val column = ChineseKeys.flickColumn(start, across, down)
-        val item = if (column >= 0) open.choiceAt(column) else -1
-        choicesLog("flick from $start: %.2f keys across, %.2f rows down, %d ms: %s".format(across, down,
-            points.last().time - points.first().time, when {
-                column < 0 -> "not a flick up from the top two rows"
-                item < 0 -> "no choice over column $column"
-                else -> "picks ${open.items[item]}"
-            }))
-        if (item >= 0) pick(open, item)
         return true
     }
 
@@ -3697,7 +3687,7 @@ class TitanKeysIme : InputMethodService() {
     private var choicesMenu: ChoicesMenu? = null
     private val choicesMenuOpen get() = choicesMenu?.visibility == View.VISIBLE
 
-    /** Shift, or a tap on the more cue, with choices on the bar: the bigger menu opens, on its first page. */
+    /** Shift, a swipe up or a tap on the more cue, with choices on the bar: the bigger menu opens, on its first page. */
     private fun openChoicesMenu() {
         val open = openPicker() as? LanguagePicker.Choices ?: return
         val engine = languages.engine ?: return
@@ -3766,13 +3756,16 @@ class TitanKeysIme : InputMethodService() {
      * taken.
      */
     private fun chineseKey(event: KeyEvent): Boolean {
-        if (event.isSystem || !ChineseKeys.usesBar(languages.current) || inGuide) return false
+        if (event.isSystem || inGuide) return false
+        // The bigger menu, open in any input method a swipe up opened it in (Vietnamese, Hindi), takes every key.
+        if (!ChineseKeys.usesBar(languages.current) && !choicesMenuOpen) return false
         val keyCode = event.keyCode
         if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
             if (event.repeatCount > 0) return menuShift == keyCode
             when {
                 choicesMenuOpen -> closeChoicesMenu()
-                openPicker() is LanguagePicker.Choices -> openChoicesMenu()
+                // Shift opens it only in Chinese and Japanese: elsewhere it types capitals, or Hindi's own sounds.
+                openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
                 else -> return false
             }
             choicesLog("Shift ($keyCode): the bigger menu ${if (choicesMenuOpen) "opens" else "closes"}")

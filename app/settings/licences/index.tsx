@@ -39,6 +39,8 @@ const licences = [
   { title: "librime-predict", subtitle: "BSD-3-Clause. Suggests the next Chinese word.", url: "https://github.com/rime/librime-predict" },
   // F: draft. Cantonese's grammar model and its plugin (#56).
   { title: "librime-octagram", subtitle: "GPL-3.0. Lets Rime weigh which words go together.", url: "https://github.com/lotem/librime-octagram" },
+  // F: draft. Mandarin's grammar model (#56).
+  { title: "Mandarin grammar model", subtitle: "LGPL-3.0. lotem's rime-octagram-data, for Pinyin and Zhuyin.", url: "https://github.com/lotem/rime-octagram-data" },
   { title: "Cantonese grammar model", subtitle: "CC BY-SA 4.0. TitanKeys' own, counted from Cantonese Wikipedia (CC BY-SA 4.0), HKCanCor (CC BY 4.0) and Common Voice (CC0).", url: "https://zh-yue.wikipedia.org" },
   { title: "OpenCC", subtitle: "Apache 2.0. Gives you Simplified, Hong Kong or Taiwan characters.", url: "https://github.com/BYVoid/OpenCC" },
   { title: "Rime's libraries", subtitle: "marisa-trie, LevelDB, yaml-cpp, spdlog, Snappy and Boost", url: "https://github.com/rime/librime/tree/master/deps" },

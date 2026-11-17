@@ -440,7 +440,8 @@ CHINESE = {
                      "rime-cantonese (CC BY 4.0)"
                      ", with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"),
     "zh-pinyin": ("漢語拼音", "Mandarin, Pinyin", "拼", "zh", "tk_pinyin",
-                  "rime-luna-pinyin and rime-essay (LGPL-3.0)"),
+                  "rime-luna-pinyin and rime-essay (LGPL-3.0)"
+                  ", with lotem's Mandarin grammar model (rime-octagram-data, LGPL-3.0)"),
     # Hong Kong's standard shape-based input methods, and Taiwan's Zhuyin on the Hsu layout, which fits the Titan's 26 letters
     # (the standard 大千 layout needs the number row): owner and Orchestrator, 2026-11-17.
     "zh-cangjie": ("倉頡", "Chinese, Cangjie", "倉", "zh", "tk_cangjie",
@@ -448,7 +449,8 @@ CHINESE = {
     "zh-quick": ("速成", "Chinese, Quick", "速", "zh", "tk_quick",
                  "rime-quick's Quick 5 (LGPL-3.0) on rime-cangjie's dictionary (marked GPL) and rime-essay (LGPL-3.0)"),
     "zh-zhuyin": ("注音 · 許氏", "Mandarin, Zhuyin (Hsu layout)", "注", "zh", "tk_zhuyin",
-                  "rime-bopomofo's Zhuyin spelling rules on rime-terra-pinyin's word list (LGPL-3.0, refined from Chewing's)"),
+                  "rime-bopomofo's Zhuyin spelling rules on rime-terra-pinyin's word list (LGPL-3.0, refined from Chewing's)"
+                  ", with lotem's Mandarin grammar model (rime-octagram-data, LGPL-3.0)"),
 }
 
 CHINESE_NOTICE = ("Typed with Rime (librime, BSD-3-Clause) and OpenCC (Apache License 2.0). The words and spelling rules: "

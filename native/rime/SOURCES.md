@@ -64,6 +64,7 @@ Japanese form of 對, last). Then it adds words.hk's word counts to the weights,
 | [rime-quick](https://github.com/rime/rime-quick): Quick 5's dictionary and spelling rule | `207d1efcc0dc9574510b61be861544edcf993736` (2026-11-10) | LGPL-3.0 |
 | [rime-terra-pinyin](https://github.com/rime/rime-terra-pinyin): Mandarin with tones, for Zhuyin (refined from Chewing's data, LGPL) | `723e51bc266cf9464530c1ddedb856aa18e3da34` (2026-09-18) | LGPL-3.0 |
 | [rime-bopomofo](https://github.com/rime/rime-bopomofo)'s Zhuyin spelling rules (`zhuyin.yaml`), copied into `tk_zhuyin.schema.yaml` | `6085c9a38a4a728047862b33d67eee18aa86f3b9` (2026-05-09) | LGPL-3.0 |
+| [rime-octagram-data](https://github.com/lotem/rime-octagram-data), its `hant` branch: `zh-hant-t-essay-bgw.gram`, Mandarin's grammar model for Pinyin and Zhuyin, shipped as it is (SHA-256 `0488ebd6688f900a39200f2b794f2f99bcbf1e8fc27280ae4a2324b08b1559c1`) | `97bf55046aad163c3d1881abae5312040b1bbed9` | LGPL-3.0 |
 | [rime-prelude](https://github.com/rime/rime-prelude): Rime's shared files, punctuation and key bindings | `082425ea0684bca36474415d4a0e8db9b016487e` | LGPL-3.0 |
 | OpenCC's conversion dictionaries and configs (from librime's `deps/opencc` above) | `025f371` | Apache-2.0 |
 

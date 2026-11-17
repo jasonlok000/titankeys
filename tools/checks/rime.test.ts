@@ -146,8 +146,17 @@ test("Cantonese's grammar model: librime-octagram built in, the model counted by
   // Yale and Jyutping use it, counting pairs of single characters too; the others have none.
   for (const id of ["tk_yale", "tk_jyutping"])
     expect(read(`native/rime/schemas/${id}.schema.yaml`)).toContain("grammar: { language: tk_yue, collocation_min_length: 2 }");
-  for (const id of ["tk_pinyin", "tk_cangjie", "tk_quick", "tk_zhuyin"])
+  // Pinyin and Zhuyin use lotem's Mandarin model (LGPL-3.0) with octagram's defaults; Cangjie and Quick have none.
+  for (const id of ["tk_pinyin", "tk_zhuyin"])
+    expect(read(`native/rime/schemas/${id}.schema.yaml`)).toMatch(/^grammar: \{ language: zh-hant-t-essay-bgw \}$/m);
+  for (const id of ["tk_cangjie", "tk_quick"])
     expect(read(`native/rime/schemas/${id}.schema.yaml`)).not.toMatch(/^grammar:/m);
+  expect(data).toMatch(/^MANDARIN_GRAMMAR_SHA256=[0-9a-f]{64}$/m);
+  expect(read("android/assets/rime.sha256")).toMatch(/ zh-hant-t-essay-bgw\.gram$/m);
+  expect(read("native/rime/SOURCES.md")).toContain("`zh-hant-t-essay-bgw.gram`");
+  expect(read("app/settings/licences/index.tsx")).toMatch(/title: "Mandarin grammar model", subtitle: "LGPL-3\.0\./);
+  for (const ident of ["zh-pinyin", "zh-zhuyin"])
+    expect(read(`android/assets/im/${ident}/NOTICE`)).toContain("lotem's Mandarin grammar model (rime-octagram-data, LGPL-3.0)");
   expect(read("android/assets/rime.sha256")).toMatch(/ tk_yue\.gram$/m);
   // The model carries Wikipedia's CC BY-SA 4.0; the plugin is GPL-3.0 at Trime's commit. Both credited, in the app too.
   expect(read("licences/Rime-cantonese-grammar-CC-BY-SA-4.0.txt")).toContain("Attribution-ShareAlike 4.0 International");

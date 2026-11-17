@@ -3,6 +3,9 @@
 
     python3 -I tools/im/next_words.py build <id> <text file> [...] [--words <word list>] [--out <file>] [--top 8] [--min 2]
     python3 -I tools/im/next_words.py check <id> <text file> [...] [--words <word list>] [--every 10]
+    python3 -I tools/im/next_words.py notice <folder id> <corpus> <table file> <extra note or "">
+
+tools/im/next_words_all.sh builds every table from tools/im/next_words_corpora.json and writes the NOTICE lines.
 
 <text file> is one sentence per line, as in the Leipzig Corpora Collection's <corpus>-sentences.txt ("<number><TAB>
 sentence"; the number is dropped) or plain text. "check" holds out every 10th sentence, builds from the rest, and
@@ -29,7 +32,23 @@ from collections import Counter, defaultdict
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 IM = os.path.join(ROOT, "android", "assets", "im")
 START = "<s>"
-TOKEN = re.compile(r"[^\W\d_](?:[\w'\-]*[^\W\d_])?|'[^\W\d_]+")
+
+def _marks():
+    """Every combining mark as a character class (Python's \\w leaves out vowel signs such as Devanagari's)."""
+    out, start = [], None
+    for c in range(sys.maxunicode + 2):
+        mark = c <= sys.maxunicode and unicodedata.category(chr(c)).startswith("M")
+        if mark and start is None:
+            start = c
+        elif not mark and start is not None:
+            out.append(re.escape(chr(start)) + ("-" + re.escape(chr(c - 1)) if c - 1 > start else ""))
+            start = None
+    return "".join(out)
+
+
+MARKS = _marks()
+LETTER = rf"(?:[^\W\d_]|[{MARKS}])"
+TOKEN = re.compile(rf"{LETTER}(?:(?:[\w'\-]|[{MARKS}])*{LETTER})?|'{LETTER}+")
 THAI = re.compile(r"[฀-๿]+")
 HANGUL = re.compile(r"[가-힣]+")
 
@@ -123,13 +142,25 @@ def count(lines, words, script):
     return pairs
 
 
-def table(pairs, top, least):
+def table(pairs, top, least, max_mb=0.0):
+    """Each first word's top next words. With max_mb, the rarest of those pairs go first until the file fits."""
     after = defaultdict(list)
     for (a, b), n in pairs.items():
         if n >= least:
             after[a].append((n, b))
-    return {a: [b for _, b in sorted(nexts, key=lambda x: (-x[0], x[1]))[:top]] for a, nexts in after.items()}, \
-        {(a, b): n for (a, b), n in pairs.items() if n >= least}
+    rows = [(n, a, b) for a, nexts in after.items() for n, b in sorted(nexts, key=lambda x: (-x[0], x[1]))[:top]]
+    if max_mb:
+        budget, kept = max_mb * 1e6, []
+        for n, a, b in sorted(rows, key=lambda r: -r[0]):
+            budget -= len(f"{a} {b}\t{n}\n".encode("utf-8"))
+            if budget < 0:
+                break
+            kept.append((n, a, b))
+        rows = kept
+    nexts = defaultdict(list)
+    for n, a, b in sorted(rows, key=lambda r: (r[1], -r[0], r[2])):
+        nexts[a].append(b)
+    return dict(nexts), {(a, b): n for n, a, b in rows}
 
 
 def korean_words(lines, vocabulary):
@@ -155,13 +186,21 @@ def load(args):
     folder = os.path.join(IM, args.id)
     im = json.load(open(os.path.join(folder, "im.json"), encoding="utf-8"))
     lines = list(sentences(args.text))
+    if args.id == "sr-latn":
+        # Its word list is the Cyrillic one written in Latin letters by make.py, so the text is too.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("make", os.path.join(ROOT, "tools", "im", "make.py"))
+        make = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(make)
+        cyrillic = re.compile("[" + "".join(make.SERBIAN_LATIN_LETTERS) + "".join(make.SERBIAN_LATIN_LETTERS).upper() + "]+")
+        lines = [cyrillic.sub(lambda m: make.serbian_latin(m.group(0)) or m.group(0), line) for line in lines]
     return im, im.get("script") or "", lines, folder
 
 
 def build(args):
     im, script, lines, folder = load(args)
     for variant, words in word_lists(im, folder, args, lines):
-        nexts, kept = table(count(lines, words, script), args.top, args.min)
+        nexts, kept = table(count(lines, words, script), args.top, args.min, args.max_mb)
         name = f"pairs-{variant}.txt" if variant else "pairs.txt"
         out = args.out or os.path.join(folder, name)
         rows = sorted(((a, b, kept[(a, b)]) for a, bs in nexts.items() for b in bs), key=lambda r: (r[0], -r[2], r[1]))
@@ -181,7 +220,7 @@ def check(args):
     train = [l for i, l in enumerate(lines) if i % args.every]
     held = [l for i, l in enumerate(lines) if not i % args.every]
     for variant, words in word_lists(im, folder, args, train):
-        nexts, _ = table(count(train, words, script), args.top, args.min)
+        nexts, _ = table(count(train, words, script), args.top, args.min, args.max_mb)
         res = Counter()
         for line in held:
             prev = START
@@ -201,7 +240,27 @@ def check(args):
                   f" {res[kind + ' top 3'] / n:.1%}")
 
 
+LEIPZIG_NOTICE = ("Next words ({file}): counts of word pairs from the Leipzig Corpora Collection's {corpus} "
+                  "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0{extra}. D. Goldhahn, T. Eckart and U. Quasthoff: "
+                  "Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. "
+                  "Built by tools/im/next_words.py; only the counts of the most common word pairs are included.")
+
+
+def notice(folder_id, corpus, file, extra):
+    """Writes the folder's NOTICE line for its table, replacing an older one for the same file."""
+    path = os.path.join(IM, folder_id, "NOTICE")
+    lines = open(path, encoding="utf-8").read().rstrip("\n").split("\n")
+    lines = [l for l in lines if not l.startswith(f"Next words ({file}):")]
+    while lines and not lines[-1]:
+        lines.pop()
+    lines += ["", LEIPZIG_NOTICE.format(file=file, corpus=corpus, extra=f", {extra}" if extra else "")]
+    open(path, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
+
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "notice":
+        notice(*sys.argv[2:6])
+        return
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("mode", choices=["build", "check"])
     p.add_argument("id")
@@ -212,6 +271,8 @@ def main():
     p.add_argument("--min", type=int, default=2)
     p.add_argument("--every", type=int, default=10)
     p.add_argument("--vocabulary", type=int, default=50_000)
+    p.add_argument("--max-mb", dest="max_mb", type=float, default=0.0,
+                   help="drop the rarest pairs until the table fits in this many MB (0: no limit)")
     args = p.parse_args()
     (build if args.mode == "build" else check)(args)
 

@@ -79,6 +79,12 @@ class WordList private constructor(
     }
 
     companion object {
+        /** Every word list still in memory, weakly: TitanKeys Debug's LeakCheck lists them (a switch must free the last). */
+        private val live = java.util.Collections.synchronizedMap(java.util.WeakHashMap<WordList, String>())
+
+        /** What [live] holds now: one line for each word list still in memory. */
+        fun alive(): List<String> = synchronized(live) { live.values.toList() }
+
         /** The most matches looked at for one prefix: enough for a one-letter prefix, where the commonest words come first. */
         private const val MAX_SCAN = 20_000
 
@@ -101,9 +107,11 @@ class WordList private constructor(
                 words += word
                 counts += fields.firstOrNull { it.startsWith("f=") }?.removePrefix("f=")?.toIntOrNull() ?: 0
             }
-            val foldedWords = words.map { fold(it, locale) }
+            // Most words fold to themselves: they share the word's own string, about half a list's strings.
+            val foldedWords = words.map { word -> fold(word, locale).let { if (it == word) word else it } }
             val order = foldedWords.indices.sortedBy { foldedWords[it] }.toIntArray()
             return WordList(words.toTypedArray(), counts.toIntArray(), Array(order.size) { foldedWords[order[it]] }, order, locale)
+                .also { live[it] = "${locale.toLanguageTag()} ${it.size} words" }
         }
     }
 }
@@ -142,5 +150,44 @@ object WordBreak {
         // Marks belong to the letter before them, so the piece never starts with one.
         while (best > 0 && Character.getType(text[best]).let { it == Character.NON_SPACING_MARK.toInt() || it == Character.COMBINING_SPACING_MARK.toInt() }) best--
         return text.substring(best)
+    }
+}
+
+/**
+ * The current input method's word list, and the one being loaded: never more than one list kept, whatever the switches. A
+ * switch to another input method drops the list at once, before the next loads, so two lists never sit in memory together
+ * for long; a load that a later switch overtook is dropped as it arrives (an OutOfMemoryError after 18 switches on the
+ * phone, 2026-11-17).
+ */
+class WordListSlot {
+    /** The input method whose list [list] is, or is being loaded for. */
+    var id: String? = null
+        private set
+    var list: WordList? = null
+        private set
+    private var ticket = 0
+
+    /** A switch to [id] starts: a ticket for its load. Another input method's list goes now. */
+    fun begin(id: String): Int {
+        if (id != this.id) list = null
+        this.id = id
+        return ++ticket
+    }
+
+    /** A load came back: kept only if it's the latest switch's. True if kept. */
+    fun done(ticket: Int, words: WordList?): Boolean {
+        if (ticket != this.ticket) return false
+        list = words
+        return true
+    }
+
+    /** Whether a load for [ticket] is still wanted: a load that a later switch overtook needn't start. */
+    fun wanted(ticket: Int) = ticket == this.ticket
+
+    /** Nothing kept: the keyboard is going. */
+    fun clear() {
+        ticket++
+        id = null
+        list = null
     }
 }

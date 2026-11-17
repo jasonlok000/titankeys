@@ -478,6 +478,12 @@ Paths are under `android/kotlin/com/titankeys/`. Line numbers are from 2026-11-1
 - **`InputMethods`** (new, `keyboard/InputMethods.kt`): reads the index, keeps the current input method, loads its
   `im.json` and word list when it's picked, and frees the last one. English stays as it is: `SwipeTyping` keeps loading its
   models at start (`engine/SwipeTyping.java:151`), and `AutocorrectLoader` keeps loading English's lists per field.
+  - **Memory** (the phone's OutOfMemoryError after 18 switches, 2026-11-17): `WordListSlot` keeps one word list at most, and
+    a switch drops the last one before the next loads. One loader thread loads one input method at a time, and a load that a
+    later switch overtook never starts. A list shares the string of each word that folds to itself. The keyboard's
+    `onDestroy` stops its engines, warm ones too. `tests/languages` switches 30 times through real lists and checks that one
+    list at most stays and the heap stays flat. TitanKeys Debug's LeakCheck reports the keyboards, word lists and engines in
+    memory, and the heap.
 - **Letters:** a letter key becomes text in `TitanKeysIme.key()` (`keyboard/TitanKeysIme.kt:3465`), from
   `event.getUnicodeChar(...)`, then `Composer.type()` (`keyboard/Composer.kt:636`). For a non-`qwerty` input method,
   `key()` asks `InputMethods` for the key's letter instead, and upper-cases it with the input method's locale. TitanKeys

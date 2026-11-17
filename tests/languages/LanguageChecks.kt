@@ -58,6 +58,7 @@ fun main(args: Array<String>) {
     androidsListFollowsTheOnes()
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
+    if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -687,6 +688,57 @@ private fun wordBreakFindsTheWord(method: InputMethod, read: WordList, list: Fil
     println("${method.id}: the word being typed found after another: %.1f%% of starts, %.1f%% of whole words (%d tries)".format(startShare, wholeShare, tries))
     check("${method.id}: a word's start is found", startShare >= 80.0) { "%.1f%%".format(startShare) }
     check("${method.id}: a whole word is found", wholeShare >= 90.0) { "%.1f%%".format(wholeShare) }
+}
+
+/** Collects garbage until the weakly held word lists settle. */
+private fun collect() = repeat(4) {
+    System.gc()
+    Thread.sleep(50)
+}
+
+private fun usedMb(): Long = Runtime.getRuntime().let { (it.totalMemory() - it.freeMemory()) / 1_048_576 }
+
+/**
+ * The phone's OutOfMemoryError after 18 switches (2026-11-17): 30 switches through the input methods with word lists, loaded
+ * as the keyboard loads them ([WordListSlot]), must keep one list at most, and the heap must not grow with them.
+ */
+private fun switchingKeepsOneList(folder: File) {
+    val methods = folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }.mapNotNull { dir ->
+        runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull()
+            ?.takeIf { it.words != null && it.engine == null }?.let { it to File(dir, it.words!!) }
+    }
+    check("enough input methods with word lists for 30 switches", methods.size >= 15) { "${methods.size}" }
+    val slot = WordListSlot()
+    collect()
+    val before = usedMb()
+    var most = 0
+    var after5 = 0L
+    repeat(30) { switch ->
+        val (method, file) = methods[switch % methods.size]
+        val ticket = slot.begin(method.id)
+        // A switch that a later one overtakes is dropped as its list arrives.
+        if (switch % 7 == 3) {
+            val overtaken = WordList.read(file.useLines { it.toList() }.asSequence(), method.javaLocale)
+            val next = methods[(switch + 1) % methods.size].first
+            val later = slot.begin(next.id)
+            check("an overtaken load is dropped", !slot.done(ticket, overtaken))
+            slot.done(later, null)
+            slot.begin(method.id)
+        }
+        val list = WordList.read(file.useLines { it.toList() }.asSequence(), method.javaLocale)
+        slot.done(slot.begin(method.id), list)
+        collect()
+        most = maxOf(most, WordList.alive().size)
+        if (switch == 4) after5 = usedMb()
+    }
+    val after30 = usedMb()
+    println("switching: 30 switches through ${methods.size} input methods, at most $most word list(s) held, heap ${before} MB before, " +
+        "$after5 MB after 5, $after30 MB after 30")
+    check("one word list at most in memory after each switch", most <= 1) { "$most" }
+    check("the heap doesn't grow with switches", after30 - after5 <= 40) { "$after5 MB after 5, $after30 MB after 30" }
+    slot.clear()
+    collect()
+    same("no word list once the keyboard goes", WordList.alive().size, 0)
 }
 
 private fun everyInputMethodInTheFolder(folder: File) {

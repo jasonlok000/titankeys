@@ -205,15 +205,19 @@ def check_phrases():
     """B's Mandarin grammar: whole phrases from one code, read back after Space (O). Pinyin: nibamenkaizhezhenshitaibuxiaoxinle
     types 你把门开着真是太不小心了; Zhuyin (Hsu): mwlziezckcxajew types 猫儿在椅子上睡觉."""
     import language_checks
-    for im, typed, want in (("zh-pinyin", "nibamenkaizhezhenshitaibuxiaoxinle", "你把门开着真是太不小心了"),
-                            ("zh-zhuyin", "mwlziezckcxajew", "猫儿在椅子上睡觉")):
+    # Each phrase as the Chinese variant writes it (zh_hans, zh_tw, zh_hk): the owner's phone types traditional, and run-as
+    # can't read which variant is set, so any of them passes (2026-11-17's resumed run).
+    for im, typed, wants in (("zh-pinyin", "nibamenkaizhezhenshitaibuxiaoxinle",
+                              ("你把门开着真是太不小心了", "你把門開著真是太不小心了", "你把門開着真是太不小心了")),
+                             ("zh-zhuyin", "mwlziezckcxajew", ("猫儿在椅子上睡觉", "貓兒在椅子上睡覺"))):
+        want = " or ".join(wants)
         fresh()
         if not language_checks.turn_on(["en", im], im):
             record(f"phrase-{im}", False, f"the field didn't start with {im}")
             continue
         fresh()
         text = shot_then(f"phrase-{im}", [f"key:{k}" for k in typed] + ["+600"], ["key:space", "+500"])
-        record(f"phrase-{im}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}", f"phrase-{im}")
+        record(f"phrase-{im}", (text or "").strip() in wants, f"{typed} + Space typed {text!r}, wanted {want}", f"phrase-{im}")
     language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
 
 

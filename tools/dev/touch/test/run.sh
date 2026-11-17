@@ -175,6 +175,15 @@ languages.in_field()
 languages.adb, languages.time.sleep = real_languages_adb, real_sleep
 starts = [args for args in sent if args[:2] == ("shell", "am")]
 assert starts and all("--activity-reorder-to-front" in args for args in starts), starts
+# From the home screen too (nobody's app): the field's screen is opened, not a stop.
+sent = []
+fronts = iter(["  mCurrentFocus=Window{1 u0 com.android.launcher3/com.android.launcher3.Launcher}"] * 2 + [""] * 9)
+languages.adb = lambda *args: sent.append(args) or ("com.android.launcher3/.Launcher" if "resolve-activity" in args
+                                                   else next(fronts) if "dumpsys" in args else "")
+languages.time.sleep = lambda seconds: None
+languages.in_field()
+languages.adb, languages.time.sleep = real_languages_adb, real_sleep
+assert any(args[:3] == ("shell", "am", "start") for args in sent), sent
 # The interactions batch reads TitanKeysBar's lines (the format it was written for, D's line) and builds its longest calls.
 import interactions_batch as ib
 ib.adb = lambda *args: ("11-17 08:00:00.000 1 2 D TitanKeysBar: bar: yue-yale 你 | 呢 | 尼\n"

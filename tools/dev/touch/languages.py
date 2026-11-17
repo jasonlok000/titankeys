@@ -174,11 +174,21 @@ def front():
     return next((line for line in adb("shell", "dumpsys", "window").splitlines() if "mCurrentFocus" in line), "")
 
 
+def home_package():
+    """The home screen's package, as Android resolves HOME, or ""."""
+    out = adb("shell", "cmd", "package", "resolve-activity", "--brief", "-a", "android.intent.action.MAIN", "-c",
+              "android.intent.category.HOME").strip().splitlines()
+    return out[-1].split("/")[0].strip() if out and "/" in out[-1] else ""
+
+
 def in_field():
-    """The Space gestures screen is in front: opened when TitanKeys Debug is, never over another app."""
+    """The Space gestures screen is in front: opened when TitanKeys Debug or the home screen is, never over another app (the
+    home screen is nobody's app: a batch that found it there stopped, 2026-11-17's switcher)."""
     if FIELD_ACTIVITY in front():
         return True
-    if f" {APP}/" in front():
+    now = front()
+    home = home_package()
+    if f" {APP}/" in now or (home and f" {home}/" in now):
         # The running screen moved to the front, not a new one stacked on it (2026-11-17: eight stacked).
         adb("shell", "am", "start", *REORDER, "-n", f"{APP}/{FIELD_ACTIVITY}")
         time.sleep(2)

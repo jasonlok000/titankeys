@@ -35,6 +35,8 @@ fun main(args: Array<String>) {
     aSyncWhileTypingSelectsTheSchemaAgain()
     theDataCopiesOnceAndChecksEachFile()
     aBadCopyKeepsTheOldData()
+    onlyTheInputMethodsOnAreCopied()
+    anOlderInstallCarriesOn()
     aManifestCannotLeaveItsFolder()
     nextWordSuggestionsFollowACommit()
     spacePicksTheFirstSuggestion()
@@ -579,6 +581,73 @@ fun aBadCopyKeepsTheOldData() {
         check(!File(root, "shared.new").exists(), "and the half copy is gone")
         check(!data.install(list) { throw java.io.FileNotFoundException(it) }, "a missing file fails")
         same(null, RimeData.parse("not a manifest"), "a list that isn't sha256sum's isn't read")
+    } finally {
+        root.deleteRecursively()
+    }
+}
+
+/**
+ * Only the files of the Chinese input methods that are on are copied, and the files no schema claims; turning one on copies
+ * its files, turning one off removes them, and an update copies only what changed, one file at a time, so the phone never
+ * holds two copies of the data (docs/studies/3.0-storage.md).
+ */
+fun onlyTheInputMethodsOnAreCopied() {
+    val root = kotlin.io.path.createTempDirectory("rime").toFile()
+    try {
+        val common = "default.yaml"
+        val cantonese = "build/jyut6ping3.table.bin"
+        val grammar = "tk_yue.gram"
+        val mandarin = "build/luna_pinyin.table.bin"
+        val files = mapOf(common to "a".toByteArray(), cantonese to ByteArray(1000) { 1 }, grammar to ByteArray(500) { 2 },
+            mandarin to ByteArray(800) { 3 })
+        val groups = RimeData.groups("tk_yale\t$cantonese\ntk_yale\t$grammar\ntk_jyutping\t$cantonese\ntk_pinyin\t$mandarin\n")
+        same(setOf(cantonese, grammar), groups["tk_yale"], "the schemas file reads")
+        val data = RimeData(root)
+        val opened = mutableListOf<String>()
+        val open = { path: String -> opened += path; files.getValue(path).inputStream() }
+        check(data.install(manifest(files), groups, setOf("tk_yale"), open), "Yale's data installs")
+        same(setOf(common, cantonese, grammar), opened.toSet(), "the shared files and Yale's, only")
+        check(!File(data.shared, mandarin).exists(), "Pinyin's table isn't copied")
+        opened.clear()
+        check(data.install(manifest(files), groups, setOf("tk_yale", "tk_pinyin"), open), "Pinyin turned on")
+        same(listOf(mandarin), opened, "copies only Pinyin's files")
+        opened.clear()
+        check(data.install(manifest(files), groups, setOf("tk_pinyin"), open), "Yale turned off")
+        same(emptyList<String>(), opened, "copies nothing")
+        check(!File(data.shared, cantonese).exists() && !File(data.shared, grammar).exists(), "and Yale's files go")
+        check(File(data.shared, mandarin).isFile && File(data.shared, common).isFile, "Pinyin's and the shared ones stay")
+        // An update: only the changed file is copied, beside its place, then swapped in.
+        val newer = files + (mandarin to ByteArray(800) { 4 })
+        opened.clear()
+        File(data.user, "build").mkdirs()
+        check(data.install(manifest(newer), groups, setOf("tk_pinyin")) { path -> opened += path; newer.getValue(path).inputStream() },
+            "new data installs")
+        same(listOf(mandarin), opened, "only the file that changed is copied")
+        check(File(data.shared, mandarin).readBytes().contentEquals(newer.getValue(mandarin)), "byte for byte")
+        check(!File(root, "shared.new").exists() && data.shared.walk().none { it.name.endsWith(".new") },
+            "and no second copy is left anywhere")
+        check(!File(data.user, "build").exists(), "what Rime compiled from the old data is gone")
+        // A file that's gone from the data goes from the phone too.
+        check(data.install(manifest(newer - common), groups, setOf("tk_pinyin")) { newer.getValue(it).inputStream() },
+            "data without a file installs")
+        check(!File(data.shared, common).exists(), "and that file is gone")
+    } finally {
+        root.deleteRecursively()
+    }
+}
+
+/** An install from before (the whole data, one marker of every file) carries on without copying anything again. */
+fun anOlderInstallCarriesOn() {
+    val root = kotlin.io.path.createTempDirectory("rime").toFile()
+    try {
+        val files = mapOf("default.yaml" to "a".toByteArray(), "build/luna_pinyin.table.bin" to ByteArray(10) { 3 })
+        val data = RimeData(root)
+        data.shared.mkdirs()
+        for ((path, bytes) in files) File(data.shared, path).apply { parentFile.mkdirs(); writeBytes(bytes) }
+        File(data.shared, ".installed").writeText(manifest(files))
+        var opened = 0
+        check(data.install(manifest(files)) { opened++; files.getValue(it).inputStream() }, "the older install is current")
+        same(0, opened, "nothing is copied again")
     } finally {
         root.deleteRecursively()
     }

@@ -305,4 +305,34 @@ grep -q "$learned" "$D/two/sync/titankeys/jyut6ping3.userdb.txt" \
 cd "$REPO"
 # The list the app copies by (RimeData), and that tools/checks/rime.test.ts checks the shipped data against.
 (cd android/assets/rime && find . -type f | LC_ALL=C sort | sed 's#^\./##' | xargs sha256sum) > android/assets/rime.sha256
+# Which files each schema needs, from its compiled config: its dictionary's table and reverse table, its prism, its grammar
+# model and its next-word table. The app copies those of the input methods that are on, and every file in no schema
+# (RimeData; docs/studies/3.0-storage.md).
+python3 -I - android/assets/rime > android/assets/rime.schemas <<'PY'
+import os, re, sys
+root = sys.argv[1]
+build = os.path.join(root, 'build')
+for name in sorted(os.listdir(build)):
+    if not (name.startswith('tk_') and name.endswith('.schema.yaml')):
+        continue
+    schema = name[:-len('.schema.yaml')]
+    text = open(os.path.join(build, name), encoding='utf-8').read()
+    def value(key):
+        m = re.search(r'^\s+' + key + r':\s*"?([^"\s]+)"?\s*$', text, re.M)
+        return m.group(1) if m else None
+    files = []
+    dictionary = value('dictionary')
+    if dictionary:
+        files += [f'build/{dictionary}.table.bin', f'build/{dictionary}.reverse.bin']
+    files.append(f'build/{value("prism") or schema}.prism.bin')
+    if value('language'):
+        files.append(value('language') + '.gram')
+    if value('db'):
+        files.append(value('db'))
+    for path in files:
+        if not os.path.isfile(os.path.join(root, path)):
+            sys.exit(f'{schema}: {path} is missing')
+        print(f'{schema}	{path}')
+PY
+
 echo "built android/assets/rime ($(du -sb android/assets/rime | cut -f1) bytes, $(wc -l < android/assets/rime.sha256) files)"

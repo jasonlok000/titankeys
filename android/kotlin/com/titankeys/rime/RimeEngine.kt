@@ -54,19 +54,33 @@ class RimeEngine(
     /** Whether a Chinese variant is on: until one is, Rime's choices aren't shown. */
     val variantPicked get() = synchronized(this) { ChineseVariant.entries.any { options[it.option] == true } }
 
+    /** What the last [start] or [warm] took: Rime's open (or that it was open), the schema's select (or that it was selected). */
+    override var timing: String = ""
+        private set
+
+    private fun millisSince(nanos: Long) = (System.nanoTime() - nanos) / 1_000_000
+
     override fun start(method: InputMethod, dataDir: File): Boolean {
         val id = method.engineArg ?: return false
         if (method.engine != ENGINE) return false
         val data = RimeData(dataDir)
         synchronized(this) {
+            val began = System.nanoTime()
+            val opening = !open
             if (!open) open = runCatching { opened(rime) { data.prepareUser(); install(data) && rime.open(data.shared.path, data.user.path) } }
                 .getOrDefault(false)
+            val openMillis = millisSince(began)
             if (!open) return false
-            if ((schema != id || seen != syncs) && !select(id)) {
+            val selecting = schema != id || seen != syncs
+            val selectBegan = System.nanoTime()
+            timing = "Rime ${if (opening) "opened in $openMillis ms" else "open already"}, $id " +
+                if (selecting) "selected" else "selected already"
+            if (selecting && !select(id)) {
                 // An input method turned on after Rime opened (a warm engine keeps it open): its files come now, and Rime
                 // opens again with them, as a sync does, so the other engines select theirs again ([reopen]).
                 if (!reopen(rime, data, install) || !select(id)) return false
             }
+            if (selecting) timing += " in ${millisSince(selectBegan)} ms"
             // A restored backup's learned words merge in now ([RimeBackup]), once the schema has opened its dictionary.
             if (RimeBackup.pending(data)) {
                 sync(rime, data)
@@ -77,15 +91,24 @@ class RimeEngine(
     }
 
     /**
-     * Unpacks the data the first time and opens Rime, selecting no schema: Rime has one session, and the engine that types
-     * owns it. Rime stays open while this engine is warm, so the engine that types only selects its schema.
+     * Unpacks the data the first time, opens Rime and selects [method]'s schema, so its dictionary, grammar and OpenCC are
+     * loaded before anyone types: the keyboard types with this same engine when it switches to a Chinese input method, and
+     * a switch to [method] then has nothing left to do (owner, 2026-11-17: "I'm still seeing loading for Yale"). Rime has one
+     * session: if another engine has selected a schema since Rime opened, that one types, and this one selects nothing.
      */
     override fun warm(method: InputMethod, dataDir: File): Boolean {
         if (method.engine != ENGINE) return false
         val data = RimeData(dataDir)
         synchronized(this) {
+            val began = System.nanoTime()
             if (!open) open = runCatching { opened(rime) { data.prepareUser(); install(data) && rime.open(data.shared.path, data.user.path) } }
                 .getOrDefault(false)
+            timing = "Rime opened in ${millisSince(began)} ms"
+            val id = method.engineArg
+            if (open && id != null && schema == null && claimed(rime, this)) {
+                val selectBegan = System.nanoTime()
+                if (select(id)) timing += ", $id selected in ${millisSince(selectBegan)} ms"
+            }
         }
         return open
     }
@@ -95,6 +118,7 @@ class RimeEngine(
 
     /** Selects [id] on Rime's session, with every option set so far. */
     private fun select(id: String): Boolean {
+        selected(rime, this)
         schema = null
         seen = syncs
         if (!rime.schema(id)) return false
@@ -291,6 +315,17 @@ class RimeEngine(
         /** How many engines have each Rime open: it closes when the last stops. */
         private val users = IdentityHashMap<RimeCalls, Int>()
 
+        /** The engine that last selected a schema on each Rime's one session, since it opened: that engine types. */
+        private val selector = IdentityHashMap<RimeCalls, RimeEngine>()
+
+        private fun selected(rime: RimeCalls, engine: RimeEngine) = synchronized(users) { selector[rime] = engine }
+
+        /** Whether [engine] may select a schema while warming: no other engine has selected one since Rime opened. */
+        private fun claimed(rime: RimeCalls, engine: RimeEngine) = synchronized(users) {
+            val by = selector[rime]
+            by == null || by === engine
+        }
+
         /** How many syncs have run: each closes Rime's session, so an engine selects its schema again after one. */
         @Volatile private var syncs = 0
 
@@ -334,6 +369,7 @@ class RimeEngine(
             val count = (users[rime] ?: 1) - 1
             if (count <= 0) {
                 users.remove(rime)
+                selector.remove(rime)
                 rime.close()
             } else {
                 users[rime] = count

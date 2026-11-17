@@ -565,9 +565,13 @@ public final class TypingSettings {
         preferences(context).edit().putString("recent_apps", String.join(",", apps)).apply();
     }
 
-    /** Records touches, keys and typed text in a log on this phone. It is off until the user turns it on. */
+    /**
+     * Records touches, keys and typed text in a log on this phone. Only TitanKeys Debug has the log (RawLogGate), and there it's on
+     * from the start and stays on, with no time limit, until the owner turns it off (owner, 2026-11-17: "for all future debugging
+     * builds let's have log on by default indefinitely"). Its 200 MB cap drops the oldest data, never the logging (RawLogStore).
+     */
     public static boolean rawLog(Context context) {
-        return preferences(context).getBoolean("raw_log", false);
+        return preferences(context).getBoolean("raw_log", context.getPackageName().endsWith(".debug"));
     }
 
     public static void rawLog(Context context, boolean enabled) {

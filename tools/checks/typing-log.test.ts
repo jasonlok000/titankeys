@@ -39,6 +39,26 @@ describe("typing log: TitanKeys Debug only", () => {
     expect(await text("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt")).toContain("RawLog.removeLeftovers(this)");
   });
 
+  test("in TitanKeys Debug it's on by default and stays on, with a cap that drops old data, never a time limit (owner, 2026-11-17)", async () => {
+    const settings = await text("android/kotlin/com/titankeys/engine/TypingSettings.java");
+    // On by default only for the Debug package; a release reads false, and the gate keeps it off there anyway.
+    expect(settings).toContain('return preferences(context).getBoolean("raw_log", context.getPackageName().endsWith(".debug"));');
+    expect(await text("android/kotlin/com/titankeys/keyboard/RawLogGate.kt")).toContain('const val DEBUG_SUFFIX = ".debug"');
+    // Nothing turns it off by itself in Debug: only the switch, and removeLeftovers, which runs only where there's no log.
+    const rawLog = await text("android/kotlin/com/titankeys/keyboard/RawLog.kt");
+    expect(rawLog).toMatch(/fun removeLeftovers\(context: Context\) \{\s*if \(available\(context\)\) return/);
+    for (const file of ["RawLog.kt", "RawLogStore.kt", "RawLogWriter.kt"]) {
+      const source = await text(`android/kotlin/com/titankeys/keyboard/${file}`);
+      expect(`${file}: ${/rawLog\(\w+, false\)/.test(source.replace("if (TypingSettings.rawLog(context)) TypingSettings.rawLog(context, false)", ""))}`).toBe(`${file}: false`);
+      expect(`${file}: ${/DAYS|HOURS|expire|currentTimeMillis\(\) -/.test(source)}`).toBe(`${file}: false`);
+    }
+    // The cap makes room by deleting the oldest files, and keeps logging.
+    const store = await text("android/kotlin/com/titankeys/keyboard/RawLogStore.kt");
+    expect(store).toContain("const val CAP_BYTES = 200L * 1024 * 1024");
+    expect(store).toMatch(/private fun makeRoom\(incoming: Long\) \{[\s\S]*?for \(file in files\(\)\.dropLast\(1\)\)/);
+    expect(await text("app/settings/rawlog.tsx")).toContain("On from the start in TitanKeys Debug, and it stays on until you turn it off.");
+  });
+
   test("no public text points to the typing log", async () => {
     for (const file of ["README.md", "app/settings/guide.tsx", "site/privacy/index.html", "lib/connected-text.ts", "app/settings/feedback.tsx"])
       expect(`${file}: ${(await text(file)).includes("Typing log") ? "Typing log" : ""}`).toBe(`${file}: `);

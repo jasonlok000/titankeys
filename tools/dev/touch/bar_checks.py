@@ -8,7 +8,9 @@ from checks import Stop, play, record
 
 # A word in each, as its keys: Korean's 한국 is g k s r n r.
 WORDS = {"es": "hola", "fr": "bonjour", "ko": "gksrnr"}
-HANDS = ["A password field: the bar stays empty (no starters, no next words)"]
+HANDS = ["A password field: the bar stays empty (no starters, no next words)",
+         "Spanish: block a word from its menu, and it never shows on the bar again",
+         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it"]
 
 
 def keys(word):
@@ -24,7 +26,8 @@ def check_bar_words():
             continue
         language_checks.fresh()
         play("+800", shot=f"bar-{im}-empty", at=500)
-        record(f"bar-{im}-starters", None, f"{im}, empty field: the bar shows starters", f"bar-{im}-empty")
+        want = " (De, La, En)" if im == "es" else ""
+        record(f"bar-{im}-starters", None, f"{im}, empty field: the bar shows starters{want}", f"bar-{im}-empty")
         moves = keys(word) + ["key:space", "+900"]
         play(*moves, shot=f"bar-{im}-next", at=len(moves) * 80 + 600)
         record(f"bar-{im}-next", None, f"{im}, after {word!r} and Space: the bar shows next words", f"bar-{im}-next")
@@ -36,4 +39,26 @@ def finish():
                         "--es", "on", "en,zh-pinyin,yue-jyutping,yue-yale,af", "--es", "current", "en")
 
 
-BATCH = [check_bar_words]
+def check_learned_starter():
+    """C's word checks (main, 2026-11-17): "hola" + Space ending two sentences, then a new sentence: Hola comes first on the bar."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "es"], "es"):
+        return record("bar-es-learned", False, "the field didn't start with es")
+    language_checks.fresh()
+    sentence = keys("hola") + ["key:space", "+90", "key:space", "+500"]  # double Space: the full stop
+    play(*sentence, *sentence, "+800", shot="bar-es-learned", at=len(sentence) * 2 * 80 + 900)
+    record("bar-es-learned", None, "after \"hola\" ended two sentences, the new sentence's bar has Hola first",
+           "bar-es-learned")
+
+
+def check_korean_choices():
+    """Korean: ㅎㅏ (G, K) pending, the bar's choices include 하고 and a word starting 한."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "ko"], "ko"):
+        return record("bar-ko-choices", False, "the field didn't start with ko")
+    language_checks.fresh()
+    play("key:g", "+90", "key:k", "+800", shot="bar-ko-choices", at=600)
+    record("bar-ko-choices", None, "하 typed: the choices include 하고 and a 한 word", "bar-ko-choices")
+
+
+BATCH = [check_bar_words, check_learned_starter, check_korean_choices]

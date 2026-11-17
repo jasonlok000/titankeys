@@ -83,6 +83,10 @@ class Contact {
      * Swipes turn the panel's pages: they can be shorter and start on any key.
      */
     var paging = false
+    /** How far a paging swipe must go, in keys: [PAGE_KEYS], or less for a flick up on the bar's choices. */
+    var pageKeys = PAGE_KEYS
+    /** Hears each paging contact's decision, for TitanKeys Debug's log; null when nothing listens. */
+    var pageLog: ((String) -> Unit)? = null
 
     /** Turned off with the Swipe typing setting. A swipe then types nothing and deletes nothing. Taps and the panel do not change. */
     var swipes = true
@@ -242,7 +246,9 @@ class Contact {
         val last = points.last()
         // A finger that takes its time is looking at the keys in the panel, so its path turns no page.
         if (paging) {
-            val swiped = touching.travel >= PAGE_KEYS && last.time - first.time <= PAGE_MILLIS
+            val swiped = touching.travel >= pageKeys && last.time - first.time <= PAGE_MILLIS
+            pageLog?.invoke("touch on the keys: %.2f keys in %d ms: %s".format(touching.travel, last.time - first.time,
+                if (swiped) "a swipe" else if (touching.travel < pageKeys) "too short (under %.2f keys)".format(pageKeys) else "too slow"))
             return if (swiped) Outcome.Swipe(points.toList(), first.time, last.time) else null
         }
         if (touching.travel >= SWIPE_KEYS) {

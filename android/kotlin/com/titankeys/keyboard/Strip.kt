@@ -826,6 +826,13 @@ class Strip(
      * Where Shift's automatic arrow goes. [corner]: small in the corner whatever the words, as beside the language mark,
      * [after] px further right (past a mark that's small there too).
      */
+    /** The middle of English's auto-capital arrow, as [placeCapital] places it: the language mark over Q shares it (owner, 2026-11-17). */
+    private fun capitalCentre(): Float {
+        val height = capitalHeight()
+        val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
+        return minOf(line - wordPixels() * CAPITAL_LIFT, floor - arrow / 2 - dp(1))
+    }
+
     private fun placeCapital(corner: Boolean = false, after: Float = 0f): Pair<Float, Float> {
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
@@ -1032,7 +1039,9 @@ class Strip(
         pickerText.typeface = typeface
         pickerText.textSize = wordPixels()
         pickerText.color = look.accent
-        val baseline = StripFit.baseline(line, pickerText.textSize, floor)
+        // Centred on the line English's auto-capital arrow is centred on (owner, 2026-11-17: "match the vertical positioning
+        // center with the auto cap in english"), not on the words' baseline.
+        val baseline = capitalCentre() - (pickerText.ascent() + pickerText.descent()) / 2
         if (markIsSmall()) {
             canvas.save()
             val x = side.toFloat() / 2 + dp(2)

@@ -645,6 +645,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("availableInputMethods", JSONArray(inputMethodIndex().entries.map {
                 JSONObject().put("id", it.id).put("name", it.name).put("nameEnglish", it.nameEnglish).put("label", it.label)
                     .put("script", it.script).put("engine", it.engine ?: JSONObject.NULL)
+                    .put("howTo", JSONArray(it.howTo))
                     .put("language", JSONObject().put("id", it.language.id).put("name", it.language.name)
                         .put("nameEnglish", it.language.nameEnglish).put("label", it.language.label).put("script", it.language.script)
                         .put("experimental", it.language.experimental))

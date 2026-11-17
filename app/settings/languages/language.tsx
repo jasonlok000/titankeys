@@ -5,6 +5,7 @@ import { Note } from "../../../lib/note";
 import { MAX_LANGUAGES, MAX_PER_LANGUAGE, languagesOf, languagesOn, shownName } from "./index";
 import { spellingLabel } from "../spelling";
 import { chineseLabel } from "../chinese";
+import { HowTo } from "../../../lib/how-to";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
@@ -41,6 +42,7 @@ export default function LanguagePage() {
       {languagesFull && <Note>Four languages at a time, tops. Turn one off first.</Note>}
       {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note>Four at a time in one language, tops. Turn one off first.</Note>}
     </Section>
+    <HowTo methods={methods} />
     {language.id === "en" && <Section title="Options">
       <Field label="Spelling" href="/settings/spelling">{spellingLabel(result.data)}</Field>
     </Section>}

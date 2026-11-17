@@ -48,6 +48,8 @@ data class InputMethod(
     val starters: List<String> = emptyList(),
     /** Chinese's [starters] in Simplified characters, for the Simplified variant. Empty elsewhere. */
     val startersSimplified: List<String> = emptyList(),
+    /** A few lines on what's special to typing it, for Settings > Languages (tools/im/howto.json). Empty where it has none. */
+    val howTo: List<String> = emptyList(),
 ) {
     /**
      * What a key types: [base], and [shift] where Shift gives another letter rather than [base]'s capital (Georgian). A
@@ -203,7 +205,7 @@ data class InputMethod(
             val source = (root["source"] as? Map<*, *>)?.entries?.associate { (k, v) -> k as String to v.toString() } ?: emptyMap()
             fun list(key: String) = (root[key] as? List<*>)?.map { it as? String ?: throw Json.Error("$key must list text") }.orEmpty()
             return InputMethod(id, text("name"), text("nameEnglish"), label, text("locale"), text("script"), keys, accents,
-                textOrNull("words"), variants, rules, engine, engineArg, source, list("starters"), list("startersSimplified"))
+                textOrNull("words"), variants, rules, engine, engineArg, source, list("starters"), list("startersSimplified"), list("howTo"))
         }
 
         private val ID = Regex("[a-z]{2,3}(-[a-z0-9]{2,8})*")

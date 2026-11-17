@@ -172,6 +172,8 @@ export type State = {
  */
 export type InputMethodEntry = {
   id: string; name: string; nameEnglish: string; label: string; script: string; engine: string | null; language: Language;
+  /** A few lines on what's special to typing it, for its language's page (tools/im/howto.json); empty where it has none. */
+  howTo: string[];
 };
 
 /** A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16). */

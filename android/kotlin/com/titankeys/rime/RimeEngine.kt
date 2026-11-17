@@ -35,7 +35,9 @@ class RimeEngine(
     constructor(context: Context) : this(RimeNative, RimeAssets.installer(context))
 
     /** TitanKeys' schemas, one per Chinese input method: an input method's `"engine": { "rime": "<id>" }`. */
-    enum class Schema(val id: String) { Yale("tk_yale"), Jyutping("tk_jyutping"), Pinyin("tk_pinyin") }
+    enum class Schema(val id: String) {
+        Yale("tk_yale"), Jyutping("tk_jyutping"), Pinyin("tk_pinyin"), Cangjie("tk_cangjie"), Quick("tk_quick"), Zhuyin("tk_zhuyin")
+    }
 
     @Volatile private var open = false
     @Volatile var schema: String? = null

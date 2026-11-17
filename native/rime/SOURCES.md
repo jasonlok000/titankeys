@@ -53,7 +53,11 @@ Japanese form of 對, last). Nothing else in rime-cantonese is changed.
 | [rime-cantonese](https://github.com/rime/rime-cantonese): Jyutping's word list (shared by Yale), spelling rules, Cantonese punctuation and its Hong Kong OpenCC set | `259f0e48bba840c3a2e0d117539e96937f3d89bc` (2026-08-13) | CC BY 4.0; its place names (`jyut6ping3.maps`) ODbL 1.0 |
 | [rime-jyutping](https://github.com/rime/rime-jyutping)'s `yale.schema.yaml`, by 幸延: the Yale spelling rules, copied into `tk_yale.schema.yaml` | `ee5e72b2b50a6708162a0402b91f257323bf852b` (2025-12-30) | LGPL-3.0 |
 | [rime-luna-pinyin](https://github.com/rime/rime-luna-pinyin): Pinyin's word list and spelling rules | `56b934b099dfbeab842320f13aa8b461a6ab3e42` | LGPL-3.0 |
-| [rime-essay](https://github.com/rime/rime-essay): word counts for Pinyin | `d95eeae056df429ecf993038c325a216f0b28c5b` | LGPL-3.0 |
+| [rime-essay](https://github.com/rime/rime-essay): word counts for Pinyin, Cangjie and Quick | `d95eeae056df429ecf993038c325a216f0b28c5b` | LGPL-3.0 |
+| [rime-cangjie](https://github.com/rime/rime-cangjie): Cangjie 5's dictionary, shared by Quick | `fcb3d7dd94ac1304663d575727d24d8107f6b082` (2026-10-30) | LGPL-3.0; its dictionary, from 倉頡之友's 五倉世紀, is marked GPL in its own header, and ships under TitanKeys' GPL-3.0 |
+| [rime-quick](https://github.com/rime/rime-quick): Quick 5's dictionary and spelling rule | `207d1efcc0dc9574510b61be861544edcf993736` (2026-11-10) | LGPL-3.0 |
+| [rime-terra-pinyin](https://github.com/rime/rime-terra-pinyin): Mandarin with tones, for Zhuyin (refined from Chewing's data, LGPL) | `723e51bc266cf9464530c1ddedb856aa18e3da34` (2026-09-18) | LGPL-3.0 |
+| [rime-bopomofo](https://github.com/rime/rime-bopomofo)'s Zhuyin spelling rules (`zhuyin.yaml`), copied into `tk_zhuyin.schema.yaml` | `6085c9a38a4a728047862b33d67eee18aa86f3b9` (2026-05-09) | LGPL-3.0 |
 | [rime-prelude](https://github.com/rime/rime-prelude): Rime's shared files, punctuation and key bindings | `082425ea0684bca36474415d4a0e8db9b016487e` | LGPL-3.0 |
 | OpenCC's conversion dictionaries and configs (from librime's `deps/opencc` above) | `025f371` | Apache-2.0 |
 
@@ -71,13 +75,19 @@ changes, as text.
 - `tk_jyutping`: Cantonese in Jyutping, rime-cantonese's `jyut6ping3` without its reverse lookups, emoji and grammar
   model. Tones are optional letters: v, x, q, and vv, xx, qq for the low tones.
 - `tk_pinyin`: Mandarin in Pinyin, rime-luna-pinyin's `luna_pinyin` without its stroke lookup.
+- `tk_cangjie`: Cangjie 5 (倉頡), rime-cangjie's `cangjie5` without its Pinyin reverse lookup and its own simplification and
+  character-set switches. The code shows as Cangjie's radicals (hqi: 竹手戈).
+- `tk_quick`: Quick 5 (速成), rime-quick's `quick5`: a Cangjie code's first and last letters, without its reverse lookup.
+- `tk_zhuyin`: Mandarin in Zhuyin on the 許氏 (Hsu) layout, rime-bopomofo's Zhuyin rules on rime-terra-pinyin, its keys
+  Hsu's letters instead of the 大千 layout's (which needs the number row and , . / ; -), tones optional (d f j s), the code
+  shown as Zhuyin.
 - `tk_variants`: the Chinese variant, one option of `zh_hk`, `zh_tw`, `zh_hans` that the app sets on every session.
 
-| Variant | Cantonese (Yale, Jyutping) | Mandarin (Pinyin) |
-| --- | --- | --- |
-| Simplified (mainland China) | OpenCC `t2s` | OpenCC `t2s` |
-| Traditional (Hong Kong) | rime-cantonese's `t2hkf` | OpenCC `t2hk` |
-| Traditional (Taiwan) | OpenCC `t2tw` | `tk_t2twp`: `t2tw` with Taiwan's phrases |
+| Variant | Cantonese (Yale, Jyutping) | Mandarin (Pinyin, Zhuyin) | Cangjie, Quick |
+| --- | --- | --- | --- |
+| Simplified (mainland China) | OpenCC `t2s` | OpenCC `t2s` | OpenCC `t2s` |
+| Traditional (Hong Kong) | rime-cantonese's `t2hkf` | OpenCC `t2hk` | OpenCC `t2hk` |
+| Traditional (Taiwan) | OpenCC `t2tw` | `tk_t2twp`: `t2tw` with Taiwan's phrases | OpenCC `t2tw`, characters only: a code gives its own character |
 
 `data.sh` tries the shipped data the way the phone uses it, with the compiled tables only and a fresh user folder, and
 fails unless the first choices are right in each variant (Pinyin "ruan jian" gives 软件, 軟件 and 軟體, for instance), and

@@ -26,7 +26,14 @@ From the study's ranking:
   Galician, Basque, Estonian, Latvian, Lithuanian, Icelandic, Irish, Afrikaans, Indonesian, Esperanto, Azerbaijani), and
   Cyrillic, Greek and Georgian (Russian, Ukrainian, Belarusian, Bulgarian, Serbian, Macedonian, Greek, Kazakh, Georgian).
 - **Chinese through Rime:** Cantonese in Yale, the owner's input method and the first Chinese one, then Jyutping, and
-  Mandarin in Pinyin, with the Chinese variant setting.
+  Mandarin in Pinyin, with the Chinese variant setting. Then Hong Kong's shape-based standards, 倉頡 (Cangjie 5) and 速成
+  (Quick 5), and Taiwan's 注音 (Zhuyin) on the 許氏 (Hsu) layout (owner and Orchestrator, 2026-11-17; 九方 is proprietary
+  and left out). Zhuyin's standard 大千 layout would need Alt for 15 of its keys, the number row and , . / ; -, which the
+  Titan has only behind Alt; Hsu puts every symbol on the 26 letters, with optional tones on d f j s, and Settings names it
+  "注音 · 許氏" so a 大千 user isn't surprised. Cangjie's and Quick's codes show as their radicals on the code line
+  (hqi: 竹手戈), Zhuyin's as Zhuyin (ㄋㄧˇ ㄏㄠˇ). `tests/rime/codes.sh` types Tatoeba's Cantonese text character by
+  character: Cangjie 97.7% first choice, Quick 44.7% (two letters a character, so the pick is the user's), Zhuyin 52.0%
+  (one syllable alone; in phrases Rime's sentences decide), on the first page 100%, 86.8% and 94.3%.
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
 - **Thai** (experimental), Kedmanee with a third layer of held keys and a word break for suggestions ("Thai" below).
 - **Hindi** (experimental), typed by sound through Wikimedia's jquery.ime rules ("Hindi" below).

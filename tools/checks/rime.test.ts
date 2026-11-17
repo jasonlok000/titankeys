@@ -82,7 +82,8 @@ test("the variants are the schemas' options, one each", () => {
 test("every pinned source is in SOURCES.md, and every licence it names is in licences/", () => {
   const sources = read("native/rime/SOURCES.md");
   const pins = [...read("native/rime/build.sh").matchAll(/@([0-9a-f]{40})$/gm), ...read("native/rime/data.sh").matchAll(/@([0-9a-f]{40})$/gm)].map(match => match[1]);
-  expect(pins.length).toBe(7);
+  // build.sh's three, and data.sh's prelude, essay, luna-pinyin, cantonese, cangjie, quick and terra-pinyin.
+  expect(pins.length).toBe(10);
   for (const pin of pins) expect(sources).toContain(pin);
   for (const licence of sources.matchAll(/`licences\/([^`]+)`/g)) expect(existsSync(join(root, "licences", licence[1]))).toBe(true);
   // The library shares the app's libc++_shared.so only because both come from NDK r27c: build.sh checks the hash.

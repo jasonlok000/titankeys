@@ -57,7 +57,7 @@ test("each input method has a language: one per language, Serbian and Chinese gr
   }
   const methods = (language: string) => indexed.filter(e => e.language.id === language).map(e => e.id).sort();
   expect(methods("sr")).toEqual(["sr", "sr-latn"]);
-  expect(methods("zh")).toEqual(["yue-jyutping", "yue-yale", "zh-pinyin"]);
+  expect(methods("zh")).toEqual(["yue-jyutping", "yue-yale", "zh-cangjie", "zh-pinyin", "zh-quick", "zh-zhuyin"]);
   expect(new Set([...byId.values()].map(l => l.label)).size).toBe(byId.size);
 });
 

@@ -1,0 +1,24 @@
+{
+  "id": "zh-cangjie",
+  "name": "倉頡",
+  "nameEnglish": "Chinese, Cangjie",
+  "label": "倉",
+  "locale": "zh",
+  "script": "Hani",
+  "keys": "qwerty",
+  "accents": {},
+  "words": null,
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": "。？！.?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": {
+    "rime": "tk_cangjie"
+  },
+  "source": {
+    "words": "rime-cangjie's Cangjie 5 (LGPL-3.0; its dictionary, from 倉頡之友's 五倉世紀, marked GPL) and rime-essay (LGPL-3.0)"
+  }
+}

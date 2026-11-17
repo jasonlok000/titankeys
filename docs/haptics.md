@@ -158,9 +158,9 @@ Back within 0.8 keys of where the flick started, measured across only, so at any
 - The flick's dots land in the caret: a light texture tick for every dot as it lands.
 - A long delete's lines turn into dots as you lift, and those tick the same way as each lands. It deletes for as long as the
   finger stays, at its pace; only the picture is capped, at a bar's width of dots (#89).
-- Every 100 words of a delete streak, flicks and held deletes with no typing between and each within 2 s of the last, play the
+- Past 100 words of a delete streak, flicks and held deletes with no typing between and each within 2 s of the last, play the
   dominoes: the delete's dots drawn as tiles that fall toward the caret while a count counts the words up, 4.5 times slower than
-  the dots, about 7 s for a full row, through the lift. Their dot ticks slow with them. A key, or a new flick or hold, ends them
+  the dots, about 7 s for a full row, through the lift; a hold past 100 shows them as it goes, its count live. Their dot ticks slow with them. A key, or a new flick or hold, ends them
   at once, and the delete goes on as always. Deletes of a selection never count, and a new field starts a new streak (#89, owner,
   2026-11-17).
 - Keys crossed once the stroke is clearly a flick: crunch. If it stops being one: boundary, once, then swipe ticks (see The crunch).

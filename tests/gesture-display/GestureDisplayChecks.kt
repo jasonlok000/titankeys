@@ -457,18 +457,41 @@ private fun theDominoesAreRare() {
     repeat(50) { now += 300; if (streak.word(now, 2_000, 100)) played++ }
     same(played, 0, "The words after it don't play them again at once")
     same(streak.words, 150, "and the count goes on")
-    // Every hundred words of a streak plays them again (owner, 2026-11-17: "it showed up once and then stopped showing again").
-    repeat(50) { now += 300; if (streak.word(now, 2_000, 100)) played++ }
-    same(played to streak.words, 1 to 200, "The 200th word plays them again")
-    // Two streaks in a row, a pause between them: each plays.
+    // Past 100 they show on, once a streak, counting 150, 200, 500 (owner, 2026-11-17: "it should play when it's OVER a hundred
+    // word... Not interrupting my delete hold"): no new start at 200.
+    repeat(350) { now += 300; if (streak.word(now, 2_000, 100)) played++ }
+    same(played to streak.words, 0 to 500, "Through 500 words: no new start, the count goes on")
+    // Two streaks, a pause between them: each passes 100.
     val twice = DeleteStreak()
     var plays = 0
     var t2 = 0L
     repeat(2) {
-        repeat(100) { t2 += 250; if (twice.word(t2, 2_000, 100)) plays++ }
+        repeat(150) { t2 += 250; if (twice.word(t2, 2_000, 100)) plays++ }
         t2 += 5_000
     }
-    same(plays, 2, "Two streaks of 100 in a row: two runs")
+    same(plays, 2, "Two streaks in a row: each passes 100 once")
+
+    // A hold through 250 words: it never stops or pauses for them, and the dominoes show from the 100th word, counting live.
+    val long = GestureDisplay()
+    long.deleteHeld(120, 1_000)
+    val longStreak = DeleteStreak()
+    var at3 = 1_000L
+    repeat(250) {
+        long.wordDeleted(at3, 5)
+        if (longStreak.word(at3, 2_000, 100)) long.startDominoes(longStreak.words, at3)
+        else if (long.dominoes) long.startDominoes(longStreak.words, at3)
+        // Its pace changes on the way: the same hold, never a new one.
+        if (it == 150) long.deleteHeld(80, at3, .8f)
+        long.advance(at3, 1f)
+        if (it == 98) same(long.dominoes, false, "Under 100: the hold's own picture")
+        if (it == 99) same(long.dominoes, true, "From the 100th word: the dominoes")
+        at3 += 120
+    }
+    same(long.scene to long.deleted, Scene.DeleteHold to 250, "The hold took all 250 words, never stopped")
+    same(long.dominoes to long.dominoTotal, true to 250, "and the count is at 250, live")
+    same(long.deleteEnded(at3), true, "At the lift they play out")
+    long.run(at3, at3 + 15_000)
+    same(long.dominoes, false, "to the end")
     now += 2_001
     streak.word(now, 2_000, 100)
     same(streak.words, 1, "More than 2 s since the last word: a new streak")

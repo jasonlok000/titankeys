@@ -420,8 +420,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * the real text before the cursor, for the words on the bar: see [deleteText].
      */
     fun deleteHeld(repeatMillis: Long, now: Long, pace: Float = 1f, before: CharSequence? = null) {
-        // A hold ends the dominoes at once, as a flick does.
-        dominoes = false
+        // A new hold ends the dominoes at once, as a flick does; the same hold, its pace changing, never does.
+        if (scene != Scene.DeleteHold) dominoes = false
         if (!begin(Scene.DeleteHold, now)) return
         deleteMillis = repeatMillis
         deletePace = pace.coerceIn(0f, 1f)
@@ -1707,7 +1707,7 @@ enum class SelectionEnd(val id: String, val label: String) {
 /**
  * The delete streak that plays the dominoes (#89): words that flicks and held deletes took, each within a gap of the last, with no
  * typing between. A delete of a selection neither counts nor breaks it (owner, 2026-11-17: select-all then delete stays an
- * instant delete with the usual animation). It plays at every hundred words of a streak: [word] says so.
+ * instant delete with the usual animation). It passes its number once a streak: [word] says so.
  */
 class DeleteStreak {
     var words = 0
@@ -1715,14 +1715,15 @@ class DeleteStreak {
     private var lastAt = Long.MIN_VALUE / 2
 
     /**
-     * A word went at [now]. True each time the streak reaches another [most] words: 100, 200, 300... (owner, 2026-11-17: "it
-     * showed up once and then stopped showing again"; it played once a streak, and a streak only ended after a [gap] or typing).
+     * A word went at [now]. True as the streak passes [most] words, once a streak: from then the dominoes show and count on,
+     * 150, 200, 500, for as long as it goes (owner, 2026-11-17: "it should play when it's OVER a hundred word... Not interrupting
+     * my delete hold"). A [gap] or typing ends the streak, and the next one passes [most] again.
      */
     fun word(now: Long, gap: Long, most: Int): Boolean {
         if (now - lastAt > gap) restart()
         lastAt = now
         words++
-        return most > 0 && words % most == 0
+        return words == most
     }
 
     /** Something was typed: the streak starts over. */

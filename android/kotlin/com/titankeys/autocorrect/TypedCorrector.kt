@@ -1,5 +1,7 @@
 package com.titankeys.autocorrect
 
+import java.util.Locale
+
 // The small helpers in this file are copied from Numen's AutoReplaceController (GPL-3.0, https://github.com/jlo-aug/numen,
 // commit 7b1391c), which is a modified version of Pastiera.
 
@@ -179,13 +181,16 @@ class Autocorrect(
     /** Another field starts another session, in which undone words get a new chance. */
     fun newField() = rejected.clear()
 
+    /** [word] in lower case as the corrector lowers it: by Turkish's rules in Turkish ([TypedCorrector.lowered]). */
+    private fun lowered(word: String) = corrector?.lowered(word) ?: word.lowercase()
+
     fun undone(word: String) {
-        rejected += word.lowercase()
+        rejected += lowered(word)
     }
 
     /** The user took a fix back and then changed the word, so they were only editing. */
     fun notKept(word: String) {
-        rejected -= word.lowercase()
+        rejected -= lowered(word)
     }
 
     /** The user kept a word they had undone: noted the first time, learned the second. [before] is the text before it. */
@@ -194,7 +199,7 @@ class Autocorrect(
         if (keptOnce.contains(word)) {
             keptOnce.remove(word)
             // A capital at the start of a sentence is not part of the word, but one mid-sentence marks a name.
-            learn(if (TypedCorrector.isSentenceStartCapital(word, before)) word.lowercase() else word)
+            learn(if (TypedCorrector.isSentenceStartCapital(word, before)) lowered(word) else word)
         } else keptOnce.add(word)
     }
 }
@@ -225,8 +230,17 @@ class TypedCorrector(
      * ([suggestion]): Space then always types what was typed (corrections-bar-only.txt).
      */
     private val spaceFixes: Boolean = true,
+    /**
+     * The language's own case rules, where they differ from the root's: Turkish and Azerbaijani, whose capital of i is İ and of
+     * ı is I. The typed word is lowered by them, as the word list and the next-word tables are, and a fix gets its capital back
+     * by them. English and the rest keep the root's.
+     */
+    private val locale: Locale = Locale.ROOT,
 ) {
     private val english = keys === NoisyChannel.Keys.ENGLISH
+
+    /** [word] in lower case by the language's rules ([locale]): [Autocorrect] keeps its taken-back words this way too. */
+    fun lowered(word: String) = word.lowercase(locale)
 
     /** The last [typed] characters of the text should become [word]. */
     class Fix(val typed: String, val word: String)
@@ -287,7 +301,7 @@ class TypedCorrector(
     /** A dictionary word as a fix writes it. A name has one spelling, and other words follow the user's English spelling. */
     private fun written(word: String) = lexicon.name(word) ?: lexicon.preferredSpelling(word)
 
-    private fun recased(word: String, typed: String) = CasingHelper.applyCasing(written(word), typed, forceLeadingCapital = false)
+    private fun recased(word: String, typed: String) = CasingHelper.applyCasing(written(word), typed, forceLeadingCapital = false, locale = locale)
 
     /** The second check's [fixed] for [word], in the user's English spelling. Null if that is what [word] already is. */
     private fun respelled(fixed: String?, word: String) = fixed?.let(lexicon::preferredSpelling)?.takeUnless { it == word }
@@ -308,7 +322,7 @@ class TypedCorrector(
         TITLES[word]?.let { return it }
         if (word.length < 2 || !word.all { it.isLetter() || it == '\'' || it == '’' }) return null
         if (word.drop(1).any { it.isUpperCase() }) return null
-        val lower = word.lowercase()
+        val lower = lowered(word)
         // An ordinary word that is also a name ("curt", "Curt") is meant as typed.
         if (lower in data.known) return null
         // A rare name may be another word's slip ("cali" for "call"), so only a common one counts, or TitanKeys' own words
@@ -328,9 +342,9 @@ class TypedCorrector(
      * back, or where no word is a likely slip.
      */
     fun suggestion(word: String, before: String): String? {
-        val lower = word.lowercase()
+        val lower = lowered(word)
         if (word.length < 2 || !word.all { it.isLetter() } || isKnown(word) || lexicon.personal(word) || lower in rejected) return null
-        val previous = previousWordFor(before)
+        val previous = previousWordFor(before, locale)
         val chance = nextWordChance?.let { model -> { candidate: String -> model(before, candidate) } }
         return channel.pick(lower, previous, wordBeforePrevious(before, previous), next = null, chance = chance)?.let(channel::likelyFix)
             ?.let { recased(it, word) }
@@ -349,7 +363,7 @@ class TypedCorrector(
      * for its full word (#63), and Backspace undoes it as any fix. One typed in capitals ("ESP", "MSG") is an acronym, so it stays.
      */
     fun shorthandFix(word: String, before: String): Fix? {
-        if (!isShorthand(word) || !lexicon.expandShorthand() || isInsideAddress(before + word) || word.lowercase() in rejected) return null
+        if (!isShorthand(word) || !lexicon.expandShorthand() || isInsideAddress(before + word) || lowered(word) in rejected) return null
         if (word.length >= 2 && word.none { it.isLowerCase() } && word.any { it.isUpperCase() }) return null
         val full = fullShorthand(word) ?: return null
         return Fix(word, if (word.first().isUpperCase()) full.replaceFirstChar { it.uppercaseChar() } else full)
@@ -365,12 +379,12 @@ class TypedCorrector(
         // A single letter is meant as typed: "p" never becomes "up". Only "i" gets its capital.
         // A missed apostrophe ("don t") still joins up, as the letter itself stays.
         if (word.length == 1) {
-            if (isInsideAddress(before + word) || word.lowercase() in rejected) return null
+            if (isInsideAddress(before + word) || lowered(word) in rejected) return null
             return spacedContraction(word, before, typedPrevious) ?: fixedCapitals(word)?.let { Fix(word, it) }
         }
         val fix = typoFix(word, before, typedPrevious)
         if (fix != null) return fixedCapitals(fix.word)?.let { Fix(word, it) } ?: fix
-        if (isInsideAddress(before + word) || word.lowercase() in rejected) return null
+        if (isInsideAddress(before + word) || lowered(word) in rejected) return null
         return fixedCapitals(word)?.let { Fix(word, it) }
     }
 
@@ -379,14 +393,14 @@ class TypedCorrector(
      * keep it. The bar itself never shows them while a word is in progress. [before] is the text before the word.
      */
     fun capitals(word: String, before: String): String? =
-        if (isInsideAddress(before + word) || word.lowercase() in rejected) null else fixedCapitals(word)
+        if (isInsideAddress(before + word) || lowered(word) in rejected) null else fixedCapitals(word)
 
     /**
      * Whether the typed [word], after [before], waits for the words after it to say if it's missing its apostrophe ("its going" is
      * "it's going"): the model is there, the switch is on, and Backspace didn't take this word's fix back in this field.
      */
     fun awaitsApostrophe(word: String, before: String): Boolean = apostrophes != null && on(FixKind.CONTEXT_APOSTROPHES) &&
-        ApostropheContext.isTarget(word) && word.lowercase() !in rejected && !isInsideAddress(before + word)
+        ApostropheContext.isTarget(word) && lowered(word) !in rejected && !isInsideAddress(before + word)
 
     /** What [rest], the text from a waiting word to the cursor, says: wait, give up, or ask now. See [ApostropheContext.following]. */
     fun apostropheFollowing(rest: String) = ApostropheContext.following(rest, apostrophes?.wanted ?: ContextWindow.SENTENCE.after)
@@ -400,7 +414,7 @@ class TypedCorrector(
 
     private fun typoFix(word: String, before: String, typedPrevious: String?): Fix? {
         if (isInsideAddress(before + word)) return null
-        val lower = word.lowercase()
+        val lower = lowered(word)
         val isRejected = lower in rejected
         if (isCamelCaseName(word)) {
             // The one camel-case slip worth fixing is a missed space before a name ("andMary"), under its switch (bug hunt #9).
@@ -442,7 +456,7 @@ class TypedCorrector(
             val single = lower.dropLast(1)
             if (lexicon.frequency(single) >= DOUBLED_LAST_MIN_FREQUENCY) return Fix(word, recased(single, word))
         }
-        val previous = previousWordFor(before)
+        val previous = previousWordFor(before, locale)
         val beforePrevious = wordBeforePrevious(before, previous)
         // A script without capitals (Hebrew, Georgian) has no lower case either: in another language, no capital is casual.
         val casual = word.all { it.isLowerCase() } || !english && word.none { it.isUpperCase() } || isSentenceStartCapital(word, before)
@@ -463,7 +477,7 @@ class TypedCorrector(
         if (on(FixKind.MISSING_SPACES)) findWordSplit(word, lexicon::frequency, ::isKnown) { left, right ->
             // A rare half must be seen next to the other ("con tuned" is no missed space), and a
             // capitalised word may be a name, so it always must ("Mansell" is not "Man sell").
-            data.pairs.count(left.lowercase(), right.lowercase()) > 0 || !word.first().isUpperCase() &&
+            data.pairs.count(lowered(left), lowered(right)) > 0 || !word.first().isUpperCase() &&
                 minOf(lexicon.frequency(left), lexicon.frequency(right)) >= unattestedSplitFrequency(left, right)
         }?.let { return Fix(word, it) }
         if (word.length >= DEEP_FIX_MIN_LENGTH && letters && on(FixKind.TYPOS)) {
@@ -487,7 +501,7 @@ class TypedCorrector(
             // "mr" fixed to "me", then a word that never follows "me" ("me smith"): it was the title after all. Without capitals for
             // names, it goes back as typed.
             if (typo != null && typo.equals("mr", ignoreCase = true) && trailing.word.equals("me", ignoreCase = true)
-                && trailing.next.all { it.isLetter() } && data.pairs.count("me", trailing.next.lowercase()) == 0) {
+                && trailing.next.all { it.isLetter() } && data.pairs.count("me", lowered(trailing.next)) == 0) {
                 val title = if (on(FixKind.NAME_CAPITALS)) "Mr" else typo
                 return Review(trailing.word, title, "${trailing.word} ${trailing.next}${trailing.tail}",
                     "$title ${trailing.next}${trailing.tail}", false)
@@ -530,7 +544,7 @@ class TypedCorrector(
 
     /** Two words that are not seen together must both be common, unless one is a word that goes almost anywhere. */
     private fun unattestedSplitFrequency(left: String, right: String) =
-        if (left.lowercase() in data.shortWords || right.lowercase() in data.shortWords) MIN_SPLIT_PART_FREQUENCY else UNATTESTED_SPLIT_MIN_FREQUENCY
+        if (lowered(left) in data.shortWords || lowered(right) in data.shortWords) MIN_SPLIT_PART_FREQUENCY else UNATTESTED_SPLIT_MIN_FREQUENCY
 
     /** A space typed for the apostrophe: "I ll" to "I'll", "don t" to "don't". */
     private fun spacedContraction(word: String, before: String, typedPrevious: String?): Fix? {
@@ -538,7 +552,7 @@ class TypedCorrector(
         val previous = before.removeSuffix(" ").takeLastWhile { it.isLetter() }
         val beforePrevious = before.removeSuffix(" ").dropLast(previous.length).lastOrNull()
         if (previous.isEmpty() || beforePrevious?.isLetterOrDigit() == true || !previous.equals(typedPrevious, ignoreCase = true)
-            || "${previous.lowercase()}'${word.lowercase()}" !in SPACED_CONTRACTIONS) return null
+            || "${lowered(previous)}'${lowered(word)}" !in SPACED_CONTRACTIONS) return null
         return Fix("$previous $word", "$previous'$word")
     }
 
@@ -579,7 +593,7 @@ class TypedCorrector(
         if (word.length < MIN_SPLIT_WORD_LENGTH + 1) return null
         val capitals = (1 until word.length).filter { word[it].isUpperCase() }
         fun isNameLike(part: String) = part.length >= 2 && part.first().isUpperCase() && part.drop(1).all { it.isLowerCase() }
-            && (part in data.names || lexicon.name(part.lowercase()) == part && lexicon.frequency(part) >= PROPER_NOUN_CLASSIC_SLIP_MIN_FREQUENCY)
+            && (part in data.names || lexicon.name(lowered(part)) == part && lexicon.frequency(part) >= PROPER_NOUN_CLASSIC_SLIP_MIN_FREQUENCY)
         fun isCommon(part: String) = lexicon.frequency(part) >= if (part.length <= 2) MIN_SPLIT_SHORT_PART_FREQUENCY else NAME_SPLIT_MIN_WORD_FREQUENCY
         if (word.first().isLowerCase() && capitals.size == 1) {
             val left = word.substring(0, capitals[0])
@@ -597,7 +611,7 @@ class TypedCorrector(
     }
 
     /** A word spelled exactly this way in the word list ("VMware") is not a slip. */
-    private fun hasExactCase(word: String) = lexicon.name(word.lowercase()) == word
+    private fun hasExactCase(word: String) = lexicon.name(lowered(word)) == word
 
     private fun isPlausibleForCasing(word: String, candidate: String): Boolean {
         val frequency = lexicon.frequency(candidate)
@@ -610,7 +624,7 @@ class TypedCorrector(
         if (candidateIsName) return true
         // A long everyday word one letter off ("Yesterdar") is a slip, not a name.
         if (candidate.length >= SENTENCE_START_LONG_WORD_LENGTH && frequency >= SENTENCE_START_LONG_FIX_MIN_FREQUENCY
-            && (likelihood >= SENTENCE_START_FIX_MIN_LIKELIHOOD || editDistance(word.lowercase(), candidate.lowercase()) == 1)) return true
+            && (likelihood >= SENTENCE_START_FIX_MIN_LIKELIHOOD || editDistance(lowered(word), lowered(candidate)) == 1)) return true
         return frequency >= SENTENCE_START_FIX_MIN_FREQUENCY && likelihood >= SENTENCE_START_FIX_MIN_LIKELIHOOD
     }
 
@@ -995,7 +1009,7 @@ class TypedCorrector(
         @Volatile var sentenceEnd: (Char) -> Boolean = { it in ".!?。！？" }
 
         /** The lowercase word before the one just typed, [PairCounts.SENTENCE_START] at a sentence start, or null after symbols. */
-        internal fun previousWordFor(textBeforeWord: String): String? {
+        internal fun previousWordFor(textBeforeWord: String, locale: Locale = Locale.ROOT): String? {
             val trimmed = textBeforeWord.trimEnd(' ')
             // After a comma or colon a new clause starts, much like a sentence ("Ok, ill call").
             if (trimmed.isEmpty() || trimmed.last() == '\n' || trimmed.last() in ".!?,;:") return PairCounts.SENTENCE_START
@@ -1005,7 +1019,7 @@ class TypedCorrector(
                 return null // Not a word, or possibly cut off.
             }
             val beforeToken = trimmed.getOrNull(trimmed.length - token.length - 1)
-            return token.lowercase().takeIf { beforeToken == null || beforeToken.isWhitespace() }
+            return token.lowercase(locale).takeIf { beforeToken == null || beforeToken.isWhitespace() }
         }
 
         /** A capitalised word at the start of a sentence, as opposed to a name mid-sentence. */

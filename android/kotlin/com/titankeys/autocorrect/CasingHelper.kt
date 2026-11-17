@@ -10,11 +10,11 @@ import java.util.Locale
  */
 object CasingHelper {
 
-    private fun capitalizeFirstLetter(candidate: String): String {
+    private fun capitalizeFirstLetter(candidate: String, locale: Locale = Locale.ROOT): String {
         val idx = candidate.indexOfFirst { it.isLetter() }
         if (idx < 0) return candidate
         val first = candidate[idx]
-        val cap = if (first.isLowerCase()) first.titlecase(Locale.ROOT) else first.toString()
+        val cap = if (first.isLowerCase()) first.titlecase(locale) else first.toString()
         return candidate.substring(0, idx) + cap + candidate.substring(idx + 1)
     }
 
@@ -29,13 +29,15 @@ object CasingHelper {
     fun applyCasing(
         candidate: String,
         original: String,
-        forceLeadingCapital: Boolean = false
+        forceLeadingCapital: Boolean = false,
+        /** The language's case rules: Turkish's i capitalises as İ. */
+        locale: Locale = Locale.ROOT,
     ): String {
         if (candidate.isEmpty()) return candidate
         
         // If the field requires forced capitalization, apply titlecase
         if (forceLeadingCapital) {
-            return capitalizeFirstLetter(candidate)
+            return capitalizeFirstLetter(candidate, locale)
         }
         
         if (original.isEmpty()) return candidate
@@ -66,11 +68,11 @@ object CasingHelper {
         
         return when {
             // Case: PARENZ -> PARENZO (all uppercase)
-            allUpper -> candidate.uppercase(Locale.ROOT)
+            allUpper -> candidate.uppercase(locale)
             // Case: Parenz -> Parenzo (first uppercase, rest lowercase)
-            firstUpper && restLower -> capitalizeFirstLetter(candidate)
+            firstUpper && restLower -> capitalizeFirstLetter(candidate, locale)
             // Case: parenz -> parenzo (all lowercase)
-            allLower -> candidate.lowercase(Locale.ROOT)
+            allLower -> candidate.lowercase(locale)
             // Other cases: use the suggestion as is
             else -> candidate
         }

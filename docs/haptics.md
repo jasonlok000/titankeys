@@ -155,8 +155,10 @@ Back within 0.8 keys of where the flick started, measured across only, so at any
 
 **Delete**
 - A delete flick: gone flick.
-- The flick's dots land in the caret: a light texture tick for every dot as it lands.
-- A long delete's lines turn into dots as you lift, and those tick the same way as each lands.
+- The flick's dots go into the chomper: a light texture tick for every dot as it's eaten. Every flick shows the same row of six
+  dots, whatever it deleted (#89, owner, 2026-11-16: dots counted from the text didn't show on a long text).
+- A long delete shows the chomper eating a dot for each word while it deletes, and ends with the delete: nothing follows the
+  lift, so no ticks. It deletes for 10 s at most, at its usual pace, then stops though the finger stays (#89).
 - Keys crossed once the stroke is clearly a flick: crunch. If it stops being one: boundary, once, then swipe ticks (see The crunch).
 - Each further word while you hold: hit, as firm as the flick's first pulse, shorter as the delete speeds up. Every word plays (see A held delete's hit).
 - A flick with nothing at all to delete: no. A long delete with nothing to delete never starts; it plays the same no, once.

@@ -70,8 +70,17 @@ fun main(args: Array<String>) {
             1_512L -> display.wordDeleted(now, 7)
         }
     }
-    // A long delete with the experiment "Dots speed up when long" on.
-    sheet("speed-up", out, 64) { display, now ->
-        if (now == 1_000L) { display.speedUp = true; display.wordDeleted(now, 30) }
+    // A long word: the same fixed row as any flick, eaten by the chomper (#89, owner, 2026-11-16).
+    sheet("long-word", out, 64) { display, now -> if (now == 1_000L) display.wordDeleted(now, 5_000) }
+    // A held delete: the chomper eats a dot for each word as it goes, pauses in the pause zone, and ends with the delete at the
+    // lift, with no dots after it.
+    sheet("hold-chomp", out, 48) { display, now ->
+        if (now == 1_000L) display.deleteHeld(200, now, .4f)
+        if (now in 1_000L..1_800L && (now - 1_000L) % 192L == 0L) display.wordDeleted(now, 6)
+        if (now == 1_800L) display.deletePaused(true)
+        // The frames are 16 ms apart from 1,000 ms, so each event falls on one.
+        if (now == 2_008L) display.deletePaused(false)
+        if (now in 2_008L..2_400L && (now - 2_008L) % 192L == 0L) display.wordDeleted(now, 6)
+        if (now == 2_504L) display.deleteEnded(now)
     }
 }

@@ -449,28 +449,74 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val morphing = display.fromHold && display.dotsIn < 1f
             val pulse = if (morphing) { morph(canvas, display, left, stop, slot, mid, alpha, look); 0f }
                 else dots(canvas, display, left, stop, caret, mid, alpha, look)
-            // A lifted hold's thin solid caret grows into the dots' own while its lines turn into dots.
-            val thin = if (display.fromHold) 1f - display.dotsIn.let { it * it * (3 - 2 * it) } else 0f
-            // The dots' caret is a little taller than the letters, and grows as each dot lands, as far as the room under the line
-            // lets it; past that it grows wider instead, so a pulse shows at every Bar text size.
-            val rest = StripFit.caretHalf(text) * (CARET_HEIGHT + (1f - CARET_HEIGHT) * thin)
-            val want = rest * (1f + CARET_PULSE * pulse)
-            val half = min(want, room())
-            val wider = (want / half) / (rest / min(rest, room()))
-            bar(canvas, caret, mid, 2 * half, GuideMotion.faded(look.accent, alpha),
-                (dp(CARET_WIDTH) + (dp(STEER_CARET) - dp(CARET_WIDTH)) * thin) * wider)
+            // The chomper sits where the caret was and eats each dot as it lands: shut as one lands, open again as the next comes
+            // (#89, owner, 2026-11-16).
+            chomper(canvas, caret + dp(CARET_WIDTH), mid, 1f - pulse, chompColour(look, alpha))
             return
         }
-        // The words the hold is taking are orange, as triple Space's selected words are, and the ones still to come stay grey
-        // (owner, 2026-11-13). In the pause zone the orange ones ease back to light grey, and the caret dims.
+        // The hold: the same row of dots, which the chomper eats one by one, a dot for each word that goes, for as long as the
+        // delete goes on. A fixed picture, not the words themselves, which didn't show on a long text (#89, owner, 2026-11-16).
+        // In the pause zone the dots ease back to light grey, the chomper dims and waits with its mouth shut.
         val paused = display.pauseShown
-        val taking = blend(GuideMotion.faded(look.accent, alpha), GuideMotion.faded(look.ink, PICKED * alpha), paused)
-        lines(display, display.shownDeleted, left, stop, slot) { start, end, going ->
-            word(canvas, start, end, mid, if (going) taking else GuideMotion.faded(look.ink, WORD * alpha))
+        val colour = blend(GuideMotion.faded(look.accent, alpha), GuideMotion.faded(look.ink, PICKED * alpha), paused)
+        val shown = display.shownDeleted
+        val bite = shown - floor(shown)
+        val back = caret + dp(CARET_WIDTH)
+        val mouth = back - chompWidth()
+        val step = dp(DOT_STEP)
+        val radius = dp(DOT_RADIUS)
+        var index = 0
+        while (index < CHOMP_ROW) {
+            // The nearest dot slides into the mouth as its word goes, and the rest follow it along.
+            val x = mouth - step / 2 - (index - bite) * step
+            if (x - radius < left) break
+            if (x < mouth + radius) dot(canvas, x, mid, radius, colour)
+            index++
         }
-        // A thin solid caret, as a triple press's pick has, that blinks in the pause zone, dimmed.
-        if (display.caretShown) bar(canvas, caret, mid, 2 * caretHalf(),
-            GuideMotion.faded(look.accent, alpha * (1f - (1f - PAUSED_CARET) * paused)), dp(STEER_CARET))
+        chomper(canvas, back, mid, if (paused > 0f) 0f else chompOpen(bite),
+            chompColour(look, alpha * (1f - (1f - PAUSED_CARET) * paused)))
+    }
+
+    /**
+     * The chomper's colour, the accent at [strength] over the bar's black, opaque: its three strokes overlap at the back, and
+     * see-through ones showed darker seams there when it faded or dimmed.
+     */
+    private fun chompColour(look: Look, strength: Float) =
+        blend(look.paper or (0xFF shl 24), look.accent or (0xFF shl 24), strength.coerceIn(0f, 1f))
+
+    /** How wide the chomper is, from its mouth to its back. */
+    private fun chompWidth() = 2f * caretHalf() * CHOMP_HEIGHT * CHOMP_WIDTH
+
+    /**
+     * TitanKeys' chomper (#89, owner, 2026-11-16): a small eater of dots of its own, in the accent on the bar's black: two flat
+     * jaws on a back, a clamp that opens to the left, where the dots come from. [open] is 0 shut, a small block, to 1 wide. It
+     * is no round face with a wedge for a mouth, and has no name.
+     */
+    private fun chomper(canvas: Canvas, back: Float, mid: Float, open: Float, colour: Int) {
+        val height = 2f * caretHalf() * CHOMP_HEIGHT
+        val jaw = height * CHOMP_JAW
+        val gap = height * CHOMP_GAP * open.coerceIn(0f, 1f)
+        val left = back - chompWidth()
+        // Three round-ended strokes, as the chevron's: the upper jaw, the lower jaw and the back that joins them. Together they
+        // sit centred on the line, as everything on the bar does.
+        val upper = mid - gap / 2 - jaw / 2
+        val lower = mid + gap / 2 + jaw / 2
+        stroke.strokeWidth = jaw
+        stroke.color = colour
+        canvas.drawLine(left + jaw / 2, upper, back - jaw / 2, upper, stroke)
+        canvas.drawLine(left + jaw / 2, lower, back - jaw / 2, lower, stroke)
+        canvas.drawLine(back - jaw / 2, upper, back - jaw / 2, lower, stroke)
+    }
+
+    /**
+     * How open the hold's chomper is as a dot goes in, from [bite], how far the dot has gone (0 to 1): it opens as the dot sets
+     * off, stays open, and shuts as the dot reaches it. Between words it rests shut.
+     */
+    private fun chompOpen(bite: Float) = when {
+        bite <= 0f -> 0f
+        bite < CHOMP_OPENS -> bite / CHOMP_OPENS
+        bite < CHOMP_SHUTS -> 1f
+        else -> (1f - bite) / (1f - CHOMP_SHUTS)
     }
 
     /**
@@ -713,6 +759,16 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val CARET_HEIGHT = 24f / 17f
         const val CARET_GAP = 4f
         const val CARET_END = 8f
+        /** The chomper (#89): its height as a share of the caret's, its width as a share of its height, its jaws' thickness and
+         * its widest gap as shares of its height, and how many dots of the hold's row show at most. */
+        const val CHOMP_HEIGHT = .9f
+        const val CHOMP_WIDTH = .9f
+        const val CHOMP_JAW = .3f
+        const val CHOMP_GAP = .5f
+        const val CHOMP_ROW = 8
+        /** How far a hold's dot has gone when the chomper is wide open, and when it starts to shut on it. */
+        const val CHOMP_OPENS = .2f
+        const val CHOMP_SHUTS = .7f
         const val WORD = .28f
         const val SELECTED = .85f
         /** The dots: their size and how far apart they are at most. */

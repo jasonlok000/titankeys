@@ -296,6 +296,14 @@ private fun pathKeys(points: List<Sample>) = points.zipWithNext { a, b -> hypot(
  * a key press or a new field ends the hold without a call to this class, and a test can run it with no clock.
  */
 internal class DeleteHold(private val contact: Contact) {
+    companion object {
+        /**
+         * The longest a held delete deletes, from its first word: on a long text it stops after this, at the pace it went,
+         * instead of taking the whole text (#89, owner, 2026-11-16: "Lets cap it when it's a long text it deletes for 10s").
+         */
+        const val MOST_MILLIS = 10_000L
+    }
+
     private var still: Sample? = null
     private var started = false
     private var nextAt = 0L
@@ -316,6 +324,10 @@ internal class DeleteHold(private val contact: Contact) {
         private set
     /** True while the finger is at or past the top-speed line, so reaching it ticks once per crossing. */
     private var atTop = false
+    /** When the hold's first word went, and whether it has run its [MOST_MILLIS]: then it deletes no more until a new flick. */
+    private var startedAt = 0L
+    var over = false
+        private set
     /**
      * The zone the finger just went into, once, for its tick: [Zone.Pause] or [Zone.TopSpeed]. [follow] sets it and [crossed]
      * hands it over, so a finger that stays in a zone ticks no more.
@@ -336,7 +348,7 @@ internal class DeleteHold(private val contact: Contact) {
      * or null if the finger is not on a flick that can repeat. [allowed] is false where a delete flick would not count now.
      */
     fun moved(allowed: Boolean): Long? {
-        if (contact.deleting) return nextAt
+        if (contact.deleting) return if (over) null else nextAt
         val points = contact.points
         if (!allowed || !contact.swipes || contact.paging || contact.travel == null || !isDeleteWordSwipe(points)) {
             still = null
@@ -357,7 +369,7 @@ internal class DeleteHold(private val contact: Contact) {
      * Returns when the next word is due, sooner or later than before, or null if nothing is deleting.
      */
     fun follow(finger: Sample): Long? {
-        if (!contact.deleting || !started || !finger.valid) return null
+        if (!contact.deleting || !started || over || !finger.valid) return null
         val from = origin ?: return null
         val keys = keysFrom(from, finger)
         val back = keysBack(from, finger)
@@ -415,6 +427,11 @@ internal class DeleteHold(private val contact: Contact) {
             if (!free) return now + BUSY_MILLIS
             delete(contact.holdDelete(now) ?: return null)
         } else {
+            // A long text: the hold deletes for [MOST_MILLIS] at most, then stops, the finger still down (#89, owner, 2026-11-16).
+            if (over || now - startedAt >= MOST_MILLIS) {
+                over = true
+                return null
+            }
             // In the pause zone nothing goes; the timer only looks again, and the finger sliding out sets the next word.
             if (paused) return now + PAUSE_LOOK_MILLIS
             if (now < nextAt) return nextAt
@@ -423,6 +440,7 @@ internal class DeleteHold(private val contact: Contact) {
         }
         lastAt = now
         nextAt = now + repeatMillis
+        if (!started) startedAt = now
         started = true
         return nextAt
     }
@@ -430,6 +448,8 @@ internal class DeleteHold(private val contact: Contact) {
     fun reset() {
         still = null
         started = false
+        startedAt = 0L
+        over = false
         nextAt = 0
         lastAt = 0
         origin = null

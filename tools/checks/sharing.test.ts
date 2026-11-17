@@ -78,6 +78,9 @@ test("one switch: Sharing on counts and sends, off deletes what waits; nothing f
   // Delete what I've sent asks for every counts ID of the year too.
   expect(contributions).toContain("Counts.forget(context)");
   expect(contributions).toContain('"\\"counts\\":"');
+  // Crashes and freezes reach the totals through CrashReport's hook, set as the process starts.
+  expect(read("android/kotlin/com/titankeys/keyboard/CrashKeeper.kt")).toContain("CrashReport.counted = { context, key -> Counts.crashed(context, key) }");
+  expect(read("android/kotlin/com/titankeys/keyboard/CrashReport.kt")).toContain('counted?.invoke(app, "crash.count")');
   // Kept out of Android's backup: the no-backup folder.
   expect(counts).toContain("File(app.noBackupFilesDir, FILE)");
 });

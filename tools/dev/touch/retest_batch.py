@@ -64,6 +64,20 @@ def check_85_leaks():
     record("85-leaks", "no guide or playground in memory" in answer, f"after 15 guides: {report}")
 
 
+def row_at(text):
+    """The middle of the first view whose text is exactly text, or None (the dump is deleted at once)."""
+    path = "/data/local/tmp/tk-touch-ui.xml"
+    adb("shell", "uiautomator", "dump", path)
+    xml = adb("shell", "cat", path)
+    adb("shell", "rm", "-f", path)
+    import re
+    found = re.search(r'text="' + re.escape(text) + r'"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+    if not found:
+        return None
+    x0, y0, x1, y1 = (int(v) for v in found.groups())
+    return (x0 + x1) // 2, (y0 + y1) // 2
+
+
 def check_languages_page():
     """Settings > Languages as a screenshot: the languages on at the top, then by script. Taps only while Debug is in front."""
     def step(*command):
@@ -74,10 +88,11 @@ def check_languages_page():
     own_screen()
     adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
     time.sleep(3)
-    # The places on the 1076 x 1200 display: SETTINGS at the top right, then Languages a screen down (2026-11-16).
+    # SETTINGS at the top right of the 1076 x 1200 display; then the Languages row, by its text where the screen shows it,
+    # or where it sits since Languages came first in Settings (main 99fb0dcd): the first row, under its heading.
     step("tap", "952", "166")
-    step("swipe", "540", "1000", "540", "450", "400")
-    step("tap", "540", "720")
+    x, y = row_at("Languages") or (540, 452)
+    step("tap", str(x), str(y))
     record("settings-languages", None, "Settings > Languages: the ones on at the top, then by script", guide_checks.shot("settings-languages"))
     for _ in range(3):
         if f" {APP}/" in languages.front():

@@ -69,5 +69,13 @@ moves = [*space_batch.keys("^teh"), "+90", "key:space:60:none", "+300", "key:del
 built = subprocess.run([sys.executable, "tools/dev/touch/gestures.py", "--out", os.path.join(os.environ["TK_OUT"], "98.tki"), *moves],
                        capture_output=True, text=True)
 assert built.returncode == 0, f"#98's gestures don't build: {built.stderr[-300:]}"
+# The morning cutoff: off without TK_CUTOFF_EPOCH, on once its time has come, off before it.
+os.environ.pop("TK_CUTOFF_EPOCH", None)
+assert not checks.past_cutoff()
+os.environ["TK_CUTOFF_EPOCH"] = "0"
+assert checks.past_cutoff()
+os.environ["TK_CUTOFF_EPOCH"] = str(10 ** 12)
+assert not checks.past_cutoff()
+os.environ.pop("TK_CUTOFF_EPOCH")
 print("Batch checks passed")
 PY

@@ -131,6 +131,8 @@ def check_every_language():
     """Every input method, in the languages batch's sets with English, each with its flick, double Space and three taps."""
     for group in language_checks.sets():
         for im in group:
+            if checks.past_cutoff():
+                raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the languages didn't run")
             try:
                 if not language_checks.turn_on(["en", *group], im):
                     record(f"gestures-{im}", False, f"the field didn't start with {im}")

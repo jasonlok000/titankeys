@@ -246,6 +246,13 @@ def to_field():
         time.sleep(1.2)
 
 
+def past_cutoff():
+    """True from TK_CUTOFF_EPOCH (a Unix time) on: a night's run stops at the next check, so the owner gets the phone back
+    by morning (2026-11-17: 07:30)."""
+    cutoff = os.environ.get("TK_CUTOFF_EPOCH")
+    return bool(cutoff) and time.time() >= float(cutoff)
+
+
 def run_batch(name):
     """Runs a batch on its own: Debug is the keyboard from the start to the end, and release TitanKeys comes back only then.
     The gates still run before every gesture. A check that breaks is a NO and the batch goes on; a STOP ends it. The report is
@@ -260,6 +267,8 @@ def run_batch(name):
         keyboard("debug")
         os.environ["TK_IME_HELD"] = "1"
         for check in module.BATCH:
+            if past_cutoff():
+                raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the batch didn't run")
             try:
                 check()
             except Stop:

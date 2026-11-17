@@ -120,6 +120,11 @@ tk_debug_opened() {
 tk_wait_for_owner() {
   local waited=0 step="${TK_OWNER_POLL_S:-20}" most="${TK_OWNER_WAIT_S:-1800}"
   echo "waiting: the owner's app is in front ($(tk_front | sed 's/.* u0 //; s/}.*//')); touching nothing"
+  # The run's notification says why it waits (checks.py's run_status left its last words beside its file). A broadcast, no touch.
+  if [ -n "${TK_RUN_STATUS_FILE:-}" ] && [ -s "$TK_RUN_STATUS_FILE.args" ]; then
+    # shellcheck disable=SC2046
+    tk_adb $(cat "$TK_RUN_STATUS_FILE.args") --es note "'waiting: another app in front'" --ez done false >/dev/null 2>&1
+  fi
   while tk_owner_app; do
     [ "$waited" -ge "$most" ] && return 1
     sleep "$step"

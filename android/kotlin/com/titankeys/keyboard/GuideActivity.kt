@@ -1032,7 +1032,7 @@ class GuideActivity : Activity() {
         window.navigationBarColor = Color.TRANSPARENT
         setContentView(build())
         if (playground) {
-            playgrounds += this
+            playgrounds += java.lang.ref.WeakReference(this)
             playgroundStarting = -PLAYGROUND_QUIET_MILLIS
         } else guidesOpen++
         // During setup another keyboard may still be the phone's keyboard, and it would cover the slide.
@@ -1169,7 +1169,7 @@ class GuideActivity : Activity() {
     private var leftByBack = false
 
     override fun onDestroy() {
-        if (playground) playgrounds -= this
+        if (playground) playgrounds.removeAll { it.get().let { open -> open == null || open === this || open.isDestroyed } }
         if (playground) Log.d(TAG, "playground closed: finishing $isFinishing, told ${playgroundExit != null}")
         // Closed by something else, such as a link that opens the app's own screen over it: the front page opens it again.
         if (playground && isFinishing) {
@@ -5294,10 +5294,10 @@ class GuideActivity : Activity() {
             // The front page asks each time its window is in front, so one that is open, or that a button just closed, is enough.
             // A playground that Android is closing counts as closed: it can close after the app's window is in front. And with
             // the app's window in front, no playground is: the app's window is at the bottom of the app's screens.
-            val showing = playgrounds.any { !it.isFinishing } && !activity.hasWindowFocus()
+            val showing = openPlaygrounds().any { !it.isFinishing } && !activity.hasWindowFocus()
             val now = SystemClock.uptimeMillis()
             val quiet = now - playgroundStarting < PLAYGROUND_QUIET_MILLIS
-            Log.d(TAG, "playground asked: open ${playgrounds.size}, showing $showing, quiet $quiet, guides $guidesOpen")
+            Log.d(TAG, "playground asked: open ${openPlaygrounds().size}, showing $showing, quiet $quiet, guides $guidesOpen")
             if (showing || quiet) return
             val open = {
                 // One that is starting does not count as open yet, so a second ask in the meantime is left out.
@@ -5344,7 +5344,7 @@ class GuideActivity : Activity() {
             return made.mapNotNull { it.get() }.map { guide ->
                 val holders = listOfNotNull(
                     "the text kept for the next playground".takeIf { playgroundKept?.from?.get() === guide },
-                    "the open playgrounds' list".takeIf { guide in playgrounds },
+                    "the open playgrounds' list".takeIf { playgrounds.any { it.get() === guide } },
                     "the playground's asker".takeIf { playgroundAsker === guide })
                 "${if (guide.playground) "playground" else "guide"} ${Integer.toHexString(System.identityHashCode(guide))}: " +
                     (if (guide.isDestroyed) "destroyed, still held" else if (guide.isFinishing) "finishing" else "open") +
@@ -5359,7 +5359,16 @@ class GuideActivity : Activity() {
         }
 
         /** Playgrounds that are open now. Main thread only. */
-        private val playgrounds = ArrayList<GuideActivity>()
+        private val playgrounds = ArrayList<java.lang.ref.WeakReference<GuideActivity>>()
+
+        /**
+         * The playgrounds open now. Held weakly, and a closed one is dropped as it's read, so the list can never keep one: leak-85
+         * found a closed playground still in it on the phone (#85, 2026-11-17), though onDestroy takes each out.
+         */
+        private fun openPlaygrounds(): List<GuideActivity> {
+            playgrounds.removeAll { it.get()?.isDestroyed != false }
+            return playgrounds.mapNotNull { it.get() }
+        }
 
         /**
          * What the last playground had when it went out of sight, for the next one that shows. In memory only: a new process, after

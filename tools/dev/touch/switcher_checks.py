@@ -10,6 +10,7 @@
 
 The input methods go on through InputMethodsSet, and each check types in Debug's Space gestures field.
 """
+import re
 import time
 
 import checks
@@ -161,7 +162,6 @@ def screen_dump():
 
 def switches(xml):
     """Each switch on the screen: its middle and whether it's on."""
-    import re
     out = []
     for node in re.findall(r"<node [^>]*>", xml):
         if 'class="android.widget.Switch"' not in node and 'checkable="true"' not in node:
@@ -171,6 +171,17 @@ def switches(xml):
             x0, y0, x1, y1 = (int(v) for v in bounds.groups())
             out.append(((x0 + x1) // 2, (y0 + y1) // 2, 'checked="true"' in node))
     return out
+
+
+def row_switch(xml, label):
+    """The switch on the row of the last view whose text is [label] (on a language's page the first is its title, the last its
+    input method's row): the one whose middle is nearest that row's, or None."""
+    rows = re.findall(r'text="' + re.escape(label) + r'"[^>]*bounds="\[\d+,(\d+)\]\[\d+,(\d+)\]"', xml)
+    found = switches(xml)
+    if not rows or not found:
+        return None
+    middle = (int(rows[-1][0]) + int(rows[-1][1])) // 2
+    return min(found, key=lambda each: abs(each[1] - middle))
 
 
 def check_fifth_language_refused():
@@ -199,13 +210,13 @@ def check_fifth_language_refused():
             return record("fifth-language-refused", False, "no Afrikaans row on Settings > Languages")
         step("tap", str(row[0]), str(row[1]))
         before = screen_dump()
-        found = switches(before)
+        found = row_switch(before, "Afrikaans")
         if not found:
-            return record("fifth-language-refused", False, "no switch on Afrikaans' page")
-        x, y, was_on = found[0]
+            return record("fifth-language-refused", False, "no switch on Afrikaans' input method row")
+        x, y, was_on = found
         step("tap", str(x), str(y))
         after = screen_dump()
-        still = switches(after)
+        still = [each for each in [row_switch(after, "Afrikaans")] if each]
         shot = guide_checks.shot("fifth-language-refused")
         record("fifth-language-refused", REFUSAL in before and not was_on and bool(still) and not still[0][2] and REFUSAL in after,
                f"the note {'shown' if REFUSAL in before else 'missing'}; the switch {'on' if was_on else 'off'} before the tap, "

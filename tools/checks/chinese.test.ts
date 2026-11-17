@@ -25,7 +25,7 @@ const body = (source: string, name: string) => {
 test("the code floats over the app, above the bar's left edge, only while a code is typed", () => {
   expect(body(strip, "drawEffects")).toContain("drawCodeLine(canvas, layer)");
   const line = body(strip, "drawCodeLine");
-  expect(line).toContain("picker.lead.isEmpty()");
+  expect(line).toContain("if ((lead.isEmpty() && next.isEmpty()) || !isShown) return");
   // At the bar's size and full brightness, on black with a soft orange glow; no joined tab (owner, 2026-11-17).
   expect(line).toContain("val above = y - height - dp(CODE_GAP_DP)");
   expect(line).toContain("codeText.textSize = wordPixels()");

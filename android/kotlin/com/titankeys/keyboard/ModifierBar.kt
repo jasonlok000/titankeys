@@ -35,8 +35,7 @@ data class ModifierBar(
          * than Shift is held, so with Ctrl there is normally no such key, and the bar lists the shortcuts.
          * [symbol] gives what Alt types on a letter key.
          */
-        fun of(modifiers: Modifiers, hover: String, shiftShows: Boolean = true, radical: (String) -> String? = { null },
-               symbol: (String) -> String?): ModifierBar? {
+        fun of(modifiers: Modifiers, hover: String, shiftShows: Boolean = true, symbol: (String) -> String?): ModifierBar? {
             val alt = modifiers.alt != Modifiers.Level.Off
             // While Ctrl is down, the automatic Shift does nothing and shows nothing: the bar is Ctrl's alone. Where Shift changes
             // nothing a key types ([InputMethod.shiftMatters]: Hebrew, Chinese, Japanese), it shows nothing either.
@@ -46,8 +45,7 @@ data class ModifierBar(
                 Modifiers.Level.Locked -> CAPS
             }
             val chips = listOfNotNull(CTRL.takeIf { modifiers.ctrlHeld }, shift, ALT.takeIf { alt })
-            // Cangjie and Quick: a finger resting on a letter shows its radical, as Shift and Alt show theirs (owner, 2026-11-17).
-            if (chips.isEmpty()) return radical(hover)?.takeIf { Layout.isLetter(hover) }?.let { ModifierBar(emptyList(), it) }
+            if (chips.isEmpty()) return null
             val held = setOfNotNull(
                 CTRL.takeIf { modifiers.ctrlHeld },
                 shift?.takeIf { modifiers.holding(Modifiers.Key.Shift) },
@@ -57,7 +55,7 @@ data class ModifierBar(
                 modifiers.ctrlHeld -> Modifiers.CTRL_ACTIONS[hover]?.let { "$hover $it" } ?: SHORTCUTS
                 !Layout.isLetter(hover) -> ""
                 alt -> symbol(hover).orEmpty()
-                else -> radical(hover) ?: hover
+                else -> hover
             }
             // Only Shift is on, and only because a sentence starts here: the words stay, with a small mark.
             val automatic = modifiers.autoShifted && shift == SHIFT && !alt && !modifiers.ctrlHeld && held.isEmpty()

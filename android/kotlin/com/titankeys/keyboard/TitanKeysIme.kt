@@ -2940,12 +2940,24 @@ class TitanKeysIme : InputMethodService() {
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
             barHover.lift(event.eventTime)
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
+            main.removeCallbacks(showRadical)
+            strip?.nextKey = ""
             return
         }
         if (last == null || !barHover.touch(last.x, last.y)) return
         restingKey = barHover.key
         markMenu(restingKey)
         showModifierBar()
+        // Cangjie and Quick: a finger that stays still on a key previews its radical in the code's tab, faded ([RadicalPreview]).
+        strip?.nextKey = ""
+        main.removeCallbacks(showRadical)
+        if (RadicalPreview.of(languages.current, restingKey) != null) main.postDelayed(showRadical, RadicalPreview.REST_MILLIS)
+    }
+
+    /** The rested key's radical, faded at the end of the code's tab, once the finger has stayed [RadicalPreview.REST_MILLIS]. */
+    private val showRadical = Runnable {
+        strip?.nextKey = if (editing && !field.exact && modifiers.alt == Modifiers.Level.Off)
+            RadicalPreview.of(languages.current, restingKey).orEmpty() else ""
     }
 
     private val endSlippedCursor = Runnable { stopCursor() }
@@ -4934,10 +4946,7 @@ class TitanKeysIme : InputMethodService() {
     private fun showModifierBar() {
         // Shift and Caps show only where Shift changes what a key types: not in Hebrew, Chinese or Japanese.
         val shiftShows = !::languages.isInitialized || languages.current.shiftMatters
-        // With a code pending its line already shows radicals, and the choices keep the bar.
-        val radicals = ::languages.isInitialized && !engineBuilding
-        strip?.modifiers = ModifierBar.of(modifiers, restingKey, shiftShows,
-            radical = { key -> if (radicals) ChineseKeys.radical(languages.current, key) else null }) { Keys.letter(it, KeyEvent.META_ALT_ON) }
+        strip?.modifiers = ModifierBar.of(modifiers, restingKey, shiftShows) { Keys.letter(it, KeyEvent.META_ALT_ON) }
     }
 
     override fun onDestroy() {

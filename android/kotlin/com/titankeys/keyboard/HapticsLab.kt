@@ -61,10 +61,17 @@ class HapticsLab(private val context: Context) {
         return GestureDisplay.dominoWords() to GestureDisplay.dominoGapMillis()
     }
 
-    /** Tries [words] and [gap] for the dominoes' streak; null puts that default back. The next delete uses them. */
-    fun tryDominoes(words: Int?, gap: Long?) {
-        Haptics.tryDominoes(context, words, gap)
+    /** How much slower the dominoes go than the dots, in percent. */
+    fun dominoSlow(): Int {
+        GestureDisplay.triedDominoSlow = Haptics.readDominoSlow(context)
+        return Math.round(GestureDisplay.dominoSlow() * 100)
+    }
+
+    /** Tries [words], [gap] and [slowPercent] for the dominoes; null puts that default back. The next delete uses them. */
+    fun tryDominoes(words: Int?, gap: Long?, slowPercent: Int?) {
+        Haptics.tryDominoes(context, words, gap, slowPercent)
         dominoes()
+        dominoSlow()
     }
 
     /** Tries [millis] as that wait, or puts the default back with null. The next real flick's dots wait that long. */
@@ -114,6 +121,7 @@ class HapticsLab(private val context: Context) {
         .put("flickHoldMillis", flickHold()).put("flickHoldDefault", GestureDisplay.FLICK_HOLD.toLong())
         .put("dominoWords", dominoes().first).put("dominoWordsDefault", GestureDisplay.DOMINO_WORDS)
         .put("dominoGapMillis", dominoes().second).put("dominoGapDefault", GestureDisplay.DOMINO_GAP_MILLIS)
+        .put("dominoSlowPercent", dominoSlow()).put("dominoSlowDefault", Math.round(GestureDisplay.DOMINO_SLOW * 100))
         .put("selectionEnd", SelectionEnd.stored(Haptics.selectionEndId(context)).id)
         .put("selectionEnds", JSONArray().apply { for (end in SelectionEnd.entries) put(JSONObject().put("id", end.id).put("label", end.label)) })
         .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(ZONE_TICKS, Haptics.zoneTicks(context))

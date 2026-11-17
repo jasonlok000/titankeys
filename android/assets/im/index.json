@@ -564,7 +564,7 @@
   "id": "ru",
   "name": "Русский",
   "nameEnglish": "Russian",
-  "label": "RU",
+  "label": "РУ",
   "locale": "ru",
   "script": "Cyrl",
   "engine": null,
@@ -572,7 +572,7 @@
    "id": "ru",
    "name": "Русский",
    "nameEnglish": "Russian",
-   "label": "RU",
+   "label": "РУ",
    "script": "Cyrl",
    "experimental": true
   }
@@ -581,7 +581,7 @@
   "id": "uk",
   "name": "Українська",
   "nameEnglish": "Ukrainian",
-  "label": "UK",
+  "label": "УК",
   "locale": "uk",
   "script": "Cyrl",
   "engine": null,
@@ -589,7 +589,7 @@
    "id": "uk",
    "name": "Українська",
    "nameEnglish": "Ukrainian",
-   "label": "UK",
+   "label": "УК",
    "script": "Cyrl",
    "experimental": true
   }
@@ -598,7 +598,7 @@
   "id": "be",
   "name": "Беларуская",
   "nameEnglish": "Belarusian",
-  "label": "BE",
+  "label": "БЕ",
   "locale": "be",
   "script": "Cyrl",
   "engine": null,
@@ -606,7 +606,7 @@
    "id": "be",
    "name": "Беларуская",
    "nameEnglish": "Belarusian",
-   "label": "BE",
+   "label": "БЕ",
    "script": "Cyrl",
    "experimental": true
   }
@@ -615,7 +615,7 @@
   "id": "bg",
   "name": "Български",
   "nameEnglish": "Bulgarian",
-  "label": "BG",
+  "label": "БГ",
   "locale": "bg",
   "script": "Cyrl",
   "engine": null,
@@ -623,7 +623,7 @@
    "id": "bg",
    "name": "Български",
    "nameEnglish": "Bulgarian",
-   "label": "BG",
+   "label": "БГ",
    "script": "Cyrl",
    "experimental": true
   }
@@ -632,7 +632,7 @@
   "id": "el",
   "name": "Ελληνικά",
   "nameEnglish": "Greek",
-  "label": "EL",
+  "label": "ΕΛ",
   "locale": "el",
   "script": "Grek",
   "engine": null,
@@ -640,7 +640,7 @@
    "id": "el",
    "name": "Ελληνικά",
    "nameEnglish": "Greek",
-   "label": "EL",
+   "label": "ΕΛ",
    "script": "Grek",
    "experimental": true
   }
@@ -666,7 +666,7 @@
   "id": "mk",
   "name": "Македонски",
   "nameEnglish": "Macedonian",
-  "label": "MK",
+  "label": "МК",
   "locale": "mk",
   "script": "Cyrl",
   "engine": null,
@@ -674,7 +674,7 @@
    "id": "mk",
    "name": "Македонски",
    "nameEnglish": "Macedonian",
-   "label": "MK",
+   "label": "МК",
    "script": "Cyrl",
    "experimental": true
   }
@@ -683,7 +683,7 @@
   "id": "kk",
   "name": "Қазақ тілі",
   "nameEnglish": "Kazakh",
-  "label": "KK",
+  "label": "ҚА",
   "locale": "kk",
   "script": "Cyrl",
   "engine": null,
@@ -691,7 +691,7 @@
    "id": "kk",
    "name": "Қазақ тілі",
    "nameEnglish": "Kazakh",
-   "label": "KK",
+   "label": "ҚА",
    "script": "Cyrl",
    "experimental": true
   }
@@ -700,7 +700,7 @@
   "id": "ka",
   "name": "ქართული",
   "nameEnglish": "Georgian",
-  "label": "KA",
+  "label": "ქა",
   "locale": "ka",
   "script": "Geor",
   "engine": null,
@@ -708,7 +708,7 @@
    "id": "ka",
    "name": "ქართული",
    "nameEnglish": "Georgian",
-   "label": "KA",
+   "label": "ქა",
    "script": "Geor",
    "experimental": true
   }
@@ -717,7 +717,7 @@
   "id": "th",
   "name": "ไทย",
   "nameEnglish": "Thai",
-  "label": "TH",
+  "label": "ไท",
   "locale": "th",
   "script": "Thai",
   "engine": null,
@@ -725,7 +725,7 @@
    "id": "th",
    "name": "ไทย",
    "nameEnglish": "Thai",
-   "label": "TH",
+   "label": "ไท",
    "script": "Thai",
    "experimental": true
   }
@@ -734,7 +734,7 @@
   "id": "hi",
   "name": "हिन्दी",
   "nameEnglish": "Hindi",
-  "label": "HI",
+  "label": "हि",
   "locale": "hi",
   "script": "Deva",
   "engine": "rules",
@@ -742,7 +742,7 @@
    "id": "hi",
    "name": "हिन्दी",
    "nameEnglish": "Hindi",
-   "label": "HI",
+   "label": "हि",
    "script": "Deva",
    "experimental": true
   }
@@ -751,7 +751,7 @@
   "id": "he",
   "name": "עברית",
   "nameEnglish": "Hebrew",
-  "label": "HE",
+  "label": "עב",
   "locale": "he",
   "script": "Hebr",
   "engine": null,
@@ -759,7 +759,7 @@
    "id": "he",
    "name": "עברית",
    "nameEnglish": "Hebrew",
-   "label": "HE",
+   "label": "עב",
    "script": "Hebr",
    "experimental": true
   }

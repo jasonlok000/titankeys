@@ -102,19 +102,19 @@ LATIN = {
 # Kazakh has no Android layout: Russian's, with Kazakh's nine letters held on the Russian letter nearest in sound and shape.
 # Georgian has no capitals: Shift types the layout's Shift letter, or the key's own letter.
 NATIONAL = {
-    "ru": ("Русский", "Russian", "RU", "ru", "main_ru", AOSP, "russian", {"p": "хъ", "l": "жэ", "m": "бю", "t": "ё"}),
-    "uk": ("Українська", "Ukrainian", "UK", "uk", "main_uk__experimental", LEIPZIG, "ukrainian", {"p": "хї", "l": "жє", "m": "бю", "u": "ґ"}),
-    "be": ("Беларуская", "Belarusian", "BE", "be", "main_be", None, "belarusian", {"p": "х", "l": "жэ", "m": "бю", "t": "ё"}),
-    "bg": ("Български", "Bulgarian", "BG", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "ью"}),
-    "el": ("Ελληνικά", "Greek", "EL", "el", "main_el__legacy", AOSP, "greek", {}),
+    "ru": ("Русский", "Russian", "РУ", "ru", "main_ru", AOSP, "russian", {"p": "хъ", "l": "жэ", "m": "бю", "t": "ё"}),
+    "uk": ("Українська", "Ukrainian", "УК", "uk", "main_uk__experimental", LEIPZIG, "ukrainian", {"p": "хї", "l": "жє", "m": "бю", "u": "ґ"}),
+    "be": ("Беларуская", "Belarusian", "БЕ", "be", "main_be", None, "belarusian", {"p": "х", "l": "жэ", "m": "бю", "t": "ё"}),
+    "bg": ("Български", "Bulgarian", "БГ", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "ью"}),
+    "el": ("Ελληνικά", "Greek", "ΕΛ", "el", "main_el__legacy", AOSP, "greek", {}),
     "sr": ("Српски", "Serbian, Cyrillic", "СР", "sr", "main_sr", AOSP, "serbian_and_montenegrin_cyrillic",
            {"p": "шђ", "l": "чћ"}, {"keys": {"z": "ж"}, "own_letters": True}),
-    "mk": ("Македонски", "Macedonian", "MK", "mk", "frequencywords/mk_full.txt", FREQUENCY_WORDS_OWN,
+    "mk": ("Македонски", "Macedonian", "МК", "mk", "frequencywords/mk_full.txt", FREQUENCY_WORDS_OWN,
            "serbian_and_montenegrin_cyrillic", {"p": "шѓж", "l": "чќ"}, {"counts": True}),
-    "kk": ("Қазақ тілі", "Kazakh", "KK", "kk", "main_kk__experimental", LEIPZIG, "russian",
+    "kk": ("Қазақ тілі", "Kazakh", "ҚА", "kk", "main_kk__experimental", LEIPZIG, "russian",
            {"f": "ә", "u": "ғ", "r": "қ", "y": "ң", "j": "ө", "e": "үұ", "h": "һ", "s": "і", "p": "хъ", "l": "жэ", "m": "бю",
             "t": "ё"}, {"layout_note": "with Kazakh's letters held on the Russian letters nearest them"}),
-    "ka": ("ქართული", "Georgian", "KA", "ka", "leipzig/kat_newscrawl_2016_1M/kat_newscrawl_2016_1M-words.txt", LEIPZIG_OWN,
+    "ka": ("ქართული", "Georgian", "ქა", "ka", "leipzig/kat_newscrawl_2016_1M/kat_newscrawl_2016_1M-words.txt", LEIPZIG_OWN,
            "georgian", {}, {"counts": True, "script": "Geor", "capitalise": False}),
 }
 BELARUSIAN = ("Belarusian word forms from GrammarDB (https://github.com/Belarus/GrammarDB), via HeliBoard's aosp-dictionaries "
@@ -539,7 +539,7 @@ def build_thai(data, ident):
     os.makedirs(folder, exist_ok=True)
     head, words = read_words(data, "main_th")
     write_words(folder, head, words)
-    write_im(folder, {"id": ident, "name": cldr_name(data, "th"), "nameEnglish": "Thai", "label": "TH", "locale": "th",
+    write_im(folder, {"id": ident, "name": cldr_name(data, "th"), "nameEnglish": "Thai", "label": "ไท", "locale": "th",
                       "script": "Thai", "keys": thai_keys(data), "accents": {}, "words": "words.combined", "variants": None,
                       "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False,
                                 "wordBreak": True},
@@ -627,7 +627,7 @@ def build_hindi(data, ident):
     file = "frequencywords/hi_full.txt"
     head, words = read_counts(data, file, "hi", letters)
     write_words(folder, head, words)
-    write_im(folder, {"id": ident, "name": cldr_name(data, "hi"), "nameEnglish": "Hindi", "label": "HI", "locale": "hi",
+    write_im(folder, {"id": ident, "name": cldr_name(data, "hi"), "nameEnglish": "Hindi", "label": "हि", "locale": "hi",
                       "script": "Deva", "keys": "qwerty", "accents": {}, "words": "words.combined", "variants": None,
                       # Shift letters are their own sounds (namaH, maChiyoM), so no sentence capitals.
                       "rules": {"capitalise": False, "sentenceEnd": ".?!।", "openingMarks": "", "apostrophes": False},
@@ -667,7 +667,7 @@ def build_hebrew(data, ident):
     letters = [chr(c) for c in range(0x05D0, 0x05EB)] + ["'"]
     head, words = read_counts(data, file, "he", letters)
     write_words(folder, head, words)
-    write_im(folder, {"id": ident, "name": cldr_name(data, "he"), "nameEnglish": "Hebrew", "label": "HE", "locale": "he",
+    write_im(folder, {"id": ident, "name": cldr_name(data, "he"), "nameEnglish": "Hebrew", "label": "עב", "locale": "he",
                       "script": "Hebr", "keys": hebrew_keys(data), "accents": {}, "words": "words.combined", "variants": None,
                       # Geresh, typed as ', is part of a word (צ'יפס).
                       "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": True},
@@ -697,6 +697,9 @@ def write_im(folder, im):
         f.write("\n")
 
 
+# Labels (Orchestrator, 2026-11-16, for the owner to confirm): one per input method, at Q and in the switcher, at most two
+# characters in the language's own script: Latin's two-letter code in capitals, РУ, ΕΛ, ქა, ไท, עב, हि, and one character
+# where the script is dense (한, あ, 耶, 粵, 拼).
 # Languages with more than one input method (owner, 2026-11-16: languages, then input methods, the Gboard way). Every other
 # input method is a language of its own, under its own name. A language's name is CLDR's for it in that language.
 LANGUAGES = {

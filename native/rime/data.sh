@@ -13,7 +13,8 @@ WORK="${TK_RIME_WORK:-$HOME/build/tk-rime}"
 TOOL="$WORK/out-host/rime_tool"
 OPENCC_DICT="$WORK/out-host/librime/deps/opencc/src/tools/opencc_dict"
 BUILD_PREDICT="$(find "$WORK/out-host" -name build_predict -type f -perm -u+x | head -1)"
-[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] && [ -n "$BUILD_PREDICT" ] || { echo "run native/rime/build.sh first" >&2; exit 1; }
+BUILD_GRAMMAR="$(find "$WORK/out-host" -name build_grammar -type f -perm -u+x | head -1)"
+[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] && [ -n "$BUILD_PREDICT" ] && [ -n "$BUILD_GRAMMAR" ]   || { echo "run native/rime/build.sh first" >&2; exit 1; }
 
 PRELUDE=https://github.com/rime/rime-prelude.git@082425ea0684bca36474415d4a0e8db9b016487e
 ESSAY=https://github.com/rime/rime-essay.git@d95eeae056df429ecf993038c325a216f0b28c5b
@@ -22,6 +23,23 @@ CANTONESE=https://github.com/rime/rime-cantonese.git@259f0e48bba840c3a2e0d117539
 CANGJIE=https://github.com/rime/rime-cangjie.git@fcb3d7dd94ac1304663d575727d24d8107f6b082
 QUICK=https://github.com/rime/rime-quick.git@207d1efcc0dc9574510b61be861544edcf993736
 TERRA=https://github.com/rime/rime-terra-pinyin.git@723e51bc266cf9464530c1ddedb856aa18e3da34
+
+# The text Cantonese's grammar model is counted from (grammar.py): Cantonese Wikipedia's articles (Wikimedia keeps a dated
+# dump for a few months only; see SOURCES.md), HKCanCor and Common Voice's zh-HK sentences, each checked by its SHA-256.
+WIKI=https://dumps.wikimedia.org/zh_yuewiki/20261101/zh_yuewiki-20261101-pages-articles.xml.bz2
+WIKI_SHA256=e493dce7899884e250de0dcb208e560f6dff1e8b7970e7abdd015dc61da83126
+HKCANCOR=https://raw.githubusercontent.com/fcbond/hkcancor/39aeadf920e0b5ca93d0ad7792c59e740e7bdd65/data/hkcancor-utf8.zip
+HKCANCOR_SHA256=09223963b8756254e15353cad843f8a4b0cbc4b9223dc8a8fa27fb1cf846057e
+VOICE=https://raw.githubusercontent.com/common-voice/common-voice/4ea23d2d30222e9324eb964365b9a0f22e3d5f3a/server/data/zh-HK/sentence-collector.txt
+VOICE_SHA256=0c537e9d65c1f1de10d70a1e0989d929b557628d975bf480d8b3b6fcc6291f26
+
+download() { # file url sha256
+  local file="$WORK/src/$1"
+  if [ ! -f "$file" ] || ! echo "$3  $file" | sha256sum -c --quiet > /dev/null 2>&1; then
+    curl -sSL --fail -o "$file" "$2"
+    echo "$3  $file" | sha256sum -c --quiet || { echo "FAIL $1 isn't the pinned file" >&2; exit 1; }
+  fi
+}
 
 fetch() { # dir url@commit
   local dir="$WORK/src/$1" url="${2%@*}" commit="${2#*@}"
@@ -117,6 +135,24 @@ for f in "$D"/occ/*.txt; do "$OPENCC_DICT" -i "$f" -o "opencc/$(basename "$f" .t
 for lang in yue cmn; do "$BUILD_PREDICT" "predict-$lang.db" < "$HERE/predict/$lang.txt" 2> "$D/predict-$lang.log" \
   || { cat "$D/predict-$lang.log"; exit 1; }; done
 
+# Cantonese's grammar model for librime-octagram, tk_yue.gram, for Yale and Jyutping (their grammar/language): which words
+# follow which in Cantonese text, so Space puts the likelier phrase first. On held-out Tatoeba phrases it takes Space's first
+# choice from 27.1% to 31.4% right with the words.hk weights (docs/studies/56-cantonese-dictionary.md). grammar.py counts it
+# from the pinned text, cutting runs into words by the Cantonese weights; counting takes minutes, so the model is kept in
+# $WORK/grammar by its inputs' hashes. It carries Wikipedia's CC BY-SA 4.0 (SOURCES.md, NOTICE).
+mkdir -p "$WORK/grammar"
+download yuewiki.xml.bz2 "$WIKI" "$WIKI_SHA256"
+download hkcancor-utf8.zip "$HKCANCOR" "$HKCANCOR_SHA256"
+download cv-zh-hk.txt "$VOICE" "$VOICE_SHA256"
+GRAMMAR_KEY="$(cat "$HERE/grammar.py" essay-cantonese.txt | sha256sum | cut -c1-16)-$(echo "$WIKI_SHA256 $HKCANCOR_SHA256 $VOICE_SHA256" | sha256sum | cut -c1-16)"
+if [ ! -s "$WORK/grammar/$GRAMMAR_KEY.gram" ]; then
+  python3 -I "$HERE/grammar.py" essay-cantonese.txt "$WORK/src/yuewiki.xml.bz2" "$WORK/src/hkcancor-utf8.zip" \
+    "$WORK/src/cv-zh-hk.txt" > "$D/grammar.txt"
+  (cd "$D" && "$BUILD_GRAMMAR" tk_yue < grammar.txt > grammar.log 2>&1) || { cat "$D/grammar.log"; exit 1; }
+  cp "$D/tk_yue.gram" "$WORK/grammar/$GRAMMAR_KEY.gram"
+fi
+cp "$WORK/grammar/$GRAMMAR_KEY.gram" tk_yue.gram
+
 # Rime records each source file's time in what it compiles. Every file gets one fixed time, so two runs give the same bytes.
 # On the phone Rime never deploys (rime_jni.cc), so the copies' own times don't matter.
 SOURCE_TIME=1763251200
@@ -199,6 +235,8 @@ phrase tk_yale zh_hk ngodeigamyatheuiyamcha 我哋今日去飲茶
 phrase tk_yale zh_hk ngodeiyatchaiheuisikfaan 我哋一齊去食飯
 phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
 phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
+# With the grammar model, a phrase the word weights alone got wrong (你識咗反美).
+phrase tk_jyutping zh_hk neisikzofaanmei 你食咗飯未
 
 # 対, the Japanese form of 對, is off deui's first page in every variant.
 for v in zh_hk zh_tw zh_hans; do

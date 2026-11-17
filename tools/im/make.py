@@ -355,9 +355,13 @@ def build_latin(data, ident):
 # android/assets/rime. Yale first, the owner's input method. F (docs/words-m1.md).
 # id: (name, English name, label, locale, Rime schema, sources)
 CHINESE = {
+    # F: draft. The words.hk and grammar credits in Yale's and Jyutping's (#56).
     "yue-yale": ("耶魯拼音", "Cantonese, Yale", "耶", "yue", "tk_yale",
-                 "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"),
-    "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping", "rime-cantonese (CC BY 4.0)"),
+                 "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"
+                 ", with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"),
+    "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping",
+                     "rime-cantonese (CC BY 4.0)"
+                     ", with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"),
     "zh-pinyin": ("漢語拼音", "Mandarin, Pinyin", "拼", "zh", "tk_pinyin",
                   "rime-luna-pinyin and rime-essay (LGPL-3.0)"),
     # Hong Kong's standard shape-based input methods, and Taiwan's Zhuyin on the Hsu layout, which fits the Titan's 26 letters

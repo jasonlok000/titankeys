@@ -104,7 +104,8 @@ test("the JNI class the library registers is the one in the app, kept from shrin
 
 test("librime-predict is built in, with each language's table, its licence and credits (#56)", () => {
   // Merged into Rime from Trime's pinned submodule, as Trime does; its tool compiles the tables.
-  expect(read("native/rime/CMakeLists.txt")).toContain('"${TK_RIME_SOURCES}/trime/app/src/main/jni/librime-predict"');
+  expect(read("native/rime/CMakeLists.txt")).toContain("foreach(plugin librime-predict librime-octagram)");
+  expect(read("native/rime/CMakeLists.txt")).toContain('"${TK_RIME_SOURCES}/trime/app/src/main/jni/${plugin}"');
   expect(read("native/rime/build.sh")).toContain("--target rime_tool opencc_dict build_predict");
   expect(read("native/rime/SOURCES.md")).toContain("67c2881914a0242fc14ec7d6877782771b75800c");
   // Each schema has the predictor and its language's table; the switch is on.
@@ -132,6 +133,30 @@ test("librime-predict is built in, with each language's table, its licence and c
   const page = read("app/settings/licences/index.tsx");
   expect(page).toContain('title: "librime-predict"');
   expect(page).toMatch(/title: "Tatoeba", subtitle: "[^"]*Chinese/);
+});
+
+test("Cantonese's grammar model: librime-octagram built in, the model counted by data.sh, licensed as itself (#56)", () => {
+  expect(read("native/rime/CMakeLists.txt")).toContain("foreach(plugin librime-predict librime-octagram)");
+  expect(read("native/rime/build.sh")).toContain("--target rime_tool opencc_dict build_predict build_grammar");
+  const data = read("native/rime/data.sh");
+  expect(data).toContain('"$BUILD_GRAMMAR" tk_yue < grammar.txt');
+  for (const pin of ["WIKI_SHA256", "HKCANCOR_SHA256", "VOICE_SHA256"]) expect(data).toMatch(new RegExp(`^${pin}=[0-9a-f]{64}$`, "m"));
+  // Yale and Jyutping use it, counting pairs of single characters too; the others have none.
+  for (const id of ["tk_yale", "tk_jyutping"])
+    expect(read(`native/rime/schemas/${id}.schema.yaml`)).toContain("grammar: { language: tk_yue, collocation_min_length: 2 }");
+  for (const id of ["tk_pinyin", "tk_cangjie", "tk_quick", "tk_zhuyin"])
+    expect(read(`native/rime/schemas/${id}.schema.yaml`)).not.toMatch(/^grammar:/m);
+  expect(read("android/assets/rime.sha256")).toMatch(/ tk_yue\.gram$/m);
+  // The model carries Wikipedia's CC BY-SA 4.0; the plugin is GPL-3.0 at Trime's commit. Both credited, in the app too.
+  expect(read("licences/Rime-cantonese-grammar-CC-BY-SA-4.0.txt")).toContain("Attribution-ShareAlike 4.0 International");
+  expect(read("licences/Rime-octagram-GPL-3.0.txt")).toContain("GNU GENERAL PUBLIC LICENSE");
+  const sources = read("native/rime/SOURCES.md");
+  expect(sources).toContain("`tk_yue.gram` is licensed CC BY-SA 4.0 itself");
+  const page = read("app/settings/licences/index.tsx");
+  expect(page).toContain('title: "librime-octagram"');
+  expect(page).toMatch(/title: "Cantonese grammar model", subtitle: "CC BY-SA 4.0\./);
+  for (const ident of ["yue-yale", "yue-jyutping"])
+    expect(read(`android/assets/im/${ident}/NOTICE`)).toContain("Cantonese Wikipedia (CC BY-SA 4.0, and so is the model)");
 });
 
 test("the keyboard shows the suggestions as choices, and clears them Rime's way (#56)", () => {

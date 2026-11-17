@@ -37,6 +37,9 @@ const licences = [
   // The Chinese entries (#56). F (docs/words-m1.md).
   { title: "Rime", subtitle: "BSD-3-Clause. Turns what you type into Chinese.", url: "https://github.com/rime/librime" },
   { title: "librime-predict", subtitle: "BSD-3-Clause. Suggests the next Chinese word.", url: "https://github.com/rime/librime-predict" },
+  // F: draft. Cantonese's grammar model and its plugin (#56).
+  { title: "librime-octagram", subtitle: "GPL-3.0. Lets Rime weigh which words go together.", url: "https://github.com/lotem/librime-octagram" },
+  { title: "Cantonese grammar model", subtitle: "CC BY-SA 4.0. TitanKeys' own, counted from Cantonese Wikipedia (CC BY-SA 4.0), HKCanCor (CC BY 4.0) and Common Voice (CC0).", url: "https://zh-yue.wikipedia.org" },
   { title: "OpenCC", subtitle: "Apache 2.0. Gives you Simplified, Hong Kong or Taiwan characters.", url: "https://github.com/BYVoid/OpenCC" },
   { title: "Rime's libraries", subtitle: "marisa-trie, LevelDB, yaml-cpp, spdlog, Snappy and Boost", url: "https://github.com/rime/librime/tree/master/deps" },
   { title: "rime-cantonese", subtitle: "CC BY 4.0, place names ODbL 1.0. Cantonese words for Yale and Jyutping.", url: "https://github.com/rime/rime-cantonese" },

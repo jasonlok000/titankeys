@@ -61,4 +61,33 @@ def check_korean_choices():
     record("bar-ko-choices", None, "하 typed: the choices include 하고 and a 한 word", "bar-ko-choices")
 
 
-BATCH = [check_bar_words, check_learned_starter, check_korean_choices]
+def check_corrections():
+    """D's corrections (main 070198f1): in Spanish, "cafe" + Space types "café " (O), and a neighbour-key slip, "hpla", shows
+    "hola" on the bar (J). In Greek, Space never fixes a slip: the field keeps what was typed (O), and the fix is only offered
+    on the bar (J)."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "es", "el"], "es"):
+        return record("fix-es", False, "the field didn't start with es")
+    language_checks.fresh()
+    play(*keys("cafe"), "key:space", "+600")
+    text = language_checks.checks.field()
+    record("fix-es-cafe", text == "café ", f"cafe + Space typed {text!r}, wanted 'café '")
+    language_checks.fresh()
+    moves = keys("hpla") + ["+800"]
+    play(*moves, shot="fix-es-hpla", at=len(moves) * 80 + 500)
+    record("fix-es-hpla", None, "hpla typed: the bar shows hola", "fix-es-hpla")
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "es", "el"], "el"):
+        return record("fix-el", False, "the field didn't start with el")
+    language_checks.fresh()
+    slip = "kslhmera"  # καλημέρα's keys (k a l h m e r a) with A slipped to its neighbour S
+    typed = language_checks.expected("el", list(slip))
+    moves = keys(slip) + ["+800"]
+    play(*moves, shot="fix-el-bar", at=len(moves) * 80 + 500)
+    play("key:space", "+600")
+    text = language_checks.checks.field()
+    record("fix-el-space", text == typed + " ", f"{slip} + Space typed {text!r}, wanted it as typed, {typed + ' '!r}")
+    record("fix-el-bar", None, f"{typed} typed: the bar offers the fix (καλημέρα), Space didn't take it", "fix-el-bar")
+
+
+BATCH = [check_bar_words, check_learned_starter, check_korean_choices, check_corrections]

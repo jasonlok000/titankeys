@@ -2700,7 +2700,10 @@ class TitanKeysIme : InputMethodService() {
                     traceCursor(samples, ended = false)
                     return
                 }
+                // Only the latest swipe's worth of points: one long stream of moves with no DOWN between (a resting finger, or
+                // Debug's TouchFeed) grew this until the heap ran out (OutOfMemoryError, 2026-11-17, the phone run's languages batch).
                 cursorPath.addAll(samples.filter { it.valid })
+                if (cursorPath.size > Swipe.MAX_POINTS) cursorPath.subList(0, cursorPath.size - Swipe.MAX_POINTS).clear()
                 contact.move(samples)
                 // A held delete flick waits for the finger to lift, and goes faster the further the finger is from where it started.
                 if (contact.deleting) {

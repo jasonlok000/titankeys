@@ -80,6 +80,22 @@ class PickedWords {
         Character.getType(c).let { it == Character.NON_SPACING_MARK.toInt() || it == Character.COMBINING_SPACING_MARK.toInt() }
 
     companion object {
+        /**
+         * Chinese's gestures go by one character (owner, 2026-11-17: "in chinese one character is basically same as one word";
+         * "flick shd delete only one word like 晒, so 唔該晒 is three seperate words"): each character is a word, a mark too, and
+         * only spaces are not. The bar's word stays the unit as picked ([lastWord]).
+         */
+        val CHARACTERS = WordBreaker { text ->
+            val pieces = ArrayList<WordPiece>()
+            var at = 0
+            while (at < text.length) {
+                val end = at + Character.charCount(text.codePointAt(at))
+                pieces += WordPiece(at, end, !Character.isWhitespace(text.codePointAt(at)))
+                at = end
+            }
+            pieces
+        }
+
         /** The longest unit kept: a phrase longer than this was likely a sentence committed at once. */
         const val LONGEST = 8
         /** The longest known word looked for. */

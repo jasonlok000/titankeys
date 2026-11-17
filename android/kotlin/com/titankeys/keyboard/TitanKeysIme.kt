@@ -2560,7 +2560,7 @@ class TitanKeysIme : InputMethodService() {
         val travel = contact.travel
         val first = points.firstOrNull()
         val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
-        if (inPractice || !contact.swipes || altOrPanel || travel == null || !far || first == null
+        if (inPractice || !contact.swipes || altOrPanel || Overlays.stopsSwipes(openOverlay) || travel == null || !far || first == null
             || startsDeleteFlick(first.x, first.y) && (isDeleteWordSwipe(points) || flickCrunch.mayBeFlick)) {
             gesture.swipeCancelled()
             swipeShown = 0
@@ -3176,6 +3176,8 @@ class TitanKeysIme : InputMethodService() {
             is Contact.Outcome.Swipe -> {
                 showStripAfterBack()
                 if (!altOrPanel && pageChoices(outcome.points)) return
+                // The switcher, the accents or the bigger menu is open: a swipe there types and deletes nothing.
+                if (Overlays.stopsSwipes(openOverlay)) return
                 if (altOrPanel) {
                     if (panelOpen) swipePanel(outcome.points)
                     return
@@ -3406,7 +3408,7 @@ class TitanKeysIme : InputMethodService() {
         picker = open
         strip?.pickerMark = -1
         strip?.notice = open.notice
-        contact.paging = panelOpen || choicesOpen
+        contact.paging = Overlays.paging(openOverlay, panelOpen)
     }
 
     private fun closePicker() {
@@ -3420,6 +3422,14 @@ class TitanKeysIme : InputMethodService() {
 
     /** An engine's choices are on the bar: swipes on the keys are theirs, short ones too, as on the Sym panel. */
     private val choicesOpen get() = picker is LanguagePicker.Choices
+
+    /** Which picking overlay is open, for the touchpad ([Overlays]). */
+    private val openOverlay: Overlays.Open get() = when (val open = picker) {
+        is LanguagePicker.Switch -> if (open.opened != null) Overlays.Open.SwitcherRow else Overlays.Open.Switcher
+        is LanguagePicker.Accents -> Overlays.Open.Accents
+        is LanguagePicker.Choices -> if (choicesMenuOpen) Overlays.Open.ChoicesMenu else Overlays.Open.Choices
+        null -> Overlays.Open.None
+    }
 
     /**
      * A swipe on the keys with an engine's choices on the bar (docs/languages.md, "Chinese on the bar"). With the bigger menu
@@ -4445,7 +4455,7 @@ class TitanKeysIme : InputMethodService() {
         updateExactBar()
         showModifierBar()
         panel?.mode = modifiers.panel
-        contact.paging = panelOpen || choicesOpen
+        contact.paging = Overlays.paging(openOverlay, panelOpen)
         updateKeyWatch()
         KeyboardEvents.publish { KeyboardEvent.ModifierState(modifiers.shift, modifiers.alt, modifiers.panel, modifiers.ctrlHeld) }
     }

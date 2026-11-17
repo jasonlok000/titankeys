@@ -393,3 +393,19 @@ class SymPress {
         closing = false
     }
 }
+
+/**
+ * TitanKeys' picking overlays and the touchpad. While the held Sym's switcher (either row), the accent picker or Chinese's
+ * bigger menu is open, a swipe on the keys neither draws its trail nor types a word or deletes one, as on the Sym panel:
+ * a finger only marks (owner, 2026-11-16: "swipe animation and swipe typing still triggers"). The bar's one row of choices
+ * keeps its own swipes: a flick up picks and a swipe turns the page, and the bigger menu turns its pages too.
+ */
+object Overlays {
+    enum class Open { None, Switcher, SwitcherRow, Accents, Choices, ChoicesMenu }
+
+    /** No trail, no swiped word, no delete flick or held delete. */
+    fun stopsSwipes(open: Open) = open == Open.Switcher || open == Open.SwitcherRow || open == Open.Accents || open == Open.ChoicesMenu
+
+    /** The touchpad works as on the Sym panel: a resting finger marks, and only a quick swipe comes out, to turn a page. */
+    fun paging(open: Open, panelOpen: Boolean) = panelOpen || open != Open.None
+}

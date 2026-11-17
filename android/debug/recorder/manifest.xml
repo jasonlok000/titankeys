@@ -42,6 +42,12 @@
             android:name="com.titankeys.keyboard.TouchFeed"
             android:exported="true"
             android:permission="android.permission.DUMP" />
+        <!-- The touch simulator's keys, Shift included, built as the phone's keyboard sends them into the keyboard's own key
+             handling, without the injector's twin keyboard (tools/dev/touch). Only adb can send to it. -->
+        <receiver
+            android:name="com.titankeys.keyboard.KeyFeed"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
         <!-- Opens the guide at one slide, for the touch simulator's checks of it. Only adb can send to it. -->
         <receiver
             android:name="com.titankeys.keyboard.GuideStart"

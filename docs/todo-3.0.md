@@ -585,3 +585,8 @@ More calls get added here as the night goes.
   - Analytics.
   - The app's size once many languages are in.
   - Whether Japanese, right-to-left and Indic scripts are in 3.0.
+
+## Owner's manual review, 2026-11-17 (office)
+
+- **Before launch:** rework the language menu (Settings > Languages and the switcher's lists). Owner: "it's very cluttered and messy.  hard to read anything." Planned for the pre-launch polish pass, with F on wording and a design pass first; not started (token budget).
+- **Now (C's queue, batched):** the small language mark on the keyboard sits off centre. Owner: "match the vertical positionoing center with the auto cap in english." Centre it vertically on the same line as English's auto-cap mark.

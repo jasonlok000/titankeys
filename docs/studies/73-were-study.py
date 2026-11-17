@@ -10,7 +10,14 @@ Prints counts and margins only, never the text. Needs numpy and onnxruntime.
 
 Usage: python3 73-were-study.py <repo root> [<labels.tsv> <ctx.pkl> <occ.pkl>]
 The last three are the private apostrophe study's working files. They're read, never written, and no text from them is printed.
+
+   or: python3 73-were-study.py <repo root> --tatoeba <eng_sentences.tsv> [processes]
+Every English sentence on Tatoeba (the official export, https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2,
+CC BY 2.0 FR), its written form as what was meant. Tatoeba is public, so this mode also prints the meant "were" sentences that
+score highest, to judge by hand whether each is a real "were" or a "we're" written wrong.
 """
+import multiprocessing
+import os
 import pickle
 import re
 import sys
@@ -80,14 +87,27 @@ def encode(text):
     return ids
 
 
-SESSION = ort.InferenceSession(PRED + "model-int8pc.onnx", providers=["CPUExecutionProvider"])
+SESSION = None
 CACHE = {}
+
+
+def session():
+    """The model, made in each process on first use: --tatoeba runs many processes, with one thread each."""
+    global SESSION
+    if SESSION is None:
+        options = ort.SessionOptions()
+        threads = int(os.environ.get("STUDY_THREADS", "0"))
+        if threads:
+            options.intra_op_num_threads = threads
+            options.inter_op_num_threads = 1
+        SESSION = ort.InferenceSession(PRED + "model-int8pc.onnx", options, providers=["CPUExecutionProvider"])
+    return SESSION
 
 
 def next_logp(ctx):
     key = tuple(ctx[-CAP:])
     if key not in CACHE:
-        CACHE[key] = SESSION.run(None, {"input_ids": np.array([list(key)], dtype=np.int64)})[0][0]
+        CACHE[key] = session().run(None, {"input_ids": np.array([list(key)], dtype=np.int64)})[0][0]
     return CACHE[key]
 
 
@@ -277,7 +297,44 @@ def main():
     report("Tatoeba and judged owner cases together", allscored)
 
 
-if __name__ == "__main__":
+def sentence_cases(text):
+    """
+    One sentence's cases for --tatoeba: what was meant, the margin, whether a word comes before it in its window (the stricter
+    rule's need), and the text. The cache is per sentence, so memory stays flat over two million sentences.
+    """
+    CACHE.clear()
+    found = []
+    for m in WORD.finditer(text):
+        meant = "we're" if m.group(1).lower() != "were" else "were"
+        typed = "Were" if m.group(1)[0].isupper() else "were"
+        before = count_words(window(text[:m.start()])) >= 1
+        found.append((meant, margin(text[:m.start()], typed, text[m.end():]), before, text))
+    return found
+
+
+def full_tatoeba(path, processes):
+    texts = set()
+    for line in open(path, encoding="utf-8"):
+        parts = line.rstrip("\n").split("\t", 2)
+        if len(parts) == 3 and WORD.search(parts[2]):
+            texts.add(parts[2])
+    texts = sorted(texts)
+    print(f"{len(texts)} distinct sentences with were or we're")
+    os.environ["STUDY_THREADS"] = "1"
+    with multiprocessing.get_context("spawn").Pool(processes) as pool:
+        cases = [case for found in pool.imap_unordered(sentence_cases, texts, chunksize=64) for case in found]
+    report("Tatoeba, every English sentence (the keyboard's rule)", [(meant, m) for meant, m, _, _ in cases])
+    report("Tatoeba, every English sentence (stricter: at least 1 word before it)",
+           [(meant, m if before else None) for meant, m, before, _ in cases])
+    high = sorted(((m, text) for meant, m, _, text in cases if meant == "were" and m is not None), reverse=True)[:30]
+    print("\nThe meant 'were' sentences that score highest (public Tatoeba text), margin first:")
+    for m, text in high:
+        print(f"  {m:6.2f}  {text}")
+
+
+if __name__ == "__main__" and len(sys.argv) > 2 and sys.argv[2] == "--tatoeba":
+    full_tatoeba(sys.argv[3], int(sys.argv[4]) if len(sys.argv) > 4 else os.cpu_count())
+elif __name__ == "__main__":
     print("#### The keyboard's rule: 2 words besides the target, before and after together")
     main()
     NEED_BEFORE = 1

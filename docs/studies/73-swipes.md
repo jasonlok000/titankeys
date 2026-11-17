@@ -29,7 +29,7 @@ The owner asked for the settle-later apostrophe fix to cover swiped words too: "
   - the on-device DistilGPT-2;
   - the window back to the last sentence mark, then 2 words after;
   - 1.0 nats, or 2.0 with Only fix when sure;
-  - "were" needs 1.0 more.
+  - "were" needs 2.0 more.
 - **Right and wrong:** a change is right only if the judged meaning is the apostrophe form. A swipe that misread another word ("hell" for "heel") counts as wrong if it changes.
 - **Tool:** [`73-swipes-study.py`](73-swipes-study.py). It prints counts and margins only, never the text.
 

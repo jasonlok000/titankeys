@@ -19,8 +19,33 @@ import languages
 from checks import Stop, adb, play, record
 
 RECEIVER = f"{checks.APP}/com.titankeys.keyboard.InputMethodsSet"
-# Settings keeps eight input methods on at most: seven, and English.
-SET_SIZE = 7
+# How many languages go on with English at a time, each with all its input methods: seven, as Settings kept eight on at most
+# (2026-11-16). The switcher shows four languages once C's cap is on main (owner, 2026-11-17): TK_LANG_SET_SIZE=3 then.
+SET_SIZE = int(os.environ.get("TK_LANG_SET_SIZE", "7"))
+MAX_ON = int(os.environ.get("TK_LANG_MAX_ON", "7"))
+
+
+def sets():
+    """The input methods other than English, in index order, in sets of SET_SIZE languages: a language's input methods (Chinese's
+    three, Serbian's two) always go on together, as the switcher shows them under one language."""
+    with open(os.path.join(languages.REPO, "android/assets/im/index.json"), encoding="utf-8") as f:
+        entries = [entry for entry in json.load(f) if entry["id"] != "en"]
+    start = os.environ.get("TK_LANG_FROM")
+    if start in [entry["id"] for entry in entries]:
+        entries = entries[[entry["id"] for entry in entries].index(start):]
+    by_language = {}
+    for entry in entries:
+        by_language.setdefault(entry.get("language", {}).get("id", entry["id"]), []).append(entry["id"])
+    # Also at most MAX_ON input methods besides English: Settings dropped the ninth on (2026-11-16), and whether it counts
+    # languages or input methods wasn't seen.
+    out, current, count = [], [], 0
+    for group in by_language.values():
+        if current and (count == SET_SIZE or len(current) + len(group) > MAX_ON):
+            out.append(current)
+            current, count = [], 0
+        current += group
+        count += 1
+    return out + ([current] if current else [])
 # Letters most layouts move, so a wrong layout shows; no Space, so no fix runs on them.
 PLAIN = "qwertyuiop"
 # Engines and the scripts whose keys aren't one letter each: their own keys and what they must type.
@@ -134,14 +159,9 @@ def one(im, on):
 
 
 def check_all():
-    """Every input method, seven at a time with English, each typing in turn."""
-    ids = [im for im in all_ids() if im != "en"]
-    # TK_LANG_FROM=ID starts at that input method, to go on after a run that ended part way.
-    start = os.environ.get("TK_LANG_FROM")
-    if start in ids:
-        ids = ids[ids.index(start):]
-    for start in range(0, len(ids), SET_SIZE):
-        group = ids[start:start + SET_SIZE]
+    """Every input method, SET_SIZE languages at a time with English, each typing in turn. TK_LANG_FROM=ID starts at that input
+    method, to go on after a run that ended part way."""
+    for group in sets():
         for im in group:
             try:
                 one(im, ["en", *group])

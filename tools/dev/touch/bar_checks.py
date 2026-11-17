@@ -1,0 +1,39 @@
+"""C's bar words (main c8de2255), for checks.py --batch bar-words: with an empty field, the bar shows starters in the language's
+own words; after a word and Space, it shows next words. Spanish, French and Korean (Korean's word list is new), each on with
+English through InputMethodsSet, in Debug's Space gestures field. A password field's empty bar is for the owner's hands:
+Debug's own screens have no password field.
+"""
+import language_checks
+from checks import Stop, play, record
+
+# A word in each, as its keys: Korean's 한국 is g k s r n r.
+WORDS = {"es": "hola", "fr": "bonjour", "ko": "gksrnr"}
+HANDS = ["A password field: the bar stays empty (no starters, no next words)"]
+
+
+def keys(word):
+    return [g for letter in word for g in (f"key:{letter}:60:none", "+90")]
+
+
+def check_bar_words():
+    """Starters with an empty field, then next words after a word and Space, in Spanish, French and Korean."""
+    for im, word in WORDS.items():
+        language_checks.fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"bar-{im}", False, f"the field didn't start with {im}")
+            continue
+        language_checks.fresh()
+        play("+800", shot=f"bar-{im}-empty", at=500)
+        record(f"bar-{im}-starters", None, f"{im}, empty field: the bar shows starters", f"bar-{im}-empty")
+        moves = keys(word) + ["key:space", "+900"]
+        play(*moves, shot=f"bar-{im}-next", at=len(moves) * 80 + 600)
+        record(f"bar-{im}-next", None, f"{im}, after {word!r} and Space: the bar shows next words", f"bar-{im}-next")
+
+
+def finish():
+    """The owner's languages as they were before the batches: English typing, Chinese's three, Afrikaans."""
+    language_checks.adb("shell", "am", "broadcast", "-n", f"{language_checks.checks.APP}/com.titankeys.keyboard.InputMethodsSet",
+                        "--es", "on", "en,zh-pinyin,yue-jyutping,yue-yale,af", "--es", "current", "en")
+
+
+BATCH = [check_bar_words]

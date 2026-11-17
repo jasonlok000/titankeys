@@ -2,8 +2,9 @@
 
 1. Three languages on, a held Sym: the tiles over E-R, T-Y and U-I, centred within W to O (the screenshot's margins).
 2. A resting finger slid across the switcher: one menu_mark per tile it enters, not one per key (Debug's HapticsDump).
-3. A tap on the screen on a Sym panel item and on a switcher tile: one screen_tap each; on a bar word: bar_word, no screen_tap.
-4. A fifth language can't go on: Settings keeps four (InputMethodsSet's answer; the line Settings shows is for the eye).
+3. A tap on the screen on a Sym panel item and on a switcher tile picks it, logs "tap at … on …" and a haptic line
+   (TitanKeysTap), and plays one screen_tap; on a bar word: bar_word, no screen_tap.
+4. Five languages through InputMethodsSet all stay on; the switcher shows the first four (Settings' own refusal is for hands).
 5. Two languages on: a held Sym switches straight to the other, and back.
 6. The mark at Q: Chinese with only Yale on shows 中; with Pinyin on too, 耶.
 
@@ -70,47 +71,77 @@ def check_one_mark_per_tile():
     play("key:sym", "+500")
 
 
-def check_screen_taps():
-    """A tap on a Sym panel item and on a switcher tile: one screen_tap each. A tap on a bar word: bar_word, no screen_tap."""
-    setup(["en", "ru", "el"], "en")
-    # The Sym panel with no code: its first item, over W on the panel's top row.
-    play("key:sym", "+700")
-    since = now()
-    checks.guarded("tap", str(column_x(1)), "970")
+def tap_lines(action):
+    """Runs action (a tap on the screen) with Debug's TitanKeysTap log cleared before, and returns its lines after: "tap at X,Y on
+    VIEW" then a haptic line, or "taken by nothing". Places and view kinds only, never text."""
+    adb("shell", "setprop", "log.tag.TitanKeysTap", "I")
+    adb("logcat", "-c")
+    action()
     time.sleep(.8)
+    lines = [line.split(":", 1)[-1].strip() for line in adb("logcat", "-d", "-s", "TitanKeysTap").splitlines()
+             if "TitanKeysTap" in line]
+    return lines
+
+
+def tapped(lines):
+    """A tap that reached a view and played its haptic: "tap at … on …", then a haptic line, and never "taken by nothing"."""
+    return (any(line.startswith("tap at") and " on " in line for line in lines)
+            and any("played" in line or "haptic" in line for line in lines)
+            and not any("taken by nothing" in line for line in lines))
+
+
+def check_screen_taps():
+    """C's finger taps (main c8de2255): a tap on a Sym panel item and on a switcher tile picks, logs "tap at … on …" and a haptic
+    line, and plays one screen_tap; a tap on a bar word plays bar_word and no screen_tap. TitanKeysTap's lines go in the report."""
+    setup(["en", "ru", "el"], "en")
+    # The Sym panel with no code: its first item, over W on the panel's top row. It types into the field.
+    play("key:sym", "+700")
+    before = checks.field()
+    since = now()
+    lines = tap_lines(lambda: checks.guarded("tap", str(column_x(1)), "970"))
     played, _ = haptics_since(since)
     taps = [name for name, _ in played if name == "screen_tap"]
-    record("tap-sym-panel", len(taps) == 1, f"{len(taps)} screen_tap for a Sym panel item: {played}")
+    picked = checks.field() != before
+    record("tap-sym-panel", tapped(lines) and picked and len(taps) == 1,
+           f"picked: {picked}; {len(taps)} screen_tap; TitanKeysTap: {lines}")
     checks.guarded("keyevent", "4")
     time.sleep(.6)
     language_checks.fresh()
-    # The switcher: Russian's tile, over T-Y.
+    # The switcher with three languages: Russian's tile, over T-Y. Picked, Q types й.
     play(*HOLD_SYM)
     since = now()
-    checks.guarded("tap", str(column_x(4.5)), str(BAR_Y))
-    time.sleep(1)
+    lines = tap_lines(lambda: checks.guarded("tap", str(column_x(4.5)), str(BAR_Y)))
     played, _ = haptics_since(since)
     taps = [name for name, _ in played if name == "screen_tap"]
-    record("tap-switcher", len(taps) == 1, f"{len(taps)} screen_tap for a switcher tile: {played}")
+    play("key:q", "+500")
+    typed = checks.field()
+    record("tap-switcher", tapped(lines) and typed == "й" and len(taps) == 1,
+           f"Q after the tap typed {typed!r} (й: Russian picked); {len(taps)} screen_tap; TitanKeysTap: {lines}")
     setup(["en", "ru", "el"], "en")
     # A bar word: English's suggestions after "hel".
     play("key:h", "+90", "key:e", "+90", "key:l", "+600")
     since = now()
-    checks.guarded("tap", "538", str(BAR_Y))
-    time.sleep(.8)
+    lines = tap_lines(lambda: checks.guarded("tap", "538", str(BAR_Y)))
     played, _ = haptics_since(since)
     names = [name for name, _ in played]
-    record("tap-bar-word", "bar_word" in names and "screen_tap" not in names, f"a bar word: {played}")
-    record("tap-clipboard", None, "a clipboard item's screen_tap needs a clip saved first: for the owner's hands")
+    record("tap-bar-word", "bar_word" in names and "screen_tap" not in names, f"a bar word: {played}; TitanKeysTap: {lines}")
+    adb("shell", "setprop", "log.tag.TitanKeysTap", "''")
 
 
 def check_fifth_language():
-    """Five languages asked for: Settings keeps four on (C's cap). InputMethodsSet says what it kept."""
+    """C's design: InputMethodsSet takes any number, and a setting with more than four keeps them all; the switcher shows the
+    first four. Five asked for: all five stay on (the receiver's answer), and a held Sym shows four tiles (the shot)."""
+    asked = ["en", "ru", "el", "de", "fr"]
+    language_checks.fresh()
+    started = language_checks.turn_on(asked, "en")
     answer = adb("shell", "am", "broadcast", "-n", f"{APP}/com.titankeys.keyboard.InputMethodsSet", "--es", "on",
-                 "en,ru,el,de,fr", "--es", "current", "en")
+                 ",".join(asked), "--es", "current", "en")
     kept = answer.split("on ", 1)[-1].split(";")[0].split(",") if "on " in answer else []
-    record("fifth-language", 0 < len(kept) <= 4, f"asked for 5 languages, kept {kept}: {answer.strip()[-160:]}")
-    record("fifth-language-line", None, "Settings > Languages shows the line when a fifth is tried: for the owner's hands")
+    record("fifth-language-kept", started and kept == asked, f"asked for {asked}, kept {kept}")
+    language_checks.fresh()
+    play(*HOLD_SYM, shot="switcher-five", at=1300)
+    record("fifth-language-tiles", None, "five on: the switcher shows four tiles, the first four", "switcher-five")
+    play("key:sym", "+500")
 
 
 def check_two_toggle():
@@ -133,7 +164,8 @@ def check_q_mark():
 
 BATCH = [check_centred, check_one_mark_per_tile, check_screen_taps, check_fifth_language, check_two_toggle, check_q_mark]
 HANDS = ["A tap on a clipboard item (a clip saved first): one screen_tap",
-         "Settings > Languages: turning on a fifth language keeps it off and shows the line"]
+         "Settings > Languages: turning on a fifth language keeps it off and shows the line",
+         "A tap on a cell in Chinese's bigger menu picks it and logs (after B's merge)"]
 
 
 def finish():

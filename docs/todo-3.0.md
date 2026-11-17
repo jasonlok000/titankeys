@@ -335,6 +335,14 @@ limit; B read Google's current page on 2026-11-17: the base module may be 500 MB
 install-time packs; the base download is then 41.4 MB, 201.8 MB in all on a Titan, with no app change. Not yet installed on
 a phone. The GitHub APK can stay whole.
 
+## For the owner's hands (collected 2026-11-17)
+
+- Export TitanKeys Debug's typing log (Settings > Typing log > Export log), for J's #83 rerun with text since 11-11.
+- The phone read 51 C on the charger at 04:19, not charging, with MediaTek's battery warning up since 02:49; it blocked the second
+  half of the night's runs. Let it cool before the next slot.
+- Shift opening and closing the Chinese menu (the twin's Shift can't be used); Georgian Shift+W types its letter; blocking a
+  Spanish word from its menu; the saved-words list.
+
 ## Milestones (internal; the owner gave the go at 01:20)
 
 Each milestone has a gate: a list of what must be true before the next one starts. At each gate the Orchestrator writes a

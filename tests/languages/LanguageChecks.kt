@@ -79,6 +79,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (args.isNotEmpty()) holdHints(File(args[0]))
+    if (args.isNotEmpty()) onlyTheOnesOnStayWarm(File(args[0]))
     if (args.isNotEmpty()) variantsArePicked(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
@@ -1619,4 +1620,12 @@ private fun heldKeysShowAsPlainLetters() {
     same("Backspace takes the last off", HeldLetters.of(push(n) + push(e) + push(67)), "n")
     same("nothing typed, nothing shown", HeldLetters.of(emptyList()), "")
     same("Space and the rest show nothing", HeldLetters.of(push(62)), "")
+}
+
+/** The owner's rule: an input method that's off loads nothing. With English and Yale on, only Rime stays warm. */
+private fun onlyTheOnesOnStayWarm(folder: File) {
+    val index = InputMethodIndex.parse(File(folder, "index.json").readText())
+    same("English and Yale on: Rime alone is warm", WarmEngines.wanted(index.on("en,yue-yale")).keys, setOf("rime"))
+    same("English alone: no engine", WarmEngines.wanted(index.on("en")).keys, emptySet<String>())
+    same("Japanese and Korean on: Mozc and Hangul", WarmEngines.wanted(index.on("en,ja,ko")).keys, setOf("mozc", "hangul"))
 }

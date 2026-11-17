@@ -201,7 +201,7 @@ internal class Languages(
      * on load avoidable?"). An engine no input method that's on uses any more is stopped.
      */
     private fun warmUp() {
-        val wanted = on.filter { it.engine != null }.associateBy { it.engine!! }
+        val wanted = WarmEngines.wanted(on)
         // One typing now goes when the keyboard switches away from it ([release]).
         for (name in warm.keys - wanted.keys) warm.remove(name)?.takeIf { it !== loadedEngine }?.let { engine ->
             Thread({ engine.stop() }, "Cool $name").start()

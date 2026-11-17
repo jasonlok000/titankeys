@@ -476,7 +476,7 @@ private fun theDominoesAreRare() {
     streak.typed()
     now += 300
     same(streak.word(now, 2_000, 100) to streak.words, false to 1, "Typing starts it over")
-    // Holds of about 35 words each, 10 s apart at most, joined by flicks within 2 s: 3 holds make it.
+    // Holds of about 35 words each, joined by flicks within 2 s: 3 holds make it.
     val holds = DeleteStreak()
     var at = 0L
     var playedAt = -1

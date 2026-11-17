@@ -17,7 +17,7 @@ fun main() {
     flickGlowRamp()
     aNormalFlickDeletesOneWordAndDoesNotRepeat()
     aHeldFlickRepeatsUntilTheLift()
-    aLongHoldStopsAfterTenSeconds()
+    aLongHoldKeepsDeleting()
     aShortFlickWaitsTheLongest()
     aLongFlickWaitsTheShortest()
     aMiddleFlickWaitsBetween()
@@ -172,30 +172,25 @@ private class Rig {
 }
 
 /**
- * #89 (owner, 2026-11-16: "Lets cap it when it's a long text it deletes for 10s"): a held delete deletes at its usual pace for
- * 10 s from its first word at most, then stops though the finger stays, and a finger that moves on doesn't start it again.
+ * #89 (owner, 2026-11-17: "the visual shd be cap but the actual deleting shdnt b capped"): a held delete deletes for as long as
+ * the finger stays, word by word at its pace, past 10 s and on. It had stopped after 10 s. The picture keeps its caps.
  */
-private fun aLongHoldStopsAfterTenSeconds() {
-    same(DeleteHold.MOST_MILLIS, 10_000L, "#89: the cap is 10 s")
+private fun aLongHoldKeepsDeleting() {
     val rig = Rig()
     rig.flick(1_000)
-    rig.runTo(30_000)
+    rig.runTo(31_000)
     val first = rig.words.first()
     isTrue(rig.words.isNotEmpty(), "#89: the hold deletes")
-    isTrue(rig.words.all { it - first < DeleteHold.MOST_MILLIS }, "#89: no word goes 10 s or more after the first: ${rig.words.last() - first} ms")
-    isTrue(rig.words.last() - first >= DeleteHold.MOST_MILLIS - slowMillis, "#89: it went on, at its pace, until the 10 s: ${rig.words.last() - first} ms")
+    isTrue(rig.words.last() - first >= 25_000, "#89: it keeps deleting past 10 s, through the 30 s held: ${rig.words.last() - first} ms")
     same(rig.words.zipWithNext { a, b -> b - a }.distinct(), listOf(slowMillis), "#89: at the pace it uses today, a short flick's")
-    same(rig.next, null, "#89: then the timer stops")
-    isTrue(rig.hold.over, "#89: the hold is over")
-    rig.move(at(SHORT_STOP - .1f, .35f, 31_000))
-    rig.runTo(40_000)
-    isTrue(rig.words.last() - first < DeleteHold.MOST_MILLIS, "#89: sliding on after it deletes nothing more")
-    // A new flick starts a new hold, with its own 10 s.
-    rig.lift(41_000)
-    rig.flick(42_000)
-    rig.runTo(43_000)
-    isTrue(rig.words.any { it >= 42_000 }, "#89: a new flick deletes again")
-    isTrue(!rig.hold.over, "#89: with its own 10 s")
+    isTrue(rig.next != null, "#89: and its timer runs on while the finger stays")
+    val source = java.io.File("android/kotlin/com/titankeys/keyboard/DeleteSwipe.kt").readText()
+    isTrue("MOST_MILLIS" !in source, "#89: no cap left on the deleting")
+    // The lift ends it, as always.
+    rig.lift(31_500)
+    val before = rig.words.size
+    rig.runTo(33_000)
+    same(rig.words.size, before, "#89: the lift ends it")
 }
 
 private fun aNormalFlickDeletesOneWordAndDoesNotRepeat() {

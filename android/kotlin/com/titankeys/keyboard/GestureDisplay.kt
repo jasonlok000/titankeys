@@ -1382,7 +1382,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         /**
          * The dominoes (#89, owner, 2026-11-17: "make it rare enough and requires deleting a legitimately large amount of text"):
          * a delete streak of this many words, flicks and held deletes with no typing between, each within [DOMINO_GAP_MILLIS]
-         * of the last. One hold stops after 10 s, about 35 words, so it takes real work. Deletes of a selection never count.
+         * of the last, so it takes real work: a long hold, or flicks one after another. Deletes of a selection never count.
          */
         const val DOMINO_WORDS = 100
         const val DOMINO_GAP_MILLIS = 2_000L

@@ -168,6 +168,12 @@ object ChineseKeys {
     }
 
     /**
+     * How far a flick up must go to pick, in keys: a finger flicking up from the top row leaves the touchpad within about half
+     * a key, under a page turn's [Contact.PAGE_KEYS] (owner's phone, 2026-11-17: "flick not working").
+     */
+    const val FLICK_KEYS = .25f
+
+    /**
      * A flick up on the touchpad from the key under a choice: mostly up, starting on a letter in the rows that pick. [across] and
      * [down] are in keys and rows; up is negative. Returns the column it started in, or -1.
      */

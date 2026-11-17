@@ -30,6 +30,8 @@ internal enum class GuideMiss(val log: String) {
     Short("short-taps"),
     /** A lift before the slide that the held tap starts. */
     NoSlide("no-slide"),
+    /** A next tap that came too late for the keyboard to count it (owner, 2026-11-16). */
+    Slow("slow-taps"),
     /** A swipe far from the grey word's path ([SWIPE_FAR_KEYS]). */
     FarSwipe("far-swipe"),
     /** Something the slide locks: see [blockedChip]. */
@@ -66,7 +68,17 @@ internal fun tapMissLine(miss: GuideMiss, taps: Int, landed: Int = taps): String
     GuideMiss.Extra -> "That's ${count(landed)} taps, not ${count(taps)}. Hold the ${ordinal(taps)} one."
     GuideMiss.Short -> "That's ${count(landed)} taps, not ${count(taps)}. Hold the ${ordinal(taps)} one."
     GuideMiss.NoSlide -> "That's a lift, not a slide. Stay down and slide."
+    // F: draft (owner, 2026-11-16: "when I'm too slow it shd tell me").
+    GuideMiss.Slow -> "That's too slow, not quick taps. Tap faster."
     else -> "That's not this slide's move."
+}
+
+/**
+ * What a Space-tap slide says as its taps start the mode: which mode, and which way to slide (owner, 2026-11-16). F: draft.
+ */
+internal fun modeStartLine(words: Boolean, left: Boolean): String {
+    val way = if (left) "left" else "right"
+    return if (words) "Select mode on. Slide $way, lift at the end." else "Cursor mode on. Slide $way, lift in the word."
 }
 
 /** The line after a swipe far from its word, under the drawing of both paths (#90). */
@@ -86,10 +98,18 @@ internal class TapMeter(val taps: Int) {
         private set
     private var lastUp = -1L
 
-    /** A finger came down at [time]: the next tap, if it follows a tap closely enough, or the first. */
-    fun down(time: Long) {
+    /**
+     * A finger came down at [time]: the next tap, if it follows a tap as soon as the keyboard needs, or the first. True when it was
+     * meant as the next tap but came too late for the keyboard, so the slide can say so (owner, 2026-11-16: "when I'm too slow it
+     * shd tell me").
+     */
+    fun down(time: Long): Boolean {
         held = false
-        landed = if (lastUp >= 0 && time - lastUp <= TAP_GAP_MILLIS && landed in 1 until taps) landed + 1 else 1
+        val gap = if (lastUp >= 0) time - lastUp else -1L
+        val counting = landed in 1 until taps
+        val slow = counting && gap > TAP_GAP_MILLIS && gap <= SLOW_MILLIS
+        landed = if (counting && gap in 0..TAP_GAP_MILLIS) landed + 1 else 1
+        return slow
     }
 
     /** The finger lifted at [time]. [tap] says whether the touch was a tap: short and still. Anything else starts again. */
@@ -109,12 +129,19 @@ internal class TapMeter(val taps: Int) {
         lastUp = -1L
     }
 
-    /** How the steps show: each tap's light, then the hold's. */
-    fun lit(step: Int) = if (step < taps) step < landed else held
+    /** How the boxes show: each tap's light, then the last tap and its hold, one box, lit once held. */
+    fun lit(box: Int) = if (box < taps - 1) box < landed else held
 
     companion object {
-        /** A touch that starts this soon after a tap lifted is the next tap. The keyboard's own gap is 150 ms; this is kinder. */
-        const val TAP_GAP_MILLIS = 450L
+        /**
+         * A touch that starts this soon after a tap lifted is the next tap: the keyboard's own most, CursorGesture's
+         * MAX_DRAG_GAP_MILLIS, so the boxes light only for taps that count. It was a kinder 450 ms, which lit taps the keyboard
+         * didn't take, and the slide couldn't tell anyone they were too slow.
+         */
+        const val KEYBOARD_GAP_MILLIS = 200L
+        const val TAP_GAP_MILLIS = KEYBOARD_GAP_MILLIS
+        /** Later than the keyboard takes, up to this long after a tap, the next is too slow; later still, it's a new start. */
+        const val SLOW_MILLIS = 1_000L
         /** A tap is a touch shorter than this, that moved less than [TAP_TRAVEL] keys. */
         const val TAP_MILLIS = 300L
         const val TAP_TRAVEL = .5f

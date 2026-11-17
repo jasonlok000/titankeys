@@ -29,16 +29,13 @@ fun main() {
     aHoldDrawsTheRealWords()
     aHoldWithNoTextLeftDrawsNoPills()
     aPausedHoldFadesAndBlinks()
-    aHoldsDotsSpeedUpAsFarAsItsWordsDid()
     aHeldTripleGlowsEveryTime()
     theTripleGlowFollowsTheHand()
     aTriplePickShowsItsSelectionAtOnce()
     aTriplePickWaitsForTheLift()
-    aHoldsDotsNeverLieOverTheWords()
     anyNumberOfWordsShowsItsDots()
     quickFlicksMakeOneStream()
     aJoinStartsTheWaitAgain()
-    longDotsSpeedUpWhenTried()
     aPickedWordHoldsABeat()
     realTextFollowsTheCursor()
     realWordsForAWordDrag()
@@ -387,30 +384,19 @@ private fun aLongerFlickDeletesFaster() {
 }
 
 private fun theHoldEndsHideIt() {
+    // The hold shows the chomper eating while it deletes; it ends with the delete, with no dots after it (#89, owner,
+    // 2026-11-16: "We show a hardcoded animation with the flick", the dots eaten).
     val display = GestureDisplay()
     display.deleteHeld(200, 1_000)
     display.wordDeleted(1_000, 5)
     display.wordDeleted(1_200, 3)
     display.wordDeleted(1_400, 4)
     display.run(1_000, 1_500)
-    val shown = display.shownDeleted
-    display.deleteEnded(1_516)
-    same(display.scene, Scene.DeleteFlick, "When the hold lifts, its lines turn into the dots")
-    same(display.fromHold, true, "The dots come from the hold")
-    same(display.softDelete, true, "and show as a single flick's do")
-    same(display.morphFrom, shown, "The lines start where the hold left them, with no jump")
-    same(display.groups.toList(), listOf(5, 3, 4), "The dots group by word, nearest the caret first, with a gap where each space was")
-    same(display.dots, 12, "A dot for each character the hold deleted")
-    same(display.reveal, 1f, "The words stay covered at the lift")
-    display.run(1_516, 1_700)
-    isTrue(display.dotsIn > 0f && display.dotsIn < 1f, "The lines shrink into the dots over about 240 ms")
-    display.run(1_716, 1_960)
-    same(display.dotsIn, 1f, "Then the dots are in")
-    same(display.dotsOut, 0f, "and they stay about 200 ms")
-    display.run(1_976, 2_400)
-    isTrue(display.dotsOut > 0f && display.dotsOut < 1f, "Then they go into the caret")
-    display.run(2_416, 2_700)
-    same(display.scene, Scene.None, "and the words come back, by about 1.15 s after the lift: twelve dots need 30 ms each to land")
+    same(display.deleted, 3, "The chomper ate a dot for each of the three words")
+    same(display.softDelete, false, "while the hold goes, it's the hold's own picture")
+    isTrue(!display.deleteEnded(1_516), "When the hold lifts, no dots follow")
+    display.run(1_516, 1_900)
+    same(display.scene, Scene.None, "and the words come back soon after")
 
     val empty = GestureDisplay()
     empty.deleteHeld(200, 1_000)
@@ -418,20 +404,6 @@ private fun theHoldEndsHideIt() {
     empty.deleteEnded(1_116)
     empty.run(1_116, 1_400)
     same(empty.scene, Scene.None, "A hold that deleted nothing just goes")
-
-    val long = GestureDisplay()
-    long.deleteHeld(200, 1_000)
-    repeat(8) { long.wordDeleted(1_000L + it * 200, 7) }
-    long.deleteEnded(2_700)
-    same(long.groups.toList(), List(8) { 7 }, "Every word shows, with a dot for each of its characters: no cap (#89)")
-
-    val cut = GestureDisplay()
-    cut.deleteHeld(200, 1_000)
-    cut.wordDeleted(1_000, 4)
-    cut.deleteEnded(1_100)
-    cut.run(1_100, 1_200)
-    cut.interrupt()
-    same(cut.scene, Scene.None, "A key or a touch cuts the hold's dots at once")
 }
 
 private fun aHoldIsNotAFlourish() {
@@ -447,24 +419,29 @@ private fun aFlickHasABriefFlourish() {
     display.wordDeleted(1_000, GestureDisplay.letters("I don't"))
     same(display.scene, Scene.DeleteFlick, "A flick must show a flourish")
     same(display.showing, true, "The flourish must cover the words")
-    same(display.softDelete, true, "A single flick shows only its dots and the caret")
-    same(display.dots, 5, "\"don't\" took five characters, so it shows five dots")
+    same(display.softDelete, true, "A single flick shows only its dots and the chomper")
+    same(display.dots, GestureDisplay.CHOMP_DOTS, "Whatever it took, the fixed row of dots (#89)")
     display.run(1_000, 1_064)
     isTrue(display.reveal > .5f && display.reveal < 1f, "The words fade out, easing out, over about 150 ms: ${display.reveal}")
     display.run(1_080, 1_160)
     same(display.reveal, 1f, "and then they stay faded")
-    same(display.groups.toList(), listOf(5), "One word, one group")
+    same(display.groups.toList(), listOf(GestureDisplay.CHOMP_DOTS), "One row")
     display.run(1_080, 1_310)
     same(display.dotsIn, 1f, "The dots are all in after 120 ms")
     same(display.dotsOut, 0f, "and they stay a while, about 200 ms")
-    same(display.reveal, 1f, "while the cover stays")
-    display.run(1_326, 1_760)
-    isTrue(display.dotsOut > 0f && display.dotsOut < 1f, "Then they go into the caret, over about 450 ms")
-    same(display.reveal, 1f, "The words stay covered while the dots go")
-    display.run(1_776, 1_910)
-    isTrue(display.reveal < 1f && display.reveal > 0f, "Then the words fade back in, over about 200 ms")
-    display.run(1_926, 1_990)
-    same(display.scene, Scene.None, "It is over by about 0.97 s, and it is only a picture, so typing never waits for it")
+    var going = false
+    var now = 1_326L
+    while (display.scene == Scene.DeleteFlick && display.dotsOut < 1f && now < 3_000) {
+        display.advance(now, 1f)
+        if (display.dotsOut > 0f && display.dotsOut < 1f) {
+            going = true
+            same(display.reveal, 1f, "The words stay covered while the chomper eats")
+        }
+        now += 16
+    }
+    isTrue(going, "Then the chomper eats them")
+    display.run(now, now + 400)
+    same(display.scene, Scene.None, "It is over by about 1 s, and it is only a picture, so typing never waits for it")
 }
 
 private fun aFlickCountsTheCharactersItDeleted() {
@@ -475,7 +452,7 @@ private fun aFlickCountsTheCharactersItDeleted() {
     same(GestureDisplay.letters(null), 1, "With no text to read, one dot")
     val long = GestureDisplay()
     long.wordDeleted(1_000, 60)
-    same(long.dots, 60, "A very long word shows a dot for each character: no cap (#89)")
+    same(long.dots, GestureDisplay.CHOMP_DOTS, "A very long word shows the fixed row, as any flick (#89, owner, 2026-11-16)")
 }
 
 private fun newInputEndsAFlick() {
@@ -1168,16 +1145,6 @@ private fun holdDots(pace: Float, words: Int = 20): List<Float> {
  * A lifted hold's dots speed up only as far as its words did: not at all if the finger stayed at the slowest, to the fastest gap
  * once it reached the top-speed line, and between for a finger between. So dots, words and glow top out together.
  */
-private fun aHoldsDotsSpeedUpAsFarAsItsWordsDid() {
-    val slow = holdDots(0f).zipWithNext { a, b -> b - a }
-    val middle = holdDots(.5f).zipWithNext { a, b -> b - a }
-    val top = holdDots(1f).zipWithNext { a, b -> b - a }
-    near(slow.minOrNull()!!, slow.maxOrNull()!!, "At the slowest the dots keep an even pace: $slow", .5f)
-    near(top.minOrNull()!!, GestureDisplay.DOT_FASTEST_GAP, "At the top-speed line they reach the fastest gap", .5f)
-    isTrue(middle.minOrNull()!! > top.minOrNull()!! + 1f && middle.minOrNull()!! < slow.minOrNull()!! - 1f,
-        "Between, they top out between: ${middle.minOrNull()}")
-    isTrue(holdDots(1f).last() < holdDots(.5f).last() && holdDots(.5f).last() < holdDots(0f).last(), "and a faster hold's dots end sooner")
-}
 
 /**
  * Two taps then a held third press glow every time, however steady the finger: the glow grows over the whole bar, a little
@@ -1281,25 +1248,6 @@ private fun aTriplePickWaitsForTheLift() {
  * A hold covers the words fully, and its dots stay on that cover until they have all gone into the caret, so a row of dots never
  * lies over the suggestions (owner, 2026-11-12: one crossed out a word). Then the words come back, easing in.
  */
-private fun aHoldsDotsNeverLieOverTheWords() {
-    val display = GestureDisplay()
-    display.deleteHeld(200, 1_000)
-    repeat(3) { display.wordDeleted(1_000L + it, 4) }
-    display.run(1_000, 1_200)
-    display.deleteEnded(1_216)
-    display.run(1_216, 1_216)
-    same(display.solid, 1f, "At the lift the words are fully covered")
-    val landed = display.dotLandsAt(display.dots - 1).toLong()
-    display.run(1_232, 1_216 + landed)
-    same(display.solid, 1f, "and stay covered while any dot is still on its way")
-    same(display.reveal, 1f, "the cover whole")
-    display.run(1_216 + landed + 16, 1_216 + landed + 2_000)
-    same(display.showing, false, "Once the dots are in, the words come back")
-    val flick = GestureDisplay()
-    flick.wordDeleted(1_000, 4)
-    flick.run(1_000, 1_100)
-    same(flick.solid, 0f, "A flick's words were never fully covered")
-}
 
 /**
  * However many words go, the dots play: a hold of eighty words, and a hundred quick flicks one after another, show a dot for
@@ -1307,38 +1255,28 @@ private fun aHoldsDotsNeverLieOverTheWords() {
  * along as they land.
  */
 private fun anyNumberOfWordsShowsItsDots() {
-    fun landsAll(display: GestureDisplay, from: Long): Long {
-        val landed = BooleanArray(display.dots)
-        var now = from
-        while (display.scene != Scene.None && now < from + 120_000) {
-            display.advance(now, 1f)
-            isTrue(display.shownUnits <= GestureDisplay.MAX_ROW + .01f, "The row never squeezes past the bar's room: ${display.shownUnits}")
-            if (display.scene == Scene.DeleteFlick) for (index in landed.indices) if (display.dotTravel(index) >= 1f) landed[index] = true
-            now += 16
-        }
-        isTrue(landed.all { it }, "Every dot lands: ${landed.count { it }} of ${landed.size}")
-        return now
-    }
+    // Eighty words held: no dots at the lift (#89); a hundred quick flicks: a fixed row each, every dot eaten in turn.
     val hold = GestureDisplay()
     hold.deleteHeld(80, 1_000)
     repeat(80) { hold.wordDeleted(1_000L + it * 80, 5 + it % 4) }
-    isTrue(hold.deleteEnded(7_500), "A hold of eighty words turns into dots")
-    same(hold.groups.size, 80, "Each of the eighty words keeps its own group")
-    isTrue(hold.groups.all { it >= 1 }, "with a dot at least")
-    landsAll(hold, 7_500)
-
+    isTrue(!hold.deleteEnded(7_500), "A hold of eighty words ends with its delete: no dots after it")
     val flicks = GestureDisplay()
     var now = 1_000L
-    var shown = 0
     repeat(100) {
         flicks.wordDeleted(now, 7)
-        isTrue(flicks.dots > shown, "Flick ${it + 1} adds its dots: ${flicks.dots}")
-        shown = flicks.dots
+        same(flicks.dots, (it + 1) * GestureDisplay.CHOMP_DOTS, "Flick ${it + 1} adds its row")
         same(flicks.chained, it > 0, "Every flick after the first joins the one stream")
         flicks.run(now, now + 184)
         now += 200
     }
-    landsAll(flicks, now)
+    val landed = BooleanArray(flicks.dots)
+    while (flicks.scene != Scene.None && now < 120_000) {
+        flicks.advance(now, 1f)
+        isTrue(flicks.shownUnits <= GestureDisplay.MAX_ROW + .01f, "The row never squeezes past the bar's room: ${flicks.shownUnits}")
+        if (flicks.scene == Scene.DeleteFlick) for (index in landed.indices) if (flicks.dotTravel(index) >= 1f) landed[index] = true
+        now += 16
+    }
+    isTrue(landed.all { it }, "Every dot is eaten: ${landed.count { it }} of ${landed.size}")
 }
 
 /** Each dot's landing, in real ms after the stream started. */
@@ -1362,27 +1300,25 @@ private fun aJoinStartsTheWaitAgain() {
     early.run(1_000, 1_284)
     early.wordDeleted(1_300, 4)
     val after = lands(early)
-    same(after.size, 9, "The four join the five")
+    same(after.size, 2 * GestureDisplay.CHOMP_DOTS, "The second row joins the first")
     near(after.first(), 300f + joinWait, "The first dot lands a whole wait after the join", 1f)
     inOrder(after, "A join at 300 ms")
 
-    // A flick again at 540 ms, into a long word's dots: one has landed, some are on their way, and the rest hold and go again
-    // from the join's wait. (At 600 ms every dot of a 12-letter word has already set off with the 200 ms wait.)
+    // A flick again at 450 ms: some dots are on their way to the chomper, and the rest hold and go again from the join's wait.
     val late = GestureDisplay()
     late.wordDeleted(1_000, 12)
     val before = lands(late)
-    late.run(1_000, 1_524)
-    late.wordDeleted(1_540, 4)
+    late.run(1_000, 1_434)
+    late.wordDeleted(1_450, 4)
     val now = lands(late)
-    val going = before.indices.filter { before[it] - GestureDisplay.DOT_TRAVEL <= 540f }
-    val waiting = before.indices.filter { before[it] - GestureDisplay.DOT_TRAVEL > 540f }
-    isTrue(before.first() < 540f, "One dot has already landed: $before")
-    isTrue(going.isNotEmpty() && waiting.isNotEmpty(), "At 540 ms some dots have set off and some haven't: $before")
+    val going = before.indices.filter { before[it] - GestureDisplay.DOT_TRAVEL <= 450f }
+    val waiting = before.indices.filter { before[it] - GestureDisplay.DOT_TRAVEL > 450f }
+    isTrue(going.isNotEmpty() && waiting.isNotEmpty(), "At 450 ms some dots have set off and some haven't: $before")
     for (index in going) near(now[index], before[index], "Dot $index, already on its way, lands as it was going to", .5f)
-    isTrue(waiting.all { now[it] >= 540f + joinWait - .5f }, "The dots still waiting go again from the join's wait: $now")
-    near(now[waiting.first()], 540f + joinWait, "The first held dot lands a whole wait after the join", 1f)
-    inOrder(now, "A join at 540 ms")
-    same(now.size, 16, "The new four go last")
+    isTrue(waiting.all { now[it] >= 450f + joinWait - .5f }, "The dots still waiting go again from the join's wait: $now")
+    near(now[waiting.first()], 450f + joinWait, "The first held dot lands a whole wait after the join", 1f)
+    inOrder(now, "A join at 450 ms")
+    same(now.size, 2 * GestureDisplay.CHOMP_DOTS, "The new row goes last")
 
     // Three quick flicks: each join starts the wait again, so the whole queue waits from the last.
     val three = GestureDisplay()
@@ -1392,7 +1328,7 @@ private fun aJoinStartsTheWaitAgain() {
     three.run(1_150, 1_284)
     three.wordDeleted(1_300, 5)
     val all = lands(three)
-    same(all.size, 12, "Three flicks' dots in one queue")
+    same(all.size, 3 * GestureDisplay.CHOMP_DOTS, "Three flicks' rows in one queue")
     near(all.first(), 300f + joinWait, "Everything waits from the third flick", 1f)
     inOrder(all, "Three quick flicks")
     val ticks = three.dotLandings(1f)
@@ -1400,13 +1336,13 @@ private fun aJoinStartsTheWaitAgain() {
     isTrue(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }, "Its ticks keep 30 ms apart: $ticks")
     // Every dot lands, in order, before the words come back.
     var at = 1_300L
-    val landed = BooleanArray(12)
+    val landed = BooleanArray(3 * GestureDisplay.CHOMP_DOTS)
     while (three.scene == Scene.DeleteFlick && at < 5_000) {
         three.advance(at, 1f)
-        if (three.scene == Scene.DeleteFlick) for (index in 0 until 12) if (three.dotTravel(index) >= 1f) landed[index] = true
+        if (three.scene == Scene.DeleteFlick) for (index in landed.indices) if (three.dotTravel(index) >= 1f) landed[index] = true
         at += 16
     }
-    isTrue(landed.all { it }, "Every one of the twelve lands: ${landed.toList()}")
+    isTrue(landed.all { it }, "Every one is eaten: ${landed.toList()}")
 }
 
 /**
@@ -1423,27 +1359,27 @@ private fun quickFlicksMakeOneStream() {
     same(display.scene, Scene.DeleteFlick, "A second flick keeps the dots going")
     same(display.chained, true, "It joins the stream")
     same(display.dotsAt, started, "The stream does not start over")
-    same(display.dots, 9, "Its four dots join the five")
-    same(display.groups.toList(), listOf(5, 4), "Each word keeps its own group, with a gap between")
+    same(display.dots, 2 * GestureDisplay.CHOMP_DOTS, "Its row joins the first")
+    same(display.groups.toList(), listOf(GestureDisplay.CHOMP_DOTS, GestureDisplay.CHOMP_DOTS), "Each flick keeps its own row, with a gap between")
     val second = display.dotLandings(1f).map { 1_256 + it }
-    isTrue(second.size >= 4, "A tick for each dot still to land, the new ones too: $second")
+    isTrue(second.size >= GestureDisplay.CHOMP_DOTS, "A tick for each dot still to land, the new ones too: $second")
     isTrue(second.first() > first.first(), "The join holds the dots back: $first, then $second")
     display.run(1_256, 1_500)
     display.wordDeleted(1_512, 7)
-    same(display.dots, 16, "A third flick grows the queue again")
+    same(display.dots, 3 * GestureDisplay.CHOMP_DOTS, "A third flick grows the queue again")
     val all = display.dotLandings(1f).map { 1_512 + it }
-    isTrue(all.size >= 7, "Every dot still to land ticks: $all")
+    isTrue(all.size >= GestureDisplay.CHOMP_DOTS, "Every dot still to land ticks: $all")
     isTrue(all.zipWithNext().all { (a, b) -> b - a >= 30 }, "Every dot lands 30 ms or more after the one before: $all")
     isTrue(all.first() > 1_512, "Nothing lands before the join")
     // Every dot lands, in order, before the words come back.
-    val landed = BooleanArray(16)
+    val landed = BooleanArray(3 * GestureDisplay.CHOMP_DOTS)
     var now = 1_512L
     while (display.scene != Scene.None && now < 6_000) {
         display.advance(now, 1f)
-        if (display.scene == Scene.DeleteFlick) for (index in 0 until 16) if (display.dotTravel(index) >= 1f) landed[index] = true
+        if (display.scene == Scene.DeleteFlick) for (index in landed.indices) if (display.dotTravel(index) >= 1f) landed[index] = true
         now += 16
     }
-    isTrue(landed.all { it }, "Every one of the sixteen dots lands: ${landed.toList()}")
+    isTrue(landed.all { it }, "Every one of the dots is eaten: ${landed.toList()}")
     isTrue(now > all.last(), "The words come back only after the last dot")
     // After the stream is over, the next flick starts a new one.
     display.wordDeleted(now + 100, 3)
@@ -1465,62 +1401,32 @@ private fun quickFlicksMakeOneStream() {
  * The experiment "Dots speed up when long": the first few dots keep their spacing, then each lands about 8% sooner than the one
  * before, down to 10 ms, so a long delete whooshes in. Ticks keep 30 ms apart by leaving some dots without one.
  */
-private fun longDotsSpeedUpWhenTried() {
-    val plain = GestureDisplay()
-    plain.speedUp = false
-    plain.wordDeleted(1_000, 30)
-    val plainSpan = plain.dotLandsAt(29) - plain.dotLandsAt(0)
-    val fast = GestureDisplay()
-    fast.speedUp = true
-    fast.wordDeleted(1_000, 30)
-    val gaps = (1 until 30).map { fast.dotLandsAt(it) - fast.dotLandsAt(it - 1) }
-    isTrue(gaps.take(3).all { kotlin.math.abs(it - 30f) < .01f }, "The first few keep 30 ms: $gaps")
-    isTrue(gaps.drop(2).zipWithNext().all { (a, b) -> b <= a + .01f }, "Then each is no longer than the one before: $gaps")
-    isTrue(kotlin.math.abs(gaps[3] - 30f * GestureDisplay.DOT_SPEED_UP) < .01f, "about 8% sooner each: ${gaps[3]}")
-    isTrue(gaps.all { it >= GestureDisplay.DOT_FASTEST_GAP - .01f } && kotlin.math.abs(gaps.last() - 10f) < .01f, "down to 10 ms: $gaps")
-    val span = fast.dotLandsAt(29) - fast.dotLandsAt(0)
-    isTrue(span < plainSpan * .6f, "A long delete is over much sooner: $span ms against $plainSpan")
-    val ticks = fast.dotLandings(1f)
-    isTrue(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }, "Ticks stay 30 ms apart or more: $ticks")
-    isTrue(ticks.size in 10 until 30, "so some dots land without one: ${ticks.size} ticks for 30 dots")
-    isTrue(kotlin.math.abs(ticks.first() - fast.dotLandsAt(0)) <= .5f, "The first dot ticks as it lands: ${ticks.first()}")
-    // A few dots with it on keep a tick each, as their spacing stays over 30 ms.
-    val few = GestureDisplay()
-    few.speedUp = true
-    few.wordDeleted(1_000, 4)
-    same(few.dotLandings(1f).size, 4, "Four dots, four ticks")
-    // On by default; off, the dots keep their even spacing.
-    same(GestureDisplay().speedUp, true, "The experiment is on by default")
-    isTrue((1 until 30).all { kotlin.math.abs(plain.dotLandsAt(it) - plain.dotLandsAt(it - 1) - 30f) < .01f }, "Off, thirty dots land 30 ms apart")
-}
 
 /**
  * The dots go into the caret over the owner's 450 ms while they fit, at least 30 ms apart. More dots stretch the way in, so each
  * lands on its own, and the haptic ticks with them come from the same numbers.
  */
 private fun aFlicksWayInStretchesToFitItsDots() {
-    for ((letters, out) in listOf(1 to 450f, 8 to 450f, 30 to 202.5f + 30 * 30)) {
+    // Every flick is the same fixed row (#89), whatever it took: one letter, eight or thirty.
+    var out = -1f
+    for (letters in listOf(1, 8, 30)) {
         val display = GestureDisplay().apply { speedUp = false }
         display.wordDeleted(1_000, letters)
         val landings = display.dotLandings(1f)
-        same(landings.size, letters, "$letters dots land one by one")
-        isTrue(kotlin.math.abs(GestureDisplay.outMillis(letters, 1f) - out) < .01f, "$letters dots go in over ${out} ms")
-        isTrue(landings.zipWithNext().all { (a, b) -> b - a >= 30 }, "$letters dots land at least 30 ms apart: $landings")
-        // The drawing's dots land when the haptic says: each is just short of the caret a frame before, and in it after.
+        same(landings.size, GestureDisplay.CHOMP_DOTS, "$letters letters: the fixed row's dots are eaten one by one")
+        val millis = GestureDisplay.outMillis(display.dots, 1f)
+        if (out < 0f) out = millis
+        near(millis, out, "$letters letters: the same way in as any flick")
+        isTrue(landings.zipWithNext().all { (a, b) -> b - a >= 30 }, "$letters letters: eaten at least 30 ms apart: $landings")
+        // The drawing's dots reach the chomper when the haptic says: each is just short of it a frame before, and in it after.
+        val last = display.dots - 1
         display.run(1_000, 1_000 + landings.last() - 2)
-        isTrue(display.dotTravel(letters - 1) < 1f, "$letters dots: the last isn't in yet")
-        isTrue(letters == 1 || display.dotTravel(letters - 2) >= 1f, "$letters dots: the one before it is")
+        isTrue(display.dotTravel(last) < 1f, "$letters letters: the last isn't eaten yet")
+        isTrue(display.dotTravel(last - 1) >= 1f, "$letters letters: the one before it is")
         display.run(1_000 + landings.last() + 2, 1_000 + landings.last() + 2)
-        isTrue(display.dotTravel(letters - 1) >= 1f, "$letters dots: then the last lands")
-        same(display.scene, Scene.DeleteFlick, "$letters dots: the words come back only after")
+        isTrue(display.dotTravel(last) >= 1f, "$letters letters: then the last is eaten")
+        same(display.scene, Scene.DeleteFlick, "$letters letters: the words come back only after")
     }
-    // Thirty dots land over about 900 ms, then the words come back.
-    val thirty = GestureDisplay().apply { speedUp = false }
-    thirty.wordDeleted(1_000, 30)
-    val landings = thirty.dotLandings(1f)
-    isTrue(landings.last() - landings.first() == 29L * 30, "Thirty dots land 30 ms apart: ${landings.first()} to ${landings.last()}")
-    thirty.run(1_000, 1_000 + (GestureDisplay.FLICK_IN + GestureDisplay.FLICK_HOLD + GestureDisplay.outMillis(30, 1f) + GestureDisplay.FLICK_BACK).toLong() + 20)
-    same(thirty.scene, Scene.None, "and it's over once the words are back")
     // Faster animations shrink the way in, but never below 30 ms a dot.
     val fast = GestureDisplay().apply { speedUp = false }
     fast.wordDeleted(1_000, 10)
@@ -1933,17 +1839,15 @@ private fun aLongWordShowsEveryDot() {
     same(wordToDelete({ reach -> "z".repeat(minOf(reach, 1_000)) }, null)?.length, 1_000, "#89: a field that gives at most 1,000 loses those")
     same(wordToDelete({ reach -> if (reach > 256) null else "z".repeat(reach) }, null)?.length, 256, "#89: a big read that fails keeps the first")
 
+    // The bar shows the same fixed row of dots, eaten by the chomper, however long the word (#89, owner, 2026-11-16: dots
+    // counted from the text didn't show on a long text).
     val display = GestureDisplay()
     display.wordDeleted(1_000, 5_000)
-    same(display.dots, 5_000, "#89: 5,000 dots")
-    same(display.groups.toList(), listOf(5_000), "#89: in one word")
-    val lands = (0 until 5_000).map { display.dotLandsAt(it) }
-    val gaps = lands.zipWithNext { a, b -> b - a }
-    isTrue(gaps.take(3).all { abs(it - 30f) < .01f }, "#89: today's pace, 30 ms apart at first: ${gaps.take(5)}")
-    isTrue(gaps.drop(40).all { abs(it - GestureDisplay.DOT_FASTEST_GAP) < .01f }, "#89: and today's speed-up, to 10 ms apart")
-    isTrue(lands.last() - lands.first() > 45_000f, "#89: no time limit, so 5,000 dots take about 50 s: ${lands.last() - lands.first()}")
+    same(display.dots, GestureDisplay.CHOMP_DOTS, "#89: the fixed row, not 5,000 dots")
+    same(display.groups.toList(), listOf(GestureDisplay.CHOMP_DOTS), "#89: one row")
     val ticks = display.dotLandings(1f)
-    isTrue(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }, "#89: their ticks thin out to 30 ms apart: ${ticks.size} ticks")
+    same(ticks.size, GestureDisplay.CHOMP_DOTS, "#89: a tick as the chomper eats each")
+    isTrue(ticks.last() < 1_500, "#89: over in well under 2 s: ${ticks.last()} ms")
     display.landsEvery(1_000, "#89: a 5,000-character word")
 }
 
@@ -1960,24 +1864,25 @@ private fun aLongRunOfWordsShowsEveryDot() {
     same(wordToDelete(reader(text), null), words.last(), "#89: a flick on it takes the last word only")
     same(GestureDisplay.letters(text), words.last().length, "#89: and a delete read before it goes counts that word")
 
+    // A hold through it: the chomper eats a dot for each word while it deletes, and ends with the delete, with no dots after.
     val hold = GestureDisplay()
     hold.deleteHeld(80, 1_000)
     for ((index, word) in words.asReversed().withIndex()) hold.wordDeleted(1_000L + index * 80, GestureDisplay.dotsFor(word, word.length))
-    isTrue(hold.deleteEnded(1_000L + words.size * 80), "#89: the hold's lift turns into dots")
-    same(hold.groups.toList(), words.asReversed().map { it.length }, "#89: each word keeps a dot for each of its characters")
-    same(hold.dots, words.sumOf { it.length }, "#89: every character of the run")
-    hold.landsEvery(1_000L + words.size * 80, "#89: a hold through 5,000 characters")
+    same(hold.deleted, words.size, "#89: the hold counts every word it took")
+    isTrue(!hold.deleteEnded(1_000L + words.size * 80), "#89: its lift plays no dots after it")
+    hold.run(1_000L + words.size * 80, 1_400L + words.size * 80)
+    same(hold.scene, Scene.None, "#89: the chomper is gone soon after the delete ends")
 
-    // Flicks one after another along it join the one stream, none squeezed.
+    // Flicks one after another along it join the one stream, each with its fixed row.
     val flicks = GestureDisplay()
     var now = 1_000L
-    for (word in words.asReversed().take(200)) {
-        flicks.wordDeleted(now, word.length)
+    repeat(20) {
+        flicks.wordDeleted(now, 9)
         flicks.run(now, now + 144)
         now += 160
     }
-    same(flicks.dots, words.asReversed().take(200).sumOf { it.length }, "#89: 200 flicks keep every dot")
-    flicks.landsEvery(now, "#89: 200 flicks along the run")
+    same(flicks.dots, 20 * GestureDisplay.CHOMP_DOTS, "#89: 20 flicks, a fixed row each")
+    flicks.landsEvery(now, "#89: 20 flicks along the run")
 }
 
 /** #89: a field that gives no text still shows a dot when a flick deletes in it. */
@@ -1991,7 +1896,7 @@ private fun aFieldWithNoTextShowsADot() {
     same(GestureDisplay.dotsFor(null, 5_000), 5_000, "#89: with a dot for each of its 5,000 characters")
     val display = GestureDisplay()
     display.wordDeleted(1_000, GestureDisplay.dotsFor(null, 0))
-    same(display.dots, 1, "#89: the bar shows one dot")
+    same(display.dots, GestureDisplay.CHOMP_DOTS, "#89: the bar shows the fixed row")
     display.landsEvery(1_000, "#89: a field with no text")
 }
 
@@ -2002,8 +1907,8 @@ private fun aFieldWithNoTextShowsADot() {
 private fun anyRealActionStopsTheDots() {
     fun playing(): GestureDisplay = GestureDisplay().apply {
         wordDeleted(1_000, 5_000)
-        run(1_000, 3_000)
-        same(scene, Scene.DeleteFlick, "#89: 5,000 dots are playing")
+        run(1_000, 1_300)
+        same(scene, Scene.DeleteFlick, "#89: a flick's dots are playing")
     }
     val key = playing()
     key.interrupt()
@@ -2024,17 +1929,9 @@ private fun anyRealActionStopsTheDots() {
 /** #93: a swipe while a delete's dots or a picked word's mark plays takes the bar at once, and its trail is whole from its first point. */
 private fun aSwipeDuringTheDotsGetsItsFullPath() {
     val flick = GestureDisplay().apply { wordDeleted(1_000, 6); run(1_000, 1_300) }
-    val held = GestureDisplay().apply {
-        deleteHeld(200, 1_000)
-        wordDeleted(1_000, 5)
-        wordDeleted(1_200, 4)
-        deleteEnded(1_300)
-        run(1_300, 1_500)
-    }
     val picked = GestureDisplay().apply { wordSelected(1_000); run(1_000, 1_200) }
-    val bigFlick = GestureDisplay().apply { wordDeleted(1_000, 5_000); run(1_000, 3_000) }
-    for ((what, display) in listOf("a flick's dots" to flick, "a held delete's dots" to held, "a picked word's mark" to picked,
-            "5,000 dots" to bigFlick)) {
+    val bigFlick = GestureDisplay().apply { wordDeleted(1_000, 5_000); run(1_000, 1_300) }
+    for ((what, display) in listOf("a flick's dots" to flick, "a picked word's mark" to picked, "a long word's dots" to bigFlick)) {
         isTrue(display.scene == Scene.DeleteFlick || display.scene == Scene.WordSelected, "#93: $what play")
         var now = 3_100L
         for (index in 0 until 40) {

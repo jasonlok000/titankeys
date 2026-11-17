@@ -3,6 +3,7 @@ package com.titankeys.keyboard
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import com.titankeys.engine.TypingSettings
 
@@ -71,6 +72,7 @@ internal class Languages(
         val index = InputMethodList.index(context)
         val setting = TypingSettings.inputMethods(context)
         on = index.on(setting)
+        warmUp()
         val picked = sync.heard(android())
         saveSync()
         val choice = InputMethodChoice.atFieldStart(index, setting, TypingSettings.currentInputMethod(context), picked)
@@ -137,6 +139,39 @@ internal class Languages(
         if (id != target) use(id)
     }
 
+    /** Engines kept warm for the input methods that are on, one for each engine: see [warmUp]. */
+    private val warm = HashMap<String, InputEngine>()
+    private val warming = HashSet<String>()
+
+    /**
+     * Each engine an input method that's on uses gets ready in the background as the keyboard starts and at each field start
+     * ([InputEngine.warm]): Rime unpacks its 40 MB the first time and opens, Mozc copies its data and loads it. A switch to the
+     * input method then only starts its own engine, with nothing to wait for (owner, 2026-11-17: "is the loading for the engine
+     * on load avoidable?"). An engine no input method that's on uses any more is stopped.
+     */
+    private fun warmUp() {
+        val wanted = on.filter { it.engine != null }.associateBy { it.engine!! }
+        for (name in warm.keys - wanted.keys) warm.remove(name)?.let { engine -> Thread({ engine.stop() }, "Cool $name").start() }
+        for ((name, entry) in wanted) {
+            if (name in warm || name in warming) continue
+            warming += name
+            Thread({
+                val started = SystemClock.elapsedRealtime()
+                val method = InputMethodList.load(context, entry.id)
+                val engine = method?.let { m ->
+                    InputEngines.create(context, name)?.takeIf { it.warm(m, java.io.File(context.filesDir, "engines/$name")) }
+                }
+                val millis = SystemClock.elapsedRealtime() - started
+                main.post {
+                    warming -= name
+                    Log.i(LOG_TAG, "Engine $name warm in $millis ms: ${if (engine != null) "ready" else "didn't start"}")
+                    if (engine == null) return@post
+                    if (on.any { it.engine == name }) warm[name] = engine else Thread({ engine.stop() }, "Cool $name").start()
+                }
+            }, "Warm $name").apply { priority = Thread.MIN_PRIORITY }.start()
+        }
+    }
+
     private fun use(id: String) {
         target = id
         val ticket = ++loading
@@ -148,6 +183,7 @@ internal class Languages(
             main.postDelayed({ if (ticket == loading) preparing?.invoke(entry) }, PREPARING_MILLIS)
         }
         Thread({
+            val startedAt = SystemClock.elapsedRealtime()
             val method = InputMethodList.load(context, id)
             // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
             val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
@@ -156,7 +192,7 @@ internal class Languages(
                 InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
             }
             main.post {
-                if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded: ${
+                if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded in ${SystemClock.elapsedRealtime() - startedAt} ms: ${
                     if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
                     else "${words?.size ?: 0} words, no engine"
                 }")
@@ -191,6 +227,8 @@ internal const val KEYBOARD_LIST = "keyboard_list"
 
 /** The log tag for which input method types and why: `adb logcat -s TitanKeysIM`. */
 internal const val LOG_TAG = "TitanKeysIM"
+/** The log tag for the bar's choices and the bigger menu, in TitanKeys Debug: `adb logcat -s TitanKeysChoices`. */
+internal const val CHOICES_TAG = "TitanKeysChoices"
 private const val SYNCED = "synced"
 
 /** How long an engine's input method may take to start before the bar says it's getting ready. */

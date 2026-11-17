@@ -145,13 +145,15 @@ object HapticTimeline {
 
     /**
      * The words under the lab's Play a hold for [plan]: the pause, how many words and dots, and how many ticks the rule skipped.
-     * "Still 400 ms, then the flick and 10 words, the lift, and 30 dots. 0 dots skipped near a word."
+     * "Still 400 ms, then the flick and 10 words, the lift, and no dots: the chomper ends with the delete. 0 dots skipped near a
+     * word." (A hold's lift has played no dots since #89.)
      */
     fun planWords(plan: HoldTicks.Plan): String {
         val words = plan.ticks.count { it.kind == HoldTicks.Kind.Word }
         val dots = plan.ticks.filter { it.kind == HoldTicks.Kind.Dot }
         val skipped = dots.count { !it.plays }
-        val after = if (dots.isEmpty()) "no dots: animations are off, so they don't tick"
+        // F: draft. A hold's chomper ends with its delete, so no dots follow the lift (#89).
+        val after = if (dots.isEmpty()) "no dots: the chomper ends with the delete"
             else "${dots.size} dots from ${dots.first().at - plan.liftAt} ms after it"
         return "Still ${plan.pauseMillis} ms, then the flick and $words words, the lift, and $after. " +
             "$skipped ${if (skipped == 1) "dot" else "dots"} skipped near a word."

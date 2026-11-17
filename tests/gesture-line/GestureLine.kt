@@ -205,17 +205,16 @@ internal object GestureLine {
         Frame("drag-left", "triple Space: the drag taking words to the left, the handle") { d -> drag(d, -1, 900L) },
         Frame("drag-caret", "triple Space: the drag, its end as a caret", SelectionEnd.Caret) { d -> drag(d, 1, 900L) },
         Frame("drag-chevron", "triple Space: the drag, its end as a chevron", SelectionEnd.Chevron) { d -> drag(d, 1, 900L) },
-        Frame("hold", "held delete: its words and caret") { d -> hold(d, 1_500L) },
-        Frame("hold-paused", "held delete: in the pause zone, the caret on") { d ->
+        Frame("hold", "held delete: the chomper eating its row of dots") { d -> hold(d, 1_500L) },
+        Frame("hold-paused", "held delete: in the pause zone, the chomper dimmed") { d ->
             hold(d, 1_500L)
             d.deletePaused(true)
             // Long enough for the pause to show in full, on a beat where the blinking caret is on.
             run(d, 1_500L, 1_548L + 2 * GestureDisplay.BLINK_MILLIS)
         },
-        Frame("hold-lifted", "held delete lifted: its words turning into dots") { d -> hold(d, 1_500L); d.deleteEnded(1_516L); run(d, 1_516L, 1_640L) },
         Frame("flick-in", "flick: the dots coming in") { d -> d.wordDeleted(1_000L, 5); run(d, 1_000L, 1_096L) },
         Frame("flick-row", "flick: the dots in a row") { d -> d.wordDeleted(1_000L, 5); d.wordDeleted(1_150L, 4); run(d, 1_000L, 1_300L) },
-        Frame("flick-landing", "flick: the dots going into the caret, its pulse") { d -> flickLanding(d) },
+        Frame("flick-landing", "flick: the dots going into the chomper, its bite") { d -> flickLanding(d) },
         Frame("swipe", "word swipe: the path over the keys") { d -> swipe(d) },
         Frame("swipe-rows", "word swipe along each row's middle: top, middle, bottom") { d ->
             swipe(d, listOf(.05f to .125f, .45f to .125f, .5f to .375f, .9f to .375f, .95f to .625f, .55f to .625f))
@@ -368,11 +367,11 @@ internal object GestureLine {
         val caret = 2 * min(StripFit.caretHalf(s.word), s.floor - s.line)
         val accent = look.accent and 0xFFFFFF
         val carets = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == accent && abs(it.right - it.left - STEER_CARET * s.density) < .01f }
-        if (frame.name.startsWith("steer") || frame.name == "hold" || frame.name == "hold-paused" || frame.name == "drag-caret") {
+        if (frame.name.startsWith("steer") || frame.name == "drag-caret") {
             if (carets.isEmpty()) found += "has no caret"
             for (bar in carets) if (abs(bar.height - caret) > .5f) found += "its caret is %.2f px tall, the letters %.2f px".format(bar.height, caret)
         }
-        if (frame.name == "hold" || frame.name.startsWith("drag") || frame.name == "pick") {
+        if (frame.name.startsWith("drag") || frame.name == "pick") {
             val ink = look.ink and 0xFFFFFF
             val words = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == ink }
             if (words.isEmpty()) found += "has no words"
@@ -391,17 +390,23 @@ internal object GestureLine {
                     found += "a word at x %.0f is %.2f px from the selection, under %.2f".format((word.left + word.right) / 2, gap, SELECTION_GAP * s.density)
             }
         }
-        // The held delete's words about to go are orange; in the pause zone they're light grey again and its caret is dimmed
-        // (owner, 2026-11-13).
-        if (frame.name == "hold" || frame.name == "hold-paused") {
-            val taking = shapes.filter { it.kind == "bar" && (it.colour and 0xFFFFFF) == accent && it.right - it.left > STEER_CARET * s.density + .01f }
-            val caretAlpha = carets.maxOfOrNull { it.colour ushr 24 } ?: 0
+        // The delete's chomper, three strokes in the accent where the caret was, eats a row of orange dots; in the pause zone the
+        // dots are light grey again and the chomper is dimmed (#89, owner, 2026-11-16).
+        if (frame.name == "hold" || frame.name == "hold-paused" || frame.name.startsWith("flick")) {
+            // In a delete's frames every stroke is the chomper's: dimmed or fading, it isn't the accent itself.
+            val chomper = shapes.filter { it.kind == "line" }
+            val orange = shapes.filter { it.kind == "dot" && (it.colour and 0xFFFFFF) == accent }
+            // Opaque, dimmed toward the bar's black, so its strokes show no seams where they overlap: its red tells how strong.
+            val red = (look.accent shr 16) and 0xFF
+            val chomperRed = chomper.maxOfOrNull { (it.colour shr 16) and 0xFF } ?: 0
+            if (chomper.size != 3) found += "has ${chomper.size} chomper strokes, not 3"
+            if (chomper.any { it.colour ushr 24 != 0xFF }) found += "its chomper is see-through, so its strokes would show seams"
             if (frame.name == "hold") {
-                if (taking.isEmpty()) found += "has no orange word for the word it's taking"
-                if (caretAlpha < 250) found += "its caret is dimmed while it isn't paused: alpha $caretAlpha"
-            } else {
-                if (taking.isNotEmpty()) found += "has ${taking.size} orange words while paused"
-                if (caretAlpha > 120) found += "its caret isn't dimmed while paused: alpha $caretAlpha"
+                if (orange.isEmpty()) found += "has no orange dots for the words it's taking"
+                if (chomperRed < red - 2) found += "its chomper is dimmed while it isn't paused: red $chomperRed of $red"
+            } else if (frame.name == "hold-paused") {
+                if (orange.isNotEmpty()) found += "has ${orange.size} orange dots while paused"
+                if (chomperRed > red / 2) found += "its chomper isn't dimmed while paused: red $chomperRed of $red"
             }
         }
         val risky = risky(image)

@@ -17,6 +17,7 @@ fun main() {
     flickGlowRamp()
     aNormalFlickDeletesOneWordAndDoesNotRepeat()
     aHeldFlickRepeatsUntilTheLift()
+    aLongHoldStopsAfterTenSeconds()
     aShortFlickWaitsTheLongest()
     aLongFlickWaitsTheShortest()
     aMiddleFlickWaitsBetween()
@@ -167,6 +168,33 @@ private class Rig {
         val settlement = contact.up(emptyList(), time) ?: return null
         return contact.settle(settlement, settlement.deadline)
     }
+}
+
+/**
+ * #89 (owner, 2026-11-16: "Lets cap it when it's a long text it deletes for 10s"): a held delete deletes at its usual pace for
+ * 10 s from its first word at most, then stops though the finger stays, and a finger that moves on doesn't start it again.
+ */
+private fun aLongHoldStopsAfterTenSeconds() {
+    same(DeleteHold.MOST_MILLIS, 10_000L, "#89: the cap is 10 s")
+    val rig = Rig()
+    rig.flick(1_000)
+    rig.runTo(30_000)
+    val first = rig.words.first()
+    isTrue(rig.words.isNotEmpty(), "#89: the hold deletes")
+    isTrue(rig.words.all { it - first < DeleteHold.MOST_MILLIS }, "#89: no word goes 10 s or more after the first: ${rig.words.last() - first} ms")
+    isTrue(rig.words.last() - first >= DeleteHold.MOST_MILLIS - slowMillis, "#89: it went on, at its pace, until the 10 s: ${rig.words.last() - first} ms")
+    same(rig.words.zipWithNext { a, b -> b - a }.distinct(), listOf(slowMillis), "#89: at the pace it uses today, a short flick's")
+    same(rig.next, null, "#89: then the timer stops")
+    isTrue(rig.hold.over, "#89: the hold is over")
+    rig.move(at(SHORT_STOP - .1f, .35f, 31_000))
+    rig.runTo(40_000)
+    isTrue(rig.words.last() - first < DeleteHold.MOST_MILLIS, "#89: sliding on after it deletes nothing more")
+    // A new flick starts a new hold, with its own 10 s.
+    rig.lift(41_000)
+    rig.flick(42_000)
+    rig.runTo(43_000)
+    isTrue(rig.words.any { it >= 42_000 }, "#89: a new flick deletes again")
+    isTrue(!rig.hold.over, "#89: with its own 10 s")
 }
 
 private fun aNormalFlickDeletesOneWordAndDoesNotRepeat() {

@@ -64,6 +64,20 @@ class RimeEngine(
         return true
     }
 
+    /**
+     * Unpacks the data the first time and opens Rime, selecting no schema: Rime has one session, and the engine that types
+     * owns it. Rime stays open while this engine is warm, so the engine that types only selects its schema.
+     */
+    override fun warm(method: InputMethod, dataDir: File): Boolean {
+        if (method.engine != ENGINE) return false
+        val data = RimeData(dataDir)
+        synchronized(this) {
+            if (!open) open = runCatching { opened(rime) { data.prepareUser(); install(data) && rime.open(data.shared.path, data.user.path) } }
+                .getOrDefault(false)
+        }
+        return open
+    }
+
     /** The sync count when this engine last selected its schema: a sync since closed the session, so it selects it again. */
     private var seen = -1
 

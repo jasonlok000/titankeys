@@ -808,6 +808,7 @@ class TitanKeysIme : InputMethodService() {
         languages = Languages(this, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains),
             { InputMethodList.idOf(currentInputMethodSubtypeOrNull()) }) { inputMethodChanged(it) }
         languages.preparing = { showPreparing(it) }
+        languages.warmAtStart()
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
@@ -3372,6 +3373,7 @@ class TitanKeysIme : InputMethodService() {
         }
         pendingInput.addLast(PendingInput(true, action, event))
         drainInput()
+        if (event != null && loadGate.closed(pendingInput)) showHeldLetters()
     }
 
     private fun drainInput() {
@@ -4203,12 +4205,28 @@ class TitanKeysIme : InputMethodService() {
     /** The line on the bar while an input method gets ready, until [inputMethodChanged] takes it away. */
     private var preparingNotice: Strip.Notice.Line? = null
 
-    /** An input method still getting ready (Rime copying its data the first time): the bar says so, never over a word's menu. */
+    /**
+     * An input method still getting ready (Rime copying its data the first time): the bar never says so (owner, 2026-11-17:
+     * "there shd be no warm up visible to the user"). The keys typed meanwhile wait ([EngineWait]), and the bar shows their
+     * letters, plain, until the engine takes them. Never over a word's menu.
+     */
     private fun showPreparing(entry: InputMethodIndex.Entry) {
         rawLog?.engine(entry.id, "preparing")
+        showHeldLetters()
+    }
+
+    /** The letters waiting for an input method that is still loading, plain, as the code they will become. */
+    private fun showHeldLetters() {
         val strip = strip ?: return
+        if (!::languages.isInitialized || !languages.loadingNow) return
         if (strip.notice != null && strip.notice !is Strip.Notice.Line) return
-        val notice = Strip.Notice.Line(preparingLine(entry))
+        val letters = HeldLetters.of(pendingInput.mapNotNull { it.event }.map { Triple(it.action == KeyEvent.ACTION_DOWN, it.repeatCount, it.keyCode) })
+        if (letters.isEmpty()) {
+            preparingNotice?.let { if (strip.notice == it) strip.notice = null }
+            preparingNotice = null
+            return
+        }
+        val notice = Strip.Notice.Line(letters)
         preparingNotice = notice
         strip.notice = notice
     }

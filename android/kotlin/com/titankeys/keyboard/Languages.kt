@@ -179,6 +179,17 @@ internal class Languages(
     /** Each language's input method last typed with, by language id, for the two-language toggle ([SwitchOverlay.toggle]). */
     val lastUsed = HashMap<String, String>()
 
+    /**
+     * As the keyboard's service is made (boot, or the keyboard restarted), before any field: every engine of an input method
+     * that's on warms then, once a process, so nobody waits for one (owner, 2026-11-17: "best if we could make it so that
+     * there's no warmup at all"). Warm engines stay through field changes and hiding; only turning an input method off, or
+     * the process ending, frees them.
+     */
+    fun warmAtStart() {
+        on = InputMethodList.index(context).on(TypingSettings.inputMethods(context))
+        warmUp()
+    }
+
     /** Engines kept warm for the input methods that are on, one for each engine: see [warmUp]. */
     private val warm = HashMap<String, InputEngine>()
     private val warming = HashSet<String>()
@@ -227,6 +238,7 @@ internal class Languages(
             apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return
         }
+        // No line saying it's getting ready: the bar shows the keys that wait, plain ([preparing]).
         on.firstOrNull { it.id == id && it.engine != null }?.let { entry ->
             main.postDelayed({ if (ticket == loading) preparing?.invoke(entry) }, PREPARING_MILLIS)
         }

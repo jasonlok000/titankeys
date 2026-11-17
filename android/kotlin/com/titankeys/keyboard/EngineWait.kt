@@ -72,3 +72,26 @@ class LoadGate<T : Any>(private val make: () -> T) {
         gate = null
     }
 }
+
+/**
+ * The letters of the keys waiting for an input method that is loading, to show plain on the bar instead of a line saying it's
+ * getting ready (owner, 2026-11-17: "there shd be no warm up visible to the user"). Each key is (down, repeat, keycode), in
+ * Android's codes: a letter's push adds it, Backspace's takes the last one off, repeats and releases add nothing.
+ */
+object HeldLetters {
+    private const val KEYCODE_A = 29
+    private const val KEYCODE_Z = 54
+    private const val KEYCODE_DEL = 67
+
+    fun of(keys: List<Triple<Boolean, Int, Int>>): String {
+        val out = StringBuilder()
+        for ((down, repeat, code) in keys) {
+            if (!down || repeat > 0) continue
+            when (code) {
+                in KEYCODE_A..KEYCODE_Z -> out.append('a' + (code - KEYCODE_A))
+                KEYCODE_DEL -> if (out.isNotEmpty()) out.setLength(out.length - 1)
+            }
+        }
+        return out.toString()
+    }
+}

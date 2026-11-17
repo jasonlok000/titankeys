@@ -81,5 +81,21 @@ os.environ.pop("TK_CUTOFF_EPOCH")
 import switcher_checks
 assert switcher_checks.tapped(["tap at 161,970 on b6", "screen_tap played"])
 assert not switcher_checks.tapped(["tap at 161,970 taken by nothing", "screen_tap played"])
+# The heat wait, with adb played by a stand-in: 51.2 °C and MediaTek's warning in front stop after the waits; 30.0 °C passes.
+real_adb, real_steps, real_seconds = checks.adb, checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS
+checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS = 1, 0
+def stand_in(temperature, front):
+    return lambda *args: f"  temperature: {temperature}" if "battery" in args else f"  mCurrentFocus=Window{{1 u0 {front}}}"
+checks.adb = stand_in(512, "com.mediatek.batterywarning/com.mediatek.batterywarning.BatteryWarningActivity")
+assert checks.phone_heat() == (51.2, True), checks.phone_heat()
+try:
+    checks.wait_cool()
+    raise AssertionError("a hot phone didn't stop the run")
+except checks.Stop:
+    pass
+checks.adb = stand_in(300, "com.titankeys.debug/com.titankeys.keyboard.SpaceGestureActivity")
+assert checks.phone_heat() == (30.0, False)
+checks.wait_cool()
+checks.adb, checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS = real_adb, real_steps, real_seconds
 print("Batch checks passed")
 PY

@@ -876,7 +876,8 @@ private fun koreanChoices() {
     check("하 offers 하고", "하고" in initial) { initial.joinToString(" ") }
     check("하 offers words that go on to 한", initial.any { it.startsWith("한") }) { initial.joinToString(" ") }
     korean.reset()
-    same("ㅎ alone offers words with ᄒ", HangulComposer(words).key('g').choices.all { it.startsWith("하") || it.first() in '하'..'힣' }, true)
+    same("ㅎ alone: ㅎ as typed, then words with ᄒ", HangulComposer(words).key('g').choices.let { it.first() == "ㅎ" && it.size > 1 } &&
+        HangulComposer(words).key('g').choices.drop(1).all { it.startsWith("하") || it.first() in '하'..'힣' }, true)
     for (c in "gksr") korean.key(c)
     val after = korean.key('n')
     check("한 written, 구 being built: 한국", after.choices.any { it.startsWith("한국") }) { after.choices.joinToString(" ") }
@@ -897,6 +898,7 @@ private fun koreanChoices() {
     check("안녕하 + ㅅ offers 안녕하세요", "안녕하세요" in row || loop.choices(0, 40).contains("안녕하세요")) {
         (row + loop.choices(0, 40)).joinToString(" ")
     }
+    same("the row's first is the word as typed, what Space writes (#98)", row.firstOrNull(), "안녕핫")
     val menu = loop.choices(0, 40)
     check("the bigger menu has more than the row", menu.size >= row.size) { "${menu.size} ${row.size}" }
     val at = menu.indexOf("안녕하세요")
@@ -904,6 +906,10 @@ private fun koreanChoices() {
         val picked = loop.pickAt(at).commit
         same("a pick from the menu writes the rest after 안녕", picked, "하세요 ")
     }
+    // Picking the word as typed writes it as Space does: the syllable being built, then the space.
+    val asTyped = HangulComposer(words)
+    for (c in "gks") asTyped.key(c)
+    same("a pick of the first, the word as typed: 한 and a space", asTyped.pickAt(0).commit, "한 ")
     // A held letter's symbol: its jamo comes off the syllable, the syllable is written, the symbol goes on as usual.
     val held = HangulComposer(words)
     held.key('g'); held.key('k'); held.key('s')

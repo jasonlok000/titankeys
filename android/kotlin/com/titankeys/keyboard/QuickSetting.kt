@@ -26,5 +26,24 @@ enum class QuickSetting(val key: String, val label: String, val title: String) {
     companion object {
         /** The item on a letter key, or null if the key is blank. */
         fun on(key: String) = entries.firstOrNull { it.key == key }
+
+        /**
+         * Each item that is a typing setting a language page may leave out, and that page's row: LanguageSettings' FIXES, SWIPE,
+         * CAPITALS, DOUBLE_SPACE and HOLD, by name, as the checks that build this file alone don't have LanguageSettings
+         * (tests/languages checks the two agree).
+         */
+        private val ROWS = mapOf(
+            Autocorrect to "fixes",
+            SwipeTyping to "swipe",
+            AutoCapitalise to "capitals",
+            AutoPunctuation to "doubleSpace",
+            HoldSymbols to "hold",
+        )
+
+        /**
+         * The items that can't work in a language whose Settings page shows [rows] (LanguageSettings.rows): the panel leaves
+         * their keys blank while that language types, as its page leaves the rows out (Fix and Hold in Chinese, say).
+         */
+        fun hiddenIn(rows: List<String>): Set<QuickSetting> = ROWS.filterValues { it !in rows }.keys
     }
 }

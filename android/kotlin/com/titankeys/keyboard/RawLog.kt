@@ -126,19 +126,27 @@ object RawLog {
         TypingSettings.liftOffGraceMillis(context), settings(context),
         Contact.tuning + deleteSwipeTuning + swipePiecesTuning + CursorMode.tuning + SwipeRecognizer.tuning())
 
-    private fun settings(context: Context): Map<String, Any> = linkedMapOf(
+    /** The language the keyboard types in now, whose own typing values apply (TypingSettings.PER_LANGUAGE). */
+    private fun typingLanguage(context: Context): String = runCatching {
+        val current = TypingSettings.currentInputMethod(context)
+        InputMethodList.index(context).on(TypingSettings.inputMethods(context)).firstOrNull { it.id == current }?.language?.id
+    }.getOrNull() ?: InputMethod.ENGLISH_ID
+
+    private fun settings(context: Context): Map<String, Any> = typingLanguage(context).let { language -> linkedMapOf(
         "liftOff" to TypingSettings.liftOffGrace(context),
         "liftOffMillis" to TypingSettings.liftOffDurationMillis(context),
         "tapKeys" to TypingSettings.tapKeys(context),
-        "holdSymbols" to TypingSettings.holdSymbols(context),
+        // The typing language's own values, and which language that is (TypingSettings.PER_LANGUAGE).
+        "language" to language,
+        "holdSymbols" to TypingSettings.holdSymbolsIn(context, language),
         "holdSymbolMillis" to TypingSettings.holdSymbolMillis(context),
         "fnAsCtrl" to TypingSettings.fnAsCtrl(context),
         "doublePressLocks" to TypingSettings.doublePressLocks(context),
-        "autoCapitalise" to TypingSettings.autoCapitalise(context),
-        "autoPunctuation" to TypingSettings.autoPunctuation(context),
-        "sentenceSpaces" to TypingSettings.sentenceSpaces(context),
-        "commaSpace" to TypingSettings.commaSpace(context),
-        "autocorrect" to TypingSettings.autocorrect(context),
+        "autoCapitalise" to TypingSettings.autoCapitaliseIn(context, language),
+        "autoPunctuation" to TypingSettings.autoPunctuationIn(context, language),
+        "sentenceSpaces" to TypingSettings.sentenceSpacesIn(context, language),
+        "commaSpace" to TypingSettings.commaSpaceIn(context, language),
+        "autocorrect" to TypingSettings.autocorrectIn(context, language),
         "suggestionBar" to TypingSettings.suggestionBar(context),
         "launcherHidesBar" to TypingSettings.launcherHidesBar(context),
         "cursorControl" to TypingSettings.cursorControl(context),
@@ -152,7 +160,7 @@ object RawLog {
         "inputMethods" to TypingSettings.inputMethods(context),
         "inputMethod" to TypingSettings.currentInputMethod(context),
         "learning" to SwipeTyping.get(context).learningEnabled(),
-    )
+    ) }
 
     private fun now() = SystemClock.uptimeMillis()
 

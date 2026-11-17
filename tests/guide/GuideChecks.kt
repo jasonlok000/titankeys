@@ -1040,7 +1040,8 @@ private fun chapterOne() {
     val typing = GUIDE_STEPS.filter { it.chapter == GuideChapter.Typing }
     // Swiping types its own spaces, so its slide locks a lone Space (owner, 2026-11-13).
     // The word menu slide teaches only the hold on TitanKeys: everything else is blocked (owner, 2026-11-13).
-    same(typing.map { it.lessons }, listOf(keys + GuideLesson.Space, setOf(GuideLesson.Swipe) + keys,
+    // The swipe slide opens swiping alone: every key press, Backspace included, is locked (owner, 2026-11-16).
+    same(typing.map { it.lessons }, listOf(keys + GuideLesson.Space, setOf(GuideLesson.Swipe),
         setOf(GuideLesson.BarHold)), "Each slide unlocks what it teaches; none teaches picking from the bar (v5.2)")
     same(GUIDE_STEPS.filter { it.chapter == GuideChapter.Delete }.map { it.lessons }, listOf(setOf(GuideLesson.Backspace),
         setOf(GuideLesson.Flick), setOf(GuideLesson.Flick, GuideLesson.DeleteHold)), "Delete unlocks Backspace, the flick, then its hold")
@@ -1213,8 +1214,16 @@ private fun scenarios() {
 
     val swipe = GuideFlow({ GuideSettings() })
     swipe.start("swipe")
-    swipe.event(Pushed(KEY_A))
-    same(title(swipe.event(Pushed(62))), "That's typing. Swipe this one.", "A word typed key by key on the swipe slide")
+    // Keys do nothing here: the keyboard's lock keeps them out of the field and says what they were (owner, 2026-11-16).
+    val swipeStep = GUIDE_STEPS.first { it.id == "swipe" }
+    GuideHooks.lessons = swipeStep.lessons
+    same(listOf(GuideLesson.Typing, GuideLesson.Space, GuideLesson.Backspace, GuideLesson.Flick, GuideLesson.DeleteHold, GuideLesson.Enter)
+        .none(GuideHooks::allows) && GuideHooks.allows(GuideLesson.Swipe), true, "Only swiping gets through on the swipe slide")
+    GuideHooks.lessons = null
+    same(blockedChip(swipeStep, GuideLesson.Typing.name), "That's typing, not a swipe. Swipe this one.", "A letter, refused")
+    same(blockedChip(swipeStep, GuideLesson.Backspace.name), "That's Backspace, not a swipe. Swipe this one.", "Backspace, refused")
+    same(blockedChip(swipeStep, GuideLesson.Space.name), "That's a space, not a swipe. Swipes add their own.", "Space, refused")
+    same(swipe.event(Pushed(KEY_A)), GuideVerdict.Wait, "A key that got through anyway moves nothing on")
     // Whatever is swiped becomes the word (the keyboard puts the line's word first), so any swipe counts (owner, v5.2).
     same(swipe.event(Recognised(listOf("tp")), "to"), GuideVerdict.Wait, "Any swipe counts, however bad: no bar to pick from")
     same(swipe.liveLine(), swipesLeft(2), "and the count goes down")
@@ -2084,6 +2093,13 @@ private fun demosEndWhereAPassDoes() {
     val seed = "$BACKSPACE_SEED "
     val backspace = byId.getValue("backspace").demo!!
     same(backspace, GuideDemo.DeleteLetter, "The Backspace slide's demo takes one letter")
+    // Its showing is on the keys: the extra e stays in the field until Backspace is pressed (owner, 2026-11-16: "I dont want it
+    // vanished"). The flick's showing still fades its word.
+    val shown = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    same(Regex("""GuideDemo\.DeleteLetter\s*(,|->)""").findAll(shown).map { it.value }.toList(), listOf("GuideDemo.DeleteLetter ->"),
+        "The field never hides the e during the showing")
+    same("GuideDemo.DeleteLetter -> Unit" in shown, true, "its branch leaves the field alone")
+    same("GuideDemo.DeleteLast -> demoRange(demo, text, null)" in shown, true, "while the flick's word still fades")
     val gone = demoRange(backspace, seed, null)!!
     same(seed.substring(gone.first, gone.last + 1), "e", "and that letter is the extra e, not the whole word")
     val after = seed.removeRange(gone)

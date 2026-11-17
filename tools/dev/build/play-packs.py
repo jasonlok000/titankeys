@@ -19,7 +19,7 @@ PACKS = {
     "mozc_pack": ["assets/mozc/", "assets/mozc.sha256"],
     "swipe_pack": ["assets/swipe/"],
     # Every input method's next-word tables (docs/next-words.md).
-    "next_words_pack": ["assets/im/*/pairs.txt"],
+    "next_words_pack": ["assets/im/*/pairs*.bin"],
 }
 # What the base module keeps where (bundletool's module layout).
 SIGNATURE = (".SF", ".RSA", ".DSA", ".EC")

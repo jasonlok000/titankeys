@@ -428,6 +428,17 @@ private fun hindiRulesType() {
     for (c in "namastee") engine.key(c)
     same("Backspace takes the last key off", engine.backspace().code, "नमस्ते")
     same("a mark no rule takes ends the word", engine.key('!').commit, "नमस्ते")
+    // The bigger menu, opened with a swipe up: the word list's words past the bar's eight, and a pick from any of them.
+    val hi = java.util.Locale.forLanguageTag("hi")
+    val code = RulesComposer(rules).apply { "nama".forEach { key(it) } }.code()
+    val many = RulesComposer(rules, WordList.read("कखगचजटडतदपबमयरलवसह".map { "$code$it" }.asSequence()
+        .mapIndexed { i, w -> " word=$w,f=${1000 - i}" }, hi))
+    val bar = "nama".map { many.key(it) }.last().choices
+    same("the bar has eight", bar.size, RulesComposer.CHOICES)
+    same("the menu's first page is the bar's, in order", many.choices(0, 8), bar)
+    same("the menu reads past them", many.choices(8, 4).size, 4)
+    val ninth = many.choices(9, 1).single()
+    same("a pick from the menu, past the bar's eight", many.pickAt(9).commit, "$ninth ")
 }
 
 /** Jquery.ime's own test cases for an input method, when $HI_FIXTURES names their JSON ([{input, output}]): how many pass. */
@@ -622,6 +633,15 @@ private fun telexMarksAndTones() {
     engine.reset()
     same("Unmarked code offers the marked word", "tieng".map { engine.key(it) }.last().choices, listOf("tiếng"))
     same("Picking writes it with a space", engine.pick(0).commit, "tiếng ")
+    // The bigger menu, opened with a swipe up: the word list's words past the bar's eight, and a pick from any of them.
+    val many = TelexComposer(WordList.read(("bcdgklmnp".flatMap { c -> "aeiou".map { v -> "ta$c$v" } }).asSequence()
+        .mapIndexed { i, w -> " word=$w,f=${1000 - i}" }, vi))
+    val bar = "ta".map { many.key(it) }.last().choices
+    same("The bar has eight", bar.size, TelexComposer.CHOICES)
+    same("The menu's first page is the bar's, in order", many.choices(0, 8), bar)
+    same("The menu reads past them", many.choices(8, 4).size, 4)
+    val ninth = many.choices(9, 1).single()
+    same("A pick from the menu, past the bar's eight", many.pickAt(9).commit, "$ninth ")
     val ended = TelexComposer().apply { "xin".forEach { key(it) } }.space()
     same("Space writes the word and goes on", ended.commit to ended.handled, "xin" to false)
 }

@@ -128,6 +128,17 @@ check tk_yale zh_hans "jung man" 中文
 check tk_yale zh_hk "deui m jyu" 對唔住
 check tk_yale zh_hk "yut yu" 粵語
 check tk_yale zh_hk "ngo dei" 我哋
+# Yale's interchangeable initials: z for j, n and l for each other. 你 stays first for nei, and ng stays ng.
+check tk_yale zh_hk "nei" 你
+check tk_yale zh_hk "lei" 你
+check tk_yale zh_hk "lei hou" 你好
+check tk_yale zh_hk "zung man" 中文
+check tk_yale zh_hk "jung man" 中文
+check tk_yale zh_hk "ngo" 我
+# Jyutping keeps its own initials: lei isn't 你 there.
+rm -rf "$D/try"; mkdir -p "$D/try"
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
+  || { echo "FAIL Jyutping lei gives 你: the fuzzy initials reached Jyutping" >&2; exit 1; }
 check tk_jyutping zh_hk "jyut jyu" 粵語
 check tk_jyutping zh_hk "ngo dei" 我哋
 check tk_jyutping zh_hk "gwong dung waa" 廣東話
@@ -148,6 +159,20 @@ check tk_zhuyin zh_tw "nefhwf" 你好
 check tk_zhuyin zh_tw "nehw" 你好
 check tk_zhuyin zh_tw "tidxm" 臺灣
 check tk_zhuyin zh_hans "jxlxn" 中文
+# A whole phrase typed without spaces, then Space once, as the owner types (2026-11-17: "diuneiloumo"): Space takes all of it,
+# leaving nothing behind.
+phrase() { # schema variant code committed
+  local got
+  rm -rf "$D/try"; mkdir -p "$D/try"
+  got="$("$TOOL" space "$D/phone" "$D/try" "$1" "$2" "$3" 2>/dev/null)"
+  [ "$got" = "$4|" ] || { echo "FAIL $1 $2 '$3' then Space: '$got', expected '$4|'" >&2; exit 1; }
+}
+phrase tk_yale zh_hk diuneiloumou 屌你老母
+phrase tk_yale zh_hk ngodeigamyatheuiyamcha 我哋今日去飲茶
+phrase tk_yale zh_hk ngodeiyatchaiheuisikfaan 我哋一齊去食飯
+phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
+phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
+
 # 対, the Japanese form of 對, is off deui's first page in every variant.
 for v in zh_hk zh_tw zh_hans; do
   rm -rf "$D/try"; mkdir -p "$D/try"

@@ -418,6 +418,12 @@ each generic language types its letters and accents over adb.
 17. Every language from the study ships inside the app; none is downloaded (43 Latin, Cyrillic and Greek languages plus
     Chinese, about 160 MB in all).
 
+18. **Language labels (2026-11-16 night):** one label per input method, shown at Q and in the switcher, at most two characters in the language's own script: Latin languages by their two-letter code (ES, DE, …; English shows no mark at Q), Cyrillic in Cyrillic (РУ, УК, БЕ, БГ, СР, МК, ҚА), Greek ΕΛ, Georgian ქა, Thai ไท, Hebrew עב, Hindi हि, and one character for 한, あ and Chinese's 耶, 粵, 拼.
+
+19. **#98, the bar shows what Space types (2026-11-16 night):** H's check found 4 cases where Space kept the typed word while a completion sat in the middle (every language but English, with Fix typos off, after a fix taken back, a hidden fix). The fix keeps Space as it is and makes the bar honest: when Space will keep the typed word, that word sits in the middle, completions to the sides. Space doesn't start autocompleting in other languages.
+
+20. **Zhuyin's layout (2026-11-16 night):** 注音 uses the 許氏 Hsu layout, all 37 symbols on the 26 letters, since the standard 大千 layout needs 15 keys the Titan only has behind Alt. Named 注音 · 許氏 in Settings. Cangjie 5 and Quick 5 use the letters directly (official rime repos, LGPL-3.0).
+
 More calls get added here as the night goes.
 
 ## For the owner in the morning

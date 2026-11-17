@@ -48,11 +48,14 @@ deploys (`rime_jni.cc`): it uses the shipped tables as they are, whatever times 
 
 **Changed from rime-cantonese:** before compiling, `data.sh` changes a few word weights in `essay-cantonese.txt`, listed
 with the reason for each in [`cantonese-weights.tsv`](cantonese-weights.tsv) (粵語 before 月餘, 我哋 before 我地, 対, the
-Japanese form of 對, last). Nothing else in rime-cantonese is changed.
+Japanese form of 對, last). Then it adds words.hk's word counts to the weights, from
+[`wordshk-counts.tsv`](wordshk-counts.tsv), scaled to 0.3 of their total (docs/studies/56-cantonese-dictionary.md: 23.2% to
+27.1% of held-out phrases right after one Space). Nothing else in rime-cantonese is changed.
 
 | Part | Version | Licence |
 | --- | --- | --- |
 | [rime-cantonese](https://github.com/rime/rime-cantonese): Jyutping's word list (shared by Yale), spelling rules, Cantonese punctuation and its Hong Kong OpenCC set | `259f0e48bba840c3a2e0d117539e96937f3d89bc` (2026-08-13) | CC BY 4.0; its place names (`jyut6ping3.maps`) ODbL 1.0 |
+| [words.hk (粵典)](https://words.hk)'s word counts in its Cantonese text collection, [`existingwordcount.csv`](https://words.hk/faiman/analysis/existingwordcount.csv), kept as `wordshk-counts.tsv` | 2026-11-16, SHA-256 `33b08d2e4cab4bdf9b481c956da68be09784c2638f999da7f88fb70cf9fc4960` | public domain ("Credits to words.hk appreciated") |
 | [rime-jyutping](https://github.com/rime/rime-jyutping)'s `yale.schema.yaml`, by 幸延: the Yale spelling rules, copied into `tk_yale.schema.yaml` | `ee5e72b2b50a6708162a0402b91f257323bf852b` (2025-12-30) | LGPL-3.0 |
 | [rime-luna-pinyin](https://github.com/rime/rime-luna-pinyin): Pinyin's word list and spelling rules | `56b934b099dfbeab842320f13aa8b461a6ab3e42` | LGPL-3.0 |
 | [rime-essay](https://github.com/rime/rime-essay): word counts for Pinyin, Cangjie and Quick | `d95eeae056df429ecf993038c325a216f0b28c5b` | LGPL-3.0 |

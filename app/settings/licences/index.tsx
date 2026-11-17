@@ -40,6 +40,8 @@ const licences = [
   { title: "OpenCC", subtitle: "Apache 2.0. Gives you Simplified, Hong Kong or Taiwan characters.", url: "https://github.com/BYVoid/OpenCC" },
   { title: "Rime's libraries", subtitle: "marisa-trie, LevelDB, yaml-cpp, spdlog, Snappy and Boost", url: "https://github.com/rime/librime/tree/master/deps" },
   { title: "rime-cantonese", subtitle: "CC BY 4.0, place names ODbL 1.0. Cantonese words for Yale and Jyutping.", url: "https://github.com/rime/rime-cantonese" },
+  // F: draft. words.hk's word counts in the Cantonese weights (#56).
+  { title: "words.hk (粵典)", subtitle: "Public domain. How often Cantonese words are used, to put the likelier ones first.", url: "https://words.hk" },
   { title: "rime-jyutping", subtitle: "LGPL-3.0. The Yale spelling rules, by 幸延.", url: "https://github.com/rime/rime-jyutping" },
   { title: "Rime's Pinyin and shared data", subtitle: "LGPL-3.0. rime-luna-pinyin and rime-essay for Pinyin, rime-prelude for the rest.", url: "https://github.com/rime/rime-luna-pinyin" },
   // F: draft. Cangjie, Quick and Zhuyin (#56).

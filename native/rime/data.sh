@@ -75,6 +75,33 @@ awk -F'\t' -v OFS='\t' '
   END { for (i = 1; i <= n; i++) if (!(order[i] in seen)) print order[i], weight[order[i]] }
 ' "$HERE/cantonese-weights.tsv" essay-cantonese.txt > essay-cantonese.new
 mv essay-cantonese.new essay-cantonese.txt
+# words.hk's word counts in its Cantonese text (wordshk-counts.tsv, public domain), added to the weights: scaled so their total
+# is 0.3 of the weights' total, each word's to its own weight, a word the weights lack added at the end. Measured on held-out
+# Tatoeba phrases, it takes Space's first choice from 23.2% to 27.1% right (docs/studies/56-cantonese-dictionary.md; owner,
+# 2026-11-17: "the default Rime dictionary is actually pretty shit").
+python3 -I - "$HERE/wordshk-counts.tsv" essay-cantonese.txt <<'PY'
+import sys
+counts = {}
+for line in open(sys.argv[1], encoding='utf-8'):
+    if line.startswith('#') or not line.strip():
+        continue
+    word, count = line.rstrip('\n').split('\t')
+    counts[word] = int(count)
+order, weight = [], {}
+for line in open(sys.argv[2], encoding='utf-8'):
+    word, _, value = line.rstrip('\n').partition('\t')
+    if word not in weight:
+        order.append(word)
+    weight[word] = int(value or 0)
+scale = 0.3 * sum(weight.values()) / sum(counts.values())
+for word, count in counts.items():
+    if word not in weight:
+        order.append(word)
+        weight[word] = 0
+    weight[word] += int(round(count * scale))
+with open(sys.argv[2], 'w', encoding='utf-8', newline='\n') as out:
+    out.writelines(f'{word}\t{max(weight[word], 1)}\n' for word in order)
+PY
 cp "$HERE"/schemas/*.yaml .
 
 # OpenCC: the three variants' configs, and only the dictionaries they use, compiled.

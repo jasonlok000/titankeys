@@ -11,9 +11,9 @@ schema:
 __include: tk_variants:/
 
 engine:
-  processors: [ ascii_composer, recognizer, key_binder, speller, punctuator, selector, navigator, express_editor ]
+  processors: [ ascii_composer, recognizer, predictor, key_binder, speller, punctuator, selector, navigator, express_editor ]
   segmentors: [ ascii_segmentor, matcher, abc_segmentor, punct_segmentor, fallback_segmentor ]
-  translators: [ punct_translator, script_translator ]
+  translators: [ predict_translator, punct_translator, script_translator ]
   filters:
     - simplifier@zh_hans
     - simplifier@zh_hk
@@ -39,6 +39,10 @@ translator:
 zh_hans: { option_name: zh_hans, opencc_config: t2s.json, tips: none }
 zh_hk:   { option_name: zh_hk,   opencc_config: t2hk.json, tips: none }
 zh_tw:   { option_name: zh_tw,   opencc_config: t2tw.json, tips: none }
+
+# The next-word suggestions after a commit (librime-predict, #56): native/rime/predict.py's table, Cantonese's, as Cangjie and Quick are Hong Kong's input methods; as many
+# as it has (at most 8), and they go on after a suggestion is picked.
+predictor: { db: predict-yue.db, max_candidates: 0, max_iterations: 0 }
 
 punctuator: { import_preset: symbols }
 key_binder: { import_preset: default }

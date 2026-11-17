@@ -452,6 +452,17 @@ private fun hindiRulesType() {
     for (c in "namastee") engine.key(c)
     same("Backspace takes the last key off", engine.backspace().code, "नमस्ते")
     same("a mark no rule takes ends the word", engine.key('!').commit, "नमस्ते")
+    // The bigger menu, opened with a swipe up: the word list's words past the bar's eight, and a pick from any of them.
+    val hi = java.util.Locale.forLanguageTag("hi")
+    val code = RulesComposer(rules).apply { "nama".forEach { key(it) } }.code()
+    val many = RulesComposer(rules, WordList.read("कखगचजटडतदपबमयरलवसह".map { "$code$it" }.asSequence()
+        .mapIndexed { i, w -> " word=$w,f=${1000 - i}" }, hi))
+    val bar = "nama".map { many.key(it) }.last().choices
+    same("the bar has eight", bar.size, RulesComposer.CHOICES)
+    same("the menu's first page is the bar's, in order", many.choices(0, 8), bar)
+    same("the menu reads past them", many.choices(8, 4).size, 4)
+    val ninth = many.choices(9, 1).single()
+    same("a pick from the menu, past the bar's eight", many.pickAt(9).commit, "$ninth ")
 }
 
 /** Jquery.ime's own test cases for an input method, when $HI_FIXTURES names their JSON ([{input, output}]): how many pass. */
@@ -646,6 +657,15 @@ private fun telexMarksAndTones() {
     engine.reset()
     same("Unmarked code offers the marked word", "tieng".map { engine.key(it) }.last().choices, listOf("tiếng"))
     same("Picking writes it with a space", engine.pick(0).commit, "tiếng ")
+    // The bigger menu, opened with a swipe up: the word list's words past the bar's eight, and a pick from any of them.
+    val many = TelexComposer(WordList.read(("bcdgklmnp".flatMap { c -> "aeiou".map { v -> "ta$c$v" } }).asSequence()
+        .mapIndexed { i, w -> " word=$w,f=${1000 - i}" }, vi))
+    val bar = "ta".map { many.key(it) }.last().choices
+    same("The bar has eight", bar.size, TelexComposer.CHOICES)
+    same("The menu's first page is the bar's, in order", many.choices(0, 8), bar)
+    same("The menu reads past them", many.choices(8, 4).size, 4)
+    val ninth = many.choices(9, 1).single()
+    same("A pick from the menu, past the bar's eight", many.pickAt(9).commit, "$ninth ")
     val ended = TelexComposer().apply { "xin".forEach { key(it) } }.space()
     same("Space writes the word and goes on", ended.commit to ended.handled, "xin" to false)
 }
@@ -766,7 +786,8 @@ private fun shiftShowsWhereItMatters(folder: File) {
     val without = folder.listFiles { file -> file.isDirectory }.orEmpty().mapNotNull { dir ->
         runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull()
     }.filter { !it.shiftMatters }.map { it.id }.sorted()
-    same("the input methods without Shift on the bar", without, listOf("he", "ja", "yue-jyutping", "yue-yale", "zh-pinyin"))
+    same("the input methods without Shift on the bar", without,
+        listOf("he", "ja", "yue-jyutping", "yue-yale", "zh-cangjie", "zh-pinyin", "zh-quick", "zh-zhuyin"))
     check("English shows Shift", InputMethod.ENGLISH.shiftMatters)
 }
 
@@ -886,7 +907,21 @@ private fun barWordsAndLearning() {
     same("typed twice, it rises above the list's", BarWords.complete("tit", learning, listOf("título")), listOf("Titankeys", "título"))
     learning.forget("Titankeys")
     check("taken back, it's under twice again", !learning.knows("Titankeys"))
+    // Blocked words and Favourites, shared by every language, and the word menu's Save and Unsave in this one.
+    val rules = WordRules({ it == "la" }, { it == "en" })
+    same("a blocked word never shows; a favourite comes first", BarWords.next("x", null, starters, capitals = false, rules = rules),
+        listOf("en", "de", "el"))
+    same("in completions too", BarWords.complete("e", null, listOf("el", "en", "es"), rules), listOf("en", "el", "es"))
+    learning.save("Zaragoza")
+    check("a saved word is known at once", learning.knows("Zaragoza"))
+    same("and offered", BarWords.complete("zar", learning, emptyList()), listOf("Zaragoza"))
+    learning.unsave("de", listed = true)
+    check("an unsaved list word is hidden", learning.isHidden("de"))
+    check("and never offered", "de" !in BarWords.next("x", learning, starters, capitals = false))
+    learning.save("de")
+    check("saved again, it's back", !learning.isHidden("de"))
     val copy = LanguageLearning.decode(learning.encode())
+    check("saved words kept as text", copy.isSaved("Zaragoza"))
     same("kept as text and read back", copy.next("buenos"), listOf("días"))
     same("its sentence starts too", copy.sentenceStarts(), listOf("hola"))
     same("a damaged line is skipped", LanguageLearning.decode("w\thola\tx\nw\tadiós\t3").completions("adi"), listOf("adiós"))

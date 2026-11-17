@@ -13,6 +13,46 @@ class LanguageLearning {
     private val words = HashMap<String, Int>()
     private val pairs = HashMap<String, HashMap<String, Int>>()
     private val starts = HashMap<String, Int>()
+    /** Words the user saved from the word menu: known from now on, and they never fade. */
+    private val saved = HashSet<String>()
+    /** The list's words the user unsaved from the word menu, in lower case: never offered until saved again. */
+    private val hidden = HashSet<String>()
+
+    /** Save from the word menu: the word is known at once. */
+    fun save(word: String) {
+        saved += word
+        hidden -= word.lowercase()
+    }
+
+    /** Unsave from the word menu: the word is forgotten, and a word of the list is hidden too, so it's never offered. */
+    fun unsave(word: String, listed: Boolean) {
+        saved -= word
+        words.remove(word)
+        if (listed) hidden += word.lowercase()
+    }
+
+    fun isSaved(word: String) = word in saved
+
+    /** The user's own words in this input method, for Settings: the saved ones and the ones learned, in alphabetical order. */
+    fun ownWords(): List<String> = (saved + words.filter { it.value >= UNKNOWN_USES }.keys).distinct().sortedBy { it.lowercase() }
+
+    /** Remove all learned words: everything goes, saved and hidden words too. */
+    fun forgetAll() {
+        words.clear()
+        pairs.clear()
+        starts.clear()
+        saved.clear()
+        hidden.clear()
+    }
+
+    /** Remove learned words: what typing taught goes, the saved words and the hidden ones stay. */
+    fun forgetLearned() {
+        words.keys.retainAll(saved)
+        pairs.clear()
+        starts.clear()
+    }
+
+    fun isHidden(word: String) = word.lowercase() in hidden
 
     /** [next] was kept after [previous], or at a sentence's start when [previous] is null. [known]: the list has it. */
     fun kept(previous: String?, next: String, known: Boolean) {
@@ -29,14 +69,16 @@ class LanguageLearning {
         if (uses <= 1) words.remove(word) else words[word] = uses - 1
     }
 
-    /** Whether [word] has been used enough to offer. */
-    fun knows(word: String) = (words[word] ?: 0) >= UNKNOWN_USES
+    /** Whether [word] has been used enough to offer, or was saved. */
+    fun knows(word: String) = word in saved || (words[word] ?: 0) >= UNKNOWN_USES
 
     /** Learned words that start with [prefix], ignoring case, most used first. */
     fun completions(prefix: String, limit: Int = 3): List<String> {
         val lower = prefix.lowercase()
-        return words.filter { (word, uses) -> uses >= UNKNOWN_USES && word.lowercase().startsWith(lower) && word.length > prefix.length }
-            .entries.sortedByDescending { it.value }.take(limit).map { it.key }
+        val used = words.filter { (word, uses) -> uses >= UNKNOWN_USES && word.lowercase().startsWith(lower) && word.length > prefix.length }
+            .entries.sortedByDescending { it.value }.map { it.key }
+        val own = saved.filter { it.lowercase().startsWith(lower) && it.length > prefix.length }.sorted()
+        return (own + used).distinct().filter { !isHidden(it) }.take(limit)
     }
 
     /** The words that followed [previous], most often first. */
@@ -47,7 +89,7 @@ class LanguageLearning {
     fun sentenceStarts(limit: Int = 3): List<String> =
         starts.entries.filter { knows(it.key) }.sortedByDescending { it.value }.take(limit).map { it.key }
 
-    val isEmpty get() = words.isEmpty()
+    val isEmpty get() = words.isEmpty() && saved.isEmpty() && hidden.isEmpty()
 
     private fun trim() {
         if (words.size > MAX_WORDS) drop(words, words.size - MAX_WORDS * 9 / 10)
@@ -73,6 +115,8 @@ class LanguageLearning {
         for ((first, nexts) in pairs) for ((next, uses) in nexts) {
             append("p\t").append(first).append('\t').append(next).append('\t').append(uses).append('\n')
         }
+        for (word in saved) append("a\t").append(word).append('\n')
+        for (word in hidden) append("h\t").append(word).append('\n')
     }
 
     companion object {
@@ -91,6 +135,8 @@ class LanguageLearning {
                     parts.size == 3 && parts[0] == "w" -> parts[2].toIntOrNull()?.let { learning.words[parts[1]] = it }
                     parts.size == 3 && parts[0] == "s" -> parts[2].toIntOrNull()?.let { learning.starts[parts[1]] = it }
                     parts.size == 4 && parts[0] == "p" -> parts[3].toIntOrNull()?.let { learning.pairs.getOrPut(parts[1]) { HashMap() }[parts[2]] = it }
+                    parts.size == 2 && parts[0] == "a" -> learning.saved += parts[1]
+                    parts.size == 2 && parts[0] == "h" -> learning.hidden += parts[1]
                 }
             }
             return learning
@@ -111,16 +157,18 @@ object BarWords {
      * method's own next words for it from its [table] (J's tables), then the starters.
      */
     fun next(previous: String?, learning: LanguageLearning?, starters: List<String>, capitals: Boolean,
-             table: NextWords? = null): List<String> {
+             table: NextWords? = null, rules: WordRules = WordRules.NONE): List<String> {
         val learned = if (previous == null) learning?.sentenceStarts().orEmpty() else learning?.next(previous).orEmpty()
         val listed = table?.after(previous).orEmpty()
-        val words = (learned + listed + starters).distinctBy { it.lowercase() }.take(SHOWN)
+        val words = Favourites.first((learned + listed + starters).distinctBy { it.lowercase() }
+            .filter { rules.usable(it) && learning?.isHidden(it) != true }.take(SHOWN), rules.favourite)
         return if (previous == null && capitals) words.map { it.replaceFirstChar { c -> c.titlecase() } } else words
     }
 
     /** While [prefix] is typed: the learned words that start with it, then [listed], the list's. */
-    fun complete(prefix: String, learning: LanguageLearning?, listed: List<String>): List<String> =
-        (learning?.completions(prefix).orEmpty() + listed).distinctBy { it.lowercase() }.take(SHOWN)
+    fun complete(prefix: String, learning: LanguageLearning?, listed: List<String>, rules: WordRules = WordRules.NONE): List<String> =
+        Favourites.first((learning?.completions(prefix).orEmpty() + listed).distinctBy { it.lowercase() }
+            .filter { rules.usable(it) && learning?.isHidden(it) != true }.take(SHOWN), rules.favourite)
 }
 
 /**
@@ -151,5 +199,18 @@ class NextWords private constructor(private val next: Map<String, List<String>>)
             }
             return NextWords(pairs.mapValues { (_, nexts) -> nexts.sortedByDescending { it.second }.take(KEPT).map { it.first } })
         }
+    }
+}
+
+/**
+ * What the user decided about words, for every language: Blocked words and Favourites, one shared set each (most words differ
+ * between languages, and one set keeps Settings, the backup and the word menu as they are). D's corrections ask the same.
+ */
+class WordRules(val blocked: (String) -> Boolean, val favourite: (String) -> Boolean) {
+    /** Not blocked: may be offered or fixed to. */
+    fun usable(word: String) = !blocked(word)
+
+    companion object {
+        val NONE = WordRules({ false }, { false })
     }
 }

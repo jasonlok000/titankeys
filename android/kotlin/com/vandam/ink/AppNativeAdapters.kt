@@ -353,8 +353,15 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                     null
                 }
                 "clearWords" -> {
+                    // Every language's own words go too ([LearnedWords]).
+                    com.titankeys.keyboard.LearnedWords.forgetAll(activity)
                     typing.clearDictionary { error -> operationResult(error, complete) }
                     null
+                }
+                // Saved words: a word another input method learned or saved, removed as the word menu's Unsave does.
+                "removeLanguageWord" -> {
+                    com.titankeys.keyboard.LearnedWords.remove(activity, data.getString("inputMethod"), data.getString("word"))
+                    "null"
                 }
                 // Settings > Your words > Back up everything and Restore (#65). A whole restore restarts TitanKeys, so it never answers.
                 "backup" -> {
@@ -601,6 +608,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("outsideSlidingMode", JSONArray(PhoneChecks.outsideSlidingMode(activity)))
             .put("learning", typing.learningEnabled())
             .put("contactNames", PhoneNameSource.contactsAllowed(activity))
+            .put("contactNamesBlocked", TypingSettings.contactNames(activity) && !PhoneNameSource.contactsAllowed(activity))
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("holdSymbols", TypingSettings.holdSymbols(activity))
             .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))
@@ -659,6 +667,12 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+            // Each other input method's own words, saved or learned, for Saved words (LearnedWords).
+            .put("languageWords", JSONArray(com.titankeys.keyboard.LearnedWords.all(activity).mapNotNull { (id, learning) ->
+                val entry = inputMethodIndex()[id] ?: return@mapNotNull null
+                JSONObject().put("inputMethod", id).put("name", entry.name).put("nameEnglish", entry.nameEnglish)
+                    .put("words", JSONArray(learning.ownWords()))
+            }))
     }
 
     private fun inputMethodIndex() = InputMethodList.index(activity)

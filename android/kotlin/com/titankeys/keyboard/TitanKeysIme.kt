@@ -3013,16 +3013,15 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * The word breaks every word gesture uses (three taps, a slide, a flick, Ctrl + Backspace): in Chinese and Japanese, the units
-     * as picked, then ICU's ([PickedWords]); elsewhere ICU's, which only narrow a run of a script without spaces ([WordBreaks]).
+     * The word breaks every word gesture uses (three taps, a slide, a flick, Ctrl + Backspace): in Chinese, one character
+     * ([PickedWords.CHARACTERS], owner); in Japanese, the units as picked, then ICU's ([PickedWords]); elsewhere ICU's, which only
+     * narrow a run of a script without spaces ([WordBreaks]).
      */
     private fun wordBreaker(): WordBreaker {
+        if (::languages.isInitialized && ChineseKeys.isChinese(languages.current)) return PickedWords.CHARACTERS
         val icu = IcuWords.of(languages.current.javaLocale)
-        return if (spacelessWords()) pickedWords.breaker(icu) else icu
+        return if (::languages.isInitialized && languages.current.id == "ja") pickedWords.breaker(icu) else icu
     }
-
-    /** Whether Chinese or Japanese types, whose words are units ([PickedWords]). */
-    private fun spacelessWords() = ::languages.isInitialized && (ChineseKeys.isChinese(languages.current) || languages.current.id == "ja")
 
     /** The word that ends at the end of [before], as the gestures take it: the bar's word in Chinese and Japanese (B's call). */
     fun chineseLastWord(before: String): String? = pickedWords.lastWord(before, IcuWords.of(languages.current.javaLocale))

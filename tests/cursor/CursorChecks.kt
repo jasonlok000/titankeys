@@ -16,6 +16,7 @@ fun main() {
     twoQuickTapsSelect()
     threeTapsTakeOneWordWithoutSpaces()
     chineseWordsAreThePickedUnits()
+    chineseGesturesGoByCharacter()
     eachFieldStartsWithItsOwnSelection()
     aDoubleSpaceCollapsesASelection()
     theBarShowsWhatIsSelected()
@@ -1431,4 +1432,26 @@ private fun chineseWordsAreThePickedUnits() {
     same(shown(WordSelection.atOrBefore(text, 4, 4, picked.breaker(icu))), "哋", "A new field: ICU's words")
     // English keeps its own steps: no breaker, whole runs.
     same(WordSelection.extend("hello big world", 0, 5, 0, 5, 1), 0 to 9, "English steps as before")
+}
+
+/**
+ * Chinese's gestures go by one character (owner, 2026-11-17: "in chinese one character is basically same as one word"; the flick
+ * deletes 晒, then 該, then 唔): three taps take the last character, a slide steps one character each way, a mark is one too.
+ */
+private fun chineseGesturesGoByCharacter() {
+    val chars = PickedWords.CHARACTERS
+    var text = "你好我哋唔該晒"
+    for (expected in listOf("晒", "該", "唔")) {
+        val start = WordBreaks.lastWordStart(text, chars)
+        same(text.substring(start), expected, "The flick deletes $expected alone")
+        text = text.substring(0, start)
+    }
+    val line = "唔該晒，我哋去飲茶。"
+    same(WordSelection.atOrBefore(line, 3, 3, chars)?.let { line.substring(it.first, it.second) }, "晒", "Three taps take the last character")
+    same(line.substring(WordBreaks.lastWordStart(line, chars)), "。", "A mark is one too")
+    val start = WordSelection.at(line, 1, 2, chars)!!
+    val one = WordSelection.extend(line, start.first, start.second, start.first, start.second, 1, chars)
+    same(line.substring(one.first, one.second), "該晒", "A slide steps one character on")
+    val back = WordSelection.extend(line, start.first, start.second, start.first, start.second, -1, chars)
+    same(line.substring(back.first, back.second), "唔該", "And one back")
 }

@@ -19,7 +19,8 @@ test("double space types the language's own full stop, and the words come from t
   expect(ime).toContain("composer.fullStopMark = { languages.current.rules.fullStop }");
   // The words come from one place, [wordBreaker]: ICU's, and in Chinese and Japanese the units as picked first (PickedWords).
   expect(ime).toContain("editor.wordBreaker = ::wordBreaker");
-  expect(ime).toMatch(/private fun wordBreaker\(\): WordBreaker \{\s*val icu = IcuWords\.of\(languages\.current\.javaLocale\)/);
+  expect(ime).toContain("ChineseKeys.isChinese(languages.current)) return PickedWords.CHARACTERS");
+  expect(ime).toContain("val icu = IcuWords.of(languages.current.javaLocale)");
   const composer = read("android/kotlin/com/titankeys/keyboard/Composer.kt");
   // The full stop is the only place double Space's mark comes from: no "." of its own.
   expect(composer).not.toContain('".$spaces"');

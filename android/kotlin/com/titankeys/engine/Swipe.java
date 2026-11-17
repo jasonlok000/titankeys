@@ -29,6 +29,13 @@ public final class Swipe {
      */
     private static final long FULL_SIZE_AFTER_MILLIS = 150;
     private static final float FULL_SIZE_STEPS = 2f;
+    /**
+     * A finger that runs off the top of the sensor is still heading up as it goes; one that finished a word has stopped
+     * or turned back down. A swipe whose last moments at the top row head down faster than this, in keys per ms, was a
+     * whole word (#83, the owner's 1% trade: 10 of 24 false joins cut and 0 of 39 breaks lost in their recorded session;
+     * 3 of 37 wrong joins cut and 3 of 346 right joins lost in the logs). See docs/studies/83-joins-micro.md.
+     */
+    private static final float HEADING_DOWN_KEYS_PER_MS = .0004f;
     public final float[] x, y, time;
 
     public Swipe(float[] x, float[] y, float[] time) {
@@ -70,6 +77,7 @@ public final class Swipe {
     public boolean sameStroke(Swipe next, long gapMillis, long flickerMillis, float endContact) {
         if (next.x.length == 0 || !couldContinue(next.x[0], next.y[0], gapMillis, flickerMillis)) return false;
         if (flicker(next.x[0], next.y[0], gapMillis, flickerMillis)) return true;
+        if (y[x.length - 1] < TOP_ROW && motion(false)[1] > HEADING_DOWN_KEYS_PER_MS) return false;
         if (gapMillis > FULL_SIZE_AFTER_MILLIS && endContact >= FULL_SIZE_STEPS) return false;
         int last = x.length - 1;
         float jumpX = (next.x[0] - x[last]) * 10, jumpY = (next.y[0] - y[last]) * 3;

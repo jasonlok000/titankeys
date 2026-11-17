@@ -314,7 +314,9 @@ Read in the code, not seen on the phone yet; every gesture check so far runs in 
 
 Every worker was told to commit its work in progress to its own branch and stop until "resume". On resume:
 - D: gestures in every language (waiting on its test suites); then send CODE_FLICK to A.
-- C: the two-languages merge, then the four-and-four cap with centring, tile and global tap haptics; then the bar-words job.
+- C: the two-languages merge, then the four-and-four cap with centring, tile and global tap haptics; then the bar-words job,
+  which now includes a Korean word list (owner: Korean's bar is empty; find one with a clear licence, Leipzig's CC BY data
+  first) and completions that match a syllable still being built.
 - H: held letters without accents type once; accents within W–O.
 - B: the Cantonese dictionary study (baseline 71.6% of characters, 10.6% of long phrases exact), then Cangjie, Quick and Zhuyin.
 - E: the guide fixes (swipe slide ignores keys, the "e" stays); G: #96 analytics.

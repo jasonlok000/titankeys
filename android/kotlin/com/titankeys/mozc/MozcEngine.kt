@@ -17,6 +17,11 @@ import java.util.IdentityHashMap
  * letters left, so it's always a letter, never a whole kana. Punctuation is Japanese full-width ([marks]); digits stay
  * plain; with text being built, its first choice goes first.
  *
+ * After a pick, Mozc offers the words that may come next (its zero-query suggestions), as Chinese does (#56; docs/languages.md,
+ * "Next-word suggestions"): they're its choices with nothing typed, so the bar shows them as it shows a text's. Space picks
+ * the first, a tap or the bigger menu any, and a pick offers the next ones; a letter starts new text instead, and any other
+ * key clears them and is the keyboard's own. A new field starts with none ([reset]).
+ *
  * [start] runs on a background thread: it copies Mozc's data out of the APK the first time (one file, 19 MB, through
  * [RimeData]'s checked copy), and opens Mozc. Everything else runs on the keyboard's main thread. Mozc is one per app
  * (tk_jni.cc keeps one session): it closes only when no engine uses it.
@@ -57,8 +62,27 @@ class MozcEngine(
 
     private fun composing() = open && typed.isNotEmpty()
 
+    /** Mozc offers next-word suggestions: choices with nothing typed. */
+    private fun suggesting() = open && typed.isEmpty() && last.choices.isNotEmpty()
+
+    /** Clears the suggestions, if any, in Mozc too, so the next read has none. */
+    private fun dismiss() {
+        if (!suggesting()) return
+        mozc.reset()
+        last = MozcCalls.Raw(null, "", emptyList())
+    }
+
+    /** A key that's the keyboard's own with nothing typed: the suggestions go, and the bar with them. */
+    private fun dismissed(): EngineState {
+        if (!suggesting()) return EngineState.UNHANDLED
+        dismiss()
+        return read(handled = false)
+    }
+
     override fun key(char: Char): EngineState {
         if (!open) return EngineState.UNHANDLED
+        // A letter starts new text over the suggestions; anything else clears them first.
+        if (char !in 'a'..'z' && char !in 'A'..'Z') dismiss()
         return when (char) {
             in 'a'..'z' -> letter(char)
             in 'A'..'Z' -> letter(char.lowercaseChar())
@@ -106,10 +130,11 @@ class MozcEngine(
         return out
     }
 
-    override fun space(): EngineState = if (composing()) pickAt(0) else EngineState.UNHANDLED
+    /** Types the first choice; with nothing typed, the first suggestion, if there are any. */
+    override fun space(): EngineState = if (composing() || suggesting()) pickAt(0) else EngineState.UNHANDLED
 
     override fun enter(): EngineState {
-        if (!composing()) return EngineState.UNHANDLED
+        if (!composing()) return dismissed()
         val letters = typed.toString()
         mozc.reset()
         typed.clear()
@@ -117,7 +142,7 @@ class MozcEngine(
     }
 
     override fun backspace(): EngineState {
-        if (!composing()) return EngineState.UNHANDLED
+        if (!composing()) return dismissed()
         typed.deleteCharAt(typed.length - 1)
         mozc.reset()
         for (c in typed) mozc.key(c)
@@ -127,7 +152,7 @@ class MozcEngine(
     override fun pick(index: Int): EngineState = pickAt(index)
 
     override fun pickAt(index: Int): EngineState {
-        if (!composing() || index < 0) return EngineState.UNHANDLED
+        if (!(composing() || suggesting()) || index < 0) return EngineState.UNHANDLED
         val picked = mozc.pick(index)
         val state = read(handled = picked)
         // A part picked: the rest is hiragana, which Enter must still type as romaji.
@@ -137,7 +162,7 @@ class MozcEngine(
     }
 
     override fun choices(start: Int, count: Int): List<String> =
-        if (!composing() || start < 0 || count <= 0) emptyList() else last.choices.drop(start).take(count)
+        if (!(composing() || suggesting()) || start < 0 || count <= 0) emptyList() else last.choices.drop(start).take(count)
 
     override fun page(forward: Boolean): EngineState = EngineState.UNHANDLED
 
@@ -155,7 +180,8 @@ class MozcEngine(
         return EngineState(
             commit = raw.commit.orEmpty() + extra,
             code = code,
-            choices = if (code.isEmpty()) emptyList() else raw.choices.take(PAGE),
+            // With nothing being built, Mozc's choices are its next-word suggestions.
+            choices = if (code.isEmpty() && raw.preedit.isNotEmpty()) emptyList() else raw.choices.take(PAGE),
             handled = handled,
             typed = typed.toString(),
         )

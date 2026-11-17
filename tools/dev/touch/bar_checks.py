@@ -349,3 +349,49 @@ def check_slips():
 
 
 BATCH += [check_first_key, check_sym_then_type, check_slips]
+
+
+def check_thai_hebrew_hindi():
+    """C's polish (2026-11-17). Thai: an empty field shows no single letter on the bar (J); after ไป and Space, next words, not
+    starters (J; the owner's ฉันไปโรงเรียน needs Shift for ฉ and โ, which the keyboard twin can't use here). Hebrew: a word's
+    best guess in the middle, the second on the right (J); a steer to the right moves the cursor back through Hebrew text (O: a
+    letter typed after it lands inside the word); after את and Space, כל is offered (J). Hindi: ki + Space types कि (O), and
+    the bar shows वह, इस (J)."""
+    field = language_checks.checks.field
+    on = ["en", "th", "he", "hi"]
+
+    def start(im):
+        language_checks.fresh()
+        if not language_checks.turn_on(on, im):
+            raise Stop(f"the field didn't start with {im}")
+        language_checks.fresh()
+
+    start("th")
+    play("+800", shot="th-empty", at=500)
+    record("th-empty", None, "Thai, empty field: no single letter on the bar", "th-empty")
+    play(*keys("wx"), "+300", "key:space", "+900", shot="th-next", at=len(keys("wx")) * 80 + 1000)  # ไป
+    record("th-next", None, "after ไป and Space: next words on the bar, not starters", "th-next")
+
+    start("he")
+    play(*keys("aku"), "+800", shot="he-guesses", at=len(keys("aku")) * 80 + 600)  # שלו
+    record("he-guesses", None, "שלו typed: the best guess in the middle, the second on the right", "he-guesses")
+    language_checks.fresh()
+    play(*keys("akuo"), "+600")  # שלום
+    word = field()
+    play("spacehold:2:1.5", "+600", "key:f", "+500")  # steer right, then כ as a marker
+    after = field()
+    inside = after != word + "כ" and "כ" in after and after.replace("כ", "", 1) == word
+    record("he-steer", inside, f"{word!r}, a steer to the right, then כ: {after!r} (the כ inside the word: the cursor went back)")
+    language_checks.fresh()
+    play(*keys("tq"), "key:space", "+900", shot="he-next", at=len(keys("tq")) * 80 + 1000)  # את
+    record("he-next", None, "after את and Space: כל offered", "he-next")
+
+    start("hi")
+    play(*keys("ki"), "+400", "key:space", "+900", shot="hi-next", at=len(keys("ki")) * 80 + 1100)
+    text = field()
+    record("hi-ki", text.strip() == "कि", f"ki + Space typed {text!r}, wanted 'कि'")
+    record("hi-next", None, "after कि: वह and इस on the bar", "hi-next")
+
+
+BATCH += [check_thai_hebrew_hindi]
+HANDS += ["Thai: ฉันไปโรงเรียน (ฉ and โ on Shift) + Space: next words after โรงเรียน (บ้าน ที่ ใน), not starters"]

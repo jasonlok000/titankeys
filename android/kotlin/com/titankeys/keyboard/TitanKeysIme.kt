@@ -3814,20 +3814,18 @@ class TitanKeysIme : InputMethodService() {
         if (event.isSystem) return false
         if (keyCode == pickerKey && event.repeatCount > 0) return true
         val open = openPicker()
-        if (keyCode == KeyEvent.KEYCODE_SYM && event.repeatCount == 0 && open is LanguagePicker.Choices && open.state.composing) {
-            // A code being built: Sym clears it, and the choices with it, and types nothing. The next Sym opens the panel (owner,
-            // 2026-11-17: "pressing the sym button should remove the keycode stuff first. And then only on the next press show
-            // the symbol /emoji stuff").
+        // A code being built, with no switcher to wait for (one input method on): Sym clears it at once, and the choices with
+        // it, and types nothing. The next Sym opens the panel (owner, 2026-11-17: "pressing the sym button should remove the
+        // keycode stuff first"). With a switcher, Sym waits as always: a tap clears the code ([symReleased]), a hold switches.
+        if (keyCode == KeyEvent.KEYCODE_SYM && event.repeatCount == 0 && codePending() && symWhyNot() != null) {
             symPress.cleared()
-            closeChoicesMenu()
-            languages.engine?.let { engineState(it.reset()) } ?: closePicker()
+            clearCode()
             return true
         }
         if (keyCode == KeyEvent.KEYCODE_SYM) {
             // Sym is never the picker's key: a held Sym's repeats and its release belong to [symPress] (the next Sym stuck).
             val press = symPress.press(event.repeatCount, open is LanguagePicker.Switch) {
-                val whyNot = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
-                    inGuide, field.exact, pendingInput.size)
+                val whyNot = symWhyNot()
                 if (whyNot != null) symLog("Sym won't wait for a hold: $whyNot")
                 whyNot == null
             }
@@ -4179,6 +4177,9 @@ class TitanKeysIme : InputMethodService() {
             symLog("Sym held, but no overlay: already let go")
             return
         }
+        // A hold opens the switcher from anywhere (Master, 2026-11-17): a code pending is cleared on the way, the panel closed.
+        if (codePending()) clearCode()
+        if (panelOpen) closePanel()
         haptics.play(Haptic.HeldSymbol)
         val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
         // Two languages: the other one at once, no switcher.
@@ -4225,6 +4226,19 @@ class TitanKeysIme : InputMethodService() {
      * Sym let go. True if it was held back: held long enough, it opened the overlay and its release does nothing more; let go
      * sooner, its press now goes on as Sym always does, and then its release.
      */
+    /** Why a Sym press won't wait for a hold to open the switcher, or null when it will ([SymHold]). */
+    private fun symWhyNot() = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
+        inGuide, field.exact, pendingInput.size)
+
+    /** An engine's code is being built on the bar. */
+    private fun codePending() = (openPicker() as? LanguagePicker.Choices)?.state?.composing == true
+
+    /** Clears the engine's code and its choices, typing nothing. */
+    private fun clearCode() {
+        closeChoicesMenu()
+        languages.engine?.let { engineState(it.reset()) } ?: closePicker()
+    }
+
     private fun symReleased(): Boolean {
         val release = symPress.release()
         if (release == SymPress.Release.NotMine) return false
@@ -4234,6 +4248,11 @@ class TitanKeysIme : InputMethodService() {
         symLog("Sym let go${down?.let { " after ${SystemClock.uptimeMillis() - it.downTime} ms" }.orEmpty()}: " +
             if (release == SymPress.Release.Kept) "the switcher's" else "Sym as usual")
         if (release == SymPress.Release.Kept || down == null) return true
+        // A tap steps back: with a code pending it clears the code and opens nothing (owner, 2026-11-17).
+        if (SymHold.tap(codePending()) == SymHold.Tap.ClearCode) {
+            clearCode()
+            return true
+        }
         // Taken as a key that the keyboard handled, so its release stays here too, as any Sym's does.
         consumedKeys += down.keyCode
         if (pendingInput.isNotEmpty()) enqueue(KeyEvent(down)) {

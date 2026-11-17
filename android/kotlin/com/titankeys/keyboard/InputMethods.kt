@@ -310,11 +310,15 @@ object EnabledEntries {
 }
 
 object SymHold {
+    /** What a Sym tap (let go before the hold time) does: it steps back, clearing a code first, else Sym as usual. */
+    enum class Tap { ClearCode, Usual }
+
+    fun tap(codePending: Boolean) = if (codePending) Tap.ClearCode else Tap.Usual
+
     fun whyNot(onCount: Int, englishOnly: Boolean, panelOpen: Boolean, altOn: Boolean, inGuide: Boolean, exact: Boolean,
                waiting: Int): String? = when {
         onCount < 2 -> "only $onCount input method on"
         englishOnly -> "this field types English: the guide or the playground"
-        panelOpen -> "the Sym panel is open"
         altOn -> "Alt is on"
         inGuide -> "the guide"
         exact -> "an exact typing app"

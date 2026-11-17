@@ -328,13 +328,18 @@ LEIPZIG_NOTICE = ("Next words ({file}): counts of word pairs from the Leipzig Co
 
 
 def notice(folder_id, corpus, file, extra):
-    """Writes the folder's NOTICE line for its table, replacing an older one for the same file."""
+    """Writes the folder's NOTICE line for its table: in place of an older one for the same file, else at the end. Other
+    paragraphs (the word list's, its ranking, its starters) stay as they are, where they are."""
     path = os.path.join(IM, folder_id, "NOTICE")
     lines = open(path, encoding="utf-8").read().rstrip("\n").split("\n")
-    lines = [l for l in lines if not l.startswith(f"Next words ({file}):")]
-    while lines and not lines[-1]:
-        lines.pop()
-    lines += ["", LEIPZIG_NOTICE.format(file=file, corpus=corpus, extra=f", {extra}" if extra else "")]
+    line = LEIPZIG_NOTICE.format(file=file, corpus=corpus, extra=f", {extra}" if extra else "")
+    at = next((i for i, l in enumerate(lines) if l.startswith(f"Next words ({file}):")), None)
+    if at is not None:
+        lines[at] = line
+    else:
+        while lines and not lines[-1]:
+            lines.pop()
+        lines += ["", line]
     open(path, "w", encoding="utf-8", newline="\n").write("\n".join(lines) + "\n")
 
 

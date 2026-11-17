@@ -253,6 +253,18 @@ class Composer(
     /** Told when a :name: becomes its emoji, or a snippet's shortcut its text. */
     var onExpanded: (() -> Unit)? = null
     /**
+     * Sharing's daily totals (#96, docs/analytics.md): told the key of a count, as "autocorrect.made" or "swipe.kept.5-7". Only
+     * in fields that allow learning, so never in password, email, web address or private fields. Never a word.
+     */
+    var count: (String) -> Unit = {}
+    /** How long a swipe took from the finger lifting to its word going in, for Sharing's speed bands. Same fields as [count]. */
+    var swipeRead: (millis: Long) -> Unit = {}
+    /** The clock of the swipes' times (SystemClock.uptimeMillis), or null where there is none. */
+    var uptime: (() -> Long)? = null
+    /** The recognitions of the last swipe that was joined to the one before, and of the last one kept apart at a quick touch. */
+    private var joinedReading: Words.Recognition? = null
+    private var keptApartReading: Words.Recognition? = null
+    /**
      * A wrong word for the right one, when the next swipe should come out wrong on purpose, which only the interactive guide asks
      * for, or null. See [GuideHooks].
      */
@@ -539,7 +551,7 @@ class Composer(
         val joined = if (joinable && (sameStroke || gap in 0..JOIN_CHECK_MILLIS)) appended(previous!!.swipe, pending.swipe, gap) else null
 
         /** Reads [path], or uses the reading already made of it, and types the result. */
-        fun read(resumes: Boolean, path: Swipe, known: Words.Recognition? = null) {
+        fun read(resumes: Boolean, path: Swipe, known: Words.Recognition? = null, keptApart: Boolean = false) {
             if (!resumes) {
                 leave()
                 awaitingNextWord = null
@@ -588,6 +600,17 @@ class Composer(
                         pending.endContact, true, accepted, false, choices)
                     composition = swiped
                     remember(swiped)
+                    if (field.learning) {
+                        if (resumes) {
+                            count("join.total")
+                            joinedReading = recognition
+                        }
+                        if (keptApart) {
+                            count("join.keptApart")
+                            keptApartReading = recognition
+                        }
+                        uptime?.invoke()?.let { now -> if (now >= pending.endedAt) swipeRead(now - pending.endedAt) }
+                    }
                     confirmState(accepted) { confirmed ->
                         if (confirmed) {
                             // The swiped word can still change the typed word before it.
@@ -631,10 +654,10 @@ class Composer(
                     }
                     val margin = reading.margin
                     if (reading.words.isNotEmpty() && margin != null && margin > firstMargin) read(true, joined, reading)
-                    else read(false, pending.swipe)
+                    else read(false, pending.swipe, keptApart = true)
                 }
             }
-            else -> read(false, pending.swipe)
+            else -> read(false, pending.swipe, keptApart = joined != null)
         }
     }
 
@@ -1061,7 +1084,9 @@ class Composer(
 
     /** Puts in the word at place [shown] on the bar. */
     fun choose(shown: Int) {
-        chooseAlternative(shownAlternatives.getOrNull(shown) ?: return)
+        val index = shownAlternatives.getOrNull(shown) ?: return
+        if (field.learning && composition !is Composition.Expanding) count("bar.place.${shown + 1}")
+        chooseAlternative(index)
     }
 
     /** The word at place [shown] on the bar, and the typed letters it would replace, which are empty when there are none. */
@@ -1388,13 +1413,26 @@ class Composer(
         if (!stillAsSwiped(swiped)) return
         if (swiped.chosen) words.chosen(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
         else words.kept(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+        settled(swiped, if (swiped.chosen) "picked" else "kept", swiped.word)
+    }
+
+    /** Sharing's count of how a swiped word settled, by its length, and whether a join or a quick pair kept apart was redone. */
+    private fun settled(swiped: Composition.Swiped, how: String, word: String) {
+        if (!field.learning) return
+        count("swipe.$how.${lengthBand(word)}")
+        if (how == "kept") return
+        if (swiped.recognition === joinedReading) count("join.undone")
+        if (swiped.recognition === keptApartReading) count("join.keptApart.redone")
     }
 
     /** The field is closing with a swiped word that was not chosen from the strip: only data sharing hears of it. */
     private fun leaveKept(swiped: Composition.Swiped) {
         if (swiped.finalised) return
         swiped.finalised = true
-        if (stillAsSwiped(swiped)) words.keptAtEnd(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+        if (stillAsSwiped(swiped)) {
+            words.keptAtEnd(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+            settled(swiped, "kept", swiped.word)
+        }
     }
 
     /**
@@ -1408,7 +1446,10 @@ class Composer(
         swiped.finalised = true
         val asSwiped = field.learning && selectionConfirmed && selection == swiped.snapshot.selection && swiped.snapshot.available
             && !swiped.snapshot.selected && swiped.snapshot.before?.endsWith(swiped.inserted) == true
-        if (asSwiped) words.keptAtEnd(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+        if (asSwiped) {
+            words.keptAtEnd(swiped.swipe, swiped.context, swiped.recognition, swiped.word)
+            settled(swiped, "kept", swiped.word)
+        }
     }
 
     /** The field allows learning, and the text is just as the swipe left it: the word was kept. */
@@ -1476,6 +1517,7 @@ class Composer(
         if (correction == null) typeWord(word, rememberCase)
         else if (!word.equals(correction.word, ignoreCase = true)) {
             words.corrected(correction.swipe, correction.context, correction.recognition, word)
+            settled(correction, "retyped", word)
             // The engine only counts a correction that resembles the swipe; the word was still typed.
             typeWord(word, rememberCase)
         } else if (correction.chosen) {
@@ -1729,6 +1771,7 @@ class Composer(
 
     private fun offerUndo(replaced: String, restored: String, word: String, keptAsTyped: Boolean) {
         undo = Undo(replaced, restored, word, keptAsTyped, snapshot())
+        if (field.learning) count("${fixKind(replaced, restored)}.made")
     }
 
     private fun learnHeldWord() {
@@ -1776,6 +1819,7 @@ class Composer(
             else -> EditCause.AutocorrectUndo
         }
         if (!replaceBehind(showing, anchor, cause, pending.replaced.length, pending.restored)) return true
+        if (!pending.spacing && !pending.expansion && field.learning) count("${fixKind(pending.replaced, pending.restored)}.undone")
         if (pending.spacing) {
             // The user wants the letter straight after the mark, so it stays there.
             typedMark = null
@@ -2218,4 +2262,24 @@ class Composer(
         /** Typed words that wait for their apostrophe at once: "if its your turn" has two. */
         private const val MAX_APOSTROPHE_TARGETS = 3
     }
+}
+
+/**
+ * Which kind of automatic fix put [replaced] where [restored] was typed, for Sharing's counts (#96): "capital" when only capitals
+ * changed ("i" to "I"), "apostrophe" when only apostrophes did ("were" to "we're"), otherwise "autocorrect".
+ */
+internal fun fixKind(replaced: String, restored: String): String {
+    val fixed = replaced.trim()
+    val typed = restored.trim()
+    if (fixed.equals(typed, ignoreCase = true)) return "capital"
+    fun letters(text: String) = text.filter { it != '\'' && it != '\u2019' }
+    return if (letters(fixed).equals(letters(typed), ignoreCase = true)) "apostrophe" else "autocorrect"
+}
+
+/** A word's length in the bands of Sharing's swipe counts. */
+internal fun lengthBand(word: String): String = when (word.codePointCount(0, word.length)) {
+    in 0..2 -> "1-2"
+    in 3..4 -> "3-4"
+    in 5..7 -> "5-7"
+    else -> "8+"
 }

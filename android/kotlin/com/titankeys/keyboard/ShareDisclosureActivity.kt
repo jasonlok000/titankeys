@@ -22,9 +22,9 @@ import com.titankeys.connected.Contributions
 import kotlin.math.roundToInt
 
 /**
- * The short policy before Share swipes turns on, for the guide's end screen (owner: "the share swipe should go back to the end
+ * The short policy before Sharing turns on (#96: swipes and daily totals, one switch), for the guide's end screen (owner: "the share swipe should go back to the end
  * screen with a clear indication on where to click accept"). It opens over the guide, so every way out lands back on the end:
- * - **Turn on Share swipes**, the one orange pill, right after the owner's "Trust me bro." on its own line, turns sharing on;
+ * - **Turn on sharing**, the one orange pill, right after the owner's "Trust me bro." on its own line, turns sharing on;
  * - **Not now**, a quiet text button, answers no, and the offer doesn't come back;
  * - Back leaves it unanswered, as it was.
  *
@@ -162,25 +162,21 @@ class ShareDisclosureActivity : Activity() {
 
         // POLICY TEXT: lib/connected-text.ts, sharePolicyText, word for word (tests/guide/run.sh checks it).
         const val TITLE = "Before you share"
-        const val SUBTITLE = "Share swipes sends us examples of your swipes, to train the swipe models. Nothing is sent until you turn it on."
-        const val SENT_TITLE = "What's sent"
+        const val SUBTITLE = "Sharing sends us examples of your swipes and daily totals of how TitanKeys works, so we can make it better. Nothing is sent until you turn it on."
+        const val SENT_TITLE = "What's shared"
         val SENT = listOf(
-            "How each swipe moved across the keys, with its timing and touch size.",
-            "The word you kept, only if it's in the dictionary.",
-            "The numbers the swipe engine used to rank the words, without the words.",
-            "The app and model versions, your phone model, and a random ID.",
+            "Your swipes: how each moved across the keys, and the word you kept, only if it's in the dictionary.",
+            "Daily totals, such as fixes undone, swipes retyped, slides skipped, settings changed and crashes.",
+            "Versions, your phone model and random IDs.",
         )
-        const val NEVER_TITLE = "What's never sent"
+        const val NEVER_TITLE = "Never shared"
         val NEVER = listOf(
-            "What you type, or the text around a word.",
-            "Names and other words that aren't in the dictionary.",
-            "Anything from password, email, web address or private fields.",
-            "Your clipboard, snippets and shortcuts.",
+            "What you type, names, anything from password or private fields, your clipboard, your apps, contacts or location.",
         )
-        const val HOW = "It's sent encrypted, on Wi-Fi only. You can turn it off and delete what you've sent any time in Settings > Share swipes."
-        const val AGREE = "Turn on Share swipes"
+        const val HOW = "It's encrypted on your phone. Turn it off any time in Settings > Sharing, and delete what you've sent."
+        const val AGREE = "Turn on sharing"
         const val DECLINE = "Not now"
-        const val POLICY = "Read the full privacy policy"
+        const val POLICY = "Read the full policy"
 
         fun intent(context: Context) = Intent(context, ShareDisclosureActivity::class.java)
     }

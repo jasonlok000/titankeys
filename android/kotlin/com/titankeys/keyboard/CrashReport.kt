@@ -46,6 +46,8 @@ object CrashReport {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {
+                // Sharing's daily totals count it, with nothing about it (#96).
+                com.titankeys.connected.Counts.crashed(app, "crash.count")
                 write(app, header(app, "Crashed") + "Thread: ${thread.name}\n\n" + stack(error))
             } catch (_: Throwable) {
                 // The report is a nicety: the crash itself must still reach Android.
@@ -119,9 +121,12 @@ object CrashReport {
         checked.writeText(System.currentTimeMillis().toString())
         val records = context.getSystemService(ActivityManager::class.java)
             .getHistoricalProcessExitReasons(context.packageName, 0, 10)
-        val last = records.filter { it.timestamp > since && it.processName == context.packageName &&
+        val ended = records.filter { it.timestamp > since && it.processName == context.packageName &&
             (it.reason == ApplicationExitInfo.REASON_ANR || it.reason == ApplicationExitInfo.REASON_CRASH_NATIVE) }
-            .maxByOrNull { it.timestamp } ?: return
+        // Sharing's daily totals count each, with nothing about it (#96). A Java crash counted itself as it happened.
+        for (record in ended) com.titankeys.connected.Counts.crashed(context,
+            if (record.reason == ApplicationExitInfo.REASON_ANR) "freeze.count" else "crash.count")
+        val last = ended.maxByOrNull { it.timestamp } ?: return
         // A Java crash after it has its own report already.
         if (File(context.noBackupFilesDir, FILE).let { it.isFile && it.lastModified() > last.timestamp }) return
         val kind = if (last.reason == ApplicationExitInfo.REASON_ANR) FROZE else "Crashed in native code"

@@ -43,6 +43,7 @@ import android.view.inputmethod.SurroundingText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.titankeys.connected.Connected
+import com.titankeys.connected.Counts
 import com.titankeys.connected.TouchSizes
 import com.titankeys.engine.Calibration
 import com.titankeys.engine.EmojiPages
@@ -393,6 +394,7 @@ class TitanKeysIme : InputMethodService() {
             return@Runnable
         }
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped(2) }
+        tally("gesture.doubleSpace")
         // With text selected, a double space puts the cursor back, as steering would start from there.
         if (collapseSelection()) {
             haptics.play(Haptic.Steer)
@@ -411,7 +413,10 @@ class TitanKeysIme : InputMethodService() {
      * the next touch is a first tap again.
      */
     private val confirmTriple = Runnable {
-        if (cursorGesture.confirmTriple()) finishHeldTaps(type = false)
+        if (cursorGesture.confirmTriple()) {
+            finishHeldTaps(type = false)
+            tally("gesture.tripleSpace")
+        }
     }
 
     /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
@@ -497,6 +502,7 @@ class TitanKeysIme : InputMethodService() {
                     haptics.holdStarted()
                     // The guide wants to know that this delete stays down, before its first word goes.
                     KeyboardEvents.publish { KeyboardEvent.DeleteHoldStarted }
+                    tally("gesture.deleteHold")
                 }
                 outcome(flick)
             }
@@ -542,6 +548,7 @@ class TitanKeysIme : InputMethodService() {
         }
         Recording.sink?.gesture("drag", samples.lastOrNull()?.time ?: SystemClock.uptimeMillis(), "words=${drag.words}")
         KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
+        tally(if (drag.words) "gesture.selectWords" else "gesture.steer")
         cursor.start(drag.landed, drag.words)
         cursorSteps.reset()
         cursor.move(samples)
@@ -798,6 +805,10 @@ class TitanKeysIme : InputMethodService() {
         // Backspace putting a word back plays nothing: the key press is felt already.
         composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }
         composer.onFixed = { typed, word -> KeyboardEvents.publish { KeyboardEvent.Fixed(typed, word) } }
+        // Sharing's daily totals (#96): the composer counts only in fields that allow learning; the guide's own fields never count.
+        composer.count = { key -> if (!inGuide) Counts.add(key) }
+        composer.swipeRead = { millis -> if (!inGuide) Counts.add("speed.swipe." + Counts.swipeBand(millis)) }
+        composer.uptime = SystemClock::uptimeMillis
         composer.onExpanded = { haptics.play(Haptic.Expansion) }
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
@@ -1289,6 +1300,7 @@ class TitanKeysIme : InputMethodService() {
                 openPicker()?.let { open ->
                     // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
                     val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
+                    if (choice >= 0 && open is LanguagePicker.Choices) tallyChoices("pick.tap")
                     if (choice >= 0) pick(open, choice)
                 }
             }
@@ -1603,6 +1615,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        if (!restarting) timeOpening()
         // Bar text size changed since the bar was made, by a pick or the phone's text size, so it's made again at the new size.
         if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
         // The bar may only now be set up for this field, so the wait starts once it is. A restart of the same field is no input: it
@@ -1620,6 +1633,24 @@ class TitanKeysIme : InputMethodService() {
         }
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+    }
+
+    /**
+     * Sharing's speed bands (#96): how long the keys take to draw for a new field, from Android asking for them to the next
+     * draw. Only while Sharing is on, in the same fields as every count.
+     */
+    private fun timeOpening() {
+        if (!Counts.on) return
+        val started = SystemClock.uptimeMillis()
+        val view = window.window?.decorView ?: return
+        val observer = view.viewTreeObserver
+        observer.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (view.viewTreeObserver.isAlive) view.viewTreeObserver.removeOnPreDrawListener(this)
+                tally("speed.open." + Counts.openBand(SystemClock.uptimeMillis() - started))
+                return true
+            }
+        })
     }
 
     override fun onWindowShown() {
@@ -3236,6 +3267,7 @@ class TitanKeysIme : InputMethodService() {
                             { dotsAt != null && strip?.gesture?.dotsAt == dotsAt })
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
+                    tally("gesture.flickDelete")
                     return
                 }
                 // An engine that failed to load takes no swipe: the bar says why, instead of the swipe vanishing without a word.
@@ -3506,6 +3538,7 @@ class TitanKeysIme : InputMethodService() {
                 item < 0 -> "no choice over column $column"
                 else -> "picks ${open.items[item]}"
             }))
+        if (item >= 0) tallyChoices("pick.flick")
         if (item >= 0) pick(open, item)
         return true
     }
@@ -3628,7 +3661,9 @@ class TitanKeysIme : InputMethodService() {
             KeyEvent.KEYCODE_DEL -> if (alt) return false else engine.backspace()
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (alt) return false else engine.enter()
             // Space picks the first choice: a resting finger doesn't change that (owner: "no marking first").
-            KeyEvent.KEYCODE_SPACE -> if (alt) return false else engine.space()
+            KeyEvent.KEYCODE_SPACE -> if (alt) return false else engine.space().also {
+                if (it.commit.isNotEmpty() && openPicker() is LanguagePicker.Choices) tallyChoices("pick.space")
+            }
             // Chinese and Japanese have no capitals: a letter is the letter, Shift or not.
             else -> if (chinese && letter && !alt) engine.key(printedLetter(event.keyCode)) else {
                 val text = (if (alt) null else inputMethodLetter(event)) ?: event.getUnicodeChar(meta).takeIf { it > 0 &&
@@ -3706,6 +3741,7 @@ class TitanKeysIme : InputMethodService() {
         menu.hover = ""
         menu.visibility = View.VISIBLE
         showModifiers()
+        tallyChoices("bigMenu")
     }
 
     private fun closeChoicesMenu() {
@@ -3721,6 +3757,7 @@ class TitanKeysIme : InputMethodService() {
         if (!choicesMenuOpen) return
         closeChoicesMenu()
         haptics.play(Haptic.MenuPress)
+        tallyChoices("pick.menu")
         languages.engine?.let { engineState(it.pickAt(index)) }
     }
 
@@ -3749,6 +3786,7 @@ class TitanKeysIme : InputMethodService() {
             KeyEvent.KEYCODE_SYM -> closeChoicesMenu()
             KeyEvent.KEYCODE_SPACE -> {
                 closeChoicesMenu()
+                tallyChoices("pick.space")
                 languages.engine?.let { engineState(it.space()) }
             }
         }
@@ -3784,6 +3822,20 @@ class TitanKeysIme : InputMethodService() {
         choicesLog("Sym let go with a code typed: the bigger menu opens")
         openChoicesMenu()
         return true
+    }
+
+    /**
+     * Sharing's daily totals (#96): one more [key], only in a field that allows learning, never in the guide's own fields, and
+     * only while Sharing is on ([Counts.add] checks).
+     */
+    private fun tally(key: String) {
+        if (editing && field.learning && !inGuide) Counts.add(key)
+    }
+
+    /** A count for Chinese's or Japanese's choices, under "zh." or "ja.". */
+    private fun tallyChoices(key: String) {
+        val language = if (ChineseKeys.isChinese(languages.current)) "zh" else "ja"
+        tally("$language.$key")
     }
 
     /** The bar's choices and the bigger menu, in TitanKeys Debug's log: `adb logcat -s TitanKeysChoices`. */

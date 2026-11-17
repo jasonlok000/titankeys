@@ -2251,6 +2251,8 @@ class GuideActivity : Activity() {
         }
 
         if (step.offersShare) Contributions.guideEnded(this)
+        // Sharing's daily totals (#96): the furthest slide reached, and whether the guide reached its end.
+        com.titankeys.connected.Counts.guide(this, flow.stepIndex, step.id, step.chapter == GuideChapter.End)
         // The keyboard starts the step in the menu that it needs: the Sym panel for Alt and the emoji, closed for typing.
         val panelLeft = panelOpen && step.setup == Modifiers.Panel.Closed && enteredBefore
         val altLeft = altOn && !panelOpen && !step.usesPanel && enteredBefore
@@ -4351,6 +4353,8 @@ class GuideActivity : Activity() {
             return
         }
         if (!passed) {
+            // Sharing's daily totals (#96): a slide skipped before it was done, a hunt among them.
+            com.titankeys.connected.Counts.guideSkipped(this, flow.step.id)
             // Skipping: the roast shows for a moment as the slide changes.
             changing = true
             busy = true
@@ -5023,8 +5027,8 @@ class GuideActivity : Activity() {
         private val ROAST_SPEEDS = listOf(45, 70, 90, 130, 170)
         private const val ROAST_LARGEST = 64
         private const val BORING_GUIDE_LINE = "Every feature in words. For nerds, and for people who skipped half of this. So, you."
-        private const val SHARE_ON = "Share my swipes: on"
-        private const val SHARE_OFF = "Share my swipes: off"
+        private const val SHARE_ON = "Sharing: on"
+        private const val SHARE_OFF = "Sharing: off"
         /**
          * Once answered, the end says nothing more under the switch: "Trust me bro." moved to the share step itself, right before
          * its accept (owner, 2026-11-13: "remove trust me bro at the end guide. put it in place of before you share").
@@ -5057,11 +5061,11 @@ class GuideActivity : Activity() {
         private const val PLAYGROUND = "playground"
         private const val PLAYGROUND_LABEL = "Playground"
         /** The share slide's offer (#34), while it is unanswered. It opens the full disclosure. */
-        private const val SHARE_OFFER = "Share my swipes"
+        private const val SHARE_OFFER = "Share to improve TitanKeys"
         /** The end's instruction. */
         /** The one boring thing at the end, in plain words: it is about consent, so no jokes here. */
-        private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes to make swiping better. Change it " +
-            "any time in Settings > Share swipes."
+        private const val SHARE_PLAIN = "Off until you agree. Then we get examples of your swipes and daily totals of how TitanKeys " +
+            "works, to make it better. Change it any time in Settings > Sharing."
         private const val END_NEXT = "Go type something"
         /** How many things the paste lesson rains down. */
         private const val RAIN_PIECES = 26

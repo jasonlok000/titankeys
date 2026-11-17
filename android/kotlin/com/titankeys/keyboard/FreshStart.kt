@@ -51,7 +51,7 @@ internal object FreshStart {
     /** Files wiped but for these keys. */
     val PARTLY_KEPT = mapOf(
         // Share swipes' ID, and what was sent and is waiting to be deleted, so the Share swipes page can still delete it.
-        "connected" to setOf("contributor", "contributor_to_delete", "contributions_sent", "contributions_sent_at"),
+        "connected" to setOf("contributor", "contributor_to_delete", "contributions_sent", "contributions_sent_at", "counts_to_delete"),
     )
 
     /** Files and folders of data, by the start of their names, in the app's no-backup folder, its files and its cache. */
@@ -67,6 +67,8 @@ internal object FreshStart {
 
     /** Wipes it all, then restarts TitanKeys on its front page. */
     fun wipe(activity: Activity) {
+        // Sharing's daily totals go, and its counts IDs stay in its own file, so totals already sent can still be deleted (#96).
+        com.titankeys.connected.Counts.clear(activity)
         // Deleting a file leaves Android's copy of it in memory, and a write still queued for it, such as Reset most things'
         // apply(), would put the whole copy back on disk (bug hunt 2.1, #2). Clearing it first, with commit(), which waits behind
         // any queued write, makes the last write an empty file; then the file goes.

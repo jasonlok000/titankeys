@@ -5,6 +5,7 @@
 //
 // - POST /v1/batch and POST /v1/delete: for the app. Write-only: nothing can be read back through them.
 // - POST /v1/report: a part of a bug report or idea from the app's form (#97), sealed the same way. Write-only too.
+// - POST /v1/counts: one day of Sharing's daily totals (#96), sealed the same way, kept 1 year. Write-only too.
 // - /v1/export...: for the owner only, with a long secret token. It returns the sealed batches and reports, still sealed.
 //
 // Uploads need no account, so the Worker limits abuse: a per-client limit, counted in memory only and keyed by a salted
@@ -42,6 +43,20 @@ export const CLIENT_REPORT_PARTS_PER_MINUTE = 2 * MAX_REPORT_PARTS;
 export const MAX_REPORT_BYTES = 800 * 1024 * 1024;
 /** Report parts that one export page lists. */
 const REPORT_PAGE = 200;
+/** A day of Sharing's totals is a few hundred bytes sealed; this leaves room for many more counts. */
+export const MAX_COUNTS_BYTES = 4 * 1024;
+/** Days of totals a minute from one client: a phone sends at most 7 waiting days in a run. */
+export const CLIENT_COUNTS_PER_MINUTE = 10;
+/** Daily totals are deleted 1 year after they arrive (docs/analytics.md). */
+export const COUNTS_KEEP_MILLIS = 365 * 24 * 60 * 60 * 1000;
+/** All daily totals, together, in their one storage object. */
+export const MAX_ALL_COUNTS_BYTES = 200 * 1024 * 1024;
+/** Days of totals that one export page lists. */
+const COUNTS_PAGE = 500;
+const DAY = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+const COUNTS_ID = /^[0-9a-f]{32}$/;
+/** The most counts IDs one deletion names: a year of 30-day IDs, twice over. */
+const MAX_DELETED_COUNTS = 26;
 const REPORT_ID = /^[0-9a-f]{32}$/;
 const PART = /^([0-9]{1,2})\/([0-9]{1,2})$/;
 const FOLDER = /^[0-9a-f]{64}$/;
@@ -126,21 +141,66 @@ async function report(request, env) {
   return answer(204);
 }
 
+const countsStore = env => env.COUNTS.get(env.COUNTS.idFromName("counts"));
+
+/**
+ * One day of Sharing's totals (#96). X-Counts is a hash of the phone's counts ID, which changes every 30 days and is never the
+ * contributor ID; X-Day is the phone's date for the totals, with no time. A day sent again replaces the first.
+ */
+async function counts(request, env) {
+  const id = request.headers.get("X-Counts") ?? "";
+  const day = request.headers.get("X-Day") ?? "";
+  if (!FOLDER.test(id) || !DAY.test(day)) return answer(400, { error: "bad counts" });
+  const length = Number(request.headers.get("Content-Length") ?? "0");
+  if (length > MAX_COUNTS_BYTES) return answer(413, { error: "too large" });
+  const body = new Uint8Array(await request.arrayBuffer());
+  if (body.length > MAX_COUNTS_BYTES) return answer(413, { error: "too large" });
+  if (body.length <= HEADER_BYTES + TAG_BYTES || MAGIC.some((byte, i) => body[i] !== byte)) return answer(400, { error: "not sealed counts" });
+  const now = Date.now();
+  const room = await call(counter(env), "take", { client: await clientKey(request, env), kind: "counts", bytes: body.length, now });
+  if (room.result === "busy") return answer(429, { error: "too many requests" });
+  if (room.result !== "ok") return answer(503, { error: room.result === "day" ? "daily limit reached" : "storage full" });
+  const stored = await call(countsStore(env), "put", { folder: id, day, now }, body);
+  if (Object.keys(stored.replaced ?? {}).length) await call(counter(env), "free", { months: stored.replaced });
+  if (stored.result !== "ok") {
+    await call(counter(env), "free", { months: { [monthOf(now)]: body.length } });
+    return answer(503, { error: "storage full" });
+  }
+  return answer(204);
+}
+
+/**
+ * "Delete what I've sent": {contributor} deletes that contributor's swipe batches, {counts: [ids]} the daily totals of each
+ * counts ID, and both can come together. Only the phone knows the IDs; the server keeps their hashes.
+ */
 async function remove(request, env) {
   const allowed = await call(counter(env), "allow", { client: await clientKey(request, env), kind: "delete", now: Date.now() });
   if (allowed.result === "busy") return answer(429, { error: "too many requests" });
-  let contributor = "";
+  let contributor, ids;
   try {
     const text = await request.text();
-    if (text.length > 1024) return answer(413, { error: "too large" });
-    contributor = JSON.parse(text).contributor ?? "";
+    if (text.length > 4096) return answer(413, { error: "too large" });
+    ({ contributor, counts: ids } = JSON.parse(text));
   } catch {
     return answer(400, { error: "bad request" });
   }
-  if (typeof contributor !== "string" || !CONTRIBUTOR.test(contributor)) return answer(400, { error: "bad contributor" });
-  const hash = await folder(contributor);
-  const { deleted, months } = await call(shard(env, shardOf(hash)), "delete-folder", { folder: hash });
-  if (deleted) await call(counter(env), "free", { months });
+  if (contributor === undefined && ids === undefined) return answer(400, { error: "bad contributor" });
+  if (contributor !== undefined && (typeof contributor !== "string" || !CONTRIBUTOR.test(contributor))) return answer(400, { error: "bad contributor" });
+  if (ids !== undefined && !(Array.isArray(ids) && ids.length <= MAX_DELETED_COUNTS && ids.every(id => typeof id === "string" && COUNTS_ID.test(id))))
+    return answer(400, { error: "bad counts" });
+  let deleted = 0;
+  if (contributor !== undefined) {
+    const hash = await folder(contributor);
+    const result = await call(shard(env, shardOf(hash)), "delete-folder", { folder: hash });
+    if (result.deleted) await call(counter(env), "free", { months: result.months });
+    deleted += result.deleted;
+  }
+  if (ids?.length) {
+    const folders = await Promise.all(ids.map(id => folder(id)));
+    const result = await call(countsStore(env), "delete-folders", { folders });
+    if (result.deleted) await call(counter(env), "free", { months: result.months });
+    deleted += result.deleted;
+  }
   return answer(200, { deleted });
 }
 
@@ -183,6 +243,21 @@ async function exporting(request, env, pathname) {
     if (deleted) await call(counter(env), "free", { months });
     return answer(200, { deleted });
   }
+  // Sharing's daily totals (#96): GET /v1/export/counts?after=ID lists them as {id, day, month, size}; GET
+  // /v1/export/counts/day?id=ID returns one, sealed; POST /v1/export/counts/confirm {through} deletes them up to that ID.
+  if (request.method === "GET" && pathname === "/v1/export/counts")
+    return answer(200, await call(countsStore(env), "list", { after: Number(url.searchParams.get("after") ?? "0") }));
+  if (request.method === "GET" && pathname === "/v1/export/counts/day") {
+    const response = await countsStore(env).fetch("https://do/get", { method: "POST", body: JSON.stringify({ id: Number(url.searchParams.get("id")) }) });
+    return new Response(response.body, { status: response.status, headers: { "Content-Type": "application/octet-stream" } });
+  }
+  if (request.method === "POST" && pathname === "/v1/export/counts/confirm") {
+    const { through } = await request.json();
+    if (!Number.isInteger(through)) return answer(400, { error: "bad request" });
+    const { deleted, months } = await call(countsStore(env), "delete-through", { through });
+    if (deleted) await call(counter(env), "free", { months });
+    return answer(200, { deleted });
+  }
   if (request.method === "POST" && pathname === "/v1/export/confirm") {
     const { shard: number, through } = await request.json();
     if (!Number.isInteger(number) || number < 0 || number >= SHARDS || !Number.isInteger(through)) return answer(400, { error: "bad request" });
@@ -209,6 +284,7 @@ export default {
     if (request.method === "POST" && pathname === "/v1/batch") return store(request, env);
     if (request.method === "POST" && pathname === "/v1/delete") return remove(request, env);
     if (request.method === "POST" && pathname === "/v1/report") return report(request, env);
+    if (request.method === "POST" && pathname === "/v1/counts") return counts(request, env);
     if (pathname.startsWith("/v1/export")) return exporting(request, env, pathname);
     return answer(404, { error: "not found" });
   },
@@ -240,7 +316,8 @@ export class Cap {
     const key = `${kind}:${client}`;
     const count = (this.clients.get(key) ?? 0) + 1;
     this.clients.set(key, count);
-    return count <= (kind === "delete" ? CLIENT_DELETES_PER_MINUTE : kind === "report" ? CLIENT_REPORT_PARTS_PER_MINUTE : CLIENT_UPLOADS_PER_MINUTE);
+    return count <= (kind === "delete" ? CLIENT_DELETES_PER_MINUTE : kind === "report" ? CLIENT_REPORT_PARTS_PER_MINUTE
+      : kind === "counts" ? CLIENT_COUNTS_PER_MINUTE : CLIENT_UPLOADS_PER_MINUTE);
   }
 
   async fetch(request) {
@@ -260,7 +337,7 @@ export class Cap {
       return Response.json({ result: "ok" });
     }
     // "take": room for one upload.
-    if (!this.allow(body.client, body.kind === "report" ? "report" : "upload", now)) return Response.json({ result: "busy" });
+    if (!this.allow(body.client, body.kind === "report" || body.kind === "counts" ? body.kind : "upload", now)) return Response.json({ result: "busy" });
     const stored = Object.values(recent).reduce((sum, value) => sum + value, 0);
     const day = await this.storage.get("day");
     const uploads = day === today ? (await this.storage.get("uploads")) ?? 0 : 0;
@@ -411,6 +488,73 @@ export class Reports {
   async alarm(now = Date.now()) {
     await this.removeWhere("created < ?", now - KEEP_MILLIS);
     const left = this.sql.exec("SELECT COUNT(*) AS count FROM parts").one().count;
+    if (left > 0) await this.storage.setAlarm(now + DAY_MILLIS);
+  }
+}
+
+/**
+ * Sharing's daily totals (#96), in one storage object: a SQLite table of sealed days, each with the hash of its counts ID, the
+ * phone's date for it, upload time, month and size. A day sent again for the same ID replaces the first. Like the others, it
+ * keeps its own byte total, and a daily alarm deletes days older than 1 year.
+ */
+export class Counts {
+  constructor(state) {
+    this.storage = state.storage;
+    this.sql = state.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS days (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, folder TEXT NOT NULL, day TEXT NOT NULL, created INTEGER NOT NULL,
+      month TEXT NOT NULL, size INTEGER NOT NULL, body BLOB NOT NULL, UNIQUE (folder, day))`);
+    this.sql.exec("CREATE INDEX IF NOT EXISTS days_created ON days (created)");
+  }
+
+  async removeWhere(where, ...values) {
+    const rows = this.sql.exec(`SELECT month, SUM(size) AS bytes, COUNT(*) AS count FROM days WHERE ${where} GROUP BY month`, ...values).toArray();
+    this.sql.exec(`DELETE FROM days WHERE ${where}`, ...values);
+    const freed = rows.reduce((sum, row) => sum + row.bytes, 0);
+    if (freed) await this.storage.put("bytes", Math.max(0, ((await this.storage.get("bytes")) ?? 0) - freed));
+    return {
+      deleted: rows.reduce((sum, row) => sum + row.count, 0),
+      months: Object.fromEntries(rows.map(row => [row.month, row.bytes])),
+    };
+  }
+
+  async fetch(request) {
+    const { pathname } = new URL(request.url);
+    if (pathname === "/put") {
+      const meta = JSON.parse(request.headers.get("X-Meta") ?? "{}");
+      const body = new Uint8Array(await request.arrayBuffer());
+      const replaced = (await this.removeWhere("folder = ? AND day = ?", meta.folder, meta.day)).months;
+      const used = (await this.storage.get("bytes")) ?? 0;
+      if (used + body.length > MAX_ALL_COUNTS_BYTES) return Response.json({ result: "full", replaced });
+      try {
+        this.sql.exec("INSERT INTO days (folder, day, created, month, size, body) VALUES (?, ?, ?, ?, ?, ?)",
+          meta.folder, meta.day, meta.now, monthOf(meta.now), body.length, body);
+      } catch {
+        return Response.json({ result: "full", replaced });
+      }
+      await this.storage.put("bytes", used + body.length);
+      if (await this.storage.getAlarm() === null) await this.storage.setAlarm(meta.now + DAY_MILLIS);
+      return Response.json({ result: "ok", replaced });
+    }
+    const body = await request.json();
+    if (pathname === "/delete-folders")
+      return Response.json(await this.removeWhere("folder IN (SELECT value FROM json_each(?))", JSON.stringify(body.folders)));
+    if (pathname === "/delete-through") return Response.json(await this.removeWhere("id <= ?", body.through));
+    if (pathname === "/list") {
+      const items = this.sql.exec("SELECT id, day, month, size FROM days WHERE id > ? ORDER BY id LIMIT ?", body.after, COUNTS_PAGE + 1).toArray();
+      return Response.json({ items: items.slice(0, COUNTS_PAGE), more: items.length > COUNTS_PAGE });
+    }
+    if (pathname === "/get") {
+      const row = this.sql.exec("SELECT body FROM days WHERE id = ?", body.id).toArray()[0];
+      return row ? new Response(row.body) : new Response(null, { status: 404 });
+    }
+    return Response.json({ error: "not found" }, { status: 404 });
+  }
+
+  /** Once a day: deletes days older than 1 year, and comes back while any are left. */
+  async alarm(now = Date.now()) {
+    await this.removeWhere("created < ?", now - COUNTS_KEEP_MILLIS);
+    const left = this.sql.exec("SELECT COUNT(*) AS count FROM days").one().count;
     if (left > 0) await this.storage.setAlarm(now + DAY_MILLIS);
   }
 }

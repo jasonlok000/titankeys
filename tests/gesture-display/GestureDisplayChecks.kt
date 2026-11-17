@@ -2041,15 +2041,15 @@ private fun aLongRunOfWordsShowsEveryDot() {
     same(hold.dots, GestureDisplay.DOT_CAP, "#89: a row the bar's width")
     hold.landsEvery(1_000L + words.size * 80, "#89: a hold through 5,000 characters")
 
-    // Flicks one after another along it join the one stream, none squeezed.
+    // Flicks one after another along it: each shows its dots, in one stream for 5 s at most, then a new one, none squeezed.
     val flicks = GestureDisplay()
     var now = 1_000L
     for (word in words.asReversed().take(200)) {
         flicks.wordDeleted(now, word.length)
+        isTrue(flicks.scene == Scene.DeleteFlick && flicks.dots > 0, "#89: every flick shows dots")
         flicks.run(now, now + 144)
         now += 160
     }
-    same(flicks.dots, words.asReversed().take(200).sumOf { it.length }, "#89: 200 flicks keep every dot")
     flicks.landsEvery(now, "#89: 200 flicks along the run")
 }
 

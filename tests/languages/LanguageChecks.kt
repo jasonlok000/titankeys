@@ -1362,8 +1362,11 @@ private fun cyrillicHoldsReachEveryLetter(folder: File) {
             }
         }
         for ((key, held) in method.accents) {
-            val order = held.sortedByDescending { weight[it[0]] ?: 0.0 }
+            // The letters commonest first; a mark held with them (Ukrainian's and Belarusian's apostrophe) after them.
+            val order = held.sortedWith(compareBy<String>({ !it[0].isLetter() }, { -(weight[it[0]] ?: 0.0) }))
             check("$id: ${key.uppercaseChar()}'s held letters commonest first", held == order) { "$held, by use $order" }
         }
+        // The apostrophe is part of Ukrainian's and Belarusian's words (сім'я, з'ява), next to х on their PC layouts: held on P.
+        if (id == "uk" || id == "be") same("$id: P holds the apostrophe, after its letters", method.accents['p']?.last(), "'")
     }
 }

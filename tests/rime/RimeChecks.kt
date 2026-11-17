@@ -36,6 +36,12 @@ fun main(args: Array<String>) {
     theDataCopiesOnceAndChecksEachFile()
     aBadCopyKeepsTheOldData()
     aManifestCannotLeaveItsFolder()
+    nextWordSuggestionsFollowACommit()
+    spacePicksTheFirstSuggestion()
+    otherKeysClearTheSuggestions()
+    aLetterStartsANewCode()
+    aNewFieldStartsWithNoSuggestions()
+    noSuggestionsBeforeAVariant()
     println("Rime checks passed")
 }
 
@@ -58,8 +64,19 @@ private class FakeRime : RimeCalls {
     var page = 0
     private var commit: String? = null
     var opened = true
+    /**
+     * librime-predict's suggestions: after a commit from a code or a suggestion, the next words, "<word>+0" and on; none at the
+     * start. Escape and Backspace clear them, as its predictor does, and clearing the composition alone doesn't: the predictor
+     * offers them again.
+     */
+    var suggestions = emptyList<String>()
 
-    fun choices() = if (code.isEmpty()) emptyList() else (0 until 8).map { "${code.uppercase()}${page * 8 + it}" }
+    private fun committed(text: String) {
+        commit = text
+        suggestions = (0 until 3).map { "$text+$it" }
+    }
+
+    fun choices() = if (code.isEmpty()) suggestions else (0 until 8).map { "${code.uppercase()}${page * 8 + it}" }
 
     override fun open(shared: String, user: String): Boolean {
         calls += "open"
@@ -88,10 +105,12 @@ private class FakeRime : RimeCalls {
     override fun process(keycode: Int, mask: Int): Boolean {
         calls += "key $keycode"
         return when (keycode) {
-            in 'a'.code..'z'.code -> { code += keycode.toChar(); page = 0; true }
-            RimeKeys.SPACE -> if (code.isEmpty()) false else { commit = choices()[0]; code = ""; true }
+            in 'a'.code..'z'.code -> { code += keycode.toChar(); page = 0; suggestions = emptyList(); true }
+            RimeKeys.SPACE -> if (code.isEmpty()) false else { committed(choices()[0]); code = ""; true }
             RimeKeys.RETURN -> if (code.isEmpty()) false else { commit = code; code = ""; true }
-            RimeKeys.BACKSPACE -> if (code.isEmpty()) false else { code = code.dropLast(1); true }
+            RimeKeys.ESCAPE -> { val had = suggestions.isNotEmpty(); suggestions = emptyList(); had }
+            RimeKeys.BACKSPACE -> if (code.isEmpty()) { val had = suggestions.isNotEmpty(); suggestions = emptyList(); had }
+                else { code = code.dropLast(1); true }
             RimeKeys.PAGE_DOWN -> { page++; true }
             RimeKeys.PAGE_UP -> { if (page > 0) page--; true }
             ','.code, '"'.code -> if (options["ascii_punct"] == true) false
@@ -101,12 +120,12 @@ private class FakeRime : RimeCalls {
     }
 
     /** Every choice, across the three pages. */
-    private fun all() = if (code.isEmpty()) emptyList() else (0 until 24).map { "${code.uppercase()}$it" }
+    private fun all() = if (code.isEmpty()) suggestions else (0 until 24).map { "${code.uppercase()}$it" }
 
     override fun selectAt(index: Int): Boolean {
         val c = all()
         if (index !in c.indices) return false
-        commit = c[index]
+        committed(c[index])
         code = ""
         page = 0
         return true
@@ -117,7 +136,7 @@ private class FakeRime : RimeCalls {
     override fun select(index: Int): Boolean {
         val c = choices()
         if (index !in c.indices) return false
-        commit = c[index]
+        committed(c[index])
         code = ""
         page = 0
         return true
@@ -313,7 +332,9 @@ fun choicesReadAcrossPages() {
     val picked = engine.pickAt(9)
     check(picked.handled, "a pick across pages is taken")
     same("SIK9", picked.commit, "and types that choice")
-    same(emptyList<String>(), engine.choices(0, 10), "with no code, no choices")
+    same(listOf("SIK9+0", "SIK9+1", "SIK9+2"), engine.choices(0, 10), "with no code, the choices are the next-word suggestions")
+    engine.reset()
+    same(emptyList<String>(), engine.choices(0, 10), "and once they're cleared, none")
     val (none, _) = started()
     none.option("zh_hk", false)
     type(none, "nei")
@@ -568,4 +589,77 @@ fun aManifestCannotLeaveItsFolder() {
     same(null, RimeData.parse("$hash  ../evil"), "no way out of the folder")
     same(null, RimeData.parse("$hash  /etc/x"), "no absolute paths")
     same(listOf(RimeData.Entry("build/a.bin", hash)), RimeData.parse("$hash  build/a.bin\n"), "a plain line reads")
+}
+
+// The next-word suggestions (librime-predict, #56; docs/languages.md, "Next-word suggestions").
+
+private fun committedNei(): Pair<RimeEngine, FakeRime> {
+    val (engine, rime) = started()
+    type(engine, "nei")
+    engine.space()
+    return engine to rime
+}
+
+fun nextWordSuggestionsFollowACommit() {
+    val (engine, _) = started()
+    type(engine, "nei")
+    val state = engine.space()
+    same("NEI0", state.commit, "Space types the code's first choice")
+    same(listOf("NEI0+0", "NEI0+1", "NEI0+2"), state.choices, "and the words that may come next are its choices")
+    same("", state.code, "with nothing typed")
+    check(!state.composing, "which isn't a code being built")
+    same(listOf("NEI0+0", "NEI0+1", "NEI0+2"), engine.choices(0, 9), "the bar's row reads them as it reads a code's choices")
+}
+
+fun spacePicksTheFirstSuggestion() {
+    val (engine, _) = committedNei()
+    val state = engine.space()
+    check(state.handled, "Space is taken while there are suggestions")
+    same("NEI0+0", state.commit, "and types the first, at the left")
+    same(listOf("NEI0+0+0", "NEI0+0+1", "NEI0+0+2"), state.choices, "and the next words follow it")
+    val (other, _) = committedNei()
+    same("NEI0+2", other.pickAt(2).commit, "a tap or the bigger menu picks any of them")
+}
+
+fun otherKeysClearTheSuggestions() {
+    for ((key, press) in listOf<Pair<String, (RimeEngine) -> EngineState>>(
+        "Backspace" to { it.backspace() }, "Enter" to { it.enter() }, "a digit" to { it.key('1') },
+        "a capital" to { it.key('A') }, "a page key" to { it.page(true) },
+    )) {
+        val (engine, rime) = committedNei()
+        val state = press(engine)
+        check(!state.handled, "$key is the keyboard's own with suggestions on the bar")
+        same("", state.commit, "and types nothing from Rime")
+        same(emptyList<String>(), state.choices, "and the suggestions go, so the bar closes")
+        check(rime.calls.contains("key ${RimeKeys.ESCAPE}"), "cleared with Escape, Rime's way: $key")
+    }
+    val (engine, _) = committedNei()
+    val state = engine.key(',')
+    same("，", state.commit, "a mark goes through Rime as it does with nothing typed")
+    same(emptyList<String>(), state.choices, "and the suggestions go first")
+}
+
+fun aLetterStartsANewCode() {
+    val (engine, _) = committedNei()
+    val state = engine.key('h')
+    same("h", state.typed, "a letter starts a new code")
+    same("", state.commit, "and types none of the suggestions")
+    same("H0", state.choices.first(), "the bar shows the code's choices instead")
+}
+
+fun aNewFieldStartsWithNoSuggestions() {
+    val (fresh, _) = started()
+    same(emptyList<String>(), fresh.state().choices, "nothing typed yet: the bar stays empty (owner)")
+    val (engine, rime) = committedNei()
+    val state = engine.reset()
+    same(emptyList<String>(), state.choices, "a new field, or Back, clears them")
+    check(rime.calls.contains("key ${RimeKeys.ESCAPE}"), "with Escape, since clearing alone brings them back")
+}
+
+fun noSuggestionsBeforeAVariant() {
+    val (engine, rime) = committedNei()
+    for (variant in ChineseVariant.entries) engine.option(variant.option, false)
+    same(emptyList<String>(), engine.state().choices, "before a variant is picked they'd be Rime's Traditional: none show")
+    check(!engine.space().handled, "and Space stays the keyboard's")
+    check(rime.suggestions.isNotEmpty(), "they stay in Rime until a variant is picked")
 }

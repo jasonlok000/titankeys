@@ -12,7 +12,8 @@ HERE="$REPO/native/rime"
 WORK="${TK_RIME_WORK:-$HOME/build/tk-rime}"
 TOOL="$WORK/out-host/rime_tool"
 OPENCC_DICT="$WORK/out-host/librime/deps/opencc/src/tools/opencc_dict"
-[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] || { echo "run native/rime/build.sh first" >&2; exit 1; }
+BUILD_PREDICT="$(find "$WORK/out-host" -name build_predict -type f -perm -u+x | head -1)"
+[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] && [ -n "$BUILD_PREDICT" ] || { echo "run native/rime/build.sh first" >&2; exit 1; }
 
 PRELUDE=https://github.com/rime/rime-prelude.git@082425ea0684bca36474415d4a0e8db9b016487e
 ESSAY=https://github.com/rime/rime-essay.git@d95eeae056df429ecf993038c325a216f0b28c5b
@@ -75,6 +76,11 @@ for n in CJK_Compatibility_Ideographs TSPhrases TSCharacters TWVariantsPhrases T
 (cd "$D/occ" && python3 -I "$OCC/scripts/extract_tofu_risk.py" TSCharacters.txt TSCharactersExt.txt)
 for f in "$D"/occ/*.txt; do "$OPENCC_DICT" -i "$f" -o "opencc/$(basename "$f" .txt).ocd2" -f text -t ocd2; done
 
+# The next-word suggestions (librime-predict, #56): native/rime/predict.py's tables, compiled by the plugin's own tool.
+# Cantonese's for Yale and Jyutping, Mandarin's for Pinyin (each schema's predictor/db).
+for lang in yue cmn; do "$BUILD_PREDICT" "predict-$lang.db" < "$HERE/predict/$lang.txt" 2> "$D/predict-$lang.log" \
+  || { cat "$D/predict-$lang.log"; exit 1; }; done
+
 # Rime records each source file's time in what it compiles. Every file gets one fixed time, so two runs give the same bytes.
 # On the phone Rime never deploys (rime_jni.cc), so the copies' own times don't matter.
 SOURCE_TIME=1763251200
@@ -129,6 +135,26 @@ for v in zh_hk zh_tw zh_hans; do
   page="$("$TOOL" try "$D/phone" "$D/try" tk_yale "$v" "deui" 8 2>/dev/null)"
   [[ "$page" != *対* ]] || { echo "FAIL 対 on deui's first page, $v: $page" >&2; exit 1; }
 done
+
+# The next-word suggestions (#56): after a commit Rime offers the table's next words, in the variant; Space picks the first;
+# Escape (the keyboard's way to clear them) leaves none, and so does a fresh session, with nothing committed yet.
+next() { # schema variant code key step expected-choices
+  local got
+  rm -rf "$D/try"; mkdir -p "$D/try"
+  got="$("$TOOL" next "$D/phone" "$D/try" "$1" "$2" "$3" "$4" 2>/dev/null | grep "^$5 " | sed 's/^[^:]*: *//' | cut -d' ' -f1-3)"
+  [ "$got" = "$6" ] || { echo "FAIL next $1 $2 '$3' $4, $5: '$got', expected '$6'" >&2; exit 1; }
+}
+next tk_yale zh_hk "nei" esc space "嘅 哋 唔"
+next tk_yale zh_hk "nei" esc esc ""
+next tk_jyutping zh_hk "nei" esc space "嘅 哋 唔"
+# A letter starts a new code: its own choices, not the suggestions.
+next tk_pinyin zh_hans "wo" h h "和 好 还"
+next tk_pinyin zh_hk "wo" esc space "為 母親 什麼都"
+next tk_pinyin zh_hans "wo" esc space "为 母亲 什么都"
+next tk_pinyin zh_tw "wo" esc space "為 母親 什麼都"
+rm -rf "$D/try"; mkdir -p "$D/try"
+fresh="$("$TOOL" try "$D/phone" "$D/try" tk_yale zh_hk "" 8 2>/dev/null | sed 's/^[^:]*://')"
+[ -z "$fresh" ] || { echo "FAIL suggestions with nothing committed: $fresh" >&2; exit 1; }
 
 # Learned words in Back up everything (RimeBackup): a word learned on one phone goes out in Rime's snapshot, and a fresh
 # phone merges that snapshot in from sync/restored/ with its own name, titankeys, as the app sets it.

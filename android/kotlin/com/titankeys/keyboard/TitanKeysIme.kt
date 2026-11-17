@@ -2981,9 +2981,10 @@ class TitanKeysIme : InputMethodService() {
 
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
-        // A code being typed goes first, as its first choice.
-        if (!field.exact && openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current))
-            languages.engine?.let { engineState(it.space()) }
+        // A code being typed goes first, as its first choice. Next-word suggestions, with nothing typed, just go.
+        val choices = openPicker() as? LanguagePicker.Choices
+        if (!field.exact && choices != null && ChineseKeys.usesBar(languages.current))
+            languages.engine?.let { engineState(if (choices.state.composing) it.space() else it.reset()) }
         if (field.exact) commitExact(item) else composer.symbol(item)
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
             getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
@@ -3640,7 +3641,8 @@ class TitanKeysIme : InputMethodService() {
         }
         if (!state.handled) {
             // What the engine had goes first (Korean's syllable, Telex's word, Rime's code before a capital), then the key as usual.
-            if (state.commit.isNotEmpty()) engineState(state)
+            // Rime's next-word suggestions go with a key that's the keyboard's own (Backspace, Enter, a digit), and the bar with them.
+            if (state.commit.isNotEmpty() || !state.composing && openPicker() is LanguagePicker.Choices) engineState(state)
             return false
         }
         if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.useHeld() else modifiers.consume()

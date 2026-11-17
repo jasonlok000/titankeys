@@ -262,20 +262,19 @@ def check_language_settings():
 BATCH += [check_accents, check_language_settings]
 
 
-def check_first_key():
-    """C's first-key fix: with Yale on and the keyboard's process just restarted (an install of the same APK, never a force
-    stop), a focused field with the keyboard hidden, N becomes a code on the bar, not a plain n (J; O: the field is empty);
-    TitanKeysIM says "Key 42 waits…" and "The keys that waited go to yue-yale" (O)."""
+def restarted_hidden(on, current):
+    """The input methods on, the keyboard's process restarted by an install of the same APK (never a force stop), Debug's field
+    focused and the keyboard hidden, TitanKeysIM's log cleared: the moment before the first touch or key."""
     import os
     import time
     adb = language_checks.adb
     apk = os.environ.get("TK_BATCH_APK", os.path.expanduser("~/build/m1-apks/main-next-debug.apk"))
     language_checks.fresh()
-    if not language_checks.turn_on(["en", "yue-yale"], "yue-yale"):
-        return record("first-key", False, "the field didn't start with yue-yale")
-    language_checks.languages.logs_on(True)
+    if not language_checks.turn_on(on, current):
+        raise Stop(f"the field didn't start with {current}")
     out = adb("install", "-r", apk)  # through checks.adb, as every phone step here (the run holds the phone lock)
-    record("first-key-install", "Success" in out, f"the same APK installed again: {out.strip()[-80:]}")
+    if "Success" not in out:
+        raise Stop(f"the same APK didn't install again: {out.strip()[-80:]}")
     time.sleep(3)
     language_checks.languages.logs_on(True)
     adb("logcat", "-c")
@@ -284,13 +283,33 @@ def check_first_key():
         raise Stop("not in the Space gestures field after the install")
     language_checks.checks.guarded("keyevent", "4")  # Back hides the keyboard; the field keeps its focus
     time.sleep(1)
-    play("key:n", "+1500", shot="first-key", at=1200)
+
+
+def waits_lines():
+    return [line.split(":", 1)[-1].strip() for line in language_checks.languages.log_lines() if "TitanKeysIM" in line
+            and ("waits" in line or "What waited" in line)]
+
+
+def check_first_key():
+    """C's touch waits (every input method but English): restarted, keyboard hidden, the first input lands in the input method.
+    Yale: a touchpad tap on N becomes Yale's code, not a plain n (J: the shot; O: the field stays empty), and TitanKeysIM says
+    "A touch waits: the input method is still loading" and "What waited goes to yue-yale" (O). Russian: the first key, Q, types
+    й (O), and TitanKeysIM says "Key 45 waits: …" and "What waited goes to ru" (O)."""
+    restarted_hidden(["en", "yue-yale"], "yue-yale")
+    play("touch:0.65,0.625:80", "+1500", shot="first-touch", at=1200)  # N's middle on the touchpad
     text = language_checks.checks.field()
-    lines = [line.split(":", 1)[-1].strip() for line in language_checks.languages.log_lines() if "TitanKeysIM" in line]
-    waited = any("Key 42 waits" in line for line in lines)
-    went = any("The keys that waited go to yue-yale" in line for line in lines)
-    record("first-key", text == "", f"N after the restart left the field {text!r} (a code on the bar, the shot)", "first-key")
-    record("first-key-log", waited and went, f"TitanKeysIM: {[l for l in lines if 'wait' in l]}")
+    lines = waits_lines()
+    record("first-touch", text == "", f"a tap on N after the restart left the field {text!r}: Yale's code on the bar (the shot)",
+           "first-touch")
+    record("first-touch-log", "A touch waits: the input method is still loading" in lines
+           and "What waited goes to yue-yale" in lines, f"TitanKeysIM: {lines}")
+    restarted_hidden(["en", "ru"], "ru")
+    play("key:q", "+1500")
+    text = language_checks.checks.field()
+    lines = waits_lines()
+    record("first-key-ru", text == "й", f"Q after the restart typed {text!r}, wanted 'й'")
+    record("first-key-ru-log", "Key 45 waits: the input method is still loading" in lines
+           and "What waited goes to ru" in lines, f"TitanKeysIM: {lines}")
 
 
 def check_sym_then_type():

@@ -5,6 +5,7 @@
 3. A tap on the screen on a Sym panel item and on a switcher tile: one screen_tap each; on a bar word: bar_word, no screen_tap.
 4. A fifth language can't go on: Settings keeps four (InputMethodsSet's answer; the line Settings shows is for the eye).
 5. Two languages on: a held Sym switches straight to the other, and back.
+6. The mark at Q: Chinese with only Yale on shows 中; with Pinyin on too, 耶.
 
 The input methods go on through InputMethodsSet, and each check types in Debug's Space gestures field.
 """
@@ -122,7 +123,15 @@ def check_two_toggle():
     record("two-toggle", first == "й" and second == "q", f"held Sym then Q: {first!r}; again: {second!r} (wanted й, then q)")
 
 
-BATCH = [check_centred, check_one_mark_per_tile, check_screen_taps, check_fifth_language, check_two_toggle]
+def check_q_mark():
+    """C's mark at Q (main 2ef3bf2d): Chinese with only Yale on shows 中, its language; with Pinyin on too, Yale's own 耶."""
+    for on, want in ((["en", "yue-yale"], "中"), (["en", "yue-yale", "zh-pinyin"], "耶")):
+        setup(on, "yue-yale")
+        play("+300", shot=f"q-mark-{len(on)}", at=100)
+        record(f"q-mark-{'-'.join(on[1:])}", None, f"{', '.join(on)} on, Yale typing: {want} at Q", f"q-mark-{len(on)}")
+
+
+BATCH = [check_centred, check_one_mark_per_tile, check_screen_taps, check_fifth_language, check_two_toggle, check_q_mark]
 HANDS = ["A tap on a clipboard item (a clip saved first): one screen_tap",
          "Settings > Languages: turning on a fifth language keeps it off and shows the line"]
 

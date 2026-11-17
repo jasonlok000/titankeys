@@ -37,6 +37,11 @@
             android:name="com.titankeys.keyboard.LeakCheck"
             android:exported="true"
             android:permission="android.permission.DUMP" />
+        <!-- Lists the files of Rime's data copy, "BYTES NAME" per line, for the storage checks. Only adb can send to it. -->
+        <receiver
+            android:name="com.titankeys.keyboard.RimeFiles"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
         <!-- The touch simulator's touchpad (tools/dev/touch): built touchpad events into the keyboard. Only adb can send to it. -->
         <receiver
             android:name="com.titankeys.keyboard.TouchFeed"

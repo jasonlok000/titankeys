@@ -619,6 +619,17 @@ public final class TypingSettings {
         preferences(context).edit().putString("chinese_variant", variant).apply();
     }
 
+    /** Whether input method [id] has said its hold hint on the bar (HoldHint): once, the first time it types. */
+    public static boolean holdHintShown(Context context, String id) {
+        return preferences(context).getStringSet("hold_hints_shown", java.util.Collections.emptySet()).contains(id);
+    }
+
+    public static void holdHintShown(Context context, String id, boolean shown) {
+        java.util.Set<String> ids = new java.util.HashSet<>(preferences(context).getStringSet("hold_hints_shown", java.util.Collections.emptySet()));
+        if (shown) ids.add(id); else ids.remove(id);
+        preferences(context).edit().putStringSet("hold_hints_shown", ids).apply();
+    }
+
     /** Whether the keyboard has opened Settings' Chinese page because no variant was picked: it does that once (ChineseSetup). */
     public static boolean chineseVariantShown(Context context) {
         return preferences(context).getBoolean("chinese_variant_shown", false);

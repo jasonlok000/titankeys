@@ -8,8 +8,9 @@ to left). "Mark at Q" is
 what the mark over Q shows. "Holding a letter" is with hold for symbols on, the default; with it off, a hold types nothing
 more, except Thai's and Hebrew's held letters, which are letters, not symbols.
 
-**How-tos:** every input method's is empty, so Settings shows no how-to on any language's page (`lib/how-to.tsx` hides an
-empty one). They land with F's text (`tools/im/howto.json`, then `make.py --howto`).
+**How-tos:** every input method has F's (docs/howto-drafts.md), on its language's page in Settings, from `tools/im/howto.json`
+through `make.py --howto`. The first-use hint is said once per input method with held letters (`HoldHint`): "Hold a letter
+for its accents.", or in Cyrillic "Missing a letter? Hold a key to find it."
 
 **Fixed in this pass** (claude/m3-first-look): the bar's sentence starts put the starters before the next-word table's, as
 the table counts every sentence as it stands (datelines, page labels); Thai's starters are hand-picked, as Japanese's are;
@@ -18,15 +19,15 @@ Latin letters marks SR, not the language's Cyrillic СР.
 
 **Decisions kept, to confirm:** Japanese's and Thai's starters are hand-picked. Hebrew and Thai mix held letters and held
 symbols on different keys. Korean, Vietnamese and Hindi open the bigger menu only with a swipe up, as their Shift types
-letters. The first-use hint, "Hold a letter for its accents.", reads wrong in the Cyrillic input methods, whose
-holds are letters without a key of their own (ж э, х ъ): new wording is F's.
+letters. The Cyrillic input methods' first-use hint is F's "Missing a letter? Hold a key to find it.", as their holds are
+letters without a key of their own (ж э, х ъ).
 
 | Input method | Mark at Q | Bar on an empty field | Holding a letter | Notes |
 |---|---|---|---|---|
 | Afrikaans (`af`) | AF | Die · Dit · Ek; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. E: é ê ë) |  |
 | Azerbaijani (`az`) | AZ | Bu · O · Lakin; once, the first time: "Hold a letter for its accents." | its accents on the bar (7 keys, e.g. E: ə) |  |
-| Belarusian (`be`) | БЕ | У · І · А; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. L: ж э) | The first-use hint says accents, but these holds are letters the layout has no key for: wording for F. |
-| Bulgarian (`bg`) | БГ | В · Това · За; once, the first time: "Hold a letter for its accents." | its accents on the bar (2 keys, e.g. M: ь ю) | The first-use hint says accents, but these holds are letters the layout has no key for: wording for F. |
+| Belarusian (`be`) | БЕ | У · І · А; once, the first time: "Missing a letter? Hold a key to find it." | its accents on the bar (4 keys, e.g. L: ж э) | The first-use hint says "Missing a letter?", as its holds are letters, not accents. |
+| Bulgarian (`bg`) | БГ | В · Това · За; once, the first time: "Missing a letter? Hold a key to find it." | its accents on the bar (2 keys, e.g. M: ь ю) | The first-use hint says "Missing a letter?", as its holds are letters, not accents. |
 | Bosnian (`bs`) | BS | U · Na · Nakon; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. C: č ć) |  |
 | Catalan (`ca`) | CA | El · La · En; once, the first time: "Hold a letter for its accents." | its accents on the bar (6 keys, e.g. E: é è) |  |
 | Czech (`cs`) | CS | V · Na · A; once, the first time: "Hold a letter for its accents." | its accents on the bar (13 keys, e.g. E: é ě) |  |
@@ -50,26 +51,26 @@ holds are letters without a key of their own (ж э, х ъ): new wording is F's.
 | Italian (`it`) | IT | Il · La · In; once, the first time: "Hold a letter for its accents." | its accents on the bar (5 keys, e.g. E: é è) |  |
 | Japanese (`ja`) | あ | 私 · 今日 · はい | its symbol, after the code typed so far | Starters hand-picked (Mozc's costs rank homophones): for the owner to confirm. |
 | Georgian (`ka`) | ქა | ეს · როგორც · ამ | its symbol | No accents and no capitals: holding gives the symbol. |
-| Kazakh (`kk`) | ҚА | Бұл · Ал · Ол; once, the first time: "Hold a letter for its accents." | its accents on the bar (12 keys, e.g. E: ү ұ) | The first-use hint says accents, but these holds are letters the layout has no key for: wording for F. |
+| Kazakh (`kk`) | ҚА | Бұл · Ал · Ол; once, the first time: "Missing a letter? Hold a key to find it." | its accents on the bar (12 keys, e.g. E: ү ұ) | The first-use hint says "Missing a letter?", as its holds are letters, not accents. |
 | Korean (`ko`) | 한 | 이 · 그는 · 또 | its symbol, after the syllable or word being built is written | Shift types the double consonants, so only a swipe up opens the bigger menu. |
 | Lithuanian (`lt`) | LT | Tačiau · Tai · O; once, the first time: "Hold a letter for its accents." | its accents on the bar (7 keys, e.g. E: ę ė) |  |
 | Latvian (`lv`) | LV | Un · Ja · Bet; once, the first time: "Hold a letter for its accents." | its accents on the bar (11 keys, e.g. E: ē) |  |
-| Macedonian (`mk`) | МК | Во · На · Тој; once, the first time: "Hold a letter for its accents." | its accents on the bar (2 keys, e.g. L: ч ќ) | The first-use hint says accents, but these holds are letters the layout has no key for: wording for F. |
+| Macedonian (`mk`) | МК | Во · На · Тој; once, the first time: "Missing a letter? Hold a key to find it." | its accents on the bar (2 keys, e.g. L: ч ќ) | The first-use hint says "Missing a letter?", as its holds are letters, not accents. |
 | Norwegian Bokmål (`nb`) | NB | Det · I · Vi; once, the first time: "Hold a letter for its accents." | its accents on the bar (3 keys, e.g. E: é) |  |
 | Dutch (`nl`) | NL | De · Het · In; once, the first time: "Hold a letter for its accents." | its accents on the bar (5 keys, e.g. E: é ë è) |  |
 | Norwegian Nynorsk (`nn`) | NN | I · Han · Det; once, the first time: "Hold a letter for its accents." | its accents on the bar (3 keys, e.g. E: é è ê) |  |
 | Polish (`pl`) | PL | W · Na · To; once, the first time: "Hold a letter for its accents." | its accents on the bar (8 keys, e.g. E: ę) |  |
 | Portuguese (`pt`) | PT | O · A · Os; once, the first time: "Hold a letter for its accents." | its accents on the bar (6 keys, e.g. E: é ê) |  |
 | Romanian (`ro`) | RO | În · De · Nu; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. A: ă â) |  |
-| Russian (`ru`) | РУ | По · На · Это; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. L: ж э) | The first-use hint says accents, but these holds are letters the layout has no key for: wording for F. |
+| Russian (`ru`) | РУ | По · На · Это; once, the first time: "Missing a letter? Hold a key to find it." | its accents on the bar (4 keys, e.g. L: ж э) | The first-use hint says "Missing a letter?", as its holds are letters, not accents. |
 | Slovak (`sk`) | SK | Na · Podľa · Ak; once, the first time: "Hold a letter for its accents." | its accents on the bar (14 keys, e.g. E: é) | The next-word table's sentence starts ("Prečítajte", a news site's links) came before the starters: fixed, starters first. |
 | Slovenian (`sl`) | SL | V · Na · Po; once, the first time: "Hold a letter for its accents." | its accents on the bar (3 keys, e.g. C: č) | "Leta" (news datelines, "Leta 2010") among the starters: fixed. |
-| Serbian, Cyrillic (`sr`) | СР; СР with another Serbian input method on | У · На · Након; once, the first time: "Hold a letter for its accents." | its accents on the bar (2 keys, e.g. L: ч ћ) | The first-use hint says accents, but these holds are letters the layout has no key for: wording for F. |
+| Serbian, Cyrillic (`sr`) | СР; СР with another Serbian input method on | У · На · Након; once, the first time: "Missing a letter? Hold a key to find it." | its accents on the bar (2 keys, e.g. L: ч ћ) | The first-use hint says "Missing a letter?", as its holds are letters, not accents. |
 | Serbian, Latin (`sr-latn`) | SR | U · Na · Nakon; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. C: č ć) | The mark showed the language's Cyrillic СР while typing Latin: fixed, SR. |
 | Swedish (`sv`) | SV | Det · I · Men; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. E: é) |  |
 | Thai (`th`) | ไท | สวัสดี · ขอบคุณ · ฉัน | the key's third Thai letter (21 keys); on the rest, its symbol | Holding mixes kinds: 21 keys type Thai's third-layer letters, 5 their symbols. Kept: Kedmanee needs 47 keys. Starters were particles and news datelines: fixed, hand-picked. |
 | Turkish (`tr`) | TR | Bu · Ancak · Bir; once, the first time: "Hold a letter for its accents." | its accents on the bar (7 keys, e.g. A: â) |  |
-| Ukrainian (`uk`) | УК | У · За · На; once, the first time: "Hold a letter for its accents." | its accents on the bar (4 keys, e.g. L: ж є) | The first-use hint says accents, but these holds are letters the layout has no key for: wording for F. |
+| Ukrainian (`uk`) | УК | У · За · На; once, the first time: "Missing a letter? Hold a key to find it." | its accents on the bar (4 keys, e.g. L: ж є) | The first-use hint says "Missing a letter?", as its holds are letters, not accents. |
 | Vietnamese (`vi`) | VI | Trong · Theo · Tuy | its symbol, after the syllable or word being built is written | Shift types capitals, so only a swipe up opens the bigger menu. |
 | Cantonese, Jyutping (`yue-jyutping`) | 中; 粵 with another Chinese input method on | 我 · 係 · 你 | its symbol, after the code typed so far | 嘅 among the starters: fixed. |
 | Cantonese, Yale (`yue-yale`) | 中; 耶 with another Chinese input method on | 我 · 係 · 你 | its symbol, after the code typed so far | 嘅 (a particle) among the starters: fixed. |

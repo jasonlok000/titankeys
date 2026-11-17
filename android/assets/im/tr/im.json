@@ -42,5 +42,9 @@
     "özellikle",
     "yeni",
     "bunun"
+  ],
+  "howTo": [
+    "Hold a letter for its accents: hold I for ı or î, G for ğ, S for ş. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
+    "Shift + I gives İ, with its dot. For I without it, hold I with Shift on and pick it."
   ]
 }

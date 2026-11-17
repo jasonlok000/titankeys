@@ -34,5 +34,8 @@
     "앞서",
     "지난",
     "한편"
+  ],
+  "howTo": [
+    "The keys follow Korean's 2-set layout (두벌식): Q is ㅂ, A is ㅁ, K is ㅏ. Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on O and P. The syllable builds above the bar and goes in once the next letter can't join it. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more."
   ]
 }

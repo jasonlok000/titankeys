@@ -42,5 +42,8 @@
     "iš",
     "jei",
     "kai"
+  ],
+  "howTo": [
+    "Hold a letter for its accents: hold A for ą, E for ę or ė, U for ų or ū. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
   ]
 }

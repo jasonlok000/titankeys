@@ -20,7 +20,8 @@ import java.util.IdentityHashMap
  * After a pick, Mozc offers the words that may come next (its zero-query suggestions), as Chinese does (#56; docs/languages.md,
  * "Next-word suggestions"): they're its choices with nothing typed, so the bar shows them as it shows a text's. Space picks
  * the first, a tap or the bigger menu any, and a pick offers the next ones; a letter starts new text instead, and any other
- * key clears them and is the keyboard's own. A new field starts with none ([reset]).
+ * key clears them and is the keyboard's own. A new field starts with none ([reset]). Emoji among them are left out
+ * ([EmojiText]), as Chinese has none.
  *
  * [start] runs on a background thread: it copies Mozc's data out of the APK the first time (one file, 19 MB, through
  * [RimeData]'s checked copy), and opens Mozc. Everything else runs on the keyboard's main thread. Mozc is one per app
@@ -36,8 +37,10 @@ class MozcEngine(
     @Volatile private var open = false
     /** The romaji typed for the text being built. */
     private val typed = StringBuilder()
-    /** Mozc's state after the last call. */
+    /** Mozc's state after the last call, with the choices the bar may show ([shown] says which of Mozc's they are). */
     private var last = MozcCalls.Raw(null, "", emptyList())
+    /** Mozc's own index of each choice in [last], which leaves out the suggestions' emoji. */
+    private var shown: List<Int> = emptyList()
 
     override fun start(method: InputMethod, dataDir: File): Boolean {
         if (method.engine != ENGINE) return false
@@ -153,7 +156,7 @@ class MozcEngine(
 
     override fun pickAt(index: Int): EngineState {
         if (!(composing() || suggesting()) || index < 0) return EngineState.UNHANDLED
-        val picked = mozc.pick(index)
+        val picked = mozc.pick(shown.getOrElse(index) { -1 })
         val state = read(handled = picked)
         // A part picked: the rest is hiragana, which Enter must still type as romaji.
         typed.clear()
@@ -174,7 +177,10 @@ class MozcEngine(
     }
 
     private fun read(handled: Boolean, extra: String = ""): EngineState {
-        val raw = mozc.read() ?: MozcCalls.Raw(null, "", emptyList())
+        val read = mozc.read() ?: MozcCalls.Raw(null, "", emptyList())
+        // With nothing being built, the choices are next-word suggestions: no emoji among them.
+        shown = read.choices.indices.filter { read.preedit.isNotEmpty() || !EmojiText.has(read.choices[it]) }
+        val raw = read.copy(choices = shown.map { read.choices[it] })
         last = raw
         val code = if (typed.isEmpty()) "" else raw.preedit
         return EngineState(

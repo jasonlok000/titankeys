@@ -22,6 +22,7 @@ fun main() {
     japaneseUsesTheChineseBar()
     kanaToRomaji()
     nextWordsAfterAPick()
+    emojiAreNotText()
     println("Japanese checks passed")
 }
 
@@ -36,7 +37,8 @@ private fun <T> same(expected: T, actual: T, what: String) {
 /**
  * A stand-in for Mozc: letters build a preedit (the letters in capitals), with twelve choices made from it; picking choice 1
  * takes a part ("PART") and leaves か; any other pick takes its choice and ends the text. With [suggests] on, a pick that ends
- * the text offers three next words, as Mozc's zero query does ("NEXT0" to "NEXT2"), and picking one offers three more.
+ * the text offers three next words with two emoji between them, as Mozc's zero query does ("NEXT0" to "NEXT2"),
+ * and picking one offers them again.
  */
 private class FakeMozc : MozcCalls {
     val calls = mutableListOf<String>()
@@ -58,7 +60,8 @@ private class FakeMozc : MozcCalls {
         if (index == 1 && preedit.isNotEmpty()) { commit = (commit ?: "") + "PART"; preedit = "か"; return true }
         commit = (commit ?: "") + c[index]
         preedit = ""
-        next = if (suggests) List(3) { "NEXT$it" } else emptyList()
+        // Mozc's zero query offers emoji among its next words too: the engine leaves them out.
+        next = if (suggests) listOf("NEXT0", "\u2600\uFE0F", "NEXT1", "\uD83D\uDE4F", "NEXT2") else emptyList()
         return true
     }
     override fun reset() { calls += "reset"; preedit = ""; next = emptyList() }
@@ -209,13 +212,13 @@ fun nextWordsAfterAPick() {
     val picked = engine.space()
     same("NE0", picked.commit, "Space types the first choice")
     same("", picked.code, "nothing is typed after it")
-    same(listOf("NEXT0", "NEXT1", "NEXT2"), picked.choices, "and Mozc's next words are the bar's choices")
+    same(listOf("NEXT0", "NEXT1", "NEXT2"), picked.choices, "and Mozc's next words are the bar's choices, without the emoji")
     same(listOf("NEXT1", "NEXT2"), engine.choices(1, 8), "the bigger menu reads them too")
     // Space picks the first suggestion, and a pick offers the next ones.
     val next = engine.space()
     same("NEXT0", next.commit, "Space picks the first suggestion")
     same(3, next.choices.size, "and the next ones come")
-    same("NEXT2", engine.pickAt(2).commit, "a tap or the menu picks any")
+    same("NEXT2", engine.pickAt(2).commit, "a tap or the menu picks any: the bar's third, Mozc's fifth")
     // A letter starts new text over them; the suggestions don't come back with it.
     val letter = engine.key('k')
     same("K", letter.code, "a letter starts new text")
@@ -242,4 +245,12 @@ fun nextWordsAfterAPick() {
     type(engine, "ne"); engine.space()
     same(emptyList<String>(), engine.reset().choices, "a new field starts with none")
     engine.stop()
+}
+
+fun emojiAreNotText() {
+    for (emoji in listOf("\u2600", "\u2600\uFE0F", "\uD83D\uDE4F", "\uD83D\uDDFC", "\u2764\uFE0F", "\uD83D\uDC4D\uD83C\uDFFB"))
+        check(EmojiText.has(emoji), "$emoji is an emoji")
+    // Text, a music note, a kaomoji, a wave dash, a full-width mark and a rare kanji stay.
+    for (text in listOf("\u3054\u3056\u3044\u307E\u3059", "\u4ECA\u65E5", "\u266A", "m(_ _)m", "\u301C", "\uFF01", "\uD840\uDC00"))
+        check(!EmojiText.has(text), "$text is text, not an emoji")
 }

@@ -495,8 +495,9 @@ picked.
 **Next words:** after a pick, Mozc offers the words that may come next, its own zero-query suggestions from its dictionary
 and what it learned (おはよう → ございます, よろしく → お願いします, ありがとう → ございます), on the bar as Chinese's next words
 are and with the same keys: Space picks the first, a tap or the bigger menu any, a letter starts new text, any other key
-clears them, and a new field starts with none ("Next-word suggestions"; #56). Some are emoji (☀ after おはよう), as in Mozc's
-own Android keyboard. `mozc_tool --next` shows them on the PC.
+clears them, and a new field starts with none ("Next-word suggestions"; #56). Mozc offers emoji among them too (☀ after
+おはよう); they're left out (`EmojiText`, Unicode's Emoji property), as Chinese has none (owner and Orchestrator,
+2026-11-17), while text symbols such as ♪ and kaomoji stay. `mozc_tool --next` shows Mozc's own, emoji included, on the PC.
 
 **Keys:**
 - Letters are romaji through Mozc's QWERTY table (`kyou` → きょう, `nn` → ん, `-` → ー inside a word). No capitals: Shift

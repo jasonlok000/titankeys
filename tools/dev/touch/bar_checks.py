@@ -260,3 +260,73 @@ def check_language_settings():
 
 
 BATCH += [check_accents, check_language_settings]
+
+
+def check_first_key():
+    """C's first-key fix: with Yale on and the keyboard's process just restarted (an install of the same APK, never a force
+    stop), a focused field with the keyboard hidden, N becomes a code on the bar, not a plain n (J; O: the field is empty);
+    TitanKeysIM says "Key 42 waits…" and "The keys that waited go to yue-yale" (O)."""
+    import os
+    import time
+    adb = language_checks.adb
+    apk = os.environ.get("TK_BATCH_APK", os.path.expanduser("~/build/m1-apks/main-next-debug.apk"))
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "yue-yale"], "yue-yale"):
+        return record("first-key", False, "the field didn't start with yue-yale")
+    language_checks.languages.logs_on(True)
+    out = adb("install", "-r", apk)  # through checks.adb, as every phone step here (the run holds the phone lock)
+    record("first-key-install", "Success" in out, f"the same APK installed again: {out.strip()[-80:]}")
+    time.sleep(3)
+    language_checks.languages.logs_on(True)
+    adb("logcat", "-c")
+    language_checks.checks.keyboard("debug")
+    if not language_checks.languages.in_field():
+        raise Stop("not in the Space gestures field after the install")
+    language_checks.checks.guarded("keyevent", "4")  # Back hides the keyboard; the field keeps its focus
+    time.sleep(1)
+    play("key:n", "+1500", shot="first-key", at=1200)
+    text = language_checks.checks.field()
+    lines = [line.split(":", 1)[-1].strip() for line in language_checks.languages.log_lines() if "TitanKeysIM" in line]
+    waited = any("Key 42 waits" in line for line in lines)
+    went = any("The keys that waited go to yue-yale" in line for line in lines)
+    record("first-key", text == "", f"N after the restart left the field {text!r} (a code on the bar, the shot)", "first-key")
+    record("first-key-log", waited and went, f"TitanKeysIM: {[l for l in lines if 'wait' in l]}")
+
+
+def check_sym_then_type():
+    """Sym to Yale (two languages on, a held Sym switches) and N at once: the first letter is in the code (J)."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "yue-yale"], "en"):
+        return record("sym-then-type", False, "the field didn't start with en")
+    language_checks.fresh()
+    play("key:sym:900:none", "+30", "key:n", "+90", "key:e", "+90", "key:i", "+700", shot="sym-then-type", at=1600)
+    record("sym-then-type", None, "a held Sym to Yale, then nei at once: the code shows nei, its n included", "sym-then-type")
+
+
+def check_slips():
+    """Belarusian гэ offers гэта (J); Hindi namastr shows नमस्ते on the bar (J) and Space keeps what was typed (O); Vietnamese
+    xon shows xin (J). The keyboard's log has no per-key timing, so the slips aren't timed."""
+    language_checks.fresh()
+    if language_checks.turn_on(["en", "be", "hi", "vi"], "be"):
+        language_checks.fresh()
+        # г is U; э is L's second accent: L held, then O, the key under it (H's accents over W to O, as French O's over I, O).
+        play("key:u", "+90", "hold:l:900", "+300", "key:o", "+800", shot="slip-be", at=2100)
+        text = language_checks.checks.field()
+        record("slip-be", None if text == "гэ" else False, f"typed {text!r} (wanted гэ): гэта offered on the bar", "slip-be")
+    for im, typed, want in (("hi", "namastr", "नमस्ते"), ("vi", "xon", "xin")):
+        language_checks.fresh()
+        if not language_checks.turn_on(["en", "be", "hi", "vi"], im):
+            record(f"slip-{im}", False, f"the field didn't start with {im}")
+            continue
+        language_checks.fresh()
+        moves = keys(typed) + ["+800"]
+        play(*moves, shot=f"slip-{im}", at=len(moves) * 80 + 500)
+        record(f"slip-{im}", None, f"{typed} typed: {want} on the bar", f"slip-{im}")
+        if im == "hi":
+            play("key:space", "+500")
+            text = language_checks.checks.field()
+            record("slip-hi-space", bool(text.strip()) and text.strip() != want,
+                   f"Space after namastr typed {text!r}: what was typed, not {want}")
+
+
+BATCH += [check_first_key, check_sym_then_type, check_slips]

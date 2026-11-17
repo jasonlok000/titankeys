@@ -91,3 +91,53 @@ def check_corrections():
 
 
 BATCH = [check_bar_words, check_learned_starter, check_korean_choices, check_corrections]
+
+
+def hangul(ch):
+    return "가" <= ch <= "힣" or "ㄱ" <= ch <= "ㆎ"
+
+
+def check_korean_polish():
+    """C's Korean polish: 안녕하세요 among the choices for ㅇㅏㄴㄴㅕㅇㅎㅏㅅ (J); Backspace mid-syllable takes one jamo (O); a swipe
+    up shows more than the row (J); a letter held mid-syllable writes the syllable, then the symbol, deleting nothing (O)."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "ko", "ja"], "ko"):
+        return record("ko-polish", False, "the field didn't start with ko")
+    language_checks.fresh()
+    moves = keys("dkssudgkt") + ["+800"]  # ㅇ ㅏ ㄴ ㄴ ㅕ ㅇ ㅎ ㅏ ㅅ
+    play(*moves, shot="ko-annyeong", at=len(moves) * 80 + 500)
+    record("ko-annyeong", None, "ㅇㅏㄴㄴㅕㅇㅎㅏㅅ typed: 안녕하세요 among the choices", "ko-annyeong")
+    language_checks.fresh()
+    play(*keys("gks"), "key:del", "+200", "key:space", "+500")  # 한, Backspace, Space
+    text = language_checks.checks.field()
+    record("ko-backspace", text == "하 ", f"한 then Backspace then Space typed {text!r}, wanted '하 '")
+    language_checks.fresh()
+    moves = keys("dkssud") + ["+400", "swipeup:b", "+800"]
+    play(*moves, "key:sym", "+400", shot="ko-swipe-up", at=len(moves) * 80 + 700)
+    record("ko-swipe-up", None, "안녕 then a swipe up: more choices than the row", "ko-swipe-up")
+    language_checks.fresh()
+    play(*keys("gk"), "hold:s:800", "+500")  # 하, then S held: its symbol
+    text = language_checks.checks.field()
+    ok = len(text) == 2 and text[0] == "하" and not hangul(text[1])
+    record("ko-hold", ok, f"하 then a held S typed {text!r}: the syllable, then S's symbol, nothing deleted")
+
+
+def check_japanese_menu():
+    """Japanese: "kyou" and a swipe up open the menu with 今日 (J); a press picks one (O); Space types the first choice (O)."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "ko", "ja"], "ja"):
+        return record("ja-menu", False, "the field didn't start with ja")
+    language_checks.fresh()
+    moves = keys("kyou") + ["+400", "swipeup:b", "+800"]
+    play(*moves, shot="ja-kyou-menu", at=len(moves) * 80 + 700)
+    record("ja-kyou-menu", None, "kyou then a swipe up: the menu, 今日 among its cells", "ja-kyou-menu")
+    play("key:s", "+500")  # the cell over S
+    picked = language_checks.checks.field()
+    record("ja-kyou-pick", bool(picked) and not picked.isascii(), f"a press of S in the menu typed {picked!r}")
+    language_checks.fresh()
+    play(*keys("kyou"), "+500", "key:space", "+600")
+    text = language_checks.checks.field()
+    record("ja-kyou-space", bool(text.strip()) and not text.isascii(), f"kyou + Space typed {text!r}: the first choice")
+
+
+BATCH += [check_korean_polish, check_japanese_menu]

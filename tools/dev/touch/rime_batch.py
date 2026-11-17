@@ -1,41 +1,37 @@
-"""B's per-schema Rime copy (main 0e5ea510), for checks.py --batch rime-files: Rime's shared folder only holds what the Chinese
-input methods that are on need. TitanKeys Debug isn't debuggable, so run-as can't list its files: B's Debug-only receiver does.
-B's RimeFiles (no extras, DUMP-protected) answers one file a line, "BYTES NAME" with NAME the path under shared/, sorted, in
-the broadcast's data; empty before the first copy. Without it, the check says so instead of failing.
+"""B's per-schema Rime copy, for checks.py --batch rime-files: Rime's shared folder only holds what the Chinese input methods
+that are on need. TitanKeys Debug isn't debuggable, so run-as can't list its files: Debug's LeakCheck says what the copy holds,
+at the end of its answer: "rime data: 53.8 MB in 41 files; tables and grammars: jyut6ping3.table.bin, tk_yue.gram" (MB of
+1,000,000 bytes), or "rime data: none copied" before the first use.
 
 1. Yale only, after the first key: about 54 MB, with jyut6ping3.table.bin and tk_yue.gram, without luna_pinyin.table.bin and
    zh-hant-t-essay-bgw.gram (O).
 2. Pinyin on too, typed in: luna_pinyin.table.bin and the grammar appear (O).
-3. Yale and Jyutping off, Pinyin typing: jyut6ping3's files and tk_yue.gram are gone (O).
+3. Yale and Jyutping off (Jyutping shares Yale's two), Pinyin typing: jyut6ping3.table.bin and tk_yue.gram are gone (O).
 The finish puts the owner's languages back.
 """
-import os
 import re
-import time
 
 import language_checks
 from checks import APP, adb, play, record
 
-RIME_RECEIVER = os.environ.get("TK_RIME_RECEIVER", f"{APP}/com.titankeys.keyboard.RimeFiles")
+LEAK_CHECK = f"{APP}/com.titankeys.keyboard.LeakCheck"
 GRAMMAR = "zh-hant-t-essay-bgw.gram"
 YALE_SIZE_MB = (49, 59)  # "about 54 MB"
-# B's list (2026-11-17), by file name under shared/: Yale's own, and what only Pinyin brings.
 YALE = ["jyut6ping3.table.bin", "tk_yue.gram"]
 PINYIN = ["luna_pinyin.table.bin", GRAMMAR]
 
 
-def files():
-    """{name: bytes} from B's receiver, or None when it isn't there."""
-    out = adb("shell", "am", "broadcast", "-n", RIME_RECEIVER)
-    if "data=" not in out:
+def rime_data():
+    """(MB, files, [tables and grammars]) from LeakCheck's "rime data" part, (0, 0, []) before the first copy, or None when this
+    Debug's LeakCheck doesn't say it yet."""
+    out = adb("shell", "am", "broadcast", "-n", LEAK_CHECK)
+    if "rime data: none copied" in out:
+        return 0.0, 0, []
+    found = re.search(r'rime data: ([0-9.]+) MB in (\d+) files; tables and grammars: ([^"\n]*)', out)
+    if not found:
         return None
-    data = out.split("data=", 1)[1].strip().strip('"')
-    found = {}
-    for line in re.split(r"[;\n]", data):
-        parts = line.strip().split(None, 1)
-        if len(parts) == 2 and parts[0].isdigit():
-            found[os.path.basename(parts[1])] = int(parts[0])
-    return found
+    names = [] if found.group(3).strip() == "none" else [n.strip() for n in found.group(3).split(",") if n.strip()]
+    return float(found.group(1)), int(found.group(2)), names
 
 
 def typed_in(on, current):
@@ -48,24 +44,26 @@ def typed_in(on, current):
 
 
 def check_rime_files():
-    """The first keys come before the first read: B's receiver answers empty data while nothing is copied yet, and only a
-    missing receiver answers no data at all."""
+    """The first keys come before the first read: "none copied" is normal until then."""
     typed_in(["en", "yue-yale"], "yue-yale")
-    listed = files()
-    if listed is None:
-        return record("rime-files", None, f"B's receiver ({RIME_RECEIVER}) isn't in this build: these checks wait for it")
-    mb = sum(listed.values()) / 1048576
-    wanted, unwanted = [n for n in YALE if n not in listed], [n for n in PINYIN if n in listed]
-    record("rime-yale-only", YALE_SIZE_MB[0] <= mb <= YALE_SIZE_MB[1] and not wanted and not unwanted,
-           f"Yale only: {mb:.1f} MB in {len(listed)} files; missing {wanted or 'none'}; Pinyin's there: {unwanted or 'none'}")
+    data = rime_data()
+    if data is None:
+        return record("rime-files", None, "this Debug's LeakCheck doesn't say what Rime's copy holds: build it from main")
+    mb, count, names = data
+    missing, extra = [n for n in YALE if n not in names], [n for n in PINYIN if n in names]
+    record("rime-yale-only", YALE_SIZE_MB[0] <= mb <= YALE_SIZE_MB[1] and not missing and not extra,
+           f"Yale only: {mb} MB in {count} files; tables and grammars {names}; Yale's missing {missing or 'none'}; "
+           f"Pinyin's there {extra or 'none'}")
     typed_in(["en", "yue-yale", "zh-pinyin"], "zh-pinyin")
-    listed = files() or {}
-    missing = [n for n in PINYIN if n not in listed]
-    record("rime-pinyin-grammar", not missing, f"Pinyin on and typed in: {len(listed)} files; Pinyin's missing: {missing or 'none'}")
+    mb, count, names = rime_data() or (0.0, 0, [])
+    missing = [n for n in PINYIN if n not in names]
+    record("rime-pinyin-grammar", not missing, f"Pinyin on and typed in: {mb} MB in {count} files; tables and grammars {names}; "
+           f"Pinyin's missing {missing or 'none'}")
     typed_in(["en", "zh-pinyin"], "zh-pinyin")  # Jyutping off too: it shares jyut6ping3 and tk_yue.gram
-    listed = files() or {}
-    left = sorted(name for name in listed if name.startswith("jyut6ping3") or name == "tk_yue.gram")
-    record("rime-yale-off", not left, f"Yale and Jyutping off, Pinyin typing: jyut6ping3's and tk_yue.gram's files left: {left or 'none'}")
+    mb, count, names = rime_data() or (0.0, 0, [])
+    left = [n for n in YALE if n in names]
+    record("rime-yale-off", not left, f"Yale and Jyutping off, Pinyin typing: {mb} MB in {count} files; Yale's left "
+           f"{left or 'none'}")
 
 
 def finish():

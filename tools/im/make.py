@@ -355,9 +355,13 @@ def build_latin(data, ident):
 # android/assets/rime. Yale first, the owner's input method. F (docs/words-m1.md).
 # id: (name, English name, label, locale, Rime schema, sources)
 CHINESE = {
+    # F: draft. The words.hk and grammar credits in Yale's and Jyutping's (#56).
     "yue-yale": ("耶魯拼音", "Cantonese, Yale", "耶", "yue", "tk_yale",
-                 "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"),
-    "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping", "rime-cantonese (CC BY 4.0)"),
+                 "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"
+                 ", with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"),
+    "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping",
+                     "rime-cantonese (CC BY 4.0)"
+                     ", with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"),
     "zh-pinyin": ("漢語拼音", "Mandarin, Pinyin", "拼", "zh", "tk_pinyin",
                   "rime-luna-pinyin and rime-essay (LGPL-3.0)"),
     # Hong Kong's standard shape-based input methods, and Taiwan's Zhuyin on the Hsu layout, which fits the Titan's 26 letters
@@ -809,6 +813,31 @@ def write_starters(data):
             f.write("\n")
 
 
+# How-tos (owner, 2026-11-17: "we shd have basic instructions in text in each language specifically"): a few lines per input
+# method for Settings > Languages, what's special to it. The text is F's (docs/howto-drafts.md), kept in tools/im/howto.json
+# (input method id: lines); this writes it into each im.json as "howTo" and the index carries it.
+HOWTO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "howto.json")
+
+
+def write_howto():
+    """Adds "howTo" to every im.json that howto.json has lines for, and takes it off the others."""
+    lines = json.load(open(HOWTO, encoding="utf-8"))
+    for ident in sorted(os.listdir(ASSETS)):
+        path = os.path.join(ASSETS, ident, "im.json")
+        if not os.path.isfile(path):
+            continue
+        im = json.load(open(path, encoding="utf-8"))
+        if lines.get(ident):
+            im["howTo"] = lines[ident]
+        elif "howTo" in im:
+            del im["howTo"]
+        else:
+            continue
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(im, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+
+
 # Input methods built by a function of their own.
 OWN = {"th": build_thai, "hi": build_hindi, "he": build_hebrew}
 
@@ -863,7 +892,8 @@ def write_index_and_list():
         engine = im.get("engine")
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
-                        "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im)})
+                        "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im),
+                        **({"howTo": im["howTo"]} if im.get("howTo") else {})})
     order = list(LATIN) + list(NATIONAL) + list(OWN) + list(ENGINES) + list(CHINESE) + list(JAPANESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:
@@ -906,6 +936,11 @@ def main():
         write_starters(data)
         print("starters written")
         return
+    # make.py <data dir> --howto: only the how-tos, into every im.json and the index.
+    if sys.argv[2:] == ["--howto"]:
+        write_howto()
+        print("index:", len(write_index_and_list()), "input methods, how-tos written")
+        return
     wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(JAPANESE) + list(OWN)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
@@ -925,6 +960,7 @@ def main():
             raise SystemExit("unknown input method " + ident)
         print("built", ident)
     write_starters(data)
+    write_howto()
     entries = write_index_and_list()
     print("index:", len(entries), "input methods")
 

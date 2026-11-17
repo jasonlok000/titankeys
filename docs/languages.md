@@ -15,7 +15,8 @@ Ground rules already set in #56:
 - **Rime for Chinese.** Cantonese and Mandarin use [Rime](https://rime.im)'s engine.
 - **English doesn't change.** It keeps swiping, the next word, autocorrect and holding for symbols, and becomes the first
   input method.
-- **Other input methods are basic:** no swiping, no next-word guesses, and autocorrect is optional and off by default.
+- **Other input methods are basic:** no swiping, no next-word guesses, and only conservative corrections of slips on the
+  keys (see "Corrections").
 - **Everything is in the app.** No downloads for typing.
 
 ## What's in 3.0
@@ -182,8 +183,28 @@ data-only language is one command plus a check by eye. Where the data comes from
 
 **Accents from the word list** (input methods with a word list):
 - The bar's suggestions ignore accents when matching: typing "cafe" offers **café**.
-- Autocorrect fills in an accent only when the plain form isn't a word itself (si / sí stays as typed). Autocorrect is off
-  by default, so by default it's suggestions only.
+- Autocorrect fills in an accent only when the plain form isn't a word itself (si / sí stays as typed).
+
+**Corrections** (input methods with a word list and no engine: not Korean, Japanese, Chinese, Hindi or Vietnamese; owner,
+2026-11-17: "ok to be bad but conservative ... it shd still be present"):
+- English's own corrector (`TypedCorrector`, its noisy channel) on the language's list, with only slips on the keys fixed:
+  none of English's word pairs, misspellings, names, shorthand or two-letter rules (`LanguageCorrections`).
+- The keys come from the input method's layout and its held accents, so a neighbour is a neighbour on the Titan's keys in
+  any script, and an accent left off ("cafe", "senor") costs almost nothing. Words are looked up by their keys, so every
+  accented form of a word is weighed (casti: části and částí); how common a word is breaks a close call.
+- Space puts a fix in only at English's Only fix when sure margins; otherwise it types what was typed, and the likeliest
+  word shows on the bar beside the completions (#98: the middle word is what Space types).
+- A word kept twice after its fix was taken back is saved for that language (`LearnedWords`, as the word menu's Save, in
+  Settings > Saved words) and never fixed again. A fix never puts in a blocked word or one unsaved in that language, and a
+  favourite wins a close call (`LanguageWords.usable` and `favourite`).
+- It follows Settings' Autocorrect switch, as English does, read in one place (`LanguageCorrection.on`) so a switch for each
+  language changes only that.
+- `tests/corrections` measures every language on made-up slips of its commonest words. A language whose Space would make
+  more than 0.5% wrong changes gets its fixes on the bar only (`android/assets/im/corrections-bar-only.txt`, which
+  `run.sh --write` writes from the measure): Greek, Galician and Slovak today. Over all 44, on 36,760 slips, Space puts
+  in the right word for 56.4% and a wrong one for 0.1%, never changes a word typed right, and the right word is on the bar
+  for 91.3%.
+- Kept-once words are each language's own (`KeptOnceStore.languageKey`).
 
 The bar, its hover and the picking come from the word menu's code (see "Where it goes in the code").
 
@@ -211,7 +232,10 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 
 **Picking from the row** (the owner's tries on the phone, 2026-11-17, dropped Shift + key and holding a key: "Shift select
 not working but honestly bad idea. Abandon it", "唔要hold key 揀字"):
-- **Space** picks the first choice.
+- **Space** picks the first choice. A whole phrase typed without spaces comes out whole. In Cantonese the first choice is
+  ranked by rime-cantonese's word weights with words.hk's word counts added, and by TitanKeys' grammar model, which words
+  follow which in Cantonese text (owner, 2026-11-17: "the default Rime dictionary is actually pretty shit";
+  docs/studies/56-cantonese-dictionary.md: 23.2% to 31.4% of held-out phrases right).
 - **A tap on the screen** on a choice picks it.
 - **No flick picks** (owner, 2026-11-17: "Abandon the flick to select concept"), and swipes on the keys never turn the row's
   pages: a swipe up opens the bigger menu instead (below).
@@ -329,6 +353,11 @@ with the names of the ones that are on.
 - **A language's page** (`app/settings/languages/language.tsx`, the route's `language` parameter): its input methods, each with a
   switch, and its own options: English's Spelling, Chinese's Characters. An experimental language says once, under its
   name, what that means (F: draft).
+- **How to type** (owner, 2026-11-17: "we shd have basic instructions in text in each language specifically"): a language's page
+  shows, between its input methods and its options, what's special to typing each one, under its name where the language has
+  several (`lib/how-to.tsx`). The lines are F's, kept in `tools/im/howto.json` (input method id: lines);
+  `tools/im/make.py --howto` writes them into each `im.json` as `"howTo"` and into the index, which Settings reads.
+  `tools/checks/im.test.ts` checks that the three agree. An input method with none shows nothing.
 - English can't be turned off while it's the only one.
 - **Names:** each row shows the input method's own name, which is CLDR's name for its language in that language,
   capitalised (Français, Русский, Indonesia); `tools/im/make.py` stops if one differs, and `tests/languages` checks the

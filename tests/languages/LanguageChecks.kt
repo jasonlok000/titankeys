@@ -36,6 +36,7 @@ private val RUSSIAN_KEYS = mapOf(
 
 fun main(args: Array<String>) {
     theFileReads()
+    howToReads()
     badFilesSayWhy()
     keysTypeTheirLetters()
     accentsKeepTheirOrderAndCase()
@@ -71,6 +72,15 @@ fun main(args: Array<String>) {
         kotlin.system.exitProcess(1)
     }
     println("languages: all passed")
+}
+
+/** An input method's how-to: an optional list of lines in its im.json and the index. */
+private fun howToReads() {
+    val method = InputMethod.parse(SPANISH.trimEnd().removeSuffix("}") + ""","howTo":["Hold a letter for its accents.","Shift gives the capital one."]}""")
+    same("an im.json's how-to", method.howTo, listOf("Hold a letter for its accents.", "Shift gives the capital one."))
+    same("none: empty", InputMethod.parse(SPANISH).howTo, emptyList<String>())
+    val index = InputMethodIndex.parse("""[{"id":"es","name":"Español","nameEnglish":"Spanish","label":"ES","locale":"es","script":"Latn","howTo":["Hold N for ñ."]}]""")
+    same("the index carries it", index["es"]?.howTo, listOf("Hold N for ñ."))
 }
 
 private fun theFileReads() {
@@ -1030,16 +1040,18 @@ private fun eachLanguageHasItsFullStop(folder: File) {
 private fun typingRowsFit(method: InputMethod) {
     val rows = LanguageSettings.rows(method)
     val expected = when (method.id) {
-        "fr" -> listOf("capitals", "doubleSpace", "sentenceSpaces", "commaSpace")
+        "fr" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace")
         // A held letter's symbol goes through the engine as its own mark, so the hold row stays.
         "zh-pinyin", "yue-yale", "yue-jyutping", "ja" -> listOf("doubleSpace", "hold")
-        "th" -> listOf("commaSpace")
-        "ka" -> listOf("doubleSpace", "sentenceSpaces", "commaSpace", "hold")
-        "id" -> listOf("capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        "th" -> listOf("fixes", "commaSpace")
+        "ka" -> listOf("fixes", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        "id" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
         else -> null
     }
     if (expected != null) same("${method.id}: its page's typing settings", rows, expected)
-    check("${method.id}: only English has its fixes, swiping and shorthand", listOf("fixes", "swipe", "shorthand").none { it in rows })
+    check("${method.id}: only English has swiping and shorthand", listOf("swipe", "shorthand").none { it in rows })
+    // Fix typos shows where the language corrects (LanguageCorrections.corrects: a list and no engine), and nowhere else.
+    same("${method.id}: Fix typos where it corrects", "fixes" in rows, method.words != null && method.engine == null)
     check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
     check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
 }

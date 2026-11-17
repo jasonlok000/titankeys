@@ -328,6 +328,13 @@ Every worker was told to commit its work in progress to its own branch and stop 
     words; size no concern for now. C's bar-words reads them.
   - C: a language with one input method shows the language's mark at Q.
 
+## App size and Google Play (found 2026-11-17)
+
+The Debug APK is about 212 MB after the Chinese work and the Cantonese grammar (179 MB before), over Google Play's 200 MB
+download limit for an app's base. The owner: "Don't worry about size yet. That's kinda easily solvable." For the Play build:
+the Chinese data, Mozc's dictionary and the grammar move to Play Asset Delivery packs, or download on demand (the owner's
+earlier idea). The GitHub APK can stay whole.
+
 ## Milestones (internal; the owner gave the go at 01:20)
 
 Each milestone has a gate: a list of what must be true before the next one starts. At each gate the Orchestrator writes a

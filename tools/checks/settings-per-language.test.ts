@@ -27,6 +27,16 @@ test("a language's page shows only its own rows, writes only its own values, and
   expect(page).toContain("void markLanguageNoteSeen();");
 });
 
+test("Fix typos shows where a language corrects, by the same rule the keyboard corrects by", () => {
+  const corrects = read("android/kotlin/com/titankeys/keyboard/LanguageCorrections.kt");
+  expect(corrects).toContain("fun corrects(method: InputMethod) = !method.isEnglish && method.words != null && method.engine == null");
+  expect(read("android/kotlin/com/titankeys/keyboard/LanguageSettings.kt"))
+    .toContain("if (method.isEnglish || method.words != null && method.engine == null) add(FIXES)");
+  // The keyboard reads the language's own switch for its corrections.
+  expect(read("android/kotlin/com/titankeys/keyboard/LanguageCorrection.kt"))
+    .toContain("fun on(language: String): Boolean = TypingSettings.autocorrectIn(context, language)");
+});
+
 test("a language reads its own value, or today's single one; the main page's writes reach English's own too", () => {
   expect(typing).toContain("return settings.contains(own) ? settings.getBoolean(own, otherwise) : settings.getBoolean(key, otherwise);");
   for (const name of ["autocorrect", "autoCapitalise", "autoPunctuation", "commaSpace", "holdSymbols", "sentenceSpaces"])

@@ -10,6 +10,7 @@ import { fixesLabel } from "../fixes";
 import { holdLabel } from "../hold";
 import { sentenceSpacesLabel } from "../sentence-spaces";
 import { shorthandLabel } from "../shorthand/index";
+import { HowTo } from "../../../lib/how-to";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
@@ -66,11 +67,13 @@ export default function LanguagePage() {
       {languagesFull && <Note>Four languages at a time, tops. Turn one off first.</Note>}
       {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note>Four at a time in one language, tops. Turn one off first.</Note>}
     </Section>
+    <HowTo methods={methods} />
     {options && <Section title="Options">
       {language.id === "en" && <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>}
       {language.id === "zh" && <Field label="Characters" href="/settings/chinese">{chineseLabel(settings)}</Field>}
       {has("fixes") && <Toggle label="Fix typos as you type" value={own.autocorrect} onChange={autocorrect => write({ autocorrect })} />}
-      {has("fixes") && own.autocorrect && <Field label="What gets fixed" href="/settings/fixes">{fixesLabel(settings)}</Field>}
+      {/* What gets fixed is English's: its kinds are English's rules. */}
+      {has("fixes") && language.id === "en" && own.autocorrect && <Field label="What gets fixed" href="/settings/fixes">{fixesLabel(settings)}</Field>}
       {has("capitals") && <Toggle label="Capital letter to start a sentence" value={own.autoCapitalise}
         onChange={autoCapitalise => write({ autoCapitalise })} />}
       {has("sentenceSpaces") && <Field label="Space after a sentence" onPress={() => open("/settings/sentence-spaces")}>

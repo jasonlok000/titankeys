@@ -22,6 +22,11 @@ class NoisyChannel(
     private val favourite: (String) -> Boolean = { false },
     /** Whether the user wants a fix only when it's clearly right: then a fix must beat the rest by more. */
     private val sure: () -> Boolean = { false },
+    /**
+     * The keys behind the letters, for input methods other than English ([Keys]): which key types a letter, so a neighbour is
+     * found through any layout, and a letter's accented forms on its own key cost almost nothing. English's are its own.
+     */
+    private val keys: Keys = Keys.ENGLISH,
 ) {
     private fun margin() = if (sure()) SURE_MIN_MARGIN else MIN_MARGIN
 
@@ -44,13 +49,13 @@ class NoisyChannel(
         /** The next-word model's log chance of a word after the text before it, or NaN when it is not known. */
         chance: ((String) -> Double)? = null,
     ): Pick? {
-        // Texting shorthand has no vowels ("lmk", "smh") and is never a slip.
-        if (typed.none { it in "aeiouy" }) return null
+        // Texting shorthand has no vowels ("lmk", "smh") and is never a slip. English's rule: other languages have their own.
+        if (keys.shorthand && typed.none { it in "aeiouy" }) return null
         val slips = candidates(typed, allowContractions)
             .asSequence()
             .filter { it != typed }
             .mapNotNull { word ->
-                val cost = cost(typed, word, isNeighborKey)
+                val cost = cost(typed, word, isNeighborKey, keys)
                 if (cost > MAX_COST) null else word to cost
             }
             .toList()
@@ -100,6 +105,9 @@ class NoisyChannel(
     fun fixForUnknown(typed: String, previous: String?, beforePrevious: String?, next: String? = null): String? =
         pick(typed, previous, beforePrevious, next)?.let(::confidentFix)
 
+    /** The pick's word when it's at least a likely slip, though maybe not clearly the one: for the bar, never for Space. */
+    fun likelyFix(pick: Pick): String? = pick.word.takeIf { pick.score > UNKNOWN_WORD_SCORE }
+
     /** The pick's word when it is a confident fix for a made-up word, else null. */
     fun confidentFix(pick: Pick): String? =
         pick.word.takeIf { pick.score > UNKNOWN_WORD_SCORE && pick.score - pick.runnerUp >= margin() }
@@ -123,7 +131,7 @@ class NoisyChannel(
     fun reconsider(typed: String, current: String, previous: String?, next: String): String? {
         val pick = pick(typed, previous, null, next) ?: return null
         if (pick.word == current || pick.score <= UNKNOWN_WORD_SCORE || pick.score - pick.runnerUp < margin()) return null
-        val currentScore = score(current, cost(typed, current, isNeighborKey), previous, null, next)
+        val currentScore = score(current, cost(typed, current, isNeighborKey, keys), previous, null, next)
         return pick.word.takeIf { pick.score - currentScore >= RECONSIDER_MARGIN }
     }
 
@@ -133,6 +141,17 @@ class NoisyChannel(
         if (previous != null && beforePrevious != null) s += TRIPLE_WEIGHT * ln(1.0 + tripleCount(beforePrevious, previous, word))
         if (next != null) s += NEXT_WEIGHT * ln(1.0 + pairCount(word, next))
         return s
+    }
+
+    /**
+     * Which key types each letter, for the error costs: [key] gives the printed key (a to z) behind a letter, or the letter
+     * itself where it has none, and [base] the letter without its accents, for the vowel rules. A letter typed for another on
+     * the same key, as e for é, costs [ACCENT]. English's keys are the letters themselves, so its costs never change.
+     */
+    class Keys(val key: (Char) -> Char, val base: (Char) -> Char, val shorthand: Boolean) {
+        companion object {
+            val ENGLISH = Keys({ it }, { it }, shorthand = true)
+        }
     }
 
     companion object {
@@ -171,6 +190,8 @@ class NoisyChannel(
         private const val EXTRA_FAT_FINGER = 0.5
         private const val EXTRA_ECHO = 0.6
         private const val SWAPPED = 0.5
+        /** An accented letter typed without its accent, as e for é: the same key, so almost no slip (owner, 2026-11-17). */
+        private const val ACCENT = 0.1
         private const val VOWELS = "aeiou"
 
         /**
@@ -191,7 +212,9 @@ class NoisyChannel(
         fun unambiguousContractions(): Set<String> = UNAMBIGUOUS_CONTRACTIONS
 
         /** Weighted edit cost of [typed] against [word]: how unlikely a slip it is. */
-        internal fun cost(typed: String, word: String, isNeighborKey: (Char, Char) -> Boolean): Double {
+        internal fun cost(typed: String, word: String, isNeighborKey: (Char, Char) -> Boolean, keys: Keys = Keys.ENGLISH): Double {
+            val key = keys.key
+            val base = keys.base
             val t = typed
             val w = word
             var twoBack = DoubleArray(w.length + 1)
@@ -202,24 +225,25 @@ class NoisyChannel(
                 val letter = t[i - 1]
                 val before = t.getOrNull(i - 2)
                 val after = t.getOrNull(i)
-                val fatFinger = (before != null && (before == letter || isNeighborKey(letter, before))) ||
-                    (after != null && (after == letter || isNeighborKey(letter, after)))
+                val fatFinger = (before != null && (before == letter || isNeighborKey(key(letter), key(before)))) ||
+                    (after != null && (after == letter || isNeighborKey(key(letter), key(after))))
                 // A vowel typed again just after itself in the word ("receieve") is a common slip too.
-                val echo = letter in VOWELS && (t.getOrNull(i - 3) == letter || t.getOrNull(i + 1) == letter)
+                val echo = base(letter) in VOWELS && (t.getOrNull(i - 3) == letter || t.getOrNull(i + 1) == letter)
                 val extra = if (fatFinger) EXTRA_FAT_FINGER else if (echo) EXTRA_ECHO else EXTRA
                 current[0] = previous[0] + EXTRA
                 for (j in 1..w.length) {
                     val target = w[j - 1]
                     val substitution = when {
                         letter == target -> 0.0
-                        isNeighborKey(letter, target) -> NEAR_KEY
-                        letter in VOWELS && target in VOWELS -> VOWEL
+                        key(letter) == key(target) -> ACCENT
+                        isNeighborKey(key(letter), key(target)) -> NEAR_KEY
+                        base(letter) in VOWELS && base(target) in VOWELS -> VOWEL
                         else -> FAR_KEY
                     }
                     val missed = when {
                         w[j - 1] == '\'' -> MISSED_APOSTROPHE
                         j > 1 && w[j - 1] == w[j - 2] -> MISSED_DOUBLE
-                        target in VOWELS -> MISSED_VOWEL
+                        base(target) in VOWELS -> MISSED_VOWEL
                         else -> MISSED
                     }
                     var c = minOf(previous[j] + extra, current[j - 1] + missed, previous[j - 1] + substitution)

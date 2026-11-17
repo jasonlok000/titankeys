@@ -1,8 +1,9 @@
 # TitanKeys' Rime: librime and OpenCC for the app, built the way Trime builds them.
 # This is Trime's app/src/main/jni/CMakeLists.txt (GPL-3.0-or-later, Rime community) at the commit pinned in build.sh,
-# with only one of its plugins, librime-predict (next-word suggestions, #56), merged into Rime as Trime merges it, with
-# TitanKeys' own JNI layer in rime_jni.cc, and with a host tool (rime_tool.cc) that compiles the data and tries codes on the
-# PC. The plugin's own build_predict tool compiles its tables (data.sh).
+# with two of its plugins, librime-predict (next-word suggestions, #56) and librime-octagram (Cantonese's grammar model,
+# #56), merged into Rime as Trime merges them, with TitanKeys' own JNI layer in rime_jni.cc, and with a host tool
+# (rime_tool.cc) that compiles the data and tries codes on the PC. The plugins' own build_predict and build_grammar tools
+# compile their data (data.sh).
 cmake_minimum_required(VERSION 3.18.0)
 project(titankeys_rime VERSION 1.0.0)
 
@@ -53,12 +54,14 @@ include(OpenccWorkarounds)
 set(X11Keysym "${CMAKE_SOURCE_DIR}/librime/include")
 include_directories("${X11Keysym}")
 
-# librime-predict, at the commit Trime pins (its submodule, fetched with Trime by build.sh), linked into librime's plugins
-# folder as Trime's cmake/Rime.cmake links it: librime merges every plugin it finds there into the library.
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/librime/plugins/librime-predict")
-  file(CREATE_LINK "${TK_RIME_SOURCES}/trime/app/src/main/jni/librime-predict"
-       "${CMAKE_SOURCE_DIR}/librime/plugins/librime-predict" SYMBOLIC)
-endif()
+# librime-predict and librime-octagram, at the commits Trime pins (its submodules, fetched with Trime by build.sh), linked
+# into librime's plugins folder as Trime's cmake/Rime.cmake links them: librime merges every plugin it finds there into the
+# library.
+foreach(plugin librime-predict librime-octagram)
+  if(NOT EXISTS "${CMAKE_SOURCE_DIR}/librime/plugins/${plugin}")
+    file(CREATE_LINK "${TK_RIME_SOURCES}/trime/app/src/main/jni/${plugin}" "${CMAKE_SOURCE_DIR}/librime/plugins/${plugin}" SYMBOLIC)
+  endif()
+endforeach()
 
 option(BUILD_TEST "" OFF)
 option(BUILD_STATIC "" ON)

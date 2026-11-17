@@ -7,7 +7,10 @@ package com.titankeys.keyboard
  * from the input method's own rules, so a new language shows the right rows by itself.
  */
 object LanguageSettings {
-    /** Fix typos and What gets fixed: English's rules. */
+    /**
+     * Fix typos: English's, and every language that corrects on its own word list (LanguageCorrections.corrects: a list and no
+     * engine). What gets fixed under it is English's alone: its kinds are English's rules.
+     */
     const val FIXES = "fixes"
     /** Capital letter to start a sentence: a script with capitals. */
     const val CAPITALS = "capitals"
@@ -29,7 +32,7 @@ object LanguageSettings {
 
     /** The rows [method]'s language shows, in the page's order. */
     fun rows(method: InputMethod): List<String> = buildList {
-        if (method.isEnglish) add(FIXES)
+        if (method.isEnglish || method.words != null && method.engine == null) add(FIXES)
         if (method.rules.capitalise) add(CAPITALS)
         if (method.rules.fullStop.isNotBlank()) add(DOUBLE_SPACE)
         if (method.rules.fullStop.endsWith(" ")) add(SENTENCE_SPACES)

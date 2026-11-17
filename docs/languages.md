@@ -269,6 +269,15 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
 - The experimental mark stays in Settings: the switcher shows labels only.
+- **The language mark over Q** (owner, 2026-11-17; drawn in [design/language-mark-built.svg](design/language-mark-built.svg)):
+  - It overlays over Q and never pushes the words; a long left word sends it small into the corner.
+  - **Shift shows only where it changes what a key types** (`InputMethod.shiftMatters`): capitals, Shift letters
+    (Georgian, Thai) or an engine that reads Shift (Korean, Hindi, Vietnamese). Not in Hebrew, where Shift types the same
+    letter, nor in Chinese and Japanese, where it opens the bigger menu. Alt always shows.
+  - **At a sentence start** the mark stays big, and Shift's automatic arrow goes small and muted above it, like a superscript.
+  - **A tap on the mark switches input method within the language,** never the language: with two on, to the other; with
+    three or more, the language's row in the switcher; with one, nothing (`SwitchOverlay.markTap`). Only the mark drawn over
+    Q takes a touch. No hover effect.
 - **Two languages on:** a held Sym switches to the other one at once, with no switcher, to the input method last used in
   it (or its first), as `SwitchOverlay.toggle` decides (owner, 2026-11-16). Three or more open the switcher. The input
   methods last used are remembered while the keyboard runs.

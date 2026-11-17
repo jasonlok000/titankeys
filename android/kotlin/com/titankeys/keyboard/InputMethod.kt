@@ -68,6 +68,18 @@ data class InputMethod(
     )
 
     val isEnglish get() = id == ENGLISH_ID
+
+    /**
+     * Whether Shift changes what a key types, so the bar shows Shift and Caps (owner, 2026-11-17: "if shift does nth, shift
+     * shd not show up in the first place"): capitals, Shift letters (Georgian, Thai), or an engine that reads Shift (Korean's
+     * double consonants, Hindi's sounds, Vietnamese's capitals). Not in Hebrew, where Shift types the same letter, nor in
+     * Chinese and Japanese, where Shift opens the bigger menu.
+     */
+    val shiftMatters: Boolean get() = when (engine) {
+        "rime", "mozc" -> false
+        "hangul", "rules", "telex" -> true
+        else -> rules.capitalise || keys?.values?.any { it.shift != null && it.shift != it.base } == true
+    }
     /** Hebrew, Arabic: the bar's side words swap ([BarOrder]). */
     val rightToLeft get() = script in RightToLeft.SCRIPTS
     val hasAccents get() = accents.isNotEmpty()

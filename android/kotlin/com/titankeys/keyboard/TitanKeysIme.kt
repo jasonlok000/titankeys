@@ -1284,6 +1284,7 @@ class TitanKeysIme : InputMethodService() {
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
         words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }
+        words.markTap = { enqueue { tapMark() } }
         words.pickerTap = { index ->
             enqueue {
                 openPicker()?.let { open ->
@@ -3807,6 +3808,26 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
+     * A tap on the language mark: the language's other input method, or its row in the switcher with three or more
+     * ([SwitchOverlay.markTap]). One input method: nothing, no haptic.
+     */
+    private fun tapMark() {
+        if (!editing || !::languages.isInitialized) return
+        val on = InputMethodIndex.group(languages.on)
+        when (val pick = SwitchOverlay.markTap(on, languages.current.id)) {
+            is SwitchPick.To -> {
+                haptics.play(Haptic.MenuPress)
+                languages.on.firstOrNull { it.id == pick.id }?.let(::switchLanguage)
+            }
+            is SwitchPick.Row -> {
+                haptics.play(Haptic.MenuPress)
+                showPicker(LanguagePicker.Switch(on, pick.language, languages.current.id))
+            }
+            null -> {}
+        }
+    }
+
+    /**
      * Switches to input method [entry]. The language mark on the bar shows which types now; the bar says nothing more (owner,
      * 2026-11-16: "I don't like the XX it is wording"). A screen reader hears it: "Typing in Spanish". F: draft.
      */
@@ -4498,10 +4519,9 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun showModifierBar() {
-        val bar = ModifierBar.of(modifiers, restingKey) { Keys.letter(it, KeyEvent.META_ALT_ON) }
-        // In Chinese, Shift is no capital (it picks the choice over a key), so its bar doesn't cover the choices or the words.
-        val chinese = ::languages.isInitialized && ChineseKeys.usesBar(languages.current)
-        strip?.modifiers = if (bar != null && chinese && bar.chips.all { it == ModifierBar.SHIFT || it == ModifierBar.CAPS }) null else bar
+        // Shift and Caps show only where Shift changes what a key types: not in Hebrew, Chinese or Japanese.
+        val shiftShows = !::languages.isInitialized || languages.current.shiftMatters
+        strip?.modifiers = ModifierBar.of(modifiers, restingKey, shiftShows) { Keys.letter(it, KeyEvent.META_ALT_ON) }
     }
 
     override fun onDestroy() {

@@ -58,6 +58,7 @@ fun main(args: Array<String>) {
     androidsListFollowsTheOnes()
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
+    if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -190,6 +191,13 @@ private fun languagesGroupTheirInputMethods() {
     same("a last used that's off now: the first", SwitchOverlay.toggle(two, "es", mapOf("zh" to "yue-jyutping")), "yue-yale")
     same("three languages: the switcher", SwitchOverlay.toggle(on, "es", emptyMap()), null)
     same("one language with two: the switcher's row", SwitchOverlay.toggle(index.languagesOn("sr,sr-latn"), "sr", emptyMap()), null)
+    // A tap on the mark: another input method of the language typing, never another language.
+    same("a tap on Serbian's mark: its other input method", SwitchOverlay.markTap(on, "sr"), SwitchPick.To("sr-latn"))
+    same("and back", SwitchOverlay.markTap(on, "sr-latn"), SwitchPick.To("sr"))
+    same("one input method: nothing", SwitchOverlay.markTap(on, "es"), null)
+    val threeChinese = InputMethodIndex.parse("[" + listOf(entry("yue-yale", "zh"), entry("yue-jyutping", "zh"),
+        entry("zh-pinyin", "zh")).joinToString(",") + "]").languagesOn("en,yue-yale,yue-jyutping,zh-pinyin")
+    same("three: the language's row in the switcher", SwitchOverlay.markTap(threeChinese, "yue-yale"), SwitchPick.Row(threeChinese[1]))
     val serbianOnly = index.languagesOn("sr,sr-latn")
     same("one language with two: straight to its row", SwitchOverlay.opening(serbianOnly), serbianOnly[0])
     same("an index without languages: each its own", InputMethodIndex.parse(SPANISH_INDEX).languages.map { it.id }, listOf("en", "es"))
@@ -695,6 +703,19 @@ private fun wordBreakFindsTheWord(method: InputMethod, read: WordList, list: Fil
     println("${method.id}: the word being typed found after another: %.1f%% of starts, %.1f%% of whole words (%d tries)".format(startShare, wholeShare, tries))
     check("${method.id}: a word's start is found", startShare >= 80.0) { "%.1f%%".format(startShare) }
     check("${method.id}: a whole word is found", wholeShare >= 90.0) { "%.1f%%".format(wholeShare) }
+}
+
+/**
+ * Shift and Caps show only where Shift changes what a key types (owner, 2026-11-17): every input method but Hebrew (Shift
+ * types the same letter) and the Chinese and Japanese ones (Shift opens the bigger menu). Korean, Hindi, Thai and Georgian
+ * keep it: their Shift types other letters.
+ */
+private fun shiftShowsWhereItMatters(folder: File) {
+    val without = folder.listFiles { file -> file.isDirectory }.orEmpty().mapNotNull { dir ->
+        runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull()
+    }.filter { !it.shiftMatters }.map { it.id }.sorted()
+    same("the input methods without Shift on the bar", without, listOf("he", "ja", "yue-jyutping", "yue-yale", "zh-pinyin"))
+    check("English shows Shift", InputMethod.ENGLISH.shiftMatters)
 }
 
 private fun everyInputMethodInTheFolder(folder: File) {

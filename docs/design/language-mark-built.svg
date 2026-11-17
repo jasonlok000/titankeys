@@ -1,0 +1,304 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 2060" width="1480" height="2060">
+<rect width="100%%" height="100%%" fill="#ffffff"/>
+<text x="20" y="80" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Russian, a sentence starts</text>
+<text x="20" y="106" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">РУ stays big over Q; Shift&#x27;s</text>
+<text x="20" y="126" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">automatic arrow small and muted</text>
+<text x="20" y="146" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">above it, like a superscript.</text>
+<g transform="translate(360,40)">
+<rect width="1080" height="110" rx="8" fill="#121212" stroke="#ff8a1f" stroke-width="5"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<text x="54" y="72" font-size="40" fill="#ff8a1f" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">РУ</text>
+<g opacity="0.6">
+<polygon points="26,13 35,22 30,22 30,31 22,31 22,22 17,22" fill="#ff8a1f"/>
+</g>
+<text x="180" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Что</text>
+<text x="540" y="72" font-size="40" fill="#f2f2f2" font-weight="700" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">И</text>
+<text x="900" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">В</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="282" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Russian, long word, sentence</text>
+<text x="20" y="308" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">The mark small in the corner; the</text>
+<text x="20" y="328" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">arrow beside it, small and muted.</text>
+<g transform="translate(360,242)">
+<rect width="1080" height="110" rx="8" fill="#121212" stroke="#ff8a1f" stroke-width="5"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<text x="26" y="30" font-size="24" fill="#ff8a1f" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">РУ</text>
+<g opacity="0.6">
+<polygon points="70,13 79,22 74,22 74,31 66,31 66,22 61,22" fill="#ff8a1f"/>
+</g>
+<text x="180" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Здравствуйте</text>
+<text x="540" y="72" font-size="40" fill="#f2f2f2" font-weight="700" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">И</text>
+<text x="900" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">В</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="484" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Russian, Shift pushed</text>
+<text x="20" y="510" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Russian has capitals: Shift&#x27;s bar</text>
+<text x="20" y="530" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">as today, the mark with the words.</text>
+<g transform="translate(360,444)">
+<rect width="1080" height="110" rx="8" fill="#121212"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<rect x="30" y="34" width="140" height="50" rx="10" fill="#ff8a1f" stroke="#ff8a1f" stroke-width="3"/>
+<text x="100" y="70" font-size="30" fill="#121212" font-weight="600" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Shift</text>
+<text x="540" y="74" font-size="44" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Й</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="686" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Hebrew, Shift pushed</text>
+<text x="20" y="712" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Shift types the same letter in</text>
+<text x="20" y="732" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Hebrew, so nothing shows: the words</text>
+<text x="20" y="752" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">and עב stay.</text>
+<g transform="translate(360,646)">
+<rect width="1080" height="110" rx="8" fill="#121212" stroke="#ff8a1f" stroke-width="5"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<text x="54" y="72" font-size="40" fill="#ff8a1f" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">עב</text>
+<text x="180" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">של</text>
+<text x="540" y="72" font-size="40" fill="#f2f2f2" font-weight="700" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">את</text>
+<text x="900" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">לא</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="888" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Hebrew, Alt pushed</text>
+<text x="20" y="914" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Alt still shows, alone.</text>
+<g transform="translate(360,848)">
+<rect width="1080" height="110" rx="8" fill="#121212"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<rect x="30" y="34" width="96" height="50" rx="10" fill="#ff8a1f" stroke="#ff8a1f" stroke-width="3"/>
+<text x="78" y="70" font-size="30" fill="#121212" font-weight="600" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Alt</text>
+<text x="540" y="74" font-size="44" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">@</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="1090" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Chinese, Shift</text>
+<text x="20" y="1116" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">No Shift chip: Shift opens the</text>
+<text x="20" y="1136" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">bigger menu (B&#x27;s change).</text>
+<g transform="translate(360,1050)">
+<line x1="0" y1="-6" x2="108" y2="-6" stroke="#8a8a8a" stroke-width="2"/>
+<text x="14" y="-14" font-size="26" fill="#333" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">nei</text>
+<rect width="1080" height="110" rx="8" fill="#121212"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<text x="162" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">你</text>
+<text x="270" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">呢</text>
+<text x="378" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">尼</text>
+<text x="486" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">妮</text>
+<text x="594" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">泥</text>
+<text x="1026" y="72" font-size="40" fill="#ff8a1f" font-weight="700" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">⋯</text>
+<text x="54" y="72" font-size="40" fill="#ff8a1f" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">耶</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="1292" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Korean, Shift pushed</text>
+<text x="20" y="1318" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Korean&#x27;s Shift types ㅃ ㅉ ㄸ ㄲ ㅆ:</text>
+<text x="20" y="1338" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Shift&#x27;s bar shows, as in Russian.</text>
+<g transform="translate(360,1252)">
+<rect width="1080" height="110" rx="8" fill="#121212"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<rect x="30" y="34" width="140" height="50" rx="10" fill="#ff8a1f" stroke="#ff8a1f" stroke-width="3"/>
+<text x="100" y="70" font-size="30" fill="#121212" font-weight="600" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Shift</text>
+<text x="540" y="74" font-size="44" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">ㅃ</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="1494" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Serbian, tap the mark</text>
+<text x="20" y="1520" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Two input methods on: a tap on СР</text>
+<text x="20" y="1540" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">switches to Serbian Latin, and the</text>
+<text x="20" y="1560" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">mark reads SR.</text>
+<g transform="translate(360,1454)">
+<rect width="1080" height="110" rx="8" fill="#121212" stroke="#ff8a1f" stroke-width="5"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<text x="54" y="72" font-size="40" fill="#ff8a1f" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">СР</text>
+<circle cx="54" cy="58" r="44" fill="none" stroke="#ff8a1f" stroke-width="3" stroke-dasharray="8 6"/>
+<text x="180" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">и</text>
+<text x="540" y="72" font-size="40" fill="#f2f2f2" font-weight="700" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">је</text>
+<text x="900" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">да</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="1696" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Chinese, three on, tap the mark</text>
+<text x="20" y="1722" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">A tap on 耶 opens Chinese&#x27;s row of</text>
+<text x="20" y="1742" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">the switcher: 耶 粵 拼 over W to O, 耶</text>
+<text x="20" y="1762" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">marked.</text>
+<g transform="translate(360,1656)">
+<rect width="1080" height="110" rx="8" fill="#121212" stroke="#ff8a1f" stroke-width="5"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<text x="216" y="72" font-size="40" fill="#ff8a1f" font-weight="700" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">耶</text>
+<text x="432" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">粵</text>
+<text x="648" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">拼</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+<text x="20" y="1898" font-size="21" fill="#111" font-weight="700" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">Spanish, tap the mark</text>
+<text x="20" y="1924" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">One input method in the language:</text>
+<text x="20" y="1944" font-size="16" fill="#444" font-weight="400" text-anchor="start" opacity="1" font-family="Inter, Noto Sans, sans-serif">nothing happens.</text>
+<g transform="translate(360,1858)">
+<rect width="1080" height="110" rx="8" fill="#121212"/>
+<line x1="108" y1="102" x2="108" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="216" y1="102" x2="216" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="324" y1="102" x2="324" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="432" y1="102" x2="432" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="540" y1="102" x2="540" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="648" y1="102" x2="648" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="756" y1="102" x2="756" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="864" y1="102" x2="864" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<line x1="972" y1="102" x2="972" y2="110" stroke="#2a2a2a" stroke-width="2"/>
+<text x="54" y="72" font-size="40" fill="#ff8a1f" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">ES</text>
+<text x="180" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">de</text>
+<text x="540" y="72" font-size="40" fill="#f2f2f2" font-weight="700" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">que</text>
+<text x="900" y="72" font-size="40" fill="#f2f2f2" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">la</text>
+<text x="54" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Q</text>
+<text x="162" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">W</text>
+<text x="270" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">E</text>
+<text x="378" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">R</text>
+<text x="486" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">T</text>
+<text x="594" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">Y</text>
+<text x="702" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">U</text>
+<text x="810" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">I</text>
+<text x="918" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">O</text>
+<text x="1026" y="134" font-size="18" fill="#999" font-weight="400" text-anchor="middle" opacity="1" font-family="Inter, Noto Sans, sans-serif">P</text>
+</g>
+</svg>

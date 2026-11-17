@@ -160,6 +160,20 @@ object SwitchOverlay {
         return lastUsed[other.language.id]?.takeIf { id -> other.methods.any { it.id == id } } ?: other.methods.first().id
     }
 
+    /**
+     * A tap on the language mark: another input method of the language typing now, never another language (owner,
+     * 2026-11-17: "switches input method not languages"). With two on, the other; with three or more, the language's row in
+     * the switcher; with one, nothing.
+     */
+    fun markTap(languages: List<InputMethodIndex.LanguageOn>, current: String): SwitchPick? {
+        val language = languages.firstOrNull { on -> on.methods.any { it.id == current } } ?: return null
+        return when (language.methods.size) {
+            1 -> null
+            2 -> SwitchPick.To(language.methods.first { it.id != current }.id)
+            else -> SwitchPick.Row(language)
+        }
+    }
+
     /** The row the switcher opens on: with one language on, straight to its input methods. */
     fun opening(languages: List<InputMethodIndex.LanguageOn>) = languages.singleOrNull()?.takeIf { it.methods.size > 1 }
 

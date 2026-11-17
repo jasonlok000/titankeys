@@ -3151,12 +3151,14 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * A quick setting that each language keeps for itself sets the typing language's own value. While that's the only language on,
-     * Settings' main page shows the setting, so its plain value follows too (TypingSettings.PER_LANGUAGE).
+     * A quick setting that each language keeps for itself sets the typing language's own value. While English is the only
+     * language on, Settings' main page shows the setting as English's, so its plain value follows too, as the page writes it
+     * (TypingSettings.PER_LANGUAGE; app/settings/languages typingPerLanguage). With another language alone on, the plain value
+     * stays: it's every language's own until it sets one, so writing it would change English's and every other's too.
      */
     private fun languageSetting(own: (String) -> Unit, plain: () -> Unit) {
         own(languages.languageId)
-        if (languages.on.map { it.language.id }.distinct().size <= 1) plain()
+        if (languages.on.all { it.language.id == InputMethod.ENGLISH_ID }) plain()
     }
 
     /** The key that toggled a quick setting, whose release must not start the mark's wait: see [keepPanelHover]. */

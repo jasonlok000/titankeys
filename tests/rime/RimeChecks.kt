@@ -30,6 +30,7 @@ fun main(args: Array<String>) {
     withNoVariantTheChinesePageOpensOnce()
     switchingInputMethodsKeepsRimeOpen()
     anInputMethodTurnedOnWhileRimeIsOpenStarts()
+    theWarmEngineHasYaleReady()
     theChineseInputMethodsAreRimes(args.firstOrNull())
     theBackupTakesRimesSnapshots()
     aRestoredBackupMergesInAtTheNextStart()
@@ -829,4 +830,31 @@ fun theBarsWordsNeverCoverACode() {
     same("n", state.typed, "a letter starts a code")
     check("w" !in state.choices, "and the offer goes")
     same(EngineState.UNHANDLED, started().first.let { e -> e.offer(listOf("w")); e.enter() }, "Enter with an offer is the keyboard's")
+ * A switch to Yale with Rime warm loads nothing (owner, 2026-11-17: "I'm still seeing loading for Yale"): the warm engine
+ * selects Yale's schema as it warms, and the switch starts that same engine, which then has nothing left to do. A warm-up never
+ * takes the session from an engine that has selected its own.
+ */
+fun theWarmEngineHasYaleReady() {
+    val rime = FakeRime()
+    val warm = RimeEngine(rime) { true }
+    check(warm.warm(method("tk_yale"), dataDir), "Yale's engine warms up")
+    same(listOf("open", "schema tk_yale"), rime.calls.filter { it == "open" || it.startsWith("schema") }, "opening Rime and selecting Yale")
+    check("selected in" in warm.timing, "and says what that took: ${warm.timing}")
+    rime.calls.clear()
+    check(warm.start(method("tk_yale"), dataDir), "the switch to Yale starts the warm engine")
+    same(emptyList<String>(), rime.calls.filter { it == "open" || it.startsWith("schema") }, "which opens and selects nothing")
+    same("Rime open already, tk_yale selected already", warm.timing, "and says so")
+    check(warm.start(method("tk_pinyin"), dataDir), "a switch to Pinyin starts it too")
+    same(listOf("schema tk_pinyin"), rime.calls.filter { it.startsWith("schema") }, "selecting Pinyin's schema")
+    warm.stop()
+    // Another engine typing before the warm-up ends keeps the session: the warm-up only opens.
+    val other = FakeRime()
+    val typing = RimeEngine(other) { true }
+    check(typing.start(method("tk_pinyin"), dataDir), "Pinyin types before the warm-up is done")
+    val late = RimeEngine(other) { true }
+    check(late.warm(method("tk_yale"), dataDir), "the warm-up still warms")
+    same(listOf("schema tk_pinyin"), other.calls.filter { it.startsWith("schema") }, "without selecting Yale over Pinyin")
+    same("tk_pinyin", typing.schema, "Pinyin keeps typing")
+    late.stop()
+    typing.stop()
 }

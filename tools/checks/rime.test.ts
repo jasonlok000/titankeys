@@ -204,3 +204,15 @@ test("the app copies only the Chinese input methods that are on, file by file (d
   expect(data).toContain('val fresh = File(target.parentFile, ".${target.name}.new")');
   expect(data).not.toContain("shared.deleteRecursively()");
 });
+
+test("a switch types with the warm engine, which keeps its schema, and the log says what each part took", () => {
+  const languages = read("android/kotlin/com/titankeys/keyboard/Languages.kt");
+  expect(languages).toContain("val warmEngine = on.firstOrNull { it.id == id }?.engine?.let { warm[it] }");
+  expect(languages).toContain("val fromWarm = warmEngine?.takeIf { method?.engine != null && dir != null && it.start(method, dir) }");
+  // A warm engine the keyboard switches away from is kept, cleared, never stopped.
+  expect(languages).toContain("if (engine in warm.values) engine.reset() else engine.stop()");
+  expect(languages).toContain('if (fromWarm != null) "the warm one" else "a new one"');
+  expect(languages).toContain("its file $fileMillis ms, words and next words $wordsMillis ms");
+  const engine = read("android/kotlin/com/titankeys/rime/RimeEngine.kt");
+  expect(engine).toContain("if (open && id != null && schema == null && claimed(rime, this)) {");
+});

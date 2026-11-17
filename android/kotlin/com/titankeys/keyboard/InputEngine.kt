@@ -66,13 +66,17 @@ interface InputEngine {
 
     /**
      * Gets the engine's data and library ready in the background, before anyone types with it, so a switch to it never waits
-     * (owner, 2026-11-17: "is the loading for the engine on load avoidable?"). Unlike [start], it chooses nothing that typing
-     * would see (Rime's schema): the engine that types starts as usual, and finds the work done. [stop] frees it.
+     * (owner, 2026-11-17: "is the loading for the engine on load avoidable?"). The keyboard then types with this same engine
+     * when it switches to one of its input methods ([start] on it again), so the work done here is never done twice: Rime
+     * has its schema selected already. [stop] frees it.
      */
     fun warm(method: InputMethod, dataDir: java.io.File): Boolean = start(method, dataDir)
 
     /** Frees what [start] loaded. The engine may be started again later. */
     fun stop()
+
+    /** What the last [start] or [warm] took, part by part, for the keyboard's log ("Input method … loaded in"); "" if it says nothing. */
+    val timing: String get() = ""
 }
 
 /**

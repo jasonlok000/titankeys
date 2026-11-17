@@ -565,9 +565,13 @@ public final class TypingSettings {
         preferences(context).edit().putString("recent_apps", String.join(",", apps)).apply();
     }
 
-    /** Records touches, keys and typed text in a log on this phone. It is off until the user turns it on. */
+    /**
+     * Records touches, keys and typed text in a log on this phone. Only TitanKeys Debug has the log (RawLogGate), and there it's on
+     * from the start and stays on, with no time limit, until the owner turns it off (owner, 2026-11-17: "for all future debugging
+     * builds let's have log on by default indefinitely"). Its 200 MB cap drops the oldest data, never the logging (RawLogStore).
+     */
     public static boolean rawLog(Context context) {
-        return preferences(context).getBoolean("raw_log", false);
+        return preferences(context).getBoolean("raw_log", context.getPackageName().endsWith(".debug"));
     }
 
     public static void rawLog(Context context, boolean enabled) {
@@ -617,6 +621,18 @@ public final class TypingSettings {
 
     public static void chineseVariant(Context context, String variant) {
         preferences(context).edit().putString("chinese_variant", variant).apply();
+    }
+
+    /**
+     * Which spelling variant each input method with several types (Portuguese's Brasil or Portugal): "id=variant" pairs,
+     * InputMethodVariants' format. Empty: each types its first.
+     */
+    public static String inputMethodVariants(Context context) {
+        return preferences(context).getString("input_method_variants", "");
+    }
+
+    public static void inputMethodVariants(Context context, String setting) {
+        preferences(context).edit().putString("input_method_variants", setting).apply();
     }
 
     /** Whether input method [id] has said its hold hint on the bar (HoldHint): once, the first time it types. */

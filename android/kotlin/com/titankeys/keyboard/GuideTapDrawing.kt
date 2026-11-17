@@ -11,9 +11,11 @@ import kotlin.math.sin
 
 /**
  * The Space-tap slides' drawing (owner, #90: "Just make the gestures more clearer or more obvious"): a flat thumb, in the
- * guide's colours, resting on the shaded patch where the taps count ([CursorGesture.inZone]), and a row of steps over it that
- * light as each tap lands, 1, 2, then held, or 1, 2, 3, then held on the select slide. It shows from the first try, in place of
- * the ghost finger, and stays calm: the thumb only moves while the slide shows how, or while the real taps land.
+ * guide's colours, resting on the shaded patch where the taps count ([CursorGesture.inZone]), and a row of boxes over it that
+ * light as each tap lands: 1, then "2 · HOLD", the last tap and its hold one box, as one tap-and-hold (owner, 2026-11-16: "2 and
+ * hold or 3 and hold shd be the same box, maybe even like tap-hold"); 1, 2, "3 · HOLD" on the select slide. The last box half
+ * lights as its tap lands and fills as the hold registers. It shows from the first try, in place of the ghost finger, and stays
+ * calm: the thumb only moves while the slide shows how, at the keyboard's own speed ([demoAt]), or while the real taps land.
  *
  * Paths, rects and text only, so tests/guide's slide renders draw it with the same stand-in Canvas as the decorations.
  */
@@ -23,7 +25,10 @@ class GuideTapDrawing(private val font: Typeface? = null) {
      * (down on the keys), and [slide] of the way through the drag to the left, from 0 to 1.
      */
     data class Pose(val taps: Int, val landed: Int = 0, val held: Boolean = false, val press: Float = 0f, val slide: Float = 0f) {
-        fun lit(step: Int) = if (step < taps) step < landed else held
+        /** Box [box] is lit: a tap's once it landed; the last, the tap-and-hold, once held. */
+        fun lit(box: Int) = if (box < taps - 1) box < landed else held
+        /** The last box's tap has landed but isn't held yet: it half lights. */
+        val holding get() = !held && landed >= taps
     }
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -69,9 +74,12 @@ class GuideTapDrawing(private val font: Typeface? = null) {
         drawThumb(canvas, tipX, tipY + pose.press * PRESS_DEPTH * dp, dp, thumb, paper)
     }
 
-    /** The steps, over the patch's letter row: a pill for each tap, then HOLD. Lit ones fill in the accent. */
+    /**
+     * The boxes, over the patch's letter row: a pill for each tap but the last, then the last tap and its hold in one. Lit ones
+     * fill in the accent; the last half fills while its tap is down and not yet held.
+     */
     private fun drawSteps(canvas: Canvas, zone: RectF, row: Float, pose: Pose, dp: Float, accent: Int, paper: Int) {
-        val widths = List(pose.taps) { STEP_WIDTH * dp } + HOLD_WIDTH * dp
+        val widths = List(pose.taps - 1) { STEP_WIDTH * dp } + HOLD_WIDTH * dp
         val gap = STEP_GAP * dp
         val total = widths.sum() + gap * (widths.size - 1)
         var left = (zone.left + zone.right) / 2 - total / 2
@@ -80,14 +88,15 @@ class GuideTapDrawing(private val font: Typeface? = null) {
         text.textSize = STEP_TEXT * dp
         for ((index, width) in widths.withIndex()) {
             val lit = pose.lit(index)
+            val half = index == widths.lastIndex && pose.holding
             // A dark pill under each, so the step reads over the key's label.
-            fill.color = if (lit) accent else faded(paper, .85f)
+            fill.color = if (lit) accent else if (half) mix(paper, accent, .45f) else faded(paper, .85f)
             canvas.drawRoundRect(left, top, left + width, top + height, height / 2, height / 2, fill)
             stroke.color = accent
             stroke.strokeWidth = 1.5f * dp
             if (!lit) canvas.drawRoundRect(left, top, left + width, top + height, height / 2, height / 2, stroke)
             text.color = if (lit) paper else accent
-            canvas.drawText(if (index < pose.taps) "${index + 1}" else HOLD, left + width / 2, top + height / 2 + STEP_TEXT * dp * .36f, text)
+            canvas.drawText(label(index, pose.taps), left + width / 2, top + height / 2 + STEP_TEXT * dp * .36f, text)
             left += width + gap
         }
     }
@@ -130,9 +139,11 @@ class GuideTapDrawing(private val font: Typeface? = null) {
 
     companion object {
         const val HOLD = "HOLD"
+        /** Box [box]'s words: its tap's number, or for the last, its number and HOLD, one tap-and-hold. */
+        fun label(box: Int, taps: Int) = if (box < taps - 1) "${box + 1}" else "${box + 1} · $HOLD"
         // Sizes in dp. Change these to adjust the look.
         const val STEP_WIDTH = 24f
-        const val HOLD_WIDTH = 48f
+        const val HOLD_WIDTH = 64f
         const val STEP_HEIGHT = 20f
         const val STEP_GAP = 5f
         const val STEP_TEXT = 12f
@@ -144,24 +155,44 @@ class GuideTapDrawing(private val font: Typeface? = null) {
         const val PRESS_DEPTH = 3f
 
         /**
-         * The drawing at [t], from 0 to 1, of the slide's own showing: each tap lands and lifts in turn and lights its step, the
-         * last stays down and lights HOLD, then with [drag] the thumb slides left. It rests at the end.
+         * The slide's own showing, at the keyboard's own speed, so it shows how quick the taps must be (owner, 2026-11-16: "The
+         * animations shd reflect the speed for this to be triggered"): each tap down for [DEMO_TAP_MILLIS], the next
+         * [DEMO_GAP_MILLIS] after it lifts, inside the keyboard's [TapMeter.KEYBOARD_GAP_MILLIS]. The last stays down; its box
+         * fills [DEMO_HOLD_LIGHT_MILLIS] in, as the keyboard registers the hold; with [drag] the thumb then slides left. Then it
+         * rests, and the showing starts again. [millis] is the time into the showing.
          */
-        fun demo(t: Float, taps: Int, drag: Boolean): Pose {
-            val tapsEnd = if (drag) .55f else .85f
-            if (t >= tapsEnd) {
-                val slide = if (drag) ((t - tapsEnd) / (1f - tapsEnd - .1f)).coerceIn(0f, 1f) else 0f
-                return Pose(taps, taps, held = true, press = 1f, slide = ease(slide))
+        fun demoAt(millis: Long, taps: Int, drag: Boolean): Pose {
+            val t = millis.mod(demoMillis(taps, drag))
+            val each = DEMO_TAP_MILLIS + DEMO_GAP_MILLIS
+            val lastDown = (taps - 1) * each
+            if (t < lastDown) {
+                val index = (t / each).toInt()
+                val local = t - index * each
+                val down = local < DEMO_TAP_MILLIS
+                return Pose(taps, landed = index + 1, press = if (down) 1f else 0f)
             }
-            val each = tapsEnd / taps
-            val index = (t / each).toInt().coerceAtMost(taps - 1)
-            val local = (t - index * each) / each
-            val last = index == taps - 1
-            // A tap goes down, lights its step as it lands, and comes back up; the last one stays down and becomes the hold.
-            val press = if (last) (local / .3f).coerceAtMost(1f) else sin((local / .6f).coerceAtMost(1f) * PI).toFloat()
-            val landed = index + if (local >= .15f) 1 else 0
-            return Pose(taps, landed, held = last && local >= .7f, press = press.coerceIn(0f, 1f))
+            val held = t - lastDown
+            if (held < DEMO_HOLD_LIGHT_MILLIS) return Pose(taps, taps, press = 1f)
+            val sliding = held - DEMO_HOLD_LIGHT_MILLIS - DEMO_HOLD_MILLIS
+            if (!drag || sliding < 0) return Pose(taps, taps, held = true, press = 1f)
+            return Pose(taps, taps, held = true, press = 1f, slide = ease((sliding.toFloat() / DEMO_SLIDE_MILLIS).coerceIn(0f, 1f)))
         }
+
+        /** How long one showing lasts, its rest at the end included. */
+        fun demoMillis(taps: Int, drag: Boolean) =
+            (taps - 1) * (DEMO_TAP_MILLIS + DEMO_GAP_MILLIS) + DEMO_HOLD_LIGHT_MILLIS + DEMO_HOLD_MILLIS +
+                (if (drag) DEMO_SLIDE_MILLIS else 0L) + DEMO_REST_MILLIS
+
+        /** A tap of the showing: down this long, as real taps are (the keyboard takes up to 130 ms for a first). */
+        const val DEMO_TAP_MILLIS = 90L
+        /** From a tap's lift to the next tap: real gaps took 37 to 124 ms. */
+        const val DEMO_GAP_MILLIS = 110L
+        /** The last tap down this long before its box fills: the keyboard registers a hold at 70 ms. */
+        const val DEMO_HOLD_LIGHT_MILLIS = 120L
+        /** Then held, still, before the slide. */
+        const val DEMO_HOLD_MILLIS = 500L
+        const val DEMO_SLIDE_MILLIS = 900L
+        const val DEMO_REST_MILLIS = 1600L
 
         private fun ease(x: Float) = x * x * (3 - 2 * x)
 

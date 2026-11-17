@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-import { Screen, Section, Stack, Text, useSnapshot } from "ink";
-import { markNerdSeen, state } from "../../lib/titankeys";
-import { nerdSplash } from "../../lib/nerd";
+import { Screen, Section, useSnapshot } from "ink";
+import { state } from "../../lib/titankeys";
 import { Topic } from "../../lib/topic";
 
 /**
@@ -9,29 +7,9 @@ import { Topic } from "../../lib/topic";
  * pointing here, so anything that it leaves out belongs here.
  */
 export default function BoringGuide() {
-  // The first time only, briefly, like a loading screen: we know who reads the manual. It waits for the app's state, so it knows
-  // whether it has shown before, and its time starts once it's on the screen.
+  // No nerd screen before it any more: the guide opens straight away (owner, 2026-11-16: "Remove the full screen popup nerd for
+  // the boring guide").
   const result = useSnapshot(state);
-  const ready = result.status === "ready";
-  const [phase, setPhase] = useState<"waiting" | "splash" | "done">("waiting");
-  useEffect(() => {
-    if (!ready || phase !== "waiting") return;
-    setPhase(nerdSplash(result.data.nerdSeen) ? "splash" : "done");
-  }, [ready]);
-  useEffect(() => {
-    if (phase !== "splash") return;
-    void markNerdSeen();
-    const timer = setTimeout(() => setPhase("done"), SPLASH_MILLIS);
-    return () => clearTimeout(timer);
-  }, [phase]);
-  if (phase === "waiting") return <Screen title="The boring guide" />;
-  // A splash, big and centred, so the whole line fits: no page title to cut it short.
-  if (phase === "splash") return <Screen centered theme="onboarding">
-    <Stack align="center" gap={14}>
-      <Text size={SPLASH_SIZE} align="center">{"We know you're a nerd."}</Text>
-      <Text size={SPLASH_SMALL} align="center">{"It's fine. Somebody has to read the manual."}</Text>
-    </Stack>
-  </Screen>;
   // The snippet start is the user's own: / unless they picked another.
   const settings = result.status === "ready" ? result.data : undefined;
   const start = settings?.snippetStart ?? "/";
@@ -131,9 +109,3 @@ export default function BoringGuide() {
     </Section>
   </Screen>;
 }
-
-/** How long the nerd screen shows before the boring guide. */
-const SPLASH_MILLIS = 1800;
-/** The splash's line and its smaller line, sized like the setup screen's. */
-const SPLASH_SIZE = 56;
-const SPLASH_SMALL = 28;

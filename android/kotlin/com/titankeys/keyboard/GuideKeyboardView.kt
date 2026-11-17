@@ -178,6 +178,17 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     private var appearStart = -1L
     private var waveStart = -1L
 
+    /**
+     * The slide's own cue once it's passed: its patch where the touches count stays, the Space taps' or the flick's, while the
+     * showing and the steps go (owner, 2026-11-16: "Keep the touch zone after its finished"). Null on a slide not yet passed.
+     */
+    var zoneCue: GuideCue? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
     fun show(next: GuideCue) {
         if (next != cue) liveTaps = null
         cue = next
@@ -353,7 +364,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         val showing = live == null && demoing && !ghostWaits(now)
         val pose = when {
             live != null -> live
-            showing && GuideMotion.enabled -> GuideTapDrawing.demo(((now - cueStart) % ghostMillis()).toFloat() / ghostMillis(), taps.count, taps.drag)
+            // At the keyboard's own speed, not slowed like the ghost finger: it shows how quick the taps must be (owner, 2026-11-16).
+            showing && GuideMotion.enabled -> GuideTapDrawing.demoAt(now - cueStart, taps.count, taps.drag)
             else -> GuideTapDrawing.Pose(taps.count)
         }
         val onOrange = tone == GuideTone.Orange
@@ -929,7 +941,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * bottom letter row to as far down Space as the touchpad feels, across C, V, B and N ([CursorGesture.inZone]).
      */
     private fun drawTapZone(canvas: Canvas) {
-        if (cue !is GuideCue.Taps) return
+        if (cue !is GuideCue.Taps && zoneCue !is GuideCue.Taps) return
         val corner = Radii.px(resources, Radii.SMALL)
         zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour, ZONE_ALPHA)
         val zone = geometry.area(CursorGesture.ZONE_LEFT, CursorGesture.ZONE_TOP, CursorGesture.ZONE_RIGHT, ZONE_BOTTOM)
@@ -941,7 +953,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      * from I and O down to M and Sym. It stops where the touchpad stops feeling. The ghost's flick starts inside it.
      */
     private fun drawDeleteZone(canvas: Canvas) {
-        if (cue !is GuideCue.Flick) return
+        if (cue !is GuideCue.Flick && zoneCue !is GuideCue.Flick) return
         val corner = Radii.px(resources, Radii.SMALL)
         zonePaint.color = GuideMotion.faded(if (tone == GuideTone.Orange) GuideColours.INK else Accent.colour, ZONE_ALPHA)
         deletePath.rewind()

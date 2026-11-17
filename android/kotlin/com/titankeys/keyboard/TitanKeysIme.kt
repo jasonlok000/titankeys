@@ -3344,6 +3344,16 @@ class TitanKeysIme : InputMethodService() {
         return languages.current.accentsOf(printedLetter(event.keyCode), false).isNotEmpty()
     }
 
+    /**
+     * In an input method with accents, a held letter that has none types once, and its repeats do nothing: no letters, symbol,
+     * picker or haptic (owner, 2026-11-17), as a held letter does in Chinese. Not in exact typing, which sends keys, nor with
+     * Alt, Ctrl or a panel on.
+     */
+    private fun accentlessRepeat(event: KeyEvent): Boolean =
+        event.repeatCount > 0 && languages.current.hasAccents && editing && !field.exact && HoldEngine.isLetter(event.keyCode) &&
+            !altOrPanel && !event.isAltPressed && !event.isCtrlPressed && !event.isMetaPressed &&
+            languages.current.accentsOf(printedLetter(event.keyCode), false).isEmpty()
+
     /** The letter printed on a letter key, in lower case. */
     private fun printedLetter(keyCode: Int) = 'a' + (keyCode - KeyEvent.KEYCODE_A)
 
@@ -4007,6 +4017,7 @@ class TitanKeysIme : InputMethodService() {
             if (field.exact) logExact("key $keyCode repeat ${event.repeatCount} kept by hold")
             return true
         }
+        if (accentlessRepeat(carried)) return true
         // With the panel's groups on the screen, fn picks the one at its place, also as Ctrl, which would take it first (bug hunt #37).
         if (keyCode == Modifiers.FN && panelOpen && isInputViewShown && categoryKey(event)) {
             consumedKeys += keyCode

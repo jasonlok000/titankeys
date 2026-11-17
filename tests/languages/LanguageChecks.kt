@@ -114,6 +114,12 @@ private fun accentsKeepTheirOrderAndCase() {
     same("a key with nothing held", de.accentsOf('q', false), emptyList<String>())
     check("German has accents", de.hasAccents)
     check("English has none", !InputMethod.ENGLISH.hasAccents)
+    // A held letter with no accents types once in an input method with accents (owner, 2026-11-17): Spanish's W holds nothing,
+    // so TitanKeysIme.accentlessRepeat takes its repeats, while N still opens its accents.
+    val es = InputMethod.parse(SPANISH)
+    check("Spanish has accents", es.hasAccents)
+    same("Spanish w holds nothing", es.accentsOf('w', false), emptyList<String>())
+    same("Spanish n holds ñ", es.accentsOf('n', false), listOf("ñ"))
     same("a letter with a combining mark stays one", InputMethod.graphemes("éa"), listOf("é", "a"))
 }
 

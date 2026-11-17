@@ -1,21 +1,24 @@
 {
  "pairs": 2306,
- "pairs whose decision changes": 10,
+ "pairs whose decision changes": 16,
  "counts": {
-  "headline": 6,
+  "headline": 7,
   "missed joins": 18,
   "others": 666,
   "right joins": 380,
-  "right joins cut": 1,
-  "right joins cut 2.x": 1,
+  "right joins cut": 3,
+  "right joins cut 1.2": 1,
+  "right joins cut 2.x": 2,
   "right non-joins": 1120,
   "unclears": 58,
-  "unclears cut": 2,
+  "unclears cut": 3,
+  "unclears cut 1.2": 1,
   "unclears cut 2.x": 2,
   "wrong join episodes": 46,
-  "wrong join episodes cut": 7,
+  "wrong join episodes cut": 10,
   "wrong joins": 64,
-  "wrong joins cut": 7,
-  "wrong joins cut 2.x": 7
+  "wrong joins cut": 10,
+  "wrong joins cut 1.2": 2,
+  "wrong joins cut 2.x": 8
  }
 }

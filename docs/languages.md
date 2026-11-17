@@ -251,6 +251,26 @@ schema. The log says how long each took (`adb logcat -s TitanKeysIM`: "Engine ri
 ms"). The first unpack can't move to the install, where no app code runs; it now happens as the keyboard first starts with a
 Chinese input method on, not at the first switch.
 
+### Next-word suggestions
+
+After a Chinese word is committed, the bar offers the words that may come next (owner: "Let's also start building the
+suggestion when there's nothing typed"; #56, [the study](studies/56-chinese-prediction.md)). After 你 in Cantonese: 嘅 哋
+唔 係….
+
+- **Where they come from:** Rime's own add-on, librime-predict, with a table per language (`native/rime/predict.py`, from
+  Tatoeba's sentences): the last committed word, and the words that followed it most often, at most 8. Rime gives them as
+  its choices with nothing typed, through the same OpenCC filters, so they come in the variant.
+- **On the bar:** over W to O, as wide as they need, exactly as a code's choices; the bigger menu (Sym) reads them too.
+- **Picking:** Space picks the first, at the left; a tap or the bigger menu picks any. A picked suggestion is committed like
+  any word, so the next ones follow it.
+- **Going away:** a letter starts a new code, and the code's choices take the bar. Any other key (Backspace, Enter, a digit,
+  a capital, a mark) clears them and does what it does with nothing typed. A symbol from the panel clears them too.
+- **Nothing typed yet in the field:** the bar stays empty (owner). A new field, and Back, clear them; the table has no entry
+  for the start of a text.
+- **Not shown before a variant is picked:** they'd be Rime's Traditional.
+- **Limits:** Rime looks up the whole last commit, so after a phrase of several words committed at once there's often
+  nothing to suggest. Moving the cursor doesn't clear them, as it doesn't clear a code.
+
 **Checks and renders:** `tests/chinese` checks the places, the pages, the keys that pick, the marks and the English word;
 `tests/rime` the engine's keys; `tools/checks/chinese.test.ts` keeps the keyboard's wiring to this design. `bash
 tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's own rules and Rime's real choices.
@@ -490,6 +510,12 @@ Paths are under `android/kotlin/com/titankeys/`. Line numbers are from 2026-11-1
 - **`InputMethods`** (new, `keyboard/InputMethods.kt`): reads the index, keeps the current input method, loads its
   `im.json` and word list when it's picked, and frees the last one. English stays as it is: `SwipeTyping` keeps loading its
   models at start (`engine/SwipeTyping.java:151`), and `AutocorrectLoader` keeps loading English's lists per field.
+  - **Memory** (the phone's OutOfMemoryError after 18 switches, 2026-11-17): `WordListSlot` keeps one word list at most, and
+    a switch drops the last one before the next loads. One loader thread loads one input method at a time, and a load that a
+    later switch overtook never starts. A list shares the string of each word that folds to itself. The keyboard's
+    `onDestroy` stops its engines, warm ones too. `tests/languages` switches 30 times through real lists and checks that one
+    list at most stays and the heap stays flat. TitanKeys Debug's LeakCheck reports the keyboards, word lists and engines in
+    memory, and the heap.
 - **Letters:** a letter key becomes text in `TitanKeysIme.key()` (`keyboard/TitanKeysIme.kt:3465`), from
   `event.getUnicodeChar(...)`, then `Composer.type()` (`keyboard/Composer.kt:636`). For a non-`qwerty` input method,
   `key()` asks `InputMethods` for the key's letter instead, and upper-cases it with the input method's locale. TitanKeys

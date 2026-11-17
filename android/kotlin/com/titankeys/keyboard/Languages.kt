@@ -22,12 +22,24 @@ internal class Languages(
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val sync = KeyboardListSync(syncStore().getString(SYNCED, null))
-    private var list: WordList? = null
+    /** The current input method's word list: one at most, whatever the switches ([WordListSlot]). */
+    private val slot = WordListSlot()
     private var loadedEngine: InputEngine? = null
+    /** Loads one input method at a time, so switches in a row never load several lists side by side. */
+    private val loader = java.util.concurrent.Executors.newSingleThreadExecutor { task ->
+        Thread(task, "InputMethod").apply {
+            priority = Thread.NORM_PRIORITY - 1
+            isDaemon = true
+        }
+    }
+
+    init {
+        live[this] = Unit
+    }
 
     /** The current input method's engine, started, or null for one whose keys type letters straight in. */
     val engine: InputEngine? get() = if (englishOnly) null else loadedEngine
-    val words = LanguageWords(english) { list }
+    val words = LanguageWords(english) { slot.list }
 
     /** The input method switched to, once loaded. */
     private var loaded: InputMethod = InputMethod.ENGLISH
@@ -49,8 +61,8 @@ internal class Languages(
     /** The input methods that are on, in the overlay's order. */
     var on: List<InputMethodIndex.Entry> = listOf(InputMethodIndex.ENGLISH)
         private set
-    /** Counts loads, so a slow one that's been overtaken by another is dropped. */
-    private var loading = 0
+    /** Counts loads, so a slow one that's been overtaken by another is dropped, or never starts. */
+    @Volatile private var loading = 0
     /** The input method being switched to, which may still be loading. */
     private var target = InputMethod.ENGLISH_ID
 
@@ -179,14 +191,17 @@ internal class Languages(
         target = id
         InputMethodList.index(context)[id]?.let { lastUsed[it.language.id] = id }
         val ticket = ++loading
+        val listTicket = slot.begin(id)
         if (id == InputMethod.ENGLISH_ID) {
-            apply(InputMethod.ENGLISH, null, ticket)
+            apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return
         }
         on.firstOrNull { it.id == id && it.engine != null }?.let { entry ->
             main.postDelayed({ if (ticket == loading) preparing?.invoke(entry) }, PREPARING_MILLIS)
         }
-        Thread({
+        loader.execute {
+            // Overtaken by a later switch while it waited its turn: it needn't load at all.
+            if (ticket != loading) return@execute
             val startedAt = SystemClock.elapsedRealtime()
             val method = InputMethodList.load(context, id)
             // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
@@ -200,17 +215,17 @@ internal class Languages(
                     if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
                     else "${words?.size ?: 0} words, no engine"
                 }")
-                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, engine)
+                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine)
                 else {
                     engine?.stop()
                     Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
-                    apply(InputMethod.ENGLISH, null, ticket)
+                    apply(InputMethod.ENGLISH, null, ticket, listTicket)
                 }
             }
-        }, "InputMethod $id").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
+        }
     }
 
-    private fun apply(method: InputMethod, words: WordList?, ticket: Int, engine: InputEngine? = null) {
+    private fun apply(method: InputMethod, words: WordList?, ticket: Int, listTicket: Int, engine: InputEngine? = null) {
         if (ticket != loading) {
             engine?.stop()
             return
@@ -219,12 +234,50 @@ internal class Languages(
         loadedEngine = engine
         variant()
         loaded = method
-        list = words
+        slot.done(listTicket, words)
         this.words.other = !current.isEnglish
         this.words.wordBreak = current.rules.wordBreak
         changed(method)
     }
+
+    /**
+     * The keyboard is going: no load finishes, the word list goes, and every engine stops, the warm ones too. Android may make
+     * a new keyboard, and this one's data mustn't stay with it.
+     */
+    fun stop() {
+        loading++
+        slot.clear()
+        loadedEngine?.stop()
+        loadedEngine = null
+        for (engine in warm.values) engine.stop()
+        warm.clear()
+        loader.shutdownNow()
+        live.remove(this)
+    }
+
+    /** What this keyboard holds of its input methods, for LeakCheck. */
+    private fun held() = "typing ${current.id}, word list ${slot.id ?: "none"}${slot.list?.let { " (${it.size} words)" }.orEmpty()}" +
+        ", engine ${loadedEngine?.javaClass?.simpleName ?: "none"}, warm ${warm.keys.sorted()}"
+
+    companion object {
+        /**
+         * TitanKeys Debug's LeakCheck: every keyboard's input methods still in memory, and every word list. One keyboard and one
+         * list at most is right; more means a switch or a keyboard that went kept its data.
+         */
+        fun report(): String {
+            val keyboards = synchronized(live) { live.keys.toList() }
+            val lists = WordList.alive()
+            val runtime = Runtime.getRuntime()
+            val used = (runtime.totalMemory() - runtime.freeMemory()) / 1_048_576
+            return "input methods: ${keyboards.size} keyboard(s) (${keyboards.joinToString("; ") { it.held() }}), " +
+                "${lists.size} word list(s) in memory${if (lists.isEmpty()) "" else " (${lists.joinToString(", ")})"}, " +
+                "heap $used of ${runtime.maxMemory() / 1_048_576} MB"
+        }
+    }
 }
+
+/** Every keyboard's [Languages] still in memory, weakly, for TitanKeys Debug's LeakCheck: one, or none, is right. */
+private val live = java.util.Collections.synchronizedMap(java.util.WeakHashMap<Languages, Unit>())
 
 /** Where [KeyboardListSync]'s entry is kept: Android's list is this phone's, so it isn't in the backup. */
 internal const val KEYBOARD_LIST = "keyboard_list"

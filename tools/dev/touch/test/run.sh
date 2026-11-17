@@ -63,5 +63,11 @@ for im in ids:
     if im not in language_checks.LOOK and im not in language_checks.OWN:
         assert language_checks.expected(im, list(language_checks.PLAIN)), im
 assert language_checks.expected("ru", list("qwe")) == "йцу", language_checks.expected("ru", list("qwe"))
+# #98's batch: the gestures it plays build (a capital through Shift, Space, a swipe, Backspace).
+import subprocess, space_batch
+moves = [*space_batch.keys("^teh"), "+90", "key:space:60:none", "+300", "key:del:60:none", "+90", "swipe:hello", "+400", "key:space"]
+built = subprocess.run([sys.executable, "tools/dev/touch/gestures.py", "--out", os.path.join(os.environ["TK_OUT"], "98.tki"), *moves],
+                       capture_output=True, text=True)
+assert built.returncode == 0, f"#98's gestures don't build: {built.stderr[-300:]}"
 print("Batch checks passed")
 PY

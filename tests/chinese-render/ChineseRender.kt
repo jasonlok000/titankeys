@@ -239,6 +239,12 @@ fun main(args: Array<String>) {
     val hello = listOf("嚱嘍囉", "嚱", "𠺬", "㹃", "𠺪", "𠾍", "He", "hae")
     bar(out, "row-english.png", "耶", "he l lo", hello, "hello")
     bar(out, "row-pinyin.png", "拼", "ni hao", listOf("你好", "擬好", "你", "妮", "尼", "泥", "倪", "霓"), null)
+    // Next-word suggestions after a commit, with nothing typed (#56): what Rime gave on the PC through rime_tool next
+    // (2026-11-16): 你 in Yale, Hong Kong, and 我 in Pinyin, Simplified. No code floats; the menu reads them too.
+    val afterNei = listOf("嘅", "哋", "唔", "係", "喺", "係咪", "啲", "冇")
+    bar(out, "suggest-yale.png", "耶", "", afterNei, null)
+    bar(out, "suggest-pinyin.png", "拼", "", listOf("为", "母亲", "什么都", "父母", "确定", "通常", "厌倦了", "丢了"), null)
+    menu(out, "suggest-menu.png", "", afterNei, 0)
     menu(out, "menu-1.png", "nei", nei, 0, hover = "D")
     menu(out, "menu-2.png", "nei", nei, 1)
     menu(out, "menu-wide.png", "diu nei lou mou", diu + nei.take(14), 0)

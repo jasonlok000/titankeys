@@ -5,14 +5,16 @@ back, and takes a screenshot for what only the eye can judge: where the code, th
 pick, so the choices' order moves during a run: a pick is judged by the screenshot taken just before it, which shows the row it
 picked from, and the field it typed.
 
-The keyboard twin's Shift can't be used here: on the Titan 2 Elite any Shift from it hides the keyboard and takes the field's focus,
-in English and with the release keyboard too (2026-11-16). The checks that need Shift are listed for the owner's hands instead.
+The design as of main 99fb0dcd (owner, 2026-11-17): Space, a tap on the screen and a flick up pick from the row; no Shift, no
+hold, no P. While a code is typed, Sym opens the bigger menu and Sym again closes it, and the orange ⋯ at P opens it on a tap;
+with no code, Sym is the Sym panel. Enter types the code as letters.
 """
 import os
 import time
 
 import checks
 import gestures
+import guide_checks
 import languages
 from checks import Stop, play, record
 
@@ -23,10 +25,10 @@ CODE = "neihou"
 # A pending code goes key by key: Backspace takes one letter off.
 CLEAR_CODE = [g for _ in range(20) for g in ("key:del", "+60")]
 # What these checks can't do on this phone, for the owner to try by hand.
-HANDS = [
-    "Shift + the key under the third choice (R, or F) picks the third choice",
-    "Georgian (ქართული on in Settings > Languages): Shift + W types ჭ",
-]
+HANDS = ["Georgian (ქართული on in Settings > Languages): Shift + W types ჭ (the keyboard twin's Shift can't be used here)"]
+# The more cue at P on the bar, on the 1076 x 1200 display: P's column, the bar's middle.
+MORE_CUE = (1022, 1170)
+FIFTH = (592, 1170)
 
 
 def duration(*moves):
@@ -46,7 +48,11 @@ def code(*after):
 
 
 def fresh():
-    """No code pending and an empty field, so one check's leftovers never reach the next."""
+    """No code pending and an empty field, so one check's leftovers never reach the next, in Debug's Space gestures field (the
+    guide's and the playground's type English only)."""
+    guide_checks.leave_guide()
+    if not languages.in_field():
+        raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
     play(*CLEAR_CODE)
     checks.set_text("")
 
@@ -74,18 +80,22 @@ def cjk(text):
 
 
 def check_yale():
-    """Yale is the input method, picked in Android's list with Alt+Sym, read back from Android."""
-    ok = languages.switch_to(YALE, languages.subtype_ids())
-    record("zh-yale", ok, "Yale is typing" if ok else "Alt+Sym didn't reach Yale: is it on in Settings > Languages?")
+    """Yale and Jyutping on with English, Yale typing (Debug's InputMethodsSet), read back from the keyboard's own log."""
+    import language_checks
+    fresh()
+    ok = language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+    record("zh-yale", ok, "the field started with Yale" if ok else "the field didn't start with Yale")
     if not ok:
         raise Stop("Yale isn't on")
 
 
 def check_row():
-    """The code floats above the bar's left edge, the mark at Q, the choices over W to O, P's "more" cue."""
+    """The code floats above the bar's left edge (bar-sized, a soft orange glow), the mark at Q, the choices over W to O, and
+    P's ⋯ in orange."""
     fresh()
     text = shot_then("zh-row", code("+400"), [])
-    record("zh-row", text == "", f"field {text!r} while the code is pending (empty is right); the bar is the shot", "zh-row")
+    record("zh-row", text == "", f"field {text!r} while the code is pending (empty is right); the bar is the shot: the code"
+           " bar-sized with an orange glow, 耶 at Q, ⋯ orange", "zh-row")
 
 
 def check_space():
@@ -95,11 +105,15 @@ def check_space():
     record("zh-space", cjk(text), f"typed {text!r}; the row it picked from is the shot", "zh-space")
 
 
-def check_hold():
-    """Holding the key under the second choice (E) picks it; Space then types whatever of the code is left."""
+def check_tap():
+    """A tap on the screen on the fifth choice picks it (the column over Y, where one-key choices put the fifth)."""
     fresh()
-    text = shot_then("zh-hold", code(), ["hold:e:800", "+300", "key:space", "+300"])
-    record("zh-hold", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's second choice", "zh-hold")
+    shot_then("zh-tap", code("+400"), [])
+    checks.guarded("tap", str(FIFTH[0]), str(FIFTH[1]))
+    time.sleep(.6)
+    play("key:space", "+300")
+    text = read()
+    record("zh-tap", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's choice over Y", "zh-tap")
 
 
 def check_flick():
@@ -110,23 +124,61 @@ def check_flick():
 
 
 def check_menu():
-    """Holding P opens the bigger menu; Enter turns to the next page and Backspace back; a press picks; Sym closes it."""
+    """While a code is typed, Sym opens the bigger menu; Enter turns to the next page and Backspace back; a press picks; Sym again
+    closes it. A tap on the orange ⋯ at P opens it too."""
     fresh()
-    held = code("hold:p:800", "+600")
-    shot_then("zh-menu-1", held, ["key:sym", "+300", *CLEAR_CODE])
-    record("zh-menu-open", None, "the menu over three rows, ✕ at Sym, ↓ at Enter, the page at P", "zh-menu-1")
+    opened = code("key:sym", "+600")
+    close = ["key:sym", "+400", *CLEAR_CODE]
+    shot_then("zh-menu-1", opened, close)
+    record("zh-menu-open", None, "Sym with a code: the menu over three rows, ✕ at Sym, ↓ at Enter, the page at P", "zh-menu-1")
     fresh()
-    shot_then("zh-menu-2", held + ["key:enter", "+600"], ["key:sym", "+300", *CLEAR_CODE])
+    shot_then("zh-menu-2", opened + ["key:enter", "+600"], close)
     record("zh-menu-next", None, "Enter: the second page (2/N at P, ↑ at Backspace)", "zh-menu-2")
     fresh()
-    shot_then("zh-menu-back", held + ["key:enter", "+500", "key:del", "+600"], ["key:sym", "+300", *CLEAR_CODE])
+    shot_then("zh-menu-back", opened + ["key:enter", "+500", "key:del", "+600"], close)
     record("zh-menu-back", None, "Backspace: the first page again (1/N)", "zh-menu-back")
     fresh()
-    text = shot_then("zh-menu-pick", held, ["key:s", "+400", "key:space", "+300"])
+    text = shot_then("zh-menu-pick", opened, ["key:s", "+400", "key:space", "+300"])
     record("zh-menu-pick", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's choice over S", "zh-menu-pick")
     fresh()
-    shot_then("zh-menu-sym", held + ["key:sym", "+600"], [])
-    record("zh-menu-sym", None, "Sym closed the menu and kept the code: the row is back", "zh-menu-sym")
+    shot_then("zh-menu-close", opened + ["key:sym", "+600"], [])
+    record("zh-menu-close", None, "Sym again closed the menu and kept the code: the row is back", "zh-menu-close")
+    fresh()
+    play(*code("+400"))
+    checks.guarded("tap", str(MORE_CUE[0]), str(MORE_CUE[1]))
+    time.sleep(.8)
+    record("zh-menu-tap", None, "a tap on ⋯ opened the menu", guide_checks.shot("zh-menu-tap"))
+    play(*close)
+
+
+def check_sym_panel():
+    """With no code typed, Sym is the Sym panel, as in every language."""
+    fresh()
+    play("key:sym", "+700", shot="zh-sym-panel", at=int(duration("key:sym", "+700")) - SHOT_EARLY)
+    record("zh-sym-panel", None, "Sym with no code: the Sym panel", "zh-sym-panel")
+    checks.guarded("keyevent", "4")  # Back closes the panel
+    time.sleep(.8)
+
+
+def suggestions(name, method, keys, then):
+    """A code, Space for its first choice, then the bar's next-word suggestions (a shot), and Space again: the first of them."""
+    import language_checks
+    fresh()
+    language_checks.turn_on(["en", YALE, "yue-jyutping", "zh-pinyin"], method)
+    fresh()
+    first = shot_then(f"{name}-after", [f"key:{k}" for k in keys] + ["+500", "key:space", "+800"], [])
+    second = shot_then(f"{name}-next", ["key:space", "+800"], [])
+    record(name, None if cjk(second) and len((second or "").strip()) > len((first or "").strip()) else False,
+           f"{''.join(keys)} + Space typed {first!r}; Space again typed {second!r}: {then}", f"{name}-after")
+
+
+def check_suggestions():
+    """Chinese suggestions with nothing typed (main 7a75c4bb): after a pick, the bar offers what comes next, and Space types
+    the first. Pinyin runs in the Characters setting the phone has (Hong Kong): the receiver can't set Simplified."""
+    suggestions("zh-next-yale", YALE, "nei", "the bar after the pick shows 嘅 哋 唔…, and Space types 嘅")
+    suggestions("zh-next-pinyin", "zh-pinyin", "wo", "the bar after the pick shows 为/為 母亲/母親…, and Space types the first")
+    import language_checks
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
 
 
 def check_enter():
@@ -153,7 +205,8 @@ def check_english():
         record(f"zh-{word}", None, f"{word}: {want}", f"zh-{word}")
 
 
-BATCH = [check_yale, check_row, check_space, check_hold, check_flick, check_menu, check_enter, check_comma, check_english]
+BATCH = [check_yale, check_row, check_space, check_tap, check_flick, check_menu, check_sym_panel, check_enter, check_comma, check_english,
+         check_suggestions]
 
 
 def finish():

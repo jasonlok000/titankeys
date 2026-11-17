@@ -81,7 +81,7 @@ loads="$("$BIN/llvm-readelf" -lW "$OUT/librime_tk.so" | grep " LOAD ")"
 cmake -S "$TREE" -B "$WORK/out-host" -DCMAKE_BUILD_TYPE=Release -DTK_RIME_SOURCES="$WORK/src" \
   -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ > "$WORK/out-host.log" 2>&1 \
   || { tail -40 "$WORK/out-host.log"; exit 1; }
-cmake --build "$WORK/out-host" -j"$JOBS" --target rime_tool opencc_dict >> "$WORK/out-host.log" 2>&1 \
+cmake --build "$WORK/out-host" -j"$JOBS" --target rime_tool opencc_dict build_predict >> "$WORK/out-host.log" 2>&1 \
   || { grep -n "error" "$WORK/out-host.log" | head -30; exit 1; }
 
 cd "$REPO"

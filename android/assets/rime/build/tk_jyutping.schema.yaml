@@ -25,6 +25,7 @@ engine:
   processors:
     - ascii_composer
     - recognizer
+    - predictor
     - key_binder
     - speller
     - punctuator
@@ -38,6 +39,7 @@ engine:
     - punct_segmentor
     - fallback_segmentor
   translators:
+    - predict_translator
     - punct_translator
     - script_translator
 key_binder:
@@ -73,6 +75,10 @@ key_binder:
   import_preset: default
 menu:
   page_size: 8
+predictor:
+  db: "predict-yue.db"
+  max_candidates: 0
+  max_iterations: 0
 punctuator:
   full_shape:
     " ": {commit: "　"}
@@ -478,6 +484,9 @@ switches:
     states: ["香港正體", "臺灣正體", "简体"]
   - name: ascii_punct
     states: ["。，", "．，"]
+  - name: prediction
+    reset: 1
+    states: ["關閉預測", "開啓預測"]
 translator:
   dictionary: jyut6ping3
   preedit_format:

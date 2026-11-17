@@ -257,6 +257,19 @@ object Picker {
     /** The columns of a page of [count] choices from an engine, from E. */
     fun pageColumns(count: Int): List<Int> = List(count.coerceIn(0, CHOICES)) { FIRST_CHOICE + it }
 
+    /**
+     * The item a finger's tap at [x] picks, or -1: the one whose keys' span on screen holds it, from its first key's left edge
+     * to its last key's right ([cell] gives a key column's span in px). The same item a key under it picks: the switcher's
+     * tiles, its input-method row, the accents and Chinese's row all map taps this way.
+     */
+    fun itemAt(x: Float, columns: List<IntRange>, items: Int, cell: (Int) -> Pair<Float, Float>): Int {
+        for ((index, span) in columns.withIndex()) {
+            if (index >= items) break
+            if (x >= cell(span.first).first && x <= cell(span.last).second) return index
+        }
+        return -1
+    }
+
     /** Which choice the key [key] picks, given each choice's column, or -1. */
     fun choice(key: String, columns: List<Int>): Int {
         val column = column(key)

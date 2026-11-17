@@ -207,7 +207,7 @@ private class FakeWords(private val lists: Lists) : Words {
 /** Types into a real Composer, the way the keyboard does for each key. */
 private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.autocorrect(), val field: Field = FIELD,
                      lists: Lists = Lists(world.words), autoCapitalise: Boolean = false, val words: FakeWords = FakeWords(lists),
-                     shorthandOnly: Autocorrect? = null) {
+                     shorthandOnly: Autocorrect? = null, composerWords: Words = words) {
     val editor = FakeEditor()
     /** The words on the suggestion bar. */
     var bar = emptyList<String>()
@@ -217,7 +217,7 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
     var externalChanges = 0
     /** How many times the keyboard was told to vibrate because a word changed by itself. */
     var vibrations = 0
-    val composer = Composer(editor, words, { _, action -> posted += action }, {}, { autoCapitalise }, { bar = it })
+    val composer = Composer(editor, composerWords, { _, action -> posted += action }, {}, { autoCapitalise }, { bar = it })
 
     init {
         composer.autocorrect = autocorrect
@@ -2790,6 +2790,56 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     val hidden = typist(offered = listOf("tehran")).type("so teh")
     hidden.composer.hide("the")
     check("its fix hidden from the bar", hidden)
+    // Short prefixes, where a slip's fix ("di" as "do") is offered but Space won't put it in: the word as typed stays in the middle.
+    val short = listOf("do", "did", "different", "the", "they", "what", "you", "going")
+    for (word in listOf("di", "th", "wh", "yo", "go", "teh", "dk", "ot")) check("the short prefix \"$word\"", typist(offered = short).type("so $word"))
+    // The word data still loading: Space keeps the word as typed, so it's the middle word, not the first completion.
+    check("\"di\" before the word data loads", typist(autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), offered = short).type("so di"))
+    // The typed word blocked: Space still types it, so it still shows in the middle.
+    check("a blocked word typed, with completions", typist(offered = short).also { it.words.blocked += "di" }.type("so di"))
+    spaceTypesTheMiddleWordInOtherLanguages(world)
+}
+
+/**
+ * #98 in other input methods, the owner on Debug from 5f4d7224: "When I type di, I see do in the middle, but space still types di
+ * anyways." Their bar ([LanguageWords]) only offers the list's words, so a slip like "di" that the list lacks was left off it and
+ * the corrector's likeliest word ("do"), which Space only puts in when sure, slid into the middle. Each language's real list and
+ * corrector, as LanguageCorrection makes them: the middle word is what Space types, and the slip's word sits beside it.
+ */
+private fun spaceTypesTheMiddleWordInOtherLanguages(world: Realistic) {
+    val folder = File("android/assets/im")
+    if (!folder.isDirectory) return
+    val barOnly = com.titankeys.keyboard.LanguageCorrections.barOnly(File(folder, com.titankeys.keyboard.LanguageCorrections.BAR_ONLY_FILE)
+        .takeIf { it.isFile }?.readLines()?.asSequence().orEmpty())
+    // French and Norwegian Bokmål have "do" and not "di"; Spanish has both, so there "di" is a word.
+    for (id in listOf("fr", "nb", "es")) {
+        val dir = File(folder, id)
+        val method = com.titankeys.keyboard.InputMethod.parse(File(dir, "im.json").readText())
+        val list = File(dir, method.words!!).useLines { com.titankeys.keyboard.WordList.read(it, method.javaLocale) }
+        val autocorrect = Autocorrect(KeptOnceStore.inMemory(), {})
+        val corrector = com.titankeys.keyboard.LanguageCorrections.corrector(method, list, { false }, autocorrect.rejected,
+            autocorrect.recent, spaceFixes = id !in barOnly)
+        autocorrect.corrector = corrector
+        val words = com.titankeys.keyboard.LanguageWords(FakeWords(Lists(world.words)), { list }).also {
+            it.other = true
+            it.suggest = { word, before -> corrector.suggestion(word, before) }
+        }
+        for (prefix in listOf("di", "pu", "ka", "bo", "ln", "mi", "tu", "qe")) {
+            val typist = Typist(world, autocorrect, composerWords = words).type("et $prefix")
+            val bar = typist.bar
+            val middle = bar.firstOrNull()
+            if (middle == null) {
+                failures += "#98 $id \"$prefix\": the bar showed nothing"
+                continue
+            }
+            val after = typist.type(" ").text
+            same(after.trimEnd().substringAfterLast(' '), middle, "#98 $id \"$prefix\": Space types the bar's middle word (bar $bar)")
+            // A fix Space won't put in goes beside the middle word, never in its place.
+            val slip = corrector.suggestion(prefix, "et ")
+            if (slip != null && !slip.equals(middle, ignoreCase = true))
+                must(slip in bar.drop(1), "#98 $id \"$prefix\": the slip's word \"$slip\" sits beside the middle (bar $bar)")
+        }
+    }
 }
 
 fun main() {

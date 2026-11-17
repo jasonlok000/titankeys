@@ -1128,9 +1128,10 @@ class Composer(
     private fun showAgain() {
         val typed = composition as? Composition.Typed
         if (typed == null || typed.trailingSpace) return show(composition.alternatives)
-        val again = ApostropheContext.offerOther(spaceFirst(typed.alternatives, typed.snapshot, typed.prefix, false), typed.prefix)
+        val space = spaceWord(typed.alternatives, typed.snapshot, typed.prefix, false)
+        val again = ApostropheContext.offerOther(space?.let { spaceFirst(typed.alternatives, it) } ?: typed.alternatives, typed.prefix)
         composition = Composition.Typed(typed.prefix, false, typed.snapshot, again)
-        show(again)
+        show(again, keepFirst = space != null)
     }
 
     private fun chooseAlternative(index: Int) {
@@ -1956,35 +1957,44 @@ class Composer(
     /**
      * The owner's rule (#98): the bar's middle word is what Space will put in. That is autocorrect's fix for the typed word, or the
      * word as typed when Space keeps it: with nothing to fix, with no corrector (every language but English, Fix typos off, a field
-     * that turns fixes off), or once Backspace took a fix back. It goes first, and the other words follow without it.
+     * that turns fixes off, before the word data loads), or once Backspace took a fix back. It goes first, and the other words
+     * follow without it. Null leaves [found] as it is.
+     *
+     * The bar never leaves it out ([show]'s keepFirst): another input method's list doesn't hold a slip like "di", and Blocked
+     * words may hold the word typed, but Space still types it, so it stays in the middle. A fix Space won't put in, such as
+     * another language's likeliest word for a slip ("do"), only goes beside it (owner, #98: "When I type di, I see do in the
+     * middle, but space still types di anyways").
      */
-    private fun spaceFirst(found: List<String>, anchor: Snapshot, prefix: String, guided: Boolean): List<String> {
+    private fun spaceWord(found: List<String>, anchor: Snapshot, prefix: String, guided: Boolean): String? {
         val word = typedWordAt(anchor)
         // A swiped word being fixed by hand isn't autocorrected: Space keeps it as it stands (endingWord).
         val fix = word?.takeIf { correcting == null }?.let { findFix(it, anchor) }
-        val space = fix?.word ?: when {
-            // Before the word data loads, the bar stays as it was, unless Space would give "i" its capital.
-            corrector() == null && autocorrect != null && field.autocorrect -> return found
+        return fix?.word ?: when {
             // A word nothing completes keeps the starts that follow it.
-            corrector() == null && found.isEmpty() -> return found
+            corrector() == null && found.isEmpty() -> null
             word != null -> word
             // The guide places its own word.
-            guided -> return found
+            guided -> null
             // A word Backspace put back: Space keeps it as it stands.
             restoredWord?.let { prefix.equals(it, ignoreCase = true) } == true -> prefix
             // Nothing may change the word, so Space keeps it as typed.
-            else -> typedWordAt(anchor, anyway = true) ?: return found
+            else -> typedWordAt(anchor, anyway = true)
         }
-        return listOf(space) + found.filterNot { it.equals(space, ignoreCase = true) }
     }
+
+    /** [found] with [space], what Space types, first: see [spaceWord]. */
+    private fun spaceFirst(found: List<String>, space: String) = listOf(space) + found.filterNot { it.equals(space, ignoreCase = true) }
 
     private fun sameLetters(a: String, b: String) = a.filter(Char::isLetter).equals(b.filter(Char::isLetter), ignoreCase = true)
 
-    private fun show(suggestions: List<String>) {
+    /** Shows [suggestions], less hidden and blocked words; with [keepFirst], the first is what Space types and always shows (#98). */
+    private fun show(suggestions: List<String>, keepFirst: Boolean = false) {
         barIdle = suggestions.isEmpty()
         // The cursor says it without asking the app: anywhere but the start, or not known, there may be text.
         barForText = selection.start != 0 || selection.end != 0
-        shownAlternatives = suggestions.indices.filter { suggestions[it].lowercase() !in hidden && words.allowed(suggestions[it]) }
+        shownAlternatives = suggestions.indices.filter {
+            keepFirst && it == 0 || suggestions[it].lowercase() !in hidden && words.allowed(suggestions[it])
+        }
         showWords(shownAlternatives.map(suggestions::get))
     }
 
@@ -2041,14 +2051,15 @@ class Composer(
             val guided = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))
             // While a word of a pair is being typed, its other form waits in the bar's left place (#73): a choice, never a fix. Not
             // in the guide, where that place may hold the guide's word.
+            val space = if (trailingSpace) null else spaceWord(guided, anchor, prefix, guided !== found)
             val suggestions = if (trailingSpace) guided
-                else spaceFirst(guided, anchor, prefix, guided !== found).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
+                else (space?.let { spaceFirst(guided, it) } ?: guided).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
             if (suggestions.isEmpty()) {
                 offerStarts(anchor)
                 return@complete
             }
             composition = Composition.Typed(prefix, trailingSpace, anchor, suggestions)
-            show(suggestions)
+            show(suggestions, keepFirst = space != null)
             // The first word is the one most likely to be picked, so have what follows it ready.
             suggestions.firstOrNull()?.let {
                 words.prepare(context.dropLast(TypedPredictions.prefix(context).length) + " " + it + " ", cancelled)

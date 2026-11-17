@@ -16,7 +16,9 @@ keyboard=$root/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android:$ort" -d "$work" \
   "$root/com/titankeys/autocorrect" "$keyboard/Composer.kt" "$keyboard/Expansions.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
   "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/WordBreaks.kt" "$keyboard/Touchpad.kt" \
-  "$keyboard/Haptics.kt" "$keyboard/Favourites.kt" \
+  "$keyboard/Haptics.kt" "$keyboard/Favourites.kt" "$keyboard/InputMethod.kt" "$keyboard/InputMethods.kt" "$keyboard/WordList.kt" \
+  "$keyboard/LanguageCorrections.kt" "$keyboard/LanguageLearning.kt" "$keyboard/LanguageWords.kt" "$keyboard/EngineSlips.kt" \
+  "$keyboard/InputEngine.kt" "$keyboard/Telex.kt" "$keyboard/Rules.kt" "$root/com/titankeys/connected/Json.kt" \
   tests/autocorrect/AutocorrectChecks.kt tests/autocorrect/PhoneWords.java $(find "$engine" "$root/org" -name '*.java')
 javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" tests/autocorrect/PhoneWords.java \
   $(find "$engine" "$root/org" -name '*.java')

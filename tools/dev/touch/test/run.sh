@@ -62,6 +62,21 @@ grep -q 'tk_bring_back' tools/dev/touch/touchlib.sh && ! grep -v '^\s*#' tools/d
   || { echo "FAIL a bring-back in touchlib.sh starts the screen without the reorder"; exit 1; }
 echo "Bring-back checks passed"
 
+# TK_WAIT_FOR_OWNER: another app in front is the owner's (the run waits, touching nothing); Debug and the home screen aren't.
+owner() {
+  FRONT=$1 bash -c '. tools/dev/env.sh; . tools/dev/phone/safety.sh; . tools/dev/touch/touchlib.sh
+    tk_adb() { case "$*" in *resolve-activity*) echo "com.android.launcher3/.Launcher";;
+               *dumpsys\ window*) echo "  mCurrentFocus=Window{1 u0 $FRONT}";; *) echo "SENT $*";; esac; }
+    tk_owner_app && echo owner || echo free; TK_OWNER_WAIT_S=0 tk_wait_for_owner > /dev/null && echo gone || echo stayed'
+}
+[ "$(owner com.anthropic.claude/com.anthropic.claude.mainactivity.MainActivity)" = "$(printf 'owner\nstayed')" ] ||
+  { echo "FAIL the owner's app in front wasn't waited for"; exit 1; }
+[ "$(owner com.titankeys.debug/com.vandam.ink.MainActivity)" = "$(printf 'free\ngone')" ] || { echo "FAIL Debug in front was waited for"; exit 1; }
+[ "$(owner com.android.launcher3/com.android.launcher3.Launcher)" = "$(printf 'free\ngone')" ] || { echo "FAIL the home screen was waited for"; exit 1; }
+[ "$(owner com.titankeys/com.vandam.ink.MainActivity)" = "$(printf 'owner\nstayed')" ] || { echo "FAIL release TitanKeys' screen wasn't left to the owner"; exit 1; }
+owner com.anthropic.claude/x | grep -q SENT && { echo "FAIL the wait sent something to the phone"; exit 1; }
+echo "Owner wait checks passed"
+
 # A batch: every named one loads, its gestures build, and its report says each result once, with what's left for hands.
 TK_OUT="$work/out" python3 - <<'PY'
 import os, sys

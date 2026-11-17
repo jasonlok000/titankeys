@@ -816,10 +816,12 @@ class TitanKeysIme : InputMethodService() {
         languages = Languages(this, EngineWords(SwipeTyping.get(this), FavouriteWords.get(this)::contains),
             { InputMethodList.idOf(currentInputMethodSubtypeOrNull()) }) { inputMethodChanged(it) }
         languages.preparing = { showPreparing(it) }
+        languages.warmAtStart()
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
-            { modifiers.autoShifted }) { barWords = it; strip?.words = it; rawLog?.bar(it) }
+            { modifiers.autoShifted }) { barWords = it; strip?.words = it; rawLog?.bar(it); offerBarWords(it) }
+        languages.words.shown = { if (ChineseKeys.usesBar(languages.current)) ChineseRow.ASK else BarWords.SHOWN }
         composer.autoPunctuation = { TypingSettings.autoPunctuationIn(this, languages.languageId) }
         composer.sentenceSpaces = {
             when (TypingSettings.sentenceSpacesIn(this, languages.languageId)) {
@@ -1593,9 +1595,16 @@ class TitanKeysIme : InputMethodService() {
      * It also hears them while the Sym panel is open, and until the release of a key that the panel took. See [PanelKeyFilter].
      * After a first push of Back let go of the touchpad, it hears the second push go through. See [TouchpadHold].
      */
+    /**
+     * An engine is building text: a code pending on the bar, or Chinese's bigger menu open. Enter and Backspace are then the
+     * keyboard's, kept from apps that take them first (PanelKeyFilter), as on the Sym panel: Enter types the code, or turns the
+     * menu's page, and never sends.
+     */
+    private val engineBuilding get() = choicesMenuOpen || (picker as? LanguagePicker.Choices)?.state?.composing == true
+
     private fun updateKeyWatch() {
         val launcher = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER
-        val forPanel = panelOpen || panelKeys.holding
+        val forPanel = panelOpen || panelKeys.holding || engineBuilding
         val running = BackService.watchKeys(if (launcher || forPanel || takenKeys.holding || hold.lettingGo) ::watchedKey else null)
         watchingKeys = running && launcher
         if (!running) {
@@ -1619,9 +1628,9 @@ class TitanKeysIme : InputMethodService() {
             if (!down) main.post(backWentThrough)
             return false
         }
-        if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel)) {
+        if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel, engineBuilding)) {
             // Once the panel has closed, a key that it took only waits for its release.
-            if (!down) onKeyUp(event.keyCode, event) else if (panelOpen) onKeyDown(event.keyCode, event)
+            if (!down) onKeyUp(event.keyCode, event) else if (panelOpen || engineBuilding) onKeyDown(event.keyCode, event)
             updateKeyWatch()
             return true
         }
@@ -3406,6 +3415,7 @@ class TitanKeysIme : InputMethodService() {
         }
         pendingInput.addLast(PendingInput(true, action, event))
         drainInput()
+        if (event != null && loadGate.closed(pendingInput)) showHeldLetters()
     }
 
     private fun drainInput() {
@@ -3716,7 +3726,9 @@ class TitanKeysIme : InputMethodService() {
     /** The picker, if it's the bar's notice now. Anything else that took the bar, as a word's menu, closed it. */
     private fun openPicker(): LanguagePicker? {
         val open = picker ?: return null
-        if (strip?.notice === open.notice) return open
+        // Equal, not only the same object: the strip keeps the notice it has when an equal one comes, so a picker shown again as it
+        // was (an engine state that didn't change) is still the one on the bar, and Enter still types its code.
+        if (strip?.notice == open.notice) return open
         picker = null
         return null
     }
@@ -3726,6 +3738,7 @@ class TitanKeysIme : InputMethodService() {
         picker = open
         strip?.pickerMark = -1
         strip?.notice = open.notice
+        updateKeyWatch()
         setPaging()
     }
 
@@ -3740,8 +3753,9 @@ class TitanKeysIme : InputMethodService() {
         val open = picker ?: return
         picker = null
         strip?.pickerMark = -1
-        if (strip?.notice === open.notice) strip?.notice = null
+        if (strip?.notice == open.notice) strip?.notice = null
         setPaging()
+        updateKeyWatch()
     }
 
     /** An engine's choices are on the bar: swipes on the keys are theirs, short ones too, as on the Sym panel. */
@@ -3771,7 +3785,7 @@ class TitanKeysIme : InputMethodService() {
             points.last().time - points.first().time, swipe, if (open.items.isEmpty()) ", but no choices to show" else ""))
         when (swipe) {
             // Korean's syllable has no choices: nothing to open.
-            ChineseKeys.Swipe.OpenMenu -> if (open.items.isNotEmpty()) openChoicesMenu()
+            ChineseKeys.Swipe.OpenMenu -> if (open.more) openChoicesMenu()
             ChineseKeys.Swipe.NextPage -> if (choicesMenu?.next() == true) haptics.play(Haptic.PanelPage)
             ChineseKeys.Swipe.PageBefore -> if (choicesMenu?.previous() == true) haptics.play(Haptic.PanelPage)
             ChineseKeys.Swipe.Nothing -> {}
@@ -3801,6 +3815,15 @@ class TitanKeysIme : InputMethodService() {
         if (event.isSystem) return false
         if (keyCode == pickerKey && event.repeatCount > 0) return true
         val open = openPicker()
+        if (keyCode == KeyEvent.KEYCODE_SYM && event.repeatCount == 0 && open is LanguagePicker.Choices && open.state.composing) {
+            // A code being built: Sym clears it, and the choices with it, and types nothing. The next Sym opens the panel (owner,
+            // 2026-11-17: "pressing the sym button should remove the keycode stuff first. And then only on the next press show
+            // the symbol /emoji stuff").
+            symPress.cleared()
+            closeChoicesMenu()
+            languages.engine?.let { engineState(it.reset()) } ?: closePicker()
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_SYM) {
             // Sym is never the picker's key: a held Sym's repeats and its release belong to [symPress] (the next Sym stuck).
             val press = symPress.press(event.repeatCount, open is LanguagePicker.Switch) {
@@ -3932,6 +3955,19 @@ class TitanKeysIme : InputMethodService() {
         } else closePicker()
     }
 
+    /**
+     * Chinese and Japanese: the bar's words go to the engine's wide row, as many as fit, and a pick types no space and brings
+     * the engine's next words ([InputEngine.offer]). Never over a code or the engine's own suggestions.
+     */
+    private fun offerBarWords(words: List<String>) {
+        if (!ChineseKeys.usesBar(languages.current) || field.exact) return
+        val engine = languages.engine ?: return
+        val open = openPicker()
+        if (open != null && (open !is LanguagePicker.Choices || open.state.composing)) return
+        val state = engine.offer(words)
+        if (state.handled) engineState(state)
+    }
+
     /** The letters typed, as an English word to offer second, or null: see [EnglishOffer]. Chinese only. */
     private fun englishFor(state: EngineState, listed: List<String>): String? {
         if (!ChineseKeys.isChinese(languages.current) || listed == listOf(com.titankeys.rime.RimeEngine.NO_VARIANT)) return null
@@ -3976,6 +4012,7 @@ class TitanKeysIme : InputMethodService() {
         menu.hover = ""
         menu.visibility = View.VISIBLE
         showModifiers()
+        updateKeyWatch()
         tallyChoices("bigMenu")
     }
 
@@ -3985,6 +4022,7 @@ class TitanKeysIme : InputMethodService() {
         menu.visibility = View.GONE
         menu.hover = ""
         showModifiers()
+        updateKeyWatch()
     }
 
     /** A pick from the bigger menu: its place in the engine's whole list. The menu closes. */
@@ -4047,7 +4085,7 @@ class TitanKeysIme : InputMethodService() {
             when {
                 choicesMenuOpen -> closeChoicesMenu()
                 // Shift opens it only in Chinese and Japanese: elsewhere it types capitals, or Hindi's own sounds.
-                openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
+                (openPicker() as? LanguagePicker.Choices)?.more == true && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
                 else -> return false
             }
             choicesLog("Shift ($keyCode): the bigger menu ${if (choicesMenuOpen) "opens" else "closes"}")
@@ -4213,12 +4251,28 @@ class TitanKeysIme : InputMethodService() {
     /** The line on the bar while an input method gets ready, until [inputMethodChanged] takes it away. */
     private var preparingNotice: Strip.Notice.Line? = null
 
-    /** An input method still getting ready (Rime copying its data the first time): the bar says so, never over a word's menu. */
+    /**
+     * An input method still getting ready (Rime copying its data the first time): the bar never says so (owner, 2026-11-17:
+     * "there shd be no warm up visible to the user"). The keys typed meanwhile wait ([EngineWait]), and the bar shows their
+     * letters, plain, until the engine takes them. Never over a word's menu.
+     */
     private fun showPreparing(entry: InputMethodIndex.Entry) {
         rawLog?.engine(entry.id, "preparing")
+        showHeldLetters()
+    }
+
+    /** The letters waiting for an input method that is still loading, plain, as the code they will become. */
+    private fun showHeldLetters() {
         val strip = strip ?: return
+        if (!::languages.isInitialized || !languages.loadingNow) return
         if (strip.notice != null && strip.notice !is Strip.Notice.Line) return
-        val notice = Strip.Notice.Line(preparingLine(entry))
+        val letters = HeldLetters.of(pendingInput.mapNotNull { it.event }.map { Triple(it.action == KeyEvent.ACTION_DOWN, it.repeatCount, it.keyCode) })
+        if (letters.isEmpty()) {
+            preparingNotice?.let { if (strip.notice == it) strip.notice = null }
+            preparingNotice = null
+            return
+        }
+        val notice = Strip.Notice.Line(letters)
         preparingNotice = notice
         strip.notice = notice
     }

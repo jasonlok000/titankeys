@@ -37,6 +37,12 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     /** Whether the input method typing now has [word] in its own list or starters, for the word menu. */
     fun listed(word: String) = list()?.contains(word) == true || word in starters
 
+    /**
+     * How many words the bar offers: three, or as many as Chinese's and Japanese's wide row fits, where the engine shows them
+     * ([InputEngine.offer]).
+     */
+    var shown: () -> Int = { BarWords.SHOWN }
+
     /** The current input method's next-word table, where it has one ([NextWords]). */
     var nextWords: NextWords? = null
     /** What the current input method learned from the user, or null where learning is off. */
@@ -60,10 +66,10 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
             val start = com.titankeys.engine.SwipeTyping.startsSentence(before)
             val previous = if (start) null else previousWord(before.trimEnd())
             result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, rules,
-                spelling = { word -> list()?.spelling(word) ?: word }))
+                spelling = { word -> list()?.spelling(word) ?: word }, shown = shown()))
             return
         }
-        val completions = BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), rules)
+        val completions = BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), rules, shown())
         // A word no completion explains may be a slip: its likeliest word goes first among the others (LanguageCorrections).
         val slip = if (completions.any { it.equals(prefix, ignoreCase = true) }) null
             else suggest(prefix, before.dropLast(prefix.length))?.takeIf(::usable)

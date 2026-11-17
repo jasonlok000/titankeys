@@ -46,6 +46,9 @@ fun main(args: Array<String>) {
     aLetterStartsANewCode()
     aNewFieldStartsWithNoSuggestions()
     noSuggestionsBeforeAVariant()
+    theBarsWordsShowAsChoices()
+    aPickedBarWordBringsItsNextWords()
+    theBarsWordsNeverCoverACode()
     println("Rime checks passed")
 }
 
@@ -153,6 +156,14 @@ private class FakeRime : RimeCalls {
     override fun reset() {
         calls += "reset"
         code = ""
+    }
+
+    /** As tk_predict.h's PredictAfter: the word counts as a commit, so its next words come, though nothing is typed. */
+    override fun predictAfter(text: String): Boolean {
+        calls += "after $text"
+        if (code.isNotEmpty()) return false
+        suggestions = (0 until 3).map { "$text+$it" }
+        return true
     }
 
     /** As Rime's sync: it closes the session, so the schema and options are gone until selected again. */
@@ -804,4 +815,49 @@ fun theWarmEngineHasYaleReady() {
     same("tk_pinyin", typing.schema, "Pinyin keeps typing")
     late.stop()
     typing.stop()
+}
+
+/**
+ * The bar's words (starters, learned next words) show as Rime's choices while it has none, as many as are offered, not three
+ * (owner, 2026-11-17: "there shd be more than 3 words for chinese for suggestion").
+ */
+fun theBarsWordsShowAsChoices() {
+    val (engine, _) = started()
+    val words = (1..6).map { "w$it" }
+    val state = engine.offer(words)
+    check(state.handled, "the bar's words are taken with nothing typed")
+    same(words, state.choices, "and show as the choices, all of them")
+    same(words.drop(2).take(3), engine.choices(2, 3), "read across as Rime's are")
+    same("", state.code, "with no code")
+}
+
+/**
+ * A pick of a bar word types it with no space, and Rime's next words for it follow (owner, 2026-11-17: "chinese suggestion
+ * (first word) doesn't get updated after pressed and types a space").
+ */
+fun aPickedBarWordBringsItsNextWords() {
+    for (how in listOf("tap", "space")) {
+        val (engine, rime) = started()
+        engine.offer(listOf("你好", "我"))
+        val state = if (how == "tap") engine.pickAt(0) else engine.space()
+        same("你好", state.commit, "a $how types the word, with no space")
+        check("after 你好" in rime.calls, "and Rime hears of it ($how)")
+        same(listOf("你好+0", "你好+1", "你好+2"), state.choices, "so its next words show ($how)")
+        same(emptyList<String>(), engine.choices(0, 9).filter { it == "我" }, "and the offer is gone ($how)")
+    }
+}
+
+/** Never over a code, or Rime's own suggestions; a letter ends the offer and starts a code. */
+fun theBarsWordsNeverCoverACode() {
+    val (engine, _) = started()
+    type(engine, "nei")
+    same(EngineState.UNHANDLED, engine.offer(listOf("w")), "not while a code is typed")
+    engine.space()
+    same(EngineState.UNHANDLED, engine.offer(listOf("w")), "not over Rime's own next words")
+    engine.reset()
+    engine.offer(listOf("w"))
+    val state = engine.key('n')
+    same("n", state.typed, "a letter starts a code")
+    check("w" !in state.choices, "and the offer goes")
+    same(EngineState.UNHANDLED, started().first.let { e -> e.offer(listOf("w")); e.enter() }, "Enter with an offer is the keyboard's")
 }

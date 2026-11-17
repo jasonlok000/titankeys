@@ -60,6 +60,8 @@ fun main(args: Array<String>) {
     aHeldSymWaits()
     overlaysKeepTheTouchpad()
     symWorksAfterTheSwitcher()
+    symClearsACodeFirst()
+    heldKeysShowAsPlainLetters()
     androidsListFollowsTheOnes()
     telexMarksAndTones()
     barWordsAndLearning()
@@ -1590,4 +1592,29 @@ private fun barLogLines() {
     same("an empty place is -", BarLog.line("yue-yale", BarLog.places(listOf("你"))), "bar: yue-yale - | 你 | -")
     same("an empty bar", BarLog.line("ko", BarLog.places(emptyList())), "bar: ko - | - | -")
     same("a notice", BarLog.line("yue-yale", "notice: Warming up Yale…"), "bar notice: Warming up Yale…")
+}
+
+/**
+ * Sym with a code being built clears it and does nothing more: its repeats and release are swallowed. The next Sym is Sym as
+ * always (owner, 2026-11-17: "pressing the sym button should remove the keycode stuff first").
+ */
+private fun symClearsACodeFirst() {
+    val sym = SymPress()
+    sym.cleared()
+    for (repeat in 1..5) same("the clearing press's repeat $repeat", sym.press(repeat, false) { true }, SymPress.Press.Swallow)
+    same("its release does nothing more", sym.release(), SymPress.Release.Kept)
+    same("the next Sym waits as usual", sym.press(0, false) { true }, SymPress.Press.Wait)
+    same("and let go soon it opens the panel", sym.release(), SymPress.Release.Usual)
+    same("with one input method on, the next Sym is Sym", sym.press(0, false) { false }, SymPress.Press.Usual)
+}
+
+/** While an input method loads, the bar shows the waiting keys' letters, plain, never a line about warming up. */
+private fun heldKeysShowAsPlainLetters() {
+    fun push(code: Int) = listOf(Triple(true, 0, code), Triple(false, 0, code))
+    val n = 29 + 13; val e = 29 + 4; val i = 29 + 8
+    same("n, e, i typed while it loads", HeldLetters.of(push(n) + push(e) + push(i)), "nei")
+    same("a held letter's repeats add nothing", HeldLetters.of(push(n) + listOf(Triple(true, 3, n))), "n")
+    same("Backspace takes the last off", HeldLetters.of(push(n) + push(e) + push(67)), "n")
+    same("nothing typed, nothing shown", HeldLetters.of(emptyList()), "")
+    same("Space and the rest show nothing", HeldLetters.of(push(62)), "")
 }

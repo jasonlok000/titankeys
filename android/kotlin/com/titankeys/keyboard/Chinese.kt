@@ -51,6 +51,17 @@ object ChineseRow {
      * its text shrunk to fit.
      */
     fun place(choices: List<String>, first: Int = FIRST, last: Int = LAST): List<IntRange?> {
+        return placed(choices, first, last)
+    }
+
+    /**
+     * Whether the engine's [listed] choices go past the row as [place] fits them, so the bigger menu has more to show: Shift
+     * and a swipe up open it only then (owner, 2026-11-17: "disable shift to expand the bar if there's nothing besides the
+     * main bar").
+     */
+    fun more(listed: List<String>): Boolean = listed.size > place(listed.take(ASK)).count { it != null }
+
+    private fun placed(choices: List<String>, first: Int, last: Int): List<IntRange?> {
         val placed = ArrayList<IntRange?>()
         var at = first
         for (choice in choices) {

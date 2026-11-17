@@ -16,6 +16,8 @@ interface RimeCalls {
     /** Up to [count] choices from choice [start], across every page. */
     fun choices(start: Int, count: Int): List<String>
     fun reset()
+    /** A word typed outside Rime (a pick from the bar): Rime offers its next words. True if any came. */
+    fun predictAfter(text: String): Boolean = false
     fun read(): Raw?
     /**
      * Rime's own backup of the learned words: merges every snapshot in the user folder's sync/ and writes its own there.

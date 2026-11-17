@@ -179,6 +179,17 @@ internal class Languages(
     /** Each language's input method last typed with, by language id, for the two-language toggle ([SwitchOverlay.toggle]). */
     val lastUsed = HashMap<String, String>()
 
+    /**
+     * As the keyboard's service is made (boot, or the keyboard restarted), before any field: every engine of an input method
+     * that's on warms then, once a process, so nobody waits for one (owner, 2026-11-17: "best if we could make it so that
+     * there's no warmup at all"). Warm engines stay through field changes and hiding; only turning an input method off, or
+     * the process ending, frees them.
+     */
+    fun warmAtStart() {
+        on = InputMethodList.index(context).on(TypingSettings.inputMethods(context))
+        warmUp()
+    }
+
     /** Engines kept warm for the input methods that are on, one for each engine: see [warmUp]. */
     private val warm = HashMap<String, InputEngine>()
     private val warming = HashSet<String>()
@@ -227,6 +238,7 @@ internal class Languages(
             apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return
         }
+        // No line saying it's getting ready: the bar shows the keys that wait, plain ([preparing]).
         on.firstOrNull { it.id == id && it.engine != null }?.let { entry ->
             main.postDelayed({ if (ticket == loading) preparing?.invoke(entry) }, PREPARING_MILLIS)
         }
@@ -446,8 +458,13 @@ internal sealed interface LanguagePicker {
         private val columns = ChineseRow.place(items)
         /** The items in the row, in order: a choice too wide for the room left waits for the bigger menu. */
         private val shown = items.indices.filter { columns[it] != null }
+        /**
+         * The engine has more choices than the row shows, so the bigger menu has something to add: only then do Shift and a
+         * swipe up open it (owner, 2026-11-17: "disable shift to expand the bar if there's nothing besides the main bar").
+         */
+        val more = ChineseRow.more(listed)
         override val notice = Strip.Notice.Picker(shown.map { items[it] }, shown.map { columns[it]!! }, lead = state.code,
-            mark = mark, more = listed.size > shown.count { !isEnglish(it) })
+            mark = mark, more = more)
         /** The row's item over key [column], or -1. */
         fun choiceAt(column: Int) = ChineseRow.choiceAt(column, columns)
         /** The item at [position] in the row as drawn, as a tap on the screen finds it. */

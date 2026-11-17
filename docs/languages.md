@@ -233,6 +233,12 @@ The owner's design (2026-11-16, `docs/owner-decisions-2.1.md`: "Chinese choices"
 concept test" and "The rest of the Chinese proposal agreed"). It holds for every Chinese input method (Yale, Jyutping,
 Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffer` in `keyboard/`.
 
+**With nothing typed** (owner, 2026-11-17), the bar's own words (starters, learned and listed next words) show in the
+choices row, as many as fit, not three (`InputEngine.offer`). A pick, by tap or Space, types the word with no space, and
+Rime's next words for it follow (`predictAfter`, `native/rime/tk_predict.h`). A letter, Enter or Backspace ends the offer.
+Shift and a swipe up open the bigger menu only when there are more choices than the row shows (`ChineseRow.more`). Sym with
+a code typed clears the code and opens nothing; the next Sym opens the panel.
+
 **The bar while a code is typed:**
 - **The code** floats just above the bar's left edge, only while a code is typed: in the bar's black, with a soft orange glow,
   its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; tried as a tab joined to the bar, then
@@ -287,6 +293,9 @@ too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
 
 **Keys while a code is typed:**
 - **Enter** types the code as letters. **Backspace** takes off the last code letter.
+  Enter never reaches the app while a code is pending or the bigger menu is open: chat apps take Enter before the keyboard and
+  would send, so the Back service keeps Enter and Backspace for the keyboard then, as on the Sym panel (`PanelKeyFilter`; it
+  needs TitanKeys in Accessibility, docs/system-settings.md). With nothing pending, Enter is the app's, and sends.
 - **Punctuation:** Chinese full-width marks by default (，。？！：；、 and Hong Kong's 「」 for quotes in Hong Kong and Taiwan
   characters; “” in Simplified), from Rime's punctuator, Alt's symbols included. With a code pending, a punctuation key types
   the first choice, then the mark. Settings: "Plain punctuation" types ASCII marks instead (Rime's `ascii_punct`).

@@ -183,7 +183,8 @@ object BarWords {
      * then the table's.
      */
     fun next(previous: String?, learning: LanguageLearning?, starters: List<String>, capitals: Boolean,
-             table: NextWords? = null, rules: WordRules = WordRules.NONE, spelling: (String) -> String = { it }): List<String> {
+             table: NextWords? = null, rules: WordRules = WordRules.NONE, spelling: (String) -> String = { it },
+             shown: Int = SHOWN): List<String> {
         val learned = if (previous == null) learning?.sentenceStarts().orEmpty() else learning?.next(previous).orEmpty()
         // The table keeps its words in lower case: each takes the word list's own spelling, so nouns and names keep their capitals.
         val listed = table?.after(previous).orEmpty().map(spelling)
@@ -191,14 +192,15 @@ object BarWords {
         // datelines, page labels and names (make.py's STARTER_SKIP), where the table counts every sentence as it stands.
         val ordered = if (previous == null) learned + starters + listed else learned + listed + starters
         val words = Favourites.first(ordered.distinctBy { it.lowercase() }
-            .filter { rules.usable(it) && learning?.isHidden(it) != true }.take(SHOWN), rules.favourite)
+            .filter { rules.usable(it) && learning?.isHidden(it) != true }.take(shown), rules.favourite)
         return if (previous == null && capitals) words.map { it.replaceFirstChar { c -> c.titlecase() } } else words
     }
 
     /** While [prefix] is typed: the learned words that start with it, then [listed], the list's. */
-    fun complete(prefix: String, learning: LanguageLearning?, listed: List<String>, rules: WordRules = WordRules.NONE): List<String> =
+    fun complete(prefix: String, learning: LanguageLearning?, listed: List<String>, rules: WordRules = WordRules.NONE,
+                 shown: Int = SHOWN): List<String> =
         Favourites.first((learning?.completions(prefix).orEmpty() + listed).distinctBy { it.lowercase() }
-            .filter { rules.usable(it) && learning?.isHidden(it) != true }.take(SHOWN), rules.favourite)
+            .filter { rules.usable(it) && learning?.isHidden(it) != true }.take(shown), rules.favourite)
 }
 
 /**

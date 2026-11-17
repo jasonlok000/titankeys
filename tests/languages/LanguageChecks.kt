@@ -762,7 +762,8 @@ private fun shiftShowsWhereItMatters(folder: File) {
     val without = folder.listFiles { file -> file.isDirectory }.orEmpty().mapNotNull { dir ->
         runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull()
     }.filter { !it.shiftMatters }.map { it.id }.sorted()
-    same("the input methods without Shift on the bar", without, listOf("he", "ja", "yue-jyutping", "yue-yale", "zh-pinyin"))
+    same("the input methods without Shift on the bar", without,
+        listOf("he", "ja", "yue-jyutping", "yue-yale", "zh-cangjie", "zh-pinyin", "zh-quick", "zh-zhuyin"))
     check("English shows Shift", InputMethod.ENGLISH.shiftMatters)
 }
 

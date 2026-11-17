@@ -196,6 +196,10 @@ next tk_pinyin zh_hans "wo" h h "和 好 还"
 next tk_pinyin zh_hk "wo" esc space "為 母親 什麼都"
 next tk_pinyin zh_hans "wo" esc space "为 母亲 什么都"
 next tk_pinyin zh_tw "wo" esc space "為 母親 什麼都"
+# Cangjie and Quick suggest from Cantonese's table, Zhuyin from Mandarin's.
+next tk_cangjie zh_hk "hqi" reset space "哋 喺 嘅"
+next tk_quick zh_hk "hqi" reset space "哋 喺 嘅"
+next tk_zhuyin zh_tw "nehw" reset space "何塞 幸福 幾次"
 rm -rf "$D/try"; mkdir -p "$D/try"
 fresh="$("$TOOL" try "$D/phone" "$D/try" tk_yale zh_hk "" 8 2>/dev/null | sed 's/^[^:]*://')"
 [ -z "$fresh" ] || { echo "FAIL suggestions with nothing committed: $fresh" >&2; exit 1; }

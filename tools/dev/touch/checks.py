@@ -84,8 +84,9 @@ def set_text(text):
     """Empties the field and types text into it, with the cursor at its end. Returns what the field then holds."""
     guarded("keycombination", "113", "29")  # Ctrl+A
     guarded("keyevent", "67")
-    for chunk in re.findall(r".{1,60}", text.replace(" ", "%s")):
-        guarded("text", chunk)
+    # Chunked first, then each chunk's spaces as adb's %s: chunking after could split a %s and type it (2026-11-16: "lazy%sdog").
+    for chunk in re.findall(r".{1,60}", text, re.S):
+        guarded("text", chunk.replace(" ", "%s"))
     return field()
 
 

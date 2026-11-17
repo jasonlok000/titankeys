@@ -3675,11 +3675,11 @@ class TitanKeysIme : InputMethodService() {
         strip?.inputMark = if (current.isEnglish) "" else current.label
     }
 
-    /** Chinese's and Japanese's bigger menu, that Shift opens, in the Sym panel's place: see [ChoicesMenu]. */
+    /** Chinese's and Japanese's bigger menu, that Sym opens while a code is typed, in the Sym panel's place: see [ChoicesMenu]. */
     private var choicesMenu: ChoicesMenu? = null
     private val choicesMenuOpen get() = choicesMenu?.visibility == View.VISIBLE
 
-    /** Shift, or a tap on the more cue, with the choices on the bar: the bigger menu opens, on its first page. */
+    /** Sym, or a tap on the more cue, with a code typed: the bigger menu opens, on its first page. */
     private fun openChoicesMenu() {
         val open = openPicker() as? LanguagePicker.Choices ?: return
         val engine = languages.engine ?: return
@@ -3738,36 +3738,34 @@ class TitanKeysIme : InputMethodService() {
         return true
     }
 
-    /** The Shift whose press opened or closed the bigger menu: its repeats and its release are the menu's too. */
-    private var menuShift = -1
-
     /**
-     * Chinese's and Japanese's own keys, before anything else (docs/languages.md, "Chinese on the bar"): either Shift opens the
-     * bigger menu while choices are on the bar, and closes it, built into TitanKeys with no remapping (owner, 2026-11-17: "both
-     * shift does the same thing is fine"); with the menu open, every key is the menu's. True if the key is taken.
+     * Chinese's and Japanese's own keys, before anything else (docs/languages.md, "Chinese on the bar"). With the bigger menu
+     * open, every key is the menu's, Sym its ✕. With a code typed, a short Sym opens the menu instead of the Sym panel (owner,
+     * 2026-11-17: "Let's use sym and not shift. but only when a code is being typed"), and a held Sym still opens the
+     * switcher: Sym waits for its hold as always, and [symReleased] opens the menu. Where no hold can come, the menu opens at
+     * once. True if the key is taken.
      */
     private fun chineseKey(event: KeyEvent): Boolean {
         if (event.isSystem || !ChineseKeys.usesBar(languages.current) || inGuide) return false
-        val keyCode = event.keyCode
-        if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
-            if (event.repeatCount > 0) return menuShift == keyCode
-            when {
-                choicesMenuOpen -> closeChoicesMenu()
-                openPicker() is LanguagePicker.Choices -> openChoicesMenu()
-                else -> return false
-            }
-            choicesLog("Shift ($keyCode): the bigger menu ${if (choicesMenuOpen) "opens" else "closes"}")
-            menuShift = keyCode
-            return true
-        }
         if (choicesMenuOpen) return choicesMenuKey(event)
-        return false
+        if (event.keyCode != KeyEvent.KEYCODE_SYM || openPicker() !is LanguagePicker.Choices) return false
+        if (event.repeatCount > 0) return pickerKey == KeyEvent.KEYCODE_SYM
+        if (symCanWait()) return false
+        choicesLog("Sym with a code typed, no switcher: the bigger menu opens")
+        openChoicesMenu()
+        pickerKey = KeyEvent.KEYCODE_SYM
+        return true
     }
 
-    /** A key let go: the Shift that opened or closed the menu keeps its release, so Shift itself never comes on. */
-    private fun chineseKeyUp(keyCode: Int): Boolean {
-        if (keyCode != menuShift) return false
-        menuShift = -1
+    /** Whether a Sym press waits for its hold, which opens the switcher: as [languageKey] asks [SymPress]. */
+    private fun symCanWait() = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
+        inGuide, field.exact, pendingInput.size) == null
+
+    /** A short Sym with a code typed: the bigger menu instead of the Sym panel. True if it opened. */
+    private fun symOpensChoices(): Boolean {
+        if (!ChineseKeys.usesBar(languages.current) || inGuide || openPicker() !is LanguagePicker.Choices || choicesMenuOpen) return false
+        choicesLog("Sym let go with a code typed: the bigger menu opens")
+        openChoicesMenu()
         return true
     }
 
@@ -3805,6 +3803,8 @@ class TitanKeysIme : InputMethodService() {
         symLog("Sym let go${down?.let { " after ${SystemClock.uptimeMillis() - it.downTime} ms" }.orEmpty()}: " +
             if (release == SymPress.Release.Kept) "the switcher's" else "Sym as usual")
         if (release == SymPress.Release.Kept || down == null) return true
+        // With a code typed, the bigger menu instead of the Sym panel: the press never reached the modifiers, nor does this.
+        if (symOpensChoices()) return true
         // Taken as a key that the keyboard handled, so its release stays here too, as any Sym's does.
         consumedKeys += down.keyCode
         if (pendingInput.isNotEmpty()) enqueue(KeyEvent(down)) {
@@ -4040,7 +4040,6 @@ class TitanKeysIme : InputMethodService() {
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
         if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
         if (lockedKeys.remove(keyCode)) return true
-        if (editing && chineseKeyUp(keyCode)) return true
         // Sym's release always ends its press first, so the next Sym is never swallowed ([SymPress]).
         if (keyCode == KeyEvent.KEYCODE_SYM && symReleased()) return true
         // The release of a key that picked from the picker, or closed it, belongs to that.

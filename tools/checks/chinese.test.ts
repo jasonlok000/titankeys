@@ -27,14 +27,19 @@ test("the code floats over the app, above the bar's left edge, only while a code
   const line = body(strip, "drawCodeLine");
   expect(line).toContain("picker.lead.isEmpty()");
   expect(line).toContain("val top = y - height");
-  // The bar no longer draws the code over Q and W.
-  expect(body(strip, "drawPicker")).not.toContain("picker.lead");
+  // At the bar's size and full brightness, on black with a soft orange glow; a joined tab behind CODE_TAB (owner, 2026-11-17).
+  expect(line).toContain("codeText.textSize = wordPixels()");
+  expect(line).toContain("codeText.color = look.ink");
+  expect(line).toContain("menuPaint.setShadowLayer(");
+  expect(strip).toContain("const val CODE_TAB = false");
 });
 
 test("the mark sits over Q and the more cue over P", () => {
   const picker = body(strip, "drawPicker");
   expect(picker).toContain("drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)");
   expect(picker).toContain("drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)");
+  // Orange while a code is typed: Sym opens more, though Sym isn't under it.
+  expect(picker).toContain("pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted");
   expect(body(ime, "engineState")).toContain("languages.current.label");
 });
 
@@ -86,14 +91,17 @@ test("the menu's P counts its pages from the first", () => {
   expect(menu).toContain("val COUNTED = 10 * PER_PAGE");
 });
 
-test("either Shift, or a tap on the more cue, opens and closes the bigger menu; P is only a letter", () => {
+test("with a code typed, Sym or a tap on the more cue opens the bigger menu; Sym closes it; Shift and P are nothing special", () => {
   const keys = body(ime, "chineseKey");
-  expect(keys).toContain("keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT");
-  expect(keys).toContain("choicesMenuOpen -> closeChoicesMenu()");
-  expect(keys).toContain("openPicker() is LanguagePicker.Choices -> openChoicesMenu()");
+  // A short Sym: the menu, from Sym's release, after it waited for a hold that would open the switcher.
+  expect(keys).toContain("if (event.keyCode != KeyEvent.KEYCODE_SYM || openPicker() !is LanguagePicker.Choices) return false");
+  expect(keys).toContain("if (symCanWait()) return false");
+  expect(body(ime, "symReleased")).toContain("if (symOpensChoices()) return true");
+  expect(body(ime, "symOpensChoices")).toContain("openPicker() !is LanguagePicker.Choices");
+  // With the menu open, Sym is its ✕.
+  expect(body(ime, "choicesMenuKey")).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
+  expect(keys).not.toContain("KEYCODE_SHIFT");
   expect(keys).not.toContain("KEYCODE_P");
-  // Shift's release stays with the menu, so Shift itself never comes on.
-  expect(body(ime, "chineseKeyUp")).toContain("if (keyCode != menuShift) return false");
   expect(ime).toContain("words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }");
   expect(body(strip, "onTouchEvent")).toContain("moreTap?.invoke()");
   expect(ime).not.toContain("pHeld");
@@ -110,10 +118,6 @@ test("the mark shows whenever an input method that isn't English types, the idle
   expect(body(strip, "dispatchDraw")).toContain("drawInputMark(canvas)");
 });
 
-test("Sym with a code typed: a short press opens the panel, whose symbol types the first choice first", () => {
-  expect(body(ime, "chineseKey")).not.toContain("KEYCODE_SYM");
-  expect(body(ime, "typePanelItem")).toContain("languages.engine?.let { engineState(it.space()) }");
-});
 
 test("engines get ready in the background, before the switch", () => {
   const languages = read("android/kotlin/com/titankeys/keyboard/Languages.kt");

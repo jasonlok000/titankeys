@@ -83,7 +83,8 @@ private fun canvas(height: Int): Pair<BufferedImage, Graphics2D> {
 }
 
 /** The bar with the row as Strip draws it: the code's line above, the mark over Q, the choices, P's cue. */
-private fun bar(out: File, name: String, mark: String, code: String, listed: List<String>, english: String?, hover: String = "") {
+private fun bar(out: File, name: String, mark: String, code: String, listed: List<String>, english: String?, hover: String = "",
+                tab: Boolean = false) {
     val (image, g) = canvas(ABOVE + BAR)
     val top = ABOVE.toFloat()
     g.color = Color.BLACK
@@ -97,15 +98,30 @@ private fun bar(out: File, name: String, mark: String, code: String, listed: Lis
     val more = listed.size > shown.count { !(english != null && it == EnglishOffer.PLACE) }
     // The code: a thin line floating just above the bar's left edge, over the app.
     if (code.isNotEmpty()) {
-        val height = px(22f)
-        val pad = px(8f)
+        // As Strip draws it: the bar's size, full brightness, black; floating with a soft orange glow, or a tab joined to the bar.
+        val height = px(34f)
+        val pad = px(12f)
+        val radius = px(10f)
         val left = column(0).first
-        val textSize = px(13f)
-        val box = RoundRectangle2D.Float(left, top - height - px(3f), g.widthOf(code, textSize) + 2 * pad, height, height, height)
-        g.color = Color(0, 0, 0, 230)
-        g.fill(box)
-        g.color = MUTED
-        g.drawMixed(code, left + pad, box.y + height / 2 + textSize * StripFit.X_HEIGHT / 2, textSize)
+        val textSize = word
+        val w = g.widthOf(code, textSize) + 2 * pad
+        val boxTop = if (tab) top - height else top - height - px(6f)
+        if (tab) {
+            g.color = Color.BLACK
+            g.fill(RoundRectangle2D.Float(left, boxTop, w, height + radius, 2 * radius, 2 * radius))
+        } else {
+            // The glow: rings of orange fading out, as Android's shadow layer blurs it.
+            val reach = px(8f)
+            for (i in 12 downTo 1) {
+                val r = reach * i / 12
+                g.color = Color(ORANGE.red, ORANGE.green, ORANGE.blue, (255 * .6f * (1 - i / 13f) * (1 - i / 13f) / 3).toInt().coerceIn(0, 255))
+                g.fill(RoundRectangle2D.Float(left - r, boxTop - r, w + 2 * r, height + 2 * r, 2 * (radius + r), 2 * (radius + r)))
+            }
+            g.color = Color.BLACK
+            g.fill(RoundRectangle2D.Float(left, boxTop, w, height, 2 * radius, 2 * radius))
+        }
+        g.color = INK
+        g.drawMixed(code, left + pad, boxTop + height / 2 + textSize * StripFit.X_HEIGHT / 2, textSize)
     }
     if (mark.isNotEmpty()) g.centred(mark, column(ChineseRow.MARK).first, column(ChineseRow.MARK).second, line, word, ORANGE)
     val hovered = if (hover.isEmpty()) -1 else shown.indexOf(ChineseRow.choiceAt(ChineseRow.column(hover), placed))
@@ -119,7 +135,9 @@ private fun bar(out: File, name: String, mark: String, code: String, listed: Lis
         }
         g.centred(items[shown[index]], left, right, line, word, if (index == hovered) ORANGE else INK)
     }
-    if (more) g.centred(ChineseRow.MORE_CUE, column(ChineseRow.MORE).first, column(ChineseRow.MORE).second, line, word, MUTED)
+    // Orange while a code is typed: Sym opens more.
+    if (more || code.isNotEmpty()) g.centred(ChineseRow.MORE_CUE, column(ChineseRow.MORE).first, column(ChineseRow.MORE).second, line, word,
+        if (code.isNotEmpty()) ORANGE else MUTED)
     g.dispose()
     ImageIO.write(image, "png", File(out, name))
 }
@@ -208,6 +226,9 @@ fun main(args: Array<String>) {
     // What Rime gave on the PC, Yale, Hong Kong (2026-11-16).
     val diu = listOf("屌你老母", "𨳒你老母", "屌你老母臭閪", "屌你老母個臭花閪", "屌你老母個臭化閪", "屌你老母個仆街仔")
     bar(out, "row-wide.png", "耶", "diu nei lou mou", diu, null)
+    // The code's two looks for the owner to choose (2026-11-17): floating with a glow (built), and a tab joined to the bar.
+    bar(out, "code-floating-glow.png", "耶", "nei hou", listOf("你好", "您好", "妳好", "你", "呢"), null)
+    bar(out, "code-tab.png", "耶", "nei hou", listOf("你好", "您好", "妳好", "你", "呢"), null, tab = true)
     val ngo = listOf("我哋今日去飲茶", "我哋", "我地", "俄地", "鵝地", "我爹", "我", "哦")
     bar(out, "row-sentence.png", "耶", "ngo dei gam yat heui yam cha", ngo, null)
     val nei = "你 呢 您 妳 尼 膩 伱 禰 餌 鈮 妮 瀰 伲 怩 隬 抳 胒 狔 誀 柅 馜 籾 眲 跜 镾 蚭 秜 彌 旎 沵 珥 儞 苨 毦 洱 獼 屔 衈 檷 𨉖 㞾 㢱 㳽 䉲 䝚 祢 𤤗 𥿡 𦲁 㛋 䕥 𡛧 𦴪 㛅 㢽 㦐 䎶 䏪 䣵 泥".split(" ")

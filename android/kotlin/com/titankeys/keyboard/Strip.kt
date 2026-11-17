@@ -944,8 +944,10 @@ class Strip(
             pickerText.color = look.accent
             drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)
         }
-        if (picker.more) {
-            pickerText.color = look.muted
+        if (picker.more || picker.lead.isNotEmpty()) {
+            // Orange while a code is typed: Sym opens the bigger menu, though Sym isn't under it (owner, 2026-11-17: "not like
+            // the hover type of highlight but maybe more like just make it orange").
+            pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted
             drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)
         }
         for ((index, item) in picker.items.withIndex()) {
@@ -994,7 +996,7 @@ class Strip(
     /** True when [x] is on the more cue, while it shows. */
     private fun onMore(x: Float): Boolean {
         val picker = notice as? Notice.Picker ?: return false
-        return picker.more && x >= menuColumn(ChineseRow.MORE).first
+        return (picker.more || picker.lead.isNotEmpty()) && x >= menuColumn(ChineseRow.MORE).first
     }
 
     /**
@@ -1060,7 +1062,8 @@ class Strip(
         val x = (stripAt[0] - layerAt[0]).toFloat()
         val y = (stripAt[1] - layerAt[1]).toFloat()
         codeText.typeface = typeface
-        codeText.textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, CODE_SIZE, resources.displayMetrics)
+        // The bar's own size, at full brightness, to read at a glance (owner, 2026-11-17).
+        codeText.textSize = wordPixels()
         val height = dp(CODE_LINE_DP).toFloat()
         val pad = dp(CODE_PAD_DP).toFloat()
         val inset = maxOf(menuColumn(0).first, side.toFloat())
@@ -1068,11 +1071,24 @@ class Strip(
         val most = width - 2 * inset - 2 * pad
         val textWidth = codeText.measureText(picker.lead)
         val scale = if (textWidth > most && textWidth > 0f) most / textWidth else 1f
-        val top = y - height - dp(CODE_GAP_DP)
-        codeBox.set(left, top, left + textWidth * scale + 2 * pad, top + height)
-        menuPaint.color = (look.paper and 0xFFFFFF) or (CODE_BACK_ALPHA shl 24)
-        canvas.drawRoundRect(codeBox, height / 2, height / 2, menuPaint)
-        codeText.color = look.muted
+        val radius = dp(CODE_RADIUS_DP).toFloat()
+        if (CODE_TAB) {
+            // A tab joined to the bar's top-left: the bar's black, rounded on top only.
+            val top = y - height
+            codeBox.set(left, top, left + textWidth * scale + 2 * pad, y + radius)
+            menuPaint.color = look.paper or (0xFF shl 24)
+            canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
+        } else {
+            // On its own over the app: black, with a soft orange glow around it.
+            val top = y - height - dp(CODE_GAP_DP)
+            codeBox.set(left, top, left + textWidth * scale + 2 * pad, top + height)
+            menuPaint.color = look.paper or (0xFF shl 24)
+            menuPaint.setShadowLayer(dp(CODE_GLOW_DP).toFloat(), 0f, 0f, GuideMotion.faded(look.accent, CODE_GLOW_ALPHA))
+            canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
+            menuPaint.clearShadowLayer()
+        }
+        val top = codeBox.top
+        codeText.color = look.ink
         val baseline = top + height / 2 - (codeText.ascent() + codeText.descent()) / 2
         canvas.save()
         canvas.scale(scale, scale, left + pad, baseline)
@@ -1839,12 +1855,15 @@ class Strip(
         /** The idle bar's input method mark, small in the corner when a word reaches under Q. */
         private const val INPUT_MARK_SMALL = .6f
         /** The code's line above the bar: its height, its gap over the bar, its sides' padding, in dp, and its text, in sp. */
-        private const val CODE_LINE_DP = 22
-        private const val CODE_GAP_DP = 3
-        private const val CODE_PAD_DP = 8
-        private const val CODE_SIZE = 13f
-        /** How opaque the line's black is over the app. */
-        private const val CODE_BACK_ALPHA = 230
+        private const val CODE_LINE_DP = 34
+        private const val CODE_GAP_DP = 6
+        private const val CODE_PAD_DP = 12
+        private const val CODE_RADIUS_DP = 10
+        /** The floating line's soft orange glow: its reach in dp and its strength. */
+        private const val CODE_GLOW_DP = 8
+        private const val CODE_GLOW_ALPHA = .6f
+        /** The code as a tab joined to the bar instead of floating with a glow: the owner is choosing (2026-11-17). */
+        const val CODE_TAB = false
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

@@ -15,6 +15,7 @@ private const val GAP_MILLIS = 80L
 fun main() {
     twoQuickTapsSelect()
     threeTapsTakeOneWordWithoutSpaces()
+    chineseWordsAreThePickedUnits()
     eachFieldStartsWithItsOwnSelection()
     aDoubleSpaceCollapsesASelection()
     theBarShowsWhatIsSelected()
@@ -1382,4 +1383,52 @@ private fun threeTapsTakeOneWordWithoutSpaces() {
     // Thai tone marks and Hindi vowel signs are part of their words, with or without breaks.
     same(WordSelection.atOrBefore("मैं ठीक हूँ", 11, 11, th), 8 to 11, "Hindi: the word with its vowel signs, back to the space")
     same(WordSelection.atOrBefore("say hello. ", 11, 11, zh), 4 to 9, "English: unchanged")
+}
+
+/**
+ * Chinese's words for every gesture (owner, 2026-11-17: "the triple tap doesn't work well chracter by character in chinese"; "also
+ * like sliding selects word per word. the bar shd also match"): the units as picked, then ICU's. ICU's Mandarin dictionary breaks
+ * Cantonese into characters (我 | 哋, 唔 | 該 | 晒, as the stand-in below does, measured on ICU4J 76.1), and the slide took the
+ * whole run. Three Yale picks (你好, 我哋, 唔該晒), then a pasted sentence that has 我哋 again: three taps, a slide of one and two
+ * either way, the flick and the bar's word all land on the same units.
+ */
+private fun chineseWordsAreThePickedUnits() {
+    val icu = dictionary("你好", "今日", "天氣", "好好", "飲茶")
+    val picked = PickedWords()
+    for (pick in listOf("你好", "我哋", "唔該晒")) picked.picked(pick)
+    picked.picked("，")
+    same(picked.units().toList(), listOf("你好", "我哋", "唔該晒"), "Only words are kept as units, not a mark")
+    val words = picked.breaker(icu)
+    val text = "你好我哋唔該晒今日天氣好好，我哋去飲茶。"
+    fun shown(range: Pair<Int, Int>?) = range?.let { text.substring(it.first, it.second) }
+    // Three taps, after each pick and in the pasted sentence.
+    same(shown(WordSelection.atOrBefore(text, 4, 4, words)), "我哋", "Three taps after 我哋 take it whole, not 哋")
+    same(shown(WordSelection.atOrBefore(text, 7, 7, words)), "唔該晒", "Three taps after 唔該晒 take it whole, not 晒")
+    same(shown(WordSelection.atOrBefore(text, 3, 3, words)), "我哋", "Inside a unit, the unit")
+    same(shown(WordSelection.atOrBefore(text, 16, 16, words)), "我哋", "Pasted text: the unit picked earlier, whole")
+    same(shown(WordSelection.atOrBefore(text, 20, 20, words)), "飲茶", "Past a full stop: ICU's word in front")
+    // A slide starts from the word three taps take, and steps one unit at a time, either way.
+    val start = WordSelection.at(text, 4, 4, words)!!
+    same(shown(start), "我哋", "A slide starts from the unit at the cursor, not the run")
+    val one = WordSelection.extend(text, start.first, start.second, start.first, start.second, 1, words)
+    same(shown(one), "我哋唔該晒", "+1 takes the next unit")
+    val two = WordSelection.extend(text, one.first, one.second, start.first, start.second, 1, words)
+    same(shown(two), "我哋唔該晒今日", "+2 the one after")
+    same(shown(WordSelection.extend(text, two.first, two.second, start.first, start.second, -1, words)), "我哋唔該晒",
+        "Back one gives a unit back")
+    val back = WordSelection.extend(text, start.first, start.second, start.first, start.second, -1, words)
+    same(shown(back), "你好我哋", "-1 takes the unit before")
+    same(shown(WordSelection.extend(text, back.first, back.second, start.first, start.second, -1, words)), "你好我哋",
+        "Nothing before the first unit: it stays")
+    // The flick deletes the unit in front, and the bar's word is that unit.
+    same("你好我哋唔該晒".substring(WordBreaks.lastWordStart("你好我哋唔該晒", words)), "唔該晒", "The flick deletes 唔該晒 whole")
+    same(text.substring(0, 17).substring(WordBreaks.lastWordStart(text.substring(0, 17), words)), "我哋去".takeLast(1),
+        "Past the picks, ICU's word: 去")
+    same(picked.lastWord("你好我哋", icu), "我哋", "The bar's word is the unit before the cursor")
+    same(picked.lastWord("今日天氣好好，", icu), null, "After a mark, no word")
+    // Without picks, ICU's words, as before; a new field keeps none.
+    picked.clear()
+    same(shown(WordSelection.atOrBefore(text, 4, 4, picked.breaker(icu))), "哋", "A new field: ICU's words")
+    // English keeps its own steps: no breaker, whole runs.
+    same(WordSelection.extend("hello big world", 0, 5, 0, 5, 1), 0 to 9, "English steps as before")
 }

@@ -112,7 +112,26 @@ object WordSelection {
      * The selection after one word of a word drag towards [direction], -1 or 1. It grows by a word. If it has already
      * grown the other way past the [anchorStart] to [anchorEnd] that the drag began with, it gives back a word instead.
      */
-    fun extend(text: CharSequence, start: Int, end: Int, anchorStart: Int, anchorEnd: Int, direction: Int): Pair<Int, Int> = when {
+    fun extend(text: CharSequence, start: Int, end: Int, anchorStart: Int, anchorEnd: Int, direction: Int,
+               breaker: WordBreaker? = null): Pair<Int, Int> {
+        // In a script without spaces, a step is one of [breaker]'s words, as three taps take them (Chinese's units).
+        val words = breaker?.takeIf { WordBreaks.anySpaceless(text) }?.pieces(text.toString())?.filter { it.word }
+        return if (words != null) extendWords(words, start, end, anchorStart, anchorEnd, direction)
+            else extendRuns(text, start, end, anchorStart, anchorEnd, direction)
+    }
+
+    /** [extend] over [words], [WordBreaker]'s words in order. */
+    private fun extendWords(words: List<WordPiece>, start: Int, end: Int, anchorStart: Int, anchorEnd: Int, direction: Int) = when {
+        // Give back the last word: to the end of the one before it.
+        direction < 0 && end > anchorEnd -> start to maxOf(anchorEnd, words.lastOrNull { it.start < end }
+            ?.let { last -> words.lastOrNull { it.end <= last.start }?.end ?: last.start } ?: end)
+        direction > 0 && start < anchorStart -> minOf(anchorStart, words.firstOrNull { it.end > start }
+            ?.let { first -> words.firstOrNull { it.start >= first.end }?.start ?: first.end } ?: start) to end
+        direction < 0 -> (words.lastOrNull { it.start < start }?.start ?: start) to end
+        else -> start to (words.firstOrNull { it.end > end }?.end ?: end)
+    }
+
+    private fun extendRuns(text: CharSequence, start: Int, end: Int, anchorStart: Int, anchorEnd: Int, direction: Int) = when {
         direction < 0 && end > anchorEnd -> start to maxOf(anchorEnd, overWord(text, end, direction))
         direction > 0 && start < anchorStart -> minOf(anchorStart, overWord(text, start, direction)) to end
         direction < 0 -> toWord(text, start, direction) to end

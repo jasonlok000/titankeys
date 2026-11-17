@@ -15,7 +15,8 @@ Ground rules already set in #56:
 - **Rime for Chinese.** Cantonese and Mandarin use [Rime](https://rime.im)'s engine.
 - **English doesn't change.** It keeps swiping, the next word, autocorrect and holding for symbols, and becomes the first
   input method.
-- **Other input methods are basic:** no swiping, no next-word guesses, and autocorrect is optional and off by default.
+- **Other input methods are basic:** no swiping, no next-word guesses, and only conservative corrections of slips on the
+  keys (see "Corrections").
 - **Everything is in the app.** No downloads for typing.
 
 ## What's in 3.0
@@ -175,8 +176,21 @@ data-only language is one command plus a check by eye. Where the data comes from
 
 **Accents from the word list** (input methods with a word list):
 - The bar's suggestions ignore accents when matching: typing "cafe" offers **café**.
-- Autocorrect fills in an accent only when the plain form isn't a word itself (si / sí stays as typed). Autocorrect is off
-  by default, so by default it's suggestions only.
+- Autocorrect fills in an accent only when the plain form isn't a word itself (si / sí stays as typed).
+
+**Corrections** (input methods with a word list and no engine: not Korean, Japanese, Chinese, Hindi or Vietnamese; owner,
+2026-11-17: "ok to be bad but conservative ... it shd still be present"):
+- English's own corrector (`TypedCorrector`, its noisy channel) on the language's list, with only slips on the keys fixed:
+  none of English's word pairs, misspellings, names, shorthand or two-letter rules (`LanguageCorrections`).
+- The keys come from the input method's layout and its held accents, so a neighbour is a neighbour on the Titan's keys in
+  any script, and an accent left off ("cafe", "senor") costs almost nothing. Words are looked up by their keys, so every
+  accented form of a word is weighed (casti: části and částí); how common a word is breaks a close call.
+- Space puts a fix in only at English's Only fix when sure margins; otherwise it types what was typed, and the likeliest
+  word shows on the bar beside the completions (#98: the middle word is what Space types).
+- A word kept twice after its fix was taken back is learned for that language and never fixed again.
+- It follows Settings' Autocorrect switch, as English does. `tests/corrections` measures every language on made-up slips of
+  its commonest words: on 36,760 slips Space makes 0.2% wrong changes, never changes a word typed right, and the right
+  word is on the bar for 91%.
 
 The bar, its hover and the picking come from the word menu's code (see "Where it goes in the code").
 

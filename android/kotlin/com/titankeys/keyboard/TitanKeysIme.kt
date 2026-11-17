@@ -80,6 +80,8 @@ class TitanKeysIme : InputMethodService() {
         set(value) { selection.cursorBefore = value }
     private lateinit var composer: Composer
     private lateinit var autocorrect: AutocorrectLoader
+    /** Corrections for the input methods other than English that have a word list (LanguageCorrections). */
+    private lateinit var languageCorrection: LanguageCorrection
     private lateinit var phoneNames: PhoneNameSource
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
@@ -865,6 +867,9 @@ class TitanKeysIme : InputMethodService() {
             }
         }
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
+        languageCorrection = LanguageCorrection(this)
+        // Another input method's likeliest word for a slip shows on the bar, even where Space won't put it in.
+        languages.words.suggest = { word, before -> languageCorrection.autocorrect?.corrector?.suggestion(word, before) }
         phoneNames = PhoneNameSource(this, SwipeTyping.get(this)).also { it.start() }
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
@@ -1471,6 +1476,9 @@ class TitanKeysIme : InputMethodService() {
         languages.refresh()
         languages.variant()
         val english = languages.current.isEnglish
+        // Each input method's own sentence ends and opening marks, for capitals and spaces (Greek's ;, Hindi's ।, Spanish's ¿¡).
+        com.titankeys.engine.SentenceCase.ends(languages.current.rules.sentenceEnd, languages.current.rules.openingMarks)
+        com.titankeys.autocorrect.TypedCorrector.sentenceEnd = { com.titankeys.engine.SentenceCase.isEnd(it.code) }
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
         holdSymbols = TypingSettings.holdSymbols(this)
@@ -1484,11 +1492,14 @@ class TitanKeysIme : InputMethodService() {
         // Other input methods have no swiping (docs/languages.md).
         contact.swipes = TypingSettings.swipeTyping(this) && field.words && english
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
-        // Autocorrect and shorthand are English's: other input methods only offer words on the bar (docs/languages.md).
+        // English's autocorrect and shorthand are English's own. Other input methods with a word list fix slips on their keys,
+        // conservatively, with the same corrector on their own list (LanguageCorrections; owner, 2026-11-17).
         val corrects = TypingSettings.autocorrect(this) && english
+        val language = if (!english && TypingSettings.autocorrect(this)) languageCorrection.use(languages.current, languages.list)
+            else null.also { languageCorrection.clear() }
         // Spell out shorthand is its own setting: with Fix typos off, the word data spells out shorthand alone (bug hunt #13).
         val shorthandAlone = !corrects && TypingSettings.expandShorthand(this) && english
-        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
+        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects } ?: language
         composer.shorthandOnly = autocorrect.autocorrect.takeIf { shorthandAlone }
         // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
         if (!corrects && !shorthandAlone) autocorrect.release() else if (editing) autocorrect.prepare()

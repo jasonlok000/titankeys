@@ -100,13 +100,11 @@ class Expansions(
             while (index > 0 && before.length - index < MAX_NAME && nameChar(before[index - 1])) index--
             if (index == 0 || before[index - 1] != mark || before.length - index < minName) return null
             val markAt = index - 1
-            val free = markAt == freeMark && mark !in SENTENCE_ENDS
+            val free = markAt == freeMark && !com.titankeys.engine.SentenceCase.isEnd(mark.code)
             if (!free && !opens(before, markAt)) return null
             return before.substring(markAt)
         }
 
-        /** Marks that end a sentence. One that took the place of a space ends the sentence, and starts no code. */
-        private const val SENTENCE_ENDS = ".!?"
 
         /** Whether a code may start at [at]: at the start of the text, or after a space or an opening mark. */
         private fun opens(before: String, at: Int) = at == 0 || before[at - 1].isWhitespace() || before[at - 1] in OPENERS

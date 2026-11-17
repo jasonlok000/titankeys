@@ -2797,6 +2797,7 @@ fun main() {
     nextWordChecks()
     composerFlow(world)
     markSpacing(world)
+    eachLanguageEndsItsSentences(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)
     expansions(world)
@@ -2818,4 +2819,37 @@ fun main() {
         throw AssertionError("Autocorrect checks failed")
     }
     println("Autocorrect checks passed")
+}
+
+/**
+ * Each input method's own sentence ends and opening marks (its im.json's sentenceEnd and openingMarks): Greek's ; is its question
+ * mark and Hindi's । its full stop, so a sentence starts after them, for capitals and Space after a sentence; Spanish's ¿ opens a
+ * sentence, so the capital goes after it. English's ; ends nothing.
+ */
+private fun eachLanguageEndsItsSentences(world: Realistic) {
+    fun starts(text: String) = com.titankeys.engine.SentenceCase.capitalise("x", text) == "X"
+    try {
+        com.titankeys.engine.SentenceCase.ends(".?!;", "")
+        same(starts("Τι κάνεις; "), true, "Greek: a sentence starts after its question mark ;")
+        same(starts("Γεια σου. "), true, "and after a full stop")
+        same(com.titankeys.engine.SentenceCase.isSpacedEnd(';'.code), true, "Greek's ; takes a sentence's space")
+        val sentences = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, 0)
+        val greek = Typist(world, field = sentences, autoCapitalise = false).also {
+            it.composer.sentenceSpaces = { 2 }
+            it.composer.sentenceCapitals = { true }
+        }
+        same(greek.type("ti;kaneis").text, "ti;  Kaneis", "Greek: after ; the next word gets Two spaces and its capital")
+        com.titankeys.engine.SentenceCase.ends(".?!।", "")
+        same(starts("मैं ठीक हूँ। "), true, "Hindi: a sentence starts after its full stop ।")
+        same(starts("मैं ठीक हूँ, "), false, "but not after a comma")
+        com.titankeys.engine.SentenceCase.ends(".?!", "¿¡")
+        same(starts("Hola. ¿"), true, "Spanish: the capital goes after the ¿ that opens a sentence")
+        same(starts("Hola, ¿"), false, "but a ¿ mid-sentence starts none")
+        com.titankeys.engine.SentenceCase.ends(".?!", "")
+        same(starts("one; "), false, "English: ; ends no sentence")
+        same(starts("Hola. ¿"), false, "and ¿ opens nothing")
+        same(starts("你好。"), true, "A full-width mark ends a sentence in every language")
+    } finally {
+        com.titankeys.engine.SentenceCase.ends(".?!", "")
+    }
 }

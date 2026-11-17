@@ -41,6 +41,9 @@ internal class Languages(
     val engine: InputEngine? get() = if (englishOnly) null else loadedEngine
     val words = LanguageWords(english) { slot.list }
 
+    /** The current input method's word list, once loaded: null for English and for one without a list. */
+    val list: WordList? get() = if (englishOnly) null else slot.list
+
     /** The input method switched to, once loaded. */
     private var loaded: InputMethod = InputMethod.ENGLISH
 
@@ -54,6 +57,7 @@ internal class Languages(
             field = value
             words.other = !current.isEnglish
             words.wordBreak = current.rules.wordBreak
+            words.apostrophes = current.rules.apostrophes
         }
 
     /** The input method typing now. English until the settings say otherwise, and always in the guide. */
@@ -233,6 +237,7 @@ internal class Languages(
         slot.done(listTicket, words)
         this.words.other = !current.isEnglish
         this.words.wordBreak = current.rules.wordBreak
+        this.words.apostrophes = current.rules.apostrophes
         changed(method)
     }
 

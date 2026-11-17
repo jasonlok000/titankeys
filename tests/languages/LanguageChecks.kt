@@ -884,20 +884,22 @@ private fun nextWordsCost(folder: File) {
         table = null
         if (list == null && table == null) collect()
     }    // English's own table, read by its own reader (PairCounts), for comparison: it isn't one of these, and loads with the engine.
-    val english = File(folder.parentFile, "autocorrect/en_pairs.txt")
+    val english = File(folder.parentFile, "autocorrect/en_pairs.bin")
     if (english.isFile) {
         collect()
         val base = usedBytes()
         var started = System.nanoTime()
-        var pairs: com.titankeys.autocorrect.PairCounts? = english.bufferedReader().useLines { com.titankeys.autocorrect.PairCounts.parse(it) }
+        var pairs: com.titankeys.autocorrect.PairCounts? = english.inputStream().use { com.titankeys.autocorrect.PairCounts.readBinary(it) }
         val firstMillis = (System.nanoTime() - started) / 1_000_000
         collect()
         val heap = (usedBytes() - base) / 1_048_576.0
         started = System.nanoTime()
-        val again = english.bufferedReader().useLines { com.titankeys.autocorrect.PairCounts.parse(it) }
+        val again = english.inputStream().use { com.titankeys.autocorrect.PairCounts.readBinary(it) }
         val secondMillis = (System.nanoTime() - started) / 1_000_000
-        println("next words: en (PairCounts): ${"%.1f".format(english.length() / 1e6)} MB as a file, ${pairs!!.size} pairs; " +
-            "heap ${"%.1f".format(heap)} MB (${firstMillis} ms first, ${secondMillis} ms again)")
+        println("next words: en (PairCounts): ${"%.1f".format(english.length() / 1e6)} MB as a file, ${pairs!!.size} pairs, " +
+            "arrays ${"%.1f".format(pairs.bytes / 1_048_576.0)} MB; heap ${"%.1f".format(heap)} MB (${firstMillis} ms first, ${secondMillis} ms again)")
+        check("en: its pairs load in under 300 ms", secondMillis <= 300) { "$secondMillis ms" }
+        same("en: a known pair's count", pairs.count("of", "the") > 0, true)
         check("en: a reload reads the same pairs", again.size == pairs.size)
         pairs = null
         if (pairs == null) collect()

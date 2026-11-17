@@ -81,7 +81,9 @@ The phone's heap is 256 MB, and switching languages must never pile up lists or 
 - **How it's measured:** compact tables by their arrays. Load times are the second load, once the JIT has warmed up; the first is up to 186 ms.
 - **Load times above** were read through WSL's mount of the Windows drive, which is slow, for text and compact alike. From WSL's own disk (`try.sh`), the compact tables load in 4 to 13 ms, the word lists in 143 to 203 ms, and English's text in 231 to 374 ms.
 - **The budget,** checked by the test: 40 MB for a list and its table, and 300 ms for a table's load.
-- **English's** `en_pairs.txt`, read by `PairCounts`: 9.3 MB and 689 to 845 ms. It loads once with the English engine, not on a switch.
+- **English's** pairs are compact too (`en_pairs.bin`, `tools/en_pairs_bin.py`, read by `PairCounts`, loaded once with the English engine). It holds the same 471,541 pairs and counts, read back identical.
+  - On its own: 6.3 MB of heap and 13 ms, against 9.2 MB and 231 to 374 ms as text (WSL's disk).
+  - All of English's correction data, as `tests/autocorrect` loads it: 512 to 516 ms and 16 MB, against 729 to 831 ms and 19 MB.
 - **Switching:** the test makes 30 switches through 44 input methods, overtaken loads included. It holds one word list and one table at most, and the heap after 30 switches stays within 6 MB of the heap after 5. Its peak, 86 to 131 MB, is read just after a load, with that load's garbage not yet collected.
 - **Loading:** `Languages` drops the table as a switch begins, never reads one for a switch overtaken before its turn, and keeps a load only if it's still the latest switch's. Its loader is a single thread.
 

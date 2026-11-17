@@ -76,7 +76,9 @@ private class Realistic {
     val lists = Lists(words)
     val heapBefore = used()
     val loadStart = System.nanoTime()
-    val data = CorrectionData.read(lists) { File("android/assets/autocorrect/$it").reader(Charsets.UTF_8) }
+    val data = CorrectionData.read(lists, { File("android/assets/autocorrect/$it").inputStream() }) {
+        File("android/assets/autocorrect/$it").reader(Charsets.UTF_8)
+    }
     val loadMillis = (System.nanoTime() - loadStart) / 1_000_000
     val heapAfter = used()
     val learned = ArrayList<String>()

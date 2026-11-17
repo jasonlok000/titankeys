@@ -205,6 +205,12 @@ data-only language is one command plus a check by eye. Where the data comes from
   in the right word for 56.4% and a wrong one for 0.1%, never changes a word typed right, and the right word is on the bar
   for 91.3%.
 - Kept-once words are each language's own (`KeptOnceStore.languageKey`).
+- **Hindi and Vietnamese** build their words in an engine, so the corrector above doesn't see them. Their choices are the
+  list's words that start like the word being built, so one wrong key (tirng for tieng) left nothing to pick. Where nothing
+  starts like it and it's no word itself, the engine tries its keys with one slip undone (a neighbouring key, a key too
+  many or left out, two swapped), spells each, and offers the commonest that's a word: one choice on the bar, never put in by
+  Space (`EngineSlips`). On one-slip keys of the commonest words, the right word is on the bar for 76% in Hindi (5.7% before)
+  and 81% in Vietnamese (15.5% before); about 3 ms and 1 ms a key on the PC.
 
 The bar, its hover and the picking come from the word menu's code (see "Where it goes in the code").
 
@@ -448,7 +454,7 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   end rewrites them, as jquery.ime does (namaste is नमस्ते). The same runner takes any other script's rule file later.
 - **The word being typed** is the engine's code, on the bar, worked out again from the keys, so Backspace takes the last key
   off. Space goes through the rules too, so a word's last virama goes (agar is अगर, agar~ keeps it), as jquery.ime does.
-  The word list's words that start with it are the choices, as Telex's are. Shift letters are their own sounds (namaH,
+  The word list's words that start with it are the choices, after the word as Space writes it, as Telex's are (#98). Shift letters are their own sounds (namaH,
   maChiyoM), so there are no sentence capitals.
 - **Measured** (`tests/languages`): jquery.ime's own Hindi test cases pass 100 of 101 when exported to `$HI_FIXTURES` (the
   one left is a browser's line break, \r written as \n); typing the 300 commonest words by sound, a search finds keys
@@ -579,7 +585,8 @@ Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tes
   tones, z to take the tone off; the same key again undoes its mark and types the key. The tone goes where the spelling
   puts it, in the older style most people write (hòa, thúy). The word being typed shows on the bar, worked out again from
   the keys typed, so Backspace takes the last key off. The word list's words that are the code without marks, or start
-  with it, are its choices, picked with the finger and Space; Space alone writes the word as typed. Telex is an engine
+  with it, are its choices, after the word as typed, which is what Space writes, so the bar shows what Space types (#98);
+  picked with the finger and Space. Telex is an engine
   rather than letters typed into the field and then rewritten, because a tone typed at the end of a word changes a vowel
   in its middle: the engine keeps the whole word until it's done, and the keyboard's own suggestions never see half a word.
 

@@ -60,8 +60,8 @@ test("Shift + a key and holding a key don't pick (owner, 2026-11-17: abandoned);
   expect(key).toContain("else -> if (chinese && letter && !alt) engine.key(printedLetter(event.keyCode)) else {");
   expect(key).not.toContain("shifted");
   expect(ime).not.toContain("holdToPick");
-  // Shift's own bar doesn't cover the choices in Chinese.
-  expect(body(ime, "showModifierBar")).toContain("ModifierBar.SHIFT || it == ModifierBar.CAPS");
+  // Shift's own bar doesn't cover the choices in Chinese: Shift shows only where it changes what a key types.
+  expect(body(ime, "showModifierBar")).toContain("languages.current.shiftMatters");
 });
 
 test("hold for symbols is back in Chinese: the letter leaves the code, the symbol goes through the engine", () => {

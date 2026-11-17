@@ -2461,7 +2461,7 @@ private fun apostrophes(world: Realistic) {
             lines.append("  $typed | $expected | $got${if (got == expected) "" else "  <-- DIFFERS"}\n")
             same(got, expected, "Owner's report with the real model: $typed")
         }
-        // #73: "were" becomes "we're" only when the model is very sure, at 2.0 nats. The meant "were" here scored -13 to 0.7.
+        // #73: "were" becomes "we're" only when the model is very sure, at 3.0 nats. The meant "were" here scored -13 to 0.7.
         val weres = listOf(
             "Were almost there." to "We're almost there.", "Great. Were done here." to "Great. We're done here.",
             "Were going to be late." to "We're going to be late.",
@@ -2477,19 +2477,19 @@ private fun apostrophes(world: Realistic) {
         println(lines)
     }
 
-    // #73: "were" waits like the other context words, but needs 1.0 nats more: 2.0, or 3.0 when only sure.
+    // #73: "were" waits like the other context words, but needs 2.0 nats more: 3.0, or 4.0 when only sure.
     val onlySure = Lists(world.words, sure = true)
     fun scoring(margin: Double) = ContinuationScorer { _, texts -> DoubleArray(texts.size) { if (it == 0) 0.0 else margin } }
-    same(typist(with = scoring(2.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "+2.5: were becomes we're")
-    same(typist(with = scoring(1.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "+1.5 isn't enough for were")
+    same(typist(with = scoring(3.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "+3.5: were becomes we're")
+    same(typist(with = scoring(2.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "+2.5 isn't enough for were")
     same(typist(with = scoring(1.5)).type("Sorry, its going to be late. ").text, "Sorry, it's going to be late. ", "though it is for its")
-    same(typist(onlySure, scoring(2.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "Only when sure: +2.5 isn't")
-    same(typist(onlySure, scoring(3.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "Only when sure: +3.5 is")
+    same(typist(onlySure, scoring(3.5)).type("Sorry, were going to be late. ").text, "Sorry, were going to be late. ", "Only when sure: +3.5 isn't")
+    same(typist(onlySure, scoring(4.5)).type("Sorry, were going to be late. ").text, "Sorry, we're going to be late. ", "Only when sure: +4.5 is")
     same(typist(with = scoring(5.0)).type("Sorry, were going to ").backspace().text, "Sorry, were going to ",
         "Backspace right after puts \"were\" back")
-    same(typist(with = scoring(2.5)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, we're going to ", "A swiped were at +2.5 changes")
-    same(typist(with = scoring(1.5)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, were going to ",
-        "A swiped were at +1.5 doesn't")
+    same(typist(with = scoring(3.5)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, we're going to ", "A swiped were at +3.5 changes")
+    same(typist(with = scoring(2.5)).type("Sorry, ").swipe("were").type("going to ").text, "Sorry, were going to ",
+        "A swiped were at +2.5 doesn't")
     same(typist(Lists(world.words, off = setOf(FixKind.CONTEXT_APOSTROPHES)), scoring(5.0)).type("Sorry, were going to ").text,
         "Sorry, were going to ", "Switched off, \"were\" stays")
     same(typist(with = scoring(5.0)).type("so were, ").text, "so were, ", "Too few words: \"were\" stays")

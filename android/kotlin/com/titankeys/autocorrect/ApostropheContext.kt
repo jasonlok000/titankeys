@@ -101,9 +101,10 @@ class ApostropheContext(
 
         /**
          * More margin for words that are right far more often than not. "were" is a very common right word, so it becomes "we're"
-         * only at 2.0, or 3.0 when only sure: the #73 study's highest margin for a meant "were" was 0.68 (docs/studies/73-were.md).
+         * only at 3.0, or 4.0 when only sure: on all of Tatoeba's English, 40,488 meant "were", the highest margin was 2.98, and 3.0
+         * made no wrong change (docs/studies/73-were.md).
          */
-        val EXTRA_MARGIN = mapOf("were" to 1.0)
+        val EXTRA_MARGIN = mapOf("were" to 2.0)
 
         /**
          * Typed forms that are real words, with the forms with an apostrophe they may be meant as. "were" takes a higher margin:

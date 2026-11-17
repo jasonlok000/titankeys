@@ -378,6 +378,26 @@ def build_chinese(data, ident):
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
         notice([CHINESE_NOTICE.format(source=source)]))
 
+# Japanese through Mozc (native/mozc/SOURCES.md): no word list here, since Mozc's data is android/assets/mozc. Its mark on the
+# bar is あ, as Japanese keyboards show it. F (docs/words-m1.md).
+# id: (name, English name, label, locale)
+JAPANESE = {"ja": ("日本語", "Japanese", "あ", "ja")}
+
+JAPANESE_NOTICE = ("Typed with Mozc (BSD-3-Clause, Google) and its open-source dictionary (IPAdic, Okinawa dictionary, "
+                   "Japanese Usage Dictionary and others, under their own permissive licences). Their versions and licences: "
+                   "native/mozc/SOURCES.md and licences/Mozc-*.txt.")
+
+
+def build_japanese(data, ident):
+    name, english, label, locale = JAPANESE[ident]
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    rules = {"capitalise": False, "sentenceEnd": "。？！.?!", "openingMarks": "", "apostrophes": False}
+    write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Jpan",
+                      "keys": "qwerty", "accents": {}, "words": None, "variants": None, "rules": rules,
+                      "engine": {"mozc": "oss"}, "source": {"words": "Mozc's open-source dictionary"}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice([JAPANESE_NOTICE]))
+
 # Korean and Vietnamese through TitanKeys' own engines (android/kotlin/com/titankeys/keyboard/Hangul.kt and Telex.kt).
 # Korean has no capitals and uses Shift for its tense consonants, so no sentence capitals.
 # id: (name, English name, label, locale, script, engine, word list file or None, word list notice, notice for the typing)
@@ -709,7 +729,7 @@ def write_index_and_list():
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im)})
-    order = list(LATIN) + list(NATIONAL) + list(OWN) + list(ENGINES) + list(CHINESE)
+    order = list(LATIN) + list(NATIONAL) + list(OWN) + list(ENGINES) + list(CHINESE) + list(JAPANESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(entries, f, ensure_ascii=False, indent=1)
@@ -746,7 +766,7 @@ def escape(text):
 def main():
     global DATA
     data = DATA = sys.argv[1]
-    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(OWN)
+    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(JAPANESE) + list(OWN)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
         if ident in LATIN:
@@ -759,6 +779,8 @@ def main():
             build_chinese(data, ident)
         elif ident in OWN:
             OWN[ident](data, ident)
+        elif ident in JAPANESE:
+            build_japanese(data, ident)
         else:
             raise SystemExit("unknown input method " + ident)
         print("built", ident)

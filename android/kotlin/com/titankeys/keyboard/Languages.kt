@@ -222,10 +222,14 @@ internal sealed interface LanguagePicker {
     class Choices(val state: EngineState, listed: List<String>, val english: String? = null, mark: String = "") : LanguagePicker {
         val items = EnglishOffer.withWord(listed.take(ChineseRow.ASK), english)
         private val columns = ChineseRow.place(items)
-        override val notice = Strip.Notice.Picker(items.take(columns.size), columns, lead = state.code, mark = mark,
-            more = listed.size > columns.size - (if (english != null && columns.size > EnglishOffer.PLACE) 1 else 0))
+        /** The items in the row, in order: a choice too wide for the room left waits for the bigger menu. */
+        private val shown = items.indices.filter { columns[it] != null }
+        override val notice = Strip.Notice.Picker(shown.map { items[it] }, shown.map { columns[it]!! }, lead = state.code,
+            mark = mark, more = listed.size > shown.count { !isEnglish(it) })
         /** The row's item over key [column], or -1. */
         fun choiceAt(column: Int) = ChineseRow.choiceAt(column, columns)
+        /** The item at [position] in the row as drawn, as a tap on the screen finds it. */
+        fun itemAt(position: Int) = shown.getOrElse(position) { -1 }
         /** Whether row item [item] is the English word. */
         fun isEnglish(item: Int) = english != null && item == EnglishOffer.PLACE && item < items.size
         /** The engine's own place for row item [item], counted across its pages: the English word moves the rest one on. */

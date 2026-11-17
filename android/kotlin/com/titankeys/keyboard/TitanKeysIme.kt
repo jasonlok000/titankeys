@@ -175,7 +175,8 @@ class TitanKeysIme : InputMethodService() {
      */
     private var symDown: KeyEvent? = null
     /** The held Sym opened the overlay, so its release does nothing more. */
-    private var symHeldOpen = false
+    /** Where the current Sym press is: waiting for a hold, or the switcher it opened or closes ([SymPress]). */
+    private val symPress = SymPress()
     private val symHeld = Runnable { openSwitchOverlay() }
     /** In Smart Launcher's search field the Back service hears the keys first and takes them for the keyboard. See [updateKeyWatch]. */
     private var watchingKeys = false
@@ -1267,7 +1268,15 @@ class TitanKeysIme : InputMethodService() {
         val choices = ChoicesMenu(ui) { index -> enqueue { pickFromMenu(index) } }.apply { visibility = View.GONE }
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
-        words.pickerTap = { index -> enqueue { openPicker()?.let { pick(it, index) } } }
+        words.pickerTap = { index ->
+            enqueue {
+                openPicker()?.let { open ->
+                    // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
+                    val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
+                    if (choice >= 0) pick(open, choice)
+                }
+            }
+        }
         val keyboard = LinearLayout(ui).apply {
             orientation = LinearLayout.VERTICAL
             addView(keys)
@@ -1362,7 +1371,7 @@ class TitanKeysIme : InputMethodService() {
         heldLetter = null
         main.removeCallbacks(symHeld)
         symDown = null
-        symHeldOpen = false
+        symPress.reset()
         closePicker()
         // Text an engine was building belongs to the field before.
         if (::languages.isInitialized) languages.engine?.reset()
@@ -2949,7 +2958,7 @@ class TitanKeysIme : InputMethodService() {
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
         // A code being typed goes first, as its first choice.
-        if (!field.exact && openPicker() is LanguagePicker.Choices && ChineseKeys.isChinese(languages.current))
+        if (!field.exact && openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current))
             languages.engine?.let { engineState(it.space()) }
         if (field.exact) commitExact(item) else composer.symbol(item)
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
@@ -3221,7 +3230,7 @@ class TitanKeysIme : InputMethodService() {
                 val engine = languages.engine
                 if (engine != null) {
                     // A tap goes to the engine as a key would: Space picks, a letter builds the code. Chinese has no capitals.
-                    val shifted = modifiers.shift != Modifiers.Level.Off && !ChineseKeys.isChinese(languages.current)
+                    val shifted = modifiers.shift != Modifiers.Level.Off && !ChineseKeys.usesBar(languages.current)
                     val state = if (key == " ") engine.space() else engine.key(languages.current.letter(key[0], shifted)?.first() ?: if (shifted) key[0] else key[0].lowercaseChar())
                     if (state.handled) {
                         engineState(state)
@@ -3262,7 +3271,7 @@ class TitanKeysIme : InputMethodService() {
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
         // In Chinese, holding the key under a choice picks it, so a hold never types a symbol (owner, 2026-11-16).
-        if (ChineseKeys.isChinese(languages.current)) return false
+        if (ChineseKeys.usesBar(languages.current)) return false
         if (languages.current.hasAccents) return canHoldAccent(event)
         if (heldLetterOf(event, false) != null) return canHoldThird(event)
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
@@ -3458,24 +3467,24 @@ class TitanKeysIme : InputMethodService() {
         if (keyCode == pickerKey && event.repeatCount > 0) return true
         val open = openPicker()
         if (keyCode == KeyEvent.KEYCODE_SYM) {
-            if (open is LanguagePicker.Switch) {
-                if (event.repeatCount == 0) closePicker()
-                pickerKey = keyCode
-                return true
+            // Sym is never the picker's key: a held Sym's repeats and its release belong to [symPress] (the next Sym stuck).
+            val press = symPress.press(event.repeatCount, open is LanguagePicker.Switch) {
+                val whyNot = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
+                    inGuide, field.exact, pendingInput.size)
+                if (whyNot != null) symLog("Sym won't wait for a hold: $whyNot")
+                whyNot == null
             }
-            if (symDown != null) return true
-            if (event.repeatCount > 0) return false
-            val whyNot = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
-                inGuide, field.exact, pendingInput.size)
-            if (whyNot != null) {
-                symLog("Sym won't wait for a hold: $whyNot")
-                return false
+            when (press) {
+                SymPress.Press.Close -> closePicker()
+                SymPress.Press.Swallow -> {}
+                SymPress.Press.Usual -> return false
+                SymPress.Press.Wait -> {
+                    symDown = KeyEvent(event)
+                    val millis = TypingSettings.holdSymbolMillis(this).toLong()
+                    symLog("Sym waits ${millis} ms for a hold, ${languages.on.size} input methods on")
+                    main.postDelayed(symHeld, millis)
+                }
             }
-            symDown = KeyEvent(event)
-            symHeldOpen = false
-            val millis = TypingSettings.holdSymbolMillis(this).toLong()
-            symLog("Sym waits ${millis} ms for a hold, ${languages.on.size} input methods on")
-            main.postDelayed(symHeld, millis)
             return true
         }
         if (open == null || event.repeatCount > 0 || Modifiers.isModifier(keyCode)) return false
@@ -3541,7 +3550,7 @@ class TitanKeysIme : InputMethodService() {
     private fun engineKey(engine: InputEngine, event: KeyEvent): Boolean {
         val meta = event.metaState or modifiers.metaState
         if (meta and (KeyEvent.META_CTRL_MASK or KeyEvent.META_META_MASK) != 0) return false
-        val chinese = ChineseKeys.isChinese(languages.current)
+        val chinese = ChineseKeys.usesBar(languages.current)
         // Alt's symbols are the keyboard's, but in Chinese Rime turns their punctuation into Chinese marks, and a code typed
         // goes first (docs/languages.md, "Chinese on the bar").
         val alt = meta and KeyEvent.META_ALT_MASK != 0
@@ -3730,7 +3739,7 @@ class TitanKeysIme : InputMethodService() {
      * is the menu's; with the choices on the bar, P waits to see if it's held, which opens the menu. True if the key is taken.
      */
     private fun chineseKey(event: KeyEvent): Boolean {
-        if (event.isSystem || !ChineseKeys.isChinese(languages.current) || inGuide) return false
+        if (event.isSystem || !ChineseKeys.usesBar(languages.current) || inGuide) return false
         if (choicesMenuOpen) return choicesMenuKey(event)
         val keyCode = event.keyCode
         if (keyCode != KeyEvent.KEYCODE_P) {
@@ -3767,12 +3776,15 @@ class TitanKeysIme : InputMethodService() {
 
     /** Sym held for the hold time: the overlay, with every input method that's on over W to O. */
     private fun openSwitchOverlay() {
-        if (symDown == null || !editing) {
-            symLog("Sym held, but no overlay: ${if (symDown == null) "already let go" else "not editing"}")
+        if (!editing) {
+            symLog("Sym held, but no overlay: not editing")
+            return
+        }
+        if (!symPress.held()) {
+            symLog("Sym held, but no overlay: already let go")
             return
         }
         symLog("Sym held: the input method overlay opens")
-        symHeldOpen = true
         haptics.play(Haptic.HeldSymbol)
         val on = InputMethodIndex.group(languages.on)
         showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), languages.current.id))
@@ -3783,14 +3795,14 @@ class TitanKeysIme : InputMethodService() {
      * sooner, its press now goes on as Sym always does, and then its release.
      */
     private fun symReleased(): Boolean {
-        val down = symDown ?: return false
+        val release = symPress.release()
+        if (release == SymPress.Release.NotMine) return false
+        val down = symDown
         symDown = null
         main.removeCallbacks(symHeld)
-        symLog("Sym let go after ${SystemClock.uptimeMillis() - down.downTime} ms: ${if (symHeldOpen) "the overlay stays" else "Sym as usual"}")
-        if (symHeldOpen) {
-            symHeldOpen = false
-            return true
-        }
+        symLog("Sym let go${down?.let { " after ${SystemClock.uptimeMillis() - it.downTime} ms" }.orEmpty()}: " +
+            if (release == SymPress.Release.Kept) "the switcher's" else "Sym as usual")
+        if (release == SymPress.Release.Kept || down == null) return true
         // Taken as a key that the keyboard handled, so its release stays here too, as any Sym's does.
         consumedKeys += down.keyCode
         if (pendingInput.isNotEmpty()) enqueue(KeyEvent(down)) {
@@ -4026,12 +4038,13 @@ class TitanKeysIme : InputMethodService() {
         if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
         if (lockedKeys.remove(keyCode)) return true
         if (editing && chineseKeyUp(keyCode)) return true
+        // Sym's release always ends its press first, so the next Sym is never swallowed ([SymPress]).
+        if (keyCode == KeyEvent.KEYCODE_SYM && symReleased()) return true
         // The release of a key that picked from the picker, or closed it, belongs to that.
         if (keyCode == pickerKey) {
             pickerKey = -1
             return true
         }
-        if (keyCode == KeyEvent.KEYCODE_SYM && symReleased()) return true
         // Published before the take-back, so the guide hears the letter let go too soon.
         val takeBack = inGuide && editing && heldLetter?.keyCode == keyCode
         Recording.sink?.key(event, touchpad.isGestureKey(event))
@@ -4451,7 +4464,7 @@ class TitanKeysIme : InputMethodService() {
     private fun showModifierBar() {
         val bar = ModifierBar.of(modifiers, restingKey) { Keys.letter(it, KeyEvent.META_ALT_ON) }
         // In Chinese, Shift is no capital (it picks the choice over a key), so its bar doesn't cover the choices or the words.
-        val chinese = ::languages.isInitialized && ChineseKeys.isChinese(languages.current)
+        val chinese = ::languages.isInitialized && ChineseKeys.usesBar(languages.current)
         strip?.modifiers = if (bar != null && chinese && bar.chips.all { it == ModifierBar.SHIFT || it == ModifierBar.CAPS }) null else bar
     }
 

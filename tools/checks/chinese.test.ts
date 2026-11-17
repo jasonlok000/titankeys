@@ -46,7 +46,7 @@ test("Space picks the first choice: a resting finger doesn't change that", () =>
 });
 
 test("a tap on the screen picks the choice under it", () => {
-  expect(ime).toContain("words.pickerTap = { index -> enqueue { openPicker()?.let { pick(it, index) } } }");
+  expect(ime).toContain("val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index");
   expect(body(strip, "onTouchEvent")).toContain("pickerTap?.invoke(item)");
 });
 
@@ -59,7 +59,7 @@ test("Shift + the key under a choice picks it, and Shift alone does nothing spec
 });
 
 test("holding the key under a choice picks it, and hold for symbols is off in Chinese", () => {
-  expect(body(ime, "canHold")).toContain("if (ChineseKeys.isChinese(languages.current)) return false");
+  expect(body(ime, "canHold")).toContain("if (ChineseKeys.usesBar(languages.current)) return false");
   expect(body(ime, "holdToPick")).toContain("TypingSettings.holdSymbolMillis(this)");
   // The letter the press typed goes again before the pick.
   expect(ime).toMatch(/engine\.backspace\(\)\n\s+pick\(held\.choices, held\.item\)/);

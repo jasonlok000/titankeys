@@ -108,3 +108,13 @@ describe("record a bug", () => {
     expect(policy).toContain(said);
   });
 });
+
+test("the log's size reads in KB below 0.1 MB, so a small log never shows 0.0 MB", async () => {
+  const { fileSize } = await import("../../lib/size");
+  expect(fileSize(0)).toBe("0 KB");
+  expect(fileSize(52_000)).toBe("51 KB");
+  expect(fileSize(104_857)).toBe("103 KB");
+  expect(fileSize(104_858)).toBe("0.1 MB");
+  expect(fileSize(3_500_000)).toBe("3.3 MB");
+  expect(await text("app/settings/rawlog.tsx")).toContain("{fileSize(rawLogBytes)}");
+});

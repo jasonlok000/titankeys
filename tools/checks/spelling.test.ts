@@ -42,7 +42,7 @@ test("Settings' Languages sits between Typing and Shortcuts, and English spellin
   const shortcuts = settings.indexOf('<Section title="Shortcuts">');
   expect(typing).toBeLessThan(languages);
   expect(languages).toBeLessThan(shortcuts);
-  const page = await read("app/settings/language.tsx");
+  const page = await read("app/settings/languages/language.tsx");
   expect(page).toMatch(/language\.id === "en" && [^]*href="\/settings\/spelling"/);
   expect(page).toMatch(/language\.id === "zh" && [^]*href="\/settings\/chinese"/);
 });

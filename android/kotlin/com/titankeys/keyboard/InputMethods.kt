@@ -316,3 +316,80 @@ object RightToLeft {
     /** Whether moving the cursor one step visually right ([direction] > 0) goes forward in the text. */
     fun forward(direction: Int, rightToLeft: Boolean) = (direction > 0) != rightToLeft
 }
+
+/**
+ * One Sym press, as the switcher sees it: let go soon it's Sym as always; held, it opens the switcher; pressed again while
+ * the switcher is open, it closes it. Android repeats a held key, so a held Sym's repeats come in while its own switcher is
+ * open: they're swallowed, never taken as a new press, and the release always ends the press, so the next Sym works.
+ */
+class SymPress {
+    enum class Press {
+        /** The switcher is open: this press closes it, and its repeats and release are swallowed. */
+        Close,
+        /** A repeat, or a press while one waits: nothing. */
+        Swallow,
+        /** Waits for the hold time: [held] then opens the switcher. */
+        Wait,
+        /** Sym as always. */
+        Usual,
+    }
+
+    enum class Release {
+        /** It opened or closed the switcher: the release does nothing more. */
+        Kept,
+        /** Let go before the hold time: its press now goes on as Sym always does. */
+        Usual,
+        /** Not a press this kept back. */
+        NotMine,
+    }
+
+    /** True from a press that waits until its release. */
+    var waiting = false
+        private set
+    private var opened = false
+    private var closing = false
+
+    /** A Sym down: its [repeat] count, whether the switcher is open, and whether a new press may wait (two or more on). */
+    fun press(repeat: Int, switcherOpen: Boolean, mayWait: () -> Boolean): Press = when {
+        // The held Sym that opened the switcher, or the press that closes it, still repeating.
+        repeat > 0 && (switcherOpen || waiting || closing) -> Press.Swallow
+        switcherOpen -> {
+            closing = true
+            Press.Close
+        }
+        waiting -> Press.Swallow
+        repeat > 0 || !mayWait() -> Press.Usual
+        else -> {
+            waiting = true
+            opened = false
+            Press.Wait
+        }
+    }
+
+    /** The hold time passed: true if Sym is still down and the switcher opens. */
+    fun held(): Boolean {
+        if (waiting) opened = true
+        return waiting
+    }
+
+    /** Sym let go. */
+    fun release(): Release = when {
+        closing -> {
+            reset()
+            Release.Kept
+        }
+        !waiting -> Release.NotMine
+        else -> {
+            val kept = opened
+            reset()
+            if (kept) Release.Kept else Release.Usual
+        }
+    }
+
+    /** A new field: nothing is held back any more. */
+    fun reset() {
+        waiting = false
+        opened = false
+        closing = false
+    }
+}

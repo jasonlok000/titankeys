@@ -52,4 +52,5 @@
     <string name="im_yue_yale" translatable="false">耶魯拼音</string>
     <string name="im_yue_jyutping" translatable="false">粵拼</string>
     <string name="im_zh_pinyin" translatable="false">漢語拼音</string>
+    <string name="im_ja" translatable="false">日本語</string>
 </resources>

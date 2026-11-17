@@ -53,6 +53,7 @@ fun main(args: Array<String>) {
     hebrewRightToLeft()
     aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
+    symWorksAfterTheSwitcher()
     androidsListFollowsTheOnes()
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
@@ -274,6 +275,42 @@ private fun androidsListFollowsTheOnes() {
 }
 
 /** A held Sym opens the overlay in any field with two or more input methods on; each reason it doesn't is said. */
+/**
+ * The phone run's bug: after the switcher, the next Sym did nothing. A held Sym opens it, Android repeats the key while it's
+ * held, it's let go, then Sym is pressed again: that press must wait for a hold as any first one does.
+ */
+private fun symWorksAfterTheSwitcher() {
+    val sym = SymPress()
+    var open = false
+    same("Sym down waits for a hold", sym.press(0, open) { true }, SymPress.Press.Wait)
+    same("its repeats before the hold time", sym.press(1, open) { true }, SymPress.Press.Swallow)
+    check("the hold opens the switcher", sym.held())
+    open = true
+    for (repeat in 2..20) same("its repeat $repeat with the switcher open", sym.press(repeat, open) { true }, SymPress.Press.Swallow)
+    same("its release keeps the switcher", sym.release(), SymPress.Release.Kept)
+    check("nothing waits after the release", !sym.waiting)
+    // A pick closes the switcher; then Sym again.
+    open = false
+    same("the next Sym waits again", sym.press(0, open) { true }, SymPress.Press.Wait)
+    same("let go soon, it's Sym as usual", sym.release(), SymPress.Release.Usual)
+    same("and the one after too", sym.press(0, open) { true }, SymPress.Press.Wait)
+    check("held, it opens the switcher", sym.held())
+    open = true
+    same("released, the switcher stays", sym.release(), SymPress.Release.Kept)
+    same("Sym with the switcher open closes it", sym.press(0, open) { true }, SymPress.Press.Close)
+    open = false
+    same("that press's repeats", sym.press(1, open) { true }, SymPress.Press.Swallow)
+    same("its release", sym.release(), SymPress.Release.Kept)
+    same("then Sym waits again", sym.press(0, open) { true }, SymPress.Press.Wait)
+    sym.release()
+    same("with one on, Sym is Sym", sym.press(0, open) { false }, SymPress.Press.Usual)
+    same("its release isn't the switcher's", sym.release(), SymPress.Release.NotMine)
+    same("a held Sym with one on repeats as usual", sym.press(3, open) { false }, SymPress.Press.Usual)
+    sym.press(0, open) { true }
+    sym.reset()
+    same("a new field forgets a waiting press", sym.release(), SymPress.Release.NotMine)
+}
+
 private fun aHeldSymWaits() {
     fun why(on: Int = 3, english: Boolean = false, panel: Boolean = false, alt: Boolean = false, guide: Boolean = false,
             exact: Boolean = false, waiting: Int = 0) = SymHold.whyNot(on, english, panel, alt, guide, exact, waiting)

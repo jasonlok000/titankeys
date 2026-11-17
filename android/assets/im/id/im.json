@@ -12,7 +12,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -22,17 +22,17 @@
     "words": "main_id__experimental.combined"
   },
   "starters": [
-    "yang",
-    "dan",
-    "di",
-    "dengan",
-    "ini",
-    "dari",
-    "untuk",
-    "pada",
+    "namun",
+    "selain",
+    "ia",
+    "kami",
+    "dia",
     "dalam",
-    "tidak",
-    "itu",
-    "adalah"
+    "di",
+    "hal",
+    "sementara",
+    "saya",
+    "dengan",
+    "pada"
   ]
 }

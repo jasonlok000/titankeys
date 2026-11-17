@@ -62,7 +62,11 @@ test("every key in typing_settings is a setting both resets clear, or something 
   expect(settings.filter(key => data.includes(key))).toEqual([]);
   for (const key of [...settings, ...data]) expect({ key, used: keys.includes(key) }).toEqual({ key, used: true });
   // Reset most things removes only the settings; the full wipe deletes the whole file.
-  expect(reset).toContain("(TYPING_SETTINGS + fixes).forEach { remove(it) }");
+  expect(reset).toContain("(TYPING_SETTINGS + fixes + languages).forEach { remove(it) }");
+  // Each language's own values ("autocorrect@fr") go with the setting they belong to.
+  expect(reset).toContain("TypingSettings.PER_LANGUAGE.any { key.startsWith(\"$it@\") }");
+  const perLanguage = read("android/kotlin/com/titankeys/engine/TypingSettings.java").match(/PER_LANGUAGE = \{([^}]*)\}/)![1];
+  for (const [, key] of perLanguage.matchAll(/"([a-z_]+)"/g)) expect({ key, reset: settings.includes(key) }).toEqual({ key, reset: true });
   expect(fresh).toMatch(/val WIPED = setOf\(\s*SettingsReset\.TYPING, SettingsReset\.HAPTICS, "fixed_scale"/);
   // The full wipe resets every setting the way Reset most things does, first.
   expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt"))

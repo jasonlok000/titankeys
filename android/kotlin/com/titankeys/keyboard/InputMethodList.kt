@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.InputMethodSubtype
+import com.titankeys.engine.TypingSettings
 import java.util.Locale
 
 /**
@@ -34,11 +35,11 @@ internal object InputMethodList {
         }.onFailure { Log.w(TAG, "Input method $id didn't load", it) }.getOrNull()
     }
 
-    /** [method]'s next-word table (pairs.txt, or pairs-<variant>.txt), or null where it has none. Off the main thread. */
+    /** [method]'s next-word table (pairs.bin, or pairs-<variant>.bin), or null where it has none. Off the main thread. */
     fun nextWords(context: Context, method: InputMethod, variant: String?): NextWords? {
-        val file = if (variant != null && method.variants.any { it.id == variant }) "pairs-$variant.txt" else "pairs.txt"
+        val file = if (variant != null && method.variants.any { it.id == variant }) "pairs-$variant.bin" else "pairs.bin"
         return runCatching {
-            context.assets.open("$FOLDER/${method.id}/$file").bufferedReader().useLines { NextWords.read(it) }
+            context.assets.open("$FOLDER/${method.id}/$file").use { NextWords.readBinary(it) }
         }.getOrNull()
     }
 
@@ -81,6 +82,15 @@ internal object InputMethodList {
         val info = own(context) ?: return null
         context.getSystemService(InputMethodManager::class.java).getEnabledInputMethodSubtypeList(info, false).mapNotNull(::idOf)
     }.getOrNull()
+
+    /**
+     * The Rime schemas of the input methods that are on (Settings > Languages), `"engine": { "rime": "<schema>" }`: what
+     * Rime's data copy keeps (RimeAssets.schemasOn; docs/studies/3.0-storage.md).
+     */
+    fun rimeSchemasOn(context: Context): Set<String> = index(context).on(TypingSettings.inputMethods(context))
+        .filter { it.engine == com.titankeys.rime.RimeEngine.ENGINE }
+        .mapNotNull { entry -> load(context, entry.id)?.engineArg }
+        .toSet()
 
     /** TitanKeys' own id in Android's keyboard list. */
     fun ownId(context: Context): String? = own(context)?.id

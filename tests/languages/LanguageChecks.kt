@@ -36,6 +36,7 @@ private val RUSSIAN_KEYS = mapOf(
 
 fun main(args: Array<String>) {
     theFileReads()
+    howToReads()
     badFilesSayWhy()
     keysTypeTheirLetters()
     accentsKeepTheirOrderAndCase()
@@ -45,9 +46,11 @@ fun main(args: Array<String>) {
     aTapPicksTheTileUnderIt()
     languagesGroupTheirInputMethods()
     theAccentsSitOverTheHeldKey()
+    englishTypingRows()
     wordsCompleteIgnoringAccents()
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
+    keysWaitForALoadingEngine()
     aRestoredInputMethodTypes()
     thaiHoldsAndBreaks()
     hindiRulesType()
@@ -63,13 +66,26 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
+    if (args.isNotEmpty()) nextWordsCost(File(args[0]))
+    if (args.isNotEmpty()) completionsMatchTheFold(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
+    if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
+    if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
     }
     println("languages: all passed")
+}
+
+/** An input method's how-to: an optional list of lines in its im.json and the index. */
+private fun howToReads() {
+    val method = InputMethod.parse(SPANISH.trimEnd().removeSuffix("}") + ""","howTo":["Hold a letter for its accents.","Shift gives the capital one."]}""")
+    same("an im.json's how-to", method.howTo, listOf("Hold a letter for its accents.", "Shift gives the capital one."))
+    same("none: empty", InputMethod.parse(SPANISH).howTo, emptyList<String>())
+    val index = InputMethodIndex.parse("""[{"id":"es","name":"Español","nameEnglish":"Spanish","label":"ES","locale":"es","script":"Latn","howTo":["Hold N for ñ."]}]""")
+    same("the index carries it", index["es"]?.howTo, listOf("Hold N for ñ."))
 }
 
 private fun theFileReads() {
@@ -120,6 +136,12 @@ private fun accentsKeepTheirOrderAndCase() {
     same("a key with nothing held", de.accentsOf('q', false), emptyList<String>())
     check("German has accents", de.hasAccents)
     check("English has none", !InputMethod.ENGLISH.hasAccents)
+    // A held letter with no accents types once in an input method with accents (owner, 2026-11-17): Spanish's W holds nothing,
+    // so TitanKeysIme.accentlessRepeat takes its repeats, while N still opens its accents.
+    val es = InputMethod.parse(SPANISH)
+    check("Spanish has accents", es.hasAccents)
+    same("Spanish w holds nothing", es.accentsOf('w', false), emptyList<String>())
+    same("Spanish n holds ñ", es.accentsOf('n', false), listOf("ñ"))
     same("a letter with a combining mark stays one", InputMethod.graphemes("éa"), listOf("é", "a"))
 }
 
@@ -249,6 +271,13 @@ private fun languagesGroupTheirInputMethods() {
     same("one Chinese on: the language's mark", SwitchOverlay.markLabel(zh.on("en,yue-yale,es"), "yue-yale", "耶"), "ZH")
     same("two Chinese on: the input method's", SwitchOverlay.markLabel(zh.on("en,yue-yale,zh-pinyin"), "yue-yale", "耶"), "耶")
     same("a language of one input method: the same either way", SwitchOverlay.markLabel(zh.on("en,es"), "es", "ES"), "ES")
+    fun serbian(id: String, label: String, script: String) = """{"id":"$id","name":"$id","nameEnglish":"$id","label":"$label",""" +
+        """"locale":"sr","script":"$script","language":{"id":"sr","name":"Српски","nameEnglish":"Serbian","label":"СР",""" +
+        """"script":"Cyrl","experimental":true}}"""
+    val serbianIndex = InputMethodIndex.parse("[" + serbian("sr", "СР", "Cyrl") + "," + serbian("sr-latn", "SR", "Latn") + "]")
+    same("Serbian in Latin letters alone: its own SR, not the language's Cyrillic СР",
+        SwitchOverlay.markLabel(serbianIndex.on("en,sr-latn"), "sr-latn", "SR"), "SR")
+    same("Serbian in Cyrillic alone: the language's СР", SwitchOverlay.markLabel(serbianIndex.on("en,sr"), "sr", "СР"), "СР")
     val serbianOnly = index.languagesOn("sr,sr-latn")
     same("one language with two: straight to its row", SwitchOverlay.opening(serbianOnly), serbianOnly[0])
     same("an index without languages: each its own", InputMethodIndex.parse(SPANISH_INDEX).languages.map { it.id }, listOf("en", "es"))
@@ -259,9 +288,16 @@ private const val SPANISH_INDEX = """[{"id":"es","name":"Español","nameEnglish"
 private fun theAccentsSitOverTheHeldKey() {
     same("one accent over E", Picker.accentColumns(1, Picker.anyColumn("E")), listOf(2))
     same("two over U", Picker.accentColumns(2, Picker.anyColumn("U")), listOf(6, 7))
-    same("four over A move in from the edge", Picker.accentColumns(4, Picker.anyColumn("A")), listOf(0, 1, 2, 3))
-    same("four over P move in from the edge", Picker.accentColumns(4, Picker.anyColumn("P")), listOf(6, 7, 8, 9))
-    same("more than ten are cut", Picker.accentColumns(14, 3).size, 10)
+    // Never over Q's or P's column: W to O, the switcher's range (owner, 2026-11-17).
+    same("four over A move in to W", Picker.accentColumns(4, Picker.anyColumn("A")), listOf(1, 2, 3, 4))
+    same("four over P move in to end at O", Picker.accentColumns(4, Picker.anyColumn("P")), listOf(5, 6, 7, 8))
+    same("one over Q sits over W", Picker.accentColumns(1, Picker.anyColumn("Q")), listOf(1))
+    same("three over Q start at W", Picker.accentColumns(3, Picker.anyColumn("Q")), listOf(1, 2, 3))
+    same("one over P sits over O", Picker.accentColumns(1, Picker.anyColumn("P")), listOf(8))
+    same("three over P end at O", Picker.accentColumns(3, Picker.anyColumn("P")), listOf(6, 7, 8))
+    same("eight fill W to O", Picker.accentColumns(8, Picker.anyColumn("G")), (1..8).toList())
+    same("eight over Q still fill W to O", Picker.accentColumns(8, Picker.anyColumn("Q")), (1..8).toList())
+    same("more than eight are cut to eight", Picker.accentColumns(14, 3), (1..8).toList())
     val columns = Picker.accentColumns(2, Picker.anyColumn("U"))
     same("U picks the first, over itself", Picker.choice("U", columns), 0)
     same("I picks the second", Picker.choice("I", columns), 1)
@@ -448,6 +484,15 @@ private fun hindiRulesType() {
     for (c in "agar") engine.key(c)
     same("the word on the bar keeps its virama until Space", engine.code(), "अगर्")
     same("Space writes it without, and the space", engine.space().commit, "अगर ")
+    // The bar shows what Space types first (#98): the word as Space writes it, then the list's.
+    val hiWords = java.util.Locale.forLanguageTag("hi")
+    val listed = RulesComposer(rules, WordList.read(sequenceOf(" word=नमस्ते,f=200", " word=अगरबत्ती,f=100"), hiWords))
+    same("The row starts with the word as Space writes it", "agar".map { listed.key(it) }.last().choices.first(), "अगर")
+    same("Picking it writes it as Space does", listed.pick(0).commit, "अगर ")
+    // A slipped key: the word one slip away, on the bar only. Space writes what was typed.
+    val slipped = "namastr".map { listed.key(it) }.last().choices
+    same("A neighbouring key's word is offered after the word as typed", slipped.drop(1), listOf("नमस्ते"))
+    same("Space writes what was typed", listed.space().commit, rules.spell("namastr "))
     for (c in "namastee") engine.key(c)
     same("Backspace takes the last key off", engine.backspace().code, "नमस्ते")
     same("a mark no rule takes ends the word", engine.key('!').commit, "नमस्ते")
@@ -654,8 +699,16 @@ private fun telexMarksAndTones() {
     same("The tone key marks the code", engine.key('s').code, "tiếng")
     same("Backspace takes the last key off", engine.backspace().code, "tiêng")
     engine.reset()
-    same("Unmarked code offers the marked word", "tieng".map { engine.key(it) }.last().choices, listOf("tiếng"))
-    same("Picking writes it with a space", engine.pick(0).commit, "tiếng ")
+    // The bar shows what Space types first (#98): the word as typed, then the list's.
+    same("Unmarked code offers the marked word, after the word as typed", "tieng".map { engine.key(it) }.last().choices,
+        listOf("tieng", "tiếng"))
+    same("Picking writes it with a space", engine.pick(1).commit, "tiếng ")
+    "tieng".forEach { engine.key(it) }
+    same("Picking the first writes the word as typed, as Space does", engine.pick(0).commit, "tieng ")
+    // A slipped key: the word one slip away, on the bar only. Space writes what was typed.
+    val slips = TelexComposer(WordList.read(sequenceOf(" word=xin,f=200"), vi))
+    same("A neighbouring key's word is offered after the word as typed", "xon".map { slips.key(it) }.last().choices, listOf("xon", "xin"))
+    same("Space writes what was typed", slips.space().commit, "xon")
     // The bigger menu, opened with a swipe up: the word list's words past the bar's eight, and a pick from any of them.
     val many = TelexComposer(WordList.read(("bcdgklmnp".flatMap { c -> "aeiou".map { v -> "ta$c$v" } }).asSequence()
         .mapIndexed { i, w -> " word=$w,f=${1000 - i}" }, vi))
@@ -799,24 +852,159 @@ private fun collect() = repeat(4) {
 private fun usedMb(): Long = Runtime.getRuntime().let { (it.totalMemory() - it.freeMemory()) / 1_048_576 }
 
 /**
+ * WordList stores each word's folded length, so complete() ranks without folding the words again (2026-11-17): the same answers
+ * as the way before, which folded every match inside its sort, for every 1 to 4 letter start of the commonest 3,000 words,
+ * lower case and capitalised, in several scripts. Prints how long a completion takes.
+ */
+private fun completionsMatchTheFold(folder: File) {
+    for (id in listOf("ka", "ko", "ru", "de", "vi", "hi")) {
+        val dir = File(folder, id)
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        val file = File(dir, method.words ?: continue)
+        val locale = method.javaLocale
+        val lines = file.readLines()
+        val list = WordList.read(lines.asSequence(), locale)
+        // The way before, step for step: matches in folded order, at most 20,000, ranked by folding each one again.
+        val words = ArrayList<String>()
+        val counts = ArrayList<Int>()
+        for (line in lines) {
+            if (!line.startsWith(" word=")) continue
+            val fields = line.trim().split(',')
+            val word = fields.firstOrNull { it.startsWith("word=") }?.removePrefix("word=") ?: continue
+            if (word.isEmpty() || fields.any { it == "not_a_word=true" }) continue
+            words += word
+            counts += fields.firstOrNull { it.startsWith("f=") }?.removePrefix("f=")?.toIntOrNull() ?: 0
+        }
+        val folded = words.map { WordList.fold(it, locale) }
+        val order = folded.indices.sortedBy { folded[it] }
+        val sortedFolds = order.map { folded[it] }
+        fun before(prefix: String): List<String> {
+            val key = WordList.fold(prefix, locale)
+            var low = 0
+            var high = sortedFolds.size
+            while (low < high) { val mid = (low + high) ushr 1; if (sortedFolds[mid] < key) low = mid + 1 else high = mid }
+            val found = ArrayList<Int>()
+            while (low < sortedFolds.size && sortedFolds[low].startsWith(key) && found.size < 20_000) found += order[low++]
+            val ranked = found.sortedWith(compareBy<Int>({ WordList.fold(words[it], locale).length != key.length }, { -counts[it] }))
+            val picked = LinkedHashSet<String>()
+            for (i in ranked) {
+                if (picked.size >= 3) break
+                val w = words[i]
+                picked += when {
+                    prefix.length > 1 && prefix.all { !it.isLetter() || it.isUpperCase() } -> w.uppercase(locale)
+                    prefix.first().isUpperCase() -> w.replaceFirstChar { it.titlecase(locale) }
+                    else -> w
+                }
+            }
+            return picked.toList()
+        }
+        val prefixes = words.take(3000).flatMap { w -> (1..minOf(4, w.length)).map { w.take(it) } }.distinct()
+            .flatMap { listOf(it, it.replaceFirstChar { c -> c.titlecase(locale) }) }.distinct()
+        val differ = prefixes.count { list.complete(it) != before(it) }
+        check("$id: completions are the same as before", differ == 0) { "$differ of ${prefixes.size} differ" }
+        fun micros(starts: List<String>, f: (String) -> List<String>): Double {
+            repeat(2) { starts.forEach { f(it) } }
+            val started = System.nanoTime()
+            repeat(3) { starts.forEach { f(it) } }
+            return (System.nanoTime() - started) / 1000.0 / (3 * starts.size)
+        }
+        val one = prefixes.filter { it.length == 1 }
+        println("completions: $id: ${prefixes.size} prefixes, $differ differ; ${"%.0f".format(micros(prefixes) { list.complete(it) })} us each " +
+            "(before ${"%.0f".format(micros(prefixes, ::before))}), one letter ${"%.0f".format(micros(one) { list.complete(it) })} us " +
+            "(before ${"%.0f".format(micros(one, ::before))})")
+    }
+}
+
+private fun usedBytes(): Long = Runtime.getRuntime().let { it.totalMemory() - it.freeMemory() }
+
+/**
+ * What one input method's word list and next-word table take on the heap, each read by the app's own reader, and how long each
+ * load takes (the first load, then a second once the JIT has warmed up). The budget: 40 MB for both, 300 ms for the table.
+ */
+private fun nextWordsCost(folder: File) {
+    for (id in listOf("ka", "ko", "sr", "el", "ru")) {
+        val dir = File(folder, id)
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        val listFile = File(dir, method.words ?: continue)
+        val tableFile = File(dir, "pairs.bin")
+        if (!tableFile.isFile) continue
+        // The table alone first, on a collected heap, then the list beside it.
+        collect()
+        val base = usedBytes()
+        var started = System.nanoTime()
+        var table: NextWords? = tableFile.inputStream().use { NextWords.readBinary(it) }
+        val firstMillis = (System.nanoTime() - started) / 1_000_000
+        collect()
+        val withTable = usedBytes()
+        started = System.nanoTime()
+        val again = tableFile.inputStream().use { NextWords.readBinary(it) }
+        val secondMillis = (System.nanoTime() - started) / 1_000_000
+        started = System.nanoTime()
+        var list: WordList? = WordList.read(listFile.useLines { it.toList() }.asSequence(), method.javaLocale)
+        val listMillis = (System.nanoTime() - started) / 1_000_000
+        collect()
+        val withBoth = usedBytes() - again.bytes
+        val tableMb = (withTable - base) / 1_048_576.0
+        val listMb = (withBoth - withTable) / 1_048_576.0
+        println("next words: $id: table ${"%.1f".format(tableFile.length() / 1e6)} MB as a file, ${table!!.size} first words, " +
+            "arrays ${"%.1f".format(table.bytes / 1_048_576.0)} MB; heap: table ${"%.1f".format(tableMb)} MB " +
+            "(${firstMillis} ms first, ${secondMillis} ms again), list ${"%.1f".format(listMb)} MB (${listMillis} ms); " +
+            "together ${"%.1f".format(listMb + tableMb)} MB")
+        check("$id: list and table under 40 MB of heap", listMb + tableMb <= 40) { "%.1f MB".format(listMb + tableMb) }
+        check("$id: the table loads in under 300 ms", secondMillis <= 300) { "$secondMillis ms" }
+        check("$id: a reload reads the same table", again.size == table.size)
+        list = null
+        table = null
+        if (list == null && table == null) collect()
+    }    // English's own table, read by its own reader (PairCounts), for comparison: it isn't one of these, and loads with the engine.
+    val english = File(folder.parentFile, "autocorrect/en_pairs.bin")
+    if (english.isFile) {
+        collect()
+        val base = usedBytes()
+        var started = System.nanoTime()
+        var pairs: com.titankeys.autocorrect.PairCounts? = english.inputStream().use { com.titankeys.autocorrect.PairCounts.readBinary(it) }
+        val firstMillis = (System.nanoTime() - started) / 1_000_000
+        collect()
+        val heap = (usedBytes() - base) / 1_048_576.0
+        started = System.nanoTime()
+        val again = english.inputStream().use { com.titankeys.autocorrect.PairCounts.readBinary(it) }
+        val secondMillis = (System.nanoTime() - started) / 1_000_000
+        println("next words: en (PairCounts): ${"%.1f".format(english.length() / 1e6)} MB as a file, ${pairs!!.size} pairs, " +
+            "arrays ${"%.1f".format(pairs.bytes / 1_048_576.0)} MB; heap ${"%.1f".format(heap)} MB (${firstMillis} ms first, ${secondMillis} ms again)")
+        check("en: its pairs load in under 300 ms", secondMillis <= 300) { "$secondMillis ms" }
+        same("en: a known pair's count", pairs.count("of", "the") > 0, true)
+        check("en: a reload reads the same pairs", again.size == pairs.size)
+        pairs = null
+        if (pairs == null) collect()
+    }
+}
+
+/**
  * The phone's OutOfMemoryError after 18 switches (2026-11-17): 30 switches through the input methods with word lists, loaded
  * as the keyboard loads them ([WordListSlot]), must keep one list at most, and the heap must not grow with them.
  */
 private fun switchingKeepsOneList(folder: File) {
     val methods = folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }.mapNotNull { dir ->
         runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull()
-            ?.takeIf { it.words != null && it.engine == null }?.let { it to File(dir, it.words!!) }
+            ?.takeIf { it.words != null && it.engine == null }?.let { Triple(it, File(dir, it.words!!), File(dir, "pairs.bin")) }
     }
     check("enough input methods with word lists for 30 switches", methods.size >= 15) { "${methods.size}" }
+    check("most of them have next-word tables", methods.count { it.third.isFile } >= 15)
     val slot = WordListSlot()
+    // The table follows Languages.use: dropped as a switch to another input method begins, never loaded for a switch that a
+    // later one overtook before its turn, and kept only when its load is the latest switch's.
+    var table: NextWords? = null
     collect()
     val before = usedMb()
     var most = 0
+    var mostTables = 0
+    var peak = 0L
     var after5 = 0L
     repeat(30) { switch ->
-        val (method, file) = methods[switch % methods.size]
+        val (method, file, pairs) = methods[switch % methods.size]
         val ticket = slot.begin(method.id)
-        // A switch that a later one overtakes is dropped as its list arrives.
+        table = null
+        // A switch that a later one overtakes is dropped as its list arrives; its table is never read.
         if (switch % 7 == 3) {
             val overtaken = WordList.read(file.useLines { it.toList() }.asSequence(), method.javaLocale)
             val next = methods[(switch + 1) % methods.size].first
@@ -826,19 +1014,26 @@ private fun switchingKeepsOneList(folder: File) {
             slot.begin(method.id)
         }
         val list = WordList.read(file.useLines { it.toList() }.asSequence(), method.javaLocale)
-        slot.done(slot.begin(method.id), list)
+        val loaded = if (pairs.isFile) pairs.inputStream().use { NextWords.readBinary(it) } else null
+        peak = maxOf(peak, usedMb())
+        if (slot.done(slot.begin(method.id), list)) table = loaded
         collect()
         most = maxOf(most, WordList.alive().size)
+        mostTables = maxOf(mostTables, NextWords.alive().size)
+        peak = maxOf(peak, usedMb())
         if (switch == 4) after5 = usedMb()
     }
     val after30 = usedMb()
-    println("switching: 30 switches through ${methods.size} input methods, at most $most word list(s) held, heap ${before} MB before, " +
-        "$after5 MB after 5, $after30 MB after 30")
+    println("switching: 30 switches through ${methods.size} input methods, at most $most word list(s) and $mostTables table(s) held, " +
+        "heap ${before} MB before, $after5 MB after 5, $after30 MB after 30, peak $peak MB")
     check("one word list at most in memory after each switch", most <= 1) { "$most" }
+    check("one next-word table at most in memory after each switch", mostTables <= 1) { "$mostTables" }
     check("the heap doesn't grow with switches", after30 - after5 <= 40) { "$after5 MB after 5, $after30 MB after 30" }
     slot.clear()
+    table = null
     collect()
     same("no word list once the keyboard goes", WordList.alive().size, 0)
+    same("no next-word table once the keyboard goes", NextWords.alive().size + (if (table == null) 0 else 1), 0)
 }
 
 /** The owner, 2026-11-16: "each language should have a list of starting words". Its own, in its own script; never English's. */
@@ -866,13 +1061,113 @@ private fun koreanChoices() {
     check("하 offers 하고", "하고" in initial) { initial.joinToString(" ") }
     check("하 offers words that go on to 한", initial.any { it.startsWith("한") }) { initial.joinToString(" ") }
     korean.reset()
-    same("ㅎ alone offers words with ᄒ", HangulComposer(words).key('g').choices.all { it.startsWith("하") || it.first() in '하'..'힣' }, true)
+    same("ㅎ alone: ㅎ as typed, then words with ᄒ", HangulComposer(words).key('g').choices.let { it.first() == "ㅎ" && it.size > 1 } &&
+        HangulComposer(words).key('g').choices.drop(1).all { it.startsWith("하") || it.first() in '하'..'힣' }, true)
     for (c in "gksr") korean.key(c)
     val after = korean.key('n')
     check("한 written, 구 being built: 한국", after.choices.any { it.startsWith("한국") }) { after.choices.joinToString(" ") }
     val pick = korean.pick(after.choices.indexOfFirst { it.startsWith("한국") })
     check("a pick writes the rest of the word, after 한", pick.commit.startsWith("국") && pick.commit.endsWith(" ")) { pick.commit }
     same("then nothing is being built", korean.code(), "")
+
+    // The whole loop: 안녕하세요 typed jamo by jamo, the field getting each syllable as the next one starts.
+    val loop = HangulComposer(words)
+    val field = StringBuilder()
+    fun type(keys: String) { for (c in keys) loop.key(c).commit.let(field::append) }
+    type("dkssud")
+    same("안 written, 녕 on the bar", field.toString() + "|" + loop.code(), "안|녕")
+    same("Backspace takes 녕's last letter: 녀", loop.backspace().code, "녀")
+    type("dgk")
+    same("녕 again, then 하 being built", field.toString() + "|" + loop.code(), "안녕|하")
+    val row = loop.key('t').choices
+    check("안녕하 + ㅅ offers 안녕하세요", "안녕하세요" in row || loop.choices(0, 40).contains("안녕하세요")) {
+        (row + loop.choices(0, 40)).joinToString(" ")
+    }
+    same("the row's first is the word as typed, what Space writes (#98)", row.firstOrNull(), "안녕핫")
+    val menu = loop.choices(0, 40)
+    check("the bigger menu has more than the row", menu.size >= row.size) { "${menu.size} ${row.size}" }
+    val at = menu.indexOf("안녕하세요")
+    if (at >= 0) {
+        val picked = loop.pickAt(at).commit
+        same("a pick from the menu writes the rest after 안녕", picked, "하세요 ")
+    }
+    // Picking the word as typed writes it as Space does: the syllable being built, then the space.
+    val asTyped = HangulComposer(words)
+    for (c in "gks") asTyped.key(c)
+    same("a pick of the first, the word as typed: 한 and a space", asTyped.pickAt(0).commit, "한 ")
+    // A held letter's symbol: its jamo comes off the syllable, the syllable is written, the symbol goes on as usual.
+    val held = HangulComposer(words)
+    held.key('g'); held.key('k'); held.key('s')
+    same("한 being built", held.code(), "한")
+    held.backspace()
+    val ended = held.key('!')
+    same("the hold's symbol: 하 written first, the symbol goes on", ended.commit + "|" + ended.handled, "하|false")
+}
+
+/**
+ * The first key or touch in an input method other than English (owner, 2026-11-17): while it loads, at a field start or a
+ * switch, keys and touches wait, also with the keyboard hidden, and go on once the load ends. Only the last load counts.
+ */
+private fun keysWaitForALoadingEngine() {
+    val wait = EngineWait()
+    same("nothing loading: keys go on", wait.waiting, false)
+    wait.loading(1, waits = true)
+    same("Yale loading at a field start: keys wait", wait.waiting, true)
+    same("an older load's end lets nothing go", wait.loaded(0), false)
+    same("still waiting", wait.waiting, true)
+    same("its own load's end: the keys go on", wait.loaded(1), true)
+    same("and nothing waits after", wait.waiting, false)
+    wait.loading(2, waits = false)
+    same("English: nothing waits", wait.waiting, false)
+    wait.loading(3, waits = true)
+    wait.loading(4, waits = true)
+    same("a switch overtook the load: its end doesn't count", wait.loaded(3), false)
+    same("the newer one's does", wait.loaded(4), true)
+    wait.loading(5, waits = true)
+    wait.loading(6, waits = false)
+    same("a switch to English overtook it: nothing waits", wait.waiting, false)
+    wait.loading(7, waits = true)
+    wait.stop()
+    same("the keyboard going: nothing waits", wait.waiting, false)
+
+    // By input method: every one but English waits, with an engine or its own letters, so a first key is never English's.
+    for (id in listOf("ru", "el", "yue-yale", "ko", "es")) {
+        wait.loading(10, id)
+        same("$id loading: the first key waits", wait.waiting, true)
+        wait.loaded(10)
+    }
+    wait.loading(11, InputMethod.ENGLISH_ID)
+    same("English loading: nothing waits", wait.waiting, false)
+    // Russian's first key while it loads: it waits behind the stop, and then it's Russian's й, not q.
+    val russian = InputMethod.parse(File("android/assets/im/ru/im.json").readText())
+    same("and after the load, Russian's Q is й", russian.letter('Q', shift = false), "й")
+    // Greek's first key the same: its A is α once loaded, where it would have been English's a.
+    val greek = InputMethod.parse(File("android/assets/im/el/im.json").readText())
+    same("and Greek's A is α", greek.letter('A', shift = false), "α")
+
+    // The queue's stop, keys and touches alike, in the order typed.
+    var made = 0
+    val gate = LoadGate { "stop${++made}" }
+    val queue = ArrayDeque<String>()
+    same("nothing loading: no stop", gate.before(false, queue), false)
+    queue += "a typed before the load"
+    same("the first key while loading puts the stop in", gate.before(true, queue), true)
+    queue += "key n"
+    same("a touch after it doesn't put another", gate.before(true, queue), false)
+    queue += "touch: a tap on g"
+    same("the queue: what came first, the stop, then the key and the touch", queue.toList(),
+        listOf("a typed before the load", "stop1", "key n", "touch: a tap on g"))
+    same("still loading (a field start's new load): the stop stays shut", gate.open(true, queue), null)
+    same("the load ends: the stop opens", gate.open(false, queue), "stop1")
+    same("and only once", gate.open(false, queue), null)
+    queue.clear()
+    gate.before(true, queue)
+    queue.clear()
+    gate.clear()
+    same("the queue emptied at a field start: a new touch puts a new stop in", gate.before(true, queue), true)
+    same("a fresh stop", queue.toList(), listOf("stop3"))
+    queue.clear()
+    same("a stop the queue dropped never opens", gate.open(false, queue), null)
 }
 
 /** The bar's words in another input method, and what it learns from the user. */
@@ -891,8 +1186,8 @@ private fun barWordsAndLearning() {
     same("its next words, commonest first, a count of 0 skipped", table.after("Buenos"), listOf("aires", "días"))
     same("the bar takes them before the starters", BarWords.next("buenos", null, starters, capitals = true, table = table),
         listOf("aires", "días", "de"))
-    same("at a sentence's start too, with capitals", BarWords.next(null, null, starters, capitals = true, table = table),
-        listOf("El", "Hola", "De"))
+    same("at a sentence's start, the starters first, then the table's, with capitals",
+        BarWords.next(null, null, listOf("de"), capitals = true, table = table), listOf("De", "El", "Hola"))
 
     val learning = LanguageLearning()
     learning.kept(null, "hola", known = true)
@@ -957,6 +1252,10 @@ private fun everyInputMethodInTheFolder(folder: File) {
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         theNameShows(method, index[method.id])
+        // The picker shows at most eight accents, W to O: a letter with more would lose some (owner, 2026-11-17).
+        val crowded = method.accents.filterValues { it.size > Picker.ACCENTS }
+        check("${method.id}: no letter has more than ${Picker.ACCENTS} accents", crowded.isEmpty()) { crowded.keys.joinToString(" ") }
+        typingRowsFit(method)
         if (method.keys != null) {
             same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
             val unshifted = ('a'..'z').filter { method.letter(it, true).isNullOrEmpty() }
@@ -1012,11 +1311,127 @@ private fun everyInputMethodInTheFolder(folder: File) {
  * "। " in Hindi, none in Thai, and ". " everywhere else, English included.
  */
 private fun eachLanguageHasItsFullStop(folder: File) {
-    val own = mapOf("zh-pinyin" to "。", "yue-yale" to "。", "yue-jyutping" to "。", "ja" to "。", "hi" to "। ", "th" to "")
+    val own = mapOf("zh-pinyin" to "。", "yue-yale" to "。", "yue-jyutping" to "。", "zh-cangjie" to "。",
+        "zh-quick" to "。", "zh-zhuyin" to "。", "ja" to "。", "hi" to "। ", "th" to "")
     for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
         val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
         val expected = own[method.id] ?: InputMethod.FULL_STOP
         check("${method.id}'s full stop", method.rules.fullStop == expected) { "'${method.rules.fullStop}', expected '$expected'" }
     }
     check("English's full stop", InputMethod.ENGLISH.rules.fullStop == ". ")
+}
+
+/**
+ * The typing settings a language's page shows once a second language is on (owner, 2026-11-17): only the ones that work in it,
+ * from its own rules (LanguageSettings).
+ */
+private fun typingRowsFit(method: InputMethod) {
+    val rows = LanguageSettings.rows(method)
+    val expected = when (method.id) {
+        "fr" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace")
+        // A held letter's symbol goes through the engine as its own mark, so the hold row stays.
+        "zh-pinyin", "yue-yale", "yue-jyutping", "ja" -> listOf("doubleSpace", "hold")
+        "th" -> listOf("fixes", "commaSpace")
+        "ka" -> listOf("fixes", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        "id" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        else -> null
+    }
+    if (expected != null) same("${method.id}: its page's typing settings", rows, expected)
+    check("${method.id}: only English has swiping and shorthand", listOf("swipe", "shorthand").none { it in rows })
+    // Fix typos shows where the language corrects (LanguageCorrections.corrects: a list and no engine), and nowhere else.
+    same("${method.id}: Fix typos where it corrects", "fixes" in rows, method.words != null && method.engine == null)
+    // Hindi's and Vietnamese's engines build the words: their slipped-key choice is only ever a suggestion on the bar, never put in
+    // by Space, so it isn't under Fix typos, and their pages don't show it (D, 2026-11-17).
+    if (method.id == "hi" || method.id == "vi") check("${method.id}: no Fix typos row", "fixes" !in rows)
+    check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
+    check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
+}
+
+private fun englishTypingRows() {
+    same("English: every typing setting on its page", LanguageSettings.rows(InputMethod.ENGLISH),
+        listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand"))
+    same("English's Double Space types a full stop", LanguageSettings.stop(InputMethod.ENGLISH), ".")
+}
+
+/**
+ * Thai, Hebrew and Hindi on the bar (the Orchestrator, 2026-11-17). Thai has no spaces between words, so its next words and
+ * learning read a phrase's words with the keyboard's own split, the one tools/im/next_words.py counted the table with.
+ * Hebrew and Hindi look up their next words by the word before, Hindi's vowel signs and all.
+ */
+private fun thaiHebrewAndHindiNextWords(folder: File) {
+    fun list(id: String) = WordList.read(File(folder, "$id/words.combined").useLines { it.toList() }.asSequence(),
+        java.util.Locale.forLanguageTag(id))
+    fun table(id: String) = File(folder, "$id/pairs.bin").inputStream().use { NextWords.readBinary(it) }
+    val thai = list("th")
+    val isWord = { piece: String -> WordBreak.word(piece, thai::has) }
+    same("Thai: ก is in the list, but one letter is never a word", isWord("ก"), false)
+    same("a phrase's words: ฉัน ไป โรงเรียน", WordBreak.words("ฉันไปโรงเรียน", isWord), listOf("ฉัน", "ไป", "โรงเรียน"))
+    same("the word a next word follows is the phrase's last", WordBreak.lastWord("ฉันไปโรงเรียน", isWord), "โรงเรียน")
+    val th = table("th")
+    check("and the table has words after it", th.after("โรงเรียน").isNotEmpty()) { th.after("โรงเรียน").joinToString(" ") }
+    check("no single letter starts a Thai sentence in the table", th.after(null).none { it.length == 1 }) {
+        th.after(null).joinToString(" ")
+    }
+    // Learning a kept phrase: each word after the one before it, never the phrase as one word.
+    val learning = LanguageLearning()
+    var before: String? = null
+    var paired = true
+    for (piece in WordBreak.words("ฉันไปโรงเรียน", isWord)) {
+        if (piece != null) learning.kept(before, piece, known = true, paired = paired)
+        before = piece
+        paired = piece != null
+    }
+    same("Thai learns ไป after ฉัน", learning.next("ฉัน"), listOf("ไป"))
+    same("and โรงเรียน after ไป", learning.next("ไป"), listOf("โรงเรียน"))
+    same("the phrase started with ฉัน", learning.sentenceStarts(), listOf("ฉัน"))
+    same("the phrase isn't a word", learning.knows("ฉันไปโรงเรียน"), false)
+    val alone = LanguageLearning()
+    alone.kept(null, "ไป", known = true, paired = false)
+    same("a word after a stray letter is known, but starts no sentence", alone.knows("ไป") to alone.sentenceStarts(),
+        true to emptyList<String>())
+
+    // Hebrew: next words by the word before, in its own letters; the bar's best word in the middle, the second on the right.
+    check("Hebrew: words follow את", table("he").after("את").isNotEmpty())
+    same("Hebrew's bar: third, best, second from left to right", BarOrder.of(true), listOf(2, 0, 1))
+    same("a drag to the right goes back in Hebrew text", RightToLeft.forward(1, rightToLeft = true), false)
+    // Hindi: the word before keeps its vowel signs and nasal mark (में), as the table does.
+    val hi = table("hi")
+    check("Hindi: words follow कि", hi.after("कि").isNotEmpty())
+    check("and में, with its vowel sign and bindu", hi.after("में").isNotEmpty()) { hi.after("में").joinToString(" ") }
+}
+
+/**
+ * The Cyrillic layouts' held letters (the Orchestrator, 2026-11-17): every letter of the alphabet can be typed, from a key or
+ * a hold, none twice, and each key's held letters come commonest first, by the input method's own word list.
+ */
+private fun cyrillicHoldsReachEveryLetter(folder: File) {
+    val alphabets = mapOf(
+        "ru" to "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "uk" to "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя",
+        "be" to "абвгдеёжзійклмнопрстуўфхцчшыьэюя", "bg" to "абвгдежзийклмнопрстуфхцчшщъьюя",
+        "mk" to "абвгдѓежзѕијклљмнњопрстќуфхцчџш", "sr" to "абвгдђежзијклљмнњопрстћуфхцчџш",
+        "kk" to "аәбвгғдеёжзийкқлмнңоөпрстуұүфхһцчшщъыіьэюя")
+    for ((id, alphabet) in alphabets) {
+        val method = InputMethod.parse(File(folder, "$id/im.json").readText())
+        val typed = ('a'..'z').mapNotNull { method.letter(it, shift = false) } + method.accents.values.flatten()
+        val missing = alphabet.filter { letter -> typed.none { it == letter.toString() } }
+        check("$id: every letter can be typed", missing.isEmpty()) { "missing $missing" }
+        val twice = typed.groupBy { it }.filter { it.value.size > 1 }.keys
+        check("$id: no letter in two places", twice.isEmpty()) { "twice $twice" }
+        // Each letter's weight in the list: its words' frequencies, a step of 25 in f being a factor of e, as make.py ranks.
+        val weight = HashMap<Char, Double>()
+        File(folder, "$id/words.combined").useLines { lines ->
+            lines.filter { it.startsWith(" word=") }.take(50_000).forEach { line ->
+                val fields = line.trim().split(",")
+                val f = fields.getOrNull(1)?.removePrefix("f=")?.toIntOrNull() ?: 0
+                for (c in fields[0].removePrefix("word=").lowercase()) weight.merge(c, Math.exp(f / 25.0), Double::plus)
+            }
+        }
+        for ((key, held) in method.accents) {
+            // The letters commonest first; a mark held with them (Ukrainian's and Belarusian's apostrophe) after them.
+            val order = held.sortedWith(compareBy<String>({ !it[0].isLetter() }, { -(weight[it[0]] ?: 0.0) }))
+            check("$id: ${key.uppercaseChar()}'s held letters commonest first", held == order) { "$held, by use $order" }
+        }
+        // The apostrophe is part of Ukrainian's and Belarusian's words (сім'я, з'ява), next to х on their PC layouts: held on P.
+        if (id == "uk" || id == "be") same("$id: P holds the apostrophe, after its letters", method.accents['p']?.last(), "'")
+    }
 }

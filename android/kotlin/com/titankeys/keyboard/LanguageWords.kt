@@ -5,14 +5,22 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The words the bar and Composer use: English's own while English is the input method, and the current input method's word
- * list otherwise. Other input methods have no swiping, no next word and learn nothing into English's words: they only complete
- * the word being typed from their list (docs/languages.md, "Accents and the picker on the bar").
+ * list otherwise. Other input methods have no swiping, no next word and learn nothing into English's words: they complete the
+ * word being typed from their list (docs/languages.md, "Accents and the picker on the bar"), and those with a list offer the
+ * likeliest word for a slip, which Space puts in only when sure (LanguageCorrections).
  */
 class LanguageWords(private val english: Words, private val current: () -> WordList?) : Words {
     /** True while another input method than English is typing, with or without a word list. */
     var other = false
     /** True while it writes no spaces between words (Thai): the word being typed is found in its list ([WordBreak]). */
     var wordBreak = false
+    /** Whether an apostrophe can be part of a word, as in French's l'eau: the input method's rule. */
+    var apostrophes = true
+    /**
+     * The likeliest word for a slip typed in another input method, given the word and the text before it, or null: it shows
+     * beside the completions, even where Space won't put it in (LanguageCorrections).
+     */
+    var suggest: (String, String) -> String? = { _, _ -> null }
     /** The current input method's starters ([InputMethod.starters], in Simplified for that Chinese variant). */
     var starters: List<String> = emptyList()
     /** Whether a sentence start takes a capital in the current input method. */
@@ -50,18 +58,32 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         // empty"). The field's own rules still keep the bar empty in passwords and the other fields without words.
         if (prefix.isEmpty()) {
             val start = com.titankeys.engine.SwipeTyping.startsSentence(before)
-            val previous = if (start) null else lastWord(before.trimEnd()).takeIf { it.isNotEmpty() }
+            val previous = if (start) null else previousWord(before.trimEnd())
             result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, rules))
             return
         }
-        result(BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), rules))
+        val completions = BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), rules)
+        // A word no completion explains may be a slip: its likeliest word goes first among the others (LanguageCorrections).
+        val slip = if (completions.any { it.equals(prefix, ignoreCase = true) }) null
+            else suggest(prefix, before.dropLast(prefix.length))?.takeIf(::usable)
+        result((listOfNotNull(slip) + completions).distinctBy { it.lowercase() })
     }
 
     override fun prefix(before: String): String {
         if (!other) return english.prefix(before)
-        val run = lastWord(before)
+        val run = lastWord(before, apostrophes)
         val list = list()
-        return if (wordBreak && list != null) WordBreak.last(run, list::has, list::hasPrefix) else run
+        return if (wordBreak && list != null) WordBreak.last(run, { WordBreak.word(it, list::has) }, list::hasPrefix) else run
+    }
+
+    /**
+     * The word a word that just ended follows, for its next words: the last run of letters, or in Thai, which has no spaces
+     * between words, that run's last word ([WordBreak.lastWord]); null where there's none.
+     */
+    fun previousWord(before: String): String? {
+        val run = lastWord(before, apostrophes).takeIf { it.isNotEmpty() } ?: return null
+        val list = list()
+        return if (wordBreak && list != null) WordBreak.lastWord(run, { WordBreak.word(it, list::has) }) else run
     }
 
     override fun prepare(text: String, cancelled: AtomicBoolean) { if (!other) english.prepare(text, cancelled) }
@@ -71,7 +93,8 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     override fun allowed(word: String) =
         if (other) usable(word) && (list()?.contains(word) == true || word in starters || learning?.knows(word) == true ||
             nextWords?.after(null)?.contains(word) == true) else english.allowed(word)
-    override fun fixAllowed(typed: String, fix: String) = if (other) false else english.fixAllowed(typed, fix)
+    /** Another input method's fix: only its corrector makes one, and only when sure (LanguageCorrections). */
+    override fun fixAllowed(typed: String, fix: String) = if (other) true else english.fixAllowed(typed, fix)
     /** Whether [word] is in English's own list, whatever input method types: Chinese offers it as a choice ([EnglishOffer]). */
     fun englishKnown(word: String) = english.known(word)
 
@@ -90,7 +113,20 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     override fun keptPair(previous: String?, next: String) {
         if (!other) return english.keptPair(previous, next)
         val learning = learning?.takeIf { mayLearn() } ?: return
-        learning.kept(previous, next, known = list()?.contains(next) == true || next in starters)
+        val list = list()
+        if (wordBreak && list != null) {
+            // Thai: what's kept between two spaces is a phrase, so each of its words is learned after the one before it, and
+            // a stray letter breaks the chain. Only the list's words: a phrase is never learned as one word.
+            val isWord = { piece: String -> WordBreak.word(piece, list::has) }
+            var before = previous?.let { WordBreak.lastWord(it, isWord) }
+            // A sentence's start only where the whole phrase starts one; after a stray letter, a word alone.
+            var paired = previous == null || before != null
+            for (piece in WordBreak.words(next, isWord)) {
+                if (piece != null) learning.kept(before, piece, known = true, paired = paired)
+                before = piece
+                paired = piece != null
+            }
+        } else learning.kept(previous, next, known = list?.contains(next) == true || next in starters)
         learned()
     }
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
@@ -109,9 +145,9 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
 
     companion object {
         /** The word the cursor is in: the letters (and apostrophes inside a word) at the end of [before]. */
-        fun lastWord(before: String): String {
+        fun lastWord(before: String, apostrophes: Boolean = true): String {
             var start = before.length
-            while (start > 0 && (before[start - 1].isLetter() || before[start - 1] == '\'' || before[start - 1] == '’' ||
+            while (start > 0 && (before[start - 1].isLetter() || apostrophes && (before[start - 1] == '\'' || before[start - 1] == '’') ||
                     Character.getType(before[start - 1]) == Character.NON_SPACING_MARK.toInt() ||
                     Character.getType(before[start - 1]) == Character.COMBINING_SPACING_MARK.toInt())) start--
             return before.substring(start).trimStart('\'', '’')

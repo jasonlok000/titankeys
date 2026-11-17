@@ -47,7 +47,7 @@ echo "$BOOST_SHA256  $WORK/src/boost-1.92.0.tar.xz" | sha256sum -c --quiet
 # The tree CMake builds: TitanKeys' CMakeLists.txt and sources, Trime's cmake/ helpers, and the fetched sources.
 TREE="$WORK/tree"
 rm -rf "$TREE"; mkdir -p "$TREE"
-cp "$HERE/CMakeLists.txt" "$HERE/rime_jni.cc" "$HERE/rime_tool.cc" "$TREE/"
+cp "$HERE/CMakeLists.txt" "$HERE/rime_jni.cc" "$HERE/rime_tool.cc" "$HERE/tk_predict.h" "$TREE/"
 cp -r "$WORK/src/trime/app/src/main/jni/cmake" "$TREE/cmake"
 ln -s "$WORK/src/librime" "$TREE/librime"
 ln -s "$WORK/src/snappy" "$TREE/snappy"
@@ -81,7 +81,7 @@ loads="$("$BIN/llvm-readelf" -lW "$OUT/librime_tk.so" | grep " LOAD ")"
 cmake -S "$TREE" -B "$WORK/out-host" -DCMAKE_BUILD_TYPE=Release -DTK_RIME_SOURCES="$WORK/src" \
   -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ > "$WORK/out-host.log" 2>&1 \
   || { tail -40 "$WORK/out-host.log"; exit 1; }
-cmake --build "$WORK/out-host" -j"$JOBS" --target rime_tool opencc_dict build_predict >> "$WORK/out-host.log" 2>&1 \
+cmake --build "$WORK/out-host" -j"$JOBS" --target rime_tool opencc_dict build_predict build_grammar >> "$WORK/out-host.log" 2>&1 \
   || { grep -n "error" "$WORK/out-host.log" | head -30; exit 1; }
 
 cd "$REPO"

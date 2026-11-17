@@ -20,7 +20,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -30,17 +30,17 @@
     "words": "main_az.combined"
   },
   "starters": [
-    "və",
     "bu",
+    "o",
+    "lakin",
+    "onun",
     "bir",
-    "ilə",
-    "də",
-    "üçün",
-    "olan",
-    "sonra",
-    "ildə",
-    "isə",
-    "ki",
-    "da"
+    "bundan",
+    "burada",
+    "həmin",
+    "belə",
+    "onlar",
+    "ancaq",
+    "buna"
   ]
 }

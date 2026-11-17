@@ -20,34 +20,34 @@
     "rime": "tk_pinyin"
   },
   "source": {
-    "words": "rime-luna-pinyin and rime-essay (LGPL-3.0)"
+    "words": "rime-luna-pinyin and rime-essay (LGPL-3.0), with lotem's Mandarin grammar model (rime-octagram-data, LGPL-3.0)"
   },
   "starters": [
-    "的",
-    "了",
     "我",
     "是",
-    "在",
     "你",
-    "和",
     "就是",
     "一個",
     "有",
     "不",
-    "但是"
+    "但是",
+    "這個",
+    "就",
+    "所以",
+    "可以"
   ],
   "startersSimplified": [
-    "的",
-    "了",
     "我",
     "是",
-    "在",
     "你",
-    "和",
     "就是",
     "一个",
     "有",
     "不",
-    "但是"
+    "但是",
+    "这个",
+    "就",
+    "所以",
+    "可以"
   ]
 }

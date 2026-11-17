@@ -67,7 +67,8 @@ LOOK = {
 }
 # Space after a code picks: Japanese's first choice, read back.
 PICKS = {"ja": "n i h o n g o"}
-HANDS = ["Georgian: Shift + W types ჭ (the keyboard twin's Shift can't be used on this phone)"]
+# Georgian's Shift + W is the shift batch's (shift_checks.py, through the key feed).
+HANDS = []
 
 
 def all_ids():
@@ -163,6 +164,8 @@ def check_all():
     method, to go on after a run that ended part way."""
     for group in sets():
         for im in group:
+            if checks.past_cutoff():
+                raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the input methods didn't run")
             try:
                 one(im, ["en", *group])
             except Stop:

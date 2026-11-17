@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -27,17 +27,17 @@
     "words": "bs_full.txt"
   },
   "starters": [
-    "da",
-    "je",
-    "ne",
-    "se",
-    "i",
     "u",
-    "to",
-    "sam",
     "na",
-    "ti",
-    "mi",
-    "za"
+    "nakon",
+    "za",
+    "to",
+    "međutim",
+    "od",
+    "iako",
+    "prema",
+    "tokom",
+    "kao",
+    "također"
   ]
 }

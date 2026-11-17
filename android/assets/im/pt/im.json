@@ -30,7 +30,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -40,17 +40,17 @@
     "words": "main_pt_BR.combined"
   },
   "starters": [
-    "de",
-    "e",
-    "a",
     "o",
-    "do",
-    "da",
+    "a",
+    "os",
+    "no",
+    "e",
     "em",
-    "que",
-    "uma",
-    "um",
-    "com",
-    "no"
+    "mas",
+    "não",
+    "na",
+    "para",
+    "ele",
+    "as"
   ]
 }

@@ -31,11 +31,12 @@ one of its plugins, librime-predict (the next-word suggestions, #56), merged in 
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp), librime's `deps/yaml-cpp` | `56e3bb550c91fd7005566f19c079cb7a503223cf` | MIT |
 | [spdlog](https://github.com/gabime/spdlog), librime's `deps/spdlog`, with its bundled {fmt} | `79524ddd08a4ec981b7fea76afd08ee05f83755d` | MIT |
 | [librime-predict](https://github.com/rime/librime-predict), Trime's `app/src/main/jni/librime-predict` submodule, fetched with Trime | `67c2881914a0242fc14ec7d6877782771b75800c` | BSD-3-Clause |
+| [librime-octagram](https://github.com/lotem/librime-octagram), Trime's `app/src/main/jni/librime-octagram` submodule, fetched with Trime: the grammar model's plugin and its `build_grammar` tool | `bd12863f45fbbd5c7db06d5ec8be8987b10253bf` | GPL-3.0 at this commit (later commits are BSD-3-Clause), as TitanKeys |
 | [Snappy](https://github.com/google/snappy) | `9c28114a38866f6deeaa826db918293bc28ae410` | BSD-3-Clause |
 | [Boost](https://github.com/boostorg/boost) (CMake release, SHA-256 checked) | 1.92.0 | Boost Software License 1.0 |
 | [Trime](https://github.com/osfans/trime): its `cmake/` helpers and its CMakeLists.txt, which ours is based on (not shipped) | `2e2b4d5394297745bf42ff6260bb547a271f378a` (2026-11-12) | GPL-3.0-or-later |
 
-Their licences: `licences/Rime-librime-BSD-3-Clause.txt`, `licences/Rime-predict-BSD-3-Clause.txt`,
+Their licences: `licences/Rime-librime-BSD-3-Clause.txt`, `licences/Rime-predict-BSD-3-Clause.txt`, `licences/Rime-octagram-GPL-3.0.txt`,
 `licences/Rime-OpenCC-Apache-2.0.txt` and `licences/Rime-dependencies.txt`.
 
 ## The data: `android/assets/rime/`
@@ -63,6 +64,7 @@ Japanese form of 對, last). Then it adds words.hk's word counts to the weights,
 | [rime-quick](https://github.com/rime/rime-quick): Quick 5's dictionary and spelling rule | `207d1efcc0dc9574510b61be861544edcf993736` (2026-11-10) | LGPL-3.0 |
 | [rime-terra-pinyin](https://github.com/rime/rime-terra-pinyin): Mandarin with tones, for Zhuyin (refined from Chewing's data, LGPL) | `723e51bc266cf9464530c1ddedb856aa18e3da34` (2026-09-18) | LGPL-3.0 |
 | [rime-bopomofo](https://github.com/rime/rime-bopomofo)'s Zhuyin spelling rules (`zhuyin.yaml`), copied into `tk_zhuyin.schema.yaml` | `6085c9a38a4a728047862b33d67eee18aa86f3b9` (2026-05-09) | LGPL-3.0 |
+| [rime-octagram-data](https://github.com/lotem/rime-octagram-data), its `hant` branch: `zh-hant-t-essay-bgw.gram`, Mandarin's grammar model for Pinyin and Zhuyin, shipped as it is (SHA-256 `0488ebd6688f900a39200f2b794f2f99bcbf1e8fc27280ae4a2324b08b1559c1`) | `97bf55046aad163c3d1881abae5312040b1bbed9` | LGPL-3.0 |
 | [rime-prelude](https://github.com/rime/rime-prelude): Rime's shared files, punctuation and key bindings | `082425ea0684bca36474415d4a0e8db9b016487e` | LGPL-3.0 |
 | OpenCC's conversion dictionaries and configs (from librime's `deps/opencc` above) | `025f371` | Apache-2.0 |
 
@@ -82,6 +84,24 @@ Each sentence is turned into Traditional characters with OpenCC's `STPhrases` an
 schema's word list, and each word keeps at most 8 next words, by how often they followed it
 ([docs/studies/56-chinese-prediction.md](../../docs/studies/56-chinese-prediction.md)). There's no entry for the start
 of a text, so nothing is suggested before the first commit.
+
+**Cantonese's grammar model** (`tk_yue.gram`, for Yale and Jyutping): which words follow which in Cantonese text, so Space
+puts the likelier phrase first. `data.sh` counts it with [`grammar.py`](grammar.py) and compiles it with librime-octagram's
+`build_grammar`, from this text, each checked by its SHA-256:
+
+| Part | Version | Licence |
+| --- | --- | --- |
+| [Cantonese Wikipedia](https://zh-yue.wikipedia.org)'s articles, [`zh_yuewiki-20261101-pages-articles.xml.bz2`](https://dumps.wikimedia.org/zh_yuewiki/20261101/) | 2026-11-01, SHA-256 `e493dce7899884e250de0dcb208e560f6dff1e8b7970e7abdd015dc61da83126` | CC BY-SA 4.0 |
+| [HKCanCor](https://github.com/fcbond/hkcancor), the Hong Kong Cantonese Corpus by Luke Kang Kwong and May L.Y. Wong, `data/hkcancor-utf8.zip` | `39aeadf920e0b5ca93d0ad7792c59e740e7bdd65`, SHA-256 `09223963b8756254e15353cad843f8a4b0cbc4b9223dc8a8fa27fb1cf846057e` | CC BY 4.0 |
+| [Common Voice](https://github.com/common-voice/common-voice)'s zh-HK sentences, `server/data/zh-HK/sentence-collector.txt` | `4ea23d2d30222e9324eb964365b9a0f22e3d5f3a`, SHA-256 `0c537e9d65c1f1de10d70a1e0989d929b557628d975bf480d8b3b6fcc6291f26` | CC0 |
+
+The model is counted from Wikipedia's text, so `tk_yue.gram` is licensed CC BY-SA 4.0 itself
+(`licences/Rime-cantonese-grammar-CC-BY-SA-4.0.txt`; HKCanCor's CC BY 4.0 is the text in
+`licences/Rime-cantonese-CC-BY-4.0.txt`): it credits the Wikipedia contributors, HKCanCor's authors and Common Voice, and
+anyone may share and change it under the same licence. Wikimedia keeps a dated dump for a few months only; after that, the
+file has to come from a mirror of Wikimedia's dumps, and the SHA-256 above checks it. On held-out Tatoeba phrases, with the
+words.hk weights, the model takes Space's first choice from 27.1% to 31.4% right
+([docs/studies/56-cantonese-dictionary.md](../../docs/studies/56-cantonese-dictionary.md)).
 
 **The LGPL-3.0 data:** its sources are the repositories at the commits above, and `data.sh` is how TitanKeys builds the
 shipped tables from them, so anyone can change the sources and rebuild. The schemas in `schemas/` are TitanKeys' own

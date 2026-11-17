@@ -195,9 +195,12 @@ tk_touch_play() {
 # tk_touch_feed KEYS_SCRIPT FEED LAST_MS: the gate, then the touches through TitanKeys Debug's touch feed and the keys through the
 # injector, started together. The feed waits as long as the injector's keyboard twin takes to come (TK_TOUCH_SETTLE_MS) when there
 # are keys, so the two stay in step. TK_TOUCH_SHOT=NAME (TK_TOUCH_SHOT_AT=MS) takes a screenshot meanwhile.
+# With a KEYFEED file (TK_KEYFEED=1 in touch.sh), the keys go through TitanKeys Debug's key feed instead, on the same clock:
+# no twin keyboard.
 tk_touch_feed() {
-  local keys_script="$1" events delay=0 keys sleep_s shot_cmd=""
+  local keys_script="$1" events delay=0 keys sleep_s shot_cmd="" keyfeed="" touch_cmd="" key_cmd=""
   events=$(cat "$2")
+  [ -n "${4:-}" ] && [ -s "$4" ] && keyfeed=$(cat "$4")
   tk_touch_ready || return 1
   keys=$(grep -c '^[0-9]' "$keys_script")
   [ "$keys" -gt 0 ] && delay="${TK_TOUCH_SETTLE_MS:-800}"
@@ -206,9 +209,10 @@ tk_touch_feed() {
     shot_cmd="sleep $(awk "BEGIN{print (${TK_TOUCH_SHOT_AT:-200} + $delay)/1000}"); screencap -p /data/local/tmp/tk-touch.png;"
   fi
   [ "$keys" -gt 0 ] && { tk_adb push -q "$keys_script" "$TK_PHONE_SCRIPT" >/dev/null || return 3; }
+  [ -n "$events" ] && touch_cmd="am broadcast -n $TK_APP/com.titankeys.keyboard.TouchFeed --es events '$events' --el delay $delay | grep -o 'data=.*';"
+  [ -n "$keyfeed" ] && key_cmd="am broadcast -n $TK_APP/com.titankeys.keyboard.KeyFeed --es keys '$keyfeed' --el delay $delay | grep -o 'data=.*';"
   tk_adb shell "$( [ "$keys" -gt 0 ] && echo "$TK_PHONE_INJECT $TK_PHONE_SCRIPT > /data/local/tmp/tk-touch.log 2>&1 &" ) \
-    am broadcast -n $TK_APP/com.titankeys.keyboard.TouchFeed --es events '$events' --el delay $delay | grep -o 'data=.*'; \
-    $shot_cmd sleep $sleep_s; wait; cat /data/local/tmp/tk-touch.log 2>/dev/null; rm -f /data/local/tmp/tk-touch.log $TK_PHONE_SCRIPT"
+    $touch_cmd $key_cmd $shot_cmd sleep $sleep_s; wait; cat /data/local/tmp/tk-touch.log 2>/dev/null; rm -f /data/local/tmp/tk-touch.log $TK_PHONE_SCRIPT"
   if [ -n "${TK_TOUCH_SHOT:-}" ]; then
     mkdir -p "$TK_TOUCH_DIR/shots"
     tk_adb pull -q /data/local/tmp/tk-touch.png "$TK_TOUCH_DIR/shots/raw-$TK_TOUCH_SHOT.png" >/dev/null

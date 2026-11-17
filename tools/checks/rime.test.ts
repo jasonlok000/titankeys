@@ -104,7 +104,8 @@ test("the JNI class the library registers is the one in the app, kept from shrin
 
 test("librime-predict is built in, with each language's table, its licence and credits (#56)", () => {
   // Merged into Rime from Trime's pinned submodule, as Trime does; its tool compiles the tables.
-  expect(read("native/rime/CMakeLists.txt")).toContain('"${TK_RIME_SOURCES}/trime/app/src/main/jni/librime-predict"');
+  expect(read("native/rime/CMakeLists.txt")).toContain("foreach(plugin librime-predict librime-octagram)");
+  expect(read("native/rime/CMakeLists.txt")).toContain('"${TK_RIME_SOURCES}/trime/app/src/main/jni/${plugin}"');
   expect(read("native/rime/build.sh")).toContain("--target rime_tool opencc_dict build_predict");
   expect(read("native/rime/SOURCES.md")).toContain("67c2881914a0242fc14ec7d6877782771b75800c");
   // Each schema has the predictor and its language's table; the switch is on.
@@ -126,12 +127,47 @@ test("librime-predict is built in, with each language's table, its licence and c
     const count = new Map<string, number>();
     for (const [word] of rows) count.set(word, (count.get(word) ?? 0) + 1);
     expect(Math.max(...count.values())).toBeLessThanOrEqual(8);
+    // No emoji among the next words, as Mozc's are left out too (owner and Orchestrator, 2026-11-17).
+    expect(rows.filter(row => /\p{Extended_Pictographic}|\uFE0F/u.test(row[1]))).toEqual([]);
   }
   // Its licence, and the Licences page: the plugin, and Tatoeba's sentences behind the tables.
   expect(read("licences/Rime-predict-BSD-3-Clause.txt")).toContain("BSD 3-Clause License");
   const page = read("app/settings/licences/index.tsx");
   expect(page).toContain('title: "librime-predict"');
   expect(page).toMatch(/title: "Tatoeba", subtitle: "[^"]*Chinese/);
+});
+
+test("Cantonese's grammar model: librime-octagram built in, the model counted by data.sh, licensed as itself (#56)", () => {
+  expect(read("native/rime/CMakeLists.txt")).toContain("foreach(plugin librime-predict librime-octagram)");
+  expect(read("native/rime/build.sh")).toContain("--target rime_tool opencc_dict build_predict build_grammar");
+  const data = read("native/rime/data.sh");
+  expect(data).toContain('"$BUILD_GRAMMAR" tk_yue < grammar.txt');
+  for (const pin of ["WIKI_SHA256", "HKCANCOR_SHA256", "VOICE_SHA256"]) expect(data).toMatch(new RegExp(`^${pin}=[0-9a-f]{64}$`, "m"));
+  // Yale and Jyutping use it, counting pairs of single characters too; the others have none.
+  for (const id of ["tk_yale", "tk_jyutping"])
+    expect(read(`native/rime/schemas/${id}.schema.yaml`)).toContain("grammar: { language: tk_yue, collocation_min_length: 2 }");
+  // Pinyin and Zhuyin use lotem's Mandarin model (LGPL-3.0) with octagram's defaults; Cangjie and Quick have none.
+  for (const id of ["tk_pinyin", "tk_zhuyin"])
+    expect(read(`native/rime/schemas/${id}.schema.yaml`)).toMatch(/^grammar: \{ language: zh-hant-t-essay-bgw \}$/m);
+  for (const id of ["tk_cangjie", "tk_quick"])
+    expect(read(`native/rime/schemas/${id}.schema.yaml`)).not.toMatch(/^grammar:/m);
+  expect(data).toMatch(/^MANDARIN_GRAMMAR_SHA256=[0-9a-f]{64}$/m);
+  expect(read("android/assets/rime.sha256")).toMatch(/ zh-hant-t-essay-bgw\.gram$/m);
+  expect(read("native/rime/SOURCES.md")).toContain("`zh-hant-t-essay-bgw.gram`");
+  expect(read("app/settings/licences/index.tsx")).toMatch(/title: "Mandarin grammar model", subtitle: "LGPL-3\.0\./);
+  for (const ident of ["zh-pinyin", "zh-zhuyin"])
+    expect(read(`android/assets/im/${ident}/NOTICE`)).toContain("lotem's Mandarin grammar model (rime-octagram-data, LGPL-3.0)");
+  expect(read("android/assets/rime.sha256")).toMatch(/ tk_yue\.gram$/m);
+  // The model carries Wikipedia's CC BY-SA 4.0; the plugin is GPL-3.0 at Trime's commit. Both credited, in the app too.
+  expect(read("licences/Rime-cantonese-grammar-CC-BY-SA-4.0.txt")).toContain("Attribution-ShareAlike 4.0 International");
+  expect(read("licences/Rime-octagram-GPL-3.0.txt")).toContain("GNU GENERAL PUBLIC LICENSE");
+  const sources = read("native/rime/SOURCES.md");
+  expect(sources).toContain("`tk_yue.gram` is licensed CC BY-SA 4.0 itself");
+  const page = read("app/settings/licences/index.tsx");
+  expect(page).toContain('title: "librime-octagram"');
+  expect(page).toMatch(/title: "Cantonese grammar model", subtitle: "CC BY-SA 4.0\./);
+  for (const ident of ["yue-yale", "yue-jyutping"])
+    expect(read(`android/assets/im/${ident}/NOTICE`)).toContain("Cantonese Wikipedia (CC BY-SA 4.0, and so is the model)");
 });
 
 test("the keyboard shows the suggestions as choices, and clears them Rime's way (#56)", () => {
@@ -144,4 +180,27 @@ test("the keyboard shows the suggestions as choices, and clears them Rime's way 
   expect(ime).toContain("if (state.commit.isNotEmpty() || !state.composing && openPicker() is LanguagePicker.Choices) engineState(state)");
   // A panel symbol sends Space only for a code: with suggestions it would pick one.
   expect(ime).toContain("engineState(if (choices.state.composing) it.space() else it.reset())");
+});
+
+test("the app copies only the Chinese input methods that are on, file by file (docs/studies/3.0-storage.md)", () => {
+  const files = new Set(lines(read("android/assets/rime.sha256")).map(line => line.path));
+  const groups = new Map<string, string[]>();
+  for (const line of read("android/assets/rime.schemas").trimEnd().split("\n")) {
+    const [schema, path] = line.split("\t");
+    expect(files.has(path)).toBe(true);
+    groups.set(schema, [...(groups.get(schema) ?? []), path]);
+  }
+  expect([...groups.keys()].sort()).toEqual(["tk_cangjie", "tk_jyutping", "tk_pinyin", "tk_quick", "tk_yale", "tk_zhuyin"]);
+  // Yale's: Cantonese's table and grammar, never Mandarin's.
+  expect(groups.get("tk_yale")).toContain("build/jyut6ping3.table.bin");
+  expect(groups.get("tk_yale")).toContain("tk_yue.gram");
+  expect(groups.get("tk_yale")).not.toContain("zh-hant-t-essay-bgw.gram");
+  expect(groups.get("tk_pinyin")).toContain("zh-hant-t-essay-bgw.gram");
+  const assets = read("android/kotlin/com/titankeys/rime/RimeAssets.kt");
+  expect(assets).toContain("data.install(manifest, groups, schemas)");
+  expect(read("android/kotlin/com/titankeys/keyboard/InputMethodList.kt")).toContain(".filter { it.engine == com.titankeys.rime.RimeEngine.ENGINE }");
+  expect(read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt")).toContain("com.titankeys.rime.RimeAssets.schemasOn = InputMethodList::rimeSchemasOn");
+  const data = read("android/kotlin/com/titankeys/rime/RimeData.kt");
+  expect(data).toContain('val fresh = File(target.parentFile, ".${target.name}.new")');
+  expect(data).not.toContain("shared.deleteRecursively()");
 });

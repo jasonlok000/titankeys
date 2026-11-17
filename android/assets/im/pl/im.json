@@ -21,7 +21,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -32,16 +32,16 @@
   },
   "starters": [
     "w",
-    "i",
-    "z",
     "na",
-    "się",
+    "to",
+    "jak",
+    "nie",
+    "po",
+    "z",
     "do",
-    "roku",
-    "jest",
+    "co",
+    "czy",
     "a",
-    "przez",
-    "od",
-    "oraz"
+    "od"
   ]
 }

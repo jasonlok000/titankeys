@@ -90,7 +90,11 @@ Each line is one JSON object and `k` is its kind. Times are in `SystemClock.upti
 | `text` | Each change the keyboard makes | `t`, `cause`, `via`, `auto`, `del`, `ins`, `aft`, `ok` |
 | `pick` | A word chosen from the strip | `t`, `index`, `word`, `offered` |
 | `sel` | `onUpdateSelection` | `t`, `start`, `end`, `cs`, `ce` (composing region), `before` (up to 256 characters) |
-| `mark` | A step mark | `t`, `kind`, `label` |
+| `mark` | A step mark, or the owner's MARK: three quick Shift presses in TitanKeys Debug (`OwnerMark`), which change nothing else and tick once | `t`, `kind` (`MARK` for the owner's), `label` (for the owner's, the local date and time) |
+| `im` | The input method typing changed | `t`, `from`, `to` (ids) |
+| `bar` | What the bar shows, when it changes, best first: the first is the middle word. Full log only | `t`, `words` |
+| `engine` | An input method's engine getting ready, done loading, or a swipe the swipe engine couldn't read | `t`, `im` (or `swipe`), `state` (`preparing`, `loaded`, or the swipe engine's readiness) |
+| `commit` | Text an engine committed (Rime, Mozc, Hangul, Telex): a pick, Space or a key. Full log only | `t`, `engine`, `text` |
 
 In a `text` line, `del` characters before the cursor and `aft` characters after it were replaced with `ins`. `del` is -1 if the app can't say how much it deleted, and `ok` is false if the app refused the edit. `cause` is one of these:
 
@@ -101,6 +105,14 @@ In a `text` line, `del` characters before the cursor and `aft` characters after 
 | `choose` | | A word chosen from the strip |
 | `command` | | A key the app handles itself, such as paste. The `sel` lines after it show what changed |
 | `lookalike`, `fullstop`, `spacedrop` | | Automatic changes, with `auto` true: a look-alike swap, two spaces that became a full stop, and a space removed before punctuation or Enter |
+
+### Pull the logs over adb (Debug only)
+
+`adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.LogPull -a com.titankeys.debug.PULL_LOGS` copies the typing
+log, and the last Record a bug recording if there is one, to `/sdcard/Android/data/com.titankeys.debug/files/logs/`. Its result is
+JSON with the files and the log's span in local time (`from`, `to`). Then `adb pull` that folder. Search the log for
+`"kind":"MARK"` to find the moments the owner marked with three quick Shift presses. The copies hold what was typed: keep them out
+of git, and delete them with `adb shell rm -r /sdcard/Android/data/com.titankeys.debug/files/logs`.
 
 ## Sample recording
 

@@ -276,6 +276,7 @@ class TitanKeysIme : InputMethodService() {
     private fun showSwipeUnavailable() {
         val strip = strip ?: return
         val typing = SwipeTyping.get(this)
+        rawLog?.engine("swipe", typing.readiness().toString())
         val text = SwipeLoad.notice(typing.readiness(), typing.loadingRetries()) ?: return
         if (strip.notice is Strip.Notice.Menu) return
         strip.notice = Strip.Notice.Line(text)
@@ -810,7 +811,7 @@ class TitanKeysIme : InputMethodService() {
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
-            { modifiers.autoShifted }) { barWords = it; strip?.words = it }
+            { modifiers.autoShifted }) { barWords = it; strip?.words = it; rawLog?.bar(it) }
         composer.autoPunctuation = { TypingSettings.autoPunctuationIn(this, languages.languageId) }
         composer.sentenceSpaces = {
             when (TypingSettings.sentenceSpacesIn(this, languages.languageId)) {
@@ -3333,6 +3334,7 @@ class TitanKeysIme : InputMethodService() {
 
     /** The load ended, ready or not: what waited goes on, to the engine if it started. */
     private fun loadEnded() {
+        rawLog?.engine(languages.current.id, "loaded")
         val stop = loadGate.open(languages.loadingNow, pendingInput) ?: return
         Log.i(LOG_TAG, "What waited goes to ${languages.current.id}")
         stop.ready = true
@@ -3875,6 +3877,7 @@ class TitanKeysIme : InputMethodService() {
     private fun engineState(state: EngineState) {
         if (state.commit.isNotEmpty()) {
             val text = state.commit
+            rawLog?.committed(languages.current.engine, text)
             if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
         }
         if (state.composing || state.choices.isNotEmpty()) {
@@ -4034,6 +4037,49 @@ class TitanKeysIme : InputMethodService() {
         tally("$language.$key")
     }
 
+    /** The input method the log last named, so an `im` line says where it switched from. */
+    private var loggedInputMethod: String? = null
+
+    /** TitanKeys Debug's owner mark: see [OwnerMark]. */
+    private val ownerMark = OwnerMark()
+    private var markShift = Modifiers.Level.Off
+    private var markAlt = Modifiers.Level.Off
+    private var markMenu = false
+    /** The Shift whose release the mark keeps, or -1. */
+    private var ownerMarkKey = -1
+
+    /**
+     * In TitanKeys Debug, while the log records this field: three quick Shift presses write a MARK with the time into the log and
+     * play a short tick. Shift, Alt and the bigger menu go back to how they were before the first press. True if this press was
+     * the mark's third, which the keyboard then keeps.
+     */
+    private fun ownerMarked(event: KeyEvent): Boolean {
+        val keyCode = event.keyCode
+        val log = rawLog
+        if (log == null || !RawLog.available(this) || event.repeatCount > 0) return false
+        if (keyCode != KeyEvent.KEYCODE_SHIFT_LEFT && keyCode != KeyEvent.KEYCODE_SHIFT_RIGHT) {
+            ownerMark.other()
+            return false
+        }
+        if (!ownerMark.shift(event.eventTime)) {
+            if (ownerMark.first) {
+                markShift = modifiers.shift
+                markAlt = modifiers.alt
+                markMenu = choicesMenuOpen
+            }
+            return false
+        }
+        modifiers.shift = markShift
+        modifiers.alt = markAlt
+        if (choicesMenuOpen && !markMenu) closeChoicesMenu() else if (!choicesMenuOpen && markMenu) openChoicesMenu()
+        showModifiers()
+        ownerMarkKey = keyCode
+        log.ownerMark(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.ROOT).format(java.util.Date()))
+        haptics.play(Haptic.PanelPage)
+        Log.i(LOG_TAG, "Owner MARK written to the log")
+        return true
+    }
+
     /** The bar's choices and the bigger menu, in TitanKeys Debug's log: `adb logcat -s TitanKeysChoices`. */
     private fun choicesLog(line: String) {
         if (AppBuild.kind(this) == "debug") Log.i(CHOICES_TAG, line)
@@ -4122,6 +4168,7 @@ class TitanKeysIme : InputMethodService() {
 
     /** An input method still getting ready (Rime copying its data the first time): the bar says so, never over a word's menu. */
     private fun showPreparing(entry: InputMethodIndex.Entry) {
+        rawLog?.engine(entry.id, "preparing")
         val strip = strip ?: return
         if (strip.notice != null && strip.notice !is Strip.Notice.Line) return
         val notice = Strip.Notice.Line(preparingLine(entry))
@@ -4130,6 +4177,8 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun inputMethodChanged(method: InputMethod) {
+        rawLog?.inputMethod(loggedInputMethod, method.id)
+        loggedInputMethod = method.id
         showInputMark()
         showQuickSettingsFor(languages.current)
         preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
@@ -4211,6 +4260,7 @@ class TitanKeysIme : InputMethodService() {
             if (event.repeatCount == 1) guideBlocked(GuideLesson.HoldSymbol)
             return true
         }
+        if (ownerMarked(event)) return true
         if (event.repeatCount == 0) KeyboardEvents.publish { KeyboardEvent.Pushed(keyCode) }
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
@@ -4326,6 +4376,11 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        // The third Shift of an owner mark keeps its release too, so it changes nothing.
+        if (keyCode == ownerMarkKey) {
+            ownerMarkKey = -1
+            return true
+        }
         // The last key let go: the mark goes as after a lift, unless the touchpad shows the finger again. A key that toggled a quick
         // setting keeps it: the touchpad's lift for the press comes after the key, and is the press's own. See [keepPanelHover].
         val panelRelease = keyCode == panelPress

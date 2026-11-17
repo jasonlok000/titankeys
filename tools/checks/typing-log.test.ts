@@ -59,6 +59,21 @@ describe("typing log: TitanKeys Debug only", () => {
     expect(await text("app/settings/rawlog.tsx")).toContain("On from the start in TitanKeys Debug, and it stays on until you turn it off.");
   });
 
+  test("LogPull and the owner's MARK are TitanKeys Debug's alone (owner, 2026-11-17)", async () => {
+    // LogPull lives with the debug tools, which tools/debug.sh copies in; only adb, holding DUMP, can send to it.
+    const manifest = await text("android/debug/recorder/manifest.xml");
+    expect(manifest).toMatch(/android:name="com\.titankeys\.keyboard\.LogPull"\s+android:exported="true"\s+android:permission="android\.permission\.DUMP"/);
+    expect(await text("android/src/main/AndroidManifest.xml")).not.toContain("LogPull");
+    const pull = await text("android/debug/recorder/LogPull.kt");
+    expect(pull).toContain("if (intent.action != ACTION || !RawLog.available(context)) return");
+    expect(pull).toContain('context.getExternalFilesDir("logs")');
+    // The mark: Debug only, only while the log records the field, and it puts Shift, Alt and the menu back.
+    const ime = await text("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+    expect(ime).toContain("if (log == null || !RawLog.available(this) || event.repeatCount > 0) return false");
+    expect(ime).toMatch(/modifiers\.shift = markShift\s+modifiers\.alt = markAlt/);
+    expect(ime).toContain('log.ownerMark(');
+  });
+
   test("no public text points to the typing log", async () => {
     for (const file of ["README.md", "app/settings/guide.tsx", "site/privacy/index.html", "lib/connected-text.ts", "app/settings/feedback.tsx"])
       expect(`${file}: ${(await text(file)).includes("Typing log") ? "Typing log" : ""}`).toBe(`${file}: `);

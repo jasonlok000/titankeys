@@ -35,7 +35,7 @@ VOICE_SHA256=0c537e9d65c1f1de10d70a1e0989d929b557628d975bf480d8b3b6fcc6291f26
 
 download() { # file url sha256
   local file="$WORK/src/$1"
-  if ! echo "$3  $file" | sha256sum -c --quiet 2>/dev/null; then
+  if [ ! -f "$file" ] || ! echo "$3  $file" | sha256sum -c --quiet > /dev/null 2>&1; then
     curl -sSL --fail -o "$file" "$2"
     echo "$3  $file" | sha256sum -c --quiet || { echo "FAIL $1 isn't the pinned file" >&2; exit 1; }
   fi

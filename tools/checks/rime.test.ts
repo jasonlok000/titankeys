@@ -104,7 +104,8 @@ test("the JNI class the library registers is the one in the app, kept from shrin
 
 test("librime-predict is built in, with each language's table, its licence and credits (#56)", () => {
   // Merged into Rime from Trime's pinned submodule, as Trime does; its tool compiles the tables.
-  expect(read("native/rime/CMakeLists.txt")).toContain('"${TK_RIME_SOURCES}/trime/app/src/main/jni/librime-predict"');
+  expect(read("native/rime/CMakeLists.txt")).toContain("foreach(plugin librime-predict librime-octagram)");
+  expect(read("native/rime/CMakeLists.txt")).toContain('"${TK_RIME_SOURCES}/trime/app/src/main/jni/${plugin}"');
   expect(read("native/rime/build.sh")).toContain("--target rime_tool opencc_dict build_predict");
   expect(read("native/rime/SOURCES.md")).toContain("67c2881914a0242fc14ec7d6877782771b75800c");
   // Each schema has the predictor and its language's table; the switch is on.

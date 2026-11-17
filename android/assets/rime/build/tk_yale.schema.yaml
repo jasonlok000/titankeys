@@ -40,6 +40,9 @@ engine:
     - predict_translator
     - punct_translator
     - script_translator
+grammar:
+  collocation_min_length: 2
+  language: tk_yue
 key_binder:
   bindings:
     - {accept: "Control+p", send: Up, when: composing}

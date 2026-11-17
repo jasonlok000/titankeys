@@ -211,7 +211,10 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 
 **Picking from the row** (the owner's tries on the phone, 2026-11-17, dropped Shift + key and holding a key: "Shift select
 not working but honestly bad idea. Abandon it", "唔要hold key 揀字"):
-- **Space** picks the first choice.
+- **Space** picks the first choice. A whole phrase typed without spaces comes out whole. In Cantonese the first choice is
+  ranked by rime-cantonese's word weights with words.hk's word counts added, and by TitanKeys' grammar model, which words
+  follow which in Cantonese text (owner, 2026-11-17: "the default Rime dictionary is actually pretty shit";
+  docs/studies/56-cantonese-dictionary.md: 23.2% to 31.4% of held-out phrases right).
 - **A tap on the screen** on a choice picks it.
 - **No flick picks** (owner, 2026-11-17: "Abandon the flick to select concept"), and swipes on the keys never turn the row's
   pages: a swipe up opens the bigger menu instead (below).

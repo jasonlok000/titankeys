@@ -113,6 +113,17 @@ check tk_yale zh_hans "jung man" 中文
 check tk_yale zh_hk "deui m jyu" 對唔住
 check tk_yale zh_hk "yut yu" 粵語
 check tk_yale zh_hk "ngo dei" 我哋
+# Yale's interchangeable initials: z for j, n and l for each other. 你 stays first for nei, and ng stays ng.
+check tk_yale zh_hk "nei" 你
+check tk_yale zh_hk "lei" 你
+check tk_yale zh_hk "lei hou" 你好
+check tk_yale zh_hk "zung man" 中文
+check tk_yale zh_hk "jung man" 中文
+check tk_yale zh_hk "ngo" 我
+# Jyutping keeps its own initials: lei isn't 你 there.
+rm -rf "$D/try"; mkdir -p "$D/try"
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
+  || { echo "FAIL Jyutping lei gives 你: the fuzzy initials reached Jyutping" >&2; exit 1; }
 check tk_jyutping zh_hk "jyut jyu" 粵語
 check tk_jyutping zh_hk "ngo dei" 我哋
 check tk_jyutping zh_hk "gwong dung waa" 廣東話

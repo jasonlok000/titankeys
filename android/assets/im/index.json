@@ -79,6 +79,16 @@
   "howTo": [
    "Hold a letter for its accents: hold A for á, à, â or ã, C for ç, O for õ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
    "Brasil or Portugal? Pick your spelling on this page."
+  ],
+  "variants": [
+   {
+    "id": "pt-BR",
+    "name": "Brasil"
+   },
+   {
+    "id": "pt-PT",
+    "name": "Portugal"
+   }
   ]
  },
  {

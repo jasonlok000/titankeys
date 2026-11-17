@@ -50,6 +50,19 @@ internal class Languages(
 
     /** The input method switched to, once loaded. */
     private var loaded: InputMethod = InputMethod.ENGLISH
+    /** The spelling variant [loaded] types (Portuguese's pt-BR or pt-PT), or null for one without variants. */
+    private var loadedVariant: String? = null
+
+    /** The spelling variant input method [id] types, of its [variants], by Settings ([InputMethodVariants]). */
+    private fun variantOf(id: String, variants: List<String>): String? =
+        InputMethodVariants.chosen(TypingSettings.inputMethodVariants(context), id, variants)
+
+    /** Whether the input method typing now has had its variant changed in Settings since it loaded: it loads again. */
+    private fun variantChanged(id: String): Boolean {
+        if (loaded.id != id || target != id) return false
+        val variants = on.firstOrNull { it.id == id }?.variants.orEmpty().map { it.id }
+        return variants.isNotEmpty() && variantOf(id, variants) != loadedVariant
+    }
 
     /**
      * True in the guide's and the playground's fields, which teach English: they type English whatever is switched on, and
@@ -106,7 +119,7 @@ internal class Languages(
             lastLogged = line
             Log.i(LOG_TAG, line)
         }
-        if (choice.id != target) use(choice.id)
+        if (choice.id != target || variantChanged(choice.id)) use(choice.id)
         // Android's keyboard list shows one entry for TitanKeys, the input method typing now, under its name; languages switch
         // inside the keyboard (owner, 2026-11-16). A restore or Settings may have left it otherwise: checked at every field start.
         val shown = listOf(choice.id)
@@ -236,9 +249,11 @@ internal class Languages(
         val startedAt = SystemClock.elapsedRealtime()
         val method = InputMethodList.load(context, id)
         // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
-        val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
+        // Its spelling variant, as Settings has it (Portuguese's Brasil or Portugal): its own list and next words.
+        val variant = method?.let { m -> variantOf(m.id, m.variants.map { it.id }) }
+        val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, variant) }
         // Its next-word table, where J's tables have one: the bar's words after a word ([NextWords]).
-        val pairs = method?.let { InputMethodList.nextWords(context, it, it.variants.firstOrNull()?.id) }
+        val pairs = method?.let { InputMethodList.nextWords(context, it, variant) }
         // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
         val engine = method?.engine?.let { name ->
             InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
@@ -249,7 +264,7 @@ internal class Languages(
                 if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
                 else "${words?.size ?: 0} words, no engine"
             }")
-            if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs)
+            if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs, variant)
             else {
                 engine?.stop()
                 Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
@@ -259,7 +274,7 @@ internal class Languages(
     }
 
     private fun apply(method: InputMethod, words: WordList?, ticket: Int, listTicket: Int, engine: InputEngine? = null,
-                      pairs: NextWords? = null) {
+                      pairs: NextWords? = null, spelling: String? = null) {
         if (ticket != loading) {
             engine?.stop()
             return
@@ -268,6 +283,7 @@ internal class Languages(
         loadedEngine = engine
         variant()
         loaded = method
+        loadedVariant = spelling
         slot.done(listTicket, words)
         this.words.nextWords = pairs
         this.words.other = !current.isEnglish

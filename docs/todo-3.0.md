@@ -310,6 +310,16 @@ Read in the code, not seen on the phone yet; every gesture check so far runs in 
 - Proposed: ICU's word breaks for languages without spaces, each language's own full stop, a flick clears a pending code
   first, and A's gesture batch in every language.
 
+## Paused for the usage limit (owner, 2026-11-17, about 00:00)
+
+Every worker was told to commit its work in progress to its own branch and stop until "resume". On resume:
+- D: gestures in every language (waiting on its test suites); then send CODE_FLICK to A.
+- C: the two-languages merge, then the four-and-four cap with centring, tile and global tap haptics; then the bar-words job.
+- H: held letters without accents type once; accents within W–O.
+- B: the Cantonese dictionary study (baseline 71.6% of characters, 10.6% of long phrases exact), then Cangjie, Quick and Zhuyin.
+- E: the guide fixes (swipe slide ignores keys, the "e" stays); G: #96 analytics.
+- A: read the 01:00 main-mem slot's reports (it runs in WSL during the pause).
+
 ## Milestones (internal; the owner gave the go at 01:20)
 
 Each milestone has a gate: a list of what must be true before the next one starts. At each gate the Orchestrator writes a

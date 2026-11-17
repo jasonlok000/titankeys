@@ -106,14 +106,50 @@ class LanguageLearning {
 object BarWords {
     const val SHOWN = 3
 
-    /** After a word ends: the words learned after [previous], or at a sentence's start ([previous] null), then the starters. */
-    fun next(previous: String?, learning: LanguageLearning?, starters: List<String>, capitals: Boolean): List<String> {
+    /**
+     * After a word ends: the words learned after [previous], or at a sentence's start ([previous] null), then the input
+     * method's own next words for it from its [table] (J's tables), then the starters.
+     */
+    fun next(previous: String?, learning: LanguageLearning?, starters: List<String>, capitals: Boolean,
+             table: NextWords? = null): List<String> {
         val learned = if (previous == null) learning?.sentenceStarts().orEmpty() else learning?.next(previous).orEmpty()
-        val words = (learned + starters).distinct().take(SHOWN)
+        val listed = table?.after(previous).orEmpty()
+        val words = (learned + listed + starters).distinctBy { it.lowercase() }.take(SHOWN)
         return if (previous == null && capitals) words.map { it.replaceFirstChar { c -> c.titlecase() } } else words
     }
 
     /** While [prefix] is typed: the learned words that start with it, then [listed], the list's. */
     fun complete(prefix: String, learning: LanguageLearning?, listed: List<String>): List<String> =
         (learning?.completions(prefix).orEmpty() + listed).distinctBy { it.lowercase() }.take(SHOWN)
+}
+
+/**
+ * An input method's next-word table, `pairs.txt` in its folder (pairs-pt-BR.txt for a variant), as J builds them from the
+ * Leipzig Corpora Collection: English's en_pairs.txt format, "first second<TAB>count" lines, '#' lines for the source, and
+ * <s> as the first word for a sentence's start. Words in lower case where the script has case. Each first word keeps its
+ * [KEPT] commonest next words, commonest first.
+ */
+class NextWords private constructor(private val next: Map<String, List<String>>) {
+    /** The words that most often follow [previous], or start a sentence when it's null. */
+    fun after(previous: String?): List<String> = next[previous?.lowercase() ?: START].orEmpty()
+
+    val size get() = next.size
+
+    companion object {
+        const val START = "<s>"
+        const val KEPT = 8
+
+        fun read(lines: Sequence<String>): NextWords {
+            val pairs = HashMap<String, MutableList<Pair<String, Int>>>()
+            for (line in lines) {
+                if (line.isEmpty() || line[0] == '#') continue
+                val tab = line.indexOf('	')
+                val space = line.indexOf(' ')
+                if (tab <= 0 || space <= 0 || space > tab) continue
+                val count = line.substring(tab + 1).trim().toIntOrNull()?.takeIf { it > 0 } ?: continue
+                pairs.getOrPut(line.substring(0, space)) { ArrayList() } += line.substring(space + 1, tab) to count
+            }
+            return NextWords(pairs.mapValues { (_, nexts) -> nexts.sortedByDescending { it.second }.take(KEPT).map { it.first } })
+        }
+    }
 }

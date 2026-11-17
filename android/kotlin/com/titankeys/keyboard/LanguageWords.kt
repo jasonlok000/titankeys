@@ -17,6 +17,8 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     var starters: List<String> = emptyList()
     /** Whether a sentence start takes a capital in the current input method. */
     var capitals = true
+    /** The current input method's next-word table, where it has one ([NextWords]). */
+    var nextWords: NextWords? = null
     /** What the current input method learned from the user, or null where learning is off. */
     var learning: LanguageLearning? = null
     /** Called after [learning] changed, to keep it. */
@@ -37,7 +39,7 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         if (prefix.isEmpty()) {
             val start = com.titankeys.engine.SwipeTyping.startsSentence(before)
             val previous = if (start) null else lastWord(before.trimEnd()).takeIf { it.isNotEmpty() }
-            result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation))
+            result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords))
             return
         }
         result(BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty()))
@@ -55,14 +57,16 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         if (other) result(null) else english.lookAlike(context, word, next, result)
     /** Only the input method's own words show on the bar: English's sentence starts don't, for one. */
     override fun allowed(word: String) =
-        if (other) list()?.contains(word) == true || word in starters || learning?.knows(word) == true else english.allowed(word)
+        if (other) list()?.contains(word) == true || word in starters || learning?.knows(word) == true ||
+            nextWords?.after(null)?.contains(word) == true else english.allowed(word)
     override fun fixAllowed(typed: String, fix: String) = if (other) false else english.fixAllowed(typed, fix)
     /** Whether [word] is in English's own list, whatever input method types: Chinese offers it as a choice ([EnglishOffer]). */
     fun englishKnown(word: String) = english.known(word)
 
     override fun known(word: String) =
         if (other) list()?.contains(word) == true || word in starters || learning?.knows(word) == true else english.known(word)
-    override fun sentenceStarts(): List<String> = if (other) BarWords.next(null, learning, starters, capitals = false) else english.sentenceStarts()
+    override fun sentenceStarts(): List<String> =
+        if (other) BarWords.next(null, learning, starters, capitals = false, table = nextWords) else english.sentenceStarts()
     override fun typed(word: String, rememberCase: Boolean) { if (!other) english.typed(word, rememberCase) }
     override fun untyped(word: String) {
         if (!other) return english.untyped(word)

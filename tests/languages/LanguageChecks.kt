@@ -58,6 +58,7 @@ fun main(args: Array<String>) {
     androidsListFollowsTheOnes()
     telexMarksAndTones()
     barWordsAndLearning()
+    koreanChoices()
     if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
@@ -757,6 +758,26 @@ private fun everyInputMethodHasStarters(folder: File) {
     }
 }
 
+/** Korean's choices from its word list: the word so far, the syllable still being built included (하 → 하고, 한국). */
+private fun koreanChoices() {
+    val file = File("android/assets/im/ko/words.combined")
+    if (!file.isFile) return
+    val words = WordList.read(file.useLines { it.toList() }.asSequence(), java.util.Locale.KOREAN)
+    val korean = HangulComposer(words)
+    korean.key('g')
+    val initial = korean.key('k').choices
+    check("하 offers 하고", "하고" in initial) { initial.joinToString(" ") }
+    check("하 offers words that go on to 한", initial.any { it.startsWith("한") }) { initial.joinToString(" ") }
+    korean.reset()
+    same("ㅎ alone offers words with ᄒ", HangulComposer(words).key('g').choices.all { it.startsWith("하") || it.first() in '하'..'힣' }, true)
+    for (c in "gksr") korean.key(c)
+    val after = korean.key('n')
+    check("한 written, 구 being built: 한국", after.choices.any { it.startsWith("한국") }) { after.choices.joinToString(" ") }
+    val pick = korean.pick(after.choices.indexOfFirst { it.startsWith("한국") })
+    check("a pick writes the rest of the word, after 한", pick.commit.startsWith("국") && pick.commit.endsWith(" ")) { pick.commit }
+    same("then nothing is being built", korean.code(), "")
+}
+
 /** The bar's words in another input method, and what it learns from the user. */
 private fun barWordsAndLearning() {
     val starters = listOf("de", "la", "en", "el", "y")
@@ -765,6 +786,16 @@ private fun barWordsAndLearning() {
     same("after a word, nothing learned: the starters", BarWords.next("hola", null, starters, capitals = true), listOf("de", "la", "en"))
     same("while a word is typed: the list's", BarWords.complete("ho", null, listOf("hola", "hoy")), listOf("hola", "hoy"))
     same("nothing to offer: empty, never English", BarWords.next(null, null, emptyList(), capitals = true), emptyList<String>())
+
+    // J's next-word tables: English's en_pairs.txt format.
+    val table = NextWords.read(sequenceOf("# Leipzig, CC BY 4.0", "<s> hola	40", "<s> el	90", "buenos días	50",
+        "buenos aires	70", "bad line", "buenos noches	0"))
+    same("a table's sentence starts, commonest first", table.after(null), listOf("el", "hola"))
+    same("its next words, commonest first, a count of 0 skipped", table.after("Buenos"), listOf("aires", "días"))
+    same("the bar takes them before the starters", BarWords.next("buenos", null, starters, capitals = true, table = table),
+        listOf("aires", "días", "de"))
+    same("at a sentence's start too, with capitals", BarWords.next(null, null, starters, capitals = true, table = table),
+        listOf("El", "Hola", "De"))
 
     val learning = LanguageLearning()
     learning.kept(null, "hola", known = true)
@@ -825,6 +856,8 @@ private fun everyInputMethodInTheFolder(folder: File) {
             rulesTypeTheList(method, dir, File(dir, words))
             continue
         }
+        // Korean's syllables are built by its engine from the jamo on the keys: koreanChoices checks its list.
+        if (method.engine == "hangul") continue
         if (method.engine == "telex") {
             telexTypesTheList(method, File(dir, words))
             continue

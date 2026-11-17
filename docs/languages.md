@@ -493,6 +493,15 @@ unless it's like password or whatever. if not hard then it should be learning fr
   words and as another is switched to: on the phone only, in the backup, kept by Reset most things and cleared by Reset
   literally everything, as English's learned words are. Learn new words I type turns it off for every language.
 - Chinese and Japanese: the starters show on an empty bar; after a pick, Rime's and Mozc's own next words show (D's work).
+- **Next-word tables** (J's, from the Leipzig Corpora Collection): `pairs.txt` in an input method's folder (`pairs-pt-BR.txt`
+  for a variant), in English's `en_pairs.txt` format: "first second<TAB>count", '#' lines for the source, `<s>` for a
+  sentence's start, lower case where the script has case, the top 8 next words per first word. `NextWords` reads it with the
+  word list on a switch and frees it with the list; the bar puts its next words after the user's own and before the starters.
+  An input method without one has the starters and the user's own, as before.
+- **Korean** has a word list now: the Leipzig Corpora Collection's 2022 Korean news (CC BY 4.0), the 100,000 commonest
+  words of whole syllables. Its engine offers the words that start with the word so far, the syllables written and the one
+  being built, by its letters: ㅎㅏ offers 하고 and 한국 (a lone initial matches as the initial its syllables split into). A
+  choice writes the rest of the word and a space.
 
 ## Korean and Vietnamese
 

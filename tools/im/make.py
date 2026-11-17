@@ -419,11 +419,19 @@ def build_engine(data, ident):
         head, words = read_words(data, file)
         write_words(folder, head, words)
         notices = [CLDR_NOTICE, typing, "Words: " + source.format(file=file + ".combined")]
+    if ident == "ko":
+        # Korean's words, for the choices while a word is typed (하 → 하고, 한국) and the bar: the Leipzig Corpora Collection's
+        # 2022 news, whole Hangul syllables only.
+        file = KOREAN_WORDS
+        hangul = [chr(c) for c in range(0xAC00, 0xD7A4)]
+        head, words = read_counts(data, file, "ko", hangul)
+        write_words(folder, head, words)
+        notices = [typing, "Words: " + LEIPZIG_OWN.format(file=os.path.basename(file))]
     rules = {"capitalise": ident != "ko", "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False}
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": script,
                       "keys": "qwerty", "accents": {}, "words": "words.combined" if file else None, "variants": None,
                       "rules": rules, "engine": engine,
-                      "source": {"keys": engine, "words": file + ".combined" if file else None}})
+                      "source": {"keys": engine, "words": (os.path.basename(file) if ident == "ko" else file + ".combined") if file else None}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice(notices))
 
 
@@ -481,6 +489,9 @@ def build_national(data, ident):
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
         notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
 
+
+# Korean's word list (Leipzig Corpora Collection, CC BY 4.0), in the data dir.
+KOREAN_WORDS = "leipzig/kor_news_2022_1M/kor_news_2022_1M-words.txt"
 
 # Thai: Kedmanee (TIS 820-2538), read from xkeyboard-config's symbols/th "basic" (xkb/ in the data dir, with xorgproto's
 # keysymdef.h for the characters). The Titan's 26 letter keys keep Kedmanee's letters and Shift letters where a PC keyboard
@@ -684,7 +695,6 @@ def build_hebrew(data, ident):
 # also come in Simplified, through OpenCC's character table (Apache 2.0).
 STARTERS = 12
 STARTER_SOURCES = {
-    "ko": ("frequencywords/ko_full.txt", "counts"),
     "yue-yale": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "yue-jyutping": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-pinyin": ("../src/rime-essay/essay.txt", "essay"),

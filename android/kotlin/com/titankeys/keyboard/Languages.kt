@@ -189,6 +189,8 @@ internal class Languages(
         target = id
         val ticket = ++loading
         val listTicket = slot.begin(id)
+        // The last input method's next-word table goes with its list.
+        if (id != loaded.id) words.nextWords = null
         if (id == InputMethod.ENGLISH_ID) {
             apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return
@@ -203,6 +205,8 @@ internal class Languages(
             val method = InputMethodList.load(context, id)
             // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
             val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
+            // Its next-word table, where J's tables have one: the bar's words after a word ([NextWords]).
+            val pairs = method?.let { InputMethodList.nextWords(context, it, it.variants.firstOrNull()?.id) }
             // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
             val engine = method?.engine?.let { name ->
                 InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
@@ -212,7 +216,7 @@ internal class Languages(
                     if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
                     else "${words?.size ?: 0} words, no engine"
                 }")
-                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine)
+                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs)
                 else {
                     engine?.stop()
                     Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
@@ -222,7 +226,8 @@ internal class Languages(
         }
     }
 
-    private fun apply(method: InputMethod, words: WordList?, ticket: Int, listTicket: Int, engine: InputEngine? = null) {
+    private fun apply(method: InputMethod, words: WordList?, ticket: Int, listTicket: Int, engine: InputEngine? = null,
+                      pairs: NextWords? = null) {
         if (ticket != loading) {
             engine?.stop()
             return
@@ -232,6 +237,7 @@ internal class Languages(
         variant()
         loaded = method
         slot.done(listTicket, words)
+        this.words.nextWords = pairs
         this.words.other = !current.isEnglish
         this.words.wordBreak = current.rules.wordBreak
         barWords()

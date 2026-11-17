@@ -9,5 +9,5 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
-  "$keyboard/Field.kt" "$keyboard/RawLogGate.kt" "$keyboard/RawLogLine.kt" "$keyboard/RawLogStore.kt" "$keyboard/RawLogWriter.kt" tests/rawlog/RawLogChecks.kt
+  "$keyboard/Field.kt" "$keyboard/RawLogGate.kt" "$keyboard/RawLogLine.kt" "$keyboard/RawLogStore.kt" "$keyboard/RawLogWriter.kt" "$keyboard/OwnerMark.kt" tests/rawlog/RawLogChecks.kt
 java -cp "$work:$stdlib" com.titankeys.keyboard.RawLogChecksKt

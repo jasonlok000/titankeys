@@ -228,6 +228,20 @@ internal object RawLogLines {
     fun mark(kind: String?, label: String?, time: Long) =
         RawLogLine("mark").put("t", time).put("kind", kind).put("label", label).toString()
 
+    /** The input method typing changed, by id: Settings, the switcher, Alt + Sym or Android's own. */
+    fun inputMethod(from: String?, to: String, time: Long) = RawLogLine("im").put("t", time).put("from", from).put("to", to).toString()
+
+    /** What the bar shows now, best first: the first is the middle word ([BarOrder]). */
+    fun bar(words: List<String>, time: Long) = RawLogLine("bar").put("t", time).put("words", words).toString()
+
+    /** An input method's engine: `preparing`, `loaded`, or why a swipe couldn't be read (SwipeLoad's readiness). */
+    fun engine(inputMethod: String, state: String, time: Long) =
+        RawLogLine("engine").put("t", time).put("im", inputMethod).put("state", state).toString()
+
+    /** What an engine committed (Rime, Mozc, Hangul, Telex), with [way] the key or pick that made it, if known. */
+    fun committed(engine: String?, text: String, time: Long) =
+        RawLogLine("commit").put("t", time).put("engine", engine).put("text", text).toString()
+
     fun header(time: Long, wallClock: Long, version: String?, model: String?, android: String?, slipMillis: Int,
                settings: Map<String, Any>, tuning: Map<String, Any>) =
         RawLogLine("header").put("format", FORMAT).put("t", time).put("wall", wallClock).put("atlas", version)

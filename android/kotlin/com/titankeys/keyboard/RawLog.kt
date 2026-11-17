@@ -227,6 +227,26 @@ object RawLog {
         }
 
         /** Any app can send a mark, so only the debug log takes it, never a user's bug recording. */
+        /** The owner's MARK ([OwnerMark]), in the full log and a running bug recording both, with the wall-clock time. */
+        fun ownerMark(wall: String) = write { RawLogLines.mark("MARK", wall, now()) }
+
+        fun inputMethod(from: String?, to: String) = write { RawLogLines.inputMethod(from, to, now()) }
+
+        fun engine(inputMethod: String, state: String) = write { RawLogLines.engine(inputMethod, state, now()) }
+
+        /** The bar's words: the full log only, as they show what was typed, and only when they change. */
+        fun bar(words: List<String>) {
+            if (debug == null || debug.closed || words == lastBar) return
+            lastBar = words
+            debug.add(RawLogLines.bar(words, now()))
+        }
+        private var lastBar: List<String>? = null
+
+        /** An engine's committed text: the full log only. */
+        fun committed(engine: String?, text: String) {
+            if (debug != null && !debug.closed) debug.add(RawLogLines.committed(engine, text, now()))
+        }
+
         fun mark(kind: String?, label: String?) {
             if (debug != null && !debug.closed) debug.add(RawLogLines.mark(kind?.take(MAX_MARK_LENGTH), label?.take(MAX_MARK_LENGTH), now()))
         }

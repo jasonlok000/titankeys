@@ -22,6 +22,9 @@ fun main() {
     writerOverflow()
     writerSkip()
     writerDiscardAndClose()
+    ownerMark()
+    timeRange()
+    newLines()
     println("Raw log checks passed")
 }
 
@@ -321,4 +324,43 @@ private fun writerDiscardAndClose() {
     idle.join(5000)
     same(logFiles(idleDirectory).flatMap { it.readLines() }, listOf(HEADER, """{"k":"end","t":"next"}"""),
         "The first line after Delete all must be kept")
+}
+
+/** Three quick Shift presses, with nothing between, make the owner's MARK (owner, 2026-11-17); anything else doesn't. */
+private fun ownerMark() {
+    val mark = OwnerMark(windowMillis = 900)
+    must(!mark.shift(1000) && mark.first, "The first press starts a run")
+    must(!mark.shift(1200) && !mark.first, "The second press is no mark")
+    must(mark.shift(1400), "The third within the window is the mark")
+    must(!mark.shift(1500), "A fourth starts over")
+    // Too slow: the oldest press falls out of the window.
+    val slow = OwnerMark(windowMillis = 900)
+    slow.shift(0); slow.shift(500)
+    must(!slow.shift(1000), "Three presses over 900 ms are no mark")
+    // Another key between them calls it off.
+    val broken = OwnerMark()
+    broken.shift(0); broken.shift(100); broken.other()
+    must(!broken.shift(200), "A key between the presses calls it off")
+}
+
+/** LogPull's answer: the log's span in wall-clock time, from each part's header. */
+private fun timeRange() {
+    val lines = sequenceOf(
+        """{"k":"gap","t":5,"why":"start","n":0}""",
+        """{"k":"header","format":1,"t":1000,"wall":1700000000000,"atlas":"x"}""",
+        """{"k":"key","c":59,"d":true,"t":1500}""",
+        """{"k":"header","format":1,"t":200,"wall":1700000100000,"atlas":"x"}""",
+        """{"k":"mark","t":900,"kind":"MARK","label":"2026-11-17 10:00:00.000"}""",
+    )
+    same(RawLogRange.of(lines), 1700000000000L to 1700000100700L, "From the first header's time to the last line's")
+    same(RawLogRange.of(sequenceOf("""{"k":"key","t":1}""")), null, "No header, no range")
+}
+
+/** The lines that let a weird moment be replayed: switches, the bar, engines and what they typed, and the MARK. */
+private fun newLines() {
+    same(RawLogLines.inputMethod("en", "yue-yale", 7), """{"k":"im","t":7,"from":"en","to":"yue-yale"}""", "An input method switch")
+    same(RawLogLines.bar(listOf("the", "they", "then"), 8), """{"k":"bar","t":8,"words":["the","they","then"]}""", "The bar, best first")
+    same(RawLogLines.engine("zh-pinyin", "preparing", 9), """{"k":"engine","t":9,"im":"zh-pinyin","state":"preparing"}""", "An engine loading")
+    same(RawLogLines.committed("rime", "我", 10), """{"k":"commit","t":10,"engine":"rime","text":"我"}""", "An engine's text")
+    same(RawLogLines.mark("MARK", "2026-11-17 10:00:00.000", 11), """{"k":"mark","t":11,"kind":"MARK","label":"2026-11-17 10:00:00.000"}""", "The owner's MARK")
 }

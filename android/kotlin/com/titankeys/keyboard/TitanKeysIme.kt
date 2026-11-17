@@ -1246,6 +1246,12 @@ class TitanKeysIme : InputMethodService() {
     private val inPractice get() = editing && GuideHooks.practice(currentInputEditorInfo?.privateImeOptions)
     private var guideEmoji: EmojiPages? = null
 
+    /** The quick settings that can't work in [method]'s language leave the panel while it types (QuickSetting.hiddenIn). */
+    private fun showQuickSettingsFor(method: InputMethod) {
+        panel?.hiddenKeys = QuickSetting.hiddenIn(LanguageSettings.rows(method)).map { it.key }.toSet()
+        panel?.render()
+    }
+
     /** In the guide, the panel has its emoji to start from and keeps O shut; anywhere else it's as always. */
     private fun showGuideExtras() {
         val guide = inGuide
@@ -1305,6 +1311,7 @@ class TitanKeysIme : InputMethodService() {
         if (::languages.isInitialized) showInputMark()
         if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys
+        if (::languages.isInitialized) keys.hiddenKeys = QuickSetting.hiddenIn(LanguageSettings.rows(languages.current)).map { it.key }.toSet()
         keys.emoji = emoji
         // Android can make this view after the field has started, and again when the screen settings change.
         words.words = barWords
@@ -4066,6 +4073,7 @@ class TitanKeysIme : InputMethodService() {
 
     private fun inputMethodChanged(method: InputMethod) {
         showInputMark()
+        showQuickSettingsFor(languages.current)
         preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
         preparingNotice = null
         closePicker()
@@ -4479,7 +4487,7 @@ class TitanKeysIme : InputMethodService() {
         if (!HoldEngine.isLetter(event.keyCode)) return categoryKey(event)
         if (event.repeatCount > 0) return true
         val letter = ('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString()
-        if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.let { item ->
+        if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.takeIf { letter !in panel?.hiddenKeys.orEmpty() }?.let { item ->
             pickedKey = event.keyCode
             useQuickSetting(item)
             keepPanelHover(letter, event.keyCode)

@@ -1,4 +1,5 @@
-en_pairs.txt: English word-pair counts for Numen's sentence-aware correction.
+en_pairs.bin: English word-pair counts for Numen's sentence-aware correction, in the compact form
+PairCounts reads (tools/en_pairs_bin.py turns the text form, en_pairs.txt, into it and back).
 Built with tools/build_context_pairs.py from:
 
 - Simple English Wikipedia (https://simple.wikipedia.org), text licensed under the

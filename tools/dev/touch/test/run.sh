@@ -42,15 +42,26 @@ import os, sys
 sys.path.insert(0, "tools/dev/touch")
 import checks
 sys.modules["checks"] = checks
+import guide_checks
 for name, module_name in checks.BATCHES.items():
     module = __import__(module_name)
+    assert all(callable(check) for check in module.BATCH), f"{name}: a check that can't run"
     assert module.BATCH, f"{name}: no checks"
-    assert module.duration(*module.code("hold:p:800")) > 1400, f"{name}: the code and a held P take too little time"
+    if hasattr(module, "code"):
+        assert module.duration(*module.code("hold:p:800")) > 1400, f"{name}: the code and a held P take too little time"
 checks.record("one", True, "fine", "one")
 checks.record("two", None, "look", "two")
 path = checks.report("test", "now", ["by hand"])
 text = open(path, encoding="utf-8").read()
 for want in ("1 YES, 0 NO, 1 to look at", "- **YES** one: fine (`shots/one.png`)", "- **LOOK** two: look", "- by hand"):
     assert want in text, f"the report lacks {want!r}:\n{text}"
+# The languages batch: every input method in index.json has a test, and the expected text comes from its im.json.
+import language_checks
+ids = language_checks.all_ids()
+assert "ja" in ids and "ko" in ids, ids
+for im in ids:
+    if im not in language_checks.LOOK and im not in language_checks.OWN:
+        assert language_checks.expected(im, list(language_checks.PLAIN)), im
+assert language_checks.expected("ru", list("qwe")) == "йцу", language_checks.expected("ru", list("qwe"))
 print("Batch checks passed")
 PY

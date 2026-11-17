@@ -194,7 +194,8 @@ CHECKS = {
 
 # Named batches: a module whose BATCH is its checks in order, and optional HANDS (what only the owner's hands can check) and
 # finish() (a tidy end).
-BATCHES = {"chinese-ui": "chinese_checks"}
+BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guide": "guide_batch", "gestures": "gesture_batch",
+           "re-tests": "retest_batch"}
 
 
 def report(name, stamp, hands):
@@ -229,7 +230,7 @@ def run_batch(name):
                 check()
             except Stop:
                 raise
-            except Exception as error:  # noqa: BLE001 (one broken check mustn't end the night's run)
+            except (Exception, SystemExit) as error:  # noqa: BLE001 (one broken check mustn't end the night's run)
                 record(check.__name__, False, f"the check broke: {error!r}")
         if hasattr(module, "finish"):
             module.finish()

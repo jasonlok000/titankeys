@@ -59,6 +59,7 @@ fun main(args: Array<String>) {
     telexMarksAndTones()
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
+    if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -815,4 +816,18 @@ private fun everyInputMethodInTheFolder(folder: File) {
         check("${method.id}: every common letter can be typed", missing.isEmpty()) { missing.joinToString(" ") }
     }
     println("languages: ${methods.size} input methods checked")
+}
+
+/**
+ * What a double Space types is each language's own full stop (owner, 2026-11-16): 。 with no space in Chinese and Japanese,
+ * "। " in Hindi, none in Thai, and ". " everywhere else, English included.
+ */
+private fun eachLanguageHasItsFullStop(folder: File) {
+    val own = mapOf("zh-pinyin" to "。", "yue-yale" to "。", "yue-jyutping" to "。", "ja" to "。", "hi" to "। ", "th" to "")
+    for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        val expected = own[method.id] ?: InputMethod.FULL_STOP
+        check("${method.id}'s full stop", method.rules.fullStop == expected) { "'${method.rules.fullStop}', expected '$expected'" }
+    }
+    check("English's full stop", InputMethod.ENGLISH.rules.fullStop == ". ")
 }

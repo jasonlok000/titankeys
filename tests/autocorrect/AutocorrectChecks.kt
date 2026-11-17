@@ -1296,6 +1296,15 @@ private fun markSpacing(world: Realistic) {
     same(quick(typist(sentence = 0)).type("there").text, "Hi. There", "Don't add spaces keeps the full stop's own space")
     same(quick(typist(fullStop = false)).type("there").text, "Hi  there", "Off, two spaces stay spaces")
     same(typist().type("hi. ").quickSpace().type("there").text, "Hi.  There", "Two spaces typed by hand after a full stop stay two")
+    // Each language's own full stop (InputMethod.Rules.fullStop): Chinese and Japanese, Hindi, Thai, and English unchanged.
+    fun inLanguage(mark: String, sentence: Int = 1) = typist(sentence = sentence, capitals = false, field = Typist.FIELD)
+        .also { it.composer.fullStopMark = { mark } }
+    same(quick(inLanguage("。")).text, "hi。", "Chinese and Japanese: a double Space types 。 with no space after it")
+    same(quick(inLanguage("。", sentence = 2)).text, "hi。", "and Two spaces after a sentence gives 。 none either")
+    same(quick(inLanguage("। ")).text, "hi। ", "Hindi: a double Space types । and its space")
+    same(quick(inLanguage("। ", sentence = 2)).text, "hi।  ", "and two spaces with Two spaces after a sentence")
+    same(quick(inLanguage("")).text, "hi  ", "Thai has no full stop: two Spaces stay two spaces")
+    same(quick(inLanguage(". ")).text, "hi. ", "The default is English's")
 
     // Every combination: the same keys never give a double space or a misfire.
     for (sentence in 0..2) for (comma in listOf(true, false)) for (fullStop in listOf(true, false)) {

@@ -107,7 +107,7 @@ The fields:
 | `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 10, one per key column. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
-| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`) |
+| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`); `fullStop`, what a double Space types: `". "` unless set, `"。"` with no space for Chinese and Japanese, `"। "` for Hindi, `""` for Thai, which has none, so two Spaces stay spaces |
 | `engine` | `null`, `"rime"` with its schema (`{ "rime": "tk_yale" }`), or the name of a built-in engine (`"hangul"`, `"telex"`) |
 | `source` | Where the letters and words come from, for the licences page and for contributors |
 
@@ -490,6 +490,23 @@ Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tes
   with it, are its choices, picked with the finger and Space; Space alone writes the word as typed. Telex is an engine
   rather than letters typed into the field and then rewritten, because a tone typed at the end of a word changes a vowel
   in its middle: the engine keeps the whole word until it's done, and the keyboard's own suggestions never see half a word.
+
+## The gestures in every language
+
+Double Space, three Space taps and the delete flick work in every language (owner, 2026-11-16):
+
+- **Double Space** types the input method's own full stop (`fullStop` in `rules`): 。 in Chinese and Japanese, "। " in
+  Hindi, nothing in Thai, ". " everywhere else. The guide's fields type English, so they keep ". ".
+- **The delete flick, each word of its hold, and Ctrl + Backspace** take one word. Where words have spaces, that's the run back
+  to the space, as before (#89). In scripts written without spaces (Han, Hiragana and Katakana, Thai, Lao, Khmer, Burmese) a
+  run can be a whole message, so ICU's word breaks for the input method's language pick the last word, with any marks after
+  it (`WordBreaks`, `IcuWords`). Java's own word breaks have no Chinese dictionary, so the JVM checks use a stand-in, and ICU's
+  real words are checked on the phone.
+- **A flick with a code being built** (Chinese, Japanese, Korean's syllable, Telex's word) clears the whole code and leaves
+  the field alone (owner: "a flick should also delete the entire key code too"); a second flick deletes from the field.
+  Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
+- **Three Space taps** pick the word in front of the cursor with the same breaks. Thai's tone marks and Hindi's vowel signs
+  count as part of their words.
 
 ## Where it goes in the code
 

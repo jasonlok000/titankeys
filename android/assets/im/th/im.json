@@ -161,7 +161,8 @@
     "sentenceEnd": ".?!",
     "openingMarks": "",
     "apostrophes": false,
-    "wordBreak": true
+    "wordBreak": true,
+    "fullStop": ""
   },
   "engine": null,
   "source": {

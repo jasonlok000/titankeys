@@ -51,6 +51,7 @@ fun main() {
     theGuideZoneIsWhereFlicksStart()
     aWordSwipeIsNotAFlick()
     aWordDeleteLeavesNoTwoSpaces()
+    aWordDeleteTakesOneWordWithoutSpaces()
     everyFlickGlowsAtItsLift()
     aFlickNeverShowsAsASwipeFirst()
     println("Delete hold checks passed")
@@ -821,4 +822,70 @@ private fun theHeldFlicksTrailFollowsTheFinger() {
     quick.flick(5_000)
     same(quickTrail.follow(quick.contact, emptyList()).size, 5, "A short flick's trail is its own points")
     same(quickTrail.held, false, "and it's never held")
+}
+
+/**
+ * A stand-in for ICU's word breaks (IcuWords on the phone): the longest of [words] at each place, a run of Latin letters or
+ * digits as one word, and anything else a piece that is no word. ICU's own dictionaries are checked on the phone.
+ */
+private fun dictionary(vararg words: String) = WordBreaker { text ->
+    val pieces = ArrayList<WordPiece>()
+    var at = 0
+    while (at < text.length) {
+        val known = words.filter { text.startsWith(it, at) }.maxByOrNull { it.length }
+        val end = when {
+            known != null -> at + known.length
+            text[at].isLetterOrDigit() && text[at].code < 0x2E80 -> {
+                var to = at
+                while (to < text.length && text[to].isLetterOrDigit() && text[to].code < 0x2E80) to++
+                to
+            }
+            else -> at + 1
+        }
+        pieces += WordPiece(at, end, known != null || text[at].isLetterOrDigit())
+        at = end
+    }
+    pieces
+}
+
+/** The text a word delete leaves with [breaker]'s words, the cursor at "|". */
+private fun deletedWith(breaker: WordBreaker, text: String): String {
+    val cursor = text.indexOf('|')
+    val before = text.substring(0, cursor)
+    val after = text.substring(cursor + 1)
+    return before.dropLast(wordDeleteLength(before, after, breaker)) + "|" + after
+}
+
+/**
+ * In a script written without spaces (Chinese, Japanese, Thai) a flick takes one word, not the whole run back to a space, which
+ * can be the whole message; each word of a hold too. Where words have spaces, nothing changes (owner, 2026-11-16).
+ */
+private fun aWordDeleteTakesOneWordWithoutSpaces() {
+    val zh = dictionary("我", "今天", "很", "高興", "見到", "你", "你好", "喜歡")
+    same(deletedWith(zh, "我今天很高興|"), "我今天很|", "Chinese: one word, not the sentence")
+    var text = "我今天很高興|"
+    val steps = ArrayList<String>()
+    while (!text.startsWith("|")) { text = deletedWith(zh, text); steps += text }
+    same(steps, listOf("我今天很|", "我今天|", "我|", "|"), "Each word of a hold, one at a time")
+    same(deletedWith(zh, "你好。|"), "|", "A full stop goes with its word, as \"hello.\" does")
+    same(deletedWith(zh, "我喜歡iPhone|"), "我喜歡|", "A Latin word in Chinese goes alone")
+    same(deletedWith(zh, "我 喜歡你|"), "我 喜歡|", "Spaces between Chinese runs: still one word")
+    same(deletedWith(zh, "好的 你好|"), "好的 |", "A run that is one word goes whole, and the space stays")
+    val ja = dictionary("今日", "は", "いい", "天気", "ですね")
+    same(deletedWith(ja, "今日はいい天気ですね|"), "今日はいい天気|", "Japanese: one word")
+    val th = dictionary("ฉัน", "ชอบ", "กิน", "ข้าว", "ผัด")
+    same(deletedWith(th, "ฉันชอบกินข้าวผัด|"), "ฉันชอบกินข้าว|", "Thai: one word")
+    // Where words have spaces, the breaks change nothing: Hindi, and English with the #89 rules.
+    same(deletedWith(zh, "मैं ठीक हूँ|"), "मैं ठीक |", "Hindi has spaces: the word back to the space, as before")
+    same(deletedWith(zh, "one two| three"), "one| three", "English: unchanged, no two spaces left")
+    same(deletedWith(zh, "one two|"), "one |", "English at the end of the text: unchanged")
+    // Without breaks (a field read before any input method, a check), the run goes whole, as before.
+    same(wordDeleteLength("我今天很高興", null), 6, "No breaks given: the whole run, as before")
+    // #89 still holds with breaks given: a long word, and a long Chinese text, read only as far as needed.
+    val long = "a".repeat(300)
+    same(wordToDelete({ long.takeLast(it) }, null, zh), long, "A 300-letter word goes whole, breaks or not")
+    val chinese = "你好".repeat(200)
+    var reads = 0
+    same(wordToDelete({ reads++; chinese.takeLast(it) }, null, zh), "你好", "The end of a long Chinese text: one word")
+    same(reads, 1, "and one read is enough")
 }

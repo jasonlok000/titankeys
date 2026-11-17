@@ -2,16 +2,22 @@ package com.titankeys.keyboard
 
 /** Decides which text the touchpad gestures select. Positions are indexes in the text, and a range is its start and end. */
 object WordSelection {
-    private fun isWordCharacter(character: Char) = Character.isLetterOrDigit(character) || character == '\'' || character == '’'
+    /**
+     * A letter, a digit, an apostrophe, or a mark that combines with a letter: Thai's tone marks and Hindi's vowel signs are
+     * part of their words, not breaks in them (ข้าว, हूँ).
+     */
+    private fun isWordCharacter(character: Char) = Character.isLetterOrDigit(character) || character == '\'' || character == '’' ||
+        Character.getType(character).let { it == Character.NON_SPACING_MARK.toInt() || it == Character.COMBINING_SPACING_MARK.toInt() }
 
     /**
      * The word at the selection, grown to whole words. A cursor that touches no word but sits just after a word
-     * and one space takes that word and the space. Returns null between words.
+     * and one space takes that word and the space. Returns null between words. In a script written without spaces, a run of
+     * letters can be a sentence, so [breaker]'s word in it is taken instead ([WordBreaks]).
      */
-    fun at(text: CharSequence, selectionStart: Int, selectionEnd: Int): Pair<Int, Int>? {
+    fun at(text: CharSequence, selectionStart: Int, selectionEnd: Int, breaker: WordBreaker? = null): Pair<Int, Int>? {
         val start = skip(text, selectionStart, -1, word = true)
         val end = skip(text, selectionEnd, 1, word = true)
-        if (start != end) return start to end
+        if (start != end) return narrow(text, start to end, selectionStart, selectionEnd, breaker)
         if (start < 2 || text[start - 1] != ' ' || !isWordCharacter(text[start - 2])) return null
         return skip(text, start - 1, -1, word = true) to end
     }
@@ -20,12 +26,26 @@ object WordSelection {
      * The word at the selection, or else the word in front of the cursor: the last word before it, past any spaces and marks
      * such as a full stop or a comma, on the same line. Returns null where no word comes before the cursor on its line.
      */
-    fun atOrBefore(text: CharSequence, selectionStart: Int, selectionEnd: Int): Pair<Int, Int>? {
-        at(text, selectionStart, selectionEnd)?.let { return it }
+    fun atOrBefore(text: CharSequence, selectionStart: Int, selectionEnd: Int, breaker: WordBreaker? = null): Pair<Int, Int>? {
+        at(text, selectionStart, selectionEnd, breaker)?.let { return it }
         var end = selectionStart
         while (end > 0 && !isWordCharacter(text[end - 1]) && text[end - 1] != '\n') end--
         if (end == 0 || !isWordCharacter(text[end - 1])) return null
-        return skip(text, end, -1, word = true) to end
+        return narrow(text, skip(text, end, -1, word = true) to end, end, end, breaker)
+    }
+
+    /**
+     * The one word of [run], a run of letters, that the selection from [selectionStart] to [selectionEnd] touches, where the run
+     * is in a script written without spaces and [breaker] is given: see [WordBreaks.wordAt]. Otherwise the run, as before.
+     */
+    private fun narrow(text: CharSequence, run: Pair<Int, Int>, selectionStart: Int, selectionEnd: Int, breaker: WordBreaker?): Pair<Int, Int> {
+        if (breaker == null) return run
+        val (from, to) = run
+        val letters = text.subSequence(from, to).toString()
+        if (!WordBreaks.anySpaceless(letters)) return run
+        val word = WordBreaks.wordAt(letters, (selectionStart - from).coerceIn(0, letters.length),
+            (selectionEnd - from).coerceIn(0, letters.length), breaker) ?: return run
+        return from + word.first to from + word.second
     }
 
     /**

@@ -371,7 +371,7 @@ def build_chinese(data, ident):
     name, english, label, locale, schema, source = CHINESE[ident]
     folder = os.path.join(ASSETS, ident)
     os.makedirs(folder, exist_ok=True)
-    rules = {"capitalise": False, "sentenceEnd": "。？！.?!", "openingMarks": "", "apostrophes": False}
+    rules = {"capitalise": False, "sentenceEnd": "。？！.?!", "openingMarks": "", "apostrophes": False, "fullStop": "。"}
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Hani",
                       "keys": "qwerty", "accents": {}, "words": None, "variants": None, "rules": rules,
                       "engine": {"rime": schema}, "source": {"words": source}})
@@ -392,7 +392,7 @@ def build_japanese(data, ident):
     name, english, label, locale = JAPANESE[ident]
     folder = os.path.join(ASSETS, ident)
     os.makedirs(folder, exist_ok=True)
-    rules = {"capitalise": False, "sentenceEnd": "。？！.?!", "openingMarks": "", "apostrophes": False}
+    rules = {"capitalise": False, "sentenceEnd": "。？！.?!", "openingMarks": "", "apostrophes": False, "fullStop": "。"}
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Jpan",
                       "keys": "qwerty", "accents": {}, "words": None, "variants": None, "rules": rules,
                       "engine": {"mozc": "oss"}, "source": {"words": "Mozc's open-source dictionary"}})
@@ -542,7 +542,7 @@ def build_thai(data, ident):
     write_im(folder, {"id": ident, "name": cldr_name(data, "th"), "nameEnglish": "Thai", "label": "ไท", "locale": "th",
                       "script": "Thai", "keys": thai_keys(data), "accents": {}, "words": "words.combined", "variants": None,
                       "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False,
-                                "wordBreak": True},
+                                "wordBreak": True, "fullStop": ""},
                       "engine": None,
                       "source": {"letters": "Kedmanee (TIS 820-2538)", "keys": "xkeyboard-config symbols/th basic",
                                  "words": "main_th.combined"}})
@@ -630,7 +630,7 @@ def build_hindi(data, ident):
     write_im(folder, {"id": ident, "name": cldr_name(data, "hi"), "nameEnglish": "Hindi", "label": "हि", "locale": "hi",
                       "script": "Deva", "keys": "qwerty", "accents": {}, "words": "words.combined", "variants": None,
                       # Shift letters are their own sounds (namaH, maChiyoM), so no sentence capitals.
-                      "rules": {"capitalise": False, "sentenceEnd": ".?!।", "openingMarks": "", "apostrophes": False},
+                      "rules": {"capitalise": False, "sentenceEnd": ".?!।", "openingMarks": "", "apostrophes": False, "fullStop": "। "},
                       "engine": {"rules": "rules.json"},
                       "source": {"keys": "jquery.ime hi-transliteration", "words": os.path.basename(file)}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(

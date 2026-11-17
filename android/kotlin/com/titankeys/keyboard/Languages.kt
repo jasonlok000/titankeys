@@ -114,7 +114,7 @@ internal class Languages(
         val choice = InputMethodChoice.atFieldStart(index, setting, TypingSettings.currentInputMethod(context), picked)
         if (choice.id == picked) TypingSettings.currentInputMethod(context, picked)
         val line = "Input method at field start: ${choice.id} (${choice.why})" +
-            if (englishOnly) "; this field types English: the guide or the playground" else ""
+            if (englishOnly) "; this field types English: the guide's lessons" else ""
         if (line != lastLogged) {
             lastLogged = line
             Log.i(LOG_TAG, line)

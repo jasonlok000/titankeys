@@ -318,7 +318,7 @@ object SymHold {
     fun whyNot(onCount: Int, englishOnly: Boolean, panelOpen: Boolean, altOn: Boolean, inGuide: Boolean, exact: Boolean,
                waiting: Int): String? = when {
         onCount < 2 -> "only $onCount input method on"
-        englishOnly -> "this field types English: the guide or the playground"
+        englishOnly -> "this field types English: the guide's lessons"
         altOn -> "Alt is on"
         inGuide -> "the guide"
         exact -> "an exact typing app"

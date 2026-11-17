@@ -4532,6 +4532,8 @@ class TitanKeysIme : InputMethodService() {
         contact.releaseKeys()
         composer.stop()
         autocorrect.release()
+        // Its word list and engines go with it, the warm ones too.
+        if (::languages.isInitialized) languages.stop()
         editor.cancelState()
         TypingSettings.stopListening(this, overlaySetting)
         barSize?.let { FixedScale.stopListening(this, it) }

@@ -17,7 +17,7 @@ test("only a debug package has the lab", () => {
 test("every lab operation refuses outside a debug package", () => {
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   const operations = [...adapter.matchAll(/^\s+"(lab\w+)" -> \{?\s*(.*)$/gm)];
-  expect(operations.map(match => match[1]).sort()).toEqual(["labDominoes", "labExperiment", "labFlickHold", "labGraph", "labPlayFlick", "labSelectionEnd"]);
+  expect(operations.map(match => match[1]).sort()).toEqual(["labExperiment", "labFlickHold", "labGraph", "labPlayFlick", "labSelectionEnd"]);
   for (const [line, , body] of operations) {
     const first = body || adapter.slice(adapter.indexOf(line) + line.length).trimStart().split("\n")[0];
     expect(first.startsWith("lab().")).toBe(true);

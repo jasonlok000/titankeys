@@ -1036,46 +1036,6 @@ class Haptics(private val context: Context) {
 
         private const val SELECTION_END_KEY = "debug_selection_end"
 
-        /**
-         * The dominoes' streak, as the Haptics lab tried it: its words, or null for GestureDisplay.DOMINO_WORDS, and the most ms
-         * between deletes, or null for GestureDisplay.DOMINO_GAP_MILLIS. Only TitanKeys Debug looks: every other build returns
-         * null without looking.
-         */
-        fun readDominoWords(context: Context): Int? {
-            if (!debug(context)) return null
-            return preferences(context).getInt(DOMINO_WORDS_KEY, -1).takeIf { it >= 0 }?.coerceIn(DOMINO_WORDS_RANGE)
-        }
-
-        fun readDominoGap(context: Context): Long? {
-            if (!debug(context)) return null
-            return preferences(context).getLong(DOMINO_GAP_KEY, -1L).takeIf { it >= 0 }?.coerceIn(DOMINO_GAP_RANGE)
-        }
-
-        /** How much slower the dominoes' dots go, in percent of the dots' time, as the lab tried it, or null. Debug only. */
-        fun readDominoSlow(context: Context): Float? {
-            if (!debug(context)) return null
-            return preferences(context).getInt(DOMINO_SLOW_KEY, -1).takeIf { it >= 0 }?.coerceIn(DOMINO_SLOW_RANGE)?.div(100f)
-        }
-
-        /** Tries [words], [gap] and [slowPercent] for the dominoes; null puts that default back. Debug build only. */
-        fun tryDominoes(context: Context, words: Int?, gap: Long?, slowPercent: Int? = null) {
-            check(debug(context)) { "Only TitanKeys Debug can try the dominoes' streak" }
-            preferences(context).edit().apply {
-                if (words == null) remove(DOMINO_WORDS_KEY) else putInt(DOMINO_WORDS_KEY, words.coerceIn(DOMINO_WORDS_RANGE))
-                if (gap == null) remove(DOMINO_GAP_KEY) else putLong(DOMINO_GAP_KEY, gap.coerceIn(DOMINO_GAP_RANGE))
-                if (slowPercent == null) remove(DOMINO_SLOW_KEY) else putInt(DOMINO_SLOW_KEY, slowPercent.coerceIn(DOMINO_SLOW_RANGE))
-            }.commit()
-        }
-
-        /** What the Haptics lab can try for the dominoes: 1 to 500 words, and 250 ms to 10 s between deletes. */
-        val DOMINO_WORDS_RANGE = 1..500
-        val DOMINO_GAP_RANGE = 250L..10_000L
-
-        private const val DOMINO_WORDS_KEY = "debug_domino_words"
-        private const val DOMINO_GAP_KEY = "debug_domino_gap"
-        /** How much slower the lab can make the dominoes: 100% (the dots' own time) to 800%. */
-        val DOMINO_SLOW_RANGE = 100..800
-        private const val DOMINO_SLOW_KEY = "debug_domino_slow"
 
         /** The waits that the Haptics lab can try for a single flick's dots, in ms. */
         val FLICK_HOLD_RANGE = 0L..600L

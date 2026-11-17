@@ -139,48 +139,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     /** True while anything here needs drawing: a scene, or the Space glow, which leaves the words as they are. */
     val busy get() = scene != Scene.None || glowing
 
-    /**
-     * The dominoes (#89, owner, 2026-11-17: "it should show in place of the dot animation... It's just a variation of the dot
-     * part of the animation. Everything else stays"): once a delete streak reaches [dominoWords] words, the delete's dots are
-     * drawn as small tiles that tip over into the caret, and a count beside the caret counts the streak's words up as they land.
-     * The words, the glow and the caret are as always. They last as long as the dots: the flick's, or the hold's after its lift,
-     * which play to the end; a key cuts them as it cuts the dots. [dominoTotal] is the streak's words, which grows as it goes on.
-     */
-    var dominoes = false
-        private set
-    var dominoTotal = 0
-        private set
-
-    /** The streak reached the dominoes, or grew while they show: [total] words. */
-    fun startDominoes(total: Int, @Suppress("UNUSED_PARAMETER") now: Long = lastFrame) {
-        dominoTotal = total
-        if (dominoes) return
-        dominoes = true
-        changed()
-    }
-
-    /**
-     * The dominoes take their time (owner, 2026-11-17: "It also finishes reli quickly. It's a Easter egg we could take our time"):
-     * from when their dots start, the bar's clock runs [dominoSlow] times slower, so everything of theirs, standing, falling and
-     * the count, takes that much longer: about 7 s for a full row. [now] on that clock.
-     */
-    private fun slowed(now: Long): Long =
-        if (dominoes && softDelete && now > flourishAt) flourishAt + ((now - flourishAt) / dominoSlow()).toLong() else now
-
-    /** [millis] after the dots started, on the wall clock: the dominoes' stretched, so their ticks land as their tiles fall. */
-    fun stretched(millis: Long): Long = if (dominoes && softDelete) (millis * dominoSlow()).toLong() else millis
-
-    /** A key was pressed: no more dominoes. */
-    fun stopDominoes() {
-        if (!dominoes) return
-        dominoes = false
-        changed()
-    }
-
-    /** The dominoes end with the delete's picture. */
-    private fun endDominoes() {
-        if (dominoes && scene == Scene.None) dominoes = false
-    }
 
     /** True while the Space glow shows, from taps, as part of a steer, select or held delete, or as it fades after one. */
     val glowing get() = glowTaps > 0 || glowHeld || glowFading
@@ -420,8 +378,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * the real text before the cursor, for the words on the bar: see [deleteText].
      */
     fun deleteHeld(repeatMillis: Long, now: Long, pace: Float = 1f, before: CharSequence? = null) {
-        // A new hold ends the dominoes at once, as a flick does; the same hold, its pace changing, never does.
-        if (scene != Scene.DeleteHold) dominoes = false
         if (!begin(Scene.DeleteHold, now)) return
         deleteMillis = repeatMillis
         deletePace = pace.coerceIn(0f, 1f)
@@ -608,12 +564,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             changed()
         } else {
             if (!allowed || live) return
-            // A flick while the dominoes show ends them at once, and its own dots start as always: the Easter egg never stands
-            // in a delete's way (owner, 2026-11-17: "it's blocking my delete").
-            if (dominoes) {
-                dominoes = false
-                if (flourishing) clear()
-            }
             // Dots still playing take the new ones at the end of their queue, and go on.
             if (scene == Scene.DeleteFlick && dots > 0 && !still && now - flourishAt < doneAt) {
                 chain(letters, (now - flourishAt).toFloat())
@@ -835,7 +785,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
     fun interrupt() {
         if (!flourishing) return
         clear()
-        endDominoes()
         changed()
     }
 
@@ -1119,9 +1068,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /** Moves the picture on to [now]. [scale] is Android's animator duration scale, and 0 means no motion. True asks for another frame. */
     fun advance(now: Long, scale: Float): Boolean {
-        val more = advanceScenes(slowed(now), scale)
-        endDominoes()
-        return more
+        return advanceScenes(now, scale)
     }
 
     private fun advanceScenes(now: Long, scale: Float): Boolean {
@@ -1145,7 +1092,9 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
                 if (now - flourishAt > stay) flourishAt = now - stay.toLong()
             }
             val length = if (!motion) STILL_MILLIS else when (scene) {
-                Scene.DeleteFlick -> if (dots > 0) (doneAt + FLICK_BACK * scale) / scale else FLICK_MILLIS
+                // A delete's dots last [DOTS_MOST] at most, however much went: past that they end, cleanly (owner, 2026-11-17:
+                // "make sure that LONG hold delete will still show the dot animations... max 5 seconds").
+                Scene.DeleteFlick -> min(if (dots > 0) (doneAt + FLICK_BACK * scale) / scale else FLICK_MILLIS, DOTS_MOST)
                 Scene.WordSelected -> PICK_MILLIS
                 else -> FLOURISH_MILLIS
             } * scale
@@ -1379,34 +1328,6 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         if (!motion) target else target + (value - target) * exp(-elapsed / millis)
 
     companion object {
-        /**
-         * The dominoes (#89, owner, 2026-11-17: "make it rare enough and requires deleting a legitimately large amount of text"):
-         * a delete streak of this many words, flicks and held deletes with no typing between, each within [DOMINO_GAP_MILLIS]
-         * of the last, so it takes real work: a long hold, or flicks one after another. Deletes of a selection never count.
-         */
-        const val DOMINO_WORDS = 100
-        const val DOMINO_GAP_MILLIS = 2_000L
-        /**
-         * Numbers tried in TitanKeys Debug's Haptics lab, or null for the defaults. Only set from Haptics.readDominoWords and
-         * readDominoGap, which every other build returns null from.
-         */
-        @Volatile
-        var triedDominoWords: Int? = null
-        @Volatile
-        var triedDominoGap: Long? = null
-
-        /**
-         * How much slower the dominoes' dots go than the dots, and what the Haptics lab tried, or null. A full row of dots takes
-         * about 1.5 s, so 4.5 times makes the dominoes about 7 s, as asked (owner, 2026-11-17: "we could take our time").
-         */
-        const val DOMINO_SLOW = 4.5f
-        @Volatile
-        var triedDominoSlow: Float? = null
-        fun dominoSlow() = triedDominoSlow ?: DOMINO_SLOW
-
-        /** The streak that plays the dominoes: the lab's, or the defaults. */
-        fun dominoWords() = triedDominoWords ?: DOMINO_WORDS
-        fun dominoGapMillis() = triedDominoGap ?: DOMINO_GAP_MILLIS
         /** How many words fit across the strip. */
         const val VISIBLE_WORDS = 7f
         /** The letters of each word in the line of text that the cursor moves through, with one space after each word. */
@@ -1630,6 +1551,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          * (owner, 2026-11-17: "it doesnt show the animation if I delete too much"). Past this, the dots show the nearest words.
          */
         const val DOT_CAP = MAX_ROW.toInt()
+        /** The longest a delete's dots show, in ms at the usual animation speed: then they end, whatever is left. */
+        const val DOTS_MOST = 5_000f
 
         /**
          * [letters], a delete's words nearest the caret first, as dots: at least one each, and [DOT_CAP] in all at most, the
@@ -1701,36 +1624,5 @@ enum class SelectionEnd(val id: String, val label: String) {
 
         /** The mark stored under [id], or the handle where there is none, as every build but TitanKeys Debug has. */
         fun stored(id: String?) = of(id) ?: Handle
-    }
-}
-
-/**
- * The delete streak that plays the dominoes (#89): words that flicks and held deletes took, each within a gap of the last, with no
- * typing between. A delete of a selection neither counts nor breaks it (owner, 2026-11-17: select-all then delete stays an
- * instant delete with the usual animation). It passes its number once a streak: [word] says so.
- */
-class DeleteStreak {
-    var words = 0
-        private set
-    private var lastAt = Long.MIN_VALUE / 2
-
-    /**
-     * A word went at [now]. True as the streak passes [most] words, once a streak: from then the dominoes show and count on,
-     * 150, 200, 500, for as long as it goes (owner, 2026-11-17: "it should play when it's OVER a hundred word... Not interrupting
-     * my delete hold"). A [gap] or typing ends the streak, and the next one passes [most] again.
-     */
-    fun word(now: Long, gap: Long, most: Int): Boolean {
-        if (now - lastAt > gap) restart()
-        lastAt = now
-        words++
-        return words == most
-    }
-
-    /** Something was typed: the streak starts over. */
-    fun typed() = restart()
-
-    private fun restart() {
-        words = 0
-        lastAt = Long.MIN_VALUE / 2
     }
 }

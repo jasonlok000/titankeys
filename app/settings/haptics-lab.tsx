@@ -1,23 +1,13 @@
 import { useState } from "react";
 import { Field, Screen, Section, SettingsChoices, TextInput, useSnapshot } from "ink";
 import { Toggle, playHaptic } from "../../lib/app-haptics";
-import { type HapticsLab, playLabFlick, setLabDominoes, setLabExperiment, setLabFlickHold, setLabSelectionEnd, showHapticsGraph, state } from "../../lib/titankeys";
+import { type HapticsLab, playLabFlick, setLabExperiment, setLabFlickHold, setLabSelectionEnd, showHapticsGraph, state } from "../../lib/titankeys";
 import { hapticGroups } from "../../lib/haptics";
 
 const title = "Haptics lab";
 /** The flick dots wait goes from 0 to 600 ms: typed, or 25 ms a press. */
 const WAIT_MAX = 600;
 const WAIT_STEP = 25;
-/** The dominoes' streak (#89): the lab tries 10 words at a time, up to 500, and 250 ms at a time between deletes. */
-const DOMINO_WORDS_MAX = 500;
-const DOMINO_WORDS_STEP = 10;
-const DOMINO_GAP_MIN = 250;
-const DOMINO_GAP_MAX = 10_000;
-const DOMINO_GAP_STEP = 250;
-/** How much slower than the dots the dominoes go: 100% to 800%, 25% at a time. */
-const DOMINO_SLOW_MIN = 100;
-const DOMINO_SLOW_MAX = 800;
-const DOMINO_SLOW_STEP = 25;
 const subtitle = "Type and swipe in the lab, and watch what the keyboard plays. Change a pattern there and the next one plays it.";
 
 /** TitanKeys Debug only. Every other build shows nothing here, even through a direct link. */
@@ -64,24 +54,6 @@ function Lab({ lab }: { lab: HapticsLab }) {
       <Field label="Shorter" disabled={wait <= 0} onPress={() => void tryWait(wait - WAIT_STEP)}>{`− ${WAIT_STEP} ms`}</Field>
       <Field label="Longer" disabled={wait >= WAIT_MAX} onPress={() => void tryWait(wait + WAIT_STEP)}>{`+ ${WAIT_STEP} ms`}</Field>
       <Field label="Reset" disabled={wait === lab.flickHoldDefault} onPress={() => void tryWait(null)}>{`${lab.flickHoldDefault} ms`}</Field>
-      {/* The dominoes' streak (#89): how many words, and the most time between deletes. Each change applies to the next delete. */}
-      <Field label="Dominoes after">{`${lab.dominoWords} words${lab.dominoWords === lab.dominoWordsDefault ? "" : `, default ${lab.dominoWordsDefault}`}`}</Field>
-      <Field label="Fewer words" disabled={lab.dominoWords <= 1}
-        onPress={() => void setLabDominoes(Math.max(1, lab.dominoWords - DOMINO_WORDS_STEP), lab.dominoGapMillis, lab.dominoSlowPercent)}>{`− ${DOMINO_WORDS_STEP}`}</Field>
-      <Field label="More words" disabled={lab.dominoWords >= DOMINO_WORDS_MAX}
-        onPress={() => void setLabDominoes(Math.min(DOMINO_WORDS_MAX, lab.dominoWords + DOMINO_WORDS_STEP), lab.dominoGapMillis, lab.dominoSlowPercent)}>{`+ ${DOMINO_WORDS_STEP}`}</Field>
-      <Field label="Dominoes gap">{`${lab.dominoGapMillis} ms${lab.dominoGapMillis === lab.dominoGapDefault ? "" : `, default ${lab.dominoGapDefault} ms`}`}</Field>
-      <Field label="Shorter gap" disabled={lab.dominoGapMillis <= DOMINO_GAP_MIN}
-        onPress={() => void setLabDominoes(lab.dominoWords, Math.max(DOMINO_GAP_MIN, lab.dominoGapMillis - DOMINO_GAP_STEP), lab.dominoSlowPercent)}>{`− ${DOMINO_GAP_STEP} ms`}</Field>
-      <Field label="Longer gap" disabled={lab.dominoGapMillis >= DOMINO_GAP_MAX}
-        onPress={() => void setLabDominoes(lab.dominoWords, Math.min(DOMINO_GAP_MAX, lab.dominoGapMillis + DOMINO_GAP_STEP), lab.dominoSlowPercent)}>{`+ ${DOMINO_GAP_STEP} ms`}</Field>
-      <Field label="Dominoes pace">{`${lab.dominoSlowPercent}% of the dots' time${lab.dominoSlowPercent === lab.dominoSlowDefault ? "" : `, default ${lab.dominoSlowDefault}%`}`}</Field>
-      <Field label="Quicker dominoes" disabled={lab.dominoSlowPercent <= DOMINO_SLOW_MIN}
-        onPress={() => void setLabDominoes(lab.dominoWords, lab.dominoGapMillis, Math.max(DOMINO_SLOW_MIN, lab.dominoSlowPercent - DOMINO_SLOW_STEP))}>{`− ${DOMINO_SLOW_STEP}%`}</Field>
-      <Field label="Slower dominoes" disabled={lab.dominoSlowPercent >= DOMINO_SLOW_MAX}
-        onPress={() => void setLabDominoes(lab.dominoWords, lab.dominoGapMillis, Math.min(DOMINO_SLOW_MAX, lab.dominoSlowPercent + DOMINO_SLOW_STEP))}>{`+ ${DOMINO_SLOW_STEP}%`}</Field>
-      <Field label="Reset the dominoes" disabled={lab.dominoWords === lab.dominoWordsDefault && lab.dominoGapMillis === lab.dominoGapDefault && lab.dominoSlowPercent === lab.dominoSlowDefault}
-        onPress={() => void setLabDominoes(null, null, null)}>{`${lab.dominoWordsDefault} words, ${lab.dominoGapDefault} ms, ${lab.dominoSlowDefault}%`}</Field>
       <Toggle label="Tick at delete zones" value={lab.experiments.deleteZoneTicks ?? true}
         onChange={on => void setLabExperiment("deleteZoneTicks", on)} />
       <Toggle label="Exact-typing keys feel like a key (texture)" value={lab.experiments.exactKeysTexture ?? false}

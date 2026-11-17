@@ -84,8 +84,9 @@ def set_text(text):
     """Empties the field and types text into it, with the cursor at its end. Returns what the field then holds."""
     guarded("keycombination", "113", "29")  # Ctrl+A
     guarded("keyevent", "67")
-    for chunk in re.findall(r".{1,60}", text.replace(" ", "%s")):
-        guarded("text", chunk)
+    # Chunked first, then each chunk's spaces as adb's %s: chunking after could split a %s and type it (2026-11-16: "lazy%sdog").
+    for chunk in re.findall(r".{1,60}", text, re.S):
+        guarded("text", chunk.replace(" ", "%s"))
     return field()
 
 
@@ -107,6 +108,21 @@ def check_89_flick_end():
     play("flick", shot="89-flick-dots", at=60)
     after = field()
     record("89-flick-end", after == text[:-len("dog")], f"{len(text)} -> {len(after)} characters", "89-flick-dots")
+
+
+def check_89_long_delete():
+    """#89: a flick with the finger left down deletes word by word, the chomper eating a dot for each, for 10 s at most: then
+    it stops though the finger stays. 400 words can't all go in 10 s, so some must be left."""
+    text = " ".join(["the quick brown fox jumps over the lazy dog"] * 45)
+    # Measured from what the field holds after setup: autocorrect may add a few characters (2026-11-16: 1984 for 1979).
+    before = set_text(text)
+    if len(before) < 1500:
+        return record("89-long-delete", None, f"setup typed only {len(before)} characters of {len(text)}")
+    play("flick:3.2:90:14000", shot="89-chomper", at=3000)
+    after = field()
+    gone = len(before) - len(after)
+    record("89-long-delete", 0 < gone < len(before) and before.startswith(after),
+           f"{gone} of {len(before)} characters deleted in a 14 s hold (stops at 10 s); the chomper is the shot", "89-chomper")
 
 
 def check_89_long_word():
@@ -183,6 +199,7 @@ def check_sym_log():
 CHECKS = {
     "89-flick-end": check_89_flick_end,
     "89-long-word": check_89_long_word,
+    "89-long-delete": check_89_long_delete,
     "93-flick-then-swipe": check_93_flick_then_swipe,
     "83-pairs": check_83_pairs,
     "swiped-its": check_swiped_apostrophe,
@@ -195,7 +212,7 @@ CHECKS = {
 # Named batches: a module whose BATCH is its checks in order, and optional HANDS (what only the owner's hands can check) and
 # finish() (a tidy end).
 BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guide": "guide_batch", "gestures": "gesture_batch",
-           "re-tests": "retest_batch", "space-middle": "space_batch"}
+           "re-tests": "retest_batch", "space-middle": "space_batch", "languages-page": "page_batch"}
 
 
 def report(name, stamp, hands):
@@ -214,6 +231,18 @@ def report(name, stamp, hands):
     return path
 
 
+def to_field():
+    """Back out of TitanKeys Debug's other screens (Settings, the guide) so the gate can bring its field's screen: an am start
+    only brings the task forward, with whatever screen is on top of it (2026-11-16, after About). Never Back over another app."""
+    field_screen = os.environ.get("TK_TOUCH_ACTIVITY", "")
+    for _ in range(5):
+        front = next((line for line in adb("shell", "dumpsys", "window").splitlines() if "mCurrentFocus" in line), "")
+        if (field_screen and field_screen in front) or f" {APP}/" not in front:
+            return
+        adb("shell", "input", "keyevent", "4")
+        time.sleep(1.2)
+
+
 def run_batch(name):
     """Runs a batch on its own: Debug is the keyboard from the start to the end, and release TitanKeys comes back only then.
     The gates still run before every gesture. A check that breaks is a NO and the batch goes on; a STOP ends it. The report is
@@ -222,9 +251,11 @@ def run_batch(name):
     module = importlib.import_module(BATCHES[name])
     stamp = time.strftime("%Y%m%d-%H%M%S")
     stopped = None
-    keyboard("debug")
-    os.environ["TK_IME_HELD"] = "1"
     try:
+        # Inside the try: a gate that fails here still gets its report and release back (2026-11-16, after a crash dialog).
+        to_field()
+        keyboard("debug")
+        os.environ["TK_IME_HELD"] = "1"
         for check in module.BATCH:
             try:
                 check()
@@ -239,7 +270,9 @@ def run_batch(name):
         record("batch", None, f"STOP, the run ended: {stop}")
     finally:
         os.environ.pop("TK_IME_HELD", None)
-        keyboard("release")
+        # A night of batches keeps Debug from the first to the last (TK_BATCH_KEEP_DEBUG=1); the runner sets release back after.
+        if os.environ.get("TK_BATCH_KEEP_DEBUG") != "1":
+            keyboard("release")
         path = report(name, stamp, getattr(module, "HANDS", []))
         print(f"report: {path}", flush=True)
     return stopped

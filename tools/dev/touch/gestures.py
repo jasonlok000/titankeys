@@ -8,7 +8,8 @@ and O.
 
 Usage: gestures.py [--keymap FILE] [--out FILE] GESTURE... with GESTUREs in order, and +MS between two for a pause:
   swipe:WORD[:SPEED]      a swipe through WORD's keys, SPEED in keys a millisecond (default .012)
-  flick[:KEYS[:MS]]       a level delete flick to the left from Backspace (default 3.2 keys in 90 ms)
+  flick[:KEYS[:MS[:HOLD]]]  a level delete flick to the left from Backspace (default 3.2 keys in 90 ms); HOLD ms with the
+                          finger left down after it, the long delete (#89: it deletes for 10 s at most)
   space:N                 N taps on Space's touch zone (1, 2 or 3)
   spacehold:N[:KEYS[:MS]] N taps on Space, the last one held, then a slide of KEYS key widths sideways (negative: left) in MS
                           (default 500), as steering (2) and selecting (3) do; KEYS 0 or none only holds
@@ -332,12 +333,14 @@ class Script:
         self.wait(FRAME_MS)
         self.lift()
 
-    def flick(self, keys=3.2, ms=90.0):
+    def flick(self, keys=3.2, ms=90.0, hold=0.0):
         # DeleteSwipe.kt's GUIDE_FLICK_START: on Backspace, in the middle of the delete zone, on the middle row.
         x0, y = (.875 + .95) / 2, (.25 + .56) / 2
         x1 = x0 - keys / 10
         self.touch(x0, y, MOVING_MAJOR[0])
         self.move([(x0, y), (x1, y)], keys / ms)
+        if hold:
+            self.still(x1, y, hold)
         self.lift()
 
     def flick_up(self, letter, rows=1.0, ms=80.0):

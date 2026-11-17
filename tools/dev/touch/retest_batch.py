@@ -14,8 +14,22 @@ from checks import APP, Stop, adb, record
 REPO = languages.REPO
 
 
+def own_screen():
+    """Debug in front again (a tool may leave the launcher there): the gate brings its screen back, then its field."""
+    guide_checks.leave_guide()
+    checks.to_field()
+    checks.keyboard("debug")
+    if not languages.in_field():
+        raise Stop(f"not on TitanKeys Debug's own screen: {languages.front().strip()}")
+
+
 def run_tool(name, *command):
-    env = dict(os.environ, APP=APP, TK_PHONE_LOCKED="1", TK_IME_HELD="1")
+    own_screen()
+    build = os.environ.get("TK_BUILD", os.path.expanduser("~/build"))
+    # As the build copies have them: rg in tk-tools, Kotlin in the build folder.
+    env = dict(os.environ, APP=APP, TK_PHONE_LOCKED="1", TK_IME_HELD="1",
+               PATH=os.path.join(build, "tk-tools") + os.pathsep + os.environ.get("PATH", ""))
+    env.setdefault("KOTLIN_HOME", os.path.join(build, "kotlin-2.1.20", "kotlinc"))
     result = subprocess.run(list(command), cwd=REPO, env=env, capture_output=True, text=True)
     tail = " | ".join((result.stdout + result.stderr).strip().splitlines()[-3:])[-300:]
     record(name, result.returncode == 0, f"exit {result.returncode}: {tail}")
@@ -41,15 +55,27 @@ def check_rawlog():
 def check_85_leaks():
     """#85: the guide opened and left 15 times, then LeakCheck: no guide or playground may stay in memory."""
     for _ in range(15):
-        guide_checks.leave_guide()
-        if not languages.in_field():
-            raise Stop(f"not on TitanKeys Debug's own screen: {languages.front().strip()}")
+        own_screen()
         guide_checks.guide("steer")
         guide_checks.leave_guide()
     time.sleep(2)
     answer = adb("shell", "am", "broadcast", "-n", f"{APP}/com.titankeys.keyboard.LeakCheck")
     report = answer.strip().split("data=")[-1].strip('"')[:300]
     record("85-leaks", "no guide or playground in memory" in answer, f"after 15 guides: {report}")
+
+
+def row_at(text):
+    """The middle of the first view whose text is exactly text, or None (the dump is deleted at once)."""
+    path = "/data/local/tmp/tk-touch-ui.xml"
+    adb("shell", "uiautomator", "dump", path)
+    xml = adb("shell", "cat", path)
+    adb("shell", "rm", "-f", path)
+    import re
+    found = re.search(r'text="' + re.escape(text) + r'"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml)
+    if not found:
+        return None
+    x0, y0, x1, y1 = (int(v) for v in found.groups())
+    return (x0 + x1) // 2, (y0 + y1) // 2
 
 
 def check_languages_page():
@@ -59,12 +85,14 @@ def check_languages_page():
             raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
         adb("shell", "input", *command)
         time.sleep(1.5)
+    own_screen()
     adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
     time.sleep(3)
-    # The places on the 1076 x 1200 display: SETTINGS at the top right, then Languages a screen down (2026-11-16).
+    # SETTINGS at the top right of the 1076 x 1200 display; then the Languages row, by its text where the screen shows it,
+    # or where it sits since Languages came first in Settings (main 99fb0dcd): the first row, under its heading.
     step("tap", "952", "166")
-    step("swipe", "540", "1000", "540", "450", "400")
-    step("tap", "540", "720")
+    x, y = row_at("Languages") or (540, 452)
+    step("tap", str(x), str(y))
     record("settings-languages", None, "Settings > Languages: the ones on at the top, then by script", guide_checks.shot("settings-languages"))
     for _ in range(3):
         if f" {APP}/" in languages.front():

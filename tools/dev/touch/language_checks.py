@@ -14,11 +14,13 @@ import os
 import time
 
 import checks
+import guide_checks
 import languages
 from checks import Stop, adb, play, record
 
 RECEIVER = f"{checks.APP}/com.titankeys.keyboard.InputMethodsSet"
-SET_SIZE = 8
+# Settings keeps eight input methods on at most: seven, and English.
+SET_SIZE = 7
 # Letters most layouts move, so a wrong layout shows; no Space, so no fix runs on them.
 PLAIN = "qwertyuiop"
 # Engines and the scripts whose keys aren't one letter each: their own keys and what they must type.
@@ -35,6 +37,8 @@ LOOK = {
     "yue-yale": ("n e i h o u", "Yale: choices over W to O (the chinese-ui batch checks the rest)"),
     "yue-jyutping": ("n e i h o u", "Jyutping: choices over W to O"),
     "zh-pinyin": ("n i h a o", "Pinyin: 你好 among the choices"),
+    # Hindi types by sound (jquery.ime's rules), so its keys aren't a table to read back against.
+    "hi": ("n a m a s t e", "Hindi by sound: नमस्ते in the field"),
 }
 # Space after a code picks: Japanese's first choice, read back.
 PICKS = {"ja": "n i h o n g o"}
@@ -54,23 +58,29 @@ def expected(im, keys):
             out += " "
         else:
             value = table.get(key, key) if isinstance(table, dict) else key
-            out += value.split("/")[0]
+            # A key's letters as "a/A", or as a list (newer im.json files): what it types plain comes first either way.
+            value = value[0] if isinstance(value, list) else value.split("/")[0]
+            out += value
     return out
 
 
 def turn_on(on, current):
-    """Sets the input methods on and the one typing, then waits for Android's entry and the keyboard to follow."""
+    """Sets the input methods on and the one typing, then starts the field anew so the keyboard reads them: release TitanKeys,
+    then Debug again (Android's own entry doesn't move the keyboard; 2026-11-16's first run). The keyboard's own log line says
+    which input method the field started with."""
+    languages.logs_on(True)
     out = adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "on", ",".join(on), "--es", "current", current)
     if "typing " + current not in out:
         raise Stop(f"InputMethodsSet didn't take {current}: {out.strip()[-200:]}")
-    ids = languages.subtype_ids()
+    # The log from here on only: counting lines drifted as the buffer rolled (lt, nn and ja, 2026-11-16).
+    adb("logcat", "-c")
+    checks.keyboard("release")
+    checks.keyboard("debug")
     for _ in range(10):
-        if ids.get(languages.current_subtype()) == current:
+        if any(f"field start: {current} (" in line for line in languages.log_lines()):
             return True
         time.sleep(.5)
-    # The keyboard reads the setting at the next field start: Debug again, read back.
-    checks.keyboard("debug")
-    return ids.get(languages.current_subtype()) == current
+    return False
 
 
 def gestures(keys):
@@ -81,6 +91,10 @@ def gestures(keys):
 
 
 def fresh():
+    """Debug's Space gestures field in front (the guide's and the playground's type English only), no code, empty."""
+    guide_checks.leave_guide()
+    if not languages.in_field():
+        raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
     play(*[g for _ in range(20) for g in ("key:del", "+60")])
     checks.set_text("")
 
@@ -93,8 +107,13 @@ def log_since(seen):
 
 def one(im, on):
     seen = len(languages.log_lines())
-    if not turn_on(on, im):
-        return record(f"lang-{im}", False, f"Android's entry didn't follow to {im}; the log: {log_since(seen)}")
+    guide_checks.leave_guide()
+    if not languages.in_field():
+        raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
+    started = turn_on(on, im)
+    seen = 0  # turn_on cleared the log
+    if not started:
+        return record(f"lang-{im}", False, f"the field didn't start with {im}; the log: {log_since(seen)}")
     fresh()
     if im in LOOK:
         keys, what = LOOK[im]
@@ -115,8 +134,12 @@ def one(im, on):
 
 
 def check_all():
-    """Every input method, eight at a time with English, each typing in turn."""
+    """Every input method, seven at a time with English, each typing in turn."""
     ids = [im for im in all_ids() if im != "en"]
+    # TK_LANG_FROM=ID starts at that input method, to go on after a run that ended part way.
+    start = os.environ.get("TK_LANG_FROM")
+    if start in ids:
+        ids = ids[ids.index(start):]
     for start in range(0, len(ids), SET_SIZE):
         group = ids[start:start + SET_SIZE]
         for im in group:
@@ -128,13 +151,29 @@ def check_all():
                 record(f"lang-{im}", False, f"the check broke: {error!r}")
 
 
+def out_of_memory():
+    """How many out-of-memory crashes of TitanKeys Debug Android's crash log holds now."""
+    crashes = adb("logcat", "-d", "-b", "crash")
+    return sum(1 for line in crashes.splitlines() if "OutOfMemoryError" in line)
+
+
 def setup():
+    global crashes_before
+    crashes_before = out_of_memory()
     if not languages.logs_on(True):
         record("lang-log", None, "the shell couldn't let TitanKeysIM through the log: the lines will say nothing")
 
 
+crashes_before = 0
+
+
 def finish():
-    """English alone again, as most people have it, and the log tags cleared."""
+    """No out-of-memory crash during the run (#85's input methods: one came after 18 switches, 2026-11-16), and LeakCheck's own
+    report; then English alone again, as most people have it, and the log tags cleared."""
+    crashes = out_of_memory() - crashes_before
+    record("lang-memory", crashes == 0, f"{crashes} out-of-memory crashes during the run")
+    answer = adb("shell", "am", "broadcast", "-n", f"{checks.APP}/com.titankeys.keyboard.LeakCheck")
+    record("lang-leakcheck", None, "LeakCheck: " + answer.strip().split("data=")[-1].strip('"')[:400])
     try:
         turn_on(["en"], "en")
         fresh()

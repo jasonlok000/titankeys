@@ -5,6 +5,7 @@ package com.titankeys.keyboard
  * the marks and the English word. The rules are plain Kotlin (keyboard/Chinese.kt), so they run here without the phone.
  */
 fun main() {
+    radicalsOnlyInCangjieAndQuick()
     theMenuOpensOnlyWithMore()
     aChoiceIsAsWideAsItNeeds()
     theRowFillsWToOInOrder()
@@ -167,4 +168,14 @@ fun theMenuOpensOnlyWithMore() {
     check(ChineseRow.more((1..12).map { "字" }), "twelve one-character choices go past the row's eight")
     check(ChineseRow.more((1..9).map { "字" }), "nine go past the row by one")
     check(!ChineseRow.more((1..8).map { "字" }), "eight fill the row: no menu")
+}
+
+/** Cangjie's and Quick's keys are radicals, N 弓, as their codes show; other input methods have none. */
+fun radicalsOnlyInCangjieAndQuick() {
+    fun method(schema: String) = InputMethod.parse("""{ "id": "zh-test", "name": "t", "nameEnglish": "t", "label": "t", "locale": "zh",
+        "script": "Hani", "keys": "qwerty", "engine": { "rime": "$schema" } }""")
+    same("弓", ChineseKeys.radical(method("tk_quick"), "N"), "Quick's N")
+    same("日", ChineseKeys.radical(method("tk_cangjie"), "A"), "Cangjie's A")
+    same("難", ChineseKeys.radical(method("tk_cangjie"), "X"), "Cangjie's X")
+    same(null, ChineseKeys.radical(method("tk_yale"), "N"), "Yale types letters")
 }

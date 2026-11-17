@@ -33,3 +33,11 @@ test("double space types the language's own full stop, and the words come from t
   expect(ime).toContain("WordSelection.at(text, start, end, wordBreaker())");
   expect(ime).toContain("direction, wordBreaker())");
 });
+
+test("a held delete takes a code being built as flicks do, one step a word, before the field (owner, 2026-11-17)", () => {
+  const start = ime.indexOf("val word = heldWords.next()");
+  const step = ime.slice(start, ime.indexOf("val selected = selectionToDelete()", start));
+  expect(step).toContain("engineState(engine.flick())");
+  expect(step).toContain("strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), 1)");
+  expect(step).toContain("return@enqueue");
+});

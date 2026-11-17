@@ -1,5 +1,6 @@
 package com.titankeys.rime
 
+import com.titankeys.keyboard.ChineseKeys
 import com.titankeys.keyboard.ChineseSetup
 import com.titankeys.keyboard.EngineState
 import com.titankeys.keyboard.InputMethod
@@ -157,20 +158,19 @@ private class FakeRime : RimeCalls {
     override fun reset() {
         calls += "reset"
         code = ""
+        pickedCode = ""
+        pickedText = ""
     }
 
-    /** What was picked of the code so far, word by word, with its letters: tk_predict.h's DropLast takes them off. */
-    val picked = mutableListOf<String>()
+    /** What was picked of the code so far: its letters, and the text Rime shows for them. */
+    var pickedCode = ""
+    var pickedText = ""
 
-    /** As DropLast: the pending code goes; with none, the last picked word. */
+    /** As tk_predict.h's DropLast: the code pending after a pick goes; false with nothing picked or nothing pending. */
     override fun dropLast(): Boolean {
         calls += "dropLast"
-        when {
-            code.isNotEmpty() && picked.isNotEmpty() -> code = ""
-            picked.isNotEmpty() -> picked.removeAt(picked.lastIndex)
-            code.isNotEmpty() -> code = ""
-            else -> return false
-        }
+        if (pickedCode.isEmpty() || code.isEmpty()) return false
+        code = ""
         return true
     }
 
@@ -191,8 +191,8 @@ private class FakeRime : RimeCalls {
     }
 
     override fun read(): RimeCalls.Raw {
-        val preedit = if (code.isEmpty()) null else code.replace("ou", "o-u")
-        val out = RimeCalls.Raw(commit, code, preedit, page, page >= 2, 0, choices(), choices().map { "" }, 8, if (code.isEmpty()) 0 else 24)
+        val preedit = if (code.isEmpty()) pickedText.ifEmpty { null } else pickedText + code.replace("ou", "o-u")
+        val out = RimeCalls.Raw(commit, pickedCode + code, preedit, page, page >= 2, 0, choices(), choices().map { "" }, 8, if (code.isEmpty()) 0 else 24)
         commit = null
         return out
     }
@@ -879,22 +879,25 @@ fun theBarsWordsNeverCoverACode() {
 }
 
 /**
- * A flick with part of a code picked (頂你個 picked, "fai" pending) takes only the pending code; the next takes a picked word;
- * none of it reaches the field (owner, 2026-11-17).
+ * A flick with part of a code picked (頂你個 picked, "fai" pending) takes only the pending code. The next types what was
+ * picked less its last character, so one flick is one character (owner, 2026-11-17), cleared rather than committed in Rime, so
+ * it learns nothing. With nothing picked, the code goes whole.
  */
 fun aFlickKeepsWhatWasPicked() {
     val (engine, rime) = started()
     type(engine, "fai")
-    rime.picked += "dingneigo"
-    val state = engine.flick()
-    check("dropLast" in rime.calls && "reset" !in rime.calls, "the flick drops what's pending, never the whole code")
-    same("", state.commit, "and types nothing")
-    same(listOf("dingneigo"), rime.picked, "what was picked stays")
-    type(engine, "x")
-    engine.flick()
-    same("", rime.code, "a later flick with a pending code again takes only that")
-    rime.picked.clear()
+    rime.pickedCode = "dingneigo"
+    rime.pickedText = "頂你個"
+    val first = engine.flick()
+    same("", first.commit, "the first flick types nothing")
+    same("頂你個", first.code, "and the picked part stays on the bar")
+    val second = engine.flick()
+    same("頂你", second.commit, "the next types what was picked, less its last character")
+    same("", second.code, "and nothing is left being built")
+    check("reset" in rime.calls, "cleared, never committed: Rime learns nothing from it")
     type(engine, "nei")
-    engine.flick()
-    same("", rime.code, "with nothing picked the code goes whole")
+    val whole = engine.flick()
+    same("", whole.commit, "with nothing picked the code goes whole, typing nothing")
+    same("", whole.code, "and leaves nothing")
+    same("𠮩", ChineseKeys.dropLastCharacter("𠮩𠮩"), "a character outside the BMP counts as one")
 }

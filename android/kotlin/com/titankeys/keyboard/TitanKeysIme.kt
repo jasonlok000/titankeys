@@ -1559,8 +1559,10 @@ class TitanKeysIme : InputMethodService() {
 
     /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
     private fun readSettings() {
-        // The guide and the playground teach English, so they type it whatever input method is on.
-        languages.englishOnly = inGuide || inPractice
+        // The guide's lessons teach English, so they type it whatever input method is on. The playground is free practice: it
+        // types in the input methods that are on, and a held Sym opens the switcher there (owner, 2026-11-17: "long press for
+        // sym doesn't trigger the language selection in the playground").
+        languages.englishOnly = inGuide
         languages.refresh()
         // Which input methods are on may have changed, and with them the mark at Q.
         if (::languages.isInitialized) showInputMark()

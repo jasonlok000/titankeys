@@ -253,6 +253,37 @@ def past_cutoff():
     return bool(cutoff) and time.time() >= float(cutoff)
 
 
+# Too hot to test: MediaTek's battery warning in front, or the battery over this (2026-11-17: 51.0 °C at 04:19, the warning
+# up from 02:47, and every batch after stopped at its gate). The run waits instead, re-checking every HEAT_STEP_SECONDS.
+HEAT_LIMIT_C = 45.0
+HEAT_STEP_SECONDS = 300
+HEAT_WAIT_STEPS = 12  # 60 minutes
+
+
+def phone_heat():
+    """The battery's temperature in °C (None if unreadable) and whether MediaTek's battery warning is in front."""
+    found = re.search(r"temperature: (\d+)", adb("shell", "dumpsys", "battery"))
+    front = next((line for line in adb("shell", "dumpsys", "window").splitlines() if "mCurrentFocus" in line), "")
+    return (int(found.group(1)) / 10 if found else None), "com.mediatek.batterywarning" in front
+
+
+def wait_cool():
+    """Waits while the phone is too hot or warns, up to an hour, saying the temperature each time; Stop if it never cools."""
+    for step in range(HEAT_WAIT_STEPS + 1):
+        celsius, warning = phone_heat()
+        if not warning and (celsius is None or celsius <= HEAT_LIMIT_C):
+            if step:
+                print(f"{time.strftime('%T')} the phone is fine again: {celsius} °C", flush=True)
+            return
+        print(f"{time.strftime('%T')} the phone is too hot to test: {celsius} °C, the battery warning "
+              f"{'in front' if warning else 'not shown'}; waiting ({step * HEAT_STEP_SECONDS // 60} of "
+              f"{HEAT_WAIT_STEPS * HEAT_STEP_SECONDS // 60} min)", flush=True)
+        if step == HEAT_WAIT_STEPS or past_cutoff():
+            break
+        time.sleep(HEAT_STEP_SECONDS)
+    raise Stop(f"the phone stayed too hot or kept its battery warning ({celsius} °C)")
+
+
 def run_batch(name):
     """Runs a batch on its own: Debug is the keyboard from the start to the end, and release TitanKeys comes back only then.
     The gates still run before every gesture. A check that breaks is a NO and the batch goes on; a STOP ends it. The report is
@@ -263,12 +294,17 @@ def run_batch(name):
     stopped = None
     try:
         # Inside the try: a gate that fails here still gets its report and release back (2026-11-16, after a crash dialog).
+        wait_cool()  # before the first gate, which would stop on the battery warning
         to_field()
         keyboard("debug")
         os.environ["TK_IME_HELD"] = "1"
+        celsius, warning = phone_heat()
+        print(f"{time.strftime('%T')} battery at the batch's start: {celsius} °C, warning {'in front' if warning else 'not shown'}",
+              flush=True)
         for check in module.BATCH:
             if past_cutoff():
                 raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the batch didn't run")
+            wait_cool()
             try:
                 check()
             except Stop:

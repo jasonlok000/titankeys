@@ -1286,7 +1286,7 @@ private fun englishTypingRows() {
 private fun thaiHebrewAndHindiNextWords(folder: File) {
     fun list(id: String) = WordList.read(File(folder, "$id/words.combined").useLines { it.toList() }.asSequence(),
         java.util.Locale.forLanguageTag(id))
-    fun table(id: String) = NextWords.read(File(folder, "$id/pairs.txt").useLines { it.toList() }.asSequence())
+    fun table(id: String) = File(folder, "$id/pairs.bin").inputStream().use { NextWords.readBinary(it) }
     val thai = list("th")
     val isWord = { piece: String -> WordBreak.word(piece, thai::has) }
     same("Thai: ก is in the list, but one letter is never a word", isWord("ก"), false)

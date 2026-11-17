@@ -645,20 +645,19 @@ private fun theDotsTickAsTheyLand() {
     val tail = 105L
     for ((letters, scale) in listOf(1 to 1f, 3 to 1f, 6 to 1f, 8 to 1f, 9 to 1f, 30 to 1f, 40 to 1f, 6 to .5f, 30 to .5f, 30 to 2f)) {
         val lands = landings(letters, scale)
-        // Every flick shows the same fixed row, whatever it took (#89, owner, 2026-11-16).
-        val dots = GestureDisplay.CHOMP_DOTS
+        val dots = letters
         val ticks = DotTicks.times(lands, tail)
         check(ticks == lands && ticks.size == dots) { "$letters letters at $scale: a tick for each of $dots dots: $ticks" }
         check(ticks.all { it.toFloat() in phase(dots, scale) }) { "$letters letters at $scale: every tick lands in the phase: $ticks" }
         check(ticks.zipWithNext().all { (a, b) -> b - a >= 30 }) { "$letters letters at $scale: 30 ms apart or more: $ticks" }
     }
-    // Any flick: the fixed row, its first dot eaten as its way ends, 450 ms into the way in, so at 120 + 200 + 202.5 ms, and the
-    // rest the owner's 450 ms spread over them.
-    val row = landings(1)
-    check(row.size == GestureDisplay.CHOMP_DOTS && row.first() == 523L) { "The fixed row: $row" }
-    check(landings(3) == row && landings(30) == row) { "Three letters or thirty, the same row: ${landings(30)}" }
-    val step = GestureDisplay.dotStepMillis(GestureDisplay.CHOMP_DOTS, 1f)
-    check(row.zipWithNext { x, y -> y - x }.all { kotlin.math.abs(it - step) <= 1f }) { "Eaten $step ms apart, the owner's 450 ms way in: $row" }
+    // One dot lands as its way ends, 450 ms into the way in, so at 120 + 200 + 202.5 ms.
+    check(landings(1) == listOf(523L)) { "One dot: ${landings(1)}" }
+    // Three keep the owner's timing: 82.5 ms apart.
+    check(landings(3) == listOf(523L, 606L, 688L)) { "Three dots: ${landings(3)}" }
+    // Thirty land 30 ms apart, the last about 900 ms after the first.
+    val thirty = landings(30)
+    check(thirty.first() == 523L && thirty.last() == 523L + 29 * 30) { "Thirty dots: ${thirty.first()} to ${thirty.last()}" }
     // With no motion the dots don't move, so nothing ticks.
     check(landings(5, 0f).isEmpty() && DotTicks.times(landings(5, 0f), tail).isEmpty()) { "None with animations off" }
     // A tick within 35 ms of the flick's tail is left out, and only those.
@@ -701,21 +700,35 @@ private fun aCutDropsTheTicksToCome() {
     check(posted.isEmpty()) { "and a cut drops them all" }
 }
 
-/**
- * A held delete's chomper ends with the delete: its lift plays no dots, so no ticks (#89, owner, 2026-11-16). The ticks a flick's
- * dots play still keep clear of the haptic just before them.
- */
+/** A long delete's lines turn into dots at the lift, which tick as each lands, the same way a flick's do. */
 private fun aHoldsDotsTickAtTheLift() {
     val held = GestureDisplay().apply { speedUp = false }
     held.deleteHeld(200, 1000)
     held.wordDeleted(1100, 4)
     held.wordDeleted(1300, 3)
-    check(!held.deleteEnded(1400)) { "The lift starts no dots" }
-    check(held.dotsAt == null) { "No dots play after it" }
-    check(held.dotLandings(1f).isEmpty()) { "so nothing ticks" }
+    check(held.deleteEnded(1400)) { "The lift starts the dots" }
+    check(!held.deleteEnded(1500)) { "A second lift starts nothing" }
+    check(held.dotsAt == 1400L) { "The dots started at the lift" }
+    val lands = held.dotLandings(1f)
+    // The lines shrink into the dots over 240 ms, stay 200 ms, then each dot takes its 202.5 ms way, 30 ms or more apart.
+    val first = (GestureDisplay.MORPH_IN + GestureDisplay.FLICK_HOLD + GestureDisplay.DOT_TRAVEL).let { kotlin.math.round(it + .001f).toLong() }
+    check(lands.size == 7 && lands.first() == first) { "A tick for each of the seven dots, the first at $first: $lands" }
+    check(lands.zipWithNext().all { (a, b) -> b - a >= 30 }) { "30 ms apart or more: $lands" }
+    check(held.dotLandings(0f).isEmpty()) { "None with animations off" }
+    // They're scheduled at the landing times, and a cut drops them all.
+    val posted = ArrayList<Pair<Runnable, Long>>()
+    val ticks = PendingTicks({ tick, at -> posted += tick to at }, { tick -> posted.removeAll { it.first === tick } })
+    var played = 0
+    ticks.schedule(DotTicks.times(lands, -20)) { played++ }
+    check(posted.map { it.second } == lands) { "One tick per dot, at the landings: $posted" }
+    val left = posted.toList()
+    ticks.cut()
+    for ((tick) in left) if (posted.any { it.first === tick }) tick.run()
+    check(played == 0 && posted.isEmpty()) { "None after the cut" }
     // The hold's last word or its no may have just played. A first dot within 35 ms of it is left out.
     check(DotTicks.times(listOf(30L, 60L, 90L), 0) == listOf(60L, 90L)) { "A tick 30 ms after the last haptic goes, one 60 ms after stays" }
     check(DotTicks.times(listOf(30L, 60L), -10) == listOf(30L, 60L)) { "One 40 ms after stays" }
+    check(DotTicks.times(lands, -20) == lands) { "At normal speed the dots land long after it" }
 }
 
 /** Taps that find no word, or steering with no text, play Nothing to pick: no, as a word that can't be saved does, never a lock. */
@@ -905,8 +918,10 @@ private fun aHoldAndItsDotsAreOneSequence() {
         val landings = GestureDisplay.holdLandings(HoldTicks.playLetters(), scale, speedUp)
         val dots = plan.ticks.filter { it.kind == HoldTicks.Kind.Dot }
         check(dots.size == landings.size && dots.map { it.at } == landings.map { plan.liftAt + it }) { "$what: a tick per dot: $dots" }
-        // The chomper ends with the delete: no dots after the lift, so no ticks (#89, owner, 2026-11-16).
-        check(dots.isEmpty()) { "$what: no dots after the lift: ${dots.size}" }
+        // A dot for each letter of every word, with no cap (#89); with speed-up on, some land without a tick.
+        check(dots.size == HoldTicks.playLetters().sum() || speedUp) { "$what: the 11 words' letters each have a dot: ${dots.size}" }
+        check(dots.all { it.at > plan.liftAt }) { "$what: the dots land after the lift" }
+        check(dots.all { it.plays }) { "$what: none is near a word, as they land after the lift: $dots" }
     }
 }
 
@@ -956,15 +971,16 @@ private fun theHoldFollowsItsPause() {
     check(now.endsAt - shorter.endsAt == 300L) { "and the hold ends 300 ms sooner" }
 }
 
-/** The lab's Play says a hold's lift plays no dots: its chomper ends with the delete (#89, owner, 2026-11-16). */
+/** The lab's strip and Play show the dots of a hold with its words, and say when there are none. */
 private fun theLabShowsTheDotsOfAHold() {
     val plan = playPlan()
     val words = HapticTimeline.planWords(plan)
-    check(plan.ticks.none { it.kind == HoldTicks.Kind.Dot }) { "A hold has no dots after its lift" }
-    check(words.startsWith("Still ${deleteHoldPauseMillis()} ms, then the flick and 10 words, the lift, and no dots: the chomper ends with the delete.")) { words }
+    val dots = plan.ticks.count { it.kind == HoldTicks.Kind.Dot }
+    check(words.startsWith("Still ${deleteHoldPauseMillis()} ms, then the flick and 10 words, the lift, and $dots dots from ")) { words }
     check(words.endsWith("0 dots skipped near a word.")) { words }
     val still = playPlan(scale = 0f)
-    check(still.ticks.none { it.kind == HoldTicks.Kind.Dot }) { "With animations off neither" }
+    check(still.ticks.none { it.kind == HoldTicks.Kind.Dot }) { "With animations off a hold has no dots" }
+    check("animations are off" in HapticTimeline.planWords(still)) { HapticTimeline.planWords(still) }
     check(HapticTimeline.isDot(Haptic.DeleteDotsLand) && !HapticTimeline.isDot(Haptic.DeleteWord)) { "Dots have their own look" }
     val dot = HapticEvent(1, Haptic.DeleteDotsLand, listOf(17), HapticResult.Played, dot = 1, dots = 30)
     check(HapticTimeline.outcome(dot) == HapticTimeline.trigger(Haptic.DeleteDotsLand)) { "A dot that ticks says what set it off" }
@@ -1039,7 +1055,7 @@ private fun allThreeGesturesHitAWallTheSameWay() {
 private fun aFlicksDotsWaitAsTheLabTries() {
     try {
         val (popped, before) = GestureDisplay.flickTimes(5)
-        check(popped != null && before.size == GestureDisplay.CHOMP_DOTS) { "A five-letter flick pops its fixed row and lands it: $popped, $before" }
+        check(popped != null && before.size == 5) { "A five-letter flick pops its dots and lands five: $popped, $before" }
         GestureDisplay.triedFlickHold = 500f
         val (_, later) = GestureDisplay.flickTimes(5)
         check(later.zip(before).all { (a, b) -> a - b == 300L }) { "Waiting 300 ms longer lands every dot 300 ms later: $before, $later" }

@@ -967,9 +967,7 @@ Some firm haptics count as texture for the gate on purpose. A held delete's word
 
 ### 9.5 Timing details
 
-<!-- F: draft (#89, 2026-11-16): the sentence below replaces "A flick shows a dot for each letter that went." -->
-- **The flick's dots.** A flick shows the same row of six dots, whatever it deleted, eaten one by one by a small orange chomper
-  where the caret was. The dots pop in over 120 ms, and the flick's 20 ms tail plays once the last dot is in. Then the dots go into the caret, each ticking as it lands, at least 30 ms apart so each tick reads on its own on this motor. The way in takes max(450, 202.5 + 30 x dots) ms, times Android's animation speed. Up to eight dots keep 450 ms. Thirty land over about 900 ms.
+- **The flick's dots.** A flick shows a dot for each letter that went. The dots pop in over 120 ms, and the flick's 20 ms tail plays once the last dot is in. Then the dots go into the caret, each ticking as it lands, at least 30 ms apart so each tick reads on its own on this motor. The way in takes max(450, 202.5 + 30 x dots) ms, times Android's animation speed. Up to eight dots keep 450 ms. Thirty land over about 900 ms.
 - **A held delete's hit** is 50 - 20 x pace ms, rounded: 50 ms at the start, 30 ms at top pace. It's never longer than the time between words less 35 ms, and never under 30 ms, the shortest pulse that still reads as a message. At top pace a hold plays 30 ms on, 50 ms off.
 - **The crunch** starts once a stroke is clearly a flick (section 4.10). If it stops being one, one boundary tick plays, and the rest ticks as a swipe.
 - **Zones.** A held delete pauses within 0.8 keys of where the flick started, measured across only, and 5.5 keys out is its top-speed line. Entering either plays one boundary tick.

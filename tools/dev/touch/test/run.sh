@@ -77,5 +77,9 @@ assert checks.past_cutoff()
 os.environ["TK_CUTOFF_EPOCH"] = str(10 ** 12)
 assert not checks.past_cutoff()
 os.environ.pop("TK_CUTOFF_EPOCH")
+# A tap that worked, as TitanKeysTap logged it on 2026-11-17 (after the tag): it passes; one taken by nothing doesn't.
+import switcher_checks
+assert switcher_checks.tapped(["tap at 161,970 on b6", "screen_tap played"])
+assert not switcher_checks.tapped(["tap at 161,970 taken by nothing", "screen_tap played"])
 print("Batch checks passed")
 PY

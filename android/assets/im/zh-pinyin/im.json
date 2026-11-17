@@ -20,7 +20,7 @@
     "rime": "tk_pinyin"
   },
   "source": {
-    "words": "rime-luna-pinyin and rime-essay (LGPL-3.0)"
+    "words": "rime-luna-pinyin and rime-essay (LGPL-3.0), with lotem's Mandarin grammar model (rime-octagram-data, LGPL-3.0)"
   },
   "starters": [
     "的",

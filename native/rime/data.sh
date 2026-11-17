@@ -32,6 +32,10 @@ HKCANCOR=https://raw.githubusercontent.com/fcbond/hkcancor/39aeadf920e0b5ca93d0a
 HKCANCOR_SHA256=09223963b8756254e15353cad843f8a4b0cbc4b9223dc8a8fa27fb1cf846057e
 VOICE=https://raw.githubusercontent.com/common-voice/common-voice/4ea23d2d30222e9324eb964365b9a0f22e3d5f3a/server/data/zh-HK/sentence-collector.txt
 VOICE_SHA256=0c537e9d65c1f1de10d70a1e0989d929b557628d975bf480d8b3b6fcc6291f26
+# Mandarin's grammar model for librime-octagram, lotem/rime-octagram-data's Traditional word model (LGPL-3.0), as upstream
+# Rime offers it: for Pinyin and Zhuyin (docs/studies/56-mandarin-dictionary.md).
+MANDARIN_GRAMMAR=https://raw.githubusercontent.com/lotem/rime-octagram-data/97bf55046aad163c3d1881abae5312040b1bbed9/zh-hant-t-essay-bgw.gram
+MANDARIN_GRAMMAR_SHA256=0488ebd6688f900a39200f2b794f2f99bcbf1e8fc27280ae4a2324b08b1559c1
 
 download() { # file url sha256
   local file="$WORK/src/$1"
@@ -152,6 +156,10 @@ if [ ! -s "$WORK/grammar/$GRAMMAR_KEY.gram" ]; then
   cp "$D/tk_yue.gram" "$WORK/grammar/$GRAMMAR_KEY.gram"
 fi
 cp "$WORK/grammar/$GRAMMAR_KEY.gram" tk_yue.gram
+# Mandarin's, for Pinyin and Zhuyin: lotem's word model, as it is. On held-out Tatoeba phrases it takes Space's first choice
+# from 54.0% to 59.9% right in Pinyin and from 49.5% to 55.4% in Zhuyin (docs/studies/56-mandarin-dictionary.md).
+download zh-hant-t-essay-bgw.gram "$MANDARIN_GRAMMAR" "$MANDARIN_GRAMMAR_SHA256"
+cp "$WORK/src/zh-hant-t-essay-bgw.gram" .
 
 # Rime records each source file's time in what it compiles. Every file gets one fixed time, so two runs give the same bytes.
 # On the phone Rime never deploys (rime_jni.cc), so the copies' own times don't matter.
@@ -237,6 +245,9 @@ phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
 phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
 # With the grammar model, a phrase the word weights alone got wrong (你識咗反美).
 phrase tk_jyutping zh_hk neisikzofaanmei 你食咗飯未
+# And Mandarin's grammar, in Pinyin and Zhuyin: phrases the dictionary alone got wrong (你八门凯这…, 猫儿在意自伤睡觉).
+phrase tk_pinyin zh_hans nibamenkaizhezhenshitaibuxiaoxinle 你把门开着真是太不小心了
+phrase tk_zhuyin zh_hans mwlziezckcxajew 猫儿在椅子上睡觉
 
 # 対, the Japanese form of 對, is off deui's first page in every variant.
 for v in zh_hk zh_tw zh_hans; do

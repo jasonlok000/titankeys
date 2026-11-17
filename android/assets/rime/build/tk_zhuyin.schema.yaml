@@ -39,6 +39,8 @@ engine:
     - predict_translator
     - punct_translator
     - script_translator
+grammar:
+  language: "zh-hant-t-essay-bgw"
 key_binder:
   bindings:
     - {accept: "Control+p", send: Up, when: composing}

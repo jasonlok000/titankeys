@@ -13,6 +13,7 @@ import zipfile
 # Pack name: the asset paths it takes (a folder ends in /).
 PACKS = {
     "swipe2_pack": ["assets/swipe2/"],
+    # Rime's tables, both grammar models (tk_yue.gram, zh-hant-t-essay-bgw.gram) and the next-word tables.
     "rime_pack": ["assets/rime/", "assets/rime.sha256"],
     "mozc_pack": ["assets/mozc/", "assets/mozc.sha256"],
     "swipe_pack": ["assets/swipe/"],

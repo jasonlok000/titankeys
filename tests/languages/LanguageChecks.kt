@@ -442,7 +442,9 @@ private fun aHeldSymWaits() {
     same("two on: Sym waits", why(on = 2), null)
     check("one on: Sym as usual", why(on = 1) != null)
     check("the playground: Sym as usual", why(english = true) != null)
-    check("the panel open: Sym closes it", why(panel = true) != null)
+    check("the panel open: a hold still opens the switcher, a tap closes the panel (Master, 2026-11-17)", why(panel = true) == null)
+    same("a tap with a code pending clears it", SymHold.tap(codePending = true), SymHold.Tap.ClearCode)
+    same("a tap with none is Sym as usual", SymHold.tap(codePending = false), SymHold.Tap.Usual)
     check("Alt on: Alt+Sym is Android's keyboard list", why(alt = true) != null)
     check("keys waiting for the app: Sym keeps its place", why(waiting = 1) != null)
 }

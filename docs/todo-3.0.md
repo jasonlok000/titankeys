@@ -296,7 +296,7 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   one plain run each next. #85's LeakCheck: two destroyed playgrounds still held after 15 guides (status comment, open).
 - **Chinese (Yale):** the row, Space, Enter, the comma, tap, flick, the menu and the Sym panel all match.
 - **For the owner's hands:** Georgian Shift+W types ჭ.
-- **Next slot:** main-mem-debug went on at 22:36 (slot2.sh): all 49 languages, the out-of-memory count, LeakCheck,
+- **Next slot:** main-mem-debug went on at 22:36 and stays on Debug for the owner; its slot was stopped at once and runs overnight: all 49 languages, the out-of-memory count, LeakCheck,
   chinese-ui with the suggestion checks, #83's pairs.
 
 ## Found 2026-11-16: the gestures assume spaces and "." (waiting for the owner's go)

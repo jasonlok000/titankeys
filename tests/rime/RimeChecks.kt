@@ -227,6 +227,9 @@ fun enterTypesTheCodeAsLetters() {
     val state = engine.enter()
     check(state.handled, "Enter is taken while a code is typed")
     same("ngo", state.commit, "Enter types the code as typed letters")
+    same("", state.code, "and clears it: nothing stays pending")
+    check(state.choices.isEmpty(), "and no choices are left on the bar")
+    same(EngineState.UNHANDLED, engine.enter(), "with nothing pending, Enter is the keyboard's: the field gets it")
 }
 
 fun backspaceDeletesFromTheCode() {

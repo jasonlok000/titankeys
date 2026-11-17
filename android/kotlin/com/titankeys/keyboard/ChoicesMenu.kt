@@ -65,9 +65,13 @@ class ChoicesMenu(
     /** The open page: its cells, as many choices as fit from its start. */
     val page: ChineseMenu.Page get() = ChineseMenu.page(choices, starts.last()) ?: ChineseMenu.Page(emptyList())
 
-    /** Reads from the engine until the open page, and the one after it, can be laid out, or the engine has no more. */
+    /**
+     * Reads from the engine until the open page and the one after it can be laid out, and at least [COUNTED] choices, so P
+     * shows how many pages there are from the first ("1/3"), or until the engine has no more. Past that, P shows "n›" until
+     * the last is read (phone check, 2026-11-16: it showed "1›" on opening, "n/3" only after paging).
+     */
     private fun fill() {
-        val want = starts.last() + 2 * PER_PAGE
+        val want = maxOf(starts.last() + 2 * PER_PAGE, COUNTED)
         while (!exhausted && choices.size < want) {
             val more = source(choices.size, READ)
             choices += more
@@ -204,6 +208,8 @@ class ChoicesMenu(
         val PER_PAGE = ChineseMenu.ROWS.sumOf { it.last - it.first + 1 }
         /** How many choices each read asks the engine for. */
         const val READ = 48
+        /** How many choices the menu reads as it opens: ten pages of one-key choices, cheap for Rime and Mozc alike. */
+        val COUNTED = 10 * PER_PAGE
         const val ITEM_SIZE = 20f
         const val POSITION_SIZE = 14f
         const val BAND_SIZE = 15f

@@ -4137,6 +4137,10 @@ class TitanKeysIme : InputMethodService() {
         }
         if (panelKey(event)) return true
         if (field.exact) return exactKey(event)
+        // With text being built, Enter is the engine's: it types the code as letters and clears it (docs/languages.md). Only
+        // with nothing pending does Enter reach the field: before, the field's Enter came first, so a code stayed pending
+        // and a new line went in (phone check, 2026-11-16).
+        if (enteringCode(event)) languages.engine?.let { engine -> if (engineKey(engine, event)) return true }
         // Enter comes before the Ctrl shortcuts, because the Enter key setting can use Ctrl + Enter.
         if (!event.isMetaPressed && enter(event)) return true
         // A lone Ctrl or Meta press is not a shortcut. Each shortcut key carries its own meta state.
@@ -4257,6 +4261,10 @@ class TitanKeysIme : InputMethodService() {
         if (event.repeatCount == 0 && panel?.pickCategoryUnder(key) == true) haptics.play(Haptic.PanelGroup)
         return true
     }
+
+    /** Enter, without Ctrl or Meta, while an engine has text being built: it goes to the engine, never the field. */
+    private fun enteringCode(event: KeyEvent) = (event.keyCode == KeyEvent.KEYCODE_ENTER || event.keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER) &&
+        !event.isMetaPressed && !event.isCtrlPressed && openPicker() is LanguagePicker.Choices
 
     /** False for any other key, and for a Ctrl + Enter that stays a shortcut for the app. */
     private fun enter(event: KeyEvent): Boolean {

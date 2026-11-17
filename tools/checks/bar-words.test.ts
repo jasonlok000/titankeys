@@ -24,7 +24,7 @@ test("passwords and the other fields without words keep an empty bar, in every l
 });
 
 test("what other input methods learn is backed up, kept by Reset most things, cleared by Reset literally everything", () => {
-  expect(read("android/kotlin/com/titankeys/keyboard/BackupFile.kt")).toContain('"language_learning" to Store.Backed()');
+  expect(read("android/kotlin/com/titankeys/keyboard/BackupFile.kt")).toContain('"language_learning" to Store.Backed(');
   expect(read("android/kotlin/com/titankeys/keyboard/FreshStart.kt")).toContain('"language_learning"');
   expect(read("android/kotlin/com/titankeys/keyboard/SettingsReset.kt")).not.toContain("language_learning");
 });

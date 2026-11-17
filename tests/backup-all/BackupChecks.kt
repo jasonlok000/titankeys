@@ -135,6 +135,7 @@ fun main() {
     same(CrashReport.mainThread(trace), "\"main\" prio=5 tid=1 Sleeping\n  at java.lang.Thread.sleep\n  at com.titankeys.keyboard.TitanKeysIme.onKey",
         "A freeze's report is the main thread's stack")
 
+    failures += learningStoreChecks()
     if (failures.isNotEmpty()) {
         failures.forEach(System.err::println)
         System.exit(1)

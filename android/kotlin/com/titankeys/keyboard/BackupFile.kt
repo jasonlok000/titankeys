@@ -55,6 +55,8 @@ internal object BackupFile {
         RECENT_COMMA,
         /** Space-separated, newest first, as emoji recents. */
         RECENT_SPACE,
+        /** What an input method learned ([LanguageLearning]'s text): both, the larger count of each, a saved word winning. */
+        LEARNING,
         /** Snippets' JSON list: both, the file's text for a shortcut in both. */
         SNIPPETS,
     }
@@ -64,7 +66,12 @@ internal object BackupFile {
          * In the backup. A key in [lists] merges on restore; every other key is a setting and takes the file's value. With [only],
          * just those keys go in. [debugOnly]: only TitanKeys Debug has it, so only its backup holds it and only it restores it.
          */
-        data class Backed(val lists: Map<String, Merge> = emptyMap(), val only: Set<String>? = null, val debugOnly: Boolean = false) : Store()
+        data class Backed(val lists: Map<String, Merge> = emptyMap(), val only: Set<String>? = null, val debugOnly: Boolean = false,
+                          /** Merges for keys by how they start, for keys named after an input method: "" for every key. */
+                          val listsByPrefix: Map<String, Merge> = emptyMap()) : Store() {
+            /** How [key] merges on a restore, or null when the file's value wins. */
+            fun mergeOf(key: String): Merge? = lists[key] ?: listsByPrefix.entries.firstOrNull { key.startsWith(it.key) }?.value
+        }
 
         /** Left out, and why. */
         data class Left(val why: String) : Store()
@@ -86,11 +93,12 @@ internal object BackupFile {
         "unsaved_words" to Store.Backed(lists = mapOf("words" to Merge.UNION)),
         "favourite_words" to Store.Backed(lists = mapOf("words" to Merge.UNION)),
         "refused_fixes" to Store.Backed(lists = mapOf("fixes" to Merge.UNION)),
-        "autocorrect_learning" to Store.Backed(lists = mapOf("kept_once_words" to Merge.KEYED_LAST_BAR)),
+        "autocorrect_learning" to Store.Backed(lists = mapOf("kept_once_words" to Merge.KEYED_LAST_BAR),
+            listsByPrefix = mapOf("kept_once_words_" to Merge.KEYED_LAST_BAR)),
         "word_case" to Store.Backed(),
         "snippets" to Store.Backed(lists = mapOf("list" to Merge.SNIPPETS)),
         // What each input method but English learned from what the user typed (LanguageLearning), as English's learned words.
-        "language_learning" to Store.Backed(),
+        "language_learning" to Store.Backed(listsByPrefix = mapOf("" to Merge.LEARNING)),
         "emoji" to Store.Backed(lists = mapOf("recent" to Merge.RECENT_SPACE)),
         // The News switch only: Share swipes' ID, its consent and what was sent stay on this phone, as does the news itself.
         "connected" to Store.Backed(only = setOf("announcements")),
@@ -311,7 +319,7 @@ internal object BackupFile {
         included(backup, debug).mapValues { (name, values) ->
             val store = STORES[name] as Store.Backed
             val here = phone[name].orEmpty()
-            values.mapValues { (key, value) -> store.lists[key]?.let { merge(it, here[key], value) } ?: value }
+            values.mapValues { (key, value) -> store.mergeOf(key)?.let { merge(it, here[key], value) } ?: value }
         }
 
     fun merge(kind: Merge, phone: Any?, file: Any): Any {
@@ -324,6 +332,8 @@ internal object BackupFile {
             Merge.RECENT_COMMA -> recent(phone, file, ",")
             Merge.RECENT_SPACE -> recent(phone, file, " ")
             Merge.SNIPPETS -> snippets(phone, file)
+            Merge.LEARNING -> if (phone is String && file is String)
+                LanguageLearning.decode(phone).apply { merge(LanguageLearning.decode(file)) }.encode() else file
         }
     }
 

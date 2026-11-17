@@ -98,6 +98,24 @@ class LanguageLearning {
 
     val isEmpty get() = words.isEmpty() && saved.isEmpty() && hidden.isEmpty()
 
+    /**
+     * [other]'s learning added to this one, as a restore does: each word, start and pair at the larger of its two counts (so
+     * restoring the same backup again changes nothing), the saved and the hidden words of both, and a word saved on either side
+     * isn't hidden. Then trimmed to the same bounds as typing.
+     */
+    fun merge(other: LanguageLearning) {
+        for ((word, uses) in other.words) words.merge(word, uses, ::maxOf)
+        for ((word, uses) in other.starts) starts.merge(word, uses, ::maxOf)
+        for ((first, nexts) in other.pairs) {
+            val mine = pairs.getOrPut(first) { HashMap() }
+            for ((next, uses) in nexts) mine.merge(next, uses, ::maxOf)
+        }
+        saved += other.saved
+        hidden += other.hidden
+        hidden -= saved.map { it.lowercase() }.toSet()
+        trim()
+    }
+
     private fun trim() {
         if (words.size > MAX_WORDS) drop(words, words.size - MAX_WORDS * 9 / 10)
         if (starts.size > MAX_STARTS) drop(starts, starts.size - MAX_STARTS * 9 / 10)

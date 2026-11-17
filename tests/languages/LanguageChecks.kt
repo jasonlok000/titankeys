@@ -50,6 +50,7 @@ fun main(args: Array<String>) {
     aRestoredInputMethodTypes()
     aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
+    overlaysKeepTheTouchpad()
     symWorksAfterTheSwitcher()
     androidsListFollowsTheOnes()
     telexMarksAndTones()
@@ -306,6 +307,19 @@ private fun symWorksAfterTheSwitcher() {
     sym.press(0, open) { true }
     sym.reset()
     same("a new field forgets a waiting press", sym.release(), SymPress.Release.NotMine)
+}
+
+/** The owner's bug: with the switcher open on English, a swipe still drew its trail and typed a word underneath. */
+private fun overlaysKeepTheTouchpad() {
+    for (open in listOf(Overlays.Open.Switcher, Overlays.Open.SwitcherRow, Overlays.Open.Accents, Overlays.Open.ChoicesMenu)) {
+        check("$open: a swipe neither draws nor types", Overlays.stopsSwipes(open))
+        check("$open: the touchpad only marks, as on the Sym panel", Overlays.paging(open, panelOpen = false))
+    }
+    check("nothing open: swipes type", !Overlays.stopsSwipes(Overlays.Open.None))
+    check("nothing open: the touchpad swipes as usual", !Overlays.paging(Overlays.Open.None, panelOpen = false))
+    check("the bar's choices keep their flick and page swipes", !Overlays.stopsSwipes(Overlays.Open.Choices))
+    check("the bar's choices page the touchpad", Overlays.paging(Overlays.Open.Choices, panelOpen = false))
+    check("the Sym panel pages it, overlay or not", Overlays.paging(Overlays.Open.None, panelOpen = true))
 }
 
 private fun aHeldSymWaits() {

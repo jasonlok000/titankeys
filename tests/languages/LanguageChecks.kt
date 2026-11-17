@@ -145,7 +145,10 @@ private fun turningOnAndOff() {
     same("another input method of a language on is fine", InputMethodIndex.toggle(listOf("en", "es", "ru", "zh-pinyin"), "yue-yale", true, language),
         listOf("en", "es", "ru", "zh-pinyin", "yue-yale"))
     same("a fifth in one language is refused", InputMethodIndex.toggle(listOf("zh1", "zh2", "zh3", "zh4"), "zh5", true) { "zh" }, null)
-    same("a setting with more than four keeps them all", INDEX.on("en,es,fr,de,it,pt").size, 6)
+    val six = InputMethodIndex.parse("[" + listOf("es", "fr", "de", "it", "pt").joinToString(",") { id ->
+        """{"id":"$id","name":"$id","nameEnglish":"$id","label":"${id.uppercase()}","locale":"$id","script":"Latn"}"""
+    } + "]")
+    same("a setting with more than four keeps them all", six.on("en,es,fr,de,it,pt").size, 6)
     same("move up", InputMethodIndex.move(listOf("en", "es", "fr"), "fr", up = true), listOf("en", "fr", "es"))
     same("the first can't move up", InputMethodIndex.move(listOf("en", "es"), "en", up = true), listOf("en", "es"))
 }

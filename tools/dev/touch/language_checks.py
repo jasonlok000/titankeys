@@ -72,11 +72,12 @@ def turn_on(on, current):
     out = adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "on", ",".join(on), "--es", "current", current)
     if "typing " + current not in out:
         raise Stop(f"InputMethodsSet didn't take {current}: {out.strip()[-200:]}")
-    seen = len(languages.log_lines())
+    # The log from here on only: counting lines drifted as the buffer rolled (lt, nn and ja, 2026-11-16).
+    adb("logcat", "-c")
     checks.keyboard("release")
     checks.keyboard("debug")
     for _ in range(10):
-        if any(f"field start: {current} (" in line for line in languages.log_lines()[seen:]):
+        if any(f"field start: {current} (" in line for line in languages.log_lines()):
             return True
         time.sleep(.5)
     return False
@@ -109,7 +110,9 @@ def one(im, on):
     guide_checks.leave_guide()
     if not languages.in_field():
         raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
-    if not turn_on(on, im):
+    started = turn_on(on, im)
+    seen = 0  # turn_on cleared the log
+    if not started:
         return record(f"lang-{im}", False, f"the field didn't start with {im}; the log: {log_since(seen)}")
     fresh()
     if im in LOOK:

@@ -4,6 +4,7 @@ checks, and Settings > Languages as a screenshot. Each tool runs as it does on i
 its exit code is the verdict and its last lines the detail."""
 import os
 import subprocess
+import re
 import time
 
 import checks
@@ -78,6 +79,31 @@ def row_at(text):
     return (x0 + x1) // 2, (y0 + y1) // 2
 
 
+def settings_button():
+    """TitanKeys' own SETTINGS on its main screen, found by its text (any case), or None. A tap by position hit another row on
+    561eb1de's screen and opened an Android Settings page (2026-11-17)."""
+    path = "/data/local/tmp/tk-touch-ui.xml"
+    adb("shell", "uiautomator", "dump", path)
+    xml = adb("shell", "cat", path)
+    adb("shell", "rm", "-f", path)
+    for node in re.findall(r"<node [^>]*>", xml):
+        if f'package="{APP}"' not in node:
+            continue
+        label = (re.search(r'text="([^"]*)"', node) or re.search(r'content-desc="([^"]*)"', node))
+        if label and label.group(1).strip().casefold() == "settings":
+            x0, y0, x1, y1 = (int(v) for v in re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node).groups())
+            return (x0 + x1) // 2, (y0 + y1) // 2
+    return None
+
+
+def open_settings(step):
+    """Taps TitanKeys' SETTINGS by its text through [step] (which checks Debug is in front); stops if it isn't there."""
+    found = settings_button()
+    if not found:
+        raise Stop("no SETTINGS on TitanKeys Debug's main screen to tap")
+    step("tap", str(found[0]), str(found[1]))
+
+
 def check_languages_page():
     """Settings > Languages as a screenshot: the languages on at the top, then by script. Taps only while Debug is in front."""
     def step(*command):
@@ -90,7 +116,7 @@ def check_languages_page():
     time.sleep(3)
     # SETTINGS at the top right of the 1076 x 1200 display; then the Languages row, by its text where the screen shows it,
     # or where it sits since Languages came first in Settings (main 99fb0dcd): the first row, under its heading.
-    step("tap", "952", "166")
+    open_settings(step)
     x, y = row_at("Languages") or (540, 452)
     step("tap", str(x), str(y))
     record("settings-languages", None, "Settings > Languages: the ones on at the top, then by script", guide_checks.shot("settings-languages"))

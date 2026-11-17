@@ -42,7 +42,7 @@ def check_spanish_howto():
     adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
     time.sleep(3)
     try:
-        step("tap", "952", "166")
+        retest_batch.open_settings(step)
         x, y = retest_batch.row_at("Languages") or (540, 452)
         step("tap", str(x), str(y))
         row = None

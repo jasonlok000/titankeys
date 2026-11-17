@@ -104,7 +104,7 @@ The fields:
 | `locale` | Android's locale for its keyboard-list entry, capitals and sorting (`tr` gives i ↔ İ) |
 | `script` | ISO 15924: `Latn`, `Cyrl`, `Grek`, `Geor`, `Hani` |
 | `keys` | `qwerty` (the letters as printed) or a map from each of the 26 keys to its letter, lower case: `{ "q": "й", "w": "ц", ... }`. Upper case comes from the locale. A key can have a different letter with Shift, written `"w": "წ/ჭ"`, for scripts without capitals |
-| `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 10, one per key column. Only letter keys can be held, since the Titan's punctuation is on Alt |
+| `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 8, one per key column from W to O. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
 | `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`) |
@@ -160,7 +160,7 @@ data-only language is one command plus a check by eye. Where the data comes from
 
 **Holding a letter shows its accents on the bar,** in the input method's order:
 - The held letter is typed at once, as today. At the hold time, the bar shows the letter's accents over the keys, one per
-  key, starting above the held key and spreading out to fit.
+  key, starting above the held key and spreading out to fit, between W and O: never over Q or P, as the switcher's.
 - **Picking is the word menu's way:** rest a finger on a key to mark the accent above it, press the key to pick it. The
   accent replaces the typed letter. Releasing the held key without a press keeps the plain letter.
 - With Shift or Caps on, the accents show in capitals.

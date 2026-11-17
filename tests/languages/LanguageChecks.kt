@@ -199,9 +199,16 @@ private const val SPANISH_INDEX = """[{"id":"es","name":"Español","nameEnglish"
 private fun theAccentsSitOverTheHeldKey() {
     same("one accent over E", Picker.accentColumns(1, Picker.anyColumn("E")), listOf(2))
     same("two over U", Picker.accentColumns(2, Picker.anyColumn("U")), listOf(6, 7))
-    same("four over A move in from the edge", Picker.accentColumns(4, Picker.anyColumn("A")), listOf(0, 1, 2, 3))
-    same("four over P move in from the edge", Picker.accentColumns(4, Picker.anyColumn("P")), listOf(6, 7, 8, 9))
-    same("more than ten are cut", Picker.accentColumns(14, 3).size, 10)
+    // Never over Q's or P's column: W to O, the switcher's range (owner, 2026-11-17).
+    same("four over A move in to W", Picker.accentColumns(4, Picker.anyColumn("A")), listOf(1, 2, 3, 4))
+    same("four over P move in to end at O", Picker.accentColumns(4, Picker.anyColumn("P")), listOf(5, 6, 7, 8))
+    same("one over Q sits over W", Picker.accentColumns(1, Picker.anyColumn("Q")), listOf(1))
+    same("three over Q start at W", Picker.accentColumns(3, Picker.anyColumn("Q")), listOf(1, 2, 3))
+    same("one over P sits over O", Picker.accentColumns(1, Picker.anyColumn("P")), listOf(8))
+    same("three over P end at O", Picker.accentColumns(3, Picker.anyColumn("P")), listOf(6, 7, 8))
+    same("eight fill W to O", Picker.accentColumns(8, Picker.anyColumn("G")), (1..8).toList())
+    same("eight over Q still fill W to O", Picker.accentColumns(8, Picker.anyColumn("Q")), (1..8).toList())
+    same("more than eight are cut to eight", Picker.accentColumns(14, 3), (1..8).toList())
     val columns = Picker.accentColumns(2, Picker.anyColumn("U"))
     same("U picks the first, over itself", Picker.choice("U", columns), 0)
     same("I picks the second", Picker.choice("I", columns), 1)
@@ -775,6 +782,9 @@ private fun everyInputMethodInTheFolder(folder: File) {
         labels.put(method.label, method.id)?.let { check("${method.id}: label ${method.label} is also $it's", false) }
         check("${method.id}: has a NOTICE", File(dir, "NOTICE").isFile)
         theNameShows(method, index[method.id])
+        // The picker shows at most eight accents, W to O: a letter with more would lose some (owner, 2026-11-17).
+        val crowded = method.accents.filterValues { it.size > Picker.ACCENTS }
+        check("${method.id}: no letter has more than ${Picker.ACCENTS} accents", crowded.isEmpty()) { crowded.keys.joinToString(" ") }
         if (method.keys != null) {
             same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
             val unshifted = ('a'..'z').filter { method.letter(it, true).isNullOrEmpty() }

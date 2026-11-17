@@ -52,7 +52,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -63,17 +63,17 @@
     "words": "main_kk__experimental.combined"
   },
   "starters": [
-    "да",
-    "мен",
-    "деп",
-    "және",
-    "де",
     "бұл",
-    "бар",
-    "деген",
+    "ал",
     "ол",
-    "жоқ",
-    "бір",
-    "болып"
+    "бірақ",
+    "оның",
+    "жас",
+    "осы",
+    "сондықтан",
+    "сол",
+    "алайда",
+    "олар",
+    "мен"
   ]
 }

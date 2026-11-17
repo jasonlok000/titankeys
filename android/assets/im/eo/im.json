@@ -19,7 +19,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -30,16 +30,16 @@
   },
   "starters": [
     "la",
-    "ke",
-    "al",
-    "de",
-    "kaj",
-    "estas",
-    "je",
-    "estis",
+    "en",
+    "ĝi",
+    "li",
     "tiu",
+    "tio",
+    "tamen",
+    "tiuj",
+    "dum",
+    "ili",
     "por",
-    "oni",
-    "li"
+    "post"
   ]
 }

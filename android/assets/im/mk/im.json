@@ -42,7 +42,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -53,17 +53,17 @@
     "words": "mk_full.txt"
   },
   "starters": [
-    "да",
-    "не",
-    "се",
-    "е",
-    "на",
-    "го",
-    "и",
-    "што",
-    "ќе",
     "во",
+    "на",
+    "тој",
     "за",
-    "тоа"
+    "по",
+    "од",
+    "со",
+    "ова",
+    "според",
+    "се",
+    "како",
+    "таа"
   ]
 }

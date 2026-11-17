@@ -20,7 +20,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -30,17 +30,17 @@
     "words": "main_lt.combined"
   },
   "starters": [
-    "ir",
-    "buvo",
-    "į",
-    "yra",
-    "iš",
-    "su",
-    "nuo",
-    "kad",
+    "tačiau",
+    "tai",
     "o",
-    "iki",
+    "taip",
+    "pasak",
+    "ir",
+    "jis",
     "kaip",
-    "bei"
+    "bet",
+    "iš",
+    "jei",
+    "kai"
   ]
 }

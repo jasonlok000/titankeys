@@ -5,3 +5,5 @@ Words: aosp-gaeilge (https://codeberg.org/goibhniu/aosp-gaeilge), via HeliBoard'
 Ranked by how often each word appears in the Leipzig Corpora Collection's gle_newscrawl_2014_300K (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0, and only the words it uses kept. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012.
 
 Next words (pairs.txt): counts of word pairs from the Leipzig Corpora Collection's gle_newscrawl_2014_300K (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. Built by tools/im/next_words.py; only the counts of the most common word pairs are included.
+
+Starters: the words that most often begin a sentence in the Leipzig Corpora Collection's gle_newscrawl_2014_300K (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0.

@@ -41,6 +41,11 @@ export default function Settings() {
   if (result.status !== "ready") return <Screen title="Settings" rightAction={closeAction} />;
   const settings = result.data;
   return <Screen title="Settings" rightAction={closeAction}>
+    {/* First in Settings (owner, 2026-11-16: "Languages shd be first in settings"). F (docs/words-m1.md). */}
+    <Section title="Languages">
+      {/* Languages, then input methods, the Gboard way: English spelling and Chinese characters are on their language's page. */}
+      <Field label="Languages" href="/settings/languages">{languagesLabel(settings)}</Field>
+    </Section>
     <Section title="Typing">
       <Toggle label="Fix typos as you type" value={settings.autocorrect}
         onChange={autocorrect => save.run({ autocorrect })} />
@@ -53,11 +58,6 @@ export default function Settings() {
       <Toggle label="Double Space types a full stop" value={settings.autoPunctuation}
         onChange={autoPunctuation => save.run({ autoPunctuation })} />
       <Field label="Hold a letter for its symbol" href="/settings/hold">{holdLabel(settings)}</Field>
-    </Section>
-    {/* Between Typing and Shortcuts (docs/languages.md). F (docs/words-m1.md). */}
-    <Section title="Languages">
-      {/* Languages, then input methods, the Gboard way: English spelling and Chinese characters are on their language's page. */}
-      <Field label="Languages" href="/settings/languages">{languagesLabel(settings)}</Field>
     </Section>
     {/* The same topics, in the same order, as the boring guide's Shortcuts and Symbols sections. */}
     <Section title="Shortcuts">

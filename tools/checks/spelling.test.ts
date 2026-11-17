@@ -35,13 +35,13 @@ test("Settings lists American first, and says American when it can't tell (#80)"
   expect(page).toContain('?? "American"');
 });
 
-test("Settings' Languages sits between Typing and Shortcuts, and English spelling is on English's page", async () => {
+test("Settings' Languages comes first, and English spelling is on English's page", async () => {
   const settings = await read("app/settings/index.tsx");
-  const typing = settings.indexOf('<Section title="Typing">');
   const languages = settings.indexOf('href="/settings/languages"');
-  const shortcuts = settings.indexOf('<Section title="Shortcuts">');
-  expect(typing).toBeLessThan(languages);
-  expect(languages).toBeLessThan(shortcuts);
+  const firstSection = settings.indexOf("<Section title=");
+  // The owner, 2026-11-16: "Languages shd be first in settings".
+  expect(settings.indexOf('<Section title="Languages">')).toBe(firstSection);
+  expect(languages).toBeLessThan(settings.indexOf('<Section title="Typing">'));
   const page = await read("app/settings/languages/language.tsx");
   expect(page).toMatch(/language\.id === "en" && [^]*href="\/settings\/spelling"/);
   expect(page).toMatch(/language\.id === "zh" && [^]*href="\/settings\/chinese"/);

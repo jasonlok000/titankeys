@@ -200,3 +200,63 @@ def check_japanese_polish():
 
 
 BATCH += [check_japanese_polish]
+
+
+def check_accents():
+    """H's accents (no repeat, over W to O): in Spanish a W held 2 s types exactly one "w" (O); in French a held O shows its
+    accents over I and O and nothing over P (J), and a held A over W, E and R and nothing over Q (J)."""
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "es", "fr"], "es"):
+        return record("accents-es", False, "the field didn't start with es")
+    language_checks.fresh()
+    play("hold:w:2000", "+500")
+    text = language_checks.checks.field()
+    record("accents-es-w", text == "w", f"W held 2 s in Spanish typed {text!r}, wanted exactly 'w'")
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "es", "fr"], "fr"):
+        return record("accents-fr", False, "the field didn't start with fr")
+    for letter, want in (("o", "the accents over I and O, nothing over P"), ("a", "over W, E and R, nothing over Q")):
+        language_checks.fresh()
+        play(f"key:{letter}:900:none", "+400", shot=f"accents-fr-{letter}", at=1100)
+        record(f"accents-fr-{letter}", None, f"{letter.upper()} held in French: {want}", f"accents-fr-{letter}")
+        play("key:del", "+300", "key:del", "+300")
+
+
+def check_language_settings():
+    """H's per-language settings: with a second language on, Settings > Typing reads "Typing in each language: English, …"
+    (J), and French's page shows the one-time line and its rows: Fix typos, Capital letter, Space after a sentence, Space after
+    , ; :, Double Space (J). The languages go on through InputMethodsSet; Settings is only looked at and tapped through."""
+    import retest_batch
+    import guide_checks
+    language_checks.fresh()
+    language_checks.turn_on(["en", "fr"], "en")
+    retest_batch.own_screen()
+    adb = language_checks.adb
+    adb("shell", "am", "start", "-n", f"{language_checks.checks.APP}/com.vandam.ink.MainActivity")
+    import time
+    time.sleep(3)
+    adb("shell", "input", "tap", "952", "166")  # SETTINGS
+    time.sleep(2)
+    record("settings-typing", None, 'Settings: the Typing row reads "Typing in each language: English, …"',
+           guide_checks.shot("settings-typing"))
+    row = retest_batch.row_at("Français") or retest_batch.row_at("French")
+    if row is None:
+        typing = retest_batch.row_at("Typing in each language")
+        if typing:
+            adb("shell", "input", "tap", str(typing[0]), str(typing[1]))
+            time.sleep(2)
+            row = retest_batch.row_at("Français") or retest_batch.row_at("French")
+    if row:
+        adb("shell", "input", "tap", str(row[0]), str(row[1]))
+        time.sleep(2)
+        record("settings-french", None, "French's page: the one-time line, then Fix typos, Capital letter, Space after a"
+               " sentence, Space after , ; :, Double Space", guide_checks.shot("settings-french"))
+    else:
+        record("settings-french", None, "French's page wasn't found by its name on screen: for the owner's hands")
+    for _ in range(4):
+        if f" {language_checks.checks.APP}/" in language_checks.languages.front():
+            adb("shell", "input", "keyevent", "4")
+            time.sleep(1)
+
+
+BATCH += [check_accents, check_language_settings]

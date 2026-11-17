@@ -83,6 +83,39 @@ tk_focus_field() {
 
 # Fails, with a STOP line, unless the checks pass. Another app in front, or no Debug field: TitanKeys Debug's screen is brought
 # back (twice at most) and checked again. Screen off, locked or navigation: one more try a second later.
+# The window in front, as dumpsys says it ("mCurrentFocus=Window{... u0 PACKAGE/ACTIVITY}").
+tk_front() { tk_adb shell dumpsys window | tr -d '' | grep -m1 mCurrentFocus; }
+
+# The home screen's package (the launcher), as Android resolves HOME.
+tk_home_package() {
+  tk_adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '' |
+    tail -1 | cut -d/ -f1
+}
+
+# True when the app in front is someone's own: not TitanKeys Debug and not the home screen. Nothing in front (a window
+# between apps) counts as the owner's too, to be safe.
+tk_owner_app() {
+  local front home
+  front=$(tk_front)
+  grep -q " $TK_APP/" <<<"$front" && return 1
+  home=$(tk_home_package)
+  [ -n "$home" ] && grep -q " $home/" <<<"$front" && return 1
+  return 0
+}
+
+# Waits while the owner's app stays in front: every TK_OWNER_POLL_S (20) s, for TK_OWNER_WAIT_S (1800) s at most. Sends nothing to
+# the phone but reads. False if the owner's app is still there at the end.
+tk_wait_for_owner() {
+  local waited=0 step="${TK_OWNER_POLL_S:-20}" most="${TK_OWNER_WAIT_S:-1800}"
+  echo "waiting: the owner's app is in front ($(tk_front | sed 's/.* u0 //; s/}.*//')); touching nothing"
+  while tk_owner_app; do
+    [ "$waited" -ge "$most" ] && return 1
+    sleep "$step"
+    waited=$((waited + step))
+  done
+  echo "the owner's app left the front after ${waited} s"
+}
+
 # The field's screen brought back to the front: the running one, moved up its task. A plain am start stacked a new one each time,
 # eight of them by 2026-11-17's morning, each a Back the owner had to press.
 tk_bring_back() {
@@ -98,6 +131,12 @@ tk_touch_check() {
     [ $status = 2 ] && { echo "$why"; return 1; }
     # Never take the screen over from a finance or maps app (the Master's rule, 2026-11-16): stop, and send nothing.
     [ $status = 4 ] && { echo "STOP: $why"; return 1; }
+    # TK_WAIT_FOR_OWNER=1 (a run while the owner uses the phone, 2026-11-17): another app in front is the owner's, so the run
+    # waits, touching nothing, until it goes; only Debug's own screens and the home screen are the run's to bring Debug back over.
+    if [ $status = 3 ] && [ "${TK_WAIT_FOR_OWNER:-}" = 1 ] && tk_owner_app; then
+      tk_wait_for_owner || { echo "STOP: $why, and still after ${TK_OWNER_WAIT_S:-1800} s"; return 1; }
+      continue
+    fi
     if [ $status = 3 ] && [ $starts -lt 2 ]; then
       starts=$((starts + 1))
       echo "$why: bringing $TK_APP back"

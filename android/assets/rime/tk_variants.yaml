@@ -13,3 +13,7 @@ switches:
     states: [ 香港正體, 臺灣正體, 简体 ]
   - name: ascii_punct
     states: [ 。，, ．， ]
+  # librime-predict's switch: the next-word suggestions after a commit, on (#56).
+  - name: prediction
+    reset: 1
+    states: [ 關閉預測, 開啓預測 ]

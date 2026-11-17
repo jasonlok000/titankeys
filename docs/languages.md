@@ -287,6 +287,9 @@ too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
 
 **Keys while a code is typed:**
 - **Enter** types the code as letters. **Backspace** takes off the last code letter.
+  Enter never reaches the app while a code is pending or the bigger menu is open: chat apps take Enter before the keyboard and
+  would send, so the Back service keeps Enter and Backspace for the keyboard then, as on the Sym panel (`PanelKeyFilter`; it
+  needs TitanKeys in Accessibility, docs/system-settings.md). With nothing pending, Enter is the app's, and sends.
 - **Punctuation:** Chinese full-width marks by default (，。？！：；、 and Hong Kong's 「」 for quotes in Hong Kong and Taiwan
   characters; “” in Simplified), from Rime's punctuator, Alt's symbols included. With a code pending, a punctuation key types
   the first choice, then the mark. Settings: "Plain punctuation" types ASCII marks instead (Rime's `ascii_punct`).

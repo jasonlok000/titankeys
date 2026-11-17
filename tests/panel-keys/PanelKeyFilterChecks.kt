@@ -18,6 +18,7 @@ fun main() {
     twoKeysAtOnce()
     clearForgetsThePushes()
     symbolAndEmojiPagesTurn()
+    enterIsTheEnginesWhileItBuilds()
     println("Panel key filter checks passed")
 }
 
@@ -108,4 +109,24 @@ private fun symbolAndEmojiPagesTurn() {
         same(Modifiers.panelScroll(ENTER, panel), -1f, "Enter must turn on on $panel")
     }
     for (code in PANEL_KEYS) same(Modifiers.panelScroll(code, Panel.Settings), 0f, "On Settings key $code must do nothing")
+}
+
+/**
+ * A code pending, or Chinese's bigger menu open: Enter and Backspace are the keyboard's, from the push to the release, as on the
+ * panel, so a chat app never sends (owner, 2026-11-17). With nothing being built, they're the app's again.
+ */
+private fun enterIsTheEnginesWhileItBuilds() {
+    for (code in PANEL_KEYS) {
+        val filter = PanelKeyFilter()
+        same(filter.takes(code, down = true, repeat = 0, Panel.Closed, building = true), true, "With a code pending key $code must stay from the app")
+        same(filter.takes(code, down = true, repeat = 2, Panel.Closed, building = true), true, "and its repeats")
+        // The code went with Enter (typed as letters), so nothing builds now: the release still belongs to the push.
+        same(filter.takes(code, down = false, repeat = 0, Panel.Closed, building = false), true, "and its release, after the code is typed")
+        same(filter.holding, false, "and then nothing is held")
+        same(filter.takes(code, down = true, repeat = 0, Panel.Closed, building = false), false, "With nothing pending key $code reaches the app")
+        same(filter.takes(code, down = false, repeat = 0, Panel.Closed, building = false), false, "and its release")
+    }
+    val filter = PanelKeyFilter()
+    same(filter.takes(KeyEvent.KEYCODE_SPACE, down = true, repeat = 0, Panel.Closed, building = true), false,
+        "Space stays with the keyboard's own path: apps don't take it first")
 }

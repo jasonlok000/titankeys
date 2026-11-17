@@ -193,3 +193,15 @@ test("an English word is offered only in Chinese, never first", () => {
   expect(english).toContain("EnglishOffer.offers(");
   expect(read("android/kotlin/com/titankeys/keyboard/Chinese.kt")).toContain("const val PLACE = 1");
 });
+
+test("Enter never sends while a code is pending or the bigger menu is open: the Back service keeps it for the keyboard", () => {
+  // Owner, 2026-11-17: "Enter with the chinese overlay expanded still sends", "the keycode didn't get sent but the message is sent out".
+  expect(ime).toContain("private val engineBuilding get() = choicesMenuOpen || (picker as? LanguagePicker.Choices)?.state?.composing == true");
+  expect(body(ime, "updateKeyWatch")).toContain("val forPanel = panelOpen || panelKeys.holding || engineBuilding");
+  expect(body(ime, "watchedKey")).toContain("panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel, engineBuilding)");
+  expect(body(ime, "watchedKey")).toContain("else if (panelOpen || engineBuilding) onKeyDown(event.keyCode, event)");
+  // The watch follows the picker and the menu as they open and close.
+  for (const name of ["showPicker", "closePicker", "openChoicesMenu", "closeChoicesMenu"]) expect(body(ime, name)).toContain("updateKeyWatch()");
+  // A picker shown again as it was still counts as the bar's: equal, not only the same object.
+  expect(body(ime, "openPicker")).toContain("if (strip?.notice == open.notice) return open");
+});

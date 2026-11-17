@@ -1570,9 +1570,16 @@ class TitanKeysIme : InputMethodService() {
      * It also hears them while the Sym panel is open, and until the release of a key that the panel took. See [PanelKeyFilter].
      * After a first push of Back let go of the touchpad, it hears the second push go through. See [TouchpadHold].
      */
+    /**
+     * An engine is building text: a code pending on the bar, or Chinese's bigger menu open. Enter and Backspace are then the
+     * keyboard's, kept from apps that take them first (PanelKeyFilter), as on the Sym panel: Enter types the code, or turns the
+     * menu's page, and never sends.
+     */
+    private val engineBuilding get() = choicesMenuOpen || (picker as? LanguagePicker.Choices)?.state?.composing == true
+
     private fun updateKeyWatch() {
         val launcher = editing && currentInputEditorInfo?.packageName == SMART_LAUNCHER
-        val forPanel = panelOpen || panelKeys.holding
+        val forPanel = panelOpen || panelKeys.holding || engineBuilding
         val running = BackService.watchKeys(if (launcher || forPanel || takenKeys.holding || hold.lettingGo) ::watchedKey else null)
         watchingKeys = running && launcher
         if (!running) {
@@ -1596,9 +1603,9 @@ class TitanKeysIme : InputMethodService() {
             if (!down) main.post(backWentThrough)
             return false
         }
-        if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel)) {
+        if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel, engineBuilding)) {
             // Once the panel has closed, a key that it took only waits for its release.
-            if (!down) onKeyUp(event.keyCode, event) else if (panelOpen) onKeyDown(event.keyCode, event)
+            if (!down) onKeyUp(event.keyCode, event) else if (panelOpen || engineBuilding) onKeyDown(event.keyCode, event)
             updateKeyWatch()
             return true
         }
@@ -3670,7 +3677,9 @@ class TitanKeysIme : InputMethodService() {
     /** The picker, if it's the bar's notice now. Anything else that took the bar, as a word's menu, closed it. */
     private fun openPicker(): LanguagePicker? {
         val open = picker ?: return null
-        if (strip?.notice === open.notice) return open
+        // Equal, not only the same object: the strip keeps the notice it has when an equal one comes, so a picker shown again as it
+        // was (an engine state that didn't change) is still the one on the bar, and Enter still types its code.
+        if (strip?.notice == open.notice) return open
         picker = null
         return null
     }
@@ -3680,6 +3689,7 @@ class TitanKeysIme : InputMethodService() {
         picker = open
         strip?.pickerMark = -1
         strip?.notice = open.notice
+        updateKeyWatch()
         setPaging()
     }
 
@@ -3694,8 +3704,9 @@ class TitanKeysIme : InputMethodService() {
         val open = picker ?: return
         picker = null
         strip?.pickerMark = -1
-        if (strip?.notice === open.notice) strip?.notice = null
+        if (strip?.notice == open.notice) strip?.notice = null
         setPaging()
+        updateKeyWatch()
     }
 
     /** An engine's choices are on the bar: swipes on the keys are theirs, short ones too, as on the Sym panel. */
@@ -3927,6 +3938,7 @@ class TitanKeysIme : InputMethodService() {
         menu.hover = ""
         menu.visibility = View.VISIBLE
         showModifiers()
+        updateKeyWatch()
         tallyChoices("bigMenu")
     }
 
@@ -3936,6 +3948,7 @@ class TitanKeysIme : InputMethodService() {
         menu.visibility = View.GONE
         menu.hover = ""
         showModifiers()
+        updateKeyWatch()
     }
 
     /** A pick from the bigger menu: its place in the engine's whole list. The menu closes. */

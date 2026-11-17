@@ -112,5 +112,14 @@ checks.adb = stand_in(300, "com.titankeys.debug/com.titankeys.keyboard.SpaceGest
 assert checks.phone_heat() == (30.0, False)
 checks.wait_cool()
 checks.adb, checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS = real_adb, real_steps, real_seconds
+# The rime-files batch reads LeakCheck's "rime data" part, as main 2db7a87b writes it, and its "none copied".
+import rime_batch
+rime_batch.adb = lambda *args: ('Broadcast completed: result=0, data="no guide or playground in memory; rime data: 53.8 MB in 41 '
+                                'files; tables and grammars: jyut6ping3.table.bin, tk_yue.gram"')
+assert rime_batch.rime_data() == (53.8, 41, ["jyut6ping3.table.bin", "tk_yue.gram"]), rime_batch.rime_data()
+rime_batch.adb = lambda *args: 'Broadcast completed: result=0, data="no guide; rime data: none copied"'
+assert rime_batch.rime_data() == (0.0, 0, [])
+rime_batch.adb = lambda *args: 'Broadcast completed: result=0, data="no guide"'
+assert rime_batch.rime_data() is None
 print("Batch checks passed")
 PY

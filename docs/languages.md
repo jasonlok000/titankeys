@@ -581,8 +581,8 @@ Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tes
 - **Korean (`keyboard/Hangul.kt`):** the 2-set (Dubeolsik) layout on the printed keys, with Shift for ㅃ ㅉ ㄸ ㄲ ㅆ and
   ㅒ ㅖ. The syllable being built shows on the bar; once the next jamo can't join it, it's written to the field (가 + ㅂ +
   ㅏ is 가바). Backspace takes off the last jamo typed. Space, Enter, digits and marks write the syllable and go on as
-  usual. No sentence capitals, since Shift is a letter key's other jamo. No word list yet: none with a clear licence was
-  found, and typing comes first.
+  usual. No sentence capitals, since Shift is a letter key's other jamo. The word list's completions follow on the row,
+  after the word as typed, which goes first because it's what Space writes (owner, #98); a swipe up opens the bigger menu.
 - **Vietnamese (`keyboard/Telex.kt`):** Telex. aa â, ee ê, oo ô, aw ă, ow ơ, uw ư (uow ươ), dd đ; s f r x j for the five
   tones, z to take the tone off; the same key again undoes its mark and types the key. The tone goes where the spelling
   puts it, in the older style most people write (hòa, thúy). The word being typed shows on the bar, worked out again from

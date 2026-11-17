@@ -85,14 +85,17 @@ open class HangulComposer(protected var words: WordList? = null) : InputEngine {
     override fun pick(index: Int): EngineState = pickWord(choices.getOrNull(index))
 
     /**
-     * The bigger menu's words, opened with a swipe up, as Telex's and Hindi's are: the word list's words for the word so far,
-     * past the bar's, in the same order.
+     * The row's and the bigger menu's words (a swipe up opens it, as in Telex and Hindi): first the word as typed, which is
+     * what Space writes, so the bar shows what Space types (owner, #98); then the word list's words for the word so far, in
+     * the same order. A pick of the word as typed writes it as Space does, with the space.
      */
     override fun choices(start: Int, count: Int): List<String> {
         val list = words ?: return emptyList()
         if (start < 0 || count <= 0) return emptyList()
         val whole = written.toString() + code()
-        return matchKeys().flatMap { list.complete(it, start + count + 1) }.distinct().filter { it != whole }.drop(start).take(count)
+        val typedFirst = if (whole.isEmpty()) emptyList() else listOf(whole)
+        val listed = matchKeys().flatMap { list.complete(it, start + count + 1) }.distinct().filter { it != whole }
+        return (typedFirst + listed).drop(start).take(count)
     }
 
     /** A pick from the bar or the bigger menu, [index] counted across all of [choices]. */

@@ -60,6 +60,15 @@ private fun sheet(name: String, out: File, every: Long, setup: (GestureDisplay, 
 
 fun main(args: Array<String>) {
     val out = File(args.firstOrNull() ?: "render-out").apply { mkdirs() }
+    // Comparison (#89): a hold of ten words over real words, then its lift, the same in every version.
+    sheet("compare-hold", out, 64) { display, now ->
+        if (now == 1_000L) {
+            display.deleteHeld(200, now, .4f)
+            display.deleteText("one two three four five six seven eight nine ten eleven twelve ")
+        }
+        if (now in 1_000L..2_728L && (now - 1_000L) % 192L == 0L) display.wordDeleted(now, 5)
+        if (now == 2_920L) display.deleteEnded(now)
+    }
     // One flick of five letters, as before: the words faded behind, not covered.
     sheet("one-flick", out, 80) { display, now -> if (now == 1_000L) display.wordDeleted(now, 5) }
     // Three quick flicks: one stream that grows, and never starts over.
@@ -70,17 +79,24 @@ fun main(args: Array<String>) {
             1_512L -> display.wordDeleted(now, 7)
         }
     }
-    // A long word: the same fixed row as any flick, eaten by the chomper (#89, owner, 2026-11-16).
-    sheet("long-word", out, 64) { display, now -> if (now == 1_000L) display.wordDeleted(now, 5_000) }
-    // A held delete: the chomper eats a dot for each word as it goes, pauses in the pause zone, and ends with the delete at the
-    // lift, with no dots after it.
-    sheet("hold-chomp", out, 48) { display, now ->
-        if (now == 1_000L) display.deleteHeld(200, now, .4f)
-        if (now in 1_000L..1_800L && (now - 1_000L) % 192L == 0L) display.wordDeleted(now, 6)
-        if (now == 1_800L) display.deletePaused(true)
-        // The frames are 16 ms apart from 1,000 ms, so each event falls on one.
-        if (now == 2_008L) display.deletePaused(false)
-        if (now in 2_008L..2_400L && (now - 2_008L) % 192L == 0L) display.wordDeleted(now, 6)
-        if (now == 2_504L) display.deleteEnded(now)
+    // A long delete with the experiment "Dots speed up when long" on.
+    sheet("speed-up", out, 64) { display, now ->
+        if (now == 1_000L) { display.speedUp = true; display.wordDeleted(now, 30) }
     }
+    // A short hold, short of the dominoes' streak: its words go orange and turn into dots at the lift, as always (#89).
+    sheet("hold-short", out, 64) { display, now ->
+        if (now == 1_000L) display.deleteHeld(200, now, .4f)
+        if (now in 1_000L..1_960L && (now - 1_000L) % 192L == 0L) display.wordDeleted(now, 5)
+        if (now == 2_008L) display.deleteEnded(now)
+    }
+    // The dominoes, in place of the dots: a hold whose streak reached them, its words as pills, then its lift (#89).
+    sheet("dominoes", out, 48) { display, now ->
+        if (now == 1_000L) display.deleteHeld(160, now, .6f)
+        if (now in 1_000L..2_600L && (now - 1_000L) % 160L == 0L) display.wordDeleted(now, 6)
+        if (now == 1_800L) display.startDominoes(100, now)
+        if (now == 2_600L) display.startDominoes(111, now)
+        if (now == 2_664L) display.deleteEnded(now)
+    }
+    // A flick at the end of a long line: a row the bar's width, not 2,000 dots.
+    sheet("long-flick", out, 80) { display, now -> if (now == 1_000L) display.wordDeleted(now, 2_000) }
 }

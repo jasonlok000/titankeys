@@ -6,6 +6,16 @@ public class Paint {
     public enum Style { FILL, STROKE, FILL_AND_STROKE }
     public enum Cap { BUTT, ROUND, SQUARE }
     public enum Join { MITER, ROUND, BEVEL }
+    public enum Align { LEFT, CENTER, RIGHT }
+    float textSize = 12f;
+    Align align = Align.LEFT;
+    boolean bold;
+    public void setTextSize(float size) { textSize = size; }
+    public float getTextSize() { return textSize; }
+    public void setTextAlign(Align align) { this.align = align; }
+    public Align getTextAlign() { return align; }
+    public void setFakeBoldText(boolean bold) { this.bold = bold; }
+    public boolean isFakeBoldText() { return bold; }
 
     int colour = 0xFF000000;
     float strokeWidth = 0f;

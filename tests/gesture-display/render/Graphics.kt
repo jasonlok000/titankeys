@@ -25,7 +25,11 @@ class Paint(flags: Int = 0) {
     enum class Style { FILL, STROKE }
     enum class Cap { ROUND }
     enum class Join { ROUND }
+    enum class Align { LEFT, CENTER, RIGHT }
     var color = 0
+    var textSize = 12f
+    var textAlign = Align.LEFT
+    var isFakeBoldText = false
     /** As Android: setting alpha changes only the colour's alpha. */
     var alpha: Int
         get() = color ushr 24
@@ -61,6 +65,14 @@ class Canvas(private val image: BufferedImage) {
     fun drawRect(l: Float, t: Float, r: Float, b: Float, p: Paint) { paint(p); target.fill(Rectangle2D.Float(l, t, r - l, b - t)) }
     fun drawCircle(x: Float, y: Float, radius: Float, p: Paint) { paint(p); target.fill(Ellipse2D.Float(x - radius, y - radius, 2 * radius, 2 * radius)) }
     fun drawLine(x0: Float, y0: Float, x1: Float, y1: Float, p: Paint) { paint(p); target.draw(Line2D.Float(x0, y0, x1, y1)) }
+    fun drawText(text: String, x: Float, y: Float, p: Paint) {
+        paint(p)
+        target.font = java.awt.Font(java.awt.Font.SANS_SERIF, if (p.isFakeBoldText) java.awt.Font.BOLD else java.awt.Font.PLAIN, 1)
+            .deriveFont(p.textSize)
+        val width = target.fontMetrics.stringWidth(text)
+        val left = when (p.textAlign) { Paint.Align.LEFT -> x; Paint.Align.CENTER -> x - width / 2f; Paint.Align.RIGHT -> x - width }
+        target.drawString(text, left, y)
+    }
     fun drawOval(r: RectF, p: Paint) { paint(p); target.fill(Ellipse2D.Float(r.left, r.top, r.right - r.left, r.bottom - r.top)) }
     fun drawRoundRect(r: RectF, rx: Float, ry: Float, p: Paint) {
         paint(p); target.fill(RoundRectangle2D.Float(r.left, r.top, r.right - r.left, r.bottom - r.top, 2 * rx, 2 * ry))

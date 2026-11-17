@@ -283,6 +283,22 @@ class TitanKeysIme : InputMethodService() {
         main.postDelayed(endTeamsEgg, SwipeLoad.NOTICE_MILLIS)
     }
 
+    /**
+     * The first time an input method with held letters types, the bar says what a hold does there ([HoldHint]), once ever for
+     * it, for a few seconds or until the next key or touch, as the swipe notice does. Never over a word's menu or a picker.
+     */
+    private fun showHoldHint() {
+        val strip = strip ?: return
+        val method = languages.current
+        val text = HoldHint.of(method) ?: return
+        if (TypingSettings.holdHintShown(this, method.id)) return
+        if (strip.notice != null && strip.notice !is Strip.Notice.Line) return
+        TypingSettings.holdHintShown(this, method.id, true)
+        strip.notice = Strip.Notice.Line(text)
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, HOLD_HINT_MILLIS)
+    }
+
     /** Android's boot count, where an app can read it, and the time this boot started. Neither changes when TitanKeys restarts. */
     private fun currentBoot(): OncePerBoot.Boot {
         val count = try {
@@ -443,6 +459,7 @@ class TitanKeysIme : InputMethodService() {
         val gesture = strip?.gesture ?: return
         gesture.speedUp = Haptics.dotsSpeedUp(this)
         if (!gesture.deleteEnded(SystemClock.uptimeMillis())) return
+        deleteLog("delete animation: dots ${gesture.dots}${if (gesture.dominoes) " as dominoes, ${gesture.dominoTotal} words" else ""}")
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val dotsAt = gesture.dotsAt
         haptics.holdDots(gesture.dotLandings(scale)) { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }
@@ -528,6 +545,7 @@ class TitanKeysIme : InputMethodService() {
             val deletes = editor.deletes
             composer.backspace(true)
             strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
+            deleteStreakWord(selected)
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
@@ -1596,6 +1614,14 @@ class TitanKeysIme : InputMethodService() {
      * TitanKeys Debug only: what happened to a press of Sym, for an app where the panel doesn't open. Never any text, only where the
      * press got to.
      */
+    /**
+     * TitanKeys Debug only: what a delete's animation shows, as counts, never text, for the phone checks of #89:
+     * "delete animation: dots N" and "dominoes run W words". adb logcat -s TitanKeysDelete
+     */
+    private fun deleteLog(line: String) {
+        if (AppBuild.kind(this) == "debug") Log.i("TitanKeysDelete", line)
+    }
+
     private fun symLog(line: String) {
         if (AppBuild.kind(this) == "debug") Log.i("TitanKeysSym", "$line (app ${currentInputEditorInfo?.packageName}, editing $editing)")
     }
@@ -2509,6 +2535,27 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** New input ends a flourish at once, and a flick's dot ticks still to come with it. */
+    /**
+     * The delete streak that plays the dominoes (#89, owner, 2026-11-17): every word a flick or a held delete takes counts, each
+     * within the streak's gap of the last, and the dominoes play once it reaches its words. A delete of a selection, as select-all
+     * then a flick, is an instant delete with the usual animation: it never counts. A key press or a typed swipe starts it over.
+     */
+    private val deleteStreak = DeleteStreak()
+
+    private fun deleteStreakWord(selected: CharSequence?) {
+        if (selected != null) return
+        // The streak's numbers, which the Haptics lab can try in TitanKeys Debug.
+        GestureDisplay.triedDominoWords = Haptics.readDominoWords(this)
+        GestureDisplay.triedDominoGap = Haptics.readDominoGap(this)
+        val now = SystemClock.uptimeMillis()
+        val gesture = strip?.gesture
+        if (deleteStreak.word(now, GestureDisplay.dominoGapMillis(), GestureDisplay.dominoWords())) {
+            gesture?.startDominoes(deleteStreak.words, now)
+            deleteLog("dominoes run ${deleteStreak.words} words")
+        }
+        else if (gesture?.dominoes == true) gesture.startDominoes(deleteStreak.words, now)
+    }
+
     private fun interruptGesture() {
         strip?.gesture?.interrupt()
         haptics.cutDots()
@@ -3135,12 +3182,14 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * A quick setting that each language keeps for itself sets the typing language's own value. While that's the only language on,
-     * Settings' main page shows the setting, so its plain value follows too (TypingSettings.PER_LANGUAGE).
+     * A quick setting that each language keeps for itself sets the typing language's own value. While English is the only
+     * language on, Settings' main page shows the setting as English's, so its plain value follows too, as the page writes it
+     * (TypingSettings.PER_LANGUAGE; app/settings/languages typingPerLanguage). With another language alone on, the plain value
+     * stays: it's every language's own until it sets one, so writing it would change English's and every other's too.
      */
     private fun languageSetting(own: (String) -> Unit, plain: () -> Unit) {
         own(languages.languageId)
-        if (languages.on.map { it.language.id }.distinct().size <= 1) plain()
+        if (languages.on.all { it.language.id == InputMethod.ENGLISH_ID }) plain()
     }
 
     /** The key that toggled a quick setting, whose release must not start the mark's wait: see [keepPanelHover]. */
@@ -3331,6 +3380,11 @@ class TitanKeysIme : InputMethodService() {
         inputLog()?.outcome(outcome)
         // A touch that is no delete flick cuts a delete's dots, which waited for it.
         if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()
+        // A swipe that types is typing: the dominoes end, and the delete streak starts over (#89).
+        if (outcome is Contact.Outcome.Swipe && !outcome.deletesWord) {
+            deleteStreak.typed()
+            strip?.gesture?.stopDominoes()
+        }
         // The word menu keeps the touchpad for itself: a finger there only marks its buttons, and nothing types.
         if (menuOpen && !altOrPanel) return
         if (!altOrPanel) {
@@ -3382,6 +3436,8 @@ class TitanKeysIme : InputMethodService() {
                         // How long the dots wait on the bar, which the Haptics lab can try live in TitanKeys Debug.
                         GestureDisplay.triedFlickHold = Haptics.readFlickHold(this)?.toFloat()
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
+                        deleteStreakWord(selected)
+                        gesture?.let { deleteLog("delete animation: dots ${it.dots}${if (it.dominoes) " as dominoes, ${it.dominoTotal} words" else ""}") }
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
@@ -4071,6 +4127,7 @@ class TitanKeysIme : InputMethodService() {
         strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
         loadEnded()
+        if (editing) showHoldHint()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
@@ -4118,6 +4175,11 @@ class TitanKeysIme : InputMethodService() {
         }
         clearTeamsEgg()
         interruptGesture()
+        // A key is typing: the dominoes end at once, and the delete streak starts over (#89).
+        if (!Modifiers.isModifier(keyCode)) {
+            deleteStreak.typed()
+            strip?.gesture?.stopDominoes()
+        }
         strip?.gesture?.glowOff()
         wakeIdleBar()
         // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.
@@ -4809,6 +4871,8 @@ class TitanKeysIme : InputMethodService() {
         private const val FLICK_REACH = 64
         /** How long the word on Teams shows. */
         private const val TEAMS_EGG_MILLIS = 500L
+        /** How long the hold hint stays on the bar, unless a key or touch takes it first. */
+        private const val HOLD_HINT_MILLIS = 6_000L
         /** How long the bar says which input method types, after a switch in the overlay. */
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"

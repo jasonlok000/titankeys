@@ -41,5 +41,9 @@
     "este",
     "y",
     "es"
+  ],
+  "howTo": [
+    "Hold a letter for its accents: hold N for ñ, A for á, U for ú or ü. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
+    "A sentence that opens with ¿ or ¡ still gets its capital."
   ]
 }

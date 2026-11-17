@@ -8,6 +8,8 @@
 //       types the code and Space, and prints the next-word suggestions, then after each further key
 //   rime_tool space <shared> <user> <schema> <variant> "<code>"
 //       types the code as typed, spaces and all, then Space once, as the app does; prints "committed|left over". A code of "-" reads one code a line from stdin.
+//   rime_tool preedit <shared> <user> <schema> <variant> "<code>"
+//       types the code as typed and prints the code line as Rime shows it (its preedit), as the bar's floating line does
 // Based on the language study's test program (docs/studies/56-languages.md).
 #include <rime_api.h>
 
@@ -150,6 +152,20 @@ int main(int argc, char** argv) {
       printf("%s|%s\n", typed.c_str(), left.c_str());
       if (!many) break;
     }
+    rime->destroy_session(s);
+    rime->finalize();
+    return 0;
+  }
+  if (argc >= 7 && strcmp(argv[1], "preedit") == 0) {
+    RimeApi* rime = open(argv[2], argv[3], true);
+    RimeSessionId s = rime->create_session();
+    if (!rime->select_schema(s, argv[4])) return 1;
+    for (const char* o : kVariants) rime->set_option(s, o, strcmp(o, argv[5]) == 0 ? True : False);
+    for (const char* c = argv[6]; *c; ++c) rime->process_key(s, (unsigned char)*c, 0);
+    RIME_STRUCT(RimeContext, ctx);
+    std::string preedit = rime->get_context(s, &ctx) && ctx.composition.preedit ? ctx.composition.preedit : "";
+    rime->free_context(&ctx);
+    printf("%s\n", preedit.c_str());
     rime->destroy_session(s);
     rime->finalize();
     return 0;

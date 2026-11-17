@@ -70,5 +70,8 @@
     "είναι",
     "στο",
     "σύμφωνα"
+  ],
+  "howTo": [
+    "The keys follow the Greek PC layout: A is α, V is ω, U is θ. W types ς, the final sigma, and Q types ;, Greek's question mark. Hold a vowel for its accent: ά, έ, ή, ί, ό, ύ, and ώ on V. Hold I or Y for ϊ or ϋ too."
   ]
 }

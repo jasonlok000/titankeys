@@ -368,6 +368,20 @@ def notice(lines):
     return "\n\n".join(lines) + "\n"
 
 
+# Paragraphs of a NOTICE that other steps write, kept when an input method is built again: J's next words
+# (tools/im/next_words.py) and the starters ([write_starters]).
+KEPT_NOTICES = ("Next words", "Starters: ")
+
+
+def write_notice(folder, lines):
+    """Writes [folder]'s NOTICE from [lines], keeping the paragraphs other steps added ([KEPT_NOTICES])."""
+    path = os.path.join(folder, "NOTICE")
+    kept = []
+    if os.path.isfile(path):
+        kept = [p for p in open(path, encoding="utf-8").read().strip("\n").split("\n\n") if p.startswith(KEPT_NOTICES)]
+    open(path, "w", encoding="utf-8", newline="\n").write(notice(list(lines) + kept))
+
+
 def subtype_id(ident):
     """A fixed id for Android's keyboard list, so the user's choices survive updates: the first 4 bytes of the id's SHA-1."""
     value = int.from_bytes(hashlib.sha1(("titankeys.im." + ident).encode()).digest()[:4], "big")
@@ -411,7 +425,7 @@ def build_latin(data, ident):
                       "keys": "qwerty", "accents": accents, "words": words_file, "variants": variants, "rules": rules,
                       "engine": None, "source": {"letters": "CLDR 49 exemplarCharacters",
                                                                      "words": file if "." in file else file + ".combined"}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice(notices))
+    write_notice(folder, notices)
 
 
 # Chinese through Rime (native/rime/SOURCES.md): no word list of their own here, since Rime's tables are in
@@ -450,8 +464,7 @@ def build_chinese(data, ident):
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Hani",
                       "keys": "qwerty", "accents": {}, "words": None, "variants": None, "rules": rules,
                       "engine": {"rime": schema}, "source": {"words": source}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CHINESE_NOTICE.format(source=source)]))
+    write_notice(folder, [CHINESE_NOTICE.format(source=source)])
 
 # Japanese through Mozc (native/mozc/SOURCES.md): no word list here, since Mozc's data is android/assets/mozc. Its mark on the
 # bar is あ, as Japanese keyboards show it. F (docs/words-m1.md).
@@ -471,7 +484,7 @@ def build_japanese(data, ident):
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Jpan",
                       "keys": "qwerty", "accents": {}, "words": None, "variants": None, "rules": rules,
                       "engine": {"mozc": "oss"}, "source": {"words": "Mozc's open-source dictionary"}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice([JAPANESE_NOTICE]))
+    write_notice(folder, [JAPANESE_NOTICE])
 
 # Korean and Vietnamese through TitanKeys' own engines (android/kotlin/com/titankeys/keyboard/Hangul.kt and Telex.kt).
 # Korean has no capitals and uses Shift for its tense consonants, so no sentence capitals.
@@ -507,7 +520,7 @@ def build_engine(data, ident):
                       "keys": "qwerty", "accents": {}, "words": "words.combined" if file else None, "variants": None,
                       "rules": rules, "engine": engine,
                       "source": {"keys": engine, "words": (os.path.basename(file) if ident == "ko" else file + ".combined") if file else None}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice(notices))
+    write_notice(folder, notices)
 
 
 def build_national(data, ident):
@@ -567,8 +580,7 @@ def build_national(data, ident):
                       "words": "words.combined", "variants": None, "rules": rules, "engine": None,
                       "source": {"letters": "CLDR 49 exemplarCharacters", "keys": "keyboard_layout_%s.kcm" % layout,
                                  "words": shown}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, layout_line, "Words: " + source_line] + ranking))
+    write_notice(folder, [CLDR_NOTICE, layout_line, "Words: " + source_line] + ranking)
 
 
 # Korean's word list (Leipzig Corpora Collection, CC BY 4.0), in the data dir.
@@ -638,7 +650,7 @@ def build_thai(data, ident):
                       "engine": None,
                       "source": {"letters": "Kedmanee (TIS 820-2538)", "keys": "xkeyboard-config symbols/th basic",
                                  "words": "main_th.combined"}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice([THAI_NOTICE, THAI_WORDS]))
+    write_notice(folder, [THAI_NOTICE, THAI_WORDS])
 
 
 # Hindi: Wikimedia's jquery.ime transliteration rules (jquery.ime/hi-transliteration.js in the data dir, GPL-3.0), run by
@@ -725,8 +737,7 @@ def build_hindi(data, ident):
                       "rules": {"capitalise": False, "sentenceEnd": ".?!।", "openingMarks": "", "apostrophes": False, "fullStop": "। "},
                       "engine": {"rules": "rules.json"},
                       "source": {"keys": "jquery.ime hi-transliteration", "words": os.path.basename(file)}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, HINDI_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="hi_full.txt")]))
+    write_notice(folder, [CLDR_NOTICE, HINDI_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="hi_full.txt")])
 
 
 # Hebrew: SI-1452, read from xkeyboard-config's symbols/il "basic" (xkb/ in the data dir). Its letters sit on the Titan's
@@ -767,8 +778,7 @@ def build_hebrew(data, ident):
                       "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": True},
                       "engine": None,
                       "source": {"keys": "xkeyboard-config symbols/il basic", "words": os.path.basename(file)}})
-    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")] + ranking))
+    write_notice(folder, [CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")] + ranking)
 
 
 # Starter words (owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty"):

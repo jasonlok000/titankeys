@@ -221,7 +221,8 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "key-feed": "keyfeed_batch",
            "shift": "shift_checks",
            "delete-animation": "delete_batch",
-           "how-to": "howto_batch"}
+           "how-to": "howto_batch",
+           "review-fixes": "review_batch"}
 
 
 def report(name, stamp, hands):

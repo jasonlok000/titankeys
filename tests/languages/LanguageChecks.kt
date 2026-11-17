@@ -70,6 +70,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
+    if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -1330,4 +1331,37 @@ private fun thaiHebrewAndHindiNextWords(folder: File) {
     val hi = table("hi")
     check("Hindi: words follow कि", hi.after("कि").isNotEmpty())
     check("and में, with its vowel sign and bindu", hi.after("में").isNotEmpty()) { hi.after("में").joinToString(" ") }
+}
+
+/**
+ * The Cyrillic layouts' held letters (the Orchestrator, 2026-11-17): every letter of the alphabet can be typed, from a key or
+ * a hold, none twice, and each key's held letters come commonest first, by the input method's own word list.
+ */
+private fun cyrillicHoldsReachEveryLetter(folder: File) {
+    val alphabets = mapOf(
+        "ru" to "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", "uk" to "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя",
+        "be" to "абвгдеёжзійклмнопрстуўфхцчшыьэюя", "bg" to "абвгдежзийклмнопрстуфхцчшщъьюя",
+        "mk" to "абвгдѓежзѕијклљмнњопрстќуфхцчџш", "sr" to "абвгдђежзијклљмнњопрстћуфхцчџш",
+        "kk" to "аәбвгғдеёжзийкқлмнңоөпрстуұүфхһцчшщъыіьэюя")
+    for ((id, alphabet) in alphabets) {
+        val method = InputMethod.parse(File(folder, "$id/im.json").readText())
+        val typed = ('a'..'z').mapNotNull { method.letter(it, shift = false) } + method.accents.values.flatten()
+        val missing = alphabet.filter { letter -> typed.none { it == letter.toString() } }
+        check("$id: every letter can be typed", missing.isEmpty()) { "missing $missing" }
+        val twice = typed.groupBy { it }.filter { it.value.size > 1 }.keys
+        check("$id: no letter in two places", twice.isEmpty()) { "twice $twice" }
+        // Each letter's weight in the list: its words' frequencies, a step of 25 in f being a factor of e, as make.py ranks.
+        val weight = HashMap<Char, Double>()
+        File(folder, "$id/words.combined").useLines { lines ->
+            lines.filter { it.startsWith(" word=") }.take(50_000).forEach { line ->
+                val fields = line.trim().split(",")
+                val f = fields.getOrNull(1)?.removePrefix("f=")?.toIntOrNull() ?: 0
+                for (c in fields[0].removePrefix("word=").lowercase()) weight.merge(c, Math.exp(f / 25.0), Double::plus)
+            }
+        }
+        for ((key, held) in method.accents) {
+            val order = held.sortedByDescending { weight[it[0]] ?: 0.0 }
+            check("$id: ${key.uppercaseChar()}'s held letters commonest first", held == order) { "$held, by use $order" }
+        }
+    }
 }

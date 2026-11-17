@@ -590,3 +590,16 @@ More calls get added here as the night goes.
 
 - **Before launch:** rework the language menu (Settings > Languages and the switcher's lists). Owner: "it's very cluttered and messy.  hard to read anything." Planned for the pre-launch polish pass, with F on wording and a design pass first; not started (token budget).
 - **Now (C's queue, batched):** the small language mark on the keyboard sits off centre. Owner: "match the vertical positionoing center with the auto cap in english." Centre it vertically on the same line as English's auto-cap mark.
+
+## 2026-11-17 evening: where things stand
+
+- **On the phone:** Debug from main 426a478b (md5 6a477563, mapping 052e80fa kept), installed 17:19. Not phone-checked yet.
+- **Tonight:** night.sh 00:30–07:30, every batch plus b-lines, heap around languages, zh-back (Sym panel and Back), leak-85; crash guard on. A sends one summary in the morning.
+- **Fixed today, offline only:**
+  - the memory leak (unbounded corrector builds per switch; C), and the uncapped cursorPath, which 2.1.0 has too (3.0 only, no 2.1.1);
+  - Chinese per character for every gesture and the held delete, inside a composition too; a flick with a partial selection; Space touches never pick; Enter and Sym with a code; the bar after a pick; more candidates; radicals on a resting finger (B);
+  - held Backspace, the bar after a switch, the language mark, the dominoes past 100, the playground switcher, the Settings labels.
+- **Open:** whether the Sym panel stays open after Back (zh-back tonight); 速成 and Debug's Settings, probably the leak, to confirm on the new build.
+- **Next, cheap:** A's RunStatus notification, the home-screen autostart and the run speed-ups.
+- **Next week (budget):** the language menu rework, F's wording pass, the LOOK shots, the website, then the pre-release.
+- **How we work now:** workers on Opus 5.5 low. Batches: one merge, one offline run, one build, one night run. The Master reviews each diff.

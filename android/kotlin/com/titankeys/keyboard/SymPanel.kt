@@ -121,6 +121,14 @@ class SymPanel(
 
     /** Quick settings that don't work here, as the key that opens all settings in the guide: no mark, no name, no switch. */
     var blockedKeys: Set<String> = emptySet()
+    /**
+     * Quick settings that can't work in the language typing (QuickSetting.hiddenIn): their keys show nothing and do nothing,
+     * as Settings leaves their rows off that language's page.
+     */
+    var hiddenKeys: Set<String> = emptySet()
+
+    /** The quick setting on [key], unless it's hidden in the language typing. */
+    private fun quickItem(key: String) = QuickSetting.on(key)?.takeIf { key !in hiddenKeys }
 
     /** Null until the emoji list has loaded. */
     var emoji: EmojiPages? = null
@@ -338,7 +346,7 @@ class SymPanel(
             key == Layout.ALT -> pressAlt()
             key == Layout.SYM -> pressSym()
             opensClipboard(key) -> openClipboard()
-            quick -> QuickSetting.on(key)?.let(useQuickSetting)
+            quick -> quickItem(key)?.let(useQuickSetting)
             clipboard -> clipKey(key)
             rows != null -> if (swipe(0f, rows)) pageChanged()
             else -> item(key)?.let(pick)
@@ -385,7 +393,7 @@ class SymPanel(
 
     /** What a key shows as text, or null if it shows none. */
     private fun label(key: String) = when {
-        quick -> QuickSetting.on(key)?.label
+        quick -> quickItem(key)?.label
         clipboard -> when (key) {
             Layout.BACKSPACE -> context.getString(R.string.clipboard_clear).takeIf { !clipSandbox && clips.any { !it.pinned } }
             Layout.ENTER -> context.getString(if (clipPinning) R.string.clipboard_pin_done else R.string.clipboard_pin)
@@ -400,7 +408,7 @@ class SymPanel(
         if (item == QuickSetting.OpenSettings || item == QuickSetting.ChangeKeyboard || item == QuickSetting.Clipboard) item.title else "${item.title}: ${if (quickSettingOn(item)) "On" else "Off"}"
 
     /** What the strip at the bottom says for a key under a finger on the quick settings page, or null if it says nothing. */
-    private fun detail(key: String) = if (quick) QuickSetting.on(key)?.takeIf { key !in blockedKeys }?.let(::describe)
+    private fun detail(key: String) = if (quick) quickItem(key)?.takeIf { key !in blockedKeys }?.let(::describe)
         else clipAt(key)?.let { clip -> ClipboardHistory.preview(clip.text) }
 
     /**
@@ -419,7 +427,7 @@ class SymPanel(
         return context.getString(message)
     }
 
-    private fun dim(key: String) = quick && (key in blockedKeys || QuickSetting.on(key)?.let(quickSettingOn) == false)
+    private fun dim(key: String) = quick && (key in blockedKeys || quickItem(key)?.let(quickSettingOn) == false)
 
     private fun categoryTab(sample: String, name: String, index: Int) = LineText(context).apply {
         text = sample

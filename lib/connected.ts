@@ -59,3 +59,23 @@ export const copyContributorId = () => connected("copyContributorId");
 export const PRIVACY_URL = "https://jasonlok000.github.io/titankeys/privacy/";
 
 export const kilobytes = (bytes: number) => bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1_048_576).toFixed(1)} MB`;
+
+/** What Sharing would send for today so far, and how many closed days wait to go (#96). */
+export type SharedToday = {
+  today: {
+    day: string;
+    counts: Record<string, number>;
+    guide?: { furthest: string; finished: boolean; skipped: string[] };
+    settings?: { set: string[] };
+    app: string; build: string; android: string; phone: string;
+  };
+  waitingDays: number;
+};
+
+export const sharedToday = resource({
+  key: () => ["shared"],
+  load: async (): Promise<SharedToday> => {
+    const answer = JSON.parse(await connected("shared")) as { today: string; waitingDays: number };
+    return { today: JSON.parse(answer.today), waitingDays: answer.waitingDays };
+  },
+})();

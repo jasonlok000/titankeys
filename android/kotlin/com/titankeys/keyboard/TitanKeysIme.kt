@@ -43,6 +43,7 @@ import android.view.inputmethod.SurroundingText
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.titankeys.connected.Connected
+import com.titankeys.connected.Counts
 import com.titankeys.connected.TouchSizes
 import com.titankeys.engine.Calibration
 import com.titankeys.engine.EmojiPages
@@ -411,6 +412,7 @@ class TitanKeysIme : InputMethodService() {
             return@Runnable
         }
         KeyboardEvents.publish { KeyboardEvent.DoubleTapped(2) }
+        tally("gesture.doubleSpace")
         // With text selected, a double space puts the cursor back, as steering would start from there.
         if (collapseSelection()) {
             haptics.play(Haptic.Steer)
@@ -429,7 +431,10 @@ class TitanKeysIme : InputMethodService() {
      * the next touch is a first tap again.
      */
     private val confirmTriple = Runnable {
-        if (cursorGesture.confirmTriple()) finishHeldTaps(type = false)
+        if (cursorGesture.confirmTriple()) {
+            finishHeldTaps(type = false)
+            tally("gesture.tripleSpace")
+        }
     }
 
     /** Two taps above Space pick nothing; the guide says so, once no third tap follows. Only in its own field. */
@@ -516,6 +521,7 @@ class TitanKeysIme : InputMethodService() {
                     haptics.holdStarted()
                     // The guide wants to know that this delete stays down, before its first word goes.
                     KeyboardEvents.publish { KeyboardEvent.DeleteHoldStarted }
+                    tally("gesture.deleteHold")
                 }
                 outcome(flick)
             }
@@ -562,6 +568,7 @@ class TitanKeysIme : InputMethodService() {
         }
         Recording.sink?.gesture("drag", samples.lastOrNull()?.time ?: SystemClock.uptimeMillis(), "words=${drag.words}")
         KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
+        tally(if (drag.words) "gesture.selectWords" else "gesture.steer")
         cursor.start(drag.landed, drag.words)
         cursorSteps.reset()
         cursor.move(samples)
@@ -823,6 +830,10 @@ class TitanKeysIme : InputMethodService() {
         // Backspace putting a word back plays nothing: the key press is felt already.
         composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }
         composer.onFixed = { typed, word -> KeyboardEvents.publish { KeyboardEvent.Fixed(typed, word) } }
+        // Sharing's daily totals (#96): the composer counts only in fields that allow learning; the guide's own fields never count.
+        composer.count = { key -> if (!inGuide) Counts.add(key) }
+        composer.swipeRead = { millis -> if (!inGuide) Counts.add("speed.swipe." + Counts.swipeBand(millis)) }
+        composer.uptime = SystemClock::uptimeMillis
         composer.onExpanded = { haptics.play(Haptic.Expansion) }
         composer.nearMiss = { right -> GuideScript.slip(right).takeIf { GuideHooks.takeNearMiss(currentInputEditorInfo?.privateImeOptions) } }
         composer.intended = { before -> GuideHooks.intended(currentInputEditorInfo?.privateImeOptions, before) }
@@ -1246,6 +1257,12 @@ class TitanKeysIme : InputMethodService() {
     private val inPractice get() = editing && GuideHooks.practice(currentInputEditorInfo?.privateImeOptions)
     private var guideEmoji: EmojiPages? = null
 
+    /** The quick settings that can't work in [method]'s language leave the panel while it types (QuickSetting.hiddenIn). */
+    private fun showQuickSettingsFor(method: InputMethod) {
+        panel?.hiddenKeys = QuickSetting.hiddenIn(LanguageSettings.rows(method)).map { it.key }.toSet()
+        panel?.render()
+    }
+
     /** In the guide, the panel has its emoji to start from and keeps O shut; anywhere else it's as always. */
     private fun showGuideExtras() {
         val guide = inGuide
@@ -1305,6 +1322,7 @@ class TitanKeysIme : InputMethodService() {
         if (::languages.isInitialized) showInputMark()
         if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys
+        if (::languages.isInitialized) keys.hiddenKeys = QuickSetting.hiddenIn(LanguageSettings.rows(languages.current)).map { it.key }.toSet()
         keys.emoji = emoji
         // Android can make this view after the field has started, and again when the screen settings change.
         words.words = barWords
@@ -1325,6 +1343,7 @@ class TitanKeysIme : InputMethodService() {
                 openPicker()?.let { open ->
                     // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
                     val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
+                    if (choice >= 0 && open is LanguagePicker.Choices) tallyChoices("pick.tap")
                     if (choice >= 0) pick(open, choice)
                 }
             }
@@ -1661,6 +1680,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        if (!restarting) timeOpening()
         // Bar text size changed since the bar was made, by a pick or the phone's text size, so it's made again at the new size.
         if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
         // The bar may only now be set up for this field, so the wait starts once it is. A restart of the same field is no input: it
@@ -1681,6 +1701,24 @@ class TitanKeysIme : InputMethodService() {
         }
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+    }
+
+    /**
+     * Sharing's speed bands (#96): how long the keys take to draw for a new field, from Android asking for them to the next
+     * draw. Only while Sharing is on, in the same fields as every count.
+     */
+    private fun timeOpening() {
+        if (!Counts.on) return
+        val started = SystemClock.uptimeMillis()
+        val view = window.window?.decorView ?: return
+        val observer = view.viewTreeObserver
+        observer.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                if (view.viewTreeObserver.isAlive) view.viewTreeObserver.removeOnPreDrawListener(this)
+                tally("speed.open." + Counts.openBand(SystemClock.uptimeMillis() - started))
+                return true
+            }
+        })
     }
 
     override fun onWindowShown() {
@@ -3154,12 +3192,14 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * A quick setting that each language keeps for itself sets the typing language's own value. While that's the only language on,
-     * Settings' main page shows the setting, so its plain value follows too (TypingSettings.PER_LANGUAGE).
+     * A quick setting that each language keeps for itself sets the typing language's own value. While English is the only
+     * language on, Settings' main page shows the setting as English's, so its plain value follows too, as the page writes it
+     * (TypingSettings.PER_LANGUAGE; app/settings/languages typingPerLanguage). With another language alone on, the plain value
+     * stays: it's every language's own until it sets one, so writing it would change English's and every other's too.
      */
     private fun languageSetting(own: (String) -> Unit, plain: () -> Unit) {
         own(languages.languageId)
-        if (languages.on.map { it.language.id }.distinct().size <= 1) plain()
+        if (languages.on.all { it.language.id == InputMethod.ENGLISH_ID }) plain()
     }
 
     /** The key that toggled a quick setting, whose release must not start the mark's wait: see [keepPanelHover]. */
@@ -3416,6 +3456,7 @@ class TitanKeysIme : InputMethodService() {
                             { dotsAt != null && strip?.gesture?.dotsAt == dotsAt })
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
+                    tally("gesture.flickDelete")
                     return
                 }
                 // An engine that failed to load takes no swipe: the bar says why, instead of the swipe vanishing without a word.
@@ -3803,7 +3844,9 @@ class TitanKeysIme : InputMethodService() {
             KeyEvent.KEYCODE_DEL -> if (alt) return false else engine.backspace()
             KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (alt) return false else engine.enter()
             // Space picks the first choice: a resting finger doesn't change that (owner: "no marking first").
-            KeyEvent.KEYCODE_SPACE -> if (alt) return false else engine.space()
+            KeyEvent.KEYCODE_SPACE -> if (alt) return false else engine.space().also {
+                if (it.commit.isNotEmpty() && openPicker() is LanguagePicker.Choices) tallyChoices("pick.space")
+            }
             // Chinese and Japanese have no capitals: a letter is the letter, Shift or not.
             else -> if (chinese && letter && !alt) engine.key(printedLetter(event.keyCode)) else {
                 val text = (if (alt) null else inputMethodLetter(event)) ?: event.getUnicodeChar(meta).takeIf { it > 0 &&
@@ -3884,6 +3927,7 @@ class TitanKeysIme : InputMethodService() {
         menu.hover = ""
         menu.visibility = View.VISIBLE
         showModifiers()
+        tallyChoices("bigMenu")
     }
 
     private fun closeChoicesMenu() {
@@ -3899,6 +3943,7 @@ class TitanKeysIme : InputMethodService() {
         if (!choicesMenuOpen) return
         closeChoicesMenu()
         haptics.play(Haptic.MenuPress)
+        tallyChoices("pick.menu")
         languages.engine?.let { engineState(it.pickAt(index)) }
     }
 
@@ -3927,6 +3972,7 @@ class TitanKeysIme : InputMethodService() {
             KeyEvent.KEYCODE_SYM -> closeChoicesMenu()
             KeyEvent.KEYCODE_SPACE -> {
                 closeChoicesMenu()
+                tallyChoices("pick.space")
                 languages.engine?.let { engineState(it.space()) }
             }
         }
@@ -3968,6 +4014,24 @@ class TitanKeysIme : InputMethodService() {
         if (keyCode != menuShift) return false
         menuShift = -1
         return true
+    }
+
+    /**
+     * Sharing's daily totals (#96): one more [key], only in a field that allows learning, never in the guide's own fields, and
+     * only while Sharing is on ([Counts.add] checks).
+     */
+    private fun tally(key: String) {
+        if (editing && field.learning && !inGuide) Counts.add(key)
+    }
+
+    /** A count for Chinese's or Japanese's choices, under "zh." or "ja.". Other input methods' choices aren't counted. */
+    private fun tallyChoices(key: String) {
+        val language = when (languages.current.engine) {
+            ChineseKeys.ENGINE -> "zh"
+            "mozc" -> "ja"
+            else -> return
+        }
+        tally("$language.$key")
     }
 
     /** The bar's choices and the bigger menu, in TitanKeys Debug's log: `adb logcat -s TitanKeysChoices`. */
@@ -4067,6 +4131,7 @@ class TitanKeysIme : InputMethodService() {
 
     private fun inputMethodChanged(method: InputMethod) {
         showInputMark()
+        showQuickSettingsFor(languages.current)
         preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
         preparingNotice = null
         closePicker()
@@ -4480,7 +4545,7 @@ class TitanKeysIme : InputMethodService() {
         if (!HoldEngine.isLetter(event.keyCode)) return categoryKey(event)
         if (event.repeatCount > 0) return true
         val letter = ('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString()
-        if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.let { item ->
+        if (modifiers.panel == Modifiers.Panel.Settings) QuickSetting.on(letter)?.takeIf { letter !in panel?.hiddenKeys.orEmpty() }?.let { item ->
             pickedKey = event.keyCode
             useQuickSetting(item)
             keepPanelHover(letter, event.keyCode)

@@ -220,7 +220,9 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "rime-files": "rime_batch",
            "key-feed": "keyfeed_batch",
            "shift": "shift_checks",
-           "delete-animation": "delete_batch"}
+           "delete-animation": "delete_batch",
+           "how-to": "howto_batch",
+           "review-fixes": "review_batch"}
 
 
 def report(name, stamp, hands):

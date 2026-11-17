@@ -46,3 +46,23 @@ test("a language reads its own value, or today's single one; the main page's wri
   expect(ime).toContain("TypingSettings.autocorrectIn(this, languages.languageId) && english");
   expect(ime).toContain("composer.commaSpace = { TypingSettings.commaSpaceIn(this, languages.languageId) }");
 });
+
+test("a quick setting writes the plain value only while English alone is on, as Settings' main page does", () => {
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+  expect(ime).toContain("if (languages.on.all { it.language.id == InputMethod.ENGLISH_ID }) plain()");
+  expect(ime).not.toContain("distinct().size <= 1) plain()");
+  expect(read("app/settings/languages/index.tsx")).toContain('return !(on.length === 1 && on[0].language.id === "en");');
+});
+
+test("the quick settings panel leaves out what can't work in the typing language, and the raw log records its own values", () => {
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+  expect(ime).toContain("panel?.hiddenKeys = QuickSetting.hiddenIn(LanguageSettings.rows(method)).map { it.key }.toSet()");
+  expect(ime).toContain("showQuickSettingsFor(languages.current)");
+  const panel = read("android/kotlin/com/titankeys/keyboard/SymPanel.kt");
+  expect(panel).toContain("private fun quickItem(key: String) = QuickSetting.on(key)?.takeIf { key !in hiddenKeys }");
+  expect(panel).toContain("quick -> quickItem(key)?.let(useQuickSetting)");
+  const log = read("android/kotlin/com/titankeys/keyboard/RawLog.kt");
+  expect(log).toContain('"language" to language,');
+  for (const key of ["holdSymbolsIn", "autoCapitaliseIn", "autoPunctuationIn", "sentenceSpacesIn", "commaSpaceIn", "autocorrectIn"])
+    expect(log).toContain(`TypingSettings.${key}(context, language)`);
+});

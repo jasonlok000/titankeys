@@ -29,6 +29,7 @@ fun main(args: Array<String>) {
     withNoVariantNothingChineseIsTyped()
     withNoVariantTheChinesePageOpensOnce()
     switchingInputMethodsKeepsRimeOpen()
+    anInputMethodTurnedOnWhileRimeIsOpenStarts()
     theChineseInputMethodsAreRimes(args.firstOrNull())
     theBackupTakesRimesSnapshots()
     aRestoredBackupMergesInAtTheNextStart()
@@ -66,6 +67,9 @@ private class FakeRime : RimeCalls {
     var page = 0
     private var commit: String? = null
     var opened = true
+    /** The schemas whose files are installed now, and the ones Rime had when it opened, which it can select: null is all. */
+    var installed: Set<String>? = null
+    private var deployed: Set<String>? = null
     /**
      * librime-predict's suggestions: after a commit from a code or a suggestion, the next words, "<word>+0" and on; none at the
      * start. Escape and Backspace clear them, as its predictor does, and clearing the composition alone doesn't: the predictor
@@ -82,6 +86,7 @@ private class FakeRime : RimeCalls {
 
     override fun open(shared: String, user: String): Boolean {
         calls += "open"
+        deployed = installed
         return opened
     }
 
@@ -94,7 +99,7 @@ private class FakeRime : RimeCalls {
         // Selecting a schema resets its switches: the variant switch's reset is zh_hk.
         options.clear()
         options["zh_hk"] = true
-        return id.startsWith("tk_")
+        return id.startsWith("tk_") && deployed?.contains(id) != false
     }
 
     override fun option(name: String, on: Boolean) {
@@ -445,6 +450,33 @@ fun switchingInputMethodsKeepsRimeOpen() {
     same(1, rime.calls.count { it == "open" }, "having opened once")
 }
 
+/**
+ * An input method turned on while Rime is open (Yale's warm engine keeps it open): its files are copied, and Rime opens again
+ * with them, when it's switched to. Before, the copy waited for Rime's next start, which a warm engine never lets come, so
+ * Cangjie turned on beside Yale typed English until the keyboard restarted.
+ */
+fun anInputMethodTurnedOnWhileRimeIsOpenStarts() {
+    val rime = FakeRime()
+    val on = mutableSetOf("tk_yale")
+    rime.installed = emptySet()
+    val install = { _: RimeData -> rime.installed = on.toSet(); true }
+    val warm = RimeEngine(rime, install)
+    check(warm.warm(method("tk_yale"), dataDir), "Yale's engine warms Rime up")
+    val yale = RimeEngine(rime, install)
+    check(yale.start(method("tk_yale"), dataDir), "Yale starts")
+    // Cangjie turned on in Settings, then switched to: the keyboard starts its engine, then stops Yale's.
+    on += "tk_cangjie"
+    val cangjie = RimeEngine(rime, install)
+    check(cangjie.start(method("tk_cangjie"), dataDir), "Cangjie starts")
+    yale.stop()
+    same("tk_cangjie", cangjie.schema, "with its schema")
+    check(rime.calls.count { it == "close" } >= 1 && rime.calls.last { it == "open" || it == "close" } == "open",
+        "Rime opened again with Cangjie's files, and stays open")
+    warm.stop()
+    cangjie.stop()
+    same(rime.calls.count { it == "open" }, rime.calls.count { it == "close" }, "each open has its close once the engines stop")
+}
+
 /** No default variant: the first Chinese switch with none picked opens Settings' Chinese page, once, and never in the guide. */
 fun withNoVariantTheChinesePageOpensOnce() {
     val yale = method("tk_yale")
@@ -581,6 +613,16 @@ fun aBadCopyKeepsTheOldData() {
         check(!File(root, "shared.new").exists(), "and the half copy is gone")
         check(!data.install(list) { throw java.io.FileNotFoundException(it) }, "a missing file fails")
         same(null, RimeData.parse("not a manifest"), "a list that isn't sha256sum's isn't read")
+        // An update cut short after a file was swapped in (a later file failed, or the process died before the end): what
+        // Rime compiled from the old data goes as the first file changes, not at the end, so it never outlives the data.
+        val two = mapOf("default.yaml" to "a".toByteArray(), "tk_yale.schema.yaml" to "y".toByteArray())
+        check(data.install(manifest(two)) { two.getValue(it).inputStream() }, "two files install")
+        File(data.user, "build").mkdirs()
+        val newer = mapOf("default.yaml" to "c".toByteArray(), "tk_yale.schema.yaml" to "z".toByteArray())
+        check(!data.install(manifest(newer)) { path -> if (path == "default.yaml") newer.getValue(path).inputStream() else
+            throw java.io.FileNotFoundException(path) }, "the update fails at its second file")
+        same("c", File(data.shared, "default.yaml").readText(), "its first file is in")
+        check(!File(data.user, "build").exists(), "and Rime's build from the old data is already gone")
     } finally {
         root.deleteRecursively()
     }

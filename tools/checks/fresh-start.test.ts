@@ -22,6 +22,7 @@ const KEPT_PREFERENCES: Record<string, string> = {
   "connected/contributor_to_delete": "an ID whose shared swipes are still waiting to be deleted",
   "connected/contributions_sent": "what was shared, for the Share swipes page's delete",
   "connected/contributions_sent_at": "when it was shared, for the same",
+  "connected/counts_to_delete": "Sharing's counts IDs whose totals are still waiting to be deleted",
 };
 
 /** Data files the code makes that the wipe leaves, and why a fresh install's are the same or none. */
@@ -30,6 +31,7 @@ const KEPT_FILES: Record<string, string> = {
   "swipe-models-v2": "the same, newer",
   "swipe-calibration-v1": "an old file the engine deletes every time it starts",
   "swipe-accuracy-v1": "the same",
+  "sharing": "Sharing's counts IDs, so totals already sent can still be deleted; the wipe empties its totals first (Counts.clear)",
 };
 
 test("the wipe keeps only the listed preferences, so the guide, Back's disclosure and the release notes go as on a new install", () => {

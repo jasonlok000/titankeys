@@ -49,12 +49,19 @@ object Contributions {
     fun enabled(context: Context, on: Boolean) {
         val preferences = Connected.preferences(context)
         val edit = preferences.edit().putBoolean(ENABLED, on).putString(OFFER, ANSWERED)
+        // What the user agreed to, and when (the day only): the envelope's version, so that a wider one asks again (#96).
+        if (on) edit.putInt(Counts.AGREED_ENVELOPE, DailyCounts.ENVELOPE).putString(Counts.AGREED_ON, java.time.LocalDate.now().toString())
         if (on && preferences.getString(CONTRIBUTOR, null) == null) edit.putString(CONTRIBUTOR, UUID.randomUUID().toString())
         edit.apply()
         TouchSizes.recording = on
-        if (!on) {
+        // One switch for everything Sharing sends (#96): the daily totals follow it, and off deletes what waits.
+        if (on) {
+            Counts.clear(context)
+            Counts.start(context)
+        } else {
             queue(context).clear()
             TouchSizes.clear()
+            Counts.clear(context)
         }
         Connected.schedule(context)
     }
@@ -84,7 +91,8 @@ object Contributions {
     fun sentAt(context: Context) = Connected.preferences(context).getLong(SENT_AT, 0)
     /** The random contributor ID, shown in Settings so that the user can still ask for deletion after removing the app. */
     fun contributorId(context: Context): String? = Connected.preferences(context).getString(CONTRIBUTOR, null)
-    fun deletionPending(context: Context) = Connected.preferences(context).getString(PENDING_DELETE, null) != null
+    fun deletionPending(context: Context) = Connected.preferences(context).getString(PENDING_DELETE, null) != null ||
+        Counts.toDelete(context).isNotEmpty()
 
     /** Deletes the examples that wait on the phone, and nothing else. */
     fun deleteQueued(context: Context) = queue(context).clear()
@@ -96,6 +104,8 @@ object Contributions {
     fun deleteAll(context: Context) {
         val preferences = Connected.preferences(context)
         queue(context).clear()
+        // The daily totals too: every counts ID of the last year goes to the server with the contributor ID.
+        Counts.forget(context)
         val id = preferences.getString(CONTRIBUTOR, null)
         val edit = preferences.edit().putInt(SENT, 0).putLong(SENT_AT, 0)
         // Asked even if nothing seems sent: a batch may have arrived just before the phone lost its answer.
@@ -166,17 +176,21 @@ object Contributions {
     /** Asks the server to delete everything sent with the old contributor ID. */
     fun sendDeletion(context: Context): Boolean = synchronized(sending) {
         val preferences = Connected.preferences(context)
-        val id = preferences.getString(PENDING_DELETE, null) ?: return@synchronized true
-        if (Connected.CONTRIBUTIONS_URL.isEmpty()) return@synchronized true
+        val id = preferences.getString(PENDING_DELETE, null)
+        val counts = Counts.toDelete(context)
+        if (id == null && counts.isEmpty() || Connected.CONTRIBUTIONS_URL.isEmpty()) return@synchronized true
         val connection = Connected.open("${Connected.CONTRIBUTIONS_URL}/v1/delete", "POST")
         try {
-            val body = "{\"contributor\":${Json.quote(id)}}".toByteArray(Charsets.UTF_8)
+            val fields = listOfNotNull(id?.let { "\"contributor\":${Json.quote(it)}" },
+                counts.takeIf { it.isNotEmpty() }?.let { ids -> "\"counts\":" + ids.joinToString(",", "[", "]") { Json.quote(it) } })
+            val body = fields.joinToString(",", "{", "}").toByteArray(Charsets.UTF_8)
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setFixedLengthStreamingMode(body.size)
             connection.outputStream.use { it.write(body) }
             if (Connected.ok(connection)) {
                 preferences.edit().remove(PENDING_DELETE).apply()
+                Counts.deleted(context)
                 true
             } else false
         } catch (error: Exception) {
@@ -196,7 +210,7 @@ object Contributions {
 
     /** A short name for the bundled models: the start of the hash of their manifest. */
     private var modelsName: String? = null
-    private fun models(context: Context): String = modelsName ?: try {
+    internal fun models(context: Context): String = modelsName ?: try {
         val manifest = context.assets.open("swipe2/manifest.sha256").use { it.readBytes() }
         MessageDigest.getInstance("SHA-256").digest(manifest).take(6).joinToString("") { "%02x".format(it) }
     } catch (error: Exception) {

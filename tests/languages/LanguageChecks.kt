@@ -1420,12 +1420,21 @@ private fun typingRowsFit(method: InputMethod) {
     if (method.id == "hi" || method.id == "vi") check("${method.id}: no Fix typos row", "fixes" !in rows)
     check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
     check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
+    // The quick settings panel hides the same ones while this input method types (QuickSetting.hiddenIn).
+    val hidden = QuickSetting.hiddenIn(rows)
+    for ((item, row) in listOf(QuickSetting.Autocorrect to "fixes", QuickSetting.SwipeTyping to "swipe",
+            QuickSetting.AutoCapitalise to "capitals", QuickSetting.AutoPunctuation to "doubleSpace", QuickSetting.HoldSymbols to "hold"))
+        same("${method.id}: the quick ${item.label} key is hidden where its row is", item in hidden, row !in rows)
+    if (method.id == "zh-pinyin") same("Chinese: the panel leaves out Fix, Swipe and Caps", hidden,
+        setOf(QuickSetting.Autocorrect, QuickSetting.SwipeTyping, QuickSetting.AutoCapitalise))
 }
 
 private fun englishTypingRows() {
     same("English: every typing setting on its page", LanguageSettings.rows(InputMethod.ENGLISH),
         listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand"))
     same("English's Double Space types a full stop", LanguageSettings.stop(InputMethod.ENGLISH), ".")
+    same("English: the quick settings panel hides nothing", QuickSetting.hiddenIn(LanguageSettings.rows(InputMethod.ENGLISH)),
+        emptySet<QuickSetting>())
 }
 
 /**

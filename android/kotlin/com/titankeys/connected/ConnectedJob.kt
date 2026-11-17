@@ -12,6 +12,7 @@ class ConnectedJob : JobService() {
                     Connected.JOB_ANNOUNCEMENTS -> Announcements.check(this)
                     Connected.JOB_CONTRIBUTIONS -> Contributions.upload(this)
                     Connected.JOB_DELETE -> Contributions.sendDeletion(this)
+                    Connected.JOB_COUNTS -> Counts.upload(this)
                     else -> true
                 }
             } catch (error: Exception) {

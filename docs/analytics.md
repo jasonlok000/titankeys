@@ -1,20 +1,23 @@
-# Analytics and Share swipes: one sharing toggle (#96, draft for the owner)
+# Sharing: swipes and daily totals under one switch (#96)
 
-Status: **draft for the owner to review. No app code yet.** Written 2026-11-16 from the owner's answers on #96. It covers:
+Status: **built** on `claude/m3-analytics` (2026-11-16), from the owner's answers on #96. The Worker's new route is written and
+tested but **not deployed**: it waits for the Orchestrator's go. This doc covers:
 - the consent envelope and the never-list;
-- the one sharing toggle and its consent screen;
-- every count, with its exact definition;
+- the one sharing switch and its short consent screen;
+- every count as the code sends it;
 - the daily payload, the Worker endpoint and retention;
-- a check against GDPR, Google Play and Android;
-- drafts of the privacy policy and Data safety changes.
+- the legal reasoning against GDPR, Google Play and Android;
+- what changed in the privacy policy and the Data safety answers.
 
-Text marked **F: draft** goes to F for wording before it ships.
+Text marked **F: draft** goes to F for wording.
 
-This is not legal advice. The sections marked **Lawyer** are where a lawyer should look before the 3.0 launch.
+This is not legal advice. TitanKeys is a hobby project and won't get a lawyer (owner, 2026-11-16: "no bro i wont get a lawyer. this
+is a hobbyiest project."), so the open legal points below are kept as notes, not as steps.
 
 ## What the owner decided
 
-- **Opt in.** Analytics and Share swipes become one thing, behind one sharing toggle. There is no separate switch per kind of sharing.
+- **Opt in, one switch, all or nothing.** Analytics and Share swipes are one thing: "either share everything or not share anything
+  at all." There is no separate switch per kind of sharing.
 - **Defaults agreed:**
   - one batch a day;
   - sent to the contributions Worker and kept a year;
@@ -22,11 +25,14 @@ This is not legal advice. The sections marked **Lawyer** are where a lawyer shou
   - only the owner sees it;
   - nothing is sent from TitanKeys Debug;
   - turning it off deletes what's waiting.
-- **Keep all the proposed counts** (listed below).
+- **Keep all the proposed counts.**
 - **Consent to an envelope** (owner: "keep it easy for us. And make sure that it's both legal and google play safe"):
   - The user agrees once. They agree to stated kinds of data, for one stated purpose, with a clear list of what is never collected.
   - A new count inside those kinds needs no new consent.
-  - The app's "What's shared" page always lists the counts sent today.
+  - The app's "What's shared" page always lists every count.
+- **A short consent screen, the full policy separate** ("keep the full policy seperate. the user main screen shd be still be
+  simple and straight to the point").
+- **No migration for people who already share swipes** ("there's no real users").
 
 ## 1. The envelope
 
@@ -85,53 +91,57 @@ This list is the promise. It is shown on the consent screen and on the "What's s
 - **Anything from the Accessibility service.**
 - **No third parties.** No analytics or ads SDKs. Nothing is sold, shared or used for ads.
 
-## 2. The one toggle
+## 2. The one switch
 
 ### Where it lives
 
-- **Settings > Share swipes** becomes **Settings > Sharing**. The route stays `/settings/share-policy` for the disclosure.
-- One switch, **Share to improve TitanKeys** (F: draft), covers K1–K8.
-- The guide's last slide still offers it once, as Share swipes is offered today.
-- The page also keeps today's tools:
+- **Settings > Share swipes** is now **Settings > Sharing**. Its switch, **Share to improve TitanKeys** (F: draft), covers K1–K8.
+- The guide's end still offers it once, as before.
+- The page keeps:
   - the counts of waiting and sent swipes;
-  - **Delete waiting**;
-  - **Delete what I've sent**;
+  - **Delete waiting swipes**;
+  - **Delete what I've sent**, which now deletes the daily totals too;
   - the contributor ID with **Copy**.
-- New on the page:
-  - **What's shared**: today's counts, the payload waiting to go, readable, with each count's meaning in plain words;
-  - the list of counts the app sends.
+- **What's shared** (`app/settings/contribute-about.tsx`) shows:
+  - what is sent and what never is;
+  - today's totals so far, as they would go, with each one's meaning;
+  - the days waiting to send;
+  - every daily total the app can send, from `lib/sharing-counts.ts`.
 
-### People who already share swipes
+### Agreeing
 
-They agreed to swipe examples (K1) only. Their swipes keep going, but **counts don't start until they agree to the new screen**.
-- The app shows that screen once, after the update.
-- "Not now" turns sharing **off** entirely, because there is one toggle. They can turn it back on in Settings at any time.
-
-**Call to confirm:** the other way is to keep swipes going for them on "Not now", which needs a hidden swipes-only state, against "one toggle". The draft turns sharing off.
+- Turning it on records the envelope's version and the day, in "connected" (`sharing_envelope`, `sharing_agreed_on`). That is the
+  proof of consent (Art. 7(1)).
+- The phone sends totals only while that version is at least the app's (`DailyCounts.ENVELOPE`). A wider envelope waits for a
+  new yes.
+- Someone who turned Share swipes on before this build has no recorded version, so their totals wait until they turn the switch
+  off and on again. The owner said there are no real users to migrate, so nothing asks them.
 
 ### The consent screen (F: draft; a clean zone: serious and plain)
 
+It's short, with the full policy one tap away. The app's page (`lib/connected-text.ts`, `sharePolicyText`) and the guide's copy
+(`ShareDisclosureActivity`) say the same, word for word.
+
 > **Before you share**
 >
-> If you turn this on, TitanKeys sends us two things, so we can see how well it works on real phones and make it better.
+> Sharing sends us examples of your swipes and daily totals of how TitanKeys works, so we can make it better. Nothing is sent
+> until you turn it on.
 >
-> **Examples of your swipes.** How each swipe moved across the keys, with its timing and touch size. The word you kept, only if it's in the dictionary. The numbers the swipe engine used to pick it.
+> **WHAT'S SHARED**
+> - Your swipes: how each moved across the keys, and the word you kept, only if it's in the dictionary.
+> - Daily totals, such as fixes undone, swipes retyped, slides skipped, settings changed and crashes.
+> - Versions, your phone model and random IDs.
 >
-> **Daily totals.** How often TitanKeys' features worked and how often you undid or changed what they did, such as autocorrect fixes undone or swipes retyped. Also how fast the keyboard was, which settings you changed from their defaults, how far you got in the guide, and how many times it crashed. Only totals for the day, never what you did one by one.
+> **NEVER SHARED**
+> - What you type, names, anything from password or private fields, your clipboard, your apps, contacts or location.
 >
-> With them go the TitanKeys, Android and model versions, your phone model and random IDs that aren't tied to you.
->
-> **What's never sent:** what you type, or the text around a word. Names and other words that aren't in the dictionary. Anything from password, email, web address or private fields. Your clipboard, snippets and shorthand. Which apps you use, your contacts and your location. What time of day you type. Anything that identifies you or your phone.
->
-> We may add new totals of the same kinds later. They're always listed under "What's shared" in Settings, and we'll ask again before we send any other kind of data.
->
-> It's all encrypted on your phone before it's sent, and only we can read it. Swipes go on Wi-Fi only. You can turn this off at any time, and delete what you've sent, in Settings > Sharing.
+> It's encrypted on your phone. Turn it off any time in Settings > Sharing, and delete what you've sent.
 >
 > [**Turn on sharing**] [Not now]
 >
-> Read the full privacy policy
+> Read the full policy
 
-Rules for the screen (Google Play and GDPR, see §6):
+The rules it keeps (Google Play and GDPR, see §6):
 - It is its own screen, not inside the Accessibility disclosure or the guide's text.
 - Nothing is sent before **Turn on sharing**.
 - Leaving the screen, Back or Home is not consent.
@@ -140,111 +150,49 @@ Rules for the screen (Google Play and GDPR, see §6):
 
 ## 3. The counts
 
+**The list is `lib/sharing-counts.ts`.** It holds every key with its meaning, as What's shared shows them.
+`tools/checks/sharing.test.ts` fails if the keyboard sends a count missing from it, or if it lists one the keyboard doesn't send.
+
 Rules for every count:
-- Counted on the phone, in memory and a small file in `noBackupFilesDir`.
-- Each day's total is sent once, then cleared.
-- Only typing in ordinary fields is counted. Password, email, web address and private fields (`TextFieldPrivacy`), and TitanKeys' own playground, are not.
-- A count of 0 is left out of the payload.
+- Counted on the phone, in memory, and saved to `noBackupFilesDir/sharing/counts.json` when a field ends.
+- Each day's totals close when the date changes, wait at most 7 days, and are sent once.
+- Only typing in fields that allow learning is counted. Password, email, web address and private fields aren't
+  (`Field.learning`), and nor are the guide's own fields.
+- A count's key must match `DailyCounts.KEY`. The keys are fixed strings in the code, so no word can become one.
 
-"Right after" means the user's very next action on that word, before typing anything else or moving the cursor away. That means one of:
-- Backspace, which TitanKeys treats as an undo;
-- picking another word for it from the bar;
-- deleting it and typing it again.
+"Right after" means the user's very next action on that word: Backspace (TitanKeys' undo), a word from the bar, or deleting it
+and typing it again.
 
-The keys below are the payload's names.
+| Group | Keys | Where it's counted |
+|---|---|---|
+| Swipes | `swipe.kept.<length>`, `swipe.picked.<length>`, `swipe.retyped.<length>` | `Composer.settled`, as the word settles; length bands `1-2`, `3-4`, `5-7`, `8+` |
+| Swipe speed | `speed.swipe.<band>` | from the finger lifting to the word going in: `<30`, `30-60`, `60-120`, `120-250`, `250+` ms |
+| Joins (#83) | `join.total`, `join.undone`, `join.keptApart`, `join.keptApart.redone` | `Composer`'s join decision; "undone" and "redone" when that word was later swapped or retyped |
+| Fixes | `autocorrect.made/undone`, `apostrophe.made/undone`, `capital.made/undone` | `Composer.offerUndo`, and Backspace's undo; the kind by `fixKind` |
+| The bar | `bar.place.<place>` | a word tapped on the bar, by its place (1 is the first) |
+| Chinese and Japanese | `zh.` or `ja.` + `pick.space`, `pick.tap`, `pick.menu`, `bigMenu` | the keyboard's choice handling |
+| Gestures | `gesture.flickDelete`, `gesture.deleteHold`, `gesture.doubleSpace`, `gesture.tripleSpace`, `gesture.steer`, `gesture.selectWords` | the keyboard, as each gesture does its job |
+| Opening speed | `speed.open.<band>` | from a new field's keys being asked for to their next draw: `<50`, `50-100`, `100-200`, `200-500`, `500+` ms |
+| Crashes | `crash.count`, `freeze.count` | written as a line when it happens (Java crashes) or found in Android's exit records (freezes, native crashes); added to the day TitanKeys next runs |
+| Guide | `guide.furthest`, `guide.finished`, `guide.skipped` | the guide, on each slide and each Skip; sent only on a day it changed |
+| Settings | `settings.set` | the keys of the settings that hold a value of the user's own: changed since the install or the last Reset most things. Never the value, never the user's lists. Sent only on a day the list changed. |
 
-### Joins (two swipe strokes joined into one word, #83)
-
-| Key | Definition |
-|---|---|
-| `join.total` | Times the keyboard joined two strokes into one word. |
-| `join.undone` | Of `join.total`, times the joined word was undone right after: deleted, split, or replaced from the bar. A wrongly joined word. |
-| `join.byHand` | Times two strokes the keyboard typed as two words were put together by hand right after: the space between them deleted, or one word typed over them. A missed join. |
-
-### Autocorrect and apostrophe fixes
-
-| Key | Definition |
-|---|---|
-| `autocorrect.made` | Times autocorrect replaced a typed word on Space or punctuation. |
-| `autocorrect.undone` | Of those, times the user undid it right after, or picked what they had typed from the bar. |
-| `apostrophe.made` | Times an apostrophe fix (were → we're, its → it's and the like, #73) was made. |
-| `apostrophe.undone` | Of those, times it was undone right after. |
-
-### Swipes, by word length
-
-Each swipe key is split by the length of the word that was finally kept, in bands `1-2`, `3-4`, `5-7` and `8+` letters. For example, `swipe.kept.5-7`.
-
-| Key | Definition |
-|---|---|
-| `swipe.kept.<band>` | Swipes whose first choice was kept. |
-| `swipe.picked.<band>` | Swipes where another word was picked from the bar. |
-| `swipe.retyped.<band>` | Swipes whose word was deleted right after and then swiped or typed again. The band is the retyped word's length. |
-
-Every swipe ends up in exactly one of the three, so their sum is the day's swipes.
-
-### The bar
-
-| Key | Definition |
-|---|---|
-| `bar.place.<n>` | Words picked from the bar, by the place they held: `1` is the first. |
-| `bar.space` | Picks made by Space, which takes the bar's first word. |
-| `bar.tap` | Picks made by tapping a word. |
-
-### Chinese picking
-
-| Key | Definition |
-|---|---|
-| `zh.pick.space`, `zh.pick.tap`, `zh.pick.shift`, `zh.pick.hold`, `zh.pick.flick` | Chinese candidates picked by each way of picking. |
-| `zh.bigMenu` | Times the bigger candidate menu was opened. |
-
-### Gestures (double space, triple space, flick to delete; steering)
-
-| Key | Definition |
-|---|---|
-| `gesture.flickDelete` | Words deleted by a flick. |
-| `gesture.flickDelete.undone` | Of those, times the deleted word was put back right after. |
-| `gesture.space` | Double and triple Space taps that did their job, such as a full stop. |
-| `gesture.space.undone` | Of those, undone right after. |
-| `gesture.steer` | Times the cursor was steered on the touchpad. |
-| `gesture.steer.undone` | Of those, times the cursor was put back where it started right after. |
-
-### Speed bands
-
-| Key | Definition |
-|---|---|
-| `speed.open.<band>` | Times the keyboard opened, by how long it took from Android asking for it to the keys being drawn. Bands: `<50`, `50-100`, `100-200`, `200-500`, `500+` ms. |
-| `speed.swipe.<band>` | Swipes, by how long it took from the finger lifting to the word being shown. Bands: `<30`, `30-60`, `60-120`, `120-250`, `250+` ms. |
-
-### Guide
-
-Sent only on a day it changes.
-
-| Key | Definition |
-|---|---|
-| `guide.furthest` | The ID of the furthest slide reached, such as `cursor`. |
-| `guide.finished` | Whether the guide was finished, `true` or `false`. |
-| `guide.huntsSkipped` | The IDs of the hunts skipped. |
-
-### Settings
-
-Sent only on a day one changes, and on the first day.
-
-| Key | Definition |
-|---|---|
-| `settings.changed` | The keys of the settings whose value differs from the default. For a switch, that is just its key. For a choice, only that it changed, never which value was chosen. Typed values such as snippets, shorthand, word lists and app lists are never included, not even as "changed". |
-
-### Crashes
-
-| Key | Definition |
-|---|---|
-| `crash.count` | Crashes that day. |
-| `freeze.count` | Freezes (Android's "not responding") that day. |
-
-Full crash reports still go only through the report form, when the user presses Send (#74).
+**How the built counts differ from the draft** (inside the envelope; calls to confirm):
+- **Missed joins.** `join.byHand` (two words merged by hand) can't be told from typing. It became `join.keptApart`: a quick
+  touch the keyboard kept as a second word. `join.keptApart.redone` counts the ones whose second word was then swapped or retyped.
+- **Capitals.** `capital.made/undone` is new, so that "i" to "I" doesn't fill `autocorrect.made`.
+- **The bar.** `bar.space` and `bar.tap` are gone. In English, Space never picks from the bar; Space's own fix is autocorrect,
+  counted there. Chinese and Japanese Space picks are `zh.pick.space` and `ja.pick.space`.
+- **Chinese picks.** Shift and hold don't pick in today's keyboard, so `pick.menu` takes their place. Japanese is counted too,
+  under `ja.`.
+- **Gestures.** Their "undone right away" isn't counted, because the keyboard has no undo for them to watch. The delete hold and
+  selecting words are counted.
+- **Guide.** `guide.skipped` lists every slide skipped before it was done, hunts among them.
 
 ### Swipe examples
 
-Unchanged from Share swipes: K1, as the privacy policy describes it today. They keep their own queue and the stable contributor ID, and go on Wi-Fi only.
+Unchanged from Share swipes: K1, as the privacy policy describes them. They keep their own queue and the stable contributor ID,
+and go on Wi-Fi only.
 
 ## 4. The daily payload
 
@@ -252,7 +200,8 @@ Unchanged from Share swipes: K1, as the privacy policy describes it today. They 
 
 - Once a day, by the existing `ConnectedJob`, on any network.
 - It's skipped when there's nothing new.
-- Never from TitanKeys Debug (`HapticsLab.available` or the build type).
+- Never from TitanKeys Debug (`Connected.build` is "debug"). Debug still counts, so What's shared can be checked on the phone.
+- Only under the envelope the user agreed to (§2, "Agreeing").
 
 ### What's in it
 
@@ -261,7 +210,7 @@ Unchanged from Share swipes: K1, as the privacy policy describes it today. They 
 
 ### How it's sealed
 
-- The JSON is gzipped, then sealed on the phone with the contributions key, as reports are (`Seal.seal`, X25519 and AES-256-GCM).
+- The JSON (`DailyCounts.payload`) is gzipped, then sealed on the phone with the contributions key, as reports are (`Seal.seal`, X25519 and AES-256-GCM).
 - It is sent over HTTPS.
 - It's a few hundred bytes sealed.
 
@@ -275,17 +224,17 @@ Unchanged from Share swipes: K1, as the privacy policy describes it today. They 
   "build": "play",
   "android": "15",
   "phone": "Titan 2 Elite",
-  "models": { "swipe": "2.0", "lm": "distilgpt2-1" },
+  "models": "3f9a1c0b7e2d",
   "counts": {
-    "join.total": 12, "join.undone": 1, "join.byHand": 2,
-    "autocorrect.made": 41, "autocorrect.undone": 3,
+    "join.total": 12, "join.undone": 1, "join.keptApart": 4, "join.keptApart.redone": 1,
+    "autocorrect.made": 41, "autocorrect.undone": 3, "capital.made": 9,
     "swipe.kept.3-4": 120, "swipe.picked.5-7": 9, "swipe.retyped.8+": 2,
-    "bar.place.1": 30, "bar.place.2": 6, "bar.space": 25, "bar.tap": 11,
+    "bar.place.1": 30, "bar.place.2": 6,
     "speed.open.50-100": 212, "speed.swipe.30-60": 140,
-    "crash.count": 0
+    "crash.count": 1
   },
-  "guide": { "furthest": "cursor", "finished": false, "huntsSkipped": ["touchpad"] },
-  "settings": { "changed": ["double_space_period", "theme"] }
+  "guide": { "furthest": "cursor", "finished": false, "skipped": ["touchpad"] },
+  "settings": { "set": ["autocorrect", "haptics", "sentence_spaces"] }
 }
 ```
 
@@ -295,7 +244,8 @@ Unchanged from Share swipes: K1, as the privacy policy describes it today. They 
 - It is never the contributor ID, and it is never sent in the same request as swipes.
 - The phone keeps the counts IDs of the last 13 periods, a year, so it can ask for their deletion.
 - They're kept in `noBackupFilesDir`, out of Android's backup, so an ID never moves to another phone or a reinstall.
-- `envelope` is the version of the envelope the user agreed to. The phone sends nothing if the user agreed to an older envelope than the app's.
+- `envelope` is the version of the envelope the payload falls under (`DailyCounts.ENVELOPE`).
+- Reset literally everything empties the totals but keeps the IDs (`Counts.clear`), so totals already sent can still be deleted.
 
 ## 5. The Worker, retention and deletion
 
@@ -365,9 +315,9 @@ Unchanged from Share swipes: K1, as the privacy policy describes it today. They 
 | **One toggle for two things** | Recital 32: when processing has several purposes, consent should cover all of them. Here both are one purpose, improving TitanKeys, described together, so one consent fits. The EDPB prefers separate consent for separate purposes, and that is the main risk of "one toggle". |
 | **ePrivacy** (Art. 5(3); UK PECR reg. 6) | Keeping counts on the phone and reading them back to send them is storing and reading on the user's device. The same opt-in covers it. |
 
-**Lawyer: GDPR**
+**Open legal points (GDPR).** No lawyer will look (hobby project); these are kept as notes:
 1. Whether the envelope's kinds (K2–K6) are described specifically enough that new counts inside them need no new consent.
-2. Whether one toggle for swipe examples and usage counts is granular enough, or a lawyer would want two boxes on one screen (one switch in Settings could still turn both off).
+2. Whether one toggle for swipe examples and usage counts is granular enough, or two boxes on one screen would be safer. The owner chose one switch (one switch in Settings could still turn both off).
 3. Whether the owner needs an **EU representative** (Art. 27) and a UK representative.
    - TitanKeys is offered to EU and UK users, and the owner is probably outside both.
    - Art. 27(2) exempts occasional processing that is unlikely to be a risk. Daily counts are not occasional.
@@ -403,7 +353,7 @@ Unchanged from Share swipes: K1, as the privacy policy describes it today. They 
 - **No advertising ID** and no other persistent device identifier, so the Play rule against linking device IDs to personal data doesn't come into it. TitanKeys has no `AD_ID` permission. Keep it that way, and check the merged manifest of every release.
 - **Families policy:** TitanKeys isn't for children (rating: not for under 13), so it is out of scope.
 
-**Lawyer and Play:**
+**Open points (Play):**
 - The exact wording of the 2026 form's data types (App interactions, Diagnostics, Crash logs).
 - Whether a reviewer reads "daily totals of how often you undo autocorrect" as about typed content. The answer is no: no text or keys, only counts. The consent screen says so.
 
@@ -420,17 +370,17 @@ Unchanged from Share swipes: K1, as the privacy policy describes it today. They 
 
 ### Things the 3.0 code must keep true
 
-These are for whoever builds #96 after the owner's yes:
-- Nothing is counted for sending, and nothing is sent, until the user agreed to the current envelope version. Debug never sends.
+Each is held by a check in `tools/checks/sharing.test.ts` or `tools/checks/connected.test.ts`:
+- Nothing is counted while Sharing is off, and nothing is sent until the user agreed to the current envelope version. Debug never sends.
 - Counts never come from the Accessibility service and never include a word.
 - The counts request carries the counts ID only, never the contributor ID, and goes separately from swipe batches.
 - The sharing files stay in `noBackupFilesDir`.
-- The "What's shared" page lists exactly the counts the code sends. A check in `tools/checks` should compare the page's list with the payload's keys, so a count can't ship unlisted.
+- The "What's shared" page lists exactly the counts the code sends (`lib/sharing-counts.ts`), so a count can't ship unlisted.
 - `docs/analytics.md` §3, the "What's shared" page and the policy change together.
 
-## 7. Privacy policy changes (draft; not on the live site)
+## 7. Privacy policy changes (applied to `site/privacy/index.html`)
 
-The live policy (`site/privacy/index.html`) must describe the app that is out. These changes go live with the 3.0 release that sends counts, not before.
+These are in the policy now. Its daily totals section says "TitanKeys 3.0 and later", so it stays true for 2.1 until 3.0 is out.
 
 ### "In short"
 
@@ -516,10 +466,15 @@ Nothing new is declared under Personal info, Location, Messages or Installed app
 
 ## Calls to confirm (owner)
 
-1. **Existing sharers:** counts wait for a fresh yes. "Not now" turns sharing off entirely (§2).
-2. **The toggle's name:** "Sharing" and "Share to improve TitanKeys". F will word it.
-3. **Two IDs:** swipes keep their stable contributor ID, which is needed for deletion after an uninstall. Counts get the separate 30-day ID, so the two can't be joined.
-4. **Counts go on any network.** Swipes stay Wi-Fi only.
-5. **Speed and length bands** as listed. They can be changed inside the envelope later.
-6. **The Android version** is added to the technical facts (K7). Swipes don't send it today.
-7. **One consent screen, not two boxes.** That's the owner's choice and is kept, with the GDPR risk named above for the lawyer.
+1. **The names:** "Sharing" for the page, "Share to improve TitanKeys" for the switch, "Turn on sharing" on the screen. F will word
+   them.
+2. **Two IDs:** swipes keep their stable contributor ID, which is needed for deletion after an uninstall. Counts get the separate
+   30-day ID, so the two can't be joined.
+3. **Totals go on any network.** Swipes stay on Wi-Fi only.
+4. **Speed and length bands** as listed. They can change inside the envelope later.
+5. **The Android version** is now among the facts (K7). Swipes don't send it.
+6. **The counts that changed from the draft** (§3): `join.keptApart` for `join.byHand`, `capital.*` added, `bar.space/tap`
+   dropped, `pick.menu` for Shift and hold, gestures' "undone" not counted.
+7. **Settings as "set"**, not "changed from default": a setting the user changed and then set back to its default still shows,
+   until Reset most things.
+8. **Earlier sharers** wait for a new yes before totals go (§2, "Agreeing").

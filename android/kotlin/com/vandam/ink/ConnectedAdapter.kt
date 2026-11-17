@@ -10,6 +10,7 @@ import android.provider.Settings
 import com.titankeys.connected.Announcements
 import com.titankeys.connected.Connected
 import com.titankeys.connected.Contributions
+import com.titankeys.connected.Counts
 import com.titankeys.connected.ReportUpload
 import com.titankeys.connected.Reports
 import com.titankeys.keyboard.AppBuild
@@ -28,6 +29,7 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
     init {
         // The app may open before the keyboard has ever started, so it sets the jobs too.
         Thread { runCatching { Connected.schedule(activity.applicationContext) } }.start()
+        Counts.start(activity)
     }
 
     override fun execute(requestId: Long, operation: String, payload: String, complete: NativeResultHandler) {
@@ -35,6 +37,8 @@ internal class ConnectedAdapter(private val activity: MainActivity) : NativeAdap
             val data = JSONObject(payload)
             val result = when (operation) {
                 "state" -> state().toString()
+                // Settings > Sharing > What's shared (#96): today's totals as they would go, and the days waiting.
+                "shared" -> JSONObject().put("today", Counts.today(activity)).put("waitingDays", Counts.waitingDays(activity)).toString()
                 "announcements" -> {
                     Announcements.enabled(activity, data.getBoolean("on"))
                     "null"

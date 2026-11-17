@@ -62,10 +62,12 @@ fun main(args: Array<String>) {
     androidsListFollowsTheOnes()
     telexMarksAndTones()
     barWordsAndLearning()
+    damagedTablesFailAtLoad()
     koreanChoices()
     if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
+    if (args.isNotEmpty()) tablesTakeTheListsSpelling(File(args[0]))
     if (args.isNotEmpty()) nextWordsCost(File(args[0]))
     if (args.isNotEmpty()) completionsMatchTheFold(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
@@ -922,6 +924,23 @@ private fun usedBytes(): Long = Runtime.getRuntime().let { it.totalMemory() - it
  * What one input method's word list and next-word table take on the heap, each read by the app's own reader, and how long each
  * load takes (the first load, then a second once the JIT has warmed up). The budget: 40 MB for both, 300 ms for the table.
  */
+/** The shipped tables through their word lists: German's nouns get their capitals, and Turkish has no doubly dotted i left. */
+private fun tablesTakeTheListsSpelling(folder: File) {
+    fun load(id: String): Pair<WordList, NextWords> {
+        val dir = File(folder, id)
+        val method = InputMethod.parse(File(dir, "im.json").readText())
+        val list = File(dir, method.words!!).bufferedReader().useLines { WordList.read(it, method.javaLocale) }
+        return list to File(dir, "pairs.bin").inputStream().use { NextWords.readBinary(it) }
+    }
+    val (germanList, germanTable) = load("de")
+    // Every next word the table has after "das", as the bar spells them: Land, Team and Spiel are nouns the list holds.
+    val afterDas = germanTable.after("das").map(germanList::spelling)
+    same("German: after das, Land, Team and Spiel keep their capitals: $afterDas", listOf("Land", "Team", "Spiel").all { it in afterDas }, true)
+    val (turkishList, turkishTable) = load("tr")
+    val afterAbdi = BarWords.next("abdi", null, emptyList(), capitals = true, table = turkishTable, spelling = turkishList::spelling)
+    same("Turkish: after abdi, no doubly dotted i: $afterAbdi", afterAbdi.none { '\u0307' in it }, true)
+}
+
 private fun nextWordsCost(folder: File) {
     for (id in listOf("ka", "ko", "sr", "el", "ru")) {
         val dir = File(folder, id)
@@ -1172,6 +1191,44 @@ private fun keysWaitForALoadingEngine() {
 }
 
 /** The bar's words in another input method, and what it learns from the user. */
+/**
+ * A damaged table fails as it loads, where InputMethodList and the autocorrect loader catch it, never later while typing (review,
+ * 2026-11-17: an offset past the end loaded, and then threw as a word was looked up). Tables made by hand, as the tools lay them out.
+ */
+private fun damagedTablesFailAtLoad() {
+    fun nextWords(wordStarts: IntArray, nexts: IntArray, cut: Int = 0): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val data = java.io.DataOutputStream(out)
+        data.write("TKNW".toByteArray())
+        for (n in intArrayOf(1, wordStarts.size - 1, 1, 3, nexts.size)) data.writeInt(n)
+        for (n in wordStarts) data.writeInt(n)
+        data.write("abc".toByteArray())
+        for (n in intArrayOf(0, nexts.size)) data.writeInt(n)
+        for (n in nexts) data.writeInt(n)
+        return out.toByteArray().let { it.copyOf(it.size - cut) }
+    }
+    fun loads(bytes: ByteArray) = runCatching { NextWords.readBinary(bytes.inputStream()) }
+    same("a sound table: after a, bc", loads(nextWords(intArrayOf(0, 1, 3), intArrayOf(1))).getOrNull()?.after("a"), listOf("bc"))
+    same("a word's start past the end fails as it loads", loads(nextWords(intArrayOf(0, 1, 9), intArrayOf(1))).isFailure, true)
+    same("a next word that isn't one fails as it loads", loads(nextWords(intArrayOf(0, 1, 3), intArrayOf(7))).isFailure, true)
+    same("a cut-short file fails as it loads", loads(nextWords(intArrayOf(0, 1, 3), intArrayOf(1), cut = 2)).isFailure, true)
+
+    fun pairs(key: Long): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val data = java.io.DataOutputStream(out)
+        data.write("TKPC".toByteArray())
+        for (n in intArrayOf(1, 2, 3, 1)) data.writeInt(n)
+        for (n in intArrayOf(0, 1, 3)) data.writeInt(n)
+        data.write("abc".toByteArray())
+        data.writeLong(key)
+        data.writeInt(5)
+        return out.toByteArray()
+    }
+    fun pairsLoad(bytes: ByteArray) = runCatching { com.titankeys.autocorrect.PairCounts.readBinary(bytes.inputStream()) }
+    same("a sound pair table: a bc 5", pairsLoad(pairs((0L shl 20) or 1L)).getOrNull()?.count("a", "bc"), 5)
+    same("a pair with a word that isn't one fails as it loads", pairsLoad(pairs((0L shl 20) or 9L)).isFailure, true)
+}
+
 private fun barWordsAndLearning() {
     val starters = listOf("de", "la", "en", "el", "y")
     same("a sentence starts: the starters, with a capital", BarWords.next(null, null, starters, capitals = true), listOf("De", "La", "En"))
@@ -1189,6 +1246,23 @@ private fun barWordsAndLearning() {
         listOf("aires", "días", "de"))
     same("at a sentence's start, the starters first, then the table's, with capitals",
         BarWords.next(null, null, listOf("de"), capitals = true, table = table), listOf("De", "El", "Hola"))
+
+    // The tables keep every word in lower case (tools/im/next_words.py): the bar gives each the word list's own spelling, so
+    // German's nouns and the names keep their capitals (review, 2026-11-17: "das " offered "unternehmen", "land", "team").
+    val german = WordList.read(sequenceOf(" word=Unternehmen,f=200", " word=unternehmen,f=120", " word=Land,f=180",
+        " word=weg,f=210", " word=Weg,f=150", " word=ist,f=255"), java.util.Locale.GERMAN)
+    same("a noun gets its capital", german.spelling("land"), "Land")
+    same("of two spellings, the commonest: the noun", german.spelling("unternehmen"), "Unternehmen")
+    same("and the adverb where it's commoner", german.spelling("weg"), "weg")
+    same("a word in lower case stays", german.spelling("ist"), "ist")
+    same("a word the list doesn't hold stays", german.spelling("xyz"), "xyz")
+    val germanTable = NextWords.read(sequenceOf("das ist\t90", "das unternehmen\t80", "das land\t70"))
+    same("the bar after das, with capitals", BarWords.next("das", null, emptyList(), capitals = true, table = germanTable,
+        spelling = german::spelling), listOf("ist", "Unternehmen", "Land"))
+    // Turkish: Python lowered İ to i with a combining dot, which showed as a doubly dotted i; the list's spelling mends it.
+    val turkish = WordList.read(sequenceOf(" word=İstanbul,f=200", " word=İbrahim,f=150"), java.util.Locale.forLanguageTag("tr"))
+    same("Turkish: the table's i̇stanbul is İstanbul", turkish.spelling("i\u0307stanbul"), "İstanbul")
+    same("and i̇brahim is İbrahim", turkish.spelling("i\u0307brahim"), "İbrahim")
 
     val learning = LanguageLearning()
     learning.kept(null, "hola", known = true)
@@ -1453,4 +1527,11 @@ private fun holdHints(folder: File) {
     for (id in listOf("es", "fr", "el", "sr-latn", "tr")) same("$id: a hold gives accents", hint(id), HoldHint.ACCENTS)
     for (id in listOf("th", "he", "id", "ka")) same("$id: no hint, nothing held on the bar", hint(id), null)
     same("English: no hint", HoldHint.of(InputMethod.ENGLISH), null)
+    // It shows as a field starts too, not only as the input method changes in one (review, 2026-11-17: one picked in Settings, or
+    // loaded with the keyboard away, never changed in a field, so its hint never showed). Once ever, as TypingSettings keeps.
+    val ime = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
+    val from = ime.indexOf("override fun onStartInputView(")
+    val start = ime.substring(from, ime.indexOf("backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS", from))
+    same("the hint is offered as a field starts", "main.post { if (editing) showHoldHint() }" in start, true)
+    same("and still once ever", "if (TypingSettings.holdHintShown(this, method.id)) return" in ime, true)
 }

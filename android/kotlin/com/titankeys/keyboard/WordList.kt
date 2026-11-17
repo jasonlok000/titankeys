@@ -49,6 +49,31 @@ class WordList private constructor(
         return false
     }
 
+    /**
+     * The list's own spelling of [word], a word from a next-word table, which keeps every word in lower case
+     * (tools/im/next_words.py): German's nouns and the names get their capitals back, "unternehmen" is Unternehmen, and Turkish
+     * "i̇stanbul", lowered without Turkish's rules, is İstanbul. Where the list holds both, the commonest spelling: the
+     * table counted them as one ("weg" and Weg, "unternehmen" and Unternehmen), with the word as it stands winning a tie. A
+     * word the list doesn't hold stays as it is.
+     */
+    fun spelling(word: String): String {
+        val key = fold(word, locale)
+        var at = lowerBound(key)
+        var best: String? = null
+        var bestCount = -1
+        while (at < folded.size && folded[at] == key) {
+            val index = order[at++]
+            val listed = words[index]
+            // The table lowered the list's spelling with no locale's rules, as Python does: the same lowering finds it.
+            if (listed.lowercase(Locale.ROOT) != word && listed.lowercase(locale) != word) continue
+            if (counts[index] > bestCount || counts[index] == bestCount && listed == word) {
+                best = listed
+                bestCount = counts[index]
+            }
+        }
+        return best ?: word
+    }
+
     /** How common [word] is, 0 to 255 as the list gives it, ignoring case; 0 where the list doesn't hold it. */
     fun frequency(word: String): Int {
         val key = fold(word, locale)

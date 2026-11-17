@@ -95,6 +95,11 @@ class PairCounts private constructor(
             val keys = LongArray(pairCount).also { buffer.asLongBuffer().get(it) }
             buffer.position(buffer.position() + 8 * pairCount)
             val counts = IntArray(pairCount).also { buffer.asIntBuffer().get(it) }
+            // A damaged file fails here, where the loader catches it, not later while correcting.
+            require(wordStart.isNotEmpty() && wordStart[0] == 0 && wordStart.last() == byteCount &&
+                (1 until wordStart.size).all { wordStart[it] >= wordStart[it - 1] } &&
+                (1 until keys.size).all { keys[it] > keys[it - 1] } &&
+                keys.all { (it ushr ID_BITS) < wordCount && (it and MAX_ID.toLong()) < wordCount }) { "A damaged pair table" }
             return PairCounts(words, wordStart, keys, counts)
         }
 

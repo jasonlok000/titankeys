@@ -67,6 +67,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
     if (args.isNotEmpty()) nextWordsCost(File(args[0]))
+    if (args.isNotEmpty()) completionsMatchTheFold(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
@@ -849,6 +850,70 @@ private fun collect() = repeat(4) {
 }
 
 private fun usedMb(): Long = Runtime.getRuntime().let { (it.totalMemory() - it.freeMemory()) / 1_048_576 }
+
+/**
+ * WordList stores each word's folded length, so complete() ranks without folding the words again (2026-11-17): the same answers
+ * as the way before, which folded every match inside its sort, for every 1 to 4 letter start of the commonest 3,000 words,
+ * lower case and capitalised, in several scripts. Prints how long a completion takes.
+ */
+private fun completionsMatchTheFold(folder: File) {
+    for (id in listOf("ka", "ko", "ru", "de", "vi", "hi")) {
+        val dir = File(folder, id)
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        val file = File(dir, method.words ?: continue)
+        val locale = method.javaLocale
+        val lines = file.readLines()
+        val list = WordList.read(lines.asSequence(), locale)
+        // The way before, step for step: matches in folded order, at most 20,000, ranked by folding each one again.
+        val words = ArrayList<String>()
+        val counts = ArrayList<Int>()
+        for (line in lines) {
+            if (!line.startsWith(" word=")) continue
+            val fields = line.trim().split(',')
+            val word = fields.firstOrNull { it.startsWith("word=") }?.removePrefix("word=") ?: continue
+            if (word.isEmpty() || fields.any { it == "not_a_word=true" }) continue
+            words += word
+            counts += fields.firstOrNull { it.startsWith("f=") }?.removePrefix("f=")?.toIntOrNull() ?: 0
+        }
+        val folded = words.map { WordList.fold(it, locale) }
+        val order = folded.indices.sortedBy { folded[it] }
+        val sortedFolds = order.map { folded[it] }
+        fun before(prefix: String): List<String> {
+            val key = WordList.fold(prefix, locale)
+            var low = 0
+            var high = sortedFolds.size
+            while (low < high) { val mid = (low + high) ushr 1; if (sortedFolds[mid] < key) low = mid + 1 else high = mid }
+            val found = ArrayList<Int>()
+            while (low < sortedFolds.size && sortedFolds[low].startsWith(key) && found.size < 20_000) found += order[low++]
+            val ranked = found.sortedWith(compareBy<Int>({ WordList.fold(words[it], locale).length != key.length }, { -counts[it] }))
+            val picked = LinkedHashSet<String>()
+            for (i in ranked) {
+                if (picked.size >= 3) break
+                val w = words[i]
+                picked += when {
+                    prefix.length > 1 && prefix.all { !it.isLetter() || it.isUpperCase() } -> w.uppercase(locale)
+                    prefix.first().isUpperCase() -> w.replaceFirstChar { it.titlecase(locale) }
+                    else -> w
+                }
+            }
+            return picked.toList()
+        }
+        val prefixes = words.take(3000).flatMap { w -> (1..minOf(4, w.length)).map { w.take(it) } }.distinct()
+            .flatMap { listOf(it, it.replaceFirstChar { c -> c.titlecase(locale) }) }.distinct()
+        val differ = prefixes.count { list.complete(it) != before(it) }
+        check("$id: completions are the same as before", differ == 0) { "$differ of ${prefixes.size} differ" }
+        fun micros(starts: List<String>, f: (String) -> List<String>): Double {
+            repeat(2) { starts.forEach { f(it) } }
+            val started = System.nanoTime()
+            repeat(3) { starts.forEach { f(it) } }
+            return (System.nanoTime() - started) / 1000.0 / (3 * starts.size)
+        }
+        val one = prefixes.filter { it.length == 1 }
+        println("completions: $id: ${prefixes.size} prefixes, $differ differ; ${"%.0f".format(micros(prefixes) { list.complete(it) })} us each " +
+            "(before ${"%.0f".format(micros(prefixes, ::before))}), one letter ${"%.0f".format(micros(one) { list.complete(it) })} us " +
+            "(before ${"%.0f".format(micros(one, ::before))})")
+    }
+}
 
 private fun usedBytes(): Long = Runtime.getRuntime().let { it.totalMemory() - it.freeMemory() }
 

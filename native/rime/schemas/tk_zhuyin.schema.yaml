@@ -1,0 +1,97 @@
+# TitanKeys: Mandarin, Zhuyin (注音) on the 許氏 (Hsu) layout. Built from rime-bopomofo's bopomofo schema and its Zhuyin
+# spelling rules (LGPL-3.0), on rime-terra-pinyin's dictionary (LGPL-3.0, refined from Chewing's), without its stroke reverse
+# lookup and custom phrases. The Titan has no number row, so instead of the standard 大千 layout (15 of whose keys are digits
+# and , . / ; - behind Alt here) it uses Hsu's, an established Zhuyin layout with every symbol on the 26 letters (owner's
+# call through the Orchestrator, 2026-11-17). Tones are optional: d ˊ, f ˇ, j ˋ, s ˙.
+schema:
+  schema_id: tk_zhuyin
+  name: 注音
+  version: "2026.11.17"
+  description: Mandarin, Zhuyin on the Hsu layout (bopomofo, terra_pinyin)
+
+__include: tk_variants:/
+
+engine:
+  processors: [ ascii_composer, recognizer, predictor, key_binder, speller, punctuator, selector, navigator, express_editor ]
+  segmentors: [ ascii_segmentor, matcher, abc_segmentor, punct_segmentor, fallback_segmentor ]
+  translators: [ predict_translator, punct_translator, script_translator ]
+  filters:
+    - simplifier@zh_hans
+    - simplifier@zh_hk
+    - simplifier@zh_tw
+    - uniquifier
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " '"
+  algebra:
+    # rime-bopomofo's pinyin_to_zhuyin (zhuyin.yaml): the dictionary's Pinyin as Zhuyin, one letter a symbol, the tone a digit.
+    - xform/^m(\d)$/mu$1/
+    - xform/^r5$/er5/
+    - xform/iu/iou/
+    - xform/ui/uei/
+    - xform/ong/ung/
+    - xform/^yi?/i/
+    - xform/^wu?/u/
+    - xform/iu/v/
+    - xform/^([jqx])u/$1v/
+    - xform/([iuv])n/$1en/
+    - xform/^zhi?/Z/
+    - xform/^chi?/C/
+    - xform/^shi?/S/
+    - xform/^([zcsr])i/$1/
+    - xform/ai/A/
+    - xform/ei/I/
+    - xform/ao/O/
+    - xform/ou/U/
+    - xform/ang/K/
+    - xform/eng/G/
+    - xform/an/M/
+    - xform/en/N/
+    - xform/er/R/
+    - xform/eh/E/
+    - xform/([iv])e/$1E/
+    # The first tone has no key; every syllable can also be typed without its tone.
+    - xform/1$//
+    - derive/^([A-Za-z]+)\d$/$1/
+    - abbrev/^([bpmfdtnlgkhjqxZCSrzcs]).+$/$1/
+    # Hsu's keys: ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏ on their letters, ㄐㄓ j, ㄑㄔ v, ㄒㄕ c, ㄖ r, ㄗ z, ㄘ a, ㄙ s; ㄧㄝ e, ㄨ x, ㄩ u;
+    # ㄚ y, ㄛ h, ㄜ g, ㄞ i, ㄟ a, ㄠ w, ㄡ o, ㄢ m, ㄣ n, ㄤ k, ㄥㄦ l; the tones ˊ d, ˇ f, ˋ j, ˙ s.
+    - 'xlit|bpmfdtnlgkhjqxZCSrzcsiuvaoeEAIOUMNKGR2345|bpmfdtnlgkhjvcjvcrzasexuyhgeiawomnklldfjs|'
+
+translator:
+  dictionary: terra_pinyin
+  prism: tk_zhuyin
+  # The code as Zhuyin on the bar's line: each syllable's first letter as an initial, the rest as finals, a last d f j s as
+  # its tone. Hsu shares keys between symbols, so this is the likeliest reading; the choices are Rime's own.
+  preedit_format:
+    # A d, f, j or s that ends a syllable is its tone.
+    - "xform/([a-z])d(?=$|[ '])/$1ˊ/"
+    - "xform/([a-z])f(?=$|[ '])/$1ˇ/"
+    - "xform/([a-z])j(?=$|[ '])/$1ˋ/"
+    - "xform/([a-z])s(?=$|[ '])/$1˙/"
+    # j, v and c start ㄐㄑㄒ before ㄧ or ㄩ (e, u), and ㄓㄔㄕ otherwise.
+    - "xform/(^|[ '])j(?![eu])/$1ㄓ/"
+    - "xform/(^|[ '])v(?![eu])/$1ㄔ/"
+    - "xform/(^|[ '])c(?![eu])/$1ㄕ/"
+    # A syllable's first letter is its initial, the rest its finals.
+    - 'xform/(^|[ ''])([bpmfdtnlgkhjvcrzas])/$1\U$2\E/'
+    - "xlit|BPMFDTNLGKHJVCRZAS|ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄖㄗㄘㄙ|"
+    - "xlit|exuyhgiawomnkl|ㄧㄨㄩㄚㄛㄜㄞㄟㄠㄡㄢㄣㄤㄥ|"
+    - "xform/([ㄧㄩ])ㄧ/$1ㄝ/"
+
+zh_hans: { option_name: zh_hans, opencc_config: t2s.json, tips: none }
+zh_hk:   { option_name: zh_hk,   opencc_config: t2hk.json, tips: none }
+zh_tw:   { option_name: zh_tw,   opencc_config: tk_t2twp.json, tips: none }
+
+# The next-word suggestions after a commit (librime-predict, #56): native/rime/predict.py's table, Mandarin's, as Zhuyin is Taiwan's; as many
+# as it has (at most 8), and they go on after a suggestion is picked.
+# Mandarin's grammar model (librime-octagram, #56): lotem/rime-octagram-data's Traditional word model, with octagram's
+# defaults, which suit Mandarin best (docs/studies/56-mandarin-dictionary.md). Traditional for every variant: it weighs the
+# dictionary's choices before OpenCC turns them Simplified.
+grammar: { language: zh-hant-t-essay-bgw }
+predictor: { db: predict-cmn.db, max_candidates: 0, max_iterations: 0 }
+
+punctuator: { import_preset: symbols }
+key_binder: { import_preset: default }
+recognizer: { import_preset: default }

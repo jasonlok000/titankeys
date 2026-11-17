@@ -19,7 +19,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "¿¡",
+    "openingMarks": "¿¡\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -27,5 +27,19 @@
     "name": "CLDR 49 localeDisplayNames: Español",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_es.combined"
-  }
+  },
+  "starters": [
+    "el",
+    "la",
+    "en",
+    "los",
+    "por",
+    "a",
+    "no",
+    "además",
+    "las",
+    "este",
+    "y",
+    "es"
+  ]
 }

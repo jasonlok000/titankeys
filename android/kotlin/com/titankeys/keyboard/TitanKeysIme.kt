@@ -80,6 +80,8 @@ class TitanKeysIme : InputMethodService() {
         set(value) { selection.cursorBefore = value }
     private lateinit var composer: Composer
     private lateinit var autocorrect: AutocorrectLoader
+    /** Corrections for the input methods other than English that have a word list (LanguageCorrections). */
+    private lateinit var languageCorrection: LanguageCorrection
     private lateinit var phoneNames: PhoneNameSource
     private lateinit var editor: ConnectionEditor
     private lateinit var overlay: TouchpadOverlay
@@ -759,6 +761,8 @@ class TitanKeysIme : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         Calibration.init(this)
+        // Rime's data copy keeps only the Chinese input methods that are on (docs/studies/3.0-storage.md).
+        com.titankeys.rime.RimeAssets.schemasOn = InputMethodList::rimeSchemasOn
         // The word menu, the Sym panel and the swipe's path all line up with the keys as Key calibration says.
         KeyCalibration.load(this)
         Connected.start(this)
@@ -782,19 +786,19 @@ class TitanKeysIme : InputMethodService() {
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
             { modifiers.autoShifted }) { barWords = it; strip?.words = it }
-        composer.autoPunctuation = { TypingSettings.autoPunctuation(this) }
+        composer.autoPunctuation = { TypingSettings.autoPunctuationIn(this, languages.languageId) }
         composer.sentenceSpaces = {
-            when (TypingSettings.sentenceSpaces(this)) {
+            when (TypingSettings.sentenceSpacesIn(this, languages.languageId)) {
                 "two" -> 2
                 "none" -> 0
                 else -> 1
             }
         }
-        composer.commaSpace = { TypingSettings.commaSpace(this) }
+        composer.commaSpace = { TypingSettings.commaSpaceIn(this, languages.languageId) }
         // Each language's own full stop for a double space, and its own words for the gestures that take one (owner, 2026-11-16).
         composer.fullStopMark = { languages.current.rules.fullStop }
         editor.wordBreaker = { IcuWords.of(languages.current.javaLocale) }
-        composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) && languages.current.rules.capitalise }
+        composer.sentenceCapitals = { TypingSettings.autoCapitaliseIn(this, languages.languageId) && languages.current.rules.capitalise }
         // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
         composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
         composer.onStroke = Trace::stroke
@@ -865,6 +869,9 @@ class TitanKeysIme : InputMethodService() {
             }
         }
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
+        languageCorrection = LanguageCorrection(this, languages.words)
+        // Another input method's likeliest word for a slip shows on the bar, even where Space won't put it in.
+        languages.words.suggest = { word, before -> languageCorrection.autocorrect?.corrector?.suggestion(word, before) }
         phoneNames = PhoneNameSource(this, SwipeTyping.get(this)).also { it.start() }
         // The firmware hands touchpad events to the topmost window titled "InputMethod", which is this
         // keyboard's window. They arrive at the window, not at any view, so catch them there.
@@ -885,6 +892,13 @@ class TitanKeysIme : InputMethodService() {
             idleBarTriggerRegistered = true
             // The touch simulator's events enter where the firmware's do: this window's touchpad path (TouchpadFeedHook).
             TouchpadFeedHook.dispatch = { event -> window.callback?.dispatchGenericMotionEvent(event) == true }
+            // Its keys enter where Android's do for the keyboard: onKeyDown and onKeyUp. One the keyboard doesn't take goes on
+            // to the app, as Android would send it (KeyFeedHook).
+            KeyFeedHook.dispatch = { event ->
+                val taken = if (event.action == KeyEvent.ACTION_DOWN) onKeyDown(event.keyCode, event) else onKeyUp(event.keyCode, event)
+                if (!taken) currentInputConnection?.sendKeyEvent(event)
+                taken
+            }
         }
         updateOverlay()
         loadEmoji()
@@ -1313,7 +1327,12 @@ class TitanKeysIme : InputMethodService() {
         words.menuPress = { haptics.play(Haptic.MenuPress) }
         // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen]. Its root feels every tap on the
         // screen that plays nothing of its own ([TapHaptics]).
-        return TapHaptics(ui) { downTime -> if (!haptics.playedSince(downTime)) haptics.play(Haptic.ScreenTap) }.apply {
+        return TapHaptics(ui) { downTime ->
+            val own = haptics.playedSince(downTime)
+            if (!own) haptics.play(Haptic.ScreenTap)
+            if (AppBuild.kind(this) == "debug") Log.i("TitanKeysTap", if (own) "the tap played its own haptic" else "screen_tap played")
+        }.apply {
+            if (AppBuild.kind(this@TitanKeysIme) == "debug") log = { line -> Log.i("TitanKeysTap", line) }
             addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
             addView(effects, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
@@ -1475,9 +1494,12 @@ class TitanKeysIme : InputMethodService() {
         if (::languages.isInitialized) showInputMark()
         languages.variant()
         val english = languages.current.isEnglish
+        // Each input method's own sentence ends and opening marks, for capitals and spaces (Greek's ;, Hindi's ।, Spanish's ¿¡).
+        com.titankeys.engine.SentenceCase.ends(languages.current.rules.sentenceEnd, languages.current.rules.openingMarks)
+        com.titankeys.autocorrect.TypedCorrector.sentenceEnd = { com.titankeys.engine.SentenceCase.isEnd(it.code) }
         composer.liftOffMillis = TypingSettings.liftOffGraceMillis(this)
         tapKeys = TypingSettings.tapKeys(this)
-        holdSymbols = TypingSettings.holdSymbols(this)
+        holdSymbols = TypingSettings.holdSymbolsIn(this, languages.languageId)
         holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
         modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
@@ -1488,11 +1510,14 @@ class TitanKeysIme : InputMethodService() {
         // Other input methods have no swiping (docs/languages.md).
         contact.swipes = TypingSettings.swipeTyping(this) && field.words && english
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
-        // Autocorrect and shorthand are English's: other input methods only offer words on the bar (docs/languages.md).
-        val corrects = TypingSettings.autocorrect(this) && english
+        // English's autocorrect and shorthand are English's own. Other input methods with a word list fix slips on their keys,
+        // conservatively, with the same corrector on their own list (LanguageCorrections; owner, 2026-11-17).
+        val corrects = TypingSettings.autocorrectIn(this, languages.languageId) && english
+        val language = if (!english && languageCorrection.on(languages.languageId)) languageCorrection.use(languages.current, languages.list)
+            else null.also { languageCorrection.clear() }
         // Spell out shorthand is its own setting: with Fix typos off, the word data spells out shorthand alone (bug hunt #13).
         val shorthandAlone = !corrects && TypingSettings.expandShorthand(this) && english
-        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects }
+        composer.autocorrect = autocorrect.autocorrect.takeIf { corrects } ?: language
         composer.shorthandOnly = autocorrect.autocorrect.takeIf { shorthandAlone }
         // The word data takes a moment to load, so it starts as a field opens: the first word typed is fixed too.
         if (!corrects && !shorthandAlone) autocorrect.release() else if (editing) autocorrect.prepare()
@@ -1928,6 +1953,17 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun menuFor(word: String): Strip.Notice.Menu {
         val typing = SwipeTyping.get(this)
+        // Another language: the word's place is in its own list and what it learned; Blocked words and Favourites are shared.
+        otherLearning()?.let { learning ->
+            val saved = learning.isSaved(word)
+            return Strip.Notice.Menu(word, MenuKeys.step(
+                blocked = typing.blockedWord(word),
+                favourite = FavouriteWords.get(this).contains(word),
+                saved = saved,
+                learned = !saved && learning.knows(word),
+                builtIn = languages.words.listed(word),
+                unsaved = learning.isHidden(word)))
+        }
         val step = pendingWords[word.lowercase()] ?: MenuKeys.step(
             blocked = typing.blockedWord(word),
             favourite = FavouriteWords.get(this).contains(word),
@@ -2167,7 +2203,17 @@ class TitanKeysIme : InputMethodService() {
      * Save, from not saved: TitanKeys knows the word now. A dictionary word you took out comes back, in the dictionary's own case;
      * any other word goes into Saved words in its own case ([keptCase]). The menu stays open, and I is Favourite now.
      */
+    /** What the input method typing now learned, when it isn't English; null for English, whose engine keeps its own. */
+    private fun otherLearning() = if (::languages.isInitialized && languages.words.other) languages.words.learning else null
+
     private fun saveWord(held: HeldWord) {
+        otherLearning()?.let { learning ->
+            learning.save(keptCase(held))
+            languages.learningChanged()
+            composer.unhide(held.word)
+            menuPressed(held, MenuKeys.Button.Save)
+            return
+        }
         val typing = SwipeTyping.get(this)
         pendingWords[held.word.lowercase()] = MenuKeys.Step.Saved
         val done: (String?) -> Unit = { error -> if (error != null) failed(held, "save", error) else settled(held.word, MenuKeys.Step.Saved) }
@@ -2182,6 +2228,13 @@ class TitanKeysIme : InputMethodService() {
      * back, and Save brings it back at once. It leaves the bar's words in this field too.
      */
     private fun unsaveWord(held: HeldWord) {
+        otherLearning()?.let { learning ->
+            learning.unsave(held.word, listed = languages.words.listed(held.word))
+            languages.learningChanged()
+            composer.hide(held.word)
+            menuPressed(held, MenuKeys.Button.Unsave)
+            return
+        }
         pendingWords[held.word.lowercase()] = MenuKeys.Step.New
         SwipeTyping.get(this).unsaveWord(held.word) { error ->
             if (error != null) failed(held, "unsave", error) else settled(held.word, MenuKeys.Step.New)
@@ -2208,6 +2261,15 @@ class TitanKeysIme : InputMethodService() {
     private fun unfavouriteWord(held: HeldWord) {
         if (!FavouriteWords.get(this).remove(held.word)) {
             haptics.play(Haptic.WordNotSaved)
+            return
+        }
+        // Another language: a favourite it didn't otherwise know goes into its saved words.
+        otherLearning()?.let { learning ->
+            if (!learning.knows(held.word) && (!languages.words.listed(held.word) || learning.isHidden(held.word))) {
+                learning.save(keptCase(held))
+                languages.learningChanged()
+            }
+            menuPressed(held, MenuKeys.Button.Unfavourite)
             return
         }
         val typing = SwipeTyping.get(this)
@@ -2667,6 +2729,8 @@ class TitanKeysIme : InputMethodService() {
         else if (cursorGesture.tripled) main.postAtTime(confirmTriple, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
             lastTouch = pending.points
+            // A tap or a swipe while the input method loads waits behind the same stop as a key ([waitForLoad]).
+            waitForLoad("A touch")
             if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
                 contact.settle(pending, pending.deadline)
                 return@let
@@ -2994,7 +3058,7 @@ class TitanKeysIme : InputMethodService() {
 
     /** Types a symbol or emoji from the panel, then goes back to normal typing. */
     private fun typePanelItem(item: String) {
-        // A code being typed goes first, as its first choice. Next-word suggestions, with nothing typed, just go.
+        // A code being typed goes first, as its first choice; suggestions with no code are cleared, not picked.
         val choices = openPicker() as? LanguagePicker.Choices
         if (!field.exact && choices != null && ChineseKeys.usesBar(languages.current))
             languages.engine?.let { engineState(if (choices.state.composing) it.space() else it.reset()) }
@@ -3011,13 +3075,13 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun quickSettingOn(item: QuickSetting) = when (item) {
-        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this)
+        QuickSetting.Autocorrect -> TypingSettings.autocorrectIn(this, languages.languageId)
         QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this)
         QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this)
-        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this)
-        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this)
+        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitaliseIn(this, languages.languageId)
+        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuationIn(this, languages.languageId)
         QuickSetting.Vibration -> Haptics.enabled(this)
-        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this)
+        QuickSetting.HoldSymbols -> TypingSettings.holdSymbolsIn(this, languages.languageId)
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this)
         QuickSetting.ScrollAssistant -> !TypingSettings.touchpadOnlyInFields(this)
@@ -3025,18 +3089,27 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun writeQuickSetting(item: QuickSetting, on: Boolean) = when (item) {
-        QuickSetting.Autocorrect -> TypingSettings.autocorrect(this, on)
+        QuickSetting.Autocorrect -> languageSetting({ TypingSettings.autocorrectIn(this, it, on) }) { TypingSettings.autocorrect(this, on) }
         QuickSetting.SwipeTyping -> TypingSettings.swipeTyping(this, on)
         QuickSetting.SuggestionBar -> TypingSettings.suggestionBar(this, on)
-        QuickSetting.AutoCapitalise -> TypingSettings.autoCapitalise(this, on)
-        QuickSetting.AutoPunctuation -> TypingSettings.autoPunctuation(this, on)
+        QuickSetting.AutoCapitalise -> languageSetting({ TypingSettings.autoCapitaliseIn(this, it, on) }) { TypingSettings.autoCapitalise(this, on) }
+        QuickSetting.AutoPunctuation -> languageSetting({ TypingSettings.autoPunctuationIn(this, it, on) }) { TypingSettings.autoPunctuation(this, on) }
         // Only the master switch: each haptic's own switch stays as it is, for when it is on again.
         QuickSetting.Vibration -> Haptics.enabled(this, on)
-        QuickSetting.HoldSymbols -> TypingSettings.holdSymbols(this, on)
+        QuickSetting.HoldSymbols -> languageSetting({ TypingSettings.holdSymbolsIn(this, it, on) }) { TypingSettings.holdSymbols(this, on) }
         QuickSetting.CursorControl -> TypingSettings.cursorControl(this, on)
         QuickSetting.DoublePressLocks -> TypingSettings.doublePressLocks(this, on)
         QuickSetting.ScrollAssistant -> TypingSettings.touchpadOnlyInFields(this, !on)
         QuickSetting.OpenSettings, QuickSetting.ChangeKeyboard, QuickSetting.Clipboard -> Unit
+    }
+
+    /**
+     * A quick setting that each language keeps for itself sets the typing language's own value. While that's the only language on,
+     * Settings' main page shows the setting, so its plain value follows too (TypingSettings.PER_LANGUAGE).
+     */
+    private fun languageSetting(own: (String) -> Unit, plain: () -> Unit) {
+        own(languages.languageId)
+        if (languages.on.map { it.language.id }.distinct().size <= 1) plain()
     }
 
     /** The key that toggled a quick setting, whose release must not start the mark's wait: see [keepPanelHover]. */
@@ -3103,6 +3176,7 @@ class TitanKeysIme : InputMethodService() {
 
     private fun clearSettlements() {
         inputGeneration++
+        loadGate.clear()
         drainScheduled = false
         settlements.values.forEach(main::removeCallbacks)
         settlements.clear()
@@ -3151,6 +3225,28 @@ class TitanKeysIme : InputMethodService() {
             }
             pendingInput.removeFirst()
         }
+    }
+
+    /** The queue's stop while an input method loads ([EngineWait]): the keys and touches typed meanwhile wait behind it. */
+    private val loadGate = LoadGate { PendingInput(false, null) }
+
+    /**
+     * A key or a touch on the touchpad while the input method is still loading, as a field starts or after a switch: it and
+     * whatever follows wait in the queue until it's ready, so the first letter goes into the engine's code (or is the input
+     * method's own letter) rather than into the field as English. Shown keyboard or not. Not in exact typing, which types
+     * English anyway.
+     */
+    private fun waitForLoad(what: String) {
+        if (field.exact || !::languages.isInitialized || !languages.loadingNow || loadGate.closed(pendingInput) || !makeRoom()) return
+        if (loadGate.before(true, pendingInput)) Log.i(LOG_TAG, "$what waits: the input method is still loading")
+    }
+
+    /** The load ended, ready or not: what waited goes on, to the engine if it started. */
+    private fun loadEnded() {
+        val stop = loadGate.open(languages.loadingNow, pendingInput) ?: return
+        Log.i(LOG_TAG, "What waited goes to ${languages.current.id}")
+        stop.ready = true
+        drainInput()
     }
 
     private fun makeRoom(): Boolean {
@@ -3300,7 +3396,7 @@ class TitanKeysIme : InputMethodService() {
                     val shifted = modifiers.shift != Modifiers.Level.Off
                     // An input method with its own letters types its letter (Russian's й on Q), in its own capitals.
                     val word = languages.current.letter(key[0], shifted)
-                        ?: if ((key == "I" && TypingSettings.autoCapitalise(this) && languages.current.isEnglish) || shifted) key else key.lowercase()
+                        ?: if ((key == "I" && TypingSettings.autoCapitaliseIn(this, languages.languageId) && languages.current.isEnglish) || shifted) key else key.lowercase()
                     composer.type(word, letterTap = true)
                 }
                 modifiers.consume()
@@ -3370,6 +3466,16 @@ class TitanKeysIme : InputMethodService() {
         return languages.current.accentsOf(printedLetter(event.keyCode), false).isNotEmpty()
     }
 
+    /**
+     * In an input method with accents, a held letter that has none types once, and its repeats do nothing: no letters, symbol,
+     * picker or haptic (owner, 2026-11-17), as a held letter does in Chinese. Not in exact typing, which sends keys, nor with
+     * Alt, Ctrl or a panel on.
+     */
+    private fun accentlessRepeat(event: KeyEvent): Boolean =
+        event.repeatCount > 0 && languages.current.hasAccents && editing && !field.exact && HoldEngine.isLetter(event.keyCode) &&
+            !altOrPanel && !event.isAltPressed && !event.isCtrlPressed && !event.isMetaPressed &&
+            languages.current.accentsOf(printedLetter(event.keyCode), false).isEmpty()
+
     /** The letter printed on a letter key, in lower case. */
     private fun printedLetter(keyCode: Int) = 'a' + (keyCode - KeyEvent.KEYCODE_A)
 
@@ -3434,8 +3540,10 @@ class TitanKeysIme : InputMethodService() {
         }
         haptics.play(Haptic.HeldSymbol)
         KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
+        // Any engine's held letter is in the code it's building, not the field (Korean's syllable, Telex's and Hindi's word): it
+        // comes off there, what was built is written, then the symbol. Replacing the field's last letter would take an earlier one.
         val engine = languages.engine
-        if (!field.exact && engine != null && ChineseKeys.usesBar(languages.current)) {
+        if (!field.exact && engine != null) {
             if (pendingInput.isNotEmpty()) enqueue { heldSymbolThroughEngine(engine, text) } else heldSymbolThroughEngine(engine, text)
             return
         }
@@ -3477,13 +3585,9 @@ class TitanKeysIme : InputMethodService() {
         setPaging()
     }
 
-    /**
-     * Swipes on the keys go to the panel or the bar's overlay while one is open. With choices on the bar, a flick up picks:
-     * shorter than a page turn, as a finger flicking up from the top row leaves the touchpad within about half a key.
-     */
+    /** Swipes on the keys go to the panel or the bar's overlay while one is open, a page turn's length or more. */
     private fun setPaging() {
         contact.paging = Overlays.paging(openOverlay, panelOpen)
-        contact.pageKeys = if (!panelOpen && picker is LanguagePicker.Choices && !choicesMenuOpen) ChineseKeys.FLICK_KEYS else Contact.PAGE_KEYS
         contact.pageLog = if (picker is LanguagePicker.Choices && AppBuild.kind(this) == "debug") { line -> choicesLog(line) } else null
     }
 
@@ -3508,32 +3612,26 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * A swipe on the keys with an engine's choices on the bar (docs/languages.md, "Chinese on the bar"). With the bigger menu
-     * open it turns the menu's page: up for the next, down for the one before, the Sym panel's own direction
-     * ([EmojiPages.forward]). Otherwise a flick up from the key under a choice picks it (the owner's concept test), and any
-     * other swipe does nothing: the row never pages. True if it was taken.
+     * A swipe on the keys with an engine's choices on the bar, a code's or suggestions', in any input method that has them:
+     * Chinese, Japanese, Vietnamese and Hindi (docs/languages.md, "Chinese on the bar"). A swipe up opens the bigger menu, as
+     * Shift and the more cue do, and with the menu open, up and down turn its pages
+     * ([ChineseKeys.swipe]). The row itself never pages, and nothing on it is picked by a swipe (owner, 2026-11-17: "Abandon
+     * the flick to select concept"). True if it was taken.
      */
     private fun pageChoices(points: List<Sample>): Boolean {
         val open = openPicker() as? LanguagePicker.Choices ?: return false
         val down = (points.last().y - points.first().y) * 4
         val across = (points.last().x - points.first().x) * 10
-        if (choicesMenuOpen) {
-            // Mostly sideways is no page: a slip, or a swipe meant for something else.
-            if (kotlin.math.abs(down) * 10 < kotlin.math.abs(across) * 4 || kotlin.math.abs(down) < Contact.PAGE_KEYS / 2f) return true
-            val turned = if (EmojiPages.forward(down)) choicesMenu?.next() else choicesMenu?.previous()
-            if (turned == true) haptics.play(Haptic.PanelPage)
-            return true
+        val swipe = ChineseKeys.swipe(across, down, choicesMenuOpen)
+        choicesLog("swipe: %.2f keys across, %.2f rows down, %d ms: %s%s".format(across, down,
+            points.last().time - points.first().time, swipe, if (open.items.isEmpty()) ", but no choices to show" else ""))
+        when (swipe) {
+            // Korean's syllable has no choices: nothing to open.
+            ChineseKeys.Swipe.OpenMenu -> if (open.items.isNotEmpty()) openChoicesMenu()
+            ChineseKeys.Swipe.NextPage -> if (choicesMenu?.next() == true) haptics.play(Haptic.PanelPage)
+            ChineseKeys.Swipe.PageBefore -> if (choicesMenu?.previous() == true) haptics.play(Haptic.PanelPage)
+            ChineseKeys.Swipe.Nothing -> {}
         }
-        val start = Layout.keyAt(points.first().x, points.first().y)
-        val column = ChineseKeys.flickColumn(start, across, down)
-        val item = if (column >= 0) open.choiceAt(column) else -1
-        choicesLog("flick from $start: %.2f keys across, %.2f rows down, %d ms: %s".format(across, down,
-            points.last().time - points.first().time, when {
-                column < 0 -> "not a flick up from the top two rows"
-                item < 0 -> "no choice over column $column"
-                else -> "picks ${open.items[item]}"
-            }))
-        if (item >= 0) pick(open, item)
         return true
     }
 
@@ -3715,11 +3813,11 @@ class TitanKeysIme : InputMethodService() {
     /** The mark at Q: the language's where it has one input method on, else the input method's ([SwitchOverlay.markLabel]). */
     private fun markLabel() = SwitchOverlay.markLabel(languages.on, languages.current.id, languages.current.label)
 
-    /** Chinese's and Japanese's bigger menu, that Sym opens while a code is typed, in the Sym panel's place: see [ChoicesMenu]. */
+    /** Chinese's and Japanese's bigger menu, that Shift opens, in the Sym panel's place: see [ChoicesMenu]. */
     private var choicesMenu: ChoicesMenu? = null
     private val choicesMenuOpen get() = choicesMenu?.visibility == View.VISIBLE
 
-    /** Sym, or a tap on the more cue, with a code typed: the bigger menu opens, on its first page. */
+    /** Shift, a swipe up or a tap on the more cue, with choices on the bar: the bigger menu opens, on its first page. */
     private fun openChoicesMenu() {
         val open = openPicker() as? LanguagePicker.Choices ?: return
         val engine = languages.engine ?: return
@@ -3778,34 +3876,40 @@ class TitanKeysIme : InputMethodService() {
         return true
     }
 
+    /** The Shift whose press opened or closed the bigger menu: its repeats and its release are the menu's too. */
+    private var menuShift = -1
+
     /**
-     * Chinese's and Japanese's own keys, before anything else (docs/languages.md, "Chinese on the bar"). With the bigger menu
-     * open, every key is the menu's, Sym its ✕. With a code typed, a short Sym opens the menu instead of the Sym panel (owner,
-     * 2026-11-17: "Let's use sym and not shift. but only when a code is being typed"), and a held Sym still opens the
-     * switcher: Sym waits for its hold as always, and [symReleased] opens the menu. Where no hold can come, the menu opens at
-     * once. True if the key is taken.
+     * Chinese's and Japanese's own keys, before anything else (docs/languages.md, "Chinese on the bar"). Either Shift opens the
+     * bigger menu while choices are on the bar, a code's or suggestions', and closes it (owner, 2026-11-17: "use the original
+     * shift as the plan instead"); with the menu open, every key is the menu's. Sym is always the Sym panel. True if the key is
+     * taken.
      */
     private fun chineseKey(event: KeyEvent): Boolean {
-        if (event.isSystem || !ChineseKeys.usesBar(languages.current) || inGuide) return false
+        if (event.isSystem || inGuide) return false
+        // The bigger menu, open in any input method a swipe up opened it in (Vietnamese, Hindi), takes every key.
+        if (!ChineseKeys.usesBar(languages.current) && !choicesMenuOpen) return false
+        val keyCode = event.keyCode
+        if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
+            if (event.repeatCount > 0) return menuShift == keyCode
+            when {
+                choicesMenuOpen -> closeChoicesMenu()
+                // Shift opens it only in Chinese and Japanese: elsewhere it types capitals, or Hindi's own sounds.
+                openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
+                else -> return false
+            }
+            choicesLog("Shift ($keyCode): the bigger menu ${if (choicesMenuOpen) "opens" else "closes"}")
+            menuShift = keyCode
+            return true
+        }
         if (choicesMenuOpen) return choicesMenuKey(event)
-        if (event.keyCode != KeyEvent.KEYCODE_SYM || openPicker() !is LanguagePicker.Choices) return false
-        if (event.repeatCount > 0) return pickerKey == KeyEvent.KEYCODE_SYM
-        if (symCanWait()) return false
-        choicesLog("Sym with a code typed, no switcher: the bigger menu opens")
-        openChoicesMenu()
-        pickerKey = KeyEvent.KEYCODE_SYM
-        return true
+        return false
     }
 
-    /** Whether a Sym press waits for its hold, which opens the switcher: as [languageKey] asks [SymPress]. */
-    private fun symCanWait() = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
-        inGuide, field.exact, pendingInput.size) == null
-
-    /** A short Sym with a code typed: the bigger menu instead of the Sym panel. True if it opened. */
-    private fun symOpensChoices(): Boolean {
-        if (!ChineseKeys.usesBar(languages.current) || inGuide || openPicker() !is LanguagePicker.Choices || choicesMenuOpen) return false
-        choicesLog("Sym let go with a code typed: the bigger menu opens")
-        openChoicesMenu()
+    /** A key let go: the Shift that opened or closed the menu keeps its release, so Shift itself never comes on. */
+    private fun chineseKeyUp(keyCode: Int): Boolean {
+        if (keyCode != menuShift) return false
+        menuShift = -1
         return true
     }
 
@@ -3879,8 +3983,6 @@ class TitanKeysIme : InputMethodService() {
         symLog("Sym let go${down?.let { " after ${SystemClock.uptimeMillis() - it.downTime} ms" }.orEmpty()}: " +
             if (release == SymPress.Release.Kept) "the switcher's" else "Sym as usual")
         if (release == SymPress.Release.Kept || down == null) return true
-        // With a code typed, the bigger menu instead of the Sym panel: the press never reached the modifiers, nor does this.
-        if (symOpensChoices()) return true
         // Taken as a key that the keyboard handled, so its release stays here too, as any Sym's does.
         consumedKeys += down.keyCode
         if (pendingInput.isNotEmpty()) enqueue(KeyEvent(down)) {
@@ -3913,6 +4015,7 @@ class TitanKeysIme : InputMethodService() {
         closePicker()
         strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
+        loadEnded()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
@@ -4064,6 +4167,7 @@ class TitanKeysIme : InputMethodService() {
             if (field.exact) logExact("key $keyCode repeat ${event.repeatCount} kept by hold")
             return true
         }
+        if (accentlessRepeat(carried)) return true
         // With the panel's groups on the screen, fn picks the one at its place, also as Ctrl, which would take it first (bug hunt #37).
         if (keyCode == Modifiers.FN && panelOpen && isInputViewShown && categoryKey(event)) {
             consumedKeys += keyCode
@@ -4073,6 +4177,7 @@ class TitanKeysIme : InputMethodService() {
             consumedKeys += keyCode
             return true
         }
+        if (!carried.isSystem) waitForLoad("Key ${carried.keyCode}")
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(carried)
             consumedKeys += keyCode
@@ -4116,6 +4221,7 @@ class TitanKeysIme : InputMethodService() {
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
         if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
         if (lockedKeys.remove(keyCode)) return true
+        if (editing && chineseKeyUp(keyCode)) return true
         // Sym's release always ends its press first, so the next Sym is never swallowed ([SymPress]).
         if (keyCode == KeyEvent.KEYCODE_SYM && symReleased()) return true
         // The release of a key that picked from the picker, or closed it, belongs to that.
@@ -4541,7 +4647,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun sentenceStartHere(): Boolean {
-        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitalise(this) ||
+        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitaliseIn(this, languages.languageId) ||
             !languages.current.rules.capitalise) return false
         val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0) ?: return false
         return SwipeTyping.startsSentence(before)
@@ -4558,6 +4664,7 @@ class TitanKeysIme : InputMethodService() {
         editing = false
         // It holds this keyboard, which must go with it (#85).
         TouchpadFeedHook.dispatch = null
+        KeyFeedHook.dispatch = null
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null

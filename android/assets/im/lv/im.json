@@ -24,7 +24,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -32,5 +32,19 @@
     "name": "CLDR 49 localeDisplayNames: Latviešu",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_lv.combined"
-  }
+  },
+  "starters": [
+    "un",
+    "ja",
+    "bet",
+    "tas",
+    "kā",
+    "tā",
+    "taču",
+    "par",
+    "vai",
+    "lai",
+    "savukārt",
+    "arī"
+  ]
 }

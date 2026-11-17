@@ -19,7 +19,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -27,5 +27,19 @@
     "name": "CLDR 49 localeDisplayNames: Galego",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_gl__experimental.combined"
-  }
+  },
+  "starters": [
+    "a",
+    "o",
+    "os",
+    "en",
+    "as",
+    "no",
+    "é",
+    "na",
+    "foi",
+    "tamén",
+    "esta",
+    "este"
+  ]
 }

@@ -3,6 +3,7 @@ package com.titankeys.keyboard
 import android.content.Context
 import com.titankeys.connected.Announcements
 import com.titankeys.engine.SwipeTyping
+import com.titankeys.engine.TypingSettings
 
 /**
  * Settings > Reset most things (owner, 2026-11-13: "there's so many now its easy to mess up"). A reset removes each setting's
@@ -43,7 +44,9 @@ internal object SettingsReset {
     fun reset(context: Context) {
         val typing = context.getSharedPreferences(TYPING, Context.MODE_PRIVATE)
         val fixes = typing.all.keys.filter { it.startsWith(FIX_PREFIX) }
-        typing.edit().apply { (TYPING_SETTINGS + fixes).forEach { remove(it) } }.apply()
+        // Each language's own values too ("autocorrect@fr"): see TypingSettings.PER_LANGUAGE.
+        val languages = typing.all.keys.filter { key -> TypingSettings.PER_LANGUAGE.any { key.startsWith("$it@") } }
+        typing.edit().apply { (TYPING_SETTINGS + fixes + languages).forEach { remove(it) } }.apply()
         val haptics = context.getSharedPreferences(HAPTICS, Context.MODE_PRIVATE)
         val switches = haptics.all.keys.filter { it.startsWith(HAPTIC_PREFIX) }
         haptics.edit().apply { (switches + HapticSwitches.MASTER).forEach { remove(it) } }.apply()

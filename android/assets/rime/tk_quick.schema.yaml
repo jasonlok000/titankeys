@@ -1,0 +1,49 @@
+# TitanKeys: Chinese, Quick (速成) 5. Built from rime-quick's quick5 schema (LGPL-3.0), on rime-cangjie's dictionary, without
+# its Pinyin reverse lookup and its own simplification switch: the Chinese variant (tk_variants) chooses the characters.
+# A character's code is its Cangjie code's first and last letters (我, hqi in Cangjie, is hi), and characters run on into
+# phrases and sentences.
+schema:
+  schema_id: tk_quick
+  name: 速成
+  version: "2026.11.17"
+  description: Chinese, Quick 5 (quick5)
+
+__include: tk_variants:/
+
+engine:
+  processors: [ ascii_composer, recognizer, predictor, key_binder, speller, punctuator, selector, navigator, express_editor ]
+  segmentors: [ ascii_segmentor, matcher, abc_segmentor, punct_segmentor, fallback_segmentor ]
+  translators: [ predict_translator, punct_translator, script_translator ]
+  filters:
+    - simplifier@zh_hans
+    - simplifier@zh_hk
+    - simplifier@zh_tw
+    - uniquifier
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " ;'"
+  algebra:
+    - 'derive/^([^z])\w+(\w)$/$1$2/'
+
+translator:
+  dictionary: quick5
+  prism: tk_quick
+  preedit_format:
+    - "xlit|abcdefghijklmnopqrstuvwxyz;'|日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜符··|"
+  comment_format:
+    - "xlit|abcdefghijklmnopqrstuvwxyz~|日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜符～|"
+  disable_user_dict_for_patterns:
+    - "^z.*$"
+
+zh_hans: { option_name: zh_hans, opencc_config: t2s.json, tips: none }
+zh_hk:   { option_name: zh_hk,   opencc_config: t2hk.json, tips: none }
+zh_tw:   { option_name: zh_tw,   opencc_config: t2tw.json, tips: none }
+
+# The next-word suggestions after a commit (librime-predict, #56): native/rime/predict.py's table, Cantonese's, as Cangjie and Quick are Hong Kong's input methods; as many
+# as it has (at most 8), and they go on after a suggestion is picked.
+predictor: { db: predict-yue.db, max_candidates: 0, max_iterations: 0 }
+
+punctuator: { import_preset: symbols }
+key_binder: { import_preset: default }
+recognizer: { import_preset: default }

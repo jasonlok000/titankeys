@@ -7,11 +7,11 @@
   "script": "Latn",
   "keys": "qwerty",
   "accents": {
-    "a": "àáä",
+    "a": "àá",
     "c": "ç",
     "e": "éè",
     "i": "íï",
-    "o": "óòöø",
+    "o": "óò",
     "u": "úü"
   },
   "words": "words.combined",
@@ -19,7 +19,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -27,5 +27,19 @@
     "name": "CLDR 49 localeDisplayNames: Català",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_ca__experimental.combined"
-  }
+  },
+  "starters": [
+    "el",
+    "la",
+    "en",
+    "els",
+    "a",
+    "les",
+    "va",
+    "es",
+    "és",
+    "de",
+    "per",
+    "també"
+  ]
 }

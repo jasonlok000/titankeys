@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Dansk",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_da.combined"
-  }
+  },
+  "starters": [
+    "det",
+    "men",
+    "i",
+    "jeg",
+    "og",
+    "den",
+    "de",
+    "der",
+    "han",
+    "en",
+    "for",
+    "så"
+  ]
 }

@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Bosanski",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "bs_full.txt"
-  }
+  },
+  "starters": [
+    "u",
+    "na",
+    "nakon",
+    "za",
+    "to",
+    "međutim",
+    "od",
+    "iako",
+    "prema",
+    "tokom",
+    "kao",
+    "također"
+  ]
 }

@@ -16,7 +16,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -24,5 +24,19 @@
     "name": "CLDR 49 localeDisplayNames: Slovenščina",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_sl.combined"
-  }
+  },
+  "starters": [
+    "v",
+    "na",
+    "po",
+    "to",
+    "med",
+    "za",
+    "ko",
+    "ta",
+    "od",
+    "pri",
+    "zaradi",
+    "s"
+  ]
 }

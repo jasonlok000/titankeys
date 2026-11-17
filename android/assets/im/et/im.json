@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Eesti",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_et__experimental.combined"
-  }
+  },
+  "starters": [
+    "kui",
+    "see",
+    "ja",
+    "aga",
+    "kas",
+    "ma",
+    "nii",
+    "ta",
+    "ka",
+    "kuid",
+    "ei",
+    "samas"
+  ]
 }

@@ -80,7 +80,7 @@ private enum class SteerAim { None, Start, Entered }
 /** A mistake for each slide, as the keyboard reports it, so a drawing shows the chip that it gets. */
 private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
     "type" to listOf(Pushed(29), Fixed("Space", "Space")),
-    "swipe" to listOf(Pushed(29), Pushed(62)),
+    "swipe" to listOf(KeyboardEvent.Tapped("A")),
     "menu" to listOf(FieldChanged("$MENU_LINE ", 3, 3)),
     "hold" to listOf(KeyboardEvent.DeleteHoldStarted, DeletedWord(held = true), KeyboardEvent.Moved(40f, lifted = true)),
     "steer" to listOf(DoubleTapped(2)),
@@ -97,7 +97,7 @@ private val MISTAKES: Map<String, List<KeyboardEvent>> = mapOf(
 
 /** What each slide's lock blocks, for its blocked frame: the thing most likely tried by chance there. */
 private val BLOCKED: Map<String, GuideLesson> = mapOf(
-    "type" to GuideLesson.BarTap, "swipe" to GuideLesson.BarHold, "menu" to GuideLesson.Swipe,
+    "type" to GuideLesson.BarTap, "swipe" to GuideLesson.Typing, "menu" to GuideLesson.Swipe,
     "backspace" to GuideLesson.Flick, "flick" to GuideLesson.DeleteHold, "hold" to GuideLesson.Backspace, "steer" to GuideLesson.Typing,
     "selectmore" to GuideLesson.Typing, "alt" to GuideLesson.Typing, "holdsym" to GuideLesson.Typing, "symmain" to GuideLesson.Alt,
     "symgroups" to GuideLesson.Typing, "clown" to GuideLesson.Typing, "paste" to GuideLesson.Typing, "clipboard" to GuideLesson.Ctrl,

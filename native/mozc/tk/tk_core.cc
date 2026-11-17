@@ -53,12 +53,13 @@ bool Mozc::Start(const std::string& data, const std::string& profile, bool deskt
 
   if (!desktop) {
     // Android's way (Mozc's own mobile request), with the QWERTY romaji table: choices as you type, whole sentences
-    // first, and the parts of a sentence among them, so a pick can take a part and leave the rest.
+    // first, and the parts of a sentence among them, so a pick can take a part and leave the rest. After a pick, the
+    // words that may come next, with nothing typed (zero query), as Chinese's next-word suggestions (#56).
     Command request;
     request.mutable_input()->set_id(session_);
     request.mutable_input()->set_type(Input::SET_REQUEST);
     Request* r = request.mutable_input()->mutable_request();
-    r->set_zero_query_suggestion(false);
+    r->set_zero_query_suggestion(true);
     r->set_mixed_conversion(true);
     r->set_update_input_mode_from_surrounding_text(false);
     r->set_special_romanji_table(Request::QWERTY_MOBILE_TO_HIRAGANA);

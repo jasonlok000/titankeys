@@ -2802,8 +2802,11 @@ class GuideActivity : Activity() {
                 t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
             }
             // One flick, one word, gone at once. The held flick's slide has no demo in the field.
-            // What goes, as the real delete takes it: the last word for a flick, the last letter for one Backspace.
-            GuideDemo.DeleteLast, GuideDemo.DeleteLetter -> demoRange(demo, text, null)?.takeIf { t > FLICK_GONE }?.let { gone ->
+            // What goes, as the real flick takes it: the last word. The Backspace slide's extra e stays in the field until you press
+            // Backspace yourself; its showing is on the keys alone (owner, 2026-11-16: "the e vanished before anything is pressed as
+            // a demo. I dont want it vanished").
+            GuideDemo.DeleteLetter -> Unit
+            GuideDemo.DeleteLast -> demoRange(demo, text, null)?.takeIf { t > FLICK_GONE }?.let { gone ->
                 built.setSpan(BackgroundColorSpan(fieldFill()), gone.first, gone.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {
@@ -2934,10 +2937,10 @@ class GuideActivity : Activity() {
     /** The letter key for [key]: itself, or for a symbol, the key that types it with Alt on this phone. */
     private fun keyFor(key: String) = if (key.length == 1 && key[0].isLetter()) key.uppercase() else altKeys[key.firstOrNull() ?: ' '] ?: key
 
-    private fun markPushes(marks: String) = GuideScript.markKeys(marks, TypingSettings.autoPunctuation(this)) { altKeys[it] }
+    private fun markPushes(marks: String) = GuideScript.markKeys(marks, TypingSettings.autoPunctuationIn(this, InputMethod.ENGLISH_ID)) { altKeys[it] }
 
     private fun pushesFor(word: String, swiped: Boolean) = demoPushes
-        ?: GuideScript.pushes(word, swiped, TypingSettings.autoPunctuation(this)) { altKeys[it] }.also { demoPushes = it }
+        ?: GuideScript.pushes(word, swiped, TypingSettings.autoPunctuationIn(this, InputMethod.ENGLISH_ID)) { altKeys[it] }.also { demoPushes = it }
 
     /** Lights the keys of every push up to [shown] that has not lit yet. */
     private fun lightPushes(pushes: List<DemoPush>, shown: Int) {
@@ -3051,14 +3054,15 @@ class GuideActivity : Activity() {
     }
 
     private fun writeNeed(need: GuideNeed) = when (need) {
-        GuideNeed.HoldSymbols -> TypingSettings.holdSymbols(this, true)
+        // The guide types English, so English's own hold is the one it turns on (TypingSettings.PER_LANGUAGE).
+        GuideNeed.HoldSymbols -> TypingSettings.holdSymbolsIn(this, InputMethod.ENGLISH_ID, true)
         GuideNeed.CursorControl -> TypingSettings.cursorControl(this, true)
         GuideNeed.SwipeTyping -> TypingSettings.swipeTyping(this, true)
         GuideNeed.FnAsCtrl -> TypingSettings.fnAsCtrl(this, true)
     }
 
     private fun readSettings() = GuideSettings(
-        holdSymbols = TypingSettings.holdSymbols(this),
+        holdSymbols = TypingSettings.holdSymbolsIn(this, InputMethod.ENGLISH_ID),
         cursorControl = TypingSettings.cursorControl(this),
         swipeTyping = TypingSettings.swipeTyping(this),
         fnAsCtrl = TypingSettings.fnAsCtrl(this),

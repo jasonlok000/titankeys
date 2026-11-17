@@ -21,7 +21,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -29,5 +29,19 @@
     "name": "CLDR 49 localeDisplayNames: Polski",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_pl.combined"
-  }
+  },
+  "starters": [
+    "w",
+    "na",
+    "to",
+    "jak",
+    "nie",
+    "po",
+    "z",
+    "do",
+    "co",
+    "czy",
+    "a",
+    "od"
+  ]
 }

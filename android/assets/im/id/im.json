@@ -12,7 +12,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -20,5 +20,19 @@
     "name": "CLDR 49 localeDisplayNames: Indonesia",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_id__experimental.combined"
-  }
+  },
+  "starters": [
+    "namun",
+    "selain",
+    "ia",
+    "kami",
+    "dia",
+    "dalam",
+    "di",
+    "hal",
+    "sementara",
+    "saya",
+    "dengan",
+    "pada"
+  ]
 }

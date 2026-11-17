@@ -36,7 +36,7 @@
   "accents": {
     "l": "жє",
     "m": "бю",
-    "p": "хї",
+    "p": "хї'",
     "u": "ґ"
   },
   "words": "words.combined",
@@ -44,7 +44,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -53,5 +53,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_ukrainian.kcm",
     "words": "main_uk__experimental.combined"
-  }
+  },
+  "starters": [
+    "у",
+    "за",
+    "на",
+    "це",
+    "він",
+    "але",
+    "зараз",
+    "також",
+    "як",
+    "в",
+    "і",
+    "а"
+  ]
 }

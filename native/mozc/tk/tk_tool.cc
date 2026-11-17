@@ -1,10 +1,12 @@
 // TitanKeys' Mozc tool for the PC, on the same core as the app (tk_core.cc): native/mozc/build.sh builds it, and the
 // Japanese checks use it.
-//   mozc_tool <mozc.data> <profile folder> [--desktop] [--choices N]
+//   mozc_tool <mozc.data> <profile folder> [--desktop] [--choices N] [--next]
 // reads romaji, one line each, and prints for each "romaji<TAB>hiragana<TAB>choice<TAB>choice...": the first N choices
 // (8 by default) in Android's way, as the app's bar gets them, or with --desktop Mozc's desktop conversion (Space), as one
 // choice. Each line starts fresh and nothing is learned between lines. Characters other than a-z and - are typed as they
-// are, as the app types them through Mozc's romaji table.
+// are, as the app types them through Mozc's romaji table. With --next, the first choice is then picked, and the line goes
+// on with what it typed and the next-word suggestions Mozc offers after it: "<TAB>=<TAB>typed<TAB>suggestion...". Mozc
+// learns those picks, so give --next its own profile folder.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -15,13 +17,15 @@
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    std::fprintf(stderr, "usage: %s <mozc.data> <profile> [--desktop] [--choices N]\n", argv[0]);
+    std::fprintf(stderr, "usage: %s <mozc.data> <profile> [--desktop] [--choices N] [--next]\n", argv[0]);
     return 2;
   }
   bool desktop = false;
+  bool next = false;
   int count = 8;
   for (int i = 3; i < argc; ++i) {
     if (std::strcmp(argv[i], "--desktop") == 0) desktop = true;
+    if (std::strcmp(argv[i], "--next") == 0) next = true;
     if (std::strcmp(argv[i], "--choices") == 0 && i + 1 < argc) count = std::atoi(argv[++i]);
   }
   tk::Mozc mozc;
@@ -43,6 +47,15 @@ int main(int argc, char** argv) {
       for (const std::string& choice : mozc.Choices()) {
         if (n++ >= count) break;
         out += "\t" + choice;
+      }
+      if (next) {
+        mozc.Pick(0);
+        out += "\t=\t" + mozc.TakeCommit();
+        int m = 0;
+        for (const std::string& choice : mozc.Choices()) {
+          if (m++ >= count) break;
+          out += "\t" + choice;
+        }
       }
     }
     std::printf("%s\n", out.c_str());

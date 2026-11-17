@@ -130,7 +130,10 @@ internal sealed interface GuideDemo {
     data object FixNext : GuideDemo
     /** The last word fades away. */
     data object DeleteLast : GuideDemo
-    /** Only the last letter goes, as one Backspace takes it. */
+    /**
+     * One Backspace, shown on the keys only: the letter it would take stays in the field until you press it (owner, 2026-11-16).
+     * [demoRange] still names that letter, the extra e, for the checks.
+     */
     data object DeleteLetter : GuideDemo
     /** The cursor walks back through the last word. */
     data object MoveCursor : GuideDemo
@@ -1326,21 +1329,13 @@ internal val GUIDE_STEPS = listOf(
     GuideStep(
         id = "swipe", chapter = GuideChapter.Typing,
         title = "Swipe it. One hand, no questions.",
+        // Only a swipe moves it on: every key press, Backspace and the deletes included, is locked, and the lock says so (owner,
+        // 2026-11-16: "pressing keys shd do nothing, rn it types. including not allowing deletes, so only way to proceed is to
+        // swipe").
         stages = listOf(GuideStage("Slide over the next grey word. Lift at the end.") { event ->
             when {
-                event is Recognised && event.words.isNotEmpty() -> {
-                    armed = false
-                    if (++count >= SWIPES_TO_PASS) GuideVerdict.Done else GuideVerdict.Wait
-                }
+                event is Recognised && event.words.isNotEmpty() -> if (++count >= SWIPES_TO_PASS) GuideVerdict.Done else GuideVerdict.Wait
                 event is Tapped -> chip("That's a tap. Slide, don't lift.")
-                event is Pushed && isLetter(event.code) -> {
-                    armed = true
-                    GuideVerdict.Wait
-                }
-                event is Pushed && event.code == KEY_SPACE && armed -> {
-                    armed = false
-                    chip("That's typing. Swipe this one.")
-                }
                 else -> GuideVerdict.Wait
             }
         }),
@@ -1353,7 +1348,7 @@ internal val GUIDE_STEPS = listOf(
         text = SWIPE_LINE.removePrefix(SWIPE_LEAD),
         cue = GuideCue.NextWord,
         needs = GuideNeed.SwipeTyping,
-        lessons = setOf(GuideLesson.Swipe, GuideLesson.Typing, GuideLesson.Backspace),
+        lessons = setOf(GuideLesson.Swipe),
         forceFix = true,
         demo = GuideDemo.SwipeNext,
     ),
@@ -2132,6 +2127,7 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             GuideLesson.HoldSymbol in open -> "That's a press, not a hold. Keep the key down."
             GuideLesson.Sym in open -> "That's typing, not Sym. Press Sym first."
             GuideLesson.BarTap in open -> "That's typing, not the bar. Tap the dancing word."
+            GuideLesson.Swipe in open -> "That's typing, not a swipe. Swipe this one."
             else -> "That's typing, not this slide's move."
         }
         // A space that would type, from the key or a light tap, on a slide with no typing (owner, 2026-11-13).
@@ -2142,8 +2138,11 @@ internal fun blockedChip(step: GuideStep, lesson: String, lessons: Set<GuideLess
             step.chapter == GuideChapter.Clipboard -> "That's a space, not a paste. Just paste."
             else -> "That's a space, not this slide's move."
         }
-        GuideLesson.Backspace.name -> if (GuideLesson.Flick in open) "That's a press, not a flick. Flick from Backspace." else
-            "That's Backspace, not this slide's move."
+        GuideLesson.Backspace.name -> when {
+            GuideLesson.Flick in open -> "That's a press, not a flick. Flick from Backspace."
+            GuideLesson.Swipe in open -> "That's Backspace, not a swipe. Swipe this one."
+            else -> "That's Backspace, not this slide's move."
+        }
         // Each fits its own slide (owner, v5.3: the typing slide's line showed on the delete slides).
         GuideLesson.Swipe.name -> when (step.chapter) {
             GuideChapter.Typing -> "That's a swipe, not typing. Type this one."

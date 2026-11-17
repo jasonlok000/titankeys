@@ -15,7 +15,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -23,5 +23,19 @@
     "name": "CLDR 49 localeDisplayNames: Euskara",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_eu.combined"
-  }
+  },
+  "starters": [
+    "bere",
+    "hala",
+    "gaur",
+    "baina",
+    "bi",
+    "gainera",
+    "beste",
+    "ez",
+    "azken",
+    "bertan",
+    "izan",
+    "hau"
+  ]
 }

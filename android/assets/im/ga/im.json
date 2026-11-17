@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Gaeilge",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_ga.combined"
-  }
+  },
+  "starters": [
+    "tá",
+    "is",
+    "bhí",
+    "ní",
+    "ach",
+    "an",
+    "agus",
+    "ba",
+    "ar",
+    "níl",
+    "i",
+    "mar"
+  ]
 }

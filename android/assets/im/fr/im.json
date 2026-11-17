@@ -20,7 +20,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -28,5 +28,19 @@
     "name": "CLDR 49 localeDisplayNames: Français",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_fr.combined"
-  }
+  },
+  "starters": [
+    "le",
+    "la",
+    "les",
+    "il",
+    "en",
+    "c'est",
+    "ce",
+    "mais",
+    "un",
+    "une",
+    "pour",
+    "on"
+  ]
 }

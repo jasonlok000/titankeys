@@ -34,7 +34,7 @@
     "z": "я"
   },
   "accents": {
-    "e": "үұ",
+    "e": "ұү",
     "f": "ә",
     "h": "һ",
     "j": "ө",
@@ -52,7 +52,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -61,5 +61,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_russian.kcm",
     "words": "main_kk__experimental.combined"
-  }
+  },
+  "starters": [
+    "бұл",
+    "ал",
+    "ол",
+    "бірақ",
+    "оның",
+    "жас",
+    "осы",
+    "сондықтан",
+    "сол",
+    "алайда",
+    "олар",
+    "мен"
+  ]
 }

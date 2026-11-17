@@ -12,7 +12,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": "telex",
@@ -20,5 +20,19 @@
     "name": "CLDR 49 localeDisplayNames: Tiếng Việt",
     "keys": "telex",
     "words": "main_vi__experimental.combined"
-  }
+  },
+  "starters": [
+    "trong",
+    "theo",
+    "tuy",
+    "sau",
+    "các",
+    "ông",
+    "đây",
+    "tôi",
+    "một",
+    "ngoài",
+    "trước",
+    "với"
+  ]
 }

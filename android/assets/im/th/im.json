@@ -170,5 +170,19 @@
     "letters": "Kedmanee (TIS 820-2538)",
     "keys": "xkeyboard-config symbols/th basic",
     "words": "main_th.combined"
-  }
+  },
+  "starters": [
+    "สวัสดี",
+    "ขอบคุณ",
+    "ฉัน",
+    "ผม",
+    "เรา",
+    "คุณ",
+    "วันนี้",
+    "พรุ่งนี้",
+    "ตอนนี้",
+    "ไม่",
+    "ใช่",
+    "แล้ว"
+  ]
 }

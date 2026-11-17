@@ -49,6 +49,27 @@ open class TelexComposer(protected var words: WordList? = null) : InputEngine {
 
     override fun page(forward: Boolean): EngineState = EngineState.UNHANDLED
 
+    /**
+     * The row's and the bigger menu's words (a swipe up opens it; owner, 2026-11-17: "Also for other relevant language"): first
+     * the word as Space writes it, so the bar shows what Space types (owner, #98), then the word list's, in the same order. A
+     * pick of the first writes it as Space does, with the space.
+     */
+    override fun choices(start: Int, count: Int): List<String> {
+        val code = code()
+        if (code.isEmpty() || start < 0 || count <= 0) return emptyList()
+        val written = spoken(typed.toString())
+        val typedFirst = if (written.isEmpty()) emptyList() else listOf(written)
+        return (typedFirst + listed(code, start + count + 1).filter { it != written }).drop(start).take(count)
+    }
+
+    /** A pick from the bar or the bigger menu, [index] counted across all of [choices]. */
+    override fun pickAt(index: Int): EngineState {
+        val word = choices(index, 1).firstOrNull() ?: return EngineState.UNHANDLED
+        typed.setLength(0)
+        choices = emptyList()
+        return EngineState(commit = "$word ")
+    }
+
     override fun reset(): EngineState {
         typed.setLength(0)
         choices = emptyList()
@@ -66,9 +87,33 @@ open class TelexComposer(protected var words: WordList? = null) : InputEngine {
 
     private fun state(): EngineState {
         val code = code()
-        choices = if (code.isEmpty()) emptyList() else words?.complete(code, CHOICES)?.filter { it != code }.orEmpty()
+        choices = if (code.isEmpty()) emptyList() else choices(0, CHOICES)
         return EngineState(code = code, choices = choices)
     }
+
+    /** The word [keys] spell, as Space writes it. */
+    private fun spoken(keys: String) = spell(keys)
+
+    /**
+     * The word list's words that start with [code], up to [limit]; where none does and [code] is no word either, the word one slip
+     * in the keys would have spelled ([EngineSlips]): on the bar only, as Space writes the word as typed.
+     */
+    private fun listed(code: String, limit: Int): List<String> {
+        val words = words ?: return emptyList()
+        val found = words.complete(code, limit).filter { it != code }
+        if (found.isNotEmpty() || words.has(code)) return found
+        val keys = typed.toString()
+        if (keys != slipKeys) {
+            slipKeys = keys
+            slipWord = EngineSlips.nearest(keys, words, ::spoken)
+        }
+        return listOfNotNull(slipWord)
+    }
+
+    /** The keys the last slip was looked for, and what was found. */
+    private var slipKeys: String? = null
+    private var slipWord: String? = null
+
 
     private fun commitAndPass(): EngineState {
         if (typed.isEmpty()) return EngineState.UNHANDLED

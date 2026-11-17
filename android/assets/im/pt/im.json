@@ -30,7 +30,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -38,5 +38,19 @@
     "name": "CLDR 49 localeDisplayNames: Português",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_pt_BR.combined"
-  }
+  },
+  "starters": [
+    "o",
+    "a",
+    "os",
+    "no",
+    "e",
+    "em",
+    "mas",
+    "não",
+    "na",
+    "para",
+    "ele",
+    "as"
+  ]
 }

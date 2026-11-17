@@ -62,5 +62,19 @@
     "name": "CLDR 49 localeDisplayNames: עברית",
     "keys": "xkeyboard-config symbols/il basic",
     "words": "he_full.txt"
-  }
+  },
+  "starters": [
+    "הוא",
+    "לאחר",
+    "על",
+    "עם",
+    "בשנת",
+    "היא",
+    "של",
+    "את",
+    "בנוסף",
+    "במהלך",
+    "כמו",
+    "הם"
+  ]
 }

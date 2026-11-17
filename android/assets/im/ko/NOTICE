@@ -1,1 +1,7 @@
 Typed with TitanKeys' Hangul engine (GPL-3.0) on the Korean standard 2-set layout (KS X 5002): Hangul syllables built from their letters as Unicode composes them.
+
+Words: The Leipzig Corpora Collection's kor_news_2022_1M-words.txt (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012.
+
+Next words (pairs.bin): counts of word pairs from the Leipzig Corpora Collection's kor_news_2022_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. Built by tools/im/next_words.py; only the counts of the most common word pairs are included.
+
+Starters: the words that most often begin a sentence in the Leipzig Corpora Collection's kor_news_2022_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0.

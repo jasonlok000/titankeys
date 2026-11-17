@@ -5,9 +5,10 @@ back, and takes a screenshot for what only the eye can judge: where the code, th
 pick, so the choices' order moves during a run: a pick is judged by the screenshot taken just before it, which shows the row it
 picked from, and the field it typed.
 
-The design as of main 99fb0dcd (owner, 2026-11-17): Space, a tap on the screen and a flick up pick from the row; no Shift, no
-hold, no P. While a code is typed, Sym opens the bigger menu and Sym again closes it, and the orange ⋯ at P opens it on a tap;
-with no code, Sym is the Sym panel. Enter types the code as letters.
+The design as of B's merge (main 0da40b8a): Space, a tap on the screen and a swipe up on the touchpad; a swipe up (or Shift, or
+a tap on the orange ⋯) opens the bigger menu and Shift or Sym closes it; Sym with no code is the Sym panel; Enter types the code
+as letters. The keyboard twin's Shift can't be used on this phone (it takes the field's focus), so the checks open the menu by a
+swipe up or ⋯ and close it with Sym, and Shift's own part is for the owner's hands.
 """
 import os
 import time
@@ -25,7 +26,8 @@ CODE = "neihou"
 # A pending code goes key by key: Backspace takes one letter off.
 CLEAR_CODE = [g for _ in range(20) for g in ("key:del", "+60")]
 # What these checks can't do on this phone, for the owner to try by hand.
-HANDS = ["Georgian (ქართული on in Settings > Languages): Shift + W types ჭ (the keyboard twin's Shift can't be used here)"]
+# Georgian's Shift + W and Shift opening and closing the bigger menu are the shift batch's (shift_checks.py, the key feed).
+HANDS = []
 # The more cue at P on the bar, on the 1076 x 1200 display: P's column, the bar's middle.
 MORE_CUE = (1022, 1170)
 FIFTH = (592, 1170)
@@ -116,21 +118,36 @@ def check_tap():
     record("zh-tap", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's choice over Y", "zh-tap")
 
 
-def check_flick():
-    """A flick up from the key under the fourth choice (G, the second row's key in its column) picks it."""
+def check_swipe_up():
+    """A swipe up from B opens the bigger menu with a code pending, in Yale (nei), Japanese (nihon), Vietnamese (ta) and Hindi
+    (nam), types nothing, and Sym closes it; in Korean nothing opens. A short flick up (a third of a row) opens nothing."""
+    import language_checks
+    for im, typed in (("yue-yale", "nei"), ("ja", "nihon"), ("vi", "ta"), ("hi", "nam"), ("ko", "gk")):
+        fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"swipe-up-{im}", False, f"the field didn't start with {im}")
+            continue
+        fresh()
+        text = shot_then(f"swipe-up-{im}", [f"key:{k}" for k in typed] + ["+400", "swipeup:b", "+600"],
+                         ["key:sym", "+500", *CLEAR_CODE])
+        want = "nothing opens (Korean has no menu)" if im == "ko" else "the bigger menu over three rows"
+        record(f"swipe-up-{im}", None, f"{typed} then a swipe up: {want}; the field after Sym and clearing: {text!r}",
+               f"swipe-up-{im}")
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
     fresh()
-    text = shot_then("zh-flick", code(), ["flickup:g", "+300", "key:space", "+300"])
-    record("zh-flick", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's fourth choice", "zh-flick")
+    shot_then("swipe-up-short", code("swipeup:g:0.3:60", "+600"), [*CLEAR_CODE])
+    record("swipe-up-short", None, "a short flick up (0.3 rows in 60 ms): nothing opens, the row stays", "swipe-up-short")
 
 
 def check_menu():
-    """While a code is typed, Sym opens the bigger menu; Enter turns to the next page and Backspace back; a press picks; Sym again
-    closes it. A tap on the orange ⋯ at P opens it too."""
+    """The bigger menu, opened by a swipe up with a code pending: Enter turns to the next page and Backspace back; a press
+    picks; a finger tap on a cell picks and logs (TitanKeysTap); Sym closes it. A tap on the orange ⋯ at P opens it too."""
+    import switcher_checks
     fresh()
-    opened = code("key:sym", "+600")
+    opened = code("swipeup:b", "+600")
     close = ["key:sym", "+400", *CLEAR_CODE]
     shot_then("zh-menu-1", opened, close)
-    record("zh-menu-open", None, "Sym with a code: the menu over three rows, ✕ at Sym, ↓ at Enter, the page at P", "zh-menu-1")
+    record("zh-menu-open", None, "a swipe up with a code: the menu over three rows, the page at P", "zh-menu-1")
     fresh()
     shot_then("zh-menu-2", opened + ["key:enter", "+600"], close)
     record("zh-menu-next", None, "Enter: the second page (2/N at P, ↑ at Backspace)", "zh-menu-2")
@@ -141,14 +158,81 @@ def check_menu():
     text = shot_then("zh-menu-pick", opened, ["key:s", "+400", "key:space", "+300"])
     record("zh-menu-pick", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's choice over S", "zh-menu-pick")
     fresh()
+    shot_then("zh-menu-cell", opened, [])
+    # The cell over W on the menu's top row, as the Sym panel's (y 970 on the 1076 x 1200 display).
+    lines = switcher_checks.tap_lines(lambda: checks.guarded("tap", str(switcher_checks.column_x(1)), "970"))
+    play("key:space", "+300")
+    text = read()
+    record("zh-menu-tap-cell", switcher_checks.tapped(lines) and cjk(text),
+           f"a finger tap on the top row's first cell typed {text!r} (the shot's cell over W); TitanKeysTap: {lines}",
+           "zh-menu-cell")
+    fresh()
     shot_then("zh-menu-close", opened + ["key:sym", "+600"], [])
-    record("zh-menu-close", None, "Sym again closed the menu and kept the code: the row is back", "zh-menu-close")
+    record("zh-menu-close", None, "Sym closed the menu and kept the code: the row is back", "zh-menu-close")
     fresh()
     play(*code("+400"))
     checks.guarded("tap", str(MORE_CUE[0]), str(MORE_CUE[1]))
     time.sleep(.8)
     record("zh-menu-tap", None, "a tap on ⋯ opened the menu", guide_checks.shot("zh-menu-tap"))
     play(*close)
+    checks.adb("shell", "setprop", "log.tag.TitanKeysTap", "''")
+
+
+def check_yale_codes():
+    """Yale's j/z and n/l (B): "lei" + Space types 你, and "zungman" + Space types 中文; the grammar model: "neisikjofaanmei" +
+    Space types 你食咗飯未."""
+    import language_checks
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+    # The last is B's Cantonese grammar model (main 38069d17): a whole sentence from one code.
+    for typed, want in (("lei", "你"), ("zungman", "中文"), ("neisikjofaanmei", "你食咗飯未")):
+        fresh()
+        text = shot_then(f"yale-{typed}", [f"key:{k}" for k in typed] + ["+500"], ["key:space", "+400"])
+        record(f"yale-{typed}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}", f"yale-{typed}")
+
+
+def check_next_words():
+    """B's next-word fallback: in Yale, ngodeigamyat + Space types 我哋今日 (O), and the bar then shows 係, 嘅 and 下晝 (J)."""
+    import language_checks
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+    fresh()
+    play(*[f"key:{k}" for k in "ngodeigamyat"], "+500", "key:space", "+900", shot="yale-next-words", at=12 * 80 + 1300)
+    text = read()
+    record("yale-ngodeigamyat", (text or "").strip() == "我哋今日", f"ngodeigamyat + Space typed {text!r}, wanted '我哋今日'")
+    record("yale-next-words", None, "after 我哋今日: 係, 嘅 and 下晝 on the bar", "yale-next-words")
+
+
+def check_phrases():
+    """B's Mandarin grammar: whole phrases from one code, read back after Space (O). Pinyin: nibamenkaizhezhenshitaibuxiaoxinle
+    types 你把门开着真是太不小心了; Zhuyin (Hsu): mwlziezckcxajew types 猫儿在椅子上睡觉."""
+    import language_checks
+    for im, typed, want in (("zh-pinyin", "nibamenkaizhezhenshitaibuxiaoxinle", "你把门开着真是太不小心了"),
+                            ("zh-zhuyin", "mwlziezckcxajew", "猫儿在椅子上睡觉")):
+        fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"phrase-{im}", False, f"the field didn't start with {im}")
+            continue
+        fresh()
+        text = shot_then(f"phrase-{im}", [f"key:{k}" for k in typed] + ["+600"], ["key:space", "+500"])
+        record(f"phrase-{im}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}", f"phrase-{im}")
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+
+
+def check_shape_codes():
+    """Cangjie (hqi + Space types 我) and Zhuyin on the Hsu layout (ne, ㄋㄧ, + Space types one character), each with starters
+    on an empty field first."""
+    import language_checks
+    for im, typed, want in (("zh-cangjie", "hqi", "我"), ("zh-zhuyin", "ne", None)):
+        fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"code-{im}", False, f"the field didn't start with {im}")
+            continue
+        fresh()
+        play("+800", shot=f"starters-{im}", at=500)
+        record(f"starters-{im}", None, f"{im}, empty field: starters on the bar", f"starters-{im}")
+        text = shot_then(f"code-{im}", [f"key:{k}" for k in typed] + ["+500"], ["key:space", "+400"])
+        ok = (text or "").strip() == want if want else (cjk(text) and len((text or "").strip()) == 1)
+        record(f"code-{im}", ok, f"{typed} + Space typed {text!r}, wanted {want or 'one character'!r}", f"code-{im}")
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
 
 
 def check_sym_panel():
@@ -205,7 +289,8 @@ def check_english():
         record(f"zh-{word}", None, f"{word}: {want}", f"zh-{word}")
 
 
-BATCH = [check_yale, check_row, check_space, check_tap, check_flick, check_menu, check_sym_panel, check_enter, check_comma, check_english,
+BATCH = [check_yale, check_row, check_space, check_tap, check_yale_codes, check_swipe_up, check_menu, check_sym_panel, check_enter,
+         check_comma, check_english, check_shape_codes, check_next_words, check_phrases,
          check_suggestions]
 
 

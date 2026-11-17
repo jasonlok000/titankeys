@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Suomi",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_fi.combined"
-  }
+  },
+  "starters": [
+    "hän",
+    "se",
+    "nyt",
+    "myös",
+    "jos",
+    "kun",
+    "tämä",
+    "sen",
+    "lisäksi",
+    "hänen",
+    "viime",
+    "mutta"
+  ]
 }

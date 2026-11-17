@@ -16,7 +16,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -24,5 +24,19 @@
     "name": "CLDR 49 localeDisplayNames: Norsk nynorsk",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_nn.combined"
-  }
+  },
+  "starters": [
+    "i",
+    "han",
+    "det",
+    "dei",
+    "den",
+    "dette",
+    "ein",
+    "på",
+    "etter",
+    "ho",
+    "frå",
+    "denne"
+  ]
 }

@@ -13,12 +13,37 @@ WORK="${TK_RIME_WORK:-$HOME/build/tk-rime}"
 TOOL="$WORK/out-host/rime_tool"
 OPENCC_DICT="$WORK/out-host/librime/deps/opencc/src/tools/opencc_dict"
 BUILD_PREDICT="$(find "$WORK/out-host" -name build_predict -type f -perm -u+x | head -1)"
-[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] && [ -n "$BUILD_PREDICT" ] || { echo "run native/rime/build.sh first" >&2; exit 1; }
+BUILD_GRAMMAR="$(find "$WORK/out-host" -name build_grammar -type f -perm -u+x | head -1)"
+[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] && [ -n "$BUILD_PREDICT" ] && [ -n "$BUILD_GRAMMAR" ]   || { echo "run native/rime/build.sh first" >&2; exit 1; }
 
 PRELUDE=https://github.com/rime/rime-prelude.git@082425ea0684bca36474415d4a0e8db9b016487e
 ESSAY=https://github.com/rime/rime-essay.git@d95eeae056df429ecf993038c325a216f0b28c5b
 LUNA=https://github.com/rime/rime-luna-pinyin.git@56b934b099dfbeab842320f13aa8b461a6ab3e42
 CANTONESE=https://github.com/rime/rime-cantonese.git@259f0e48bba840c3a2e0d117539e96937f3d89bc
+CANGJIE=https://github.com/rime/rime-cangjie.git@fcb3d7dd94ac1304663d575727d24d8107f6b082
+QUICK=https://github.com/rime/rime-quick.git@207d1efcc0dc9574510b61be861544edcf993736
+TERRA=https://github.com/rime/rime-terra-pinyin.git@723e51bc266cf9464530c1ddedb856aa18e3da34
+
+# The text Cantonese's grammar model is counted from (grammar.py): Cantonese Wikipedia's articles (Wikimedia keeps a dated
+# dump for a few months only; see SOURCES.md), HKCanCor and Common Voice's zh-HK sentences, each checked by its SHA-256.
+WIKI=https://dumps.wikimedia.org/zh_yuewiki/20261101/zh_yuewiki-20261101-pages-articles.xml.bz2
+WIKI_SHA256=e493dce7899884e250de0dcb208e560f6dff1e8b7970e7abdd015dc61da83126
+HKCANCOR=https://raw.githubusercontent.com/fcbond/hkcancor/39aeadf920e0b5ca93d0ad7792c59e740e7bdd65/data/hkcancor-utf8.zip
+HKCANCOR_SHA256=09223963b8756254e15353cad843f8a4b0cbc4b9223dc8a8fa27fb1cf846057e
+VOICE=https://raw.githubusercontent.com/common-voice/common-voice/4ea23d2d30222e9324eb964365b9a0f22e3d5f3a/server/data/zh-HK/sentence-collector.txt
+VOICE_SHA256=0c537e9d65c1f1de10d70a1e0989d929b557628d975bf480d8b3b6fcc6291f26
+# Mandarin's grammar model for librime-octagram, lotem/rime-octagram-data's Traditional word model (LGPL-3.0), as upstream
+# Rime offers it: for Pinyin and Zhuyin (docs/studies/56-mandarin-dictionary.md).
+MANDARIN_GRAMMAR=https://raw.githubusercontent.com/lotem/rime-octagram-data/97bf55046aad163c3d1881abae5312040b1bbed9/zh-hant-t-essay-bgw.gram
+MANDARIN_GRAMMAR_SHA256=0488ebd6688f900a39200f2b794f2f99bcbf1e8fc27280ae4a2324b08b1559c1
+
+download() { # file url sha256
+  local file="$WORK/src/$1"
+  if [ ! -f "$file" ] || ! echo "$3  $file" | sha256sum -c --quiet > /dev/null 2>&1; then
+    curl -sSL --fail -o "$file" "$2"
+    echo "$3  $file" | sha256sum -c --quiet || { echo "FAIL $1 isn't the pinned file" >&2; exit 1; }
+  fi
+}
 
 fetch() { # dir url@commit
   local dir="$WORK/src/$1" url="${2%@*}" commit="${2#*@}"
@@ -35,6 +60,9 @@ fetch rime-prelude "$PRELUDE"
 fetch rime-essay "$ESSAY"
 fetch rime-luna-pinyin "$LUNA"
 fetch rime-cantonese "$CANTONESE"
+fetch rime-cangjie "$CANGJIE"
+fetch rime-quick "$QUICK"
+fetch rime-terra-pinyin "$TERRA"
 SRC="$WORK/src"
 OCC="$SRC/librime/deps/opencc/data"
 
@@ -47,7 +75,8 @@ python3 -I - "$SRC/rime-prelude/default.yaml" default.yaml <<'PY'
 import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
 s, n = re.subn(r'schema_list:\n(  - schema: .*\n)+',
-               'schema_list:\n  - schema: tk_yale\n  - schema: tk_jyutping\n  - schema: tk_pinyin\n', s)
+               'schema_list:\n  - schema: tk_yale\n  - schema: tk_jyutping\n  - schema: tk_pinyin\n  - schema: tk_cangjie\n'
+               '  - schema: tk_quick\n  - schema: tk_zhuyin\n', s)
 assert n == 1
 s, n = re.subn(r'page_size: 5', 'page_size: 8', s)
 assert n == 1
@@ -57,6 +86,8 @@ cp "$SRC/rime-essay/essay.txt" .
 cp "$SRC/rime-luna-pinyin/luna_pinyin.dict.yaml" "$SRC/rime-luna-pinyin/pinyin.yaml" .
 cp "$SRC"/rime-cantonese/jyut6ping3*.dict.yaml "$SRC/rime-cantonese/essay-cantonese.txt" \
   "$SRC/rime-cantonese/symbols_cantonese.yaml" .
+# Cangjie 5 and Quick 5 (rime-cangjie's dictionary, which Quick builds on), and Zhuyin's dictionary (rime-terra-pinyin).
+cp "$SRC"/rime-cangjie/cangjie5*.dict.yaml "$SRC"/rime-quick/quick5*.dict.yaml "$SRC/rime-terra-pinyin/terra_pinyin.dict.yaml" .
 # TitanKeys' few changes to the Cantonese word weights (cantonese-weights.tsv says why): a word's weight replaced, or the
 # word added at the end, in the file's order.
 awk -F'\t' -v OFS='\t' '
@@ -66,6 +97,33 @@ awk -F'\t' -v OFS='\t' '
   END { for (i = 1; i <= n; i++) if (!(order[i] in seen)) print order[i], weight[order[i]] }
 ' "$HERE/cantonese-weights.tsv" essay-cantonese.txt > essay-cantonese.new
 mv essay-cantonese.new essay-cantonese.txt
+# words.hk's word counts in its Cantonese text (wordshk-counts.tsv, public domain), added to the weights: scaled so their total
+# is 0.3 of the weights' total, each word's to its own weight, a word the weights lack added at the end. Measured on held-out
+# Tatoeba phrases, it takes Space's first choice from 23.2% to 27.1% right (docs/studies/56-cantonese-dictionary.md; owner,
+# 2026-11-17: "the default Rime dictionary is actually pretty shit").
+python3 -I - "$HERE/wordshk-counts.tsv" essay-cantonese.txt <<'PY'
+import sys
+counts = {}
+for line in open(sys.argv[1], encoding='utf-8'):
+    if line.startswith('#') or not line.strip():
+        continue
+    word, count = line.rstrip('\n').split('\t')
+    counts[word] = int(count)
+order, weight = [], {}
+for line in open(sys.argv[2], encoding='utf-8'):
+    word, _, value = line.rstrip('\n').partition('\t')
+    if word not in weight:
+        order.append(word)
+    weight[word] = int(value or 0)
+scale = 0.3 * sum(weight.values()) / sum(counts.values())
+for word, count in counts.items():
+    if word not in weight:
+        order.append(word)
+        weight[word] = 0
+    weight[word] += int(round(count * scale))
+with open(sys.argv[2], 'w', encoding='utf-8', newline='\n') as out:
+    out.writelines(f'{word}\t{max(weight[word], 1)}\n' for word in order)
+PY
 cp "$HERE"/schemas/*.yaml .
 
 # OpenCC: the three variants' configs, and only the dictionaries they use, compiled.
@@ -81,6 +139,28 @@ for f in "$D"/occ/*.txt; do "$OPENCC_DICT" -i "$f" -o "opencc/$(basename "$f" .t
 for lang in yue cmn; do "$BUILD_PREDICT" "predict-$lang.db" < "$HERE/predict/$lang.txt" 2> "$D/predict-$lang.log" \
   || { cat "$D/predict-$lang.log"; exit 1; }; done
 
+# Cantonese's grammar model for librime-octagram, tk_yue.gram, for Yale and Jyutping (their grammar/language): which words
+# follow which in Cantonese text, so Space puts the likelier phrase first. On held-out Tatoeba phrases it takes Space's first
+# choice from 27.1% to 31.4% right with the words.hk weights (docs/studies/56-cantonese-dictionary.md). grammar.py counts it
+# from the pinned text, cutting runs into words by the Cantonese weights; counting takes minutes, so the model is kept in
+# $WORK/grammar by its inputs' hashes. It carries Wikipedia's CC BY-SA 4.0 (SOURCES.md, NOTICE).
+mkdir -p "$WORK/grammar"
+download yuewiki.xml.bz2 "$WIKI" "$WIKI_SHA256"
+download hkcancor-utf8.zip "$HKCANCOR" "$HKCANCOR_SHA256"
+download cv-zh-hk.txt "$VOICE" "$VOICE_SHA256"
+GRAMMAR_KEY="$(cat "$HERE/grammar.py" essay-cantonese.txt | sha256sum | cut -c1-16)-$(echo "$WIKI_SHA256 $HKCANCOR_SHA256 $VOICE_SHA256" | sha256sum | cut -c1-16)"
+if [ ! -s "$WORK/grammar/$GRAMMAR_KEY.gram" ]; then
+  python3 -I "$HERE/grammar.py" essay-cantonese.txt "$WORK/src/yuewiki.xml.bz2" "$WORK/src/hkcancor-utf8.zip" \
+    "$WORK/src/cv-zh-hk.txt" > "$D/grammar.txt"
+  (cd "$D" && "$BUILD_GRAMMAR" tk_yue < grammar.txt > grammar.log 2>&1) || { cat "$D/grammar.log"; exit 1; }
+  cp "$D/tk_yue.gram" "$WORK/grammar/$GRAMMAR_KEY.gram"
+fi
+cp "$WORK/grammar/$GRAMMAR_KEY.gram" tk_yue.gram
+# Mandarin's, for Pinyin and Zhuyin: lotem's word model, as it is. On held-out Tatoeba phrases it takes Space's first choice
+# from 54.0% to 59.9% right in Pinyin and from 49.5% to 55.4% in Zhuyin (docs/studies/56-mandarin-dictionary.md).
+download zh-hant-t-essay-bgw.gram "$MANDARIN_GRAMMAR" "$MANDARIN_GRAMMAR_SHA256"
+cp "$WORK/src/zh-hant-t-essay-bgw.gram" .
+
 # Rime records each source file's time in what it compiles. Every file gets one fixed time, so two runs give the same bytes.
 # On the phone Rime never deploys (rime_jni.cc), so the copies' own times don't matter.
 SOURCE_TIME=1763251200
@@ -92,7 +172,7 @@ mkdir -p "$D/shared/build"
 for f in "$D"/user/build/*; do
   case "$(basename "$f")" in *.table.bin|*.reverse.bin|*.prism.bin|*.schema.yaml|default.yaml) cp "$f" "$D/shared/build/";; esac
 done
-for t in jyut6ping3.table.bin luna_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_pinyin.prism.bin; do
+for t in jyut6ping3.table.bin luna_pinyin.table.bin cangjie5.table.bin quick5.table.bin terra_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_pinyin.prism.bin tk_cangjie.prism.bin tk_quick.prism.bin tk_zhuyin.prism.bin; do
   test -s "$D/shared/build/$t" || { echo "missing $t" >&2; exit 1; }
 done
 # The word lists' sources don't ship: Rime uses the compiled tables.
@@ -119,6 +199,17 @@ check tk_yale zh_hans "jung man" 中文
 check tk_yale zh_hk "deui m jyu" 對唔住
 check tk_yale zh_hk "yut yu" 粵語
 check tk_yale zh_hk "ngo dei" 我哋
+# Yale's interchangeable initials: z for j, n and l for each other. 你 stays first for nei, and ng stays ng.
+check tk_yale zh_hk "nei" 你
+check tk_yale zh_hk "lei" 你
+check tk_yale zh_hk "lei hou" 你好
+check tk_yale zh_hk "zung man" 中文
+check tk_yale zh_hk "jung man" 中文
+check tk_yale zh_hk "ngo" 我
+# Jyutping keeps its own initials: lei isn't 你 there.
+rm -rf "$D/try"; mkdir -p "$D/try"
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
+  || { echo "FAIL Jyutping lei gives 你: the fuzzy initials reached Jyutping" >&2; exit 1; }
 check tk_jyutping zh_hk "jyut jyu" 粵語
 check tk_jyutping zh_hk "ngo dei" 我哋
 check tk_jyutping zh_hk "gwong dung waa" 廣東話
@@ -129,6 +220,35 @@ check tk_pinyin zh_hk "ruan jian" 軟件
 check tk_pinyin zh_tw "ruan jian" 軟體
 check tk_pinyin zh_hans "da yin ji" 打印机
 check tk_pinyin zh_tw "da yin ji" 印表機
+# Cangjie 5: 我 is hqi, 倉 oiar; Quick 5 the first and last letters (我 hi, after 的); Zhuyin on Hsu (你好 ㄋㄧˇ ㄏㄠˇ).
+check tk_cangjie zh_hk "hqi" 我
+check tk_cangjie zh_hk "oiar" 倉
+check tk_cangjie zh_hans "oiar" 仓
+check tk_quick zh_hk "hqi" 我
+check tk_quick zh_tw "oiar" 倉
+check tk_zhuyin zh_tw "nefhwf" 你好
+check tk_zhuyin zh_tw "nehw" 你好
+check tk_zhuyin zh_tw "tidxm" 臺灣
+check tk_zhuyin zh_hans "jxlxn" 中文
+# A whole phrase typed without spaces, then Space once, as the owner types (2026-11-17: "diuneiloumo"): Space takes all of it,
+# leaving nothing behind.
+phrase() { # schema variant code committed
+  local got
+  rm -rf "$D/try"; mkdir -p "$D/try"
+  got="$("$TOOL" space "$D/phone" "$D/try" "$1" "$2" "$3" 2>/dev/null)"
+  [ "$got" = "$4|" ] || { echo "FAIL $1 $2 '$3' then Space: '$got', expected '$4|'" >&2; exit 1; }
+}
+phrase tk_yale zh_hk diuneiloumou 屌你老母
+phrase tk_yale zh_hk ngodeigamyatheuiyamcha 我哋今日去飲茶
+phrase tk_yale zh_hk ngodeiyatchaiheuisikfaan 我哋一齊去食飯
+phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
+phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
+# With the grammar model, a phrase the word weights alone got wrong (你識咗反美).
+phrase tk_jyutping zh_hk neisikzofaanmei 你食咗飯未
+# And Mandarin's grammar, in Pinyin and Zhuyin: phrases the dictionary alone got wrong (你八门凯这…, 猫儿在意自伤睡觉).
+phrase tk_pinyin zh_hans nibamenkaizhezhenshitaibuxiaoxinle 你把门开着真是太不小心了
+phrase tk_zhuyin zh_hans mwlziezckcxajew 猫儿在椅子上睡觉
+
 # 対, the Japanese form of 對, is off deui's first page in every variant.
 for v in zh_hk zh_tw zh_hans; do
   rm -rf "$D/try"; mkdir -p "$D/try"
@@ -152,6 +272,14 @@ next tk_pinyin zh_hans "wo" h h "和 好 还"
 next tk_pinyin zh_hk "wo" esc space "為 母親 什麼都"
 next tk_pinyin zh_hans "wo" esc space "为 母亲 什么都"
 next tk_pinyin zh_tw "wo" esc space "為 母親 什麼都"
+# Cangjie and Quick suggest from Cantonese's table, Zhuyin from Mandarin's.
+next tk_cangjie zh_hk "hqi" reset space "哋 喺 嘅"
+next tk_quick zh_hk "hqi" reset space "哋 喺 嘅"
+next tk_zhuyin zh_tw "nehw" reset space "何塞 幸福 幾次"
+# A phrase committed at once: its next words from what it ends with (tk_predict.h), which Escape clears as any others.
+next tk_yale zh_hk "ngodeigamyat" esc space "係 嘅 下晝"
+next tk_yale zh_hk "ngodeigamyat" esc esc ""
+next tk_pinyin zh_hk "womenyiqi" esc space "去 一邊 來"
 rm -rf "$D/try"; mkdir -p "$D/try"
 fresh="$("$TOOL" try "$D/phone" "$D/try" tk_yale zh_hk "" 8 2>/dev/null | sed 's/^[^:]*://')"
 [ -z "$fresh" ] || { echo "FAIL suggestions with nothing committed: $fresh" >&2; exit 1; }
@@ -177,4 +305,34 @@ grep -q "$learned" "$D/two/sync/titankeys/jyut6ping3.userdb.txt" \
 cd "$REPO"
 # The list the app copies by (RimeData), and that tools/checks/rime.test.ts checks the shipped data against.
 (cd android/assets/rime && find . -type f | LC_ALL=C sort | sed 's#^\./##' | xargs sha256sum) > android/assets/rime.sha256
+# Which files each schema needs, from its compiled config: its dictionary's table and reverse table, its prism, its grammar
+# model and its next-word table. The app copies those of the input methods that are on, and every file in no schema
+# (RimeData; docs/studies/3.0-storage.md).
+python3 -I - android/assets/rime > android/assets/rime.schemas <<'PY'
+import os, re, sys
+root = sys.argv[1]
+build = os.path.join(root, 'build')
+for name in sorted(os.listdir(build)):
+    if not (name.startswith('tk_') and name.endswith('.schema.yaml')):
+        continue
+    schema = name[:-len('.schema.yaml')]
+    text = open(os.path.join(build, name), encoding='utf-8').read()
+    def value(key):
+        m = re.search(r'^\s+' + key + r':\s*"?([^"\s]+)"?\s*$', text, re.M)
+        return m.group(1) if m else None
+    files = []
+    dictionary = value('dictionary')
+    if dictionary:
+        files += [f'build/{dictionary}.table.bin', f'build/{dictionary}.reverse.bin']
+    files.append(f'build/{value("prism") or schema}.prism.bin')
+    if value('language'):
+        files.append(value('language') + '.gram')
+    if value('db'):
+        files.append(value('db'))
+    for path in files:
+        if not os.path.isfile(os.path.join(root, path)):
+            sys.exit(f'{schema}: {path} is missing')
+        print(f'{schema}	{path}')
+PY
+
 echo "built android/assets/rime ($(du -sb android/assets/rime | cut -f1) bytes, $(wc -l < android/assets/rime.sha256) files)"

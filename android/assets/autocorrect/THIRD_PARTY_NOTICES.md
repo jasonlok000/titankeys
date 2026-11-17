@@ -4,7 +4,7 @@ TitanKeys copies the autocorrect from [Numen](https://github.com/jlo-aug/numen) 
 
 The word data is in `android/assets/autocorrect`. It has these attributions and licences. A copy of this file is next to the data, so it is also in the app.
 
-## English word-pair counts (`en_pairs.txt`)
+## English word-pair counts (`en_pairs.bin`)
 
 Word-pair counts built by Numen's `tools/build_context_pairs.py` from:
 

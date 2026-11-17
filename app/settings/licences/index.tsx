@@ -37,11 +37,21 @@ const licences = [
   // The Chinese entries (#56). F (docs/words-m1.md).
   { title: "Rime", subtitle: "BSD-3-Clause. Turns what you type into Chinese.", url: "https://github.com/rime/librime" },
   { title: "librime-predict", subtitle: "BSD-3-Clause. Suggests the next Chinese word.", url: "https://github.com/rime/librime-predict" },
+  // F: draft. Cantonese's grammar model and its plugin (#56).
+  { title: "librime-octagram", subtitle: "GPL-3.0. Lets Rime weigh which words go together.", url: "https://github.com/lotem/librime-octagram" },
+  // F: draft. Mandarin's grammar model (#56).
+  { title: "Mandarin grammar model", subtitle: "LGPL-3.0. lotem's rime-octagram-data, for Pinyin and Zhuyin.", url: "https://github.com/lotem/rime-octagram-data" },
+  { title: "Cantonese grammar model", subtitle: "CC BY-SA 4.0. TitanKeys' own, counted from Cantonese Wikipedia (CC BY-SA 4.0), HKCanCor (CC BY 4.0) and Common Voice (CC0).", url: "https://zh-yue.wikipedia.org" },
   { title: "OpenCC", subtitle: "Apache 2.0. Gives you Simplified, Hong Kong or Taiwan characters.", url: "https://github.com/BYVoid/OpenCC" },
   { title: "Rime's libraries", subtitle: "marisa-trie, LevelDB, yaml-cpp, spdlog, Snappy and Boost", url: "https://github.com/rime/librime/tree/master/deps" },
   { title: "rime-cantonese", subtitle: "CC BY 4.0, place names ODbL 1.0. Cantonese words for Yale and Jyutping.", url: "https://github.com/rime/rime-cantonese" },
+  // F: draft. words.hk's word counts in the Cantonese weights (#56).
+  { title: "words.hk (粵典)", subtitle: "Public domain. How often Cantonese words are used, to put the likelier ones first.", url: "https://words.hk" },
   { title: "rime-jyutping", subtitle: "LGPL-3.0. The Yale spelling rules, by 幸延.", url: "https://github.com/rime/rime-jyutping" },
   { title: "Rime's Pinyin and shared data", subtitle: "LGPL-3.0. rime-luna-pinyin and rime-essay for Pinyin, rime-prelude for the rest.", url: "https://github.com/rime/rime-luna-pinyin" },
+  // F: draft. Cangjie, Quick and Zhuyin (#56).
+  { title: "rime-cangjie and rime-quick", subtitle: "LGPL-3.0. Cangjie 5 and Quick 5; the Cangjie table, from 倉頡之友, is GPL.", url: "https://github.com/rime/rime-cangjie" },
+  { title: "rime-terra-pinyin and rime-bopomofo", subtitle: "LGPL-3.0. Zhuyin's words, with Chewing's data, and its spelling rules.", url: "https://github.com/rime/rime-bopomofo" },
   // The Japanese entries (#56). F: draft.
   { title: "Mozc", subtitle: "BSD-3-Clause. Turns what you type into Japanese.", url: "https://github.com/google/mozc" },
   { title: "Mozc's dictionary", subtitle: "IPAdic, the Okinawa dictionary, Japanese Usage Dictionary and Tamachi, each under its own licence.", url: "https://github.com/google/mozc/tree/master/src/data/dictionary_oss" },

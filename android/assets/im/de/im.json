@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Deutsch",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_de__legacy.combined"
-  }
+  },
+  "starters": [
+    "die",
+    "der",
+    "das",
+    "in",
+    "es",
+    "im",
+    "und",
+    "ein",
+    "auch",
+    "sie",
+    "er",
+    "mit"
+  ]
 }

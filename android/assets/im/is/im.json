@@ -21,7 +21,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -29,5 +29,19 @@
     "name": "CLDR 49 localeDisplayNames: Íslenska",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_is__experimental.combined"
-  }
+  },
+  "starters": [
+    "það",
+    "í",
+    "hann",
+    "þetta",
+    "ég",
+    "þá",
+    "meira",
+    "en",
+    "við",
+    "þar",
+    "hún",
+    "að"
+  ]
 }

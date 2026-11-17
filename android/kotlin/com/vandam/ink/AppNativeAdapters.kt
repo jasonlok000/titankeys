@@ -37,8 +37,10 @@ import com.titankeys.keyboard.Haptic
 import com.titankeys.keyboard.HapticGroup
 import com.titankeys.keyboard.Haptics
 import com.titankeys.keyboard.HapticsLab
+import com.titankeys.keyboard.InputMethod
 import com.titankeys.keyboard.InputMethodIndex
 import com.titankeys.keyboard.InputMethodList
+import com.titankeys.keyboard.LanguageSettings
 import com.titankeys.keyboard.InkPress
 import com.titankeys.keyboard.KeyCalibrationActivity
 import com.titankeys.keyboard.KeyCapture
@@ -351,8 +353,15 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                     null
                 }
                 "clearWords" -> {
+                    // Every language's own words go too ([LearnedWords]).
+                    com.titankeys.keyboard.LearnedWords.forgetAll(activity)
                     typing.clearDictionary { error -> operationResult(error, complete) }
                     null
+                }
+                // Saved words: a word another input method learned or saved, removed as the word menu's Unsave does.
+                "removeLanguageWord" -> {
+                    com.titankeys.keyboard.LearnedWords.remove(activity, data.getString("inputMethod"), data.getString("word"))
+                    "null"
                 }
                 // Settings > Your words > Back up everything and Restore (#65). A whole restore restarts TitanKeys, so it never answers.
                 "backup" -> {
@@ -417,6 +426,11 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 "wipeEverything" -> {
                     SettingsReset.reset(activity)
                     FreshStart.wipe(activity)
+                    "null"
+                }
+                // The line on a language's page the first time a second language is on: the typing settings moved there.
+                "languageNoteSeen" -> {
+                    appPreferences().edit().putBoolean(LANGUAGE_NOTE_SEEN, true).apply()
                     "null"
                 }
                 "phoneWarningSeen" -> {
@@ -594,6 +608,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("outsideSlidingMode", JSONArray(PhoneChecks.outsideSlidingMode(activity)))
             .put("learning", typing.learningEnabled())
             .put("contactNames", PhoneNameSource.contactsAllowed(activity))
+            .put("contactNamesBlocked", TypingSettings.contactNames(activity) && !PhoneNameSource.contactsAllowed(activity))
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("holdSymbols", TypingSettings.holdSymbols(activity))
             .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))
@@ -637,10 +652,15 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("availableInputMethods", JSONArray(inputMethodIndex().entries.map {
                 JSONObject().put("id", it.id).put("name", it.name).put("nameEnglish", it.nameEnglish).put("label", it.label)
                     .put("script", it.script).put("engine", it.engine ?: JSONObject.NULL)
+                    .put("howTo", JSONArray(it.howTo))
                     .put("language", JSONObject().put("id", it.language.id).put("name", it.language.name)
                         .put("nameEnglish", it.language.nameEnglish).put("label", it.language.label).put("script", it.language.script)
-                        .put("experimental", it.language.experimental))
+                        .put("experimental", it.language.experimental)
+                        .put("settings", JSONArray(languageRows(it.language.id)))
+                        .put("stop", languageStop(it.language.id)))
             }))
+            .put("languageSettings", JSONObject(inputMethodIndex().languages.associate { it.id to languageValues(it.id) }))
+            .put("languageNoteSeen", appPreferences().getBoolean(LANGUAGE_NOTE_SEEN, false))
             .put("chineseVariant", TypingSettings.chineseVariant(activity))
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))
@@ -648,9 +668,39 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("rawLogBytes", RawLog.size(activity))
             .put("words", words)
             .put("blockedWords", JSONArray(typing.blockedWords().toList()))
+            // Each other input method's own words, saved or learned, for Saved words (LearnedWords).
+            .put("languageWords", JSONArray(com.titankeys.keyboard.LearnedWords.all(activity).mapNotNull { (id, learning) ->
+                val entry = inputMethodIndex()[id] ?: return@mapNotNull null
+                JSONObject().put("inputMethod", id).put("name", entry.name).put("nameEnglish", entry.nameEnglish)
+                    .put("words", JSONArray(learning.ownWords()))
+            }))
     }
 
     private fun inputMethodIndex() = InputMethodList.index(activity)
+
+    /** Each language's first input method, read once: its rules decide which typing settings its page shows. */
+    private val languageMethods = HashMap<String, InputMethod?>()
+
+    private fun languageMethod(language: String): InputMethod? {
+        if (language in languageMethods) return languageMethods[language]
+        val first = inputMethodIndex().entries.firstOrNull { it.language.id == language }
+        val method: InputMethod? = first?.let { InputMethodList.load(activity, it.id) }
+        languageMethods[language] = method
+        return method
+    }
+
+    private fun languageRows(language: String) = languageMethod(language)?.let(LanguageSettings::rows).orEmpty()
+
+    private fun languageStop(language: String) = languageMethod(language)?.let(LanguageSettings::stop).orEmpty()
+
+    /** A language's own typing values, or today's single value where it never set one. */
+    private fun languageValues(language: String) = JSONObject()
+        .put("autocorrect", TypingSettings.autocorrectIn(activity, language))
+        .put("autoCapitalise", TypingSettings.autoCapitaliseIn(activity, language))
+        .put("autoPunctuation", TypingSettings.autoPunctuationIn(activity, language))
+        .put("sentenceSpaces", TypingSettings.sentenceSpacesIn(activity, language))
+        .put("commaSpace", TypingSettings.commaSpaceIn(activity, language))
+        .put("holdSymbols", TypingSettings.holdSymbolsIn(activity, language))
 
     private fun putShorthand(state: JSONObject) {
         val off = TypingSettings.shorthandOff(activity)
@@ -759,23 +809,37 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             "contactNames" -> if (value as Boolean && !PhoneNameSource.contactsAllowed(activity)) ContactsPermissionActivity.start(activity)
                 else TypingSettings.contactNames(activity, value)
             "tapKeys" -> TypingSettings.tapKeys(activity, value as String)
-            "holdSymbols" -> TypingSettings.holdSymbols(activity, value as Boolean)
+            "holdSymbols" -> TypingSettings.holdSymbols(activity, value as Boolean).also { TypingSettings.holdSymbolsIn(activity, ENGLISH, value) }
             "holdSymbolMillis" -> TypingSettings.holdSymbolMillis(activity, (value as Number).toInt())
             "fnAsCtrl" -> TypingSettings.fnAsCtrl(activity, value as Boolean)
             "altBackspaceForward" -> TypingSettings.altBackspaceForward(activity, value as Boolean)
             "shiftBackspaceWord" -> TypingSettings.shiftBackspaceWord(activity, value as Boolean)
             "altSymNextKeyboard" -> TypingSettings.altSymNextKeyboard(activity, value as Boolean)
             "doublePressLocks" -> TypingSettings.doublePressLocks(activity, value as Boolean)
-            "autoCapitalise" -> TypingSettings.autoCapitalise(activity, value as Boolean)
-            "autoPunctuation" -> TypingSettings.autoPunctuation(activity, value as Boolean)
-            "sentenceSpaces" -> TypingSettings.sentenceSpaces(activity, value as String)
-            "commaSpace" -> TypingSettings.commaSpace(activity, value as Boolean)
-            "autocorrect" -> TypingSettings.autocorrect(activity, value as Boolean)
+            "autoCapitalise" -> TypingSettings.autoCapitalise(activity, value as Boolean).also { TypingSettings.autoCapitaliseIn(activity, ENGLISH, value) }
+            "autoPunctuation" -> TypingSettings.autoPunctuation(activity, value as Boolean).also { TypingSettings.autoPunctuationIn(activity, ENGLISH, value) }
+            "sentenceSpaces" -> TypingSettings.sentenceSpaces(activity, value as String).also { TypingSettings.sentenceSpacesIn(activity, ENGLISH, value) }
+            "commaSpace" -> TypingSettings.commaSpace(activity, value as Boolean).also { TypingSettings.commaSpaceIn(activity, ENGLISH, value) }
+            "autocorrect" -> TypingSettings.autocorrect(activity, value as Boolean).also { TypingSettings.autocorrectIn(activity, ENGLISH, value) }
             // Only the switches that came, as for haptics.
             "fixToggles" -> (value as JSONObject).let { toggles ->
                 for (id in toggles.keys()) FixKind.of(id)?.let { TypingSettings.fixOn(activity, it.id, toggles.getBoolean(id)) }
             }
             "fixOnlyWhenSure" -> TypingSettings.fixOnlyWhenSure(activity, value as Boolean)
+            // A language's page: its own values only, as {"fr": {"autoCapitalise": false}} (TypingSettings.PER_LANGUAGE).
+            "languageSettings" -> (value as JSONObject).let { languages ->
+                for (language in languages.keys()) {
+                    val values = languages.getJSONObject(language)
+                    for (key in values.keys()) when (key) {
+                        "autocorrect" -> TypingSettings.autocorrectIn(activity, language, values.getBoolean(key))
+                        "autoCapitalise" -> TypingSettings.autoCapitaliseIn(activity, language, values.getBoolean(key))
+                        "autoPunctuation" -> TypingSettings.autoPunctuationIn(activity, language, values.getBoolean(key))
+                        "commaSpace" -> TypingSettings.commaSpaceIn(activity, language, values.getBoolean(key))
+                        "holdSymbols" -> TypingSettings.holdSymbolsIn(activity, language, values.getBoolean(key))
+                        "sentenceSpaces" -> TypingSettings.sentenceSpacesIn(activity, language, values.getString(key))
+                    }
+                }
+            }
             "suggestionBar" -> TypingSettings.suggestionBar(activity, value as Boolean)
             "launcherHidesBar" -> TypingSettings.launcherHidesBar(activity, value as Boolean)
             "cursorControl" -> TypingSettings.cursorControl(activity, value as Boolean)
@@ -836,5 +900,7 @@ internal object CrashOfferHosts {
 
 /** The other-phone warning has shown once (#75). */
 private const val PHONE_WARNING_SEEN = "phone_warning_seen"
+private const val LANGUAGE_NOTE_SEEN = "language_settings_moved_seen"
+private const val ENGLISH = InputMethod.ENGLISH_ID
 /** TitanKeys Debug's switch that fakes another phone (#75). */
 private const val FAKE_OTHER_PHONE = "fake_other_phone"

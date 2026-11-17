@@ -20,7 +20,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -28,5 +28,19 @@
     "name": "CLDR 49 localeDisplayNames: Lietuvių",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_lt.combined"
-  }
+  },
+  "starters": [
+    "tačiau",
+    "tai",
+    "o",
+    "taip",
+    "pasak",
+    "ir",
+    "jis",
+    "kaip",
+    "bet",
+    "iš",
+    "jei",
+    "kai"
+  ]
 }

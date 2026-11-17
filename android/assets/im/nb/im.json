@@ -16,7 +16,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -24,5 +24,19 @@
     "name": "CLDR 49 localeDisplayNames: Norsk bokmål",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_nb.combined"
-  }
+  },
+  "starters": [
+    "det",
+    "i",
+    "vi",
+    "men",
+    "jeg",
+    "han",
+    "de",
+    "nå",
+    "dette",
+    "og",
+    "en",
+    "for"
+  ]
 }

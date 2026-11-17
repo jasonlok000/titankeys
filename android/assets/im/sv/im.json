@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Svenska",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_sv.combined"
-  }
+  },
+  "starters": [
+    "det",
+    "i",
+    "men",
+    "en",
+    "den",
+    "nu",
+    "jag",
+    "vi",
+    "de",
+    "han",
+    "på",
+    "när"
+  ]
 }

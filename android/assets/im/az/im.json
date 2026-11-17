@@ -20,7 +20,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -28,5 +28,19 @@
     "name": "CLDR 49 localeDisplayNames: Azərbaycan",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_az.combined"
-  }
+  },
+  "starters": [
+    "bu",
+    "o",
+    "lakin",
+    "onun",
+    "bir",
+    "bundan",
+    "burada",
+    "həmin",
+    "belə",
+    "onlar",
+    "ancaq",
+    "buna"
+  ]
 }

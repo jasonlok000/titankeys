@@ -850,6 +850,57 @@
   }
  },
  {
+  "id": "zh-cangjie",
+  "name": "倉頡",
+  "nameEnglish": "Chinese, Cangjie",
+  "label": "倉",
+  "locale": "zh",
+  "script": "Hani",
+  "engine": "rime",
+  "language": {
+   "id": "zh",
+   "name": "中文",
+   "nameEnglish": "Chinese",
+   "label": "中",
+   "script": "Hani",
+   "experimental": false
+  }
+ },
+ {
+  "id": "zh-quick",
+  "name": "速成",
+  "nameEnglish": "Chinese, Quick",
+  "label": "速",
+  "locale": "zh",
+  "script": "Hani",
+  "engine": "rime",
+  "language": {
+   "id": "zh",
+   "name": "中文",
+   "nameEnglish": "Chinese",
+   "label": "中",
+   "script": "Hani",
+   "experimental": false
+  }
+ },
+ {
+  "id": "zh-zhuyin",
+  "name": "注音 · 許氏",
+  "nameEnglish": "Mandarin, Zhuyin (Hsu layout)",
+  "label": "注",
+  "locale": "zh",
+  "script": "Hani",
+  "engine": "rime",
+  "language": {
+   "id": "zh",
+   "name": "中文",
+   "nameEnglish": "Chinese",
+   "label": "中",
+   "script": "Hani",
+   "experimental": false
+  }
+ },
+ {
   "id": "ja",
   "name": "日本語",
   "nameEnglish": "Japanese",

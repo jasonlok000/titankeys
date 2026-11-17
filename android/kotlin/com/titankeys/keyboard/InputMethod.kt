@@ -41,6 +41,15 @@ data class InputMethod(
     val engineArg: String?,
     /** Where the letters and the words come from, for the licences page and for contributors. */
     val source: Map<String, String>,
+    /**
+     * Its commonest words, commonest first, for the bar at a sentence's start and after a word until the user's own take over
+     * (owner, 2026-11-16: "each language should have a list of starting words"). tools/im/make.py writes them.
+     */
+    val starters: List<String> = emptyList(),
+    /** Chinese's [starters] in Simplified characters, for the Simplified variant. Empty elsewhere. */
+    val startersSimplified: List<String> = emptyList(),
+    /** A few lines on what's special to typing it, for Settings > Languages (tools/im/howto.json). Empty where it has none. */
+    val howTo: List<String> = emptyList(),
 ) {
     /**
      * What a key types: [base], and [shift] where Shift gives another letter rather than [base]'s capital (Georgian). A
@@ -194,8 +203,9 @@ data class InputMethod(
                 else -> throw Json.Error("engine must be null, a name, or { name: argument }")
             }
             val source = (root["source"] as? Map<*, *>)?.entries?.associate { (k, v) -> k as String to v.toString() } ?: emptyMap()
+            fun list(key: String) = (root[key] as? List<*>)?.map { it as? String ?: throw Json.Error("$key must list text") }.orEmpty()
             return InputMethod(id, text("name"), text("nameEnglish"), label, text("locale"), text("script"), keys, accents,
-                textOrNull("words"), variants, rules, engine, engineArg, source)
+                textOrNull("words"), variants, rules, engine, engineArg, source, list("starters"), list("startersSimplified"), list("howTo"))
         }
 
         private val ID = Regex("[a-z]{2,3}(-[a-z0-9]{2,8})*")

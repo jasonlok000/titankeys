@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Română",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_ro.combined"
-  }
+  },
+  "starters": [
+    "în",
+    "de",
+    "nu",
+    "la",
+    "un",
+    "este",
+    "o",
+    "cu",
+    "pentru",
+    "pe",
+    "a",
+    "dacă"
+  ]
 }

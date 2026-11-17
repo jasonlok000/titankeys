@@ -34,9 +34,9 @@
     "z": "я"
   },
   "accents": {
-    "l": "жэ",
+    "l": "эж",
     "m": "бю",
-    "p": "х",
+    "p": "х'",
     "t": "ё"
   },
   "words": "words.combined",
@@ -44,7 +44,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -53,5 +53,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_belarusian.kcm",
     "words": "main_be.combined"
-  }
+  },
+  "starters": [
+    "у",
+    "і",
+    "а",
+    "але",
+    "я",
+    "гэта",
+    "на",
+    "калі",
+    "як",
+    "ён",
+    "мы",
+    "паводле"
+  ]
 }

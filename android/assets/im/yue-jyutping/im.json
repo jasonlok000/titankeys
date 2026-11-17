@@ -20,6 +20,34 @@
     "rime": "tk_jyutping"
   },
   "source": {
-    "words": "rime-cantonese (CC BY 4.0)"
-  }
+    "words": "rime-cantonese (CC BY 4.0), with words.hk's word counts (public domain) and TitanKeys' grammar model, counted from Cantonese Wikipedia (CC BY-SA 4.0, and so is the model), HKCanCor (CC BY 4.0) and Common Voice (CC0)"
+  },
+  "starters": [
+    "我",
+    "係",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "都",
+    "個",
+    "就",
+    "有",
+    "啦"
+  ],
+  "startersSimplified": [
+    "我",
+    "系",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "都",
+    "个",
+    "就",
+    "有",
+    "啦"
+  ]
 }

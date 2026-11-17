@@ -34,7 +34,7 @@
     "z": "з"
   },
   "accents": {
-    "m": "ью",
+    "m": "юь",
     "p": "ящ"
   },
   "words": "words.combined",
@@ -42,7 +42,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -51,5 +51,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_bulgarian_phonetic.kcm",
     "words": "main_bg__experimental.combined"
-  }
+  },
+  "starters": [
+    "в",
+    "това",
+    "за",
+    "и",
+    "на",
+    "той",
+    "по",
+    "от",
+    "не",
+    "според",
+    "но",
+    "ако"
+  ]
 }

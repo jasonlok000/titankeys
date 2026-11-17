@@ -57,7 +57,7 @@ test("each input method has a language: one per language, Serbian and Chinese gr
   }
   const methods = (language: string) => indexed.filter(e => e.language.id === language).map(e => e.id).sort();
   expect(methods("sr")).toEqual(["sr", "sr-latn"]);
-  expect(methods("zh")).toEqual(["yue-jyutping", "yue-yale", "zh-pinyin"]);
+  expect(methods("zh")).toEqual(["yue-jyutping", "yue-yale", "zh-cangjie", "zh-pinyin", "zh-quick", "zh-zhuyin"]);
   expect(new Set([...byId.values()].map(l => l.label)).size).toBe(byId.size);
 });
 
@@ -114,4 +114,19 @@ test("each entry in Android's keyboard list is whole: an id of its own, a valid 
   }
   expect(new Set(entries.map(e => e.subtypeId)).size).toBe(entries.length);
   expect(new Set(entries.map(e => e.imeSubtypeExtraValue)).size).toBe(entries.length);
+});
+
+test("how-tos: an optional list of lines per input method, from tools/im/howto.json, carried by the index", () => {
+  const source: Record<string, unknown> = JSON.parse(read("tools/im/howto.json"));
+  for (const [id, lines] of Object.entries(source)) {
+    expect({ id, known: ids.includes(id) }).toEqual({ id, known: true });
+    expect({ id, list: Array.isArray(lines) && lines.every(line => typeof line === "string" && line.trim().length > 0 && line.length <= 400) })
+      .toEqual({ id, list: true });
+  }
+  const index: { id: string; howTo?: string[] }[] = JSON.parse(read(`${folder}/index.json`));
+  for (const im of ims as (Im & { howTo?: string[] })[]) {
+    // make.py --howto writes them: the im.json and the index say the same as howto.json.
+    expect({ id: im.id, howTo: im.howTo ?? null }).toEqual({ id: im.id, howTo: (source[im.id] as string[] | undefined) ?? null });
+    expect({ id: im.id, index: index.find(e => e.id === im.id)?.howTo ?? null }).toEqual({ id: im.id, index: im.howTo ?? null });
+  }
 });

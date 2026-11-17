@@ -40,6 +40,9 @@ engine:
     - predict_translator
     - punct_translator
     - script_translator
+grammar:
+  collocation_min_length: 2
+  language: tk_yue
 key_binder:
   bindings:
     - {accept: "Control+p", send: Up, when: composing}
@@ -462,6 +465,9 @@ speller:
     - "xform/oe/eu/"
     - "xform/em/im/"
     - "xform/ep/ip/"
+    - "derive/^j/z/"
+    - "derive/^n(?!g)/l/"
+    - "derive/^l/n/"
     - "abbrev/^([a-z]).+$/$1/"
     - "abbrev/^(ng).+$/$1/"
     - "abbrev/^(ch).+$/$1/"

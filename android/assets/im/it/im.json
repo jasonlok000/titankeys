@@ -18,7 +18,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Italiano",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_it.combined"
-  }
+  },
+  "starters": [
+    "il",
+    "la",
+    "in",
+    "e",
+    "i",
+    "per",
+    "non",
+    "a",
+    "le",
+    "un",
+    "ma",
+    "è"
+  ]
 }

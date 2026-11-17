@@ -47,9 +47,35 @@ def check_90_slides():
         guide_checks.leave_guide()
 
 
+def check_swipe_slide():
+    """E's guide (main c8de2255): on the swipe slide, keys and Backspace type nothing; only a swipe does."""
+    own_screen()
+    guide_checks.guide("swipe")
+    try:
+        before = checks.field()
+    except Stop:
+        before = None
+    checks.play("key:a", "+120", "key:s", "+120", "key:del", "+500")
+    try:
+        after = checks.field()
+    except Stop:
+        after = None
+    record("guide-swipe-keys", before is not None and after == before,
+           f"the slide's field before {before!r}, after A, S and Backspace {after!r}", guide_checks.shot("guide-swipe-keys"))
+    guide_checks.leave_guide()
+
+
+def check_first_delete_slide():
+    """E's guide: the first delete slide keeps its "e" (the extra e that Backspace takes) in place as it opens."""
+    own_screen()
+    guide_checks.guide("backspace")
+    record("guide-delete-e", None, "the first delete slide shows its extra \"e\"", guide_checks.shot("guide-delete-e"))
+    guide_checks.leave_guide()
+
+
 BATCH = [wrap(check) for check in (guide_checks.check_66_steer, guide_checks.check_67_selectmore, guide_checks.check_68_hunts,
                                    guide_checks.check_69_paste, guide_checks.check_69_clip, guide_checks.check_84_menu)]
-BATCH.append(check_90_slides)
+BATCH += [check_swipe_slide, check_first_delete_slide, check_90_slides]
 
 
 def finish():

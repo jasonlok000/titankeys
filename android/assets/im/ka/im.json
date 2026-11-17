@@ -48,5 +48,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_georgian.kcm",
     "words": "kat_newscrawl_2016_1M-words.txt"
-  }
+  },
+  "starters": [
+    "ეს",
+    "როგორც",
+    "ამ",
+    "ჩვენ",
+    "მისი",
+    "მე",
+    "თუმცა",
+    "ამის",
+    "საქართველოს",
+    "რაც",
+    "თუ",
+    "მისივე"
+  ]
 }

@@ -7,13 +7,18 @@ package com.titankeys.keyboard
  *
  * The syllable being built is the engine's code, on the bar as Rime's is; a syllable is written to the field once the next
  * jamo can't join it. Backspace takes the last jamo typed off (과 → 고 → ㄱ). Space, Enter, a mark or a digit writes the
- * syllable and then goes on as usual. No word list, so no choices.
+ * syllable and then goes on as usual. With a word list ([words]), the choices are the words that start with the word so far,
+ * the syllables already written and the one being built, by its letters, so 하 offers 하고 and 한국. A choice writes the rest
+ * of its word and a space: the syllables before are in the field already.
  *
  * Plain Kotlin, checked on the JVM (tests/languages); [HangulEngine] is the keyboard's, made by [InputEngines].
  */
-open class HangulComposer : InputEngine {
+open class HangulComposer(protected var words: WordList? = null) : InputEngine {
     /** The jamo typed for the syllable being built, in the order typed: the syllables before it are in the field. */
     private val typed = ArrayList<Char>()
+    /** This word's syllables already written to the field, since the last space or mark. */
+    private val written = StringBuilder()
+    private var choices: List<String> = emptyList()
 
     override fun start(method: InputMethod, dataDir: java.io.File): Boolean = true
 
@@ -21,12 +26,44 @@ open class HangulComposer : InputEngine {
         val jamo = jamoOf(char) ?: return commitAndPass()
         typed += jamo
         val syllables = split(typed)
-        if (syllables.size == 1) return EngineState(code = compose(syllables[0]))
+        if (syllables.size == 1) return withChoices(EngineState(code = compose(syllables[0])))
         // The new jamo started a syllable: the ones before it are done.
         val done = syllables.dropLast(1).joinToString("") { compose(it) }
         typed.clear()
         typed += syllables.last()
-        return EngineState(commit = done, code = compose(syllables.last()))
+        written.append(done)
+        return withChoices(EngineState(commit = done, code = compose(syllables.last())))
+    }
+
+    /** [state] with the word list's words that start with the word so far, as its choices. */
+    private fun withChoices(state: EngineState): EngineState {
+        if (words == null) return state
+        choices = choices(0, CHOICES)
+        return state.copy(choices = choices)
+    }
+
+    /**
+     * What the word so far may be, for matching: its syllables, the one being built by its letters; and where that one ends
+     * in a consonant, also that consonant starting the next syllable, as a vowel after it would make it (안녕핫 or 안녕하ᄉ…, so
+     * 안녕하세요 is offered before its ㅔ is typed).
+     */
+    private fun matchKeys(): List<String> {
+        val start = written.toString()
+        val keys = mutableListOf(start + matchKey())
+        val last = typed.lastOrNull()
+        if (typed.size >= 3 && last != null && !isVowel(last) && typed.any(::isVowel) && INITIALS.indexOf(last) >= 0)
+            keys += start + split(typed.dropLast(1)).joinToString("") { compose(it) } + (0x1100 + INITIALS.indexOf(last)).toChar()
+        return keys.filter { it.isNotEmpty() }
+    }
+
+    /**
+     * The syllable being built, for matching: its letters as a word's syllables split into them (NFD). A lone initial, as ㅎ,
+     * is a compatibility letter that doesn't split, so it becomes the initial ᄒ that 하 and 한 start with.
+     */
+    private fun matchKey(): String {
+        val code = code()
+        if (code.length == 1 && INITIALS.indexOf(code[0]) >= 0) return (0x1100 + INITIALS.indexOf(code[0])).toChar().toString()
+        return code
     }
 
     override fun space(): EngineState = commitAndPass()
@@ -34,24 +71,58 @@ open class HangulComposer : InputEngine {
     override fun enter(): EngineState = commitAndPass()
 
     override fun backspace(): EngineState {
-        if (typed.isEmpty()) return EngineState.UNHANDLED
+        if (typed.isEmpty()) {
+            // The field deletes its last syllable, one of this word's.
+            if (written.isNotEmpty()) written.setLength(written.length - 1)
+            choices = emptyList()
+            return EngineState.UNHANDLED
+        }
         typed.removeAt(typed.lastIndex)
-        return EngineState(code = code())
+        return withChoices(EngineState(code = code()))
     }
 
-    override fun pick(index: Int): EngineState = EngineState.UNHANDLED
+    /** A choice: the rest of its word, after the syllables already written, and a space. */
+    override fun pick(index: Int): EngineState = pickWord(choices.getOrNull(index))
+
+    /**
+     * The row's and the bigger menu's words (a swipe up opens it, as in Telex and Hindi): first the word as typed, which is
+     * what Space writes, so the bar shows what Space types (owner, #98); then the word list's words for the word so far, in
+     * the same order. A pick of the word as typed writes it as Space does, with the space.
+     */
+    override fun choices(start: Int, count: Int): List<String> {
+        val list = words ?: return emptyList()
+        if (start < 0 || count <= 0) return emptyList()
+        val whole = written.toString() + code()
+        val typedFirst = if (whole.isEmpty()) emptyList() else listOf(whole)
+        val listed = matchKeys().flatMap { list.complete(it, start + count + 1) }.distinct().filter { it != whole }
+        return (typedFirst + listed).drop(start).take(count)
+    }
+
+    /** A pick from the bar or the bigger menu, [index] counted across all of [choices]. */
+    override fun pickAt(index: Int): EngineState = pickWord(choices(index, 1).firstOrNull())
+
+    private fun pickWord(word: String?): EngineState {
+        if (word == null) return EngineState.UNHANDLED
+        val rest = if (word.startsWith(written)) word.substring(written.length) else word
+        typed.clear()
+        written.setLength(0)
+        choices = emptyList()
+        return EngineState(commit = "$rest ")
+    }
 
     override fun page(forward: Boolean): EngineState = EngineState.UNHANDLED
 
     override fun reset(): EngineState {
         typed.clear()
+        written.setLength(0)
+        choices = emptyList()
         return EngineState()
     }
 
     override fun option(name: String, on: Boolean) {}
 
     override fun stop() {
-        typed.clear()
+        reset()
     }
 
     /** The syllable being built, as it shows. */
@@ -59,6 +130,8 @@ open class HangulComposer : InputEngine {
 
     /** The syllable goes to the field, and the key that ended it goes on as usual (a space, a mark, Enter). */
     private fun commitAndPass(): EngineState {
+        written.setLength(0)
+        choices = emptyList()
         if (typed.isEmpty()) return EngineState.UNHANDLED
         val text = code()
         typed.clear()
@@ -66,6 +139,9 @@ open class HangulComposer : InputEngine {
     }
 
     companion object {
+        /** The most choices asked of the word list, one for each key over W to O. */
+        const val CHOICES = 8
+
         /** The 2-set layout: each key's jamo, then its jamo with Shift where that differs. */
         private val PLAIN = mapOf(
             'q' to 'ㅂ', 'w' to 'ㅈ', 'e' to 'ㄷ', 'r' to 'ㄱ', 't' to 'ㅅ', 'y' to 'ㅛ', 'u' to 'ㅕ', 'i' to 'ㅑ', 'o' to 'ㅐ', 'p' to 'ㅔ',

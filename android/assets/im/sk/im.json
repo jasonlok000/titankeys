@@ -27,7 +27,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -35,5 +35,19 @@
     "name": "CLDR 49 localeDisplayNames: Slovenčina",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_sk__experimental.combined"
-  }
+  },
+  "starters": [
+    "na",
+    "podľa",
+    "ak",
+    "ako",
+    "je",
+    "ale",
+    "po",
+    "aj",
+    "za",
+    "pri",
+    "do",
+    "pre"
+  ]
 }

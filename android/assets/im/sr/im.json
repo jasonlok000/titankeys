@@ -42,7 +42,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -51,5 +51,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_serbian_and_montenegrin_cyrillic.kcm",
     "words": "main_sr.combined"
-  }
+  },
+  "starters": [
+    "у",
+    "на",
+    "након",
+    "за",
+    "међутим",
+    "то",
+    "од",
+    "током",
+    "када",
+    "он",
+    "као",
+    "по"
+  ]
 }

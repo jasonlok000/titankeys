@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Afrikaans",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_af__experimental.combined"
-  }
+  },
+  "starters": [
+    "die",
+    "dit",
+    "ek",
+    "ons",
+    "hy",
+    "in",
+    "en",
+    "daar",
+    "sy",
+    "as",
+    "maar",
+    "hulle"
+  ]
 }

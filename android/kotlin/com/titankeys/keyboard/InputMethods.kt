@@ -18,6 +18,8 @@ class InputMethodIndex(entries: List<Entry>) {
         val locale: String,
         val script: String,
         val engine: String? = null,
+        /** Its how-to's lines for Settings, from the index ([InputMethod.howTo]); empty where it has none. */
+        val howTo: List<String> = emptyList(),
         /** The language it types: Serbian's Cyrillic and Latin, Chinese's Yale, Jyutping and Pinyin share one. */
         val language: Language = Language(id, name, nameEnglish, label, script, experimental = id != InputMethod.ENGLISH_ID),
     )
@@ -86,11 +88,14 @@ class InputMethodIndex(entries: List<Entry>) {
                 fun text(key: String) = entry[key] as? String ?: throw Json.Error("$key must be text")
                 val language = entry["language"] as? Map<*, *>
                 val id = text("id")
-                if (language == null) Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String)
+                val howTo = (entry["howTo"] as? List<*>)?.map { it as? String ?: throw Json.Error("howTo must list text") }.orEmpty()
+                if (language == null) Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"),
+                    entry["engine"] as? String, howTo = howTo)
                 else {
                     fun of(key: String) = language[key] as? String ?: throw Json.Error("language.$key must be text")
                     Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String,
-                        Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
+                        howTo = howTo,
+                        language = Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
                 }
             })
         }
@@ -192,7 +197,10 @@ object SwitchOverlay {
      * Cyrillic), else the input method's (耶, 粵 with two Chinese on).
      */
     fun markLabel(on: List<InputMethodIndex.Entry>, current: String, currentLabel: String): String {
-        val language = on.firstOrNull { it.id == current }?.language ?: return currentLabel
+        val entry = on.firstOrNull { it.id == current } ?: return currentLabel
+        val language = entry.language
+        // Serbian in Latin letters marks SR, not the language's Cyrillic СР: the mark is in the script being typed.
+        if (entry.script != language.script) return currentLabel
         return if (on.count { it.language.id == language.id } == 1) language.label else currentLabel
     }
 
@@ -239,15 +247,21 @@ object Picker {
     fun anyColumn(key: String): Int = column(key, Layout.rows.size)
 
     /**
-     * The columns of [count] accents of the key in column [held]: centred over it, moved in to stay on the keys. More than
-     * ten are cut to ten.
+     * The columns of [count] accents of the key in column [held]: centred over it, moved in to stay between W and O, the
+     * switcher's range, never over Q's or P's column (owner, 2026-11-17). More than [ACCENTS] are cut to that many: no input
+     * method has a letter with more (tests/languages).
      */
     fun accentColumns(count: Int, held: Int): List<Int> {
-        val shown = count.coerceIn(0, COLUMNS)
+        val shown = count.coerceIn(0, ACCENTS)
         if (shown == 0) return emptyList()
-        val start = (held - (shown - 1) / 2).coerceIn(0, COLUMNS - shown)
+        val start = (held - (shown - 1) / 2).coerceIn(FIRST_ACCENT, FIRST_ACCENT + ACCENTS - shown)
         return List(shown) { start + it }
     }
+
+    /** Accents start at W's column at the leftmost. */
+    const val FIRST_ACCENT = 1
+    /** The most accents a key shows: W to O. */
+    const val ACCENTS = COLUMNS - 2
 
     /** An engine's first choice sits over E: Q and W show the code being typed and the page. */
     const val FIRST_CHOICE = 2
@@ -256,6 +270,19 @@ object Picker {
 
     /** The columns of a page of [count] choices from an engine, from E. */
     fun pageColumns(count: Int): List<Int> = List(count.coerceIn(0, CHOICES)) { FIRST_CHOICE + it }
+
+    /**
+     * The item a finger's tap at [x] picks, or -1: the one whose keys' span on screen holds it, from its first key's left edge
+     * to its last key's right ([cell] gives a key column's span in px). The same item a key under it picks: the switcher's
+     * tiles, its input-method row, the accents and Chinese's row all map taps this way.
+     */
+    fun itemAt(x: Float, columns: List<IntRange>, items: Int, cell: (Int) -> Pair<Float, Float>): Int {
+        for ((index, span) in columns.withIndex()) {
+            if (index >= items) break
+            if (x >= cell(span.first).first && x <= cell(span.last).second) return index
+        }
+        return -1
+    }
 
     /** Which choice the key [key] picks, given each choice's column, or -1. */
     fun choice(key: String, columns: List<Int>): Int {
@@ -445,7 +472,7 @@ class SymPress {
  * TitanKeys' picking overlays and the touchpad. While the held Sym's switcher (either row), the accent picker or Chinese's
  * bigger menu is open, a swipe on the keys neither draws its trail nor types a word or deletes one, as on the Sym panel:
  * a finger only marks (owner, 2026-11-16: "swipe animation and swipe typing still triggers"). The bar's one row of choices
- * keeps its own swipes: a flick up picks and a swipe turns the page, and the bigger menu turns its pages too.
+ * keeps its own swipes: a swipe up opens the bigger menu, and the menu's swipes turn its pages.
  */
 object Overlays {
     enum class Open { None, Switcher, SwitcherRow, Accents, Choices, ChoicesMenu }

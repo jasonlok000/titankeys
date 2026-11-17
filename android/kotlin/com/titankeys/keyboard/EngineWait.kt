@@ -16,7 +16,10 @@ class EngineWait {
     /** A load is under way that typing waits for. */
     val waiting get() = awaited != NONE
 
-    /** Load [ticket] began: typing waits for it when [waits], any input method but English. */
+    /** Load [ticket] of input method [id] began: typing waits for any but English, engine or not (Yale, Russian, Greek). */
+    fun loading(ticket: Int, id: String) = loading(ticket, waits = id != InputMethod.ENGLISH_ID)
+
+    /** Load [ticket] began: typing waits for it when [waits]. */
     fun loading(ticket: Int, waits: Boolean) {
         awaited = if (waits) ticket else NONE
     }

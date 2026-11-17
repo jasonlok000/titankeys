@@ -284,6 +284,32 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   - #97: a bug and feedback form sent to the server, with email as the backup. tk-data builds it, deploy approved.
   - Port 5555 is fixed until the next restart.
 
+## Evening phone run, 2026-11-16 (A, main-tomorrow-debug 99fb0dcd, 21:38–22:34)
+
+- **Languages:** 44 of 49 type right, read back. Hindi, Yale and Pinyin are right by the shots; Jyutping's shot isn't judged
+  yet. lt, nn and ja: "field didn't start", a harness doubt, re-checked in the next slot.
+- **Out of memory:** Debug crashed after about 18 input-method switches in one process. The fix is in main-mem (7a75c4bb).
+- **Guide:** 66, 67, 69 pass, read back. The other slides were judged from the shots.
+- **Gestures:** #89 (end, long word, 14 s hold stopped at 194 of 1984 characters), #93 and the swiped "its" pass. #83's
+  pairs still join (goon, into, issue), as expected before the 1% veto.
+- **Re-tests:** about, feedback and rawlog pass. home-focus and ime-window fail twice each, maybe from Debug being held:
+  one plain run each next. #85's LeakCheck: two destroyed playgrounds still held after 15 guides (status comment, open).
+- **Chinese (Yale):** the row, Space, Enter, the comma, tap, flick, the menu and the Sym panel all match.
+- **For the owner's hands:** Georgian Shift+W types ჭ.
+- **Next slot:** main-mem-debug went on at 22:36 (slot2.sh): all 49 languages, the out-of-memory count, LeakCheck,
+  chinese-ui with the suggestion checks, #83's pairs.
+
+## Found 2026-11-16: the gestures assume spaces and "." (waiting for the owner's go)
+
+Read in the code, not seen on the phone yet; every gesture check so far runs in English only.
+- A delete flick takes everything back to the last space (`wordDeleteLength`), so in Chinese, Japanese and Thai it can take a
+  whole message. A flick while a Chinese code is pending deletes from the field and leaves the code.
+- Double space types ". " in every language (Composer's full stop). Chinese and Japanese want "。" with no space, Hindi
+  "।", and Thai no full stop.
+- Three Space taps pick a run of letters (`WordSelection`), which in Chinese is a whole sentence.
+- Proposed: ICU's word breaks for languages without spaces, each language's own full stop, a flick clears a pending code
+  first, and A's gesture batch in every language.
+
 ## Milestones (internal; the owner gave the go at 01:20)
 
 Each milestone has a gate: a list of what must be true before the next one starts. At each gate the Orchestrator writes a

@@ -6,6 +6,7 @@ import { Note } from "../../../lib/note";
 import { MAX_LANGUAGES, MAX_PER_LANGUAGE, languageValues, languagesOf, languagesOn, shownName, typingPerLanguage } from "./index";
 import { spellingLabel } from "../spelling";
 import { chineseLabel } from "../chinese";
+import { variantLabel } from "../variant";
 import { fixesLabel } from "../fixes";
 import { holdLabel } from "../hold";
 import { sentenceSpacesLabel } from "../sentence-spaces";
@@ -55,7 +56,9 @@ export default function LanguagePage() {
   const rows = typingPerLanguage(settings) ? language.settings : [];
   const has = (row: LanguageSetting) => rows.includes(row);
   const doubleSpace = language.stop === "." ? "Double Space types a full stop" : `Double Space types ${language.stop}`;
-  const options = rows.length > 0 || language.id === "en" || language.id === "zh";
+  // An input method with spelling variants picks one here (Portuguese's Brasil or Portugal).
+  const withVariants = methods.filter(im => im.variants.length > 1);
+  const options = rows.length > 0 || language.id === "en" || language.id === "zh" || withVariants.length > 0;
   return <Screen title={shownName(language.name, language.nameEnglish, language.script)} subtitle={subtitle}>
     {/* F: draft. Once, the first time the settings move. */}
     {moved && <Note>Typing settings for each language now live on its page.</Note>}
@@ -71,6 +74,9 @@ export default function LanguagePage() {
     {options && <Section title="Options">
       {language.id === "en" && <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>}
       {language.id === "zh" && <Field label="Characters" href="/settings/chinese">{chineseLabel(settings)}</Field>}
+      {/* F: draft. */}
+      {withVariants.map(im => <Field key={im.id} label={withVariants.length > 1 ? `Spelling, ${im.name}` : "Spelling"}
+        onPress={() => navigate({ path: "/settings/variant", params: { inputMethod: im.id } })}>{variantLabel(settings, im)}</Field>)}
       {has("fixes") && <Toggle label="Fix typos as you type" value={own.autocorrect} onChange={autocorrect => write({ autocorrect })} />}
       {/* What gets fixed is English's: its kinds are English's rules. */}
       {has("fixes") && language.id === "en" && own.autocorrect && <Field label="What gets fixed" href="/settings/fixes">{fixesLabel(settings)}</Field>}

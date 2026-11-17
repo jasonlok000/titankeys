@@ -157,6 +157,8 @@ export type State = {
   chineseVariant: ChineseVariant | "";
   /** Each language's own typing values, by the language's id. */
   languageSettings: Record<string, LanguageValues>;
+  /** The spelling variant each input method with variants types, by its id: {"pt": "pt-BR"}. */
+  inputMethodVariants: Record<string, string>;
   /** The line saying the typing settings moved into each language has shown, the first time a second language was on. */
   languageNoteSeen: boolean;
   /** Records touches, keys and typed text in a log on this phone. */
@@ -178,6 +180,8 @@ export type InputMethodEntry = {
   id: string; name: string; nameEnglish: string; label: string; script: string; engine: string | null; language: Language;
   /** A few lines on what's special to typing it, for its language's page (tools/im/howto.json); empty where it has none. */
   howTo: string[];
+  /** Its spelling variants, the default first (Portuguese's Brasil and Portugal); empty where it has none. */
+  variants: { id: string; name: string }[];
 };
 
 /**
@@ -223,7 +227,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "liftOff" | "liftOffMillis" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
   /** A language's page: its own values, by language id. A write sends only the ones that changed. */

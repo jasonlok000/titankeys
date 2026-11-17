@@ -1121,7 +1121,10 @@ def write_index_and_list():
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im),
-                        **({"howTo": im["howTo"]} if im.get("howTo") else {})})
+                        **({"howTo": im["howTo"]} if im.get("howTo") else {}),
+                        # Its spelling variants (Portuguese's Brasil and Portugal), for Settings' choice: the first is the default.
+                        **({"variants": [{"id": v["id"], "name": v["name"]} for v in im["variants"]]}
+                           if im.get("variants") else {})})
     order = list(LATIN) + list(NATIONAL) + list(OWN) + list(ENGINES) + list(CHINESE) + list(JAPANESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:

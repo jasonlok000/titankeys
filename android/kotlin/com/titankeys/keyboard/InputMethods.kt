@@ -20,6 +20,8 @@ class InputMethodIndex(entries: List<Entry>) {
         val engine: String? = null,
         /** Its how-to's lines for Settings, from the index ([InputMethod.howTo]); empty where it has none. */
         val howTo: List<String> = emptyList(),
+        /** Its spelling variants, the default first (Portuguese's pt-BR Brasil, pt-PT Portugal); empty where it has none. */
+        val variants: List<VariantName> = emptyList(),
         /** The language it types: Serbian's Cyrillic and Latin, Chinese's Yale, Jyutping and Pinyin share one. */
         val language: Language = Language(id, name, nameEnglish, label, script, experimental = id != InputMethod.ENGLISH_ID),
     )
@@ -89,12 +91,17 @@ class InputMethodIndex(entries: List<Entry>) {
                 val language = entry["language"] as? Map<*, *>
                 val id = text("id")
                 val howTo = (entry["howTo"] as? List<*>)?.map { it as? String ?: throw Json.Error("howTo must list text") }.orEmpty()
+                val variants = (entry["variants"] as? List<*>)?.map {
+                    val variant = it as? Map<*, *> ?: throw Json.Error("each variant must be an object")
+                    VariantName(variant["id"] as? String ?: throw Json.Error("each variant must have an id"),
+                        variant["name"] as? String ?: throw Json.Error("each variant must have a name"))
+                }.orEmpty()
                 if (language == null) Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"),
-                    entry["engine"] as? String, howTo = howTo)
+                    entry["engine"] as? String, howTo = howTo, variants = variants)
                 else {
                     fun of(key: String) = language[key] as? String ?: throw Json.Error("language.$key must be text")
                     Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String,
-                        howTo = howTo,
+                        howTo = howTo, variants = variants,
                         language = Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
                 }
             })
@@ -482,4 +489,30 @@ object Overlays {
 
     /** The touchpad works as on the Sym panel: a resting finger marks, and only a quick swipe comes out, to turn a page. */
     fun paging(open: Open, panelOpen: Boolean) = panelOpen || open != Open.None
+}
+
+/** A spelling variant as the index lists it: its id and its name in its language (Brasil, Portugal). */
+data class VariantName(val id: String, val name: String)
+
+/**
+ * Which spelling variant each input method with several types (Settings > Languages, the language's page; Portuguese's Brasil
+ * or Portugal): the setting is "id=variant" pairs separated by commas, and an input method without one, or with a variant it
+ * doesn't have, types its first.
+ */
+object InputMethodVariants {
+    /** The variant [id] types, of its [variants] (the default first), by [setting]; null where it has none. */
+    fun chosen(setting: String, id: String, variants: List<String>): String? {
+        val picked = read(setting)[id]
+        return picked?.takeIf { it in variants } ?: variants.firstOrNull()
+    }
+
+    /** [setting] with [id] typing [variant]. */
+    fun with(setting: String, id: String, variant: String): String = (read(setting) + (id to variant)).entries
+        .joinToString(",") { "${it.key}=${it.value}" }
+
+    fun read(setting: String): Map<String, String> = setting.split(',').mapNotNull { pair ->
+        val (id, variant) = pair.split('=', limit = 2).takeIf { it.size == 2 && it[0].isNotBlank() && it[1].isNotBlank() }
+            ?: return@mapNotNull null
+        id.trim() to variant.trim()
+    }.toMap()
 }

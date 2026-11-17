@@ -76,6 +76,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (args.isNotEmpty()) holdHints(File(args[0]))
+    if (args.isNotEmpty()) variantsArePicked(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -1557,4 +1558,26 @@ private fun holdHints(folder: File) {
     val start = ime.substring(from, ime.indexOf("backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS", from))
     same("the hint is offered as a field starts", "main.post { if (editing) showHoldHint() }" in start, true)
     same("and still once ever", "if (TypingSettings.holdHintShown(this, method.id)) return" in ime, true)
+}
+
+/**
+ * Spelling variants (Portuguese's Brasil and Portugal, E's find 2026-11-17): the index lists them with their names, Brasil
+ * first; the setting picks one per input method, the first by default, and a variant an input method doesn't have is its first.
+ */
+private fun variantsArePicked(folder: File) {
+    val index = InputMethodIndex.parse(File(folder, "index.json").readText())
+    val pt = index.entries.first { it.id == "pt" }
+    same("Portuguese's variants, Brasil first", pt.variants, listOf(VariantName("pt-BR", "Brasil"), VariantName("pt-PT", "Portugal")))
+    same("an input method without variants lists none", index.entries.first { it.id == "es" }.variants, emptyList<VariantName>())
+    val ids = pt.variants.map { it.id }
+    same("nothing picked: Brasil", InputMethodVariants.chosen("", "pt", ids), "pt-BR")
+    val portugal = InputMethodVariants.with("", "pt", "pt-PT")
+    same("Portugal picked", InputMethodVariants.chosen(portugal, "pt", ids), "pt-PT")
+    same("another's pick leaves it alone", InputMethodVariants.chosen(InputMethodVariants.with(portugal, "xx", "x-1"), "pt", ids), "pt-PT")
+    same("a variant it doesn't have: its first", InputMethodVariants.chosen("pt=pt-AO", "pt", ids), "pt-BR")
+    same("none for an input method without variants", InputMethodVariants.chosen(portugal, "es", emptyList()), null)
+    same("picking again replaces", InputMethodVariants.read(InputMethodVariants.with(portugal, "pt", "pt-BR")), mapOf("pt" to "pt-BR"))
+    // Each variant has its own list and next words in the folder, as the keyboard loads them.
+    for (variant in ids) check("$variant's list and table are there",
+        File(folder, "pt/words-$variant.combined").isFile && File(folder, "pt/pairs-$variant.bin").isFile)
 }

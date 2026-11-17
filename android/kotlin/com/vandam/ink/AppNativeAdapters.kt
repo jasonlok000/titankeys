@@ -36,6 +36,7 @@ import com.titankeys.keyboard.GuideActivity
 import com.titankeys.keyboard.Haptic
 import com.titankeys.keyboard.HapticGroup
 import com.titankeys.keyboard.Haptics
+import com.titankeys.keyboard.InputMethodVariants
 import com.titankeys.keyboard.HapticsLab
 import com.titankeys.keyboard.InputMethod
 import com.titankeys.keyboard.InputMethodIndex
@@ -658,6 +659,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 JSONObject().put("id", it.id).put("name", it.name).put("nameEnglish", it.nameEnglish).put("label", it.label)
                     .put("script", it.script).put("engine", it.engine ?: JSONObject.NULL)
                     .put("howTo", JSONArray(it.howTo))
+                    .put("variants", JSONArray(it.variants.map { variant -> JSONObject().put("id", variant.id).put("name", variant.name) }))
                     .put("language", JSONObject().put("id", it.language.id).put("name", it.language.name)
                         .put("nameEnglish", it.language.nameEnglish).put("label", it.language.label).put("script", it.language.script)
                         .put("experimental", it.language.experimental)
@@ -667,6 +669,10 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("languageSettings", JSONObject(inputMethodIndex().languages.associate { it.id to languageValues(it.id) }))
             .put("languageNoteSeen", appPreferences().getBoolean(LANGUAGE_NOTE_SEEN, false))
             .put("chineseVariant", TypingSettings.chineseVariant(activity))
+            // Each input method with spelling variants, and the one it types (Portuguese's Brasil or Portugal; the first by default).
+            .put("inputMethodVariants", JSONObject(inputMethodIndex().entries.filter { it.variants.isNotEmpty() }.associate {
+                it.id to InputMethodVariants.chosen(TypingSettings.inputMethodVariants(activity), it.id, it.variants.map { v -> v.id })
+            }))
             .put("rawLogAvailable", RawLog.available(activity))
             .put("rawLog", RawLog.on(activity))
             .put("build", AppBuild.kind(activity))
@@ -883,6 +889,17 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 // Android's list has one TitanKeys entry, the input method typing: still on, or now the first that is.
                 InputMethodList.enable(activity, listOf(inputMethodIndex().current(InputMethodIndex.setting(ids),
                     TypingSettings.currentInputMethod(activity)).id))
+            }
+            // {"pt": "pt-PT"}: only a variant the input method has.
+            "inputMethodVariants" -> (value as JSONObject).let { picked ->
+                val index = inputMethodIndex()
+                var setting = TypingSettings.inputMethodVariants(activity)
+                for (id in picked.keys()) {
+                    val variant = picked.getString(id)
+                    if (index.entries.any { entry -> entry.id == id && entry.variants.any { it.id == variant } })
+                        setting = InputMethodVariants.with(setting, id, variant)
+                }
+                TypingSettings.inputMethodVariants(activity, setting)
             }
             "chineseVariant" -> TypingSettings.chineseVariant(activity, (value as String).takeIf { it in CHINESE_VARIANTS }.orEmpty())
             "rawLog" -> RawLog.enabled(activity, value as Boolean)

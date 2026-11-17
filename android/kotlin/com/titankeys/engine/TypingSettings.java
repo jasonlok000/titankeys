@@ -623,6 +623,18 @@ public final class TypingSettings {
         preferences(context).edit().putString("chinese_variant", variant).apply();
     }
 
+    /**
+     * Which spelling variant each input method with several types (Portuguese's Brasil or Portugal): "id=variant" pairs,
+     * InputMethodVariants' format. Empty: each types its first.
+     */
+    public static String inputMethodVariants(Context context) {
+        return preferences(context).getString("input_method_variants", "");
+    }
+
+    public static void inputMethodVariants(Context context, String setting) {
+        preferences(context).edit().putString("input_method_variants", setting).apply();
+    }
+
     /** Whether input method [id] has said its hold hint on the bar (HoldHint): once, the first time it types. */
     public static boolean holdHintShown(Context context, String id) {
         return preferences(context).getStringSet("hold_hints_shown", java.util.Collections.emptySet()).contains(id);

@@ -78,8 +78,10 @@ def tap_lines(action):
     adb("logcat", "-c")
     action()
     time.sleep(.8)
-    lines = [line.split(":", 1)[-1].strip() for line in adb("logcat", "-d", "-s", "TitanKeysTap").splitlines()
-             if "TitanKeysTap" in line]
+    # The text after the tag: logcat's own time holds colons too, so splitting at the first one kept it (2026-11-17's night run
+    # read "36:35.213 … I TitanKeysTap: tap at …", and the tap that worked was a NO).
+    lines = [line.split("TitanKeysTap:", 1)[-1].strip() for line in adb("logcat", "-d", "-s", "TitanKeysTap").splitlines()
+             if "TitanKeysTap:" in line]
     return lines
 
 

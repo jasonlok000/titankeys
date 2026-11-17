@@ -65,5 +65,9 @@
     "се",
     "како",
     "таа"
+  ],
+  "howTo": [
+    "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ѕ. Hold L for ч or ќ, and P for ш, ж or ѓ.",
+    "Rest a finger on the key under the letter on the bar, then press it."
   ]
 }

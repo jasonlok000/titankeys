@@ -172,7 +172,9 @@ data-only language is one command plus a check by eye. Where the data comes from
 - **Picking is the word menu's way:** rest a finger on a key to mark the accent above it, press the key to pick it. The
   accent replaces the typed letter. Releasing the held key without a press keeps the plain letter.
 - With Shift or Caps on, the accents show in capitals.
-- The first time an input method with accents is used, the bar says once: "Hold a letter for its accents."
+- The first time an input method with accents types, the bar says once, for a few seconds or until a key: "Hold a letter for
+  its accents." In Cyrillic, where a hold gives the letters without a key of their own (ж э, х ъ), it says "Missing a letter?
+  Hold a key to find it." instead (F; `HoldHint`). Each input method says it once ever; Reset most things brings it back.
 - In an input method with accents, **hold for symbols is off on every key**, so a hold always means one thing. Symbols stay
   on Alt + key and the Sym panel. Input methods without accents keep hold for symbols.
 

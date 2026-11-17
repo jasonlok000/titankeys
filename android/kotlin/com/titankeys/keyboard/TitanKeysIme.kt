@@ -282,6 +282,22 @@ class TitanKeysIme : InputMethodService() {
         main.postDelayed(endTeamsEgg, SwipeLoad.NOTICE_MILLIS)
     }
 
+    /**
+     * The first time an input method with held letters types, the bar says what a hold does there ([HoldHint]), once ever for
+     * it, for a few seconds or until the next key or touch, as the swipe notice does. Never over a word's menu or a picker.
+     */
+    private fun showHoldHint() {
+        val strip = strip ?: return
+        val method = languages.current
+        val text = HoldHint.of(method) ?: return
+        if (TypingSettings.holdHintShown(this, method.id)) return
+        if (strip.notice != null && strip.notice !is Strip.Notice.Line) return
+        TypingSettings.holdHintShown(this, method.id, true)
+        strip.notice = Strip.Notice.Line(text)
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, HOLD_HINT_MILLIS)
+    }
+
     /** Android's boot count, where an app can read it, and the time this boot started. Neither changes when TitanKeys restarts. */
     private fun currentBoot(): OncePerBoot.Boot {
         val count = try {
@@ -4054,6 +4070,7 @@ class TitanKeysIme : InputMethodService() {
         strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
         loadEnded()
+        if (editing) showHoldHint()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
@@ -4797,6 +4814,8 @@ class TitanKeysIme : InputMethodService() {
         private const val FLICK_REACH = 64
         /** How long the word on Teams shows. */
         private const val TEAMS_EGG_MILLIS = 500L
+        /** How long the hold hint stays on the bar, unless a key or touch takes it first. */
+        private const val HOLD_HINT_MILLIS = 6_000L
         /** How long the bar says which input method types, after a switch in the overlay. */
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"

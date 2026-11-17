@@ -49,5 +49,8 @@
     "pri",
     "do",
     "pre"
+  ],
+  "howTo": [
+    "Hold a letter for its accents: hold C for č, L for ĺ or ľ, O for ó or ô. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
   ]
 }

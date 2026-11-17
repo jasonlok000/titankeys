@@ -72,6 +72,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
+    if (args.isNotEmpty()) holdHints(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -1434,4 +1435,13 @@ private fun cyrillicHoldsReachEveryLetter(folder: File) {
         // The apostrophe is part of Ukrainian's and Belarusian's words (сім'я, з'ява), next to х on their PC layouts: held on P.
         if (id == "uk" || id == "be") same("$id: P holds the apostrophe, after its letters", method.accents['p']?.last(), "'")
     }
+}
+
+/** The hold hint each input method says once (HoldHint): accents, Cyrillic's missing letters, or nothing. */
+private fun holdHints(folder: File) {
+    fun hint(id: String) = HoldHint.of(InputMethod.parse(File(folder, "$id/im.json").readText()))
+    for (id in listOf("be", "bg", "kk", "mk", "ru", "sr", "uk")) same("$id: a hold finds a missing letter", hint(id), HoldHint.MISSING)
+    for (id in listOf("es", "fr", "el", "sr-latn", "tr")) same("$id: a hold gives accents", hint(id), HoldHint.ACCENTS)
+    for (id in listOf("th", "he", "id", "ka")) same("$id: no hint, nothing held on the bar", hint(id), null)
+    same("English: no hint", HoldHint.of(InputMethod.ENGLISH), null)
 }

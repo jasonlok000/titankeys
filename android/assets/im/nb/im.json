@@ -38,5 +38,8 @@
     "og",
     "en",
     "for"
+  ],
+  "howTo": [
+    "Hold a letter for its accents: hold A for æ or å, O for ø. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
   ]
 }

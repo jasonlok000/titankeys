@@ -22,6 +22,7 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    shiftShowsOnlyWhereItMatters()
     aLostFirstBackspaceDecidesAfresh()
     tappedShiftOrCapsLeavesSteeringAndShortcutsAlone()
     heldShiftBackspaceDeletesWords()
@@ -195,7 +196,7 @@ private class Keyboard {
     }
 
     /** The modifier bar, with a finger on [hover]. Here Alt types % on Q and nothing on the other keys. */
-    fun bar(hover: String = "") = ModifierBar.of(modifiers, hover) { key -> "%".takeIf { key == "Q" } }
+    fun bar(hover: String = "", shiftShows: Boolean = true) = ModifierBar.of(modifiers, hover, shiftShows) { key -> "%".takeIf { key == "Q" } }
 
     fun press(code: Int = SHIFT) {
         down(code)
@@ -402,6 +403,17 @@ private fun altSymWithThePanelOpenIsAsBefore() = Keyboard().run {
     same(modifiers.takeKeyboardSwitch(), false, "With the panel open, Alt + Sym must not switch keyboards")
     same(modifiers.panel, Panel.Closed, "With the panel open, Sym must move the panel on as before")
     up(ALT)
+}
+
+/** Hebrew, Chinese, Japanese: Shift changes nothing a key types, so neither it nor Caps shows; Alt still does. */
+private fun shiftShowsOnlyWhereItMatters() = Keyboard().run {
+    press()
+    same(bar(shiftShows = true)?.chips, listOf(ModifierBar.SHIFT), "Where Shift matters, it must show")
+    same(bar(shiftShows = false), null, "Where Shift changes nothing, it must not show, and the words stay")
+    press()
+    same(bar(shiftShows = false), null, "Nor must Caps")
+    press(ALT)
+    same(bar(shiftShows = false)?.chips, listOf(ModifierBar.ALT), "Alt must still show, alone")
 }
 
 private fun onePress() = Keyboard().run {

@@ -299,7 +299,7 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **Next slot:** main-mem-debug went on at 22:36 and stays on Debug for the owner; its slot was stopped at once and runs overnight: all 49 languages, the out-of-memory count, LeakCheck,
   chinese-ui with the suggestion checks, #83's pairs.
 
-## Found 2026-11-16: the gestures assume spaces and "." (waiting for the owner's go)
+## Found 2026-11-16: the gestures assume spaces and "." (owner's go 2026-11-17: D builds it; C does the bar never empty)
 
 Read in the code, not seen on the phone yet; every gesture check so far runs in English only.
 - A delete flick takes everything back to the last space (`wordDeleteLength`), so in Chinese, Japanese and Thai it can take a
@@ -309,6 +309,24 @@ Read in the code, not seen on the phone yet; every gesture check so far runs in 
 - Three Space taps pick a run of letters (`WordSelection`), which in Chinese is a whole sentence.
 - Proposed: ICU's word breaks for languages without spaces, each language's own full stop, a flick clears a pending code
   first, and A's gesture batch in every language.
+
+## Paused for the usage limit (owner, 2026-11-17, about 00:00)
+
+Every worker was told to commit its work in progress to its own branch and stop until "resume". On resume:
+- D: gestures in every language (waiting on its test suites); then send CODE_FLICK to A.
+- C: the two-languages merge, then the four-and-four cap with centring, tile and global tap haptics; then the bar-words job,
+  which now includes a Korean word list (owner: Korean's bar is empty; find one with a clear licence, Leipzig's CC BY data
+  first) and completions that match a syllable still being built.
+- H: held letters without accents type once; accents within W–O.
+- B: the Cantonese dictionary study (baseline 71.6% of characters, 10.6% of long phrases exact), then Cangjie, Quick and Zhuyin.
+- E: the guide fixes (swipe slide ignores keys, the "e" stays); G: #96 analytics.
+- A: read the 01:00 main-mem slot's reports (it runs in WSL during the pause).
+- New on resume (owner, 2026-11-17):
+  - D, after gestures: conservative corrections for every language with a word list, at least on the bar, reusing English's
+    key-neighbour engine; Space applies one only at English's strict confidence. Tests with made-up typos per language.
+  - J (free): word-pair tables for every language from Leipzig's CC BY corpora (licence checked per language), for next
+    words; size no concern for now. C's bar-words reads them.
+  - C: a language with one input method shows the language's mark at Q.
 
 ## Milestones (internal; the owner gave the go at 01:20)
 

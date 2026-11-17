@@ -75,6 +75,8 @@ export const hapticGroups: { title: string; haptics: { id: string; label: string
     { id: "clipboard_cleared", label: "Clear the clipboard", about: "When you clear the clipboard and the clips are gone." },
   ] },
   { title: "Other", haptics: [
+    // F: draft.
+    { id: "screen_tap", label: "Tap on the screen", about: "When you tap a tile, button or item the keyboard shows on the screen, and it has no haptic of its own." },
     { id: "bug_recording", label: "Record a bug starts", about: "When Record a bug starts." },
     { id: "bug_recording_stopped", label: "Record a bug stops", about: "When Record a bug stops." },
     { id: "guide_celebration", label: "Guide celebrations", about: "When you finish a part of the guide." },

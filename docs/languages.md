@@ -107,7 +107,7 @@ The fields:
 | `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 10, one per key column. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
-| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`) |
+| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`); `fullStop`, what a double Space types: `". "` unless set, `"。"` with no space for Chinese and Japanese, `"। "` for Hindi, `""` for Thai, which has none, so two Spaces stay spaces |
 | `engine` | `null`, `"rime"` with its schema (`{ "rime": "tk_yale" }`), or the name of a built-in engine (`"hangul"`, `"telex"`) |
 | `source` | Where the letters and words come from, for the licences page and for contributors |
 
@@ -289,8 +289,20 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
 - The experimental mark stays in Settings: the switcher shows labels only.
-- After a switch, the bar says for a moment which input method types now. A lasting mark on the bar for anything but English
-  comes later; its accessibility text says it in full: "Typing in Spanish".
+- **The language mark over Q** (owner, 2026-11-17; drawn in [design/language-mark-built.svg](design/language-mark-built.svg)):
+  - It overlays over Q and never pushes the words; a long left word sends it small into the corner.
+  - **Shift shows only where it changes what a key types** (`InputMethod.shiftMatters`): capitals, Shift letters
+    (Georgian, Thai) or an engine that reads Shift (Korean, Hindi, Vietnamese). Not in Hebrew, where Shift types the same
+    letter, nor in Chinese and Japanese, where it opens the bigger menu. Alt always shows.
+  - **At a sentence start** the mark stays big, and Shift's automatic arrow goes small and muted above it, like a superscript.
+  - **A tap on the mark switches input method within the language,** never the language: with two on, to the other; with
+    three or more, the language's row in the switcher; with one, nothing (`SwitchOverlay.markTap`). Only the mark drawn over
+    Q takes a touch. No hover effect.
+- **Two languages on:** a held Sym switches to the other one at once, with no switcher, to the input method last used in
+  it (or its first), as `SwitchOverlay.toggle` decides (owner, 2026-11-16). Three or more open the switcher. The input
+  methods last used are remembered while the keyboard runs.
+- After a switch, the bar says nothing (owner, 2026-11-16: "I don't like the XX it is wording"): the language mark at Q
+  shows which types. A screen reader hears "Typing in Spanish" (F: draft).
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
@@ -529,6 +541,23 @@ Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tes
   with it, are its choices, picked with the finger and Space; Space alone writes the word as typed. Telex is an engine
   rather than letters typed into the field and then rewritten, because a tone typed at the end of a word changes a vowel
   in its middle: the engine keeps the whole word until it's done, and the keyboard's own suggestions never see half a word.
+
+## The gestures in every language
+
+Double Space, three Space taps and the delete flick work in every language (owner, 2026-11-16):
+
+- **Double Space** types the input method's own full stop (`fullStop` in `rules`): 。 in Chinese and Japanese, "। " in
+  Hindi, nothing in Thai, ". " everywhere else. The guide's fields type English, so they keep ". ".
+- **The delete flick, each word of its hold, and Ctrl + Backspace** take one word. Where words have spaces, that's the run back
+  to the space, as before (#89). In scripts written without spaces (Han, Hiragana and Katakana, Thai, Lao, Khmer, Burmese) a
+  run can be a whole message, so ICU's word breaks for the input method's language pick the last word, with any marks after
+  it (`WordBreaks`, `IcuWords`). Java's own word breaks have no Chinese dictionary, so the JVM checks use a stand-in, and ICU's
+  real words are checked on the phone.
+- **A flick with a code being built** (Chinese, Japanese, Korean's syllable, Telex's word) clears the whole code and leaves
+  the field alone (owner: "a flick should also delete the entire key code too"); a second flick deletes from the field.
+  Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
+- **Three Space taps** pick the word in front of the cursor with the same breaks. Thai's tone marks and Hindi's vowel signs
+  count as part of their words.
 
 ## Where it goes in the code
 

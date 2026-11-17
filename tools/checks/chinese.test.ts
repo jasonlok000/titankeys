@@ -40,7 +40,8 @@ test("the mark sits over Q and the more cue over P", () => {
   expect(picker).toContain("drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)");
   // Orange while a code is typed: Sym opens more, though Sym isn't under it.
   expect(picker).toContain("pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted");
-  expect(body(ime, "engineState")).toContain("languages.current.label");
+  // The language's mark where it has one input method on, else the input method's (owner, 2026-11-17).
+  expect(body(ime, "engineState")).toContain("markLabel()");
 });
 
 test("Space picks the first choice: a resting finger doesn't change that", () => {
@@ -60,8 +61,8 @@ test("Shift + a key and holding a key don't pick (owner, 2026-11-17: abandoned);
   expect(key).toContain("else -> if (chinese && letter && !alt) engine.key(printedLetter(event.keyCode)) else {");
   expect(key).not.toContain("shifted");
   expect(ime).not.toContain("holdToPick");
-  // Shift's own bar doesn't cover the choices in Chinese.
-  expect(body(ime, "showModifierBar")).toContain("ModifierBar.SHIFT || it == ModifierBar.CAPS");
+  // Shift's own bar doesn't cover the choices in Chinese: Shift shows only where it changes what a key types.
+  expect(body(ime, "showModifierBar")).toContain("languages.current.shiftMatters");
 });
 
 test("hold for symbols is back in Chinese: the letter leaves the code, the symbol goes through the engine", () => {
@@ -113,7 +114,7 @@ test("the row shows no hover; the bigger menu does", () => {
 });
 
 test("the mark shows whenever an input method that isn't English types, the idle bar included", () => {
-  expect(body(ime, "showInputMark")).toContain("strip?.inputMark = if (current.isEnglish) \"\" else current.label");
+  expect(body(ime, "showInputMark")).toContain("strip?.inputMark = if (languages.current.isEnglish) \"\" else markLabel()");
   expect(body(ime, "inputMethodChanged")).toContain("showInputMark()");
   expect(body(strip, "dispatchDraw")).toContain("drawInputMark(canvas)");
 });

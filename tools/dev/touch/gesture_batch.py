@@ -1,20 +1,143 @@
-"""The touchpad's gesture checks for checks.py --batch gestures, in English: #89's flick at a long text's end, on a long word
-and held (the long delete, 10 s at most, and its chomper),
-#93's flick then a swipe, #83's swipe pairs, #84's pill and the swiped "its" (all in checks.py)."""
+"""The touchpad's gesture checks for checks.py --batch gestures: in English, #89's flick at a long text's end, on a long word
+and held (the long delete, 10 s at most, and its chomper), #93's flick then a swipe, #83's swipe pairs, #84's pill and the
+swiped "its" (all in checks.py); then the gestures in every language (owner, 2026-11-17), the languages batch's sets of seven
+with English, through Debug's InputMethodsSet:
+
+- a flick at the end of a typed line takes the last word, by the language's own word breaks: the field goes back to what it
+  held before that word was typed;
+- double Space after a word types the language's own full stop: "。" in Chinese and Japanese, "। " in Hindi, a plain space in
+  Thai, ". " elsewhere;
+- three Space taps pick one word (a screenshot: the field's text can't show a selection).
+
+Chinese, Japanese and Hindi type their first word from a code, picked with Space. With a code pending, a flick clears the whole
+code and leaves the field alone (CODE_FLICK, D's list as of main 3593072b). In Chinese, Japanese and Thai a flick and three taps go
+by ICU's word breaks: two known words with no space, and the flick leaves the first.
+"""
 import checks
 import language_checks
+from checks import Stop, play, record
+
+# What double Space after a word leaves at the end of the field, by input method (D, main 3593072b): "。" with no space in
+# Chinese and Japanese, "। " in Hindi, a plain second space in Thai (it types no mark), ". " in the rest.
+STOPS = {"yue-yale": "。", "yue-jyutping": "。", "zh-pinyin": "。", "ja": "。", "hi": "। ", "th": "  "}
+PLAIN_STOP = ". "
+# The input methods whose words come from a code, picked with Space; "nihon" picks 日本 in Japanese.
+CODES = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "hi": "namaste"}
+# Two known words typed with no space between: ICU's dictionary breaks them apart, and a flick takes only the second.
+# In Chinese and Japanese the second comes after the first is picked, while next-word suggestions show (no code): a flick
+# then clears them and deletes a word as usual.
+JOINED = {"yue-yale": ("neihou", "ngodei"), "yue-jyutping": ("neihou", "ngodei"), "zh-pinyin": ("nihao", "women"),
+          "ja": ("watashi", "nihon"), "th": ("gik", "wx")}  # Thai: เรา then ไป, on Kedmanee's plain layer
+# A flick with a code pending clears the whole code and leaves the field alone (D): the code each types.
+CODE_FLICK = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "ko": "gksrnr",
+              "vi": "tieeng", "hi": "namaste"}
+# Two plain words' keys for the rest: the first is typed with a Space after it, the second is what the flick takes.
+FIRST, SECOND = "qwe", "asd"
 
 
 def english():
     """English types, whatever the last batch left on, in Debug's Space gestures field."""
     language_checks.guide_checks.leave_guide()
     if not language_checks.languages.in_field():
-        raise checks.Stop(f"not in the Space gestures field: {language_checks.languages.front().strip()}")
+        raise Stop(f"not in the Space gestures field: {language_checks.languages.front().strip()}")
     language_checks.turn_on(["en"], "en")
 
 
-BATCH = [english, checks.check_89_flick_end, checks.check_89_long_word, checks.check_89_long_delete, checks.check_93_flick_then_swipe, checks.check_83_pairs,
-         checks.check_84_pill, checks.check_swiped_apostrophe]
+def keys(word):
+    return [g for letter in word for g in (f"key:{letter}:60:none", "+90")]
+
+
+def first_word(im):
+    """The first word, then a Space: typed, or picked from a code (Space picks and types no space). Returns the field then."""
+    if im in CODES:
+        play(*keys(CODES[im]), "+500", "key:space", "+500")
+    else:
+        play(*keys(FIRST), "key:space", "+500")
+    return checks.field()
+
+
+def flick(im):
+    """A flick at the end of a typed line takes the last word. In Chinese, Japanese and Thai by ICU's breaks: two words with no
+    space, and the flick leaves the first."""
+    language_checks.fresh()
+    if im in JOINED:
+        first, second = JOINED[im]
+        picked = im != "th"
+        play(*keys(first), *(["+500", "key:space"] if picked else []), "+500")
+        before = checks.field()
+        play(*keys(second), *(["+500", "key:space"] if picked else []), "+500")
+        typed = checks.field()
+        name = f"flick-suggestions-{im}" if picked else f"flick-{im}"
+    else:
+        before = first_word(im)
+        play(*keys(SECOND), "+400")
+        typed = checks.field()
+        name = f"flick-{im}"
+    play("flick", "+500", shot=name, at=200)
+    after = checks.field()
+    record(name, bool(before) and typed != before and after == before,
+           f"{before!r} then {typed!r}; the flick left {after!r}", name)
+
+
+def double_space(im):
+    """Double Space after a word: the language's own full stop (D's list), read back."""
+    language_checks.fresh()
+    before = first_word(im)
+    play("key:space", "+90", "key:space", "+500")
+    text = checks.field()
+    want = STOPS.get(im, PLAIN_STOP)
+    # The first word's own Space is there already when it was typed rather than picked.
+    ok = text.startswith(before.rstrip(" ")) and text.endswith(want)
+    record(f"stop-{im}", ok, f"after {before!r}, double Space: {text!r}, wanted it to end {want!r}")
+
+
+def three_taps(im):
+    """Three Space taps pick one word (by ICU's breaks in Chinese, Japanese and Thai): the screenshot shows the pick."""
+    language_checks.fresh()
+    if im in JOINED:
+        first, second = JOINED[im]
+        picked = im != "th"
+        play(*keys(first), *(["+500", "key:space"] if picked else []), "+400",
+             *keys(second), *(["+500", "key:space"] if picked else []), "+400")
+    else:
+        first_word(im)
+        play(*keys(SECOND), "+400", "key:space", "+400")
+    play("space:3", "+600", shot=f"taps-{im}", at=450)
+    record(f"taps-{im}", None, "three Space taps: one word picked", f"taps-{im}")
+
+
+def code_flick(im):
+    """A flick with a code pending clears the whole code and leaves the field alone."""
+    language_checks.fresh()
+    before = first_word(im)
+    play(*keys(CODE_FLICK[im]), "+400", "flick", "+500", shot=f"code-flick-{im}", at=600)
+    text = checks.field()
+    record(f"code-flick-{im}", text == before, f"field {before!r}, a code, then a flick: {text!r} (the bar is the shot)",
+           f"code-flick-{im}")
+
+
+def check_every_language():
+    """Every input method, in the languages batch's sets with English, each with its flick, double Space and three taps."""
+    for group in language_checks.sets():
+        for im in group:
+            try:
+                if not language_checks.turn_on(["en", *group], im):
+                    record(f"gestures-{im}", False, f"the field didn't start with {im}")
+                    continue
+                flick(im)
+                double_space(im)
+                three_taps(im)
+                if im in CODE_FLICK:
+                    code_flick(im)
+            except Stop:
+                raise
+            except (Exception, SystemExit) as error:  # noqa: BLE001 (one language mustn't end the night's run)
+                record(f"gestures-{im}", False, f"the check broke: {error!r}")
+
+
+BATCH = [english, checks.check_89_flick_end, checks.check_89_long_word, checks.check_89_long_delete,
+         checks.check_93_flick_then_swipe, checks.check_83_pairs, checks.check_84_pill, checks.check_swiped_apostrophe,
+         check_every_language, english]
 
 
 def finish():

@@ -15,7 +15,7 @@ engine=android/kotlin/com/titankeys/engine
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   tests/gesture-display/render/Graphics.kt tests/gesture-display/render/Stand.kt tests/gesture-display/render/RenderBar.kt \
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
-  "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/DeleteSwipe.kt" \
+  "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/WordBreaks.kt" \
   "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/WordSelection.kt" "$keyboard/GestureDisplay.kt" "$keyboard/TrailThickness.kt" \
   "$keyboard/GestureDrawing.kt" "$keyboard/StripFit.kt" "$keyboard/KeyGeometry.kt" "$keyboard/KeyAlignment.kt"
 java -Djava.awt.headless=true -cp "$work:$stdlib" com.titankeys.keyboard.RenderBarKt "$out"

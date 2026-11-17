@@ -223,11 +223,17 @@ internal class FlickCrunch {
  * spaces, as deleting "two" from "one two| three" would, the space before the word goes too, so "one| three" is left
  * (owner, 2026-11-12). Only a plain space goes, and only between two words: never at the start of the text, nor at its end,
  * nor before punctuation, a line break or anything else that isn't a space. A flick and each word of a hold delete this way.
+ *
+ * In a script written without spaces (Chinese, Japanese, Thai: [WordBreaks]) the run before the cursor can be a whole message,
+ * so there [breaker]'s last word goes, with the marks after it: one word a flick, as with spaces (owner, 2026-11-16).
  */
-internal fun wordDeleteLength(before: String, after: String?): Int {
+internal fun wordDeleteLength(before: String, after: String?, breaker: WordBreaker? = null): Int {
     var start = before.length
     while (start > 0 && isWordBreak(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
+    val runEnd = start
     while (start > 0 && !isWordBreak(before.codePointBefore(start))) start -= Character.charCount(before.codePointBefore(start))
+    val run = before.substring(start, runEnd)
+    if (breaker != null && WordBreaks.anySpaceless(run)) start += WordBreaks.lastWordStart(run, breaker)
     val tookWord = start < before.length && !isWordBreak(before.codePointBefore(before.length))
     if (tookWord && start > 0 && before[start - 1] == ' ' && after?.startsWith(' ') == true) start--
     return before.length - start
@@ -245,11 +251,11 @@ private fun isWordBreak(c: Int) = Character.isWhitespace(c) || Character.isSpace
  * and then this is null too. A read that may have cut the word off, because all of it is the word and its spaces, is read again
  * twice as far, until the word's start shows, the text's start is reached, or the field gives no more.
  */
-internal fun wordToDelete(read: (Int) -> String?, after: String?): String? {
+internal fun wordToDelete(read: (Int) -> String?, after: String?, breaker: WordBreaker? = null): String? {
     var reach = WORD_READ_FIRST
     var before = read(reach) ?: return null
     while (true) {
-        val length = wordDeleteLength(before, after)
+        val length = wordDeleteLength(before, after, breaker)
         if (length < before.length || before.length < reach || reach >= WORD_READ_MOST) return before.substring(before.length - length)
         val further = read(reach * 2)
         // A field that gives no more, or fails on a big read, keeps what it gave.

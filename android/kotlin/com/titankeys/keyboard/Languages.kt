@@ -152,6 +152,9 @@ internal class Languages(
         if (id != target) use(id)
     }
 
+    /** Each language's input method last typed with, by language id, for the two-language toggle ([SwitchOverlay.toggle]). */
+    val lastUsed = HashMap<String, String>()
+
     /** Engines kept warm for the input methods that are on, one for each engine: see [warmUp]. */
     private val warm = HashMap<String, InputEngine>()
     private val warming = HashSet<String>()
@@ -187,6 +190,7 @@ internal class Languages(
 
     private fun use(id: String) {
         target = id
+        InputMethodList.index(context)[id]?.let { lastUsed[it.language.id] = id }
         val ticket = ++loading
         val listTicket = slot.begin(id)
         // The last input method's next-word table goes with its list.

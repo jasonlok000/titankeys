@@ -42,6 +42,7 @@ fun main(args: Array<String>) {
     englishIsAlwaysThereAndFirst()
     turningOnAndOff()
     theOverlaySpansTwoKeysWhenFewAreOn()
+    aTapPicksTheTileUnderIt()
     languagesGroupTheirInputMethods()
     theAccentsSitOverTheHeldKey()
     wordsCompleteIgnoringAccents()
@@ -61,7 +62,9 @@ fun main(args: Array<String>) {
     koreanChoices()
     if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
+    if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
+    if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -139,19 +142,58 @@ private fun turningOnAndOff() {
     same("on goes last", InputMethodIndex.toggle(listOf("en"), "es", true), listOf("en", "es"))
     same("the only one can't go off", InputMethodIndex.toggle(listOf("en"), "en", false), null)
     same("English can go off with another on", InputMethodIndex.toggle(listOf("en", "es"), "en", false), listOf("es"))
-    val eight = List(8) { "x$it" }
-    same("a ninth is refused", InputMethodIndex.toggle(eight, "es", true), null)
+    // At most four languages, and four input methods within one (owner, 2026-11-17), with no other total.
+    val language = { id: String -> when { id.startsWith("yue") || id.startsWith("zh") -> "zh"; id.startsWith("sr") -> "sr"; else -> id } }
+    val tests = listOf("en", "vi", "yue-yale", "yue-jyutping", "zh-pinyin", "ja")
+    same("A's largest set, six in four languages, stays on", tests.fold(listOf<String>()) { on, id -> InputMethodIndex.toggle(on, id, true, language)!! }, tests)
+    same("a fifth language is refused", InputMethodIndex.toggle(tests, "es", true, language), null)
+    same("another input method of a language on is fine", InputMethodIndex.toggle(listOf("en", "es", "ru", "zh-pinyin"), "yue-yale", true, language),
+        listOf("en", "es", "ru", "zh-pinyin", "yue-yale"))
+    same("a fifth in one language is refused", InputMethodIndex.toggle(listOf("zh1", "zh2", "zh3", "zh4"), "zh5", true) { "zh" }, null)
+    val six = InputMethodIndex.parse("[" + listOf("es", "fr", "de", "it", "pt").joinToString(",") { id ->
+        """{"id":"$id","name":"$id","nameEnglish":"$id","label":"${id.uppercase()}","locale":"$id","script":"Latn"}"""
+    } + "]")
+    same("a setting with more than four keeps them all", six.on("en,es,fr,de,it,pt").size, 6)
     same("move up", InputMethodIndex.move(listOf("en", "es", "fr"), "fr", up = true), listOf("en", "fr", "es"))
     same("the first can't move up", InputMethodIndex.move(listOf("en", "es"), "en", up = true), listOf("en", "es"))
 }
 
+/** A finger's tap on the screen picks what a key under it picks: each tile's span is its keys', edge to edge. */
+private fun aTapPicksTheTileUnderIt() {
+    val key = 108f
+    val cell = { column: Int -> column * key to (column + 1) * key }
+    for (count in 1..4) {
+        val columns = SwitchOverlay.columns(count)
+        for ((tile, span) in columns.withIndex()) {
+            val middle = (span.first + span.last + 1) * key / 2
+            same("$count tiles: a tap in tile $tile's middle picks it", Picker.itemAt(middle, columns, count, cell), tile)
+            for (letter in listOf(Layout.rows[0][span.first], Layout.rows[1][span.first]))
+                same("$count tiles: the key $letter picks the same tile", SwitchOverlay.choice(letter, count), tile)
+        }
+    }
+    same("Q's place picks nothing", Picker.itemAt(key / 2, SwitchOverlay.columns(2), 2, cell), -1)
+    same("P's place picks nothing", Picker.itemAt(9.5f * key, SwitchOverlay.columns(2), 2, cell), -1)
+    same("with three, W's place picks nothing", Picker.itemAt(1.5f * key, SwitchOverlay.columns(3), 3, cell), -1)
+    same("a column past the items picks nothing", Picker.itemAt(7.5f * key, SwitchOverlay.columns(4), 2, cell), -1)
+}
+
 private fun theOverlaySpansTwoKeysWhenFewAreOn() {
-    // Spread evenly over W to O (owner, 2026-11-16): 2 take 4 keys each, 3 take 2 each with the rest empty, 4 take 2 each.
-    same("two on", SwitchOverlay.columns(2), listOf(1..4, 5..8))
-    same("three on", SwitchOverlay.columns(3), listOf(1..2, 3..4, 5..6))
-    same("four on", SwitchOverlay.columns(4), listOf(1..2, 3..4, 5..6, 7..8))
-    same("five on", SwitchOverlay.columns(5), listOf(1..1, 2..2, 3..3, 4..4, 5..5))
-    same("eight on reach O", SwitchOverlay.columns(8).last(), 8..8)
+    // Centred within W to O, every tile the same whole number of keys (owner, 2026-11-17): 1 = W–O, 2 = four keys each,
+    // 3 = two each over E–I, 4 = two each. W is column 1 and O column 8, so the margins left of W and right of O are equal.
+    same("one: W to O", SwitchOverlay.columns(1), listOf(1..8))
+    same("two: four keys each", SwitchOverlay.columns(2), listOf(1..4, 5..8))
+    same("three: two each over E to I", SwitchOverlay.columns(3), listOf(2..3, 4..5, 6..7))
+    same("four: two each", SwitchOverlay.columns(4), listOf(1..2, 3..4, 5..6, 7..8))
+    for (count in 1..4) {
+        val columns = SwitchOverlay.columns(count)
+        same("$count: centred, as many keys left of the first as right of the last", columns.first().first - 1, 8 - columns.last().last)
+        same("$count: every tile as wide", columns.map { it.last - it.first }.distinct().size, 1)
+    }
+    same("more than four: the first four", SwitchOverlay.columns(6).size, 4)
+    same("W picks nothing with three", SwitchOverlay.choice("W", 3), -1)
+    same("E picks the first of three", SwitchOverlay.choice("E", 3), 0)
+    same("D, under E, too", SwitchOverlay.choice("D", 3), 0)
+    same("Y picks the second of three", SwitchOverlay.choice("Y", 3), 1)
     same("W picks the first of two", SwitchOverlay.choice("W", 2), 0)
     same("R picks the first of two too", SwitchOverlay.choice("R", 2), 0)
     same("T picks the first of two", SwitchOverlay.choice("T", 2), 0)
@@ -159,9 +201,10 @@ private fun theOverlaySpansTwoKeysWhenFewAreOn() {
     same("O picks the second of two", SwitchOverlay.choice("O", 2), 1)
     same("S, on the second row, picks as W does", SwitchOverlay.choice("S", 2), 0)
     same("Q picks nothing", SwitchOverlay.choice("Q", 2), -1)
-    same("I picks nothing with three on", SwitchOverlay.choice("I", 3), -1)
+    same("I picks the third of three", SwitchOverlay.choice("I", 3), 2)
+    same("O picks nothing with three", SwitchOverlay.choice("O", 3), -1)
     same("Z's row picks nothing", SwitchOverlay.choice("X", 2), -1)
-    same("O picks the eighth of eight", SwitchOverlay.choice("O", 8), 7)
+    same("O picks the fourth of four", SwitchOverlay.choice("O", 4), 3)
 }
 
 /** Languages, then input methods: Serbian and Chinese group theirs, and the switcher's second row shows them. */
@@ -186,6 +229,26 @@ private fun languagesGroupTheirInputMethods() {
     same("its row picks an input method", SwitchOverlay.pick(on, on[1], 1), SwitchPick.To("sr-latn"))
     same("an empty place picks nothing", SwitchOverlay.pick(on, null, 5), null)
     same("several languages: the switcher opens on them", SwitchOverlay.opening(on), null)
+    // Two languages on: a held Sym goes straight to the other, to its input method last used.
+    val two = index.languagesOn("es,yue-yale,zh-pinyin")
+    same("two languages: Spanish to Chinese, its first", SwitchOverlay.toggle(two, "es", emptyMap()), "yue-yale")
+    same("to the one last used there", SwitchOverlay.toggle(two, "es", mapOf("zh" to "zh-pinyin")), "zh-pinyin")
+    same("from Chinese back to Spanish", SwitchOverlay.toggle(two, "zh-pinyin", mapOf("es" to "es")), "es")
+    same("a last used that's off now: the first", SwitchOverlay.toggle(two, "es", mapOf("zh" to "yue-jyutping")), "yue-yale")
+    same("three languages: the switcher", SwitchOverlay.toggle(on, "es", emptyMap()), null)
+    same("one language with two: the switcher's row", SwitchOverlay.toggle(index.languagesOn("sr,sr-latn"), "sr", emptyMap()), null)
+    // A tap on the mark: another input method of the language typing, never another language.
+    same("a tap on Serbian's mark: its other input method", SwitchOverlay.markTap(on, "sr"), SwitchPick.To("sr-latn"))
+    same("and back", SwitchOverlay.markTap(on, "sr-latn"), SwitchPick.To("sr"))
+    same("one input method: nothing", SwitchOverlay.markTap(on, "es"), null)
+    val threeChinese = InputMethodIndex.parse("[" + listOf(entry("yue-yale", "zh"), entry("yue-jyutping", "zh"),
+        entry("zh-pinyin", "zh")).joinToString(",") + "]").languagesOn("en,yue-yale,yue-jyutping,zh-pinyin")
+    same("three: the language's row in the switcher", SwitchOverlay.markTap(threeChinese, "yue-yale"), SwitchPick.Row(threeChinese[1]))
+    // The mark at Q: the language's where it has one input method on, the input method's where it has more.
+    val zh = InputMethodIndex.parse("[" + listOf(entry("yue-yale", "zh"), entry("zh-pinyin", "zh"), entry("es", "es")).joinToString(",") + "]")
+    same("one Chinese on: the language's mark", SwitchOverlay.markLabel(zh.on("en,yue-yale,es"), "yue-yale", "耶"), "ZH")
+    same("two Chinese on: the input method's", SwitchOverlay.markLabel(zh.on("en,yue-yale,zh-pinyin"), "yue-yale", "耶"), "耶")
+    same("a language of one input method: the same either way", SwitchOverlay.markLabel(zh.on("en,es"), "es", "ES"), "ES")
     val serbianOnly = index.languagesOn("sr,sr-latn")
     same("one language with two: straight to its row", SwitchOverlay.opening(serbianOnly), serbianOnly[0])
     same("an index without languages: each its own", InputMethodIndex.parse(SPANISH_INDEX).languages.map { it.id }, listOf("en", "es"))
@@ -693,6 +756,19 @@ private fun wordBreakFindsTheWord(method: InputMethod, read: WordList, list: Fil
     check("${method.id}: a whole word is found", wholeShare >= 90.0) { "%.1f%%".format(wholeShare) }
 }
 
+/**
+ * Shift and Caps show only where Shift changes what a key types (owner, 2026-11-17): every input method but Hebrew (Shift
+ * types the same letter) and the Chinese and Japanese ones (Shift opens the bigger menu). Korean, Hindi, Thai and Georgian
+ * keep it: their Shift types other letters.
+ */
+private fun shiftShowsWhereItMatters(folder: File) {
+    val without = folder.listFiles { file -> file.isDirectory }.orEmpty().mapNotNull { dir ->
+        runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull()
+    }.filter { !it.shiftMatters }.map { it.id }.sorted()
+    same("the input methods without Shift on the bar", without, listOf("he", "ja", "yue-jyutping", "yue-yale", "zh-pinyin"))
+    check("English shows Shift", InputMethod.ENGLISH.shiftMatters)
+}
+
 /** Collects garbage until the weakly held word lists settle. */
 private fun collect() = repeat(4) {
     System.gc()
@@ -908,4 +984,18 @@ private fun everyInputMethodInTheFolder(folder: File) {
         check("${method.id}: every common letter can be typed", missing.isEmpty()) { missing.joinToString(" ") }
     }
     println("languages: ${methods.size} input methods checked")
+}
+
+/**
+ * What a double Space types is each language's own full stop (owner, 2026-11-16): 。 with no space in Chinese and Japanese,
+ * "। " in Hindi, none in Thai, and ". " everywhere else, English included.
+ */
+private fun eachLanguageHasItsFullStop(folder: File) {
+    val own = mapOf("zh-pinyin" to "。", "yue-yale" to "。", "yue-jyutping" to "。", "ja" to "。", "hi" to "। ", "th" to "")
+    for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        val expected = own[method.id] ?: InputMethod.FULL_STOP
+        check("${method.id}'s full stop", method.rules.fullStop == expected) { "'${method.rules.fullStop}', expected '$expected'" }
+    }
+    check("English's full stop", InputMethod.ENGLISH.rules.fullStop == ". ")
 }

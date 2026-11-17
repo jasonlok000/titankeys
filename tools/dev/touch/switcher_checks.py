@@ -13,6 +13,7 @@ The input methods go on through InputMethodsSet, and each check types in Debug's
 import time
 
 import checks
+import guide_checks
 import language_checks
 import languages
 from checks import APP, Stop, adb, play, record
@@ -146,6 +147,76 @@ def check_fifth_language():
     play("key:sym", "+500")
 
 
+REFUSAL = "Four languages at a time, tops. Turn one off first."
+
+
+def screen_dump():
+    """The screen's accessibility tree, as uiautomator dumps it (the dump is deleted at once)."""
+    path = "/data/local/tmp/tk-touch-ui.xml"
+    adb("shell", "uiautomator", "dump", path)
+    xml = adb("shell", "cat", path)
+    adb("shell", "rm", "-f", path)
+    return xml
+
+
+def switches(xml):
+    """Each switch on the screen: its middle and whether it's on."""
+    import re
+    out = []
+    for node in re.findall(r"<node [^>]*>", xml):
+        if 'class="android.widget.Switch"' not in node and 'checkable="true"' not in node:
+            continue
+        bounds = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node)
+        if bounds:
+            x0, y0, x1, y1 = (int(v) for v in bounds.groups())
+            out.append(((x0 + x1) // 2, (y0 + y1) // 2, 'checked="true"' in node))
+    return out
+
+
+def check_fifth_language_refused():
+    """Settings > Languages, with four languages on (English, Russian, Greek, German): a fifth one's page (Afrikaans, the first
+    by script, so no scroll) says "Four languages at a time, tops. Turn one off first.", and a tap on its input method's switch
+    leaves it off. Taps only while TitanKeys Debug is in front, as the languages-page check does."""
+    import retest_batch
+
+    def step(*command):
+        if f" {APP}/" not in languages.front():
+            raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
+        adb("shell", "input", *command)
+        time.sleep(1.5)
+    language_checks.fresh()
+    if not language_checks.turn_on(["en", "ru", "el", "de"], "en"):
+        return record("fifth-language-refused", False, "the four languages didn't go on")
+    retest_batch.own_screen()
+    adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
+    time.sleep(3)
+    try:
+        step("tap", "952", "166")
+        x, y = retest_batch.row_at("Languages") or (540, 452)
+        step("tap", str(x), str(y))
+        row = retest_batch.row_at("Afrikaans")
+        if not row:
+            return record("fifth-language-refused", False, "no Afrikaans row on Settings > Languages")
+        step("tap", str(row[0]), str(row[1]))
+        before = screen_dump()
+        found = switches(before)
+        if not found:
+            return record("fifth-language-refused", False, "no switch on Afrikaans' page")
+        x, y, was_on = found[0]
+        step("tap", str(x), str(y))
+        after = screen_dump()
+        still = switches(after)
+        shot = guide_checks.shot("fifth-language-refused")
+        record("fifth-language-refused", REFUSAL in before and not was_on and bool(still) and not still[0][2] and REFUSAL in after,
+               f"the note {'shown' if REFUSAL in before else 'missing'}; the switch {'on' if was_on else 'off'} before the tap, "
+               f"{'on' if still and still[0][2] else 'off'} after it", shot)
+    finally:
+        for _ in range(4):
+            if f" {APP}/" in languages.front() and not languages.in_field():
+                adb("shell", "input", "keyevent", "4")
+                time.sleep(1)
+
+
 def check_two_toggle():
     """Two languages on (English, Russian): a held Sym switches straight to the other, with no overlay, and back."""
     setup(["en", "ru"], "en")
@@ -164,9 +235,9 @@ def check_q_mark():
         record(f"q-mark-{'-'.join(on[1:])}", None, f"{', '.join(on)} on, Yale typing: {want} at Q", f"q-mark-{len(on)}")
 
 
-BATCH = [check_centred, check_one_mark_per_tile, check_screen_taps, check_fifth_language, check_two_toggle, check_q_mark]
+BATCH = [check_centred, check_one_mark_per_tile, check_screen_taps, check_fifth_language, check_fifth_language_refused,
+         check_two_toggle, check_q_mark]
 HANDS = ["A tap on a clipboard item (a clip saved first): one screen_tap",
-         "Settings > Languages: turning on a fifth language keeps it off and shows the line",
          "A tap on a cell in Chinese's bigger menu picks it and logs (after B's merge)"]
 
 

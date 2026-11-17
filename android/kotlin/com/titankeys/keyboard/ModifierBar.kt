@@ -35,10 +35,11 @@ data class ModifierBar(
          * than Shift is held, so with Ctrl there is normally no such key, and the bar lists the shortcuts.
          * [symbol] gives what Alt types on a letter key.
          */
-        fun of(modifiers: Modifiers, hover: String, symbol: (String) -> String?): ModifierBar? {
+        fun of(modifiers: Modifiers, hover: String, shiftShows: Boolean = true, symbol: (String) -> String?): ModifierBar? {
             val alt = modifiers.alt != Modifiers.Level.Off
-            // While Ctrl is down, the automatic Shift does nothing and shows nothing: the bar is Ctrl's alone.
-            val shift = if (modifiers.autoShiftWaits) null else when (modifiers.shift) {
+            // While Ctrl is down, the automatic Shift does nothing and shows nothing: the bar is Ctrl's alone. Where Shift changes
+            // nothing a key types ([InputMethod.shiftMatters]: Hebrew, Chinese, Japanese), it shows nothing either.
+            val shift = if (modifiers.autoShiftWaits || !shiftShows) null else when (modifiers.shift) {
                 Modifiers.Level.Off -> null
                 Modifiers.Level.Once -> SHIFT
                 Modifiers.Level.Locked -> CAPS

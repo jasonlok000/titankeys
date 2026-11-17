@@ -23,5 +23,19 @@
     "name": "CLDR 49 localeDisplayNames: Euskara",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_eu.combined"
-  }
+  },
+  "starters": [
+    "eta",
+    "da",
+    "ez",
+    "ere",
+    "bat",
+    "du",
+    "izan",
+    "dira",
+    "egin",
+    "edo",
+    "zen",
+    "dute"
+  ]
 }

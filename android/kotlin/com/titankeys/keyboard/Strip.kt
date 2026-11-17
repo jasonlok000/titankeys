@@ -822,7 +822,11 @@ class Strip(
      * Puts the arrow's place in [capitalBox] and gives the arrow's size and line width in pixels. While an idle game plays with the
      * arrow, the game draws it.
      */
-    private fun placeCapital(): Pair<Float, Float> {
+    /**
+     * Where Shift's automatic arrow goes. [corner]: small in the corner whatever the words, as beside the language mark,
+     * [after] px further right (past a mark that's small there too).
+     */
+    private fun placeCapital(corner: Boolean = false, after: Float = 0f): Pair<Float, Float> {
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
         val width = capitalWidth()
@@ -834,10 +838,10 @@ class Strip(
         // The left word, as drawn: if its text would reach under the chip, the chip goes small into the corner.
         val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
         val textLeft = word?.let { it.left + it.totalPaddingLeft + it.layout.getLineLeft(0) - it.scrollX }
-        val small = textLeft != null && textLeft < capitalBox.right + dp(CAPITAL_CLEAR)
+        val small = corner || textLeft != null && textLeft < capitalBox.right + dp(CAPITAL_CLEAR)
         if (small) {
             val scale = CAPITAL_SMALL
-            val x = side.toFloat() / 2 + dp(2)
+            val x = side.toFloat() / 2 + dp(2) + after
             capitalBox.set(x, dp(4).toFloat(), x + width * scale, dp(4) + height * scale)
         }
         val cornerScale = capitalBox.height() / height
@@ -846,8 +850,16 @@ class Strip(
 
     private fun drawAutoCapital(canvas: Canvas) {
         if (!autoCapital || !showSuggestions || idle?.glyphs?.any { it.arrow } == true) return
-        val (size, line) = placeCapital()
+        // Beside the language mark, which is what types, the arrow is small and muted (owner, 2026-11-17): above the mark over
+        // Q, like a superscript, or after it when it's small in the corner too.
+        val withMark = markShows()
+        val after = if (withMark && markIsSmall()) {
+            pickerText.textSize = wordPixels()
+            pickerText.measureText(inputMark) * INPUT_MARK_SMALL + dp(3)
+        } else 0f
+        val (size, line) = placeCapital(corner = withMark, after = after)
         capitalPaint.color = look.accent
+        if (withMark) capitalPaint.alpha = CAPITAL_MUTED
         // The shift arrow, where Shift's chip would be, without the chip's outline: a head as wide as it is tall at the top, on a stem half as wide.
         val x = capitalBox.centerX() - size / 2
         val y = capitalBox.centerY() - size / 2
@@ -1015,15 +1027,13 @@ class Strip(
      * it small into the corner, as Shift's arrow goes.
      */
     private fun drawInputMark(canvas: Canvas) {
-        if (inputMark.isEmpty() || notice != null || modifiers != null || idle != null || width == 0) return
+        markRight = -1f
+        if (!markShows()) return
         pickerText.typeface = typeface
         pickerText.textSize = wordPixels()
         pickerText.color = look.accent
         val baseline = StripFit.baseline(line, pickerText.textSize, floor)
-        val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
-        val textLeft = word?.let { it.left + it.totalPaddingLeft + it.layout.getLineLeft(0) - it.scrollX }
-        val right = minOf(menuColumn(ChineseRow.MARK).second, (width - side).toFloat())
-        if (textLeft != null && textLeft < right + dp(4)) {
+        if (markIsSmall()) {
             canvas.save()
             val x = side.toFloat() / 2 + dp(2)
             canvas.scale(INPUT_MARK_SMALL, INPUT_MARK_SMALL, x, dp(4).toFloat())
@@ -1032,18 +1042,37 @@ class Strip(
             return
         }
         drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)
+        // Only the mark drawn over Q is touched: small in the corner, a touch there is the left word's.
+        markRight = menuColumn(ChineseRow.MARK).second
     }
+
+    /**
+     * Whether the idle bar shows the mark: not under a notice, the idle game or a modifier's bar. The Shift that a sentence
+     * start turns on leaves it where it is, its arrow small above it (owner, 2026-11-17).
+     */
+    private fun markShows() = inputMark.isNotEmpty() && notice == null && idle == null && width > 0 &&
+        (modifiers == null || autoCapital)
+
+    /** A word whose text would reach under Q sends the mark small into the corner. */
+    private fun markIsSmall(): Boolean {
+        val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
+        val textLeft = word?.let { it.left + it.totalPaddingLeft + it.layout.getLineLeft(0) - it.scrollX } ?: return false
+        return textLeft < minOf(menuColumn(ChineseRow.MARK).second, (width - side).toFloat()) + dp(4)
+    }
+
+    /** A touch on the mark over Q: the keyboard switches input method within the language. */
+    var markTap: (() -> Unit)? = null
+
+    /** The right edge of the mark drawn over Q, while it is; -1 when it isn't. */
+    private var markRight = -1f
+    private var markTouched = false
     /** The picker item a touch went down on, which it picks if it lifts there too. */
     private var pickerTouched = -1
 
     /** The picker's item under [x], or -1. */
     private fun pickerItemAt(x: Float): Int {
         val picker = notice as? Notice.Picker ?: return -1
-        for ((index, columns) in picker.columns.withIndex()) {
-            if (index >= picker.items.size) break
-            if (x >= menuColumn(columns.first).first && x <= menuColumn(columns.last).second) return index
-        }
-        return -1
+        return Picker.itemAt(x, picker.columns, picker.items.size, ::menuColumn)
     }
 
     private val codeText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
@@ -1072,21 +1101,14 @@ class Strip(
         val textWidth = codeText.measureText(picker.lead)
         val scale = if (textWidth > most && textWidth > 0f) most / textWidth else 1f
         val radius = dp(CODE_RADIUS_DP).toFloat()
-        if (CODE_TAB) {
-            // A tab joined to the bar's top-left: the bar's black, rounded on top only.
-            val top = y - height
-            codeBox.set(left, top, left + textWidth * scale + 2 * pad, y + radius)
-            menuPaint.color = look.paper or (0xFF shl 24)
-            canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
-        } else {
-            // On its own over the app: black, with a soft orange glow around it.
-            val top = y - height - dp(CODE_GAP_DP)
-            codeBox.set(left, top, left + textWidth * scale + 2 * pad, top + height)
-            menuPaint.color = look.paper or (0xFF shl 24)
-            menuPaint.setShadowLayer(dp(CODE_GLOW_DP).toFloat(), 0f, 0f, GuideMotion.faded(look.accent, CODE_GLOW_ALPHA))
-            canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
-            menuPaint.clearShadowLayer()
-        }
+        // On its own over the app: black, with a soft orange glow around it (owner, 2026-11-17: "I think the glow acc looks
+        // nice so we can keep that in place of linked tab").
+        val above = y - height - dp(CODE_GAP_DP)
+        codeBox.set(left, above, left + textWidth * scale + 2 * pad, above + height)
+        menuPaint.color = look.paper or (0xFF shl 24)
+        menuPaint.setShadowLayer(dp(CODE_GLOW_DP).toFloat(), 0f, 0f, GuideMotion.faded(look.accent, CODE_GLOW_ALPHA))
+        canvas.drawRoundRect(codeBox, radius, radius, menuPaint)
+        menuPaint.clearShadowLayer()
         val top = codeBox.top
         codeText.color = look.ink
         val baseline = top + height / 2 - (codeText.ascent() + codeText.descent()) / 2
@@ -1481,6 +1503,17 @@ class Strip(
     private var menuTouched: Action? = null
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (markTouched || event.actionMasked == MotionEvent.ACTION_DOWN && markRight > 0 && event.x <= markRight) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> markTouched = true
+                MotionEvent.ACTION_UP -> {
+                    markTouched = false
+                    if (markRight > 0 && event.x <= markRight + dp(8)) markTap?.invoke()
+                }
+                MotionEvent.ACTION_CANCEL -> markTouched = false
+            }
+            return true
+        }
         if (notice is Notice.Picker && pickerTap != null) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> pickerTouched = if (onMore(event.x)) moreTouched else pickerItemAt(event.x)
@@ -1537,6 +1570,8 @@ class Strip(
         }
         // A touch on one of the menu's buttons is the bar's, which draws them. Beside them it closes the menu, as before.
         if (event.actionMasked == MotionEvent.ACTION_DOWN && menuActionAt(event.x) != null) return true
+        // A touch on the language mark over Q is the bar's: it switches input method ([markTap]).
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && markTap != null && markRight > 0 && event.x <= markRight) return true
         // A touch on the picker's items is the bar's, which draws them over the keys.
         if (event.actionMasked == MotionEvent.ACTION_DOWN && pickerTap != null && (pickerItemAt(event.x) >= 0 || onMore(event.x))) return true
         return gesture.showing || super.onInterceptTouchEvent(event)
@@ -1854,16 +1889,16 @@ class Strip(
         private const val MENU_WORD_TOP = 2
         /** The idle bar's input method mark, small in the corner when a word reaches under Q. */
         private const val INPUT_MARK_SMALL = .6f
+        /** Shift's automatic arrow beside the language mark: muted, out of 255. */
+        private const val CAPITAL_MUTED = 150
         /** The code's line above the bar: its height, its gap over the bar, its sides' padding, in dp, and its text, in sp. */
         private const val CODE_LINE_DP = 34
         private const val CODE_GAP_DP = 6
         private const val CODE_PAD_DP = 12
         private const val CODE_RADIUS_DP = 10
-        /** The floating line's soft orange glow: its reach in dp and its strength. */
+        /** The line's soft orange glow: its reach in dp and its strength. */
         private const val CODE_GLOW_DP = 8
         private const val CODE_GLOW_ALPHA = .6f
-        /** The code as a tab joined to the bar instead of floating with a glow: the owner is choosing (2026-11-17). */
-        const val CODE_TAB = false
         /** Enough of the clip for one line. The line itself cuts it cleanly where it ends. */
         private const val CLIP_PREVIEW_LENGTH = 200
         /** The clipboard icon beside a clip, as a part of the text size. */

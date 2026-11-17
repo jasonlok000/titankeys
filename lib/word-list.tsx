@@ -6,7 +6,8 @@ import { refusedOnError } from "./app-haptics";
 
 export function WordList({ title, words, empty, placeholder, addWord, removeWord }: {
   title: string;
-  words: readonly { word: string; description?: string }[];
+  /** [id] tells two entries of the same word apart, as in two languages; it's what [removeWord] gets. The word by default. */
+  words: readonly { word: string; description?: string; id?: string }[];
   empty: string;
   placeholder: string;
   addWord: (word: string) => Promise<void>;
@@ -29,8 +30,8 @@ export function WordList({ title, words, empty, placeholder, addWord, removeWord
     : <Row title="Add word" endIcon={add} onPress={() => setAdding(true)} />;
   return <Screen title={title} header={header}>
     {words.length
-      ? words.map(({ word, description }) => <Row key={word} title={word} subtitle={description || undefined}
-        endAction={{ icon: close, onPress: () => remove.run(word) }} />)
+      ? words.map(({ word, description, id }) => <Row key={id ?? word} title={word} subtitle={description || undefined}
+        endAction={{ icon: close, onPress: () => remove.run(id ?? word) }} />)
       : <Note>{empty}</Note>}
   </Screen>;
 }

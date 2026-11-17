@@ -14,6 +14,7 @@ private const val GAP_MILLIS = 80L
 
 fun main() {
     twoQuickTapsSelect()
+    threeTapsTakeOneWordWithoutSpaces()
     eachFieldStartsWithItsOwnSelection()
     aDoubleSpaceCollapsesASelection()
     theBarShowsWhatIsSelected()
@@ -1350,4 +1351,35 @@ private fun eachFieldStartsWithItsOwnSelection() {
     // Chrome's address bar opens with its URL selected: that selection counts from the start.
     selection.started(0, 22)
     same(selection.selected, true, "A field that opens with text selected has it selected")
+}
+
+/** A stand-in for ICU's word breaks: the longest of [words] at each place, anything else one character a piece. */
+private fun dictionary(vararg words: String) = WordBreaker { text ->
+    val pieces = ArrayList<WordPiece>()
+    var at = 0
+    while (at < text.length) {
+        val known = words.filter { text.startsWith(it, at) }.maxByOrNull { it.length }
+        val end = at + (known?.length ?: 1)
+        pieces += WordPiece(at, end, known != null || text[at].isLetterOrDigit())
+        at = end
+    }
+    pieces
+}
+
+/**
+ * Three Space taps pick the word in front of the cursor. In a script written without spaces a run of letters can be a sentence,
+ * so there they pick one word as the breaks find it (owner, 2026-11-16). Where words have spaces, nothing changes.
+ */
+private fun threeTapsTakeOneWordWithoutSpaces() {
+    val zh = dictionary("我", "今天", "很", "高興")
+    same(WordSelection.atOrBefore("我今天很高興", 6, 6, zh), 4 to 6, "Chinese: the word before the cursor, not the sentence")
+    same(WordSelection.atOrBefore("我今天很高興。", 7, 7, zh), 4 to 6, "Past a full stop, the word in front")
+    same(WordSelection.atOrBefore("我今天很高興", 2, 2, zh), 1 to 3, "Inside a word, that word")
+    same(WordSelection.at("我今天很高興", 1, 3, zh), 1 to 3, "A selection grows to whole words")
+    same(WordSelection.atOrBefore("我今天很高興", 6, 6), 0 to 6, "Without breaks, the run, as before")
+    val th = dictionary("ฉัน", "ชอบ", "กิน", "ข้าว")
+    same(WordSelection.atOrBefore("ฉันชอบกินข้าว", 13, 13, th), 9 to 13, "Thai: the word, its tone mark included")
+    // Thai tone marks and Hindi vowel signs are part of their words, with or without breaks.
+    same(WordSelection.atOrBefore("मैं ठीक हूँ", 11, 11, th), 8 to 11, "Hindi: the word with its vowel signs, back to the space")
+    same(WordSelection.atOrBefore("say hello. ", 11, 11, zh), 4 to 9, "English: unchanged")
 }

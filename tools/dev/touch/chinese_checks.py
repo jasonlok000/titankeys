@@ -116,11 +116,12 @@ def check_tap():
     record("zh-tap", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's choice over Y", "zh-tap")
 
 
-def check_flick():
-    """A flick up from the key under the fourth choice (G, the second row's key in its column) picks it."""
+def check_swipe_up():
+    """A swipe up on the touchpad, two rows from B, opens the bigger menu; Shift closes it again and nothing is typed."""
     fresh()
-    text = shot_then("zh-flick", code(), ["flickup:g", "+300", "key:space", "+300"])
-    record("zh-flick", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's fourth choice", "zh-flick")
+    text = shot_then("zh-swipe-up", code("swipeup:b", "+600"), ["key:shift", "+300", *CLEAR_CODE])
+    record("zh-swipe-up", None if not text else False,
+           f"left {text!r} (should be empty): the shot should show the bigger menu over three rows", "zh-swipe-up")
 
 
 def check_menu():
@@ -205,7 +206,7 @@ def check_english():
         record(f"zh-{word}", None, f"{word}: {want}", f"zh-{word}")
 
 
-BATCH = [check_yale, check_row, check_space, check_tap, check_flick, check_menu, check_sym_panel, check_enter, check_comma, check_english,
+BATCH = [check_yale, check_row, check_space, check_tap, check_swipe_up, check_menu, check_sym_panel, check_enter, check_comma, check_english,
          check_suggestions]
 
 

@@ -82,7 +82,8 @@ test("the variants are the schemas' options, one each", () => {
 test("every pinned source is in SOURCES.md, and every licence it names is in licences/", () => {
   const sources = read("native/rime/SOURCES.md");
   const pins = [...read("native/rime/build.sh").matchAll(/@([0-9a-f]{40})$/gm), ...read("native/rime/data.sh").matchAll(/@([0-9a-f]{40})$/gm)].map(match => match[1]);
-  expect(pins.length).toBe(7);
+  // build.sh's three, and data.sh's prelude, essay, luna-pinyin, cantonese, cangjie, quick and terra-pinyin.
+  expect(pins.length).toBe(10);
   for (const pin of pins) expect(sources).toContain(pin);
   for (const licence of sources.matchAll(/`licences\/([^`]+)`/g)) expect(existsSync(join(root, "licences", licence[1]))).toBe(true);
   // The library shares the app's libc++_shared.so only because both come from NDK r27c: build.sh checks the hash.
@@ -107,7 +108,8 @@ test("librime-predict is built in, with each language's table, its licence and c
   expect(read("native/rime/build.sh")).toContain("--target rime_tool opencc_dict build_predict");
   expect(read("native/rime/SOURCES.md")).toContain("67c2881914a0242fc14ec7d6877782771b75800c");
   // Each schema has the predictor and its language's table; the switch is on.
-  const tables: Record<string, string> = { tk_yale: "predict-yue.db", tk_jyutping: "predict-yue.db", tk_pinyin: "predict-cmn.db" };
+  const tables: Record<string, string> = { tk_yale: "predict-yue.db", tk_jyutping: "predict-yue.db", tk_pinyin: "predict-cmn.db",
+    tk_cangjie: "predict-yue.db", tk_quick: "predict-yue.db", tk_zhuyin: "predict-cmn.db" };
   for (const [schema, db] of Object.entries(tables)) {
     const text = read(`native/rime/schemas/${schema}.schema.yaml`);
     expect(text).toMatch(/processors: \[ ascii_composer, recognizer, predictor, key_binder,/);

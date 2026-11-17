@@ -13,12 +13,41 @@
     "capitalise": false,
     "sentenceEnd": "。？！.?!",
     "openingMarks": "",
-    "apostrophes": false
+    "apostrophes": false,
+    "fullStop": "。"
   },
   "engine": {
     "rime": "tk_yale"
   },
   "source": {
     "words": "rime-jyutping's Yale spelling rules (LGPL-3.0) on rime-cantonese's word list (CC BY 4.0)"
-  }
+  },
+  "starters": [
+    "我",
+    "係",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "嘅",
+    "都",
+    "個",
+    "就",
+    "有"
+  ],
+  "startersSimplified": [
+    "我",
+    "系",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "嘅",
+    "都",
+    "个",
+    "就",
+    "有"
+  ]
 }

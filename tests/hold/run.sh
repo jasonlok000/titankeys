@@ -18,7 +18,7 @@ engine=$root/com/titankeys/engine
 keyboard=$root/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$android:$ort" -d "$work" \
   "$root/com/titankeys/autocorrect" "$keyboard/Composer.kt" "$keyboard/Expansions.kt" "$keyboard/ExactTyping.kt" "$keyboard/Layout.kt" "$keyboard/Field.kt" "$keyboard/EnterKey.kt" \
-  "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Touchpad.kt" \
+  "$keyboard/RawLogLine.kt" "$keyboard/Recording.kt" "$keyboard/KeyboardEvents.kt" "$keyboard/Modifiers.kt" "$keyboard/QuickSetting.kt" "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/WordBreaks.kt" "$keyboard/Touchpad.kt" \
   "$keyboard/Haptics.kt" tests/hold/HoldLetterChecks.kt $(find "$engine" "$root/org" -name '*.java')
 javac --release 17 -nowarn -cp "$work:$stdlib:$android:$ort" -d "$work" $(find "$engine" "$root/org" -name '*.java')
 java -cp "$work:$stdlib:$android:$ort" com.titankeys.keyboard.HoldLetterChecksKt

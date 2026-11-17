@@ -24,5 +24,19 @@
     "name": "CLDR 49 localeDisplayNames: Norsk bokmål",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_nb.combined"
-  }
+  },
+  "starters": [
+    "i",
+    "og",
+    "av",
+    "er",
+    "som",
+    "en",
+    "til",
+    "på",
+    "ble",
+    "for",
+    "med",
+    "var"
+  ]
 }

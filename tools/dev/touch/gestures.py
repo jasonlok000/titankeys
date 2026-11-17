@@ -16,10 +16,12 @@ Usage: gestures.py [--keymap FILE] [--out FILE] GESTURE... with GESTUREs in orde
   key:NAME[:HOLD[:AFTER]] a key pressed with the finger on its spot: held HOLD ms (default 70); AFTER is what the finger then
                           does: lift (default), rest (stays 700 ms), slide (moves a key right, then lifts) or none (no touch)
   hold:LETTER[:MS]        a letter held down (default 800 ms)
-  flickup:LETTER[:ROWS[:MS]]  a flick up on the touchpad from LETTER's key, ROWS rows (default 1) in MS (default 80): Chinese
-                          picks the choice over the key it starts on this way (ChineseKeys.flickColumn)
+  swipeup:LETTER[:ROWS[:MS]]  a swipe straight up on the touchpad from LETTER's key, ROWS rows (default 2) in MS (default
+                          150): with Chinese choices on the bar it opens the bigger menu (ChineseKeys.swipe)
   chord:A+B[+C][:MS]      keys pressed together, in order, then let go the other way round: alt+sym, shift+w (default 80 ms)
   touch:X,Y[:MS]          a still touch at a touchpad position (default 300 ms)
+  rest:X0,Y0,X1,Y1[:MS]   a resting finger slid slowly from one position to the other, then lifted (default 1500 ms):
+                          the switcher's and the menus' marking, which only a resting touch does
   replay-getevent:FILE    a capture from capture.sh, played as it was
   replay-rawlog:FILE[:FROM[:TO]]  the touches and keys of a raw log export, between two uptimes in ms (default all)
 Key names: a to z, space, enter, del, shift, alt, sym, fn. Letters and the rest have the Linux codes; sym and fn come from the
@@ -343,7 +345,7 @@ class Script:
             self.still(x1, y, hold)
         self.lift()
 
-    def flick_up(self, letter, rows=1.0, ms=80.0):
+    def swipe_up(self, letter, rows=2.0, ms=150.0):
         """Straight up from the key's middle, rows rows, then a lift: up only, so it's never read as across."""
         x, y0 = key_centre(letter)
         y1 = max(0.0, y0 - rows / 4)
@@ -414,6 +416,13 @@ class Script:
             if i:
                 self.wait(20)
             self.key(name, False)
+
+    def rest(self, x0, y0, x1, y1, ms=1500.0):
+        self.still(x0, y0, 300)
+        length = math.hypot((x1 - x0) * 10, (y1 - y0) * 4)
+        self.move([(x0, y0), (x1, y1)], length / ms if length else 1.0, STILL_MAJOR)
+        self.still(x1, y1, 300)
+        self.lift()
 
     def tap_at(self, x, y, ms=300.0):
         self.still(x, y, ms)
@@ -566,8 +575,8 @@ def build(args, alignment=None):
             script.space_hold(count, float(parts[1]) if len(parts) > 1 else 0.0, float(parts[2]) if len(parts) > 2 else 500.0)
         elif name == "key":
             script.press(parts[0], float(parts[1]) if len(parts) > 1 else 70.0, parts[2] if len(parts) > 2 else "lift")
-        elif name == "flickup":
-            script.flick_up(parts[0], float(parts[1]) if len(parts) > 1 else 1.0, float(parts[2]) if len(parts) > 2 else 80.0)
+        elif name == "swipeup":
+            script.swipe_up(parts[0], float(parts[1]) if len(parts) > 1 else 2.0, float(parts[2]) if len(parts) > 2 else 150.0)
         elif name == "hold":
             script.press(parts[0], float(parts[1]) if len(parts) > 1 else 800.0)
         elif name == "chord":
@@ -575,6 +584,9 @@ def build(args, alignment=None):
         elif name == "touch":
             x, y = (float(v) for v in parts[0].split(","))
             script.tap_at(x, y, float(parts[1]) if len(parts) > 1 else 300.0)
+        elif name == "rest":
+            x0, y0, x1, y1 = (float(v) for v in parts[0].split(","))
+            script.rest(x0, y0, x1, y1, float(parts[1]) if len(parts) > 1 else 1500.0)
         elif name == "replay-getevent":
             script.replay_getevent(rest)
         elif name == "replay-rawlog":

@@ -56,11 +56,12 @@ class InputMethodIndex(entries: List<Entry>) {
 
     /**
      * The input methods that are on, in the overlay's order, from the setting's text (ids with commas between). Unknown ids
-     * are dropped, as are repeats and any past [InputMethod.MAX_ON]. English is on when nothing else is.
+     * are dropped, as are repeats; none is dropped for being past a limit, which Settings keeps when turning one on
+     * ([InputMethod.MAX_LANGUAGES]). English is on when nothing else is.
      */
     fun on(setting: String?): List<Entry> {
         val wanted = setting.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        val known = wanted.mapNotNull { byId[it] }.take(InputMethod.MAX_ON)
+        val known = wanted.mapNotNull { byId[it] }
         return known.ifEmpty { listOf(ENGLISH) }
     }
 
@@ -99,12 +100,14 @@ class InputMethodIndex(entries: List<Entry>) {
 
         /**
          * Turns [id] on or off in the setting [current], keeping the order: a newly turned on one goes last. English can't be
-         * turned off while it's the only one, and nothing goes past [InputMethod.MAX_ON]. Returns the new setting, or null if
-         * the change isn't allowed.
+         * turned off while it's the only one; a fifth language, or a fifth input method in one language, can't be turned on
+         * ([InputMethod.MAX_LANGUAGES], [InputMethod.MAX_PER_LANGUAGE]), going by [languageOf]. Returns the new setting, or null
+         * if the change isn't allowed.
          */
-        fun toggle(current: List<String>, id: String, on: Boolean): List<String>? = when {
+        fun toggle(current: List<String>, id: String, on: Boolean, languageOf: (String) -> String = { it }): List<String>? = when {
             on && id in current -> current
-            on && current.size >= InputMethod.MAX_ON -> null
+            on && languageOf(id) !in current.map(languageOf) && current.map(languageOf).distinct().size >= InputMethod.MAX_LANGUAGES -> null
+            on && current.count { languageOf(it) == languageOf(id) } >= InputMethod.MAX_PER_LANGUAGE -> null
             on -> current + id
             id !in current -> current
             current.size == 1 -> null
@@ -141,12 +144,56 @@ object SwitchOverlay {
     /** The rows of letters that pick: the top two. */
     const val ROWS = 2
 
-    /** The key columns each of [count] places spans, in order, from W. */
+    /**
+     * The key columns each of [count] places spans, centred within W to O, every place the same whole number of keys (owner,
+     * 2026-11-17): one takes W to O, two four keys each, three two each over E to I, four two each.
+     */
     fun columns(count: Int): List<IntRange> {
-        val shown = count.coerceIn(0, InputMethod.MAX_ON)
+        val shown = count.coerceIn(0, InputMethod.MAX_LANGUAGES)
         if (shown == 0) return emptyList()
-        val width = (LAST - FIRST + 1) / shown
-        return List(shown) { FIRST + width * it until FIRST + width * (it + 1) }
+        val keys = LAST - FIRST + 1
+        val width = keys / shown
+        val start = FIRST + (keys - width * shown) / 2
+        return List(shown) { start + width * it until start + width * (it + 1) }
+    }
+
+    /** What the switcher shows: the first four languages on, each with its first four input methods. A setting may hold more. */
+    fun shown(languages: List<InputMethodIndex.LanguageOn>) = languages.take(InputMethod.MAX_LANGUAGES)
+        .map { it.copy(methods = it.methods.take(InputMethod.MAX_PER_LANGUAGE)) }
+
+    /**
+     * With exactly two languages on, a held Sym switches to the other at once, with no switcher (owner, 2026-11-16: "if
+     * there's only two languages, holding sym shd switch between them by itself"): to its input method last used ([lastUsed],
+     * by language), or else its first. Null with any other number, where the switcher opens.
+     */
+    fun toggle(languages: List<InputMethodIndex.LanguageOn>, current: String, lastUsed: Map<String, String>): String? {
+        if (languages.size != 2) return null
+        val other = languages.firstOrNull { on -> on.methods.none { it.id == current } } ?: languages[1]
+        return lastUsed[other.language.id]?.takeIf { id -> other.methods.any { it.id == id } } ?: other.methods.first().id
+    }
+
+    /**
+     * A tap on the language mark: another input method of the language typing now, never another language (owner,
+     * 2026-11-17: "switches input method not languages"). With two on, the other; with three or more, the language's row in
+     * the switcher; with one, nothing.
+     */
+    fun markTap(languages: List<InputMethodIndex.LanguageOn>, current: String): SwitchPick? {
+        val language = languages.firstOrNull { on -> on.methods.any { it.id == current } } ?: return null
+        return when (language.methods.size) {
+            1 -> null
+            2 -> SwitchPick.To(language.methods.first { it.id != current }.id)
+            else -> SwitchPick.Row(language)
+        }
+    }
+
+    /**
+     * The mark at Q (owner, 2026-11-17: "If only one input method is in one language, the q sign shd show the language icon
+     * instead"): the language's own mark where it has one input method on (中 with only Yale on, СР with only Serbian
+     * Cyrillic), else the input method's (耶, 粵 with two Chinese on).
+     */
+    fun markLabel(on: List<InputMethodIndex.Entry>, current: String, currentLabel: String): String {
+        val language = on.firstOrNull { it.id == current }?.language ?: return currentLabel
+        return if (on.count { it.language.id == language.id } == 1) language.label else currentLabel
     }
 
     /** The row the switcher opens on: with one language on, straight to its input methods. */
@@ -209,6 +256,19 @@ object Picker {
 
     /** The columns of a page of [count] choices from an engine, from E. */
     fun pageColumns(count: Int): List<Int> = List(count.coerceIn(0, CHOICES)) { FIRST_CHOICE + it }
+
+    /**
+     * The item a finger's tap at [x] picks, or -1: the one whose keys' span on screen holds it, from its first key's left edge
+     * to its last key's right ([cell] gives a key column's span in px). The same item a key under it picks: the switcher's
+     * tiles, its input-method row, the accents and Chinese's row all map taps this way.
+     */
+    fun itemAt(x: Float, columns: List<IntRange>, items: Int, cell: (Int) -> Pair<Float, Float>): Int {
+        for ((index, span) in columns.withIndex()) {
+            if (index >= items) break
+            if (x >= cell(span.first).first && x <= cell(span.last).second) return index
+        }
+        return -1
+    }
 
     /** Which choice the key [key] picks, given each choice's column, or -1. */
     fun choice(key: String, columns: List<Int>): Int {
@@ -398,7 +458,7 @@ class SymPress {
  * TitanKeys' picking overlays and the touchpad. While the held Sym's switcher (either row), the accent picker or Chinese's
  * bigger menu is open, a swipe on the keys neither draws its trail nor types a word or deletes one, as on the Sym panel:
  * a finger only marks (owner, 2026-11-16: "swipe animation and swipe typing still triggers"). The bar's one row of choices
- * keeps its own swipes: a flick up picks and a swipe turns the page, and the bigger menu turns its pages too.
+ * keeps its own swipes: a swipe up opens the bigger menu, and the menu's swipes turn its pages.
  */
 object Overlays {
     enum class Open { None, Switcher, SwitcherRow, Accents, Choices, ChoicesMenu }

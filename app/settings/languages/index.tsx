@@ -3,8 +3,12 @@ import { chevronRight } from "ink/icons";
 import { type InputMethodEntry, type Language, type State, state } from "../../../lib/titankeys";
 import { Note } from "../../../lib/note";
 
-/** The most input methods on at once: the switcher's places, W to O (InputMethod.MAX_ON). */
-export const MAX_ON = 8;
+/**
+ * The most languages on, and the most input methods on within one (owner, 2026-11-17: "Don't allow selecting more than 4"),
+ * as the keyboard's InputMethod.MAX_LANGUAGES and MAX_PER_LANGUAGE. No other total. A setting with more keeps them.
+ */
+export const MAX_LANGUAGES = 4;
+export const MAX_PER_LANGUAGE = 4;
 
 /** A language with its input methods: every one it has, and the ones that are on, in the setting's order. */
 export type LanguageRow = { language: Language; methods: InputMethodEntry[]; on: InputMethodEntry[] };

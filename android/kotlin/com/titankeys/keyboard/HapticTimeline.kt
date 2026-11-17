@@ -94,6 +94,7 @@ object HapticTimeline {
         Haptic.ClipPinned -> "You pinned a clip"
         Haptic.ClipUnpinned -> "You unpinned a clip"
         Haptic.ClipboardCleared -> "You cleared the clipboard"
+        Haptic.ScreenTap -> "A tap on the keyboard's screen"
         Haptic.BugRecordingStarted -> "Record a bug started"
         Haptic.BugRecordingStopped -> "Record a bug stopped"
         Haptic.GuideCelebration -> "The guide celebrated"

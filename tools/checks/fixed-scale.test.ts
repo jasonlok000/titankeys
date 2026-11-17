@@ -94,7 +94,7 @@ test("only the bar and the menu's effects are made at Bar text size; the panels 
   const body = ime.slice(start, ime.indexOf("\n    }\n", start));
   expect(body).toContain("val ui = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod)");
   expect(body).toContain("val barUi = FixedScale.themed(this, android.R.style.Theme_DeviceDefault_InputMethod, viewSize.factor)");
-  for (const view of ["Strip(barUi,", "MenuEffects(barUi,", "SymPanel(ui,", "ExactBar(ui,", "LinearLayout(ui)", "FrameLayout(ui)"]) {
+  for (const view of ["Strip(barUi,", "MenuEffects(barUi,", "SymPanel(ui,", "ExactBar(ui,", "LinearLayout(ui)", "TapHaptics(ui)"]) {
     expect(body).toContain(view);
   }
   expect(body.match(/barUi/g)?.length).toBe(3);

@@ -232,6 +232,8 @@ class Composer(
     var autoPunctuation: () -> Boolean = { true }
     /** How many spaces go in after a typed . ? or ! once a letter follows it: 0, 1 or 2. */
     var sentenceSpaces: () -> Int = { 1 }
+    /** What a quick second Space types in place of the first: the input method's full stop ([InputMethod.Rules.fullStop]). */
+    var fullStopMark: () -> String = { ". " }
     /** A space goes in after a typed , ; or : once a letter follows it. */
     var commaSpace: () -> Boolean = { true }
     /**
@@ -833,10 +835,12 @@ class Composer(
             }
             !field.fullStops || anchor.selected -> if (!edit(EditCause.Space, 0, " ")) return
             !repeated && pending != null && time - pending.time in 0..FULL_STOP_MILLIS && autoPunctuation()
-                && anchor.available && anchor == pending.snapshot -> {
-                // Two spaces after a sentence give this full stop two spaces as well.
+                && anchor.available && anchor == pending.snapshot && fullStopMark().isNotEmpty() -> {
+                // The language's own full stop ("。" with no space, "। "), and none in Thai, where two Spaces stay spaces.
+                // Two spaces after a sentence give a full stop with a space two spaces as well.
+                val mark = fullStopMark()
                 val spaces = if (field.markSpaces && sentenceSpaces() == 2) "  " else " "
-                if (!edit(EditCause.FullStop, 1, ".$spaces")) return
+                if (!edit(EditCause.FullStop, 1, if (mark.endsWith(" ")) mark.trimEnd() + spaces else mark)) return
             }
             else -> {
                 if (!edit(EditCause.Space, 0, " ")) return

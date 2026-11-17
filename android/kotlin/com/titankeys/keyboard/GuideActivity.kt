@@ -2802,8 +2802,11 @@ class GuideActivity : Activity() {
                 t > SWIPE_LANDS / 2 -> add(gap + GuideScript.slip(next))
             }
             // One flick, one word, gone at once. The held flick's slide has no demo in the field.
-            // What goes, as the real delete takes it: the last word for a flick, the last letter for one Backspace.
-            GuideDemo.DeleteLast, GuideDemo.DeleteLetter -> demoRange(demo, text, null)?.takeIf { t > FLICK_GONE }?.let { gone ->
+            // What goes, as the real flick takes it: the last word. The Backspace slide's extra e stays in the field until you press
+            // Backspace yourself; its showing is on the keys alone (owner, 2026-11-16: "the e vanished before anything is pressed as
+            // a demo. I dont want it vanished").
+            GuideDemo.DeleteLetter -> Unit
+            GuideDemo.DeleteLast -> demoRange(demo, text, null)?.takeIf { t > FLICK_GONE }?.let { gone ->
                 built.setSpan(BackgroundColorSpan(fieldFill()), gone.first, gone.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {

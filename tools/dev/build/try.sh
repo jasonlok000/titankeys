@@ -26,6 +26,15 @@ for f in node_modules .ink signing; do [ -e "$B/$f" ] || cp -a "$SEED/$f" "$B/";
 find "$B" -mindepth 1 -maxdepth 1 ! -name node_modules ! -name .ink ! -name signing ! -name dist -exec rm -rf {} +
 tar -C "$W" --exclude=.git --exclude=node_modules --exclude=dist --exclude=.ink --exclude=signing --exclude=tools/dev/local.env -cf - . | tar -xf - -C "$B"
 cd "$B" || exit 1
+# The copy keeps .ink between runs, and with it Gradle's Kotlin incremental cache, which held declarations a merge had moved to
+# another file and failed the build with "Conflicting declarations" (2026-11-16, main e133d51a). Any change to the Kotlin and
+# Java sources, their names or contents (Debug's recorder included), clears that cache first; an unchanged tree keeps it.
+sources=$(find android -name '*.kt' -o -name '*.java' | LC_ALL=C sort | xargs sha1sum | sha1sum | cut -d' ' -f1)
+# TK_KEEP_KOTLIN_CACHE=1 keeps it anyway, to time the difference or for a quick try that changed no declaration.
+if [ "$(cat .ink/kotlin-sources 2>/dev/null)" != "$sources" ] && [ "${TK_KEEP_KOTLIN_CACHE:-}" != 1 ]; then
+  rm -rf .ink/build/android/kotlin
+  echo "$sources" > .ink/kotlin-sources
+fi
 python3 "$H/compat.py" > /dev/null || { echo "FAIL public Ink edits"; exit 1; }
 # The Ink for this tree's own patch as ../ink, as verify.sh has: try.sh used to build against whatever the shared Ink had.
 tk_ink_use "$B" || exit 1

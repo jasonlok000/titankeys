@@ -161,7 +161,8 @@
     "sentenceEnd": ".?!",
     "openingMarks": "",
     "apostrophes": false,
-    "wordBreak": true
+    "wordBreak": true,
+    "fullStop": ""
   },
   "engine": null,
   "source": {
@@ -169,5 +170,19 @@
     "letters": "Kedmanee (TIS 820-2538)",
     "keys": "xkeyboard-config symbols/th basic",
     "words": "main_th.combined"
-  }
+  },
+  "starters": [
+    "ที่",
+    "การ",
+    "เป็น",
+    "ใน",
+    "จะ",
+    "มี",
+    "ของ",
+    "และ",
+    "ไม่",
+    "ได้",
+    "ให้",
+    "ว่า"
+  ]
 }

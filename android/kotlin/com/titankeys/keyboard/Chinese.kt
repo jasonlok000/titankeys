@@ -167,20 +167,26 @@ object ChineseKeys {
         return text.map { when (it) { '“' -> '「'; '”' -> '」'; '‘' -> '『'; '’' -> '』'; else -> it } }.joinToString("")
     }
 
-    /**
-     * How far a flick up must go to pick, in keys: a finger flicking up from the top row leaves the touchpad within about half
-     * a key, under a page turn's [Contact.PAGE_KEYS] (owner's phone, 2026-11-17: "flick not working").
-     */
-    const val FLICK_KEYS = .25f
+    /** What a swipe on the keys does while an engine's choices are on the bar. */
+    enum class Swipe { OpenMenu, NextPage, PageBefore, Nothing }
 
     /**
-     * A flick up on the touchpad from the key under a choice: mostly up, starting on a letter in the rows that pick. [across] and
-     * [down] are in keys and rows; up is negative. Returns the column it started in, or -1.
+     * A swipe on the touchpad with choices on the bar, a page turn's length or more ([Contact.PAGE_KEYS], which Contact asks of
+     * every paging swipe): up opens the bigger menu (owner, 2026-11-17: "swiping up would expand the word list"), and with the
+     * menu open, up and down turn its pages, as on the Sym panel. Mostly sideways, or less than half a row up or down, is
+     * nothing: a slip, or a swipe meant for something else. [across] and [down] are in keys and rows; up is negative.
      */
-    fun flickColumn(startKey: String, across: Float, down: Float): Int {
-        if (down >= 0f || kotlin.math.abs(across) > kotlin.math.abs(down)) return -1
-        return ChineseRow.column(startKey)
+    fun swipe(across: Float, down: Float, menuOpen: Boolean): Swipe {
+        if (kotlin.math.abs(down) * 10 < kotlin.math.abs(across) * 4 || kotlin.math.abs(down) < SWIPE_ROWS) return Swipe.Nothing
+        return when {
+            menuOpen -> if (down < 0f) Swipe.NextPage else Swipe.PageBefore
+            down < 0f -> Swipe.OpenMenu
+            else -> Swipe.Nothing
+        }
     }
+
+    /** How far up or down a swipe on the choices must go, in rows: half a page turn's [Contact.PAGE_KEYS] (.45 keys). */
+    const val SWIPE_ROWS = .45f / 2f
 }
 
 /**

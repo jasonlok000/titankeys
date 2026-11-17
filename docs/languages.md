@@ -26,7 +26,14 @@ From the study's ranking:
   Galician, Basque, Estonian, Latvian, Lithuanian, Icelandic, Irish, Afrikaans, Indonesian, Esperanto, Azerbaijani), and
   Cyrillic, Greek and Georgian (Russian, Ukrainian, Belarusian, Bulgarian, Serbian, Macedonian, Greek, Kazakh, Georgian).
 - **Chinese through Rime:** Cantonese in Yale, the owner's input method and the first Chinese one, then Jyutping, and
-  Mandarin in Pinyin, with the Chinese variant setting.
+  Mandarin in Pinyin, with the Chinese variant setting. Then Hong Kong's shape-based standards, 倉頡 (Cangjie 5) and 速成
+  (Quick 5), and Taiwan's 注音 (Zhuyin) on the 許氏 (Hsu) layout (owner and Orchestrator, 2026-11-17; 九方 is proprietary
+  and left out). Zhuyin's standard 大千 layout would need Alt for 15 of its keys, the number row and , . / ; -, which the
+  Titan has only behind Alt; Hsu puts every symbol on the 26 letters, with optional tones on d f j s, and Settings names it
+  "注音 · 許氏" so a 大千 user isn't surprised. Cangjie's and Quick's codes show as their radicals on the code line
+  (hqi: 竹手戈), Zhuyin's as Zhuyin (ㄋㄧˇ ㄏㄠˇ). `tests/rime/codes.sh` types Tatoeba's Cantonese text character by
+  character: Cangjie 97.7% first choice, Quick 44.7% (two letters a character, so the pick is the user's), Zhuyin 52.0%
+  (one syllable alone; in phrases Rime's sentences decide), on the first page 100%, 86.8% and 94.3%.
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
 - **Thai** (experimental), Kedmanee with a third layer of held keys and a word break for suggestions ("Thai" below).
 - **Hindi** (experimental), typed by sound through Wikimedia's jquery.ime rules ("Hindi" below).
@@ -107,7 +114,7 @@ The fields:
 | `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 10, one per key column. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
-| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`) |
+| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`); `fullStop`, what a double Space types: `". "` unless set, `"。"` with no space for Chinese and Japanese, `"। "` for Hindi, `""` for Thai, which has none, so two Spaces stay spaces |
 | `engine` | `null`, `"rime"` with its schema (`{ "rime": "tk_yale" }`), or the name of a built-in engine (`"hangul"`, `"telex"`) |
 | `source` | Where the letters and words come from, for the licences page and for contributors |
 
@@ -188,9 +195,9 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 
 **The bar while a code is typed:**
 - **The code** floats just above the bar's left edge, only while a code is typed: in the bar's black, with a soft orange glow,
-  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; a tab joined to the bar's top is the
-  other look, `Strip.CODE_TAB`, while the owner chooses). It's drawn in the see-through layer over the app (the word menu's
-  effects layer), so the app never resizes. With no code, nothing floats,
+  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; tried as a tab joined to the bar, then
+  "I think the glow acc looks nice so we can keep that in place of linked tab"). It's drawn in the see-through layer over the
+  app (the word menu's effects layer), so the app never resizes. With no code, nothing floats,
   and the bar shows its suggestions: no language name, no tint ("keep it using the orange black theme").
 - **The language mark at Q:** the input method's label (耶, 粵, 拼, あ, ES) in the accent over Q, as Shift's arrow and Caps
   show today, whenever an input method that isn't English types, the idle bar included (owner, 2026-11-17: "The Yale Chinese
@@ -206,20 +213,25 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 not working but honestly bad idea. Abandon it", "唔要hold key 揀字"):
 - **Space** picks the first choice.
 - **A tap on the screen** on a choice picks it.
-- **A flick up on the touchpad** from the key under a choice picks it (the top two rows). It needs only a quarter of a key
-  (`ChineseKeys.FLICK_KEYS`): a finger flicking up from the top row leaves the touchpad within about half a key, under a page
-  turn's length, so the owner's flicks went unseen ("flick not working"). Each flick's reading is in TitanKeys Debug's log
-  (`adb logcat -s TitanKeysChoices`). Swipes on the keys never turn the row's pages.
+- **No flick picks** (owner, 2026-11-17: "Abandon the flick to select concept"), and swipes on the keys never turn the row's
+  pages: a swipe up opens the bigger menu instead (below).
 - **Hold for symbols is back** in Chinese, as in every language: a held letter's press goes out of the code again, and its
   symbol goes through the engine, as Alt's does (a mark as Chinese writes it, the code's first choice first).
 - The row shows no hover (owner, 2026-11-17): only the bigger menu does.
 
-**The bigger menu: Sym, while a code is typed** (owner, 2026-11-17: "Let's use sym and not shift. but only when a code is
-being typed. The reasoning being that the emojis and symbols shold not be typed anyways when there's still code"). A short
-Sym opens it, Sym again closes it, and a held Sym still opens the language switcher; with no code typed, Sym is the Sym panel
-as always. A tap on the more cue `⋯` at P opens it too. The cue is orange while a code is typed, meaning Sym opens more,
-though Sym isn't under it ("not like the hover type of highlight but maybe more like just make it orange"). Shift does nothing
-special, and P is only a letter ("Abandon p too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
+**The bigger menu: Shift** (owner, 2026-11-17: "use the original shift as the plan instead. No hover effect needed for the
+shift because it's at the blind spot", after trying Sym). Either Shift opens it while choices are on the bar, a code's or
+the suggestions', and either Shift closes it; Shift itself never comes on for that press. Sym is always the Sym panel: with
+a code typed, a symbol picked there types the code's first choice first, then the symbol, as the comma does; with
+suggestions and no code, they're cleared, not picked. A swipe up on the touchpad opens it too, a page turn's length or more,
+so a resting finger or a word's swipe can't (owner, 2026-11-17: "swiping up would expand the word list for Chinese"), and so
+does a tap on the more cue `⋯` at P. The cue is orange while a code is typed, meaning Shift opens more, though Shift isn't
+under it ("not like the hover type of highlight but maybe more like just make it orange"). P is only a letter ("Abandon p
+too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
+- **Every input method with choices on the bar has it** (owner, 2026-11-17: "Also for other relevant language"): Chinese,
+  Japanese, Vietnamese (Telex) and Hindi, which fill it from their word lists past the bar's eight. A swipe up opens it in
+  all of them; Shift only in Chinese and Japanese, since in Vietnamese it types capitals and in Hindi its own sounds. Korean
+  builds a syllable with no choices, so a swipe up there opens nothing.
 - The choices fill the three letter rows over the keys (W to O, S to L, Z to M), each as wide as it needs, as in the row.
   P shows the page ("2/5").
 - A press of the key under a choice picks it, and so does a tap on the screen. A resting finger highlights the choice over
@@ -227,8 +239,8 @@ special, and P is only a letter ("Abandon p too"). Like the Sym panel's emoji an
 - Enter turns to the next page and Backspace to the one before, the Sym panel's own keys; a swipe up on the keys turns to
   the next and down to the one before.
 - Sym is the ✕: it closes the menu, and so does Back. A pick closes it too.
-- No swipe opens it ("actions told apart only by speed are hard to learn"). Each key it takes is in TitanKeys Debug's log, with
-  its key code: the owner's Enter once sent where the touch feed's paged, and the log will say what the real key sends.
+- A swipe up opens it only at a page turn's length, never a short flick's ("actions told apart only by speed are hard to
+  learn"). Each key and swipe it takes is in TitanKeys Debug's log, with its key code: the owner's Enter once sent where the touch feed's paged, and the log will say what the real key sends.
 
 **Keys while a code is typed:**
 - **Enter** types the code as letters. **Backspace** takes off the last code letter.
@@ -289,8 +301,20 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 - The order is Settings > Languages' order.
 - With only one input method on, holding Sym does nothing.
 - The experimental mark stays in Settings: the switcher shows labels only.
-- After a switch, the bar says for a moment which input method types now. A lasting mark on the bar for anything but English
-  comes later; its accessibility text says it in full: "Typing in Spanish".
+- **The language mark over Q** (owner, 2026-11-17; drawn in [design/language-mark-built.svg](design/language-mark-built.svg)):
+  - It overlays over Q and never pushes the words; a long left word sends it small into the corner.
+  - **Shift shows only where it changes what a key types** (`InputMethod.shiftMatters`): capitals, Shift letters
+    (Georgian, Thai) or an engine that reads Shift (Korean, Hindi, Vietnamese). Not in Hebrew, where Shift types the same
+    letter, nor in Chinese and Japanese, where it opens the bigger menu. Alt always shows.
+  - **At a sentence start** the mark stays big, and Shift's automatic arrow goes small and muted above it, like a superscript.
+  - **A tap on the mark switches input method within the language,** never the language: with two on, to the other; with
+    three or more, the language's row in the switcher; with one, nothing (`SwitchOverlay.markTap`). Only the mark drawn over
+    Q takes a touch. No hover effect.
+- **Two languages on:** a held Sym switches to the other one at once, with no switcher, to the input method last used in
+  it (or its first), as `SwitchOverlay.toggle` decides (owner, 2026-11-16). Three or more open the switcher. The input
+  methods last used are remembered while the keyboard runs.
+- After a switch, the bar says nothing (owner, 2026-11-16: "I don't like the XX it is wording"): the language mark at Q
+  shows which types. A screen reader hears "Typing in Spanish" (F: draft).
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
@@ -473,6 +497,45 @@ for 買える, 景観 for 警官), the second choice or a pick away.
 only `JNI_OnLoad` was exported), and `mozc.data` 18.96 MB, 13.19 MB compressed: 16.0 MB in the APK, and 19 MB copied out on
 the phone on the first use. The whole debug APK is 167.4 MB, under Google Play's 200 MB.
 
+## The bar's words in every language
+
+The owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty at all times
+unless it's like password or whatever. if not hard then it should be learning from the user too."
+
+- **Starters:** each input method's commonest words, in its `im.json` (`"starters"`), written by `tools/im/make.py
+  --starters`: from its own word list; Korean from FrequencyWords; Cantonese and Mandarin from Rime's essays, with a
+  Simplified copy through OpenCC's character table (`"startersSimplified"`, for that variant); Japanese picked by hand (Mozc's
+  costs rank homophones, not common words).
+- **On the bar** (`BarWords`, through `LanguageWords`): at a sentence's start, the user's own sentence starts and then the
+  starters, with a capital where the script has them; after a word, the words the user typed after it and then the
+  starters; while a word is typed, the user's words that start with it and then the list's. Nothing to offer leaves the bar
+  empty; it never shows English. Passwords and the other fields without words keep an empty bar, as before. English is
+  unchanged: its own engine answers.
+- **Learning** (`LanguageLearning`): every word kept, with the one before it or a sentence start, per input method. A word
+  the list lacks counts from its second use, so a typo typed once never shows. Bounded (2,000 words, 5,000 pairs, 200
+  sentence starts; the least used go). Kept in the `language_learning` store, one key per input method, written every five
+  words and as another is switched to: on the phone only, in the backup, kept by Reset most things and cleared by Reset
+  literally everything, as English's learned words are. Learn new words I type turns it off for every language.
+- Chinese and Japanese: the starters show on an empty bar; after a pick, Rime's and Mozc's own next words show (D's work).
+- **Next-word tables** (J's, from the Leipzig Corpora Collection): `pairs.txt` in an input method's folder (`pairs-pt-BR.txt`
+  for a variant), in English's `en_pairs.txt` format: "first second<TAB>count", '#' lines for the source, `<s>` for a
+  sentence's start, lower case where the script has case, the top 8 next words per first word. `NextWords` reads it with the
+  word list on a switch and frees it with the list; the bar puts its next words after the user's own and before the starters.
+  An input method without one has the starters and the user's own, as before.
+- **Blocked words, Favourites and the user's own words in every language** (owner, 2026-11-17: "The dictionary and favorite
+  systems should still work for other languages"). Blocked words and Favourites stay one shared set each (`WordRules`): words
+  rarely collide across languages, and one set keeps Settings, the backup and the word menu as they are. A blocked word never
+  shows in any language; a favourite comes first among the bar's three (`Favourites.first`). The word menu works on a word in
+  any language: Block and Favourite use the shared sets; Save and Unsave act on that language's own words (saved words never
+  fade; Unsave hides a list word until it's saved again). `LearnedWords` keeps one copy for the keyboard and Settings: Saved
+  words lists every language's own words under its name, with remove; Remove all learned words clears them too. D's fixes
+  ask `LanguageWords.usable` and `favourite`. Export words carries English's only (its file is the engine's); Back up
+  everything carries every language's.
+- **Korean** has a word list now: the Leipzig Corpora Collection's 2022 Korean news (CC BY 4.0), the 100,000 commonest
+  words of whole syllables. Its engine offers the words that start with the word so far, the syllables written and the one
+  being built, by its letters: ㅎㅏ offers 하고 and 한국 (a lone initial matches as the initial its syllables split into). A
+  choice writes the rest of the word and a space.
+
 ## Korean and Vietnamese
 
 Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tests/languages`), named in `im.json` as
@@ -490,6 +553,23 @@ Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tes
   with it, are its choices, picked with the finger and Space; Space alone writes the word as typed. Telex is an engine
   rather than letters typed into the field and then rewritten, because a tone typed at the end of a word changes a vowel
   in its middle: the engine keeps the whole word until it's done, and the keyboard's own suggestions never see half a word.
+
+## The gestures in every language
+
+Double Space, three Space taps and the delete flick work in every language (owner, 2026-11-16):
+
+- **Double Space** types the input method's own full stop (`fullStop` in `rules`): 。 in Chinese and Japanese, "। " in
+  Hindi, nothing in Thai, ". " everywhere else. The guide's fields type English, so they keep ". ".
+- **The delete flick, each word of its hold, and Ctrl + Backspace** take one word. Where words have spaces, that's the run back
+  to the space, as before (#89). In scripts written without spaces (Han, Hiragana and Katakana, Thai, Lao, Khmer, Burmese) a
+  run can be a whole message, so ICU's word breaks for the input method's language pick the last word, with any marks after
+  it (`WordBreaks`, `IcuWords`). Java's own word breaks have no Chinese dictionary, so the JVM checks use a stand-in, and ICU's
+  real words are checked on the phone.
+- **A flick with a code being built** (Chinese, Japanese, Korean's syllable, Telex's word) clears the whole code and leaves
+  the field alone (owner: "a flick should also delete the entire key code too"); a second flick deletes from the field.
+  Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
+- **Three Space taps** pick the word in front of the cursor with the same breaks. Thai's tone marks and Hindi's vowel signs
+  count as part of their words.
 
 ## Where it goes in the code
 

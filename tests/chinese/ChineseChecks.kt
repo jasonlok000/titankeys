@@ -13,7 +13,7 @@ fun main() {
     theMenuTurnsItsPages()
     pShowsTheMenusPage()
     punctuationAndQuotes()
-    aFlickUpPicks()
+    aSwipeUpOpensTheMenu()
     anEnglishWordOnlyWhenRimeCantRead()
     theEnglishWordIsNeverFirst()
     println("Chinese checks passed")
@@ -118,12 +118,20 @@ fun punctuationAndQuotes() {
     same("ascii_punct", ChineseKeys.PLAIN_PUNCTUATION, "plain punctuation is Rime's own option")
 }
 
-fun aFlickUpPicks() {
-    same(1, ChineseKeys.flickColumn("W", across = 0.1f, down = -0.8f), "up from W: W's choice")
-    same(4, ChineseKeys.flickColumn("G", across = -0.2f, down = -1f), "up from the second row too")
-    same(-1, ChineseKeys.flickColumn("W", across = 0f, down = 0.8f), "down picks nothing")
-    same(-1, ChineseKeys.flickColumn("W", across = 1.5f, down = -0.5f), "mostly sideways picks nothing")
-    same(-1, ChineseKeys.flickColumn("Z", across = 0f, down = -1f), "from the third row, nothing")
+fun aSwipeUpOpensTheMenu() {
+    val open = ChineseKeys.Swipe.OpenMenu
+    val nothing = ChineseKeys.Swipe.Nothing
+    same(open, ChineseKeys.swipe(across = 0.1f, down = -0.8f, menuOpen = false), "a swipe up opens the bigger menu")
+    same(open, ChineseKeys.swipe(across = 0f, down = -2f, menuOpen = false), "from the bottom row too: it picks nothing")
+    same(nothing, ChineseKeys.swipe(across = 0f, down = 0.8f, menuOpen = false), "down opens nothing")
+    same(nothing, ChineseKeys.swipe(across = 1.5f, down = -0.5f, menuOpen = false), "mostly sideways opens nothing")
+    // A short flick up, what used to pick, does nothing now: under half a page turn's length.
+    same(nothing, ChineseKeys.swipe(across = 0f, down = -0.2f, menuOpen = false), "a short flick up does nothing")
+    same(nothing, ChineseKeys.swipe(across = 0f, down = -0.1f, menuOpen = true), "nor with the menu open")
+    // With the menu open, up and down turn its pages, as on the Sym panel.
+    same(ChineseKeys.Swipe.NextPage, ChineseKeys.swipe(across = 0f, down = -0.8f, menuOpen = true), "up: the next page")
+    same(ChineseKeys.Swipe.PageBefore, ChineseKeys.swipe(across = 0f, down = 0.8f, menuOpen = true), "down: the page before")
+    same(nothing, ChineseKeys.swipe(across = 2f, down = 0.5f, menuOpen = true), "sideways turns no page")
 }
 
 fun anEnglishWordOnlyWhenRimeCantRead() {

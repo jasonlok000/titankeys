@@ -329,6 +329,11 @@ with the names of the ones that are on.
 - **A language's page** (`app/settings/languages/language.tsx`, the route's `language` parameter): its input methods, each with a
   switch, and its own options: English's Spelling, Chinese's Characters. An experimental language says once, under its
   name, what that means (F: draft).
+- **How to type** (owner, 2026-11-17: "we shd have basic instructions in text in each language specifically"): a language's page
+  shows, between its input methods and its options, what's special to typing each one, under its name where the language has
+  several (`lib/how-to.tsx`). The lines are F's, kept in `tools/im/howto.json` (input method id: lines);
+  `tools/im/make.py --howto` writes them into each `im.json` as `"howTo"` and into the index, which Settings reads.
+  `tools/checks/im.test.ts` checks that the three agree. An input method with none shows nothing.
 - English can't be turned off while it's the only one.
 - **Names:** each row shows the input method's own name, which is CLDR's name for its language in that language,
   capitalised (Français, Русский, Indonesia); `tools/im/make.py` stops if one differs, and `tests/languages` checks the

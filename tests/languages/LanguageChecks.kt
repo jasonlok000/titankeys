@@ -36,6 +36,7 @@ private val RUSSIAN_KEYS = mapOf(
 
 fun main(args: Array<String>) {
     theFileReads()
+    howToReads()
     badFilesSayWhy()
     keysTypeTheirLetters()
     accentsKeepTheirOrderAndCase()
@@ -70,6 +71,15 @@ fun main(args: Array<String>) {
         kotlin.system.exitProcess(1)
     }
     println("languages: all passed")
+}
+
+/** An input method's how-to: an optional list of lines in its im.json and the index. */
+private fun howToReads() {
+    val method = InputMethod.parse(SPANISH.trimEnd().removeSuffix("}") + ""","howTo":["Hold a letter for its accents.","Shift gives the capital one."]}""")
+    same("an im.json's how-to", method.howTo, listOf("Hold a letter for its accents.", "Shift gives the capital one."))
+    same("none: empty", InputMethod.parse(SPANISH).howTo, emptyList<String>())
+    val index = InputMethodIndex.parse("""[{"id":"es","name":"Español","nameEnglish":"Spanish","label":"ES","locale":"es","script":"Latn","howTo":["Hold N for ñ."]}]""")
+    same("the index carries it", index["es"]?.howTo, listOf("Hold N for ñ."))
 }
 
 private fun theFileReads() {

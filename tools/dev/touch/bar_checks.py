@@ -10,8 +10,8 @@ from checks import Stop, play, record
 WORDS = {"es": "hola", "fr": "bonjour", "ko": "gksrnr"}
 HANDS = ["A password field: the bar stays empty (no starters, no next words)",
          "Spanish: block a word from its menu, and it never shows on the bar again",
-         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it",
-         "Japanese: Shift closes the bigger menu (the keyboard twin's Shift can't be used here)"]
+         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it"]
+# Japanese's Shift on the bigger menu is the shift batch's (shift_checks.py, through the key feed).
 
 
 def keys(word):
@@ -394,7 +394,7 @@ def check_thai_hebrew_hindi():
 
 
 BATCH += [check_thai_hebrew_hindi]
-HANDS += ["Thai: ฉันไปโรงเรียน (ฉ and โ on Shift) + Space: next words after โรงเรียน (บ้าน ที่ ใน), not starters"]
+# Thai's ฉันไปโรงเรียน (ฉ and โ on Shift) is the shift batch's (shift_checks.py, through the key feed).
 
 
 def check_empty_fields():

@@ -9,6 +9,13 @@ java -cp "$work" com.titankeys.engine.AlignmentDump android/assets/calibration/t
 cc -O2 -Wall -Wextra -Werror -o "$work/tk-inject" tools/dev/touch/inject.c
 python3 tools/dev/touch/test/test_touch.py "$work/alignment.txt" "$work/tk-inject"
 
+# TK_KEYFEED's scripts: gestures.py writes the keys by Android's names for the key feed, and leaves the injector none.
+python3 tools/dev/touch/gestures.py --keyfeed-out "$work/k.keys" --feed-out "$work/k.feed" --out "$work/k.tki" chord:shift+q +100 key:space:60:none
+[ "$(cat "$work/k.keys")" = "D 0 SHIFT_RIGHT;D 30 Q;U 110 Q;U 130 SHIFT_RIGHT;D 240 SPACE;U 300 SPACE" ] \
+  || { echo "FAIL the key feed's keys: $(cat "$work/k.keys")"; exit 1; }
+grep -q TitanKey "$work/k.tki" && { echo "FAIL the injector still got keys with TK_KEYFEED"; exit 1; }
+echo "Key feed scripts checks passed"
+
 # The key feed's script (TitanKeys Debug's KeyFeed): Shift's meta state, Android's repeats, bad scripts refused.
 if [ -n "${KOTLIN_HOME:-}" ]; then
   "$KOTLIN_HOME/bin/kotlinc" -nowarn -d "$work/keyfeed" android/debug/recorder/KeyFeedPlan.kt tools/dev/touch/test/KeyFeedChecks.kt 2>&1 | grep -v '^warning' || true

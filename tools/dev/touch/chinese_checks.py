@@ -26,8 +26,8 @@ CODE = "neihou"
 # A pending code goes key by key: Backspace takes one letter off.
 CLEAR_CODE = [g for _ in range(20) for g in ("key:del", "+60")]
 # What these checks can't do on this phone, for the owner to try by hand.
-HANDS = ["Georgian (ქართული on in Settings > Languages): Shift + W types ჭ (the keyboard twin's Shift can't be used here)",
-         "Chinese: Shift with a code pending opens the bigger menu, and Shift again closes it"]
+# Georgian's Shift + W and Shift opening and closing the bigger menu are the shift batch's (shift_checks.py, the key feed).
+HANDS = []
 # The more cue at P on the bar, on the 1076 x 1200 display: P's column, the bar's middle.
 MORE_CUE = (1022, 1170)
 FIFTH = (592, 1170)

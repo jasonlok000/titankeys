@@ -218,7 +218,8 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "gestures-fix": "gesture_fix_batch",
            "first-use": "first_use_batch",
            "rime-files": "rime_batch",
-           "key-feed": "keyfeed_batch"}
+           "key-feed": "keyfeed_batch",
+           "shift": "shift_checks"}
 
 
 def report(name, stamp, hands):

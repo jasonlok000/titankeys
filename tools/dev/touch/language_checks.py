@@ -67,7 +67,8 @@ LOOK = {
 }
 # Space after a code picks: Japanese's first choice, read back.
 PICKS = {"ja": "n i h o n g o"}
-HANDS = ["Georgian: Shift + W types ჭ (the keyboard twin's Shift can't be used on this phone)"]
+# Georgian's Shift + W is the shift batch's (shift_checks.py, through the key feed).
+HANDS = []
 
 
 def all_ids():

@@ -4,6 +4,8 @@
 //   rime_tool try <shared> <user> <schema> <variant> "<code>" [count]
 //       types the code key by key (a space is sent as the delimiter, an apostrophe) and prints the first choices,
 //       with the variant (zh_hans, zh_hk or zh_tw) set as the app sets it
+//   rime_tool space <shared> <user> <schema> <variant> "<code>"
+//       types the code as typed, spaces and all, then Space once, as the app does; prints "committed|left over". A code of "-" reads one code a line from stdin.
 // Based on the language study's test program (docs/studies/56-languages.md).
 #include <rime_api.h>
 
@@ -72,6 +74,37 @@ int main(int argc, char** argv) {
     rime->finalize();
     return 0;
   }
+  if (argc >= 7 && strcmp(argv[1], "space") == 0) {
+    const char* schema = argv[4];
+    const char* variant = argv[5];
+    RimeApi* rime = open(argv[2], argv[3], true);
+    RimeSessionId s = rime->create_session();
+    if (!rime->select_schema(s, schema)) {
+      fprintf(stderr, "schema %s not found\n", schema);
+      return 1;
+    }
+    for (const char* o : kVariants) rime->set_option(s, o, strcmp(o, variant) == 0 ? True : False);
+    // "-": one code a line from stdin, each after a cleared input, for a corpus test.
+    bool many = strcmp(argv[6], "-") == 0;
+    char line[4096];
+    while (many ? fgets(line, sizeof line, stdin) != nullptr : true) {
+      std::string code = many ? std::string(line, strcspn(line, "\r\n")) : argv[6];
+      rime->clear_composition(s);
+      for (char c : code) rime->process_key(s, (unsigned char)c, 0);
+      rime->process_key(s, ' ', 0);
+      RIME_STRUCT(RimeCommit, commit);
+      std::string typed = rime->get_commit(s, &commit) ? commit.text : "";
+      if (commit.text) rime->free_commit(&commit);
+      RIME_STRUCT(RimeContext, ctx);
+      std::string left = rime->get_context(s, &ctx) && ctx.composition.preedit ? ctx.composition.preedit : "";
+      rime->free_context(&ctx);
+      printf("%s|%s\n", typed.c_str(), left.c_str());
+      if (!many) break;
+    }
+    rime->destroy_session(s);
+    rime->finalize();
+    return 0;
+  }
   if (argc >= 7 && strcmp(argv[1], "learn") == 0) {
     // Types the code and picks choice <index>, as a user would, so Rime learns it.
     RimeApi* rime = open(argv[2], argv[3], true);
@@ -92,6 +125,7 @@ int main(int argc, char** argv) {
     return ok ? 0 : 1;
   }
   fprintf(stderr, "usage: %s deploy <shared> <user> | try <shared> <user> <schema> <variant> <code> [count]\n"
+          "  | space <shared> <user> <schema> <variant> <code>\n"
           "  | learn <shared> <user> <schema> <code> <index> | sync <shared> <user>\n", argv[0]);
   return 2;
 }

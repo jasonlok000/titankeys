@@ -123,6 +123,20 @@ check tk_pinyin zh_hk "ruan jian" 軟件
 check tk_pinyin zh_tw "ruan jian" 軟體
 check tk_pinyin zh_hans "da yin ji" 打印机
 check tk_pinyin zh_tw "da yin ji" 印表機
+# A whole phrase typed without spaces, then Space once, as the owner types (2026-11-17: "diuneiloumo"): Space takes all of it,
+# leaving nothing behind.
+phrase() { # schema variant code committed
+  local got
+  rm -rf "$D/try"; mkdir -p "$D/try"
+  got="$("$TOOL" space "$D/phone" "$D/try" "$1" "$2" "$3" 2>/dev/null)"
+  [ "$got" = "$4|" ] || { echo "FAIL $1 $2 '$3' then Space: '$got', expected '$4|'" >&2; exit 1; }
+}
+phrase tk_yale zh_hk diuneiloumou 屌你老母
+phrase tk_yale zh_hk ngodeigamyatheuiyamcha 我哋今日去飲茶
+phrase tk_yale zh_hk ngodeiyatchaiheuisikfaan 我哋一齊去食飯
+phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
+phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
+
 # 対, the Japanese form of 對, is off deui's first page in every variant.
 for v in zh_hk zh_tw zh_hans; do
   rm -rf "$D/try"; mkdir -p "$D/try"

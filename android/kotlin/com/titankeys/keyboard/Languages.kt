@@ -41,9 +41,9 @@ internal class Languages(
     val engine: InputEngine? get() = if (englishOnly) null else loadedEngine
     val words = LanguageWords(english) { slot.list }
 
-    /** Whether keys wait for an engine that's loading, and go to it once it's ready ([EngineWait]). */
+    /** Whether typing waits for an input method that's loading, and goes to it once it's ready ([EngineWait]). */
     private val engineWait = EngineWait()
-    val engineLoading get() = !englishOnly && engineWait.waiting
+    val loadingNow get() = !englishOnly && engineWait.waiting
 
     /** The current input method's word list, once loaded: null for English and for one without a list. */
     val list: WordList? get() = if (englishOnly) null else slot.list
@@ -206,7 +206,7 @@ internal class Languages(
         val listTicket = slot.begin(id)
         // The last input method's next-word table goes with its list.
         if (id != loaded.id) words.nextWords = null
-        engineWait.loading(ticket, on.any { it.id == id && it.engine != null })
+        engineWait.loading(ticket, id != InputMethod.ENGLISH_ID)
         if (id == InputMethod.ENGLISH_ID) {
             apply(InputMethod.ENGLISH, null, ticket, listTicket)
             return

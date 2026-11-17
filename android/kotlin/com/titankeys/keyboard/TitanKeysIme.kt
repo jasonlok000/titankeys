@@ -2720,6 +2720,8 @@ class TitanKeysIme : InputMethodService() {
         else if (cursorGesture.tripled) main.postAtTime(confirmTriple, event.eventTime + CursorGesture.CONFIRM_MILLIS)
         contact.up(samples, SystemClock.uptimeMillis())?.let { pending ->
             lastTouch = pending.points
+            // A tap or a swipe while the input method loads waits behind the same stop as a key ([waitForLoad]).
+            waitForLoad("A touch")
             if (settlements.size == Contact.MAX_PENDING_CONTACTS || !makeRoom()) {
                 contact.settle(pending, pending.deadline)
                 return@let
@@ -3165,7 +3167,7 @@ class TitanKeysIme : InputMethodService() {
 
     private fun clearSettlements() {
         inputGeneration++
-        engineBarrier = null
+        loadGate.clear()
         drainScheduled = false
         settlements.values.forEach(main::removeCallbacks)
         settlements.clear()
@@ -3216,29 +3218,25 @@ class TitanKeysIme : InputMethodService() {
         }
     }
 
-    /** The queue's stop while an engine loads ([EngineWait]): the keys typed meanwhile wait behind it. */
-    private var engineBarrier: PendingInput? = null
+    /** The queue's stop while an input method loads ([EngineWait]): the keys and touches typed meanwhile wait behind it. */
+    private val loadGate = LoadGate { PendingInput(false, null) }
 
     /**
-     * A key while the input method's engine is still loading, as a field starts or after a switch: it and the keys after it wait
-     * in the queue until the engine is ready, so the first letter goes into the engine's code rather than into the field as
-     * English. Shown keyboard or not. Not in exact typing, which never uses an engine.
+     * A key or a touch on the touchpad while the input method is still loading, as a field starts or after a switch: it and
+     * whatever follows wait in the queue until it's ready, so the first letter goes into the engine's code (or is the input
+     * method's own letter) rather than into the field as English. Shown keyboard or not. Not in exact typing, which types
+     * English anyway.
      */
-    private fun waitForEngine(event: KeyEvent) {
-        if (field.exact || event.isSystem || !::languages.isInitialized || !languages.engineLoading) return
-        if (engineBarrier?.let { it in pendingInput } == true || !makeRoom()) return
-        engineBarrier = PendingInput(false, null).also(pendingInput::addLast)
-        Log.i(LOG_TAG, "Key ${event.keyCode} waits: the input method's engine is still loading")
+    private fun waitForLoad(what: String) {
+        if (field.exact || !::languages.isInitialized || !languages.loadingNow || loadGate.closed(pendingInput) || !makeRoom()) return
+        if (loadGate.before(true, pendingInput)) Log.i(LOG_TAG, "$what waits: the input method is still loading")
     }
 
-    /** The load ended, ready or not: the keys that waited go on, to the engine if it started. */
-    private fun engineReady() {
-        if (languages.engineLoading) return
-        val barrier = engineBarrier ?: return
-        engineBarrier = null
-        if (barrier !in pendingInput) return
-        Log.i(LOG_TAG, "The keys that waited go to ${languages.current.id}")
-        barrier.ready = true
+    /** The load ended, ready or not: what waited goes on, to the engine if it started. */
+    private fun loadEnded() {
+        val stop = loadGate.open(languages.loadingNow, pendingInput) ?: return
+        Log.i(LOG_TAG, "What waited goes to ${languages.current.id}")
+        stop.ready = true
         drainInput()
     }
 
@@ -4008,7 +4006,7 @@ class TitanKeysIme : InputMethodService() {
         closePicker()
         strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
-        engineReady()
+        loadEnded()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
         val subtype = InputMethodList.subtype(this, method.id) ?: return
@@ -4170,7 +4168,7 @@ class TitanKeysIme : InputMethodService() {
             consumedKeys += keyCode
             return true
         }
-        waitForEngine(carried)
+        if (!carried.isSystem) waitForLoad("Key ${carried.keyCode}")
         if (pendingInput.isNotEmpty()) {
             val captured = KeyEvent(carried)
             consumedKeys += keyCode

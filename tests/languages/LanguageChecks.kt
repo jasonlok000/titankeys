@@ -952,30 +952,54 @@ private fun koreanChoices() {
 }
 
 /**
- * The first key in an engine's input method (owner, 2026-11-17): while its engine loads, at a field start or a switch, keys
- * wait, also with the keyboard hidden, and go on once the load ends. Only the last load counts.
+ * The first key or touch in an input method other than English (owner, 2026-11-17): while it loads, at a field start or a
+ * switch, keys and touches wait, also with the keyboard hidden, and go on once the load ends. Only the last load counts.
  */
 private fun keysWaitForALoadingEngine() {
     val wait = EngineWait()
     same("nothing loading: keys go on", wait.waiting, false)
-    wait.loading(1, engine = true)
+    wait.loading(1, waits = true)
     same("Yale loading at a field start: keys wait", wait.waiting, true)
     same("an older load's end lets nothing go", wait.loaded(0), false)
     same("still waiting", wait.waiting, true)
     same("its own load's end: the keys go on", wait.loaded(1), true)
     same("and nothing waits after", wait.waiting, false)
-    wait.loading(2, engine = false)
-    same("an input method without an engine (Spanish): nothing waits", wait.waiting, false)
-    wait.loading(3, engine = true)
-    wait.loading(4, engine = true)
+    wait.loading(2, waits = false)
+    same("English: nothing waits", wait.waiting, false)
+    wait.loading(3, waits = true)
+    wait.loading(4, waits = true)
     same("a switch overtook the load: its end doesn't count", wait.loaded(3), false)
     same("the newer one's does", wait.loaded(4), true)
-    wait.loading(5, engine = true)
-    wait.loading(6, engine = false)
+    wait.loading(5, waits = true)
+    wait.loading(6, waits = false)
     same("a switch to English overtook it: nothing waits", wait.waiting, false)
-    wait.loading(7, engine = true)
+    wait.loading(7, waits = true)
     wait.stop()
     same("the keyboard going: nothing waits", wait.waiting, false)
+
+    // The queue's stop, keys and touches alike, in the order typed.
+    var made = 0
+    val gate = LoadGate { "stop${++made}" }
+    val queue = ArrayDeque<String>()
+    same("nothing loading: no stop", gate.before(false, queue), false)
+    queue += "a typed before the load"
+    same("the first key while loading puts the stop in", gate.before(true, queue), true)
+    queue += "key n"
+    same("a touch after it doesn't put another", gate.before(true, queue), false)
+    queue += "touch: a tap on g"
+    same("the queue: what came first, the stop, then the key and the touch", queue.toList(),
+        listOf("a typed before the load", "stop1", "key n", "touch: a tap on g"))
+    same("still loading (a field start's new load): the stop stays shut", gate.open(true, queue), null)
+    same("the load ends: the stop opens", gate.open(false, queue), "stop1")
+    same("and only once", gate.open(false, queue), null)
+    queue.clear()
+    gate.before(true, queue)
+    queue.clear()
+    gate.clear()
+    same("the queue emptied at a field start: a new touch puts a new stop in", gate.before(true, queue), true)
+    same("a fresh stop", queue.toList(), listOf("stop3"))
+    queue.clear()
+    same("a stop the queue dropped never opens", gate.open(false, queue), null)
 }
 
 /** The bar's words in another input method, and what it learns from the user. */

@@ -706,6 +706,10 @@ STARTER_SOURCES = {
     "yue-yale": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "yue-jyutping": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-pinyin": ("../src/rime-essay/essay.txt", "essay"),
+    # As their predictors: Cangjie and Quick Rime's Cantonese (predict-yue), Zhuyin its Mandarin (predict-cmn).
+    "zh-cangjie": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
+    "zh-quick": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
+    "zh-zhuyin": ("../src/rime-essay/essay.txt", "essay"),
     "ja": ("", "fixed"),
 }
 # Japanese has no frequency list split into words that we ship, and Mozc's costs rank homophones, not common words, so its

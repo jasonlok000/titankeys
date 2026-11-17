@@ -121,5 +121,12 @@ rime_batch.adb = lambda *args: 'Broadcast completed: result=0, data="no guide; r
 assert rime_batch.rime_data() == (0.0, 0, [])
 rime_batch.adb = lambda *args: 'Broadcast completed: result=0, data="no guide"'
 assert rime_batch.rime_data() is None
+# E's delete animation batch: its counts parse, and its longest calls build within one call's 15 s.
+import delete_batch
+assert delete_batch.dots(["delete animation: dots 41", "dominoes run 100 words", "delete animation: dots 60 as dominoes, 104 words"]) == [41, 60]
+for moves in (["flick", "+300"] * 33, [delete_batch.HOLD, "+1500"], [delete_batch.HOLD, "+300", "key:x:60:none", "+800"]):
+    built = subprocess.run([sys.executable, "tools/dev/touch/gestures.py", "--out", os.path.join(os.environ["TK_OUT"], "del.tki"), *moves],
+                           capture_output=True, text=True)
+    assert built.returncode == 0, f"the delete batch's gestures don't build: {built.stderr[-300:]}"
 print("Batch checks passed")
 PY

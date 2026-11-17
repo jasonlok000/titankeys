@@ -146,8 +146,11 @@ test("engines get ready in the background, before the switch", () => {
   const languages = read("android/kotlin/com/titankeys/keyboard/Languages.kt");
   expect(body(languages, "refresh")).toContain("warmUp()");
   expect(body(languages, "warmUp")).toContain("it.warm(m, java.io.File(context.filesDir, \"engines/$name\"))");
-  // Rime's warm selects no schema: the engine that types owns its one session.
-  expect(body(read("android/kotlin/com/titankeys/rime/RimeEngine.kt"), "warm")).not.toContain("select(");
+  // Rime's warm selects its input method's schema, so a switch to it has nothing left to do (owner, 2026-11-17: "I'm still
+  // seeing loading for Yale"), but only while no other engine has selected one: that one types, and keeps the session.
+  const warm = body(read("android/kotlin/com/titankeys/rime/RimeEngine.kt"), "warm");
+  expect(warm).toContain("if (open && id != null && schema == null && claimed(rime, this)) {");
+  expect(warm).toContain("if (select(id))");
 });
 
 test("the menu: a press picks, Enter and Backspace turn pages, each key logged, Sym is the ✕, Back closes", () => {

@@ -265,6 +265,10 @@ next tk_pinyin zh_tw "wo" esc space "為 母親 什麼都"
 next tk_cangjie zh_hk "hqi" reset space "哋 喺 嘅"
 next tk_quick zh_hk "hqi" reset space "哋 喺 嘅"
 next tk_zhuyin zh_tw "nehw" reset space "何塞 幸福 幾次"
+# A phrase committed at once: its next words from what it ends with (tk_predict.h), which Escape clears as any others.
+next tk_yale zh_hk "ngodeigamyat" esc space "係 嘅 下晝"
+next tk_yale zh_hk "ngodeigamyat" esc esc ""
+next tk_pinyin zh_hk "womenyiqi" esc space "去 一邊 來"
 rm -rf "$D/try"; mkdir -p "$D/try"
 fresh="$("$TOOL" try "$D/phone" "$D/try" tk_yale zh_hk "" 8 2>/dev/null | sed 's/^[^:]*://')"
 [ -z "$fresh" ] || { echo "FAIL suggestions with nothing committed: $fresh" >&2; exit 1; }

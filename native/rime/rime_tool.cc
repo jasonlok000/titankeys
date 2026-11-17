@@ -11,6 +11,8 @@
 // Based on the language study's test program (docs/studies/56-languages.md).
 #include <rime_api.h>
 
+#include "tk_predict.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -99,16 +101,22 @@ int main(int argc, char** argv) {
       }
       printf("\n");
     };
-    for (const char* c = argv[6]; *c; ++c) rime->process_key(s, *c == ' ' ? '\'' : (unsigned char)*c, 0);
-    rime->process_key(s, ' ', 0);
+    // Each key as the app sends it (rime_jni.cc): with the next-word fallback after it (tk_predict.h).
+    auto press = [&](int keycode) {
+      const auto* before = tk::LastCommit(s);
+      rime->process_key(s, keycode, 0);
+      tk::PredictFromEnd(s, before);
+    };
+    for (const char* c = argv[6]; *c; ++c) press(*c == ' ' ? '\'' : (unsigned char)*c);
+    press(' ');
     show("space");
     for (int i = 7; i < argc; ++i) {
       std::string key = argv[i];
-      if (key == "esc") rime->process_key(s, 0xff1b, 0);
-      else if (key == "bs") rime->process_key(s, 0xff08, 0);
-      else if (key == "space") rime->process_key(s, ' ', 0);
+      if (key == "esc") press(0xff1b);
+      else if (key == "bs") press(0xff08);
+      else if (key == "space") press(' ');
       else if (key == "reset") rime->clear_composition(s);
-      else for (char c : key) rime->process_key(s, (unsigned char)c, 0);
+      else for (char c : key) press((unsigned char)c);
       show(key.c_str());
     }
     rime->destroy_session(s);

@@ -399,6 +399,22 @@ class Composer(
         }
     }
 
+    /**
+     * The input method changed, and with it the words this composer asks (LanguageWords): what the bar shows is the old one's
+     * (owner, 2026-11-17: "right after switching keyboard the suggestion doesn't change and it stuck on like Chinese"). An
+     * answer still on its way is dropped, the word being shown goes, the bar empties, and the new input method's words come,
+     * its starters or next words. Keys typed before the switch keep their place: this waits behind them.
+     */
+    fun wordsChanged() {
+        if (defer { wordsChanged() }) return
+        invalidate(discardInput = false)
+        composition = Composition.None
+        correcting = null
+        awaitingNextWord = null
+        show(emptyList())
+        predict()
+    }
+
     /** Starts over. The words on the bar stay until [predict] replaces them, so that the bar does not flash empty. */
     private fun reset(predicts: Boolean = true) {
         invalidate()

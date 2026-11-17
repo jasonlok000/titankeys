@@ -530,6 +530,16 @@ class TitanKeysIme : InputMethodService() {
         }
         val word = heldWords.next()
         enqueue {
+            // A code still being built goes first, as a flick takes it: the pending code, then what was picked, typed less its last
+            // character, each step one word for the dominoes (owner, 2026-11-17: "the same shd work for holding for delete too").
+            val engine = languages.engine
+            if (engine != null && (openPicker() as? LanguagePicker.Choices)?.state?.composing == true) {
+                haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
+                engineState(engine.flick())
+                strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), 1)
+                KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
+                return@enqueue
+            }
             // At the start of the text the hold hits a wall: the same wall as a flick with nothing to delete, played clean, once,
             // and the hold stays quiet while the finger stays, with no words left on the bar, only the caret.
             val selected = selectionToDelete()

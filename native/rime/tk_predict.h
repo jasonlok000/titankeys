@@ -63,7 +63,8 @@ inline bool PredictAfter(RimeSessionId id, const std::string& text) {
 }
 
 // A flick with a code being built (owner, 2026-11-17): the code still pending goes, and what was picked of it stays (頂你個
-// picked, "fai" pending: "fai" goes). With nothing pending, the last picked word goes, with its code. True if anything went.
+// picked, "fai" pending: "fai" goes). True if anything went: false with nothing pending, and the keyboard then types what was
+// picked, less its last character (RimeEngine.flick), without Rime committing it, so it learns nothing from it.
 inline bool DropLast(RimeSessionId id) {
   auto session = rime::Service::instance().GetSession(id);
   if (!session) return false;
@@ -71,14 +72,12 @@ inline bool DropLast(RimeSessionId id) {
   if (!ctx || ctx->input().empty()) return false;
   const size_t length = ctx->input().length();
   ctx->set_caret_pos(length);
-  size_t picked = 0, lastStart = 0;
+  size_t picked = 0;
   for (const auto& segment : ctx->composition()) {
-    if (segment.status < rime::Segment::kSelected) continue;
-    picked = segment.end;
-    lastStart = segment.start;
+    if (segment.status >= rime::Segment::kSelected) picked = segment.end;
   }
-  const size_t keep = picked < length ? picked : lastStart;
-  return ctx->PopInput(length - keep);
+  if (picked == 0 || picked >= length) return false;
+  return ctx->PopInput(length - picked);
 }
 
 }  // namespace tk

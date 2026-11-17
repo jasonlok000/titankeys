@@ -18,7 +18,7 @@ interface RimeCalls {
     fun reset()
     /** A word typed outside Rime (a pick from the bar): Rime offers its next words. True if any came. */
     fun predictAfter(text: String): Boolean = false
-    /** A flick: the code still pending goes and what was picked of it stays; with none pending, the last picked word goes. */
+    /** A flick: the code still pending after a pick goes and what was picked stays. False with nothing picked or pending. */
     fun dropLast(): Boolean = false
     fun read(): Raw?
     /**

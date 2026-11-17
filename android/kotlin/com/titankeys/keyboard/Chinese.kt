@@ -162,6 +162,19 @@ object ChineseKeys {
     /** Whether [method] types through the bar of choices: Chinese and Japanese. The English word is Chinese's alone. */
     fun usesBar(method: InputMethod) = method.engine in BAR_ENGINES
 
+    /**
+     * What was picked of a code, from Rime's [preedit] once nothing is pending: its text without spaces, or empty while any of
+     * it is still letters ([input]'s), as with nothing picked.
+     */
+    fun pickedText(preedit: String?, input: String): String {
+        val text = preedit.orEmpty().filterNot { it.isWhitespace() }
+        return if (text.isEmpty() || text.any { it in 'a'..'z' || it in 'A'..'Z' } || text == input) "" else text
+    }
+
+    /** [text] less its last character, a whole code point (an emoji or a rare character is two chars). */
+    fun dropLastCharacter(text: String): String =
+        if (text.isEmpty()) "" else text.substring(0, text.offsetByCodePoints(text.length, -1))
+
     /** Rime's option for plain (ASCII) punctuation, the setting's. */
     const val PLAIN_PUNCTUATION = "ascii_punct"
 

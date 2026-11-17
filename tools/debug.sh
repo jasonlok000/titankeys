@@ -42,4 +42,11 @@ cp android/debug/colors.xml android/src/main/res/values/titankeys_debug.xml
 bash tools/release.sh
 apk=$(ls -t dist/*.apk | head -1)
 echo "Built $apk"
+# R8's mapping beside the APK, named by its map id, so a crash's frames (r8-map-id-…) can be retraced later: without it, 2026-11-17's
+# OutOfMemoryError needed a rebuild of the same commit to read.
+mapping=.ink/build/android/outputs/mapping/release/mapping.txt
+if [ -f "$mapping" ]; then
+  id=$(grep -m1 -oE 'pg_map_id: [0-9a-f]+' "$mapping" | cut -d' ' -f2)
+  cp "$mapping" "${apk%.apk}.mapping-${id:0:8}.txt" && echo "Mapping ${apk%.apk}.mapping-${id:0:8}.txt (map id $id)"
+fi
 if [[ "${1:-}" == "--install" ]]; then . "$(dirname "$0")/phone-lock.sh"; adb install -r "$apk"; fi

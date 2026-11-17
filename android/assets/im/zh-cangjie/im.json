@@ -20,5 +20,33 @@
   },
   "source": {
     "words": "rime-cangjie's Cangjie 5 (LGPL-3.0; its dictionary, from 倉頡之友's 五倉世紀, marked GPL) and rime-essay (LGPL-3.0)"
-  }
+  },
+  "starters": [
+    "我",
+    "係",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "嘅",
+    "都",
+    "個",
+    "就",
+    "有"
+  ],
+  "startersSimplified": [
+    "我",
+    "系",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "嘅",
+    "都",
+    "个",
+    "就",
+    "有"
+  ]
 }

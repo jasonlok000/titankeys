@@ -148,13 +148,29 @@ def check_all():
                 record(f"lang-{im}", False, f"the check broke: {error!r}")
 
 
+def out_of_memory():
+    """How many out-of-memory crashes of TitanKeys Debug Android's crash log holds now."""
+    crashes = adb("logcat", "-d", "-b", "crash")
+    return sum(1 for line in crashes.splitlines() if "OutOfMemoryError" in line)
+
+
 def setup():
+    global crashes_before
+    crashes_before = out_of_memory()
     if not languages.logs_on(True):
         record("lang-log", None, "the shell couldn't let TitanKeysIM through the log: the lines will say nothing")
 
 
+crashes_before = 0
+
+
 def finish():
-    """English alone again, as most people have it, and the log tags cleared."""
+    """No out-of-memory crash during the run (#85's input methods: one came after 18 switches, 2026-11-16), and LeakCheck's own
+    report; then English alone again, as most people have it, and the log tags cleared."""
+    crashes = out_of_memory() - crashes_before
+    record("lang-memory", crashes == 0, f"{crashes} out-of-memory crashes during the run")
+    answer = adb("shell", "am", "broadcast", "-n", f"{checks.APP}/com.titankeys.keyboard.LeakCheck")
+    record("lang-leakcheck", None, "LeakCheck: " + answer.strip().split("data=")[-1].strip('"')[:400])
     try:
         turn_on(["en"], "en")
         fresh()

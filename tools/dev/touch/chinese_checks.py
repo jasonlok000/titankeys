@@ -160,6 +160,27 @@ def check_sym_panel():
     time.sleep(.8)
 
 
+def suggestions(name, method, keys, then):
+    """A code, Space for its first choice, then the bar's next-word suggestions (a shot), and Space again: the first of them."""
+    import language_checks
+    fresh()
+    language_checks.turn_on(["en", YALE, "yue-jyutping", "zh-pinyin"], method)
+    fresh()
+    first = shot_then(f"{name}-after", [f"key:{k}" for k in keys] + ["+500", "key:space", "+800"], [])
+    second = shot_then(f"{name}-next", ["key:space", "+800"], [])
+    record(name, None if cjk(second) and len((second or "").strip()) > len((first or "").strip()) else False,
+           f"{''.join(keys)} + Space typed {first!r}; Space again typed {second!r}: {then}", f"{name}-after")
+
+
+def check_suggestions():
+    """Chinese suggestions with nothing typed (main 7a75c4bb): after a pick, the bar offers what comes next, and Space types
+    the first. Pinyin runs in the Characters setting the phone has (Hong Kong): the receiver can't set Simplified."""
+    suggestions("zh-next-yale", YALE, "nei", "the bar after the pick shows 嘅 哋 唔…, and Space types 嘅")
+    suggestions("zh-next-pinyin", "zh-pinyin", "wo", "the bar after the pick shows 为/為 母亲/母親…, and Space types the first")
+    import language_checks
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+
+
 def check_enter():
     """Enter types the code as letters."""
     fresh()
@@ -184,7 +205,8 @@ def check_english():
         record(f"zh-{word}", None, f"{word}: {want}", f"zh-{word}")
 
 
-BATCH = [check_yale, check_row, check_space, check_tap, check_flick, check_menu, check_sym_panel, check_enter, check_comma, check_english]
+BATCH = [check_yale, check_row, check_space, check_tap, check_flick, check_menu, check_sym_panel, check_enter, check_comma, check_english,
+         check_suggestions]
 
 
 def finish():

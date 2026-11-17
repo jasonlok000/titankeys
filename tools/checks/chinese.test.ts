@@ -22,15 +22,15 @@ const body = (source: string, name: string) => {
   throw new Error(`no end to ${name}`);
 };
 
-test("the code is a tab on the bar's left edge, over the app, only while a code is typed", () => {
+test("the code floats over the app, above the bar's left edge, only while a code is typed", () => {
   expect(body(strip, "drawEffects")).toContain("drawCodeLine(canvas, layer)");
   const line = body(strip, "drawCodeLine");
   expect(line).toContain("picker.lead.isEmpty()");
-  // At the bar's size and full brightness, in the bar's black, joined to it; the floating glow is gone (owner, 2026-11-17).
+  // At the bar's size and full brightness, on black with a soft orange glow; no joined tab (owner, 2026-11-17).
+  expect(line).toContain("val above = y - height - dp(CODE_GAP_DP)");
   expect(line).toContain("codeText.textSize = wordPixels()");
   expect(line).toContain("codeText.color = look.ink");
-  expect(line).toContain("codeBox.set(left, y - height, left + textWidth * scale + 2 * pad, y + radius)");
-  expect(strip).not.toContain("setShadowLayer(");
+  expect(line).toContain("menuPaint.setShadowLayer(");
   expect(strip).not.toContain("CODE_TAB");
 });
 

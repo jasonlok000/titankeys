@@ -95,19 +95,25 @@ private fun bar(out: File, name: String, mark: String, code: String, listed: Lis
     val shown = items.indices.filter { placed[it] != null }
     val columns = shown.map { placed[it]!! }
     val more = listed.size > shown.count { !(english != null && it == EnglishOffer.PLACE) }
-    // The code: a tab on the bar's top-left edge, over the app.
+    // The code: a line floating just above the bar's left edge, over the app.
     if (code.isNotEmpty()) {
-        // As Strip draws it: the bar's size, full brightness, black.
+        // As Strip draws it: the bar's size, full brightness, black, with a soft orange glow.
         val height = px(34f)
         val pad = px(12f)
         val radius = px(10f)
         val left = column(0).first
         val textSize = word
         val w = g.widthOf(code, textSize) + 2 * pad
-        // A tab joined to the bar's top-left, rounded on top only: its bottom reaches into the bar's black.
-        val boxTop = top - height
+        // Floating just above the bar, with a soft orange glow: rings of orange fading out, as Android's shadow layer blurs it.
+        val boxTop = top - height - px(6f)
+        val reach = px(8f)
+        for (i in 12 downTo 1) {
+            val r = reach * i / 12
+            g.color = Color(ORANGE.red, ORANGE.green, ORANGE.blue, (255 * .6f * (1 - i / 13f) * (1 - i / 13f) / 3).toInt().coerceIn(0, 255))
+            g.fill(RoundRectangle2D.Float(left - r, boxTop - r, w + 2 * r, height + 2 * r, 2 * (radius + r), 2 * (radius + r)))
+        }
         g.color = Color.BLACK
-        g.fill(RoundRectangle2D.Float(left, boxTop, w, height + radius, 2 * radius, 2 * radius))
+        g.fill(RoundRectangle2D.Float(left, boxTop, w, height, 2 * radius, 2 * radius))
         g.color = INK
         g.drawMixed(code, left + pad, boxTop + height / 2 + textSize * StripFit.X_HEIGHT / 2, textSize)
     }
@@ -214,8 +220,8 @@ fun main(args: Array<String>) {
     // What Rime gave on the PC, Yale, Hong Kong (2026-11-16).
     val diu = listOf("屌你老母", "𨳒你老母", "屌你老母臭閪", "屌你老母個臭花閪", "屌你老母個臭化閪", "屌你老母個仆街仔")
     bar(out, "row-wide.png", "耶", "diu nei lou mou", diu, null)
-    // The code as a tab joined to the bar (owner, 2026-11-17: "do the second for the tab").
-    bar(out, "code-tab.png", "耶", "nei hou", listOf("你好", "您好", "妳好", "你", "呢"), null)
+    // The code floating with its glow (owner, 2026-11-17: "keep that in place of linked tab").
+    bar(out, "code-glow.png", "耶", "nei hou", listOf("你好", "您好", "妳好", "你", "呢"), null)
     val ngo = listOf("我哋今日去飲茶", "我哋", "我地", "俄地", "鵝地", "我爹", "我", "哦")
     bar(out, "row-sentence.png", "耶", "ngo dei gam yat heui yam cha", ngo, null)
     val nei = "你 呢 您 妳 尼 膩 伱 禰 餌 鈮 妮 瀰 伲 怩 隬 抳 胒 狔 誀 柅 馜 籾 眲 跜 镾 蚭 秜 彌 旎 沵 珥 儞 苨 毦 洱 獼 屔 衈 檷 𨉖 㞾 㢱 㳽 䉲 䝚 祢 𤤗 𥿡 𦲁 㛋 䕥 𡛧 𦴪 㛅 㢽 㦐 䎶 䏪 䣵 泥".split(" ")

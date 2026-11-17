@@ -187,10 +187,10 @@ concept test" and "The rest of the Chinese proposal agreed"). It holds for every
 Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffer` in `keyboard/`.
 
 **The bar while a code is typed:**
-- **The code** sits in a tab joined to the bar's top-left edge, only while a code is typed: the bar's black, rounded on top,
-  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly, then "do the second for the tab" over
-  a line floating with a glow). It's drawn in the see-through layer over the app (the word menu's effects layer), so the app
-  never resizes. With no code, there's no tab,
+- **The code** floats just above the bar's left edge, only while a code is typed: in the bar's black, with a soft orange glow,
+  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; tried as a tab joined to the bar, then
+  "I think the glow acc looks nice so we can keep that in place of linked tab"). It's drawn in the see-through layer over the
+  app (the word menu's effects layer), so the app never resizes. With no code, nothing floats,
   and the bar shows its suggestions: no language name, no tint ("keep it using the orange black theme").
 - **The language mark at Q:** the input method's label (耶, 粵, 拼, あ, ES) in the accent over Q, as Shift's arrow and Caps
   show today, whenever an input method that isn't English types, the idle bar included (owner, 2026-11-17: "The Yale Chinese

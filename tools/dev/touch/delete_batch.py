@@ -10,8 +10,8 @@ the dominoes (100 words, each within 2 s of the last, flicks and held deletes, n
    (O); a shot about 500 ms after it (J).
 5. A streak of 99 words, one flick a word: no dominoes (O); the 100th flick then plays them, which shows the streak held.
 6. A letter key while the tiles fall: they're gone at once (J, a shot).
-7. The held delete uncapped: a 14 s hold deletes clearly more than a 10 s one (O; a LOOK until E's fix lands).
-8. The dominoes on every 100-word streak, longer, never blocking a delete (O and J; LOOKs until E's fix lands).
+7. The held delete uncapped: a 14 s hold deletes clearly more than a 10 s one (O).
+8. The dominoes on every 100-word streak, longer, never blocking a delete (O and J).
 
 One touch call plays at most 15 s, so a streak spans calls, and the gap between two calls (the gate's adb calls) counts against
 the streak's 2 s. Each call's time past its script goes in the report; when it's over 2 s, a missing dominoes line is a LOOK.
@@ -172,13 +172,9 @@ def check_key_ends_dominoes():
            f"{over}); X 300 ms after the lift: no tiles 150 ms after it", "delete-key-ends")
 
 
-# E's fixes after the owner tried 5f4d7224 (owner-decisions-2.1, 2026-11-17), checked before they land: until E's branch is on
-# main their NOs are expected, so each says so and is a LOOK; a YES counts.
-E_PENDING = "expected to fail until E's branch lands"
-
-
+# E's fixes after the owner tried 5f4d7224 (owner-decisions-2.1, 2026-11-17), on main since 561eb1de.
 def expected_fail(name, ok, detail, shot=None):
-    record(name, True if ok else None, detail if ok else f"{detail} ({E_PENDING})", shot)
+    record(name, bool(ok), detail, shot)
 
 
 def check_uncapped_delete():
@@ -209,10 +205,7 @@ def check_dominoes_every_streak():
     slow = any(ms > GAP_MS for ms in over + over2)
     detail = (f"first streak {'played' if ran[0] else 'no dominoes'}, second {'played' if ran[1] else 'no dominoes'}; "
               f"ms past each call's script {over + over2}")
-    if ran[0] and not ran[1] and not slow:
-        expected_fail("dominoes-every-streak", False, detail)
-    else:
-        record("dominoes-every-streak", True if all(ran) else None, detail)
+    record("dominoes-every-streak", True if all(ran) else (None if slow else False), detail)
     record("dominoes-longer", None, "1.5 s after the last lift: the dominoes still falling (about 2.5 times longer)", "dominoes-long")
     # A flick while they may still show: it deletes a word.
     before_flick = words(checks.field())

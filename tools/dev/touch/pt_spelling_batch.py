@@ -6,8 +6,7 @@ goes through TitanKeys' own screen, with taps only while Debug is in front.
 Words only one list has (the Master diffed them): PT projecto, actividade; BR projeto.
 1. Portugal: "proje" offers projecto, "activi" offers actividade (O from D's TitanKeysBar line, else J by the shot).
 2. Brasil: "proje" offers projeto, never projecto (O, the same way).
-Both picks run, and Brasil is put back after. Until C's variants are on main, a NO is a LOOK, "expected to fail until C's
-variants land", and a build without the Spelling row says so.
+Both picks run, and Brasil is put back after. C's variants are on main since 561eb1de.
 """
 import time
 
@@ -19,7 +18,6 @@ import languages
 import retest_batch
 from checks import APP, Stop, adb, play, record
 
-C_PENDING = "expected to fail until C's variants land"
 NAMES = {"pt-PT": "Portugal", "pt-BR": "Brasil"}
 
 
@@ -69,14 +67,13 @@ def offers(prefix, name):
 
 def judge(name, words, shot, ok_if, detail):
     if words is None:
-        return record(name, None, f"{detail}: no TitanKeysBar line, see the shot ({C_PENDING})", shot)
-    ok = ok_if(words)
-    record(name, True if ok else None, f"{detail}: the bar {' | '.join(words)}" + ("" if ok else f" ({C_PENDING})"), shot)
+        return record(name, None, f"{detail}: no TitanKeysBar line, see the shot", shot)
+    record(name, ok_if(words), f"{detail}: the bar {' | '.join(words)}", shot)
 
 
 def check_portugal():
     if not pick("pt-PT"):
-        return record("pt-PT-picked", None, f"no Português > Spelling > Portugal in Settings ({C_PENDING})")
+        return record("pt-PT-picked", False, "no Português > Spelling > Portugal in Settings")
     words, shot = offers("proje", "pt-PT-proje")
     judge("pt-PT-projecto", words, shot, lambda w: "projecto" in w, "Portugal, proje")
     words, shot = offers("activi", "pt-PT-activi")

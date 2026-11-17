@@ -98,7 +98,9 @@ test("the lab shows what the keyboard really plays, from a feed only the debug b
   const users = [...new Bun.Glob("**/*.{kt,java}").scanSync(join(root, "android"))].filter(path =>
     // The feed object itself, not View.isHapticFeedbackEnabled, which every press turns off (AppPress.kt).
     !path.endsWith("Haptics.kt") && /\bHapticFeed\b/.test(read(join("android", path))));
-  expect(users.map(path => path.replaceAll("\\", "/"))).toEqual(["kotlin/com/titankeys/keyboard/HapticsLabActivity.kt"]);
+  // The lab, and Debug's HapticsDump receiver (only adb, only Debug), which reads the feed for the touch simulator's checks.
+  expect(users.map(path => path.replaceAll("\\", "/")).sort())
+    .toEqual(["debug/recorder/HapticsDump.kt", "kotlin/com/titankeys/keyboard/HapticsLabActivity.kt"]);
   // The lab stops listening as it goes, so the keyboard never holds on to a closed screen.
   const screen = read("android/kotlin/com/titankeys/keyboard/HapticsLabActivity.kt");
   expect(screen).toMatch(/override fun onPause\(\) \{[^}]*HapticFeed\.stop\(\)/);

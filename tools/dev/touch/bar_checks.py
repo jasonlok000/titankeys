@@ -395,3 +395,26 @@ def check_thai_hebrew_hindi():
 
 BATCH += [check_thai_hebrew_hindi]
 HANDS += ["Thai: ฉันไปโรงเรียน (ฉ and โ on Shift) + Space: next words after โรงเรียน (บ้าน ที่ ใน), not starters"]
+
+
+def check_empty_fields():
+    """C's first-look fixes: an empty field's starters. Thai: สวัสดี, ขอบคุณ, ฉัน (J). Slovak: no "Prečítajte" (J). Pinyin: 我,
+    是, 你, with no 的 (J). Only Serbian (Latin) on, nothing else: the mark at Q reads SR (J)."""
+    for im, want in (("th", "สวัสดี, ขอบคุณ, ฉัน"), ("sk", "no \"Prečítajte\""), ("zh-pinyin", "我, 是, 你, and no 的")):
+        language_checks.fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"empty-{im}", False, f"the field didn't start with {im}")
+            continue
+        language_checks.fresh()
+        play("+800", shot=f"empty-{im}", at=500)
+        record(f"empty-{im}", None, f"{im}, empty field: {want}", f"empty-{im}")
+    language_checks.fresh()
+    if language_checks.turn_on(["sr-latn"], "sr-latn"):
+        language_checks.fresh()
+        play("+800", shot="empty-sr-latn-only", at=500)
+        record("mark-sr-latn", None, "only Serbian (Latin) on: the mark at Q reads SR", "empty-sr-latn-only")
+    else:
+        record("mark-sr-latn", False, "the field didn't start with sr-latn alone")
+
+
+BATCH += [check_empty_fields]

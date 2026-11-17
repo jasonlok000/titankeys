@@ -3,3 +3,5 @@ Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. C
 Key layout: SI-1452, as xkeyboard-config's symbols/il gives it (https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config), with ת on Q and the final ף and ץ held on P and M.
 
 Words: Hermit Dave's FrequencyWords (https://github.com/hermitdave/FrequencyWords, he_full.txt), built from OpenSubtitles. Its content is CC BY-SA 4.0.
+
+Starters: the words that most often begin a sentence in the Leipzig Corpora Collection's heb_wikipedia_2021_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0.

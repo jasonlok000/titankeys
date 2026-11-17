@@ -115,7 +115,7 @@ The fields:
 | `accents` | For each of the 26 letter keys, the letters held on it, in the order they show on the bar: at most 8, one per key column from W to O. Only letter keys can be held, since the Titan's punctuation is on Alt |
 | `words` | The word list's file, or `null` |
 | `variants` | `null`, or a list of `{ "id", "name", "words" }` for spellings with their own word lists (Portuguese: `pt-BR`, `pt-PT`) |
-| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (¿¡), and whether apostrophes are part of words (French: `l'eau`); `fullStop`, what a double Space types: `". "` unless set, `"。"` with no space for Chinese and Japanese, `"। "` for Hindi, `""` for Thai, which has none, so two Spaces stay spaces |
+| `rules` | `capitalise`: the script has capitals, after a sentence's end and with Shift (Georgian's `false`: no sentence capitals, and Shift types the key's Shift letter or its own letter); the characters that end a sentence, marks that open one (Spanish's ¿¡, and in every script with capitals the quote marks " “ ” „ « », so «Привет» and „Hallo“ get their capital), and whether apostrophes are part of words (French: `l'eau`); `fullStop`, what a double Space types: `". "` unless set, `"。"` with no space for Chinese and Japanese, `"। "` for Hindi, `""` for Thai, which has none, so two Spaces stay spaces |
 | `engine` | `null`, `"rime"` with its schema (`{ "rime": "tk_yale" }`), or the name of a built-in engine (`"hangul"`, `"telex"`) |
 | `source` | Where the letters and words come from, for the licences page and for contributors |
 
@@ -546,8 +546,11 @@ the phone on the first use. The whole debug APK is 167.4 MB, under Google Play's
 The owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty at all times
 unless it's like password or whatever. if not hard then it should be learning from the user too."
 
-- **Starters:** each input method's commonest words, in its `im.json` (`"starters"`), written by `tools/im/make.py
-  --starters`: from its own word list; Korean from FrequencyWords; Cantonese and Mandarin from Rime's essays, with a
+- **Starters:** the words each input method's sentences most often begin with, in its `im.json` (`"starters"`), written by
+  `tools/im/make.py --starters`: from the Leipzig Corpora Collection's sentences for the language (`STARTER_CORPORA`, CC BY 4.0,
+  credited in its NOTICE), only the words in its own list, in lower case, leaving out names (a word written with a capital
+  more often than not mid-sentence) and a few corpus labels (`STARTER_SKIP`); Thai, whose sentences have no spaces, from its
+  list's commonest words; Cantonese and Mandarin from Rime's essays, with a
   Simplified copy through OpenCC's character table (`"startersSimplified"`, for that variant); Japanese picked by hand (Mozc's
   costs rank homophones, not common words).
 - **On the bar** (`BarWords`, through `LanguageWords`): at a sentence's start, the user's own sentence starts and then the

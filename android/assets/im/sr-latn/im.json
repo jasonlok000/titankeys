@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -27,17 +27,17 @@
     "words": "main_sr.combined"
   },
   "starters": [
-    "je",
-    "i",
     "u",
-    "se",
     "na",
-    "su",
-    "da",
-    "od",
-    "a",
+    "nakon",
     "za",
-    "godine",
-    "sa"
+    "međutim",
+    "to",
+    "od",
+    "tokom",
+    "kada",
+    "on",
+    "kao",
+    "po"
   ]
 }

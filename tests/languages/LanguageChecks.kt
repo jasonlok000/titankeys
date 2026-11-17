@@ -1143,7 +1143,8 @@ private fun everyInputMethodInTheFolder(folder: File) {
  * "। " in Hindi, none in Thai, and ". " everywhere else, English included.
  */
 private fun eachLanguageHasItsFullStop(folder: File) {
-    val own = mapOf("zh-pinyin" to "。", "yue-yale" to "。", "yue-jyutping" to "。", "ja" to "。", "hi" to "। ", "th" to "")
+    val own = mapOf("zh-pinyin" to "。", "yue-yale" to "。", "yue-jyutping" to "。", "zh-cangjie" to "。",
+        "zh-quick" to "。", "zh-zhuyin" to "。", "ja" to "。", "hi" to "। ", "th" to "")
     for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
         val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
         val expected = own[method.id] ?: InputMethod.FULL_STOP

@@ -19,7 +19,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -29,17 +29,17 @@
     "words": "main_gl__experimental.combined"
   },
   "starters": [
-    "do",
-    "unha",
-    "que",
-    "se",
     "a",
-    "da",
-    "para",
-    "e",
     "o",
-    "á",
-    "con",
-    "de"
+    "os",
+    "en",
+    "as",
+    "no",
+    "é",
+    "na",
+    "foi",
+    "tamén",
+    "esta",
+    "este"
   ]
 }

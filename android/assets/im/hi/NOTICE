@@ -3,3 +3,5 @@ Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. C
 Typing: Wikimedia's jquery.ime, hi-transliteration (https://github.com/wikimedia/jquery.ime, rules/hi/hi-transliteration.js) by Junaid P V, GNU GPL 3.0.
 
 Words: Hermit Dave's FrequencyWords (https://github.com/hermitdave/FrequencyWords, hi_full.txt), built from OpenSubtitles. Its content is CC BY-SA 4.0.
+
+Starters: the words that most often begin a sentence in the Leipzig Corpora Collection's hin_news_2022_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0.

@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": true
   },
   "engine": null,
@@ -28,16 +28,16 @@
   },
   "starters": [
     "die",
-    "en",
-    "van",
-    "is",
+    "dit",
+    "ek",
+    "ons",
+    "hy",
     "in",
-    "het",
-    "nie",
-    "n",
-    "wat",
-    "te",
-    "om",
-    "vir"
+    "en",
+    "daar",
+    "sy",
+    "as",
+    "maar",
+    "hulle"
   ]
 }

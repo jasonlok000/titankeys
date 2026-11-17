@@ -17,7 +17,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -27,17 +27,17 @@
     "words": "main_da.combined"
   },
   "starters": [
+    "det",
+    "men",
     "i",
+    "jeg",
     "og",
-    "af",
-    "en",
-    "er",
-    "at",
-    "til",
-    "som",
     "den",
-    "på",
+    "de",
+    "der",
+    "han",
+    "en",
     "for",
-    "med"
+    "så"
   ]
 }

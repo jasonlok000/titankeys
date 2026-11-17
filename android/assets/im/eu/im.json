@@ -15,7 +15,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "",
+    "openingMarks": "\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -25,17 +25,17 @@
     "words": "main_eu.combined"
   },
   "starters": [
-    "eta",
-    "da",
+    "bere",
+    "hala",
+    "gaur",
+    "baina",
+    "bi",
+    "gainera",
+    "beste",
     "ez",
-    "ere",
-    "bat",
-    "du",
+    "azken",
+    "bertan",
     "izan",
-    "dira",
-    "egin",
-    "edo",
-    "zen",
-    "dute"
+    "hau"
   ]
 }

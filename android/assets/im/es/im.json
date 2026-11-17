@@ -19,7 +19,7 @@
   "rules": {
     "capitalise": true,
     "sentenceEnd": ".?!",
-    "openingMarks": "¿¡",
+    "openingMarks": "¿¡\"“”„«»",
     "apostrophes": false
   },
   "engine": null,
@@ -29,17 +29,17 @@
     "words": "main_es.combined"
   },
   "starters": [
-    "de",
+    "el",
     "la",
     "en",
-    "el",
-    "y",
-    "que",
-    "a",
-    "del",
     "los",
-    "se",
     "por",
-    "un"
+    "a",
+    "no",
+    "además",
+    "las",
+    "este",
+    "y",
+    "es"
   ]
 }

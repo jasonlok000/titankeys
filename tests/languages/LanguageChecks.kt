@@ -68,6 +68,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
+    if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -1198,4 +1199,51 @@ private fun englishTypingRows() {
     same("English: every typing setting on its page", LanguageSettings.rows(InputMethod.ENGLISH),
         listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand"))
     same("English's Double Space types a full stop", LanguageSettings.stop(InputMethod.ENGLISH), ".")
+}
+
+/**
+ * Thai, Hebrew and Hindi on the bar (the Orchestrator, 2026-11-17). Thai has no spaces between words, so its next words and
+ * learning read a phrase's words with the keyboard's own split, the one tools/im/next_words.py counted the table with.
+ * Hebrew and Hindi look up their next words by the word before, Hindi's vowel signs and all.
+ */
+private fun thaiHebrewAndHindiNextWords(folder: File) {
+    fun list(id: String) = WordList.read(File(folder, "$id/words.combined").useLines { it.toList() }.asSequence(),
+        java.util.Locale.forLanguageTag(id))
+    fun table(id: String) = NextWords.read(File(folder, "$id/pairs.txt").useLines { it.toList() }.asSequence())
+    val thai = list("th")
+    val isWord = { piece: String -> WordBreak.word(piece, thai::has) }
+    same("Thai: ก is in the list, but one letter is never a word", isWord("ก"), false)
+    same("a phrase's words: ฉัน ไป โรงเรียน", WordBreak.words("ฉันไปโรงเรียน", isWord), listOf("ฉัน", "ไป", "โรงเรียน"))
+    same("the word a next word follows is the phrase's last", WordBreak.lastWord("ฉันไปโรงเรียน", isWord), "โรงเรียน")
+    val th = table("th")
+    check("and the table has words after it", th.after("โรงเรียน").isNotEmpty()) { th.after("โรงเรียน").joinToString(" ") }
+    check("no single letter starts a Thai sentence in the table", th.after(null).none { it.length == 1 }) {
+        th.after(null).joinToString(" ")
+    }
+    // Learning a kept phrase: each word after the one before it, never the phrase as one word.
+    val learning = LanguageLearning()
+    var before: String? = null
+    var paired = true
+    for (piece in WordBreak.words("ฉันไปโรงเรียน", isWord)) {
+        if (piece != null) learning.kept(before, piece, known = true, paired = paired)
+        before = piece
+        paired = piece != null
+    }
+    same("Thai learns ไป after ฉัน", learning.next("ฉัน"), listOf("ไป"))
+    same("and โรงเรียน after ไป", learning.next("ไป"), listOf("โรงเรียน"))
+    same("the phrase started with ฉัน", learning.sentenceStarts(), listOf("ฉัน"))
+    same("the phrase isn't a word", learning.knows("ฉันไปโรงเรียน"), false)
+    val alone = LanguageLearning()
+    alone.kept(null, "ไป", known = true, paired = false)
+    same("a word after a stray letter is known, but starts no sentence", alone.knows("ไป") to alone.sentenceStarts(),
+        true to emptyList<String>())
+
+    // Hebrew: next words by the word before, in its own letters; the bar's best word in the middle, the second on the right.
+    check("Hebrew: words follow את", table("he").after("את").isNotEmpty())
+    same("Hebrew's bar: third, best, second from left to right", BarOrder.of(true), listOf(2, 0, 1))
+    same("a drag to the right goes back in Hebrew text", RightToLeft.forward(1, rightToLeft = true), false)
+    // Hindi: the word before keeps its vowel signs and nasal mark (में), as the table does.
+    val hi = table("hi")
+    check("Hindi: words follow कि", hi.after("कि").isNotEmpty())
+    check("and में, with its vowel sign and bindu", hi.after("में").isNotEmpty()) { hi.after("में").joinToString(" ") }
 }

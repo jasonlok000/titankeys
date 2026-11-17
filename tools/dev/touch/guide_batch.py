@@ -75,7 +75,36 @@ def check_first_delete_slide():
 
 BATCH = [wrap(check) for check in (guide_checks.check_66_steer, guide_checks.check_67_selectmore, guide_checks.check_68_hunts,
                                    guide_checks.check_69_paste, guide_checks.check_69_clip, guide_checks.check_84_menu)]
-BATCH += [check_swipe_slide, check_first_delete_slide, check_90_slides]
+def check_85_dump():
+    """#85, B's leak work: after the guide batch, LeakCheck with a heap dump, pulled to the computer, and tools/leak-paths.py on
+    it. The paths (class and field names only) go to $TK_OUT/touch/leak-paths-TIME.txt; the dump holds typed text, so it's
+    deleted on both sides at once, as LeakCheck says."""
+    import os
+    import subprocess
+    answer = adb("shell", "am", "broadcast", "-n", f"{APP}/com.titankeys.keyboard.LeakCheck", "--ez", "dump", "true")
+    found = re.search(r"heap dump: (\S+\.hprof)", answer)
+    if not found:
+        return record("85-dump", None, f"no heap dump: {answer.strip()[-300:]}")
+    remote = found.group(1).rstrip('"')
+    out = os.path.join(os.environ.get("TK_OUT", os.path.expanduser("~/tk-out")), "touch")
+    local = os.path.join(out, os.path.basename(remote))
+    paths = os.path.join(out, "leak-paths-" + os.path.basename(remote).replace("leak-", "").replace(".hprof", ".txt"))
+    try:
+        adb("pull", remote, local)
+        result = subprocess.run(["python3", os.path.join(languages.REPO, "tools/leak-paths.py"), local],
+                                capture_output=True, text=True)
+        with open(paths, "w", encoding="utf-8") as f:
+            f.write(result.stdout + result.stderr)
+        lines = [line for line in (result.stdout + result.stderr).splitlines() if line.strip()]
+        record("85-dump", None, f"LeakCheck: {answer.strip().split('data=')[-1][:200]}; leak paths in {paths}: "
+               + " | ".join(lines[:6])[:600])
+    finally:
+        if os.path.exists(local):
+            os.remove(local)
+        adb("shell", "rm", "-f", remote)
+
+
+BATCH += [check_swipe_slide, check_first_delete_slide, check_90_slides, check_85_dump]
 
 
 def finish():

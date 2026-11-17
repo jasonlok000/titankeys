@@ -418,6 +418,8 @@ each generic language types its letters and accents over adb.
 17. Every language from the study ships inside the app; none is downloaded (43 Latin, Cyrillic and Greek languages plus
     Chinese, about 160 MB in all).
 
+18. **Language labels (2026-11-16 night):** one label per input method, shown at Q and in the switcher, at most two characters in the language's own script: Latin languages by their two-letter code (ES, DE, …; English shows no mark at Q), Cyrillic in Cyrillic (РУ, УК, БЕ, БГ, СР, МК, ҚА), Greek ΕΛ, Georgian ქა, Thai ไท, Hebrew עב, Hindi हि, and one character for 한, あ and Chinese's 耶, 粵, 拼.
+
 More calls get added here as the night goes.
 
 ## For the owner in the morning

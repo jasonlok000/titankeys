@@ -22,6 +22,7 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    aRestingFingerShowsItsRadical()
     shiftShowsOnlyWhereItMatters()
     aLostFirstBackspaceDecidesAfresh()
     tappedShiftOrCapsLeavesSteeringAndShortcutsAlone()
@@ -1583,4 +1584,14 @@ private fun theShortcutsSwitchOff() {
         press(SYM)
         same(modifiers.takeKeyboardSwitch(), true, "On, Alt + Sym switches")
     }
+}
+
+/** Cangjie and Quick: a finger resting on a letter shows its radical with no modifier on, as Alt shows its symbol (owner, 2026-11-17). */
+private fun aRestingFingerShowsItsRadical() {
+    val modifiers = Modifiers()
+    val radical = { key: String -> "弓".takeIf { key == "N" } }
+    val bar = ModifierBar.of(modifiers, "N", shiftShows = false, radical = radical) { null }
+    same(bar, ModifierBar(emptyList(), "弓"), "N shows 弓 with no modifier on")
+    same(ModifierBar.of(modifiers, "", shiftShows = false, radical = radical) { null }, null, "no finger, no bar")
+    same(ModifierBar.of(modifiers, "N", shiftShows = false) { null }, null, "elsewhere a resting finger shows nothing")
 }

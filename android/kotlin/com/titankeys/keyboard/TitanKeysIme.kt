@@ -4934,7 +4934,10 @@ class TitanKeysIme : InputMethodService() {
     private fun showModifierBar() {
         // Shift and Caps show only where Shift changes what a key types: not in Hebrew, Chinese or Japanese.
         val shiftShows = !::languages.isInitialized || languages.current.shiftMatters
-        strip?.modifiers = ModifierBar.of(modifiers, restingKey, shiftShows) { Keys.letter(it, KeyEvent.META_ALT_ON) }
+        // With a code pending its line already shows radicals, and the choices keep the bar.
+        val radicals = ::languages.isInitialized && !engineBuilding
+        strip?.modifiers = ModifierBar.of(modifiers, restingKey, shiftShows,
+            radical = { key -> if (radicals) ChineseKeys.radical(languages.current, key) else null }) { Keys.letter(it, KeyEvent.META_ALT_ON) }
     }
 
     override fun onDestroy() {

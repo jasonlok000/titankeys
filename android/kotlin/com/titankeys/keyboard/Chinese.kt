@@ -171,6 +171,20 @@ object ChineseKeys {
         return if (text.isEmpty() || text.any { it in 'a'..'z' || it in 'A'..'Z' } || text == input) "" else text
     }
 
+    /** Cangjie's and Quick's radicals, A to Z, as their schemas show the code (preedit_format). */
+    private const val RADICALS = "日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜符"
+    private val RADICAL_SCHEMAS = setOf("tk_cangjie", "tk_quick")
+
+    /**
+     * The radical key [letter] types in [method], for a finger resting on it (owner, 2026-11-17: "it should show 弓 when my
+     * finger is hovered over n"), or null where the input method types letters.
+     */
+    fun radical(method: InputMethod, letter: String): String? {
+        if (method.engine != "rime" || method.engineArg !in RADICAL_SCHEMAS || letter.length != 1) return null
+        val index = letter[0].uppercaseChar() - 'A'
+        return if (index in RADICALS.indices) RADICALS[index].toString() else null
+    }
+
     /** [text] less its last character, a whole code point (an emoji or a rare character is two chars). */
     fun dropLastCharacter(text: String): String =
         if (text.isEmpty()) "" else text.substring(0, text.offsetByCodePoints(text.length, -1))

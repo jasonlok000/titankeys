@@ -10,6 +10,8 @@ the dominoes (100 words, each within 2 s of the last, flicks and held deletes, n
    (O); a shot about 500 ms after it (J).
 5. A streak of 99 words, one flick a word: no dominoes (O); the 100th flick then plays them, which shows the streak held.
 6. A letter key while the tiles fall: they're gone at once (J, a shot).
+7. The held delete uncapped: a 14 s hold deletes clearly more than a 10 s one (O; a LOOK until E's fix lands).
+8. The dominoes on every 100-word streak, longer, never blocking a delete (O and J; LOOKs until E's fix lands).
 
 One touch call plays at most 15 s, so a streak spans calls, and the gap between two calls (the gate's adb calls) counts against
 the streak's 2 s. Each call's time past its script goes in the report; when it's over 2 s, a missing dominoes line is a LOOK.
@@ -170,7 +172,58 @@ def check_key_ends_dominoes():
            f"{over}); X 300 ms after the lift: no tiles 150 ms after it", "delete-key-ends")
 
 
-BATCH = [check_flick_dots, check_full_hold, check_select_all, check_dominoes, check_99_words, check_key_ends_dominoes]
+# E's fixes after the owner tried 5f4d7224 (owner-decisions-2.1, 2026-11-17), checked before they land: until E's branch is on
+# main their NOs are expected, so each says so and is a LOOK; a YES counts.
+E_PENDING = "expected to fail until E's branch lands"
+
+
+def expected_fail(name, ok, detail, shot=None):
+    record(name, True if ok else None, detail if ok else f"{detail} ({E_PENDING})", shot)
+
+
+def check_uncapped_delete():
+    """A held delete deletes as long as the finger stays, only its animation capped at 10 s ("the actual deleting shdnt b
+    capped"): a 14 s hold takes clearly more words than a 10 s one, on the same text."""
+    gone = []
+    for hold_ms in (10000, 14000):
+        before = long_text("delete-uncapped")
+        if before is None:
+            return
+        checks.play(f"flick:3.2:90:{hold_ms}", "+800")
+        gone.append(words(before) - words(checks.field()))
+    expected_fail("delete-uncapped", gone[0] > 0 and gone[1] >= gone[0] * 1.2,
+                  f"a 10 s hold took {gone[0]} words, a 14 s hold {gone[1]} (uncapped: 1.2 times or more)")
+
+
+def check_dominoes_every_streak():
+    """The dominoes after the owner tried them: every 100-word streak plays them, not only the first; a delete while they show
+    still deletes; they run about 2.5 times longer (the shot, 1.5 s after the lift)."""
+    before = long_text("dominoes-every-streak")
+    if before is None:
+        return
+    first, over = holds_to_dominoes(last=("+400",), last_ms=400)
+    time.sleep(3)  # past the streak's gap: the next holds are a new streak
+    adb("logcat", "-c")
+    second, over2 = holds_to_dominoes(last=("+1500",), last_ms=1500, shot="dominoes-long", shot_after=1500)
+    ran = [any(line == "dominoes run 100 words" for line in lines) for lines in (first, second)]
+    slow = any(ms > GAP_MS for ms in over + over2)
+    detail = (f"first streak {'played' if ran[0] else 'no dominoes'}, second {'played' if ran[1] else 'no dominoes'}; "
+              f"ms past each call's script {over + over2}")
+    if ran[0] and not ran[1] and not slow:
+        expected_fail("dominoes-every-streak", False, detail)
+    else:
+        record("dominoes-every-streak", True if all(ran) else None, detail)
+    record("dominoes-longer", None, "1.5 s after the last lift: the dominoes still falling (about 2.5 times longer)", "dominoes-long")
+    # A flick while they may still show: it deletes a word.
+    before_flick = words(checks.field())
+    checks.play("flick", "+700")
+    after_flick = words(checks.field())
+    expected_fail("dominoes-dont-block", after_flick == before_flick - 1,
+                  f"a flick just after the dominoes: {before_flick} words, then {after_flick}")
+
+
+BATCH = [check_flick_dots, check_full_hold, check_select_all, check_dominoes, check_99_words, check_key_ends_dominoes,
+         check_uncapped_delete, check_dominoes_every_streak]
 
 
 def finish():

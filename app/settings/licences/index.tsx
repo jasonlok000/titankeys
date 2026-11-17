@@ -42,6 +42,9 @@ const licences = [
   { title: "rime-cantonese", subtitle: "CC BY 4.0, place names ODbL 1.0. Cantonese words for Yale and Jyutping.", url: "https://github.com/rime/rime-cantonese" },
   { title: "rime-jyutping", subtitle: "LGPL-3.0. The Yale spelling rules, by 幸延.", url: "https://github.com/rime/rime-jyutping" },
   { title: "Rime's Pinyin and shared data", subtitle: "LGPL-3.0. rime-luna-pinyin and rime-essay for Pinyin, rime-prelude for the rest.", url: "https://github.com/rime/rime-luna-pinyin" },
+  // F: draft. Cangjie, Quick and Zhuyin (#56).
+  { title: "rime-cangjie and rime-quick", subtitle: "LGPL-3.0. Cangjie 5 and Quick 5; the Cangjie table, from 倉頡之友, is GPL.", url: "https://github.com/rime/rime-cangjie" },
+  { title: "rime-terra-pinyin and rime-bopomofo", subtitle: "LGPL-3.0. Zhuyin's words, with Chewing's data, and its spelling rules.", url: "https://github.com/rime/rime-bopomofo" },
   // The Japanese entries (#56). F: draft.
   { title: "Mozc", subtitle: "BSD-3-Clause. Turns what you type into Japanese.", url: "https://github.com/google/mozc" },
   { title: "Mozc's dictionary", subtitle: "IPAdic, the Okinawa dictionary, Japanese Usage Dictionary and Tamachi, each under its own licence.", url: "https://github.com/google/mozc/tree/master/src/data/dictionary_oss" },

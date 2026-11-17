@@ -22,7 +22,9 @@ class LanguageCorrection(private val context: Context, private val words: Langua
     private val typing = SwipeTyping.get(context)
     private var id: String? = null
     private var list: WordList? = null
-    private var generation = 0
+    @Volatile private var generation = 0
+    /** One build at a time, the newest only: a switch while one builds drops the one waiting ([LatestOnly]). */
+    private val builds = LatestOnly("corrections")
 
     /** The current language's autocorrect, its corrector set once made; null for English and input methods without a list. */
     var autocorrect: Autocorrect? = null
@@ -45,7 +47,9 @@ class LanguageCorrection(private val context: Context, private val words: Langua
         )
         autocorrect = made
         val request = ++generation
-        Thread({
+        builds.submit {
+            // Overtaken by a later switch before it started: never built.
+            if (request != generation) return@submit
             val corrector = try {
                 LanguageCorrections.corrector(method, list, words::known, made.rejected, made.recent,
                     typos = { typing.fixOn(com.titankeys.autocorrect.FixKind.TYPOS.id) }, usable = words::usable,
@@ -55,9 +59,6 @@ class LanguageCorrection(private val context: Context, private val words: Langua
                 null
             }
             main.post { if (request == generation) made.corrector = corrector }
-        }, "corrections-${method.id}").apply {
-            priority = Thread.MIN_PRIORITY
-            start()
         }
         return made
     }

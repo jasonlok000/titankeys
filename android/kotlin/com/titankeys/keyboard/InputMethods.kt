@@ -529,3 +529,13 @@ object InputMethodVariants {
         id.trim() to variant.trim()
     }.toMap()
 }
+
+/**
+ * Which engines stay warm (Languages.warmUp): only those of the input methods that are on, one input method for each (owner,
+ * 2026-11-17: "if the language or input method is not chosen, it should not load. Meaning that disabling it should disable
+ * that engine as well"). An engine no input method on uses is stopped at the next field start.
+ */
+object WarmEngines {
+    fun wanted(on: List<InputMethodIndex.Entry>): Map<String, InputMethodIndex.Entry> =
+        on.filter { it.engine != null }.associateBy { it.engine!! }
+}

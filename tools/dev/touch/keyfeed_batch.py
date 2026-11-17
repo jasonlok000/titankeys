@@ -14,7 +14,7 @@ RECEIVER = f"{APP}/com.titankeys.keyboard.KeyFeed"
 
 
 def feed(keys):
-    return adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "keys", keys)
+    return adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "keys", f"'{keys}'")  # quoted: the phone's shell splits on spaces and ";" (2026-11-17: "bad keys")
 
 
 def debug_lines():

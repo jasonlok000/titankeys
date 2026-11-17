@@ -187,5 +187,10 @@ for moves in ([*ib.keys("neihou"), "+500", "swipeup:b", "+700", "key:s", "+500"]
     built = subprocess.run([sys.executable, "tools/dev/touch/gestures.py", "--out", os.path.join(os.environ["TK_OUT"], "ib.tki"), *moves],
                            capture_output=True, text=True)
     assert built.returncode == 0, f"the interactions batch's gestures don't build: {built.stderr[-300:]}"
+# The key feed's script reaches the phone as one quoted argument: the phone's shell splits on spaces and ";" (2026-11-17: "bad keys").
+import keyfeed_batch
+keyfeed_batch.adb = lambda *args: args
+sent = keyfeed_batch.feed("D 0 SHIFT_RIGHT;D 60 Q;U 140 Q;U 200 SHIFT_RIGHT")
+assert sent[-1] == "'D 0 SHIFT_RIGHT;D 60 Q;U 140 Q;U 200 SHIFT_RIGHT'", sent
 print("Batch checks passed")
 PY

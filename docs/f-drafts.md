@@ -1,6 +1,6 @@
 # F: drafts still in the code
 
-This is every text in the app that is still marked as F's draft on main (cac09377, 2026-11-17), grouped by the screen it shows on, so F can make one wording pass over all of them.
+This is every text in the app that is still marked as F's draft on main (340455b4, 2026-11-17), grouped by the screen it shows on, so F can make one wording pass over all of them.
 - Each entry gives the file and line of its marker, then the text as it stands.
 - Nothing here has been changed: F rewrites the strings in place, then drops each "F: draft" marker.
 - Lines marked "F (docs/words-m1.md)" are F's already, done in M1. They're listed at the end, without their text.
@@ -71,10 +71,12 @@ The titles are the projects' names. Only the subtitles are drafts.
 - `:30` Noto Sans Thai: **SIL Open Font Licence. The Thai letters in Settings.**
 - `:32` Noto Sans CJK: **SIL Open Font Licence. The Korean and Chinese characters in Settings.**
 - `:40` librime-octagram: **GPL-3.0. Lets Rime weigh which words go together.**
-- `:46` words.hk (粵典): **Public domain. How often Cantonese words are used, to put the likelier ones first.**
-- `:50` rime-cangjie and rime-quick: **LGPL-3.0. Cangjie 5 and Quick 5; the Cangjie table, from 倉頡之友, is GPL.**
-- `:53` Mozc: **BSD-3-Clause. Turns what you type into Japanese.**
-- `:53` Mozc's dictionary: **IPAdic, the Okinawa dictionary, Japanese Usage Dictionary and Tamachi, each under its own licence.**
+- `:42` Mandarin grammar model: **LGPL-3.0. lotem's rime-octagram-data, for Pinyin and Zhuyin.** (new today)
+- `:40` Cantonese grammar model: **CC BY-SA 4.0. TitanKeys' own, counted from Cantonese Wikipedia (CC BY-SA 4.0), HKCanCor (CC BY 4.0) and Common Voice (CC0).**
+- `:48` words.hk (粵典): **Public domain. How often Cantonese words are used, to put the likelier ones first.**
+- `:52` rime-cangjie and rime-quick: **LGPL-3.0. Cangjie 5 and Quick 5; the Cangjie table, from 倉頡之友, is GPL.**
+- `:55` Mozc: **BSD-3-Clause. Turns what you type into Japanese.**
+- `:55` Mozc's dictionary: **IPAdic, the Okinawa dictionary, Japanese Usage Dictionary and Tamachi, each under its own licence.**
 
 ## The guide (android/kotlin/com/titankeys/keyboard)
 
@@ -91,7 +93,7 @@ The titles are the projects' names. Only the subtitles are drafts.
 
 ## The keyboard
 
-- `TitanKeysIme.kt:3931`: what a screen reader hears when the language changes:
+- `TitanKeysIme.kt:3965`: what a screen reader hears when the language changes:
   - **Typing in «English name»**, as in "Typing in Spanish".
 
 ## TitanKeys Debug only
@@ -117,6 +119,6 @@ No pass needed. They're listed so a search for "F" finds them here:
 - `app/settings/licences/index.tsx:37`
 - `lib/haptics.ts:45`
 - `GuideSteps.kt:38, 71, 76, 87, 175, 980, 993, 1154, 1489, 2081`
-- `Languages.kt:360`
+- `Languages.kt:367`
 - `RimeEngine.kt:284`
 - `strings.xml:2, 80`

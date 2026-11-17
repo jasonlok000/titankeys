@@ -7,6 +7,9 @@ schema_list:
   - schema: tk_yale
   - schema: tk_jyutping
   - schema: tk_pinyin
+  - schema: tk_cangjie
+  - schema: tk_quick
+  - schema: tk_zhuyin
 
 switcher:
   caption: 〔方案選單〕

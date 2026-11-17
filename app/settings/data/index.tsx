@@ -2,10 +2,12 @@ import { Field, Screen, Section, navigate, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../../lib/app-haptics";
 import { state, update } from "../../../lib/titankeys";
 import { transfer } from "../../../lib/transfer";
+import { Needs, needs, useRecheck } from "../../../lib/system-needs";
 
 export default function YourWords() {
   const result = useSnapshot(state);
   const save = useAction(update);
+  useRecheck(state);
   const subtitle = "Your words and the names TitanKeys knows stay on your phone. We never send them anywhere.";
   if (result.status !== "ready") return <Screen title="Your words" subtitle={subtitle} />;
   const { learning, contactNames } = result.data;
@@ -15,6 +17,7 @@ export default function YourWords() {
     </Section>
     <Section title="Names on this phone">
       <Toggle label="Names from my contacts" value={contactNames} onChange={contactNames => save.run({ contactNames })} />
+      <Needs list={needs.contactNames(result.data)} />
     </Section>
     <Section title="My words">
       <Field label="Saved words" href="/settings/data/saved-words" />

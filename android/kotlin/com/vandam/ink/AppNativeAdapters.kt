@@ -601,6 +601,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("outsideSlidingMode", JSONArray(PhoneChecks.outsideSlidingMode(activity)))
             .put("learning", typing.learningEnabled())
             .put("contactNames", PhoneNameSource.contactsAllowed(activity))
+            .put("contactNamesBlocked", TypingSettings.contactNames(activity) && !PhoneNameSource.contactsAllowed(activity))
             .put("tapKeys", TypingSettings.tapKeys(activity))
             .put("holdSymbols", TypingSettings.holdSymbols(activity))
             .put("holdSymbolMillis", TypingSettings.holdSymbolMillis(activity))

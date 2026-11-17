@@ -86,6 +86,10 @@ zh_tw:   { option_name: zh_tw,   opencc_config: tk_t2twp.json, tips: none }
 
 # The next-word suggestions after a commit (librime-predict, #56): native/rime/predict.py's table, Mandarin's, as Zhuyin is Taiwan's; as many
 # as it has (at most 8), and they go on after a suggestion is picked.
+# Mandarin's grammar model (librime-octagram, #56): lotem/rime-octagram-data's Traditional word model, with octagram's
+# defaults, which suit Mandarin best (docs/studies/56-mandarin-dictionary.md). Traditional for every variant: it weighs the
+# dictionary's choices before OpenCC turns them Simplified.
+grammar: { language: zh-hant-t-essay-bgw }
 predictor: { db: predict-cmn.db, max_candidates: 0, max_iterations: 0 }
 
 punctuator: { import_preset: symbols }

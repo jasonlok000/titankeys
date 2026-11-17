@@ -4,6 +4,7 @@
     python3 -I tools/im/next_words.py build <id> <text file> [...] [--words <word list>] [--out <file>] [--top 8] [--min 2]
     python3 -I tools/im/next_words.py check <id> <text file> [...] [--words <word list>] [--every 10]
     python3 -I tools/im/next_words.py notice <folder id> <corpus> <table file> <extra note or "">
+    python3 -I tools/im/next_words.py convert <pairs.txt> [...]
 
 tools/im/next_words_all.sh builds every table from tools/im/next_words_corpora.json and writes the NOTICE lines.
 
@@ -11,9 +12,10 @@ tools/im/next_words_all.sh builds every table from tools/im/next_words_corpora.j
 sentence"; the number is dropped) or plain text. "check" holds out every 10th sentence, builds from the rest, and
 measures how often the held-out next word is the table's first, or among its first three, for a word in the table.
 
-The table goes to android/assets/im/<id>/pairs.txt by default (Portuguese: pairs-pt-BR.txt and pairs-pt-PT.txt, one per
-word list), in the same format as English's android/assets/autocorrect/en_pairs.txt (PairCounts reads it): "first
-second<TAB>count" lines in lower case, <s> as the first word at a sentence's start. Only the --top next words for each
+The table goes to android/assets/im/<id>/pairs.bin by default (Portuguese: pairs-pt-BR.bin and pairs-pt-PT.bin, one per
+word list), the compact form NextWords reads (see write_binary): its words in lower case, <s> as the first word at a
+sentence's start, each first word's next words commonest first. --text also writes it readable, in English's
+android/assets/autocorrect/en_pairs.txt format ("first second<TAB>count" lines); "convert" turns such text into .bin. Only the --top next words for each
 first word are kept, each seen at least --min times. The format is agreed with the suggestion bar's reader (C).
 
 Tokens follow the input method's word list (words.combined): Unicode letters and marks, with apostrophes and hyphens
@@ -210,15 +212,19 @@ def build(args):
     im, script, lines, folder = load(args)
     for variant, words in word_lists(im, folder, args, lines):
         nexts, kept = table(count(lines, words, script), args.top, args.min, args.max_mb)
-        name = f"pairs-{variant}.txt" if variant else "pairs.txt"
+        name = f"pairs-{variant}.bin" if variant else "pairs.bin"
         out = args.out or os.path.join(folder, name)
         rows = sorted(((a, b, kept[(a, b)]) for a, bs in nexts.items() for b in bs), key=lambda r: (r[0], -r[2], r[1]))
-        with open(out, "w", encoding="utf-8", newline="\n") as f:
-            f.write(f"# {im['nameEnglish']}{' (' + variant + ')' if variant else ''} next words: the {args.top} most common words"
-                    f" after each word. See NOTICE.\n")
-            f.write("# Format: first<space>second<tab>count. <s> marks the start of a sentence.\n")
-            for a, b, n in rows:
-                f.write(f"{a} {b}\t{n}\n")
+        if out.endswith(".bin"):
+            write_binary(out, nexts)
+        if args.text or not out.endswith(".bin"):
+            text = args.text or out
+            with open(text, "w", encoding="utf-8", newline="\n") as f:
+                f.write(f"# {im['nameEnglish']}{' (' + variant + ')' if variant else ''} next words: the {args.top} most common words"
+                        f" after each word. See NOTICE.\n")
+                f.write("# Format: first<space>second<tab>count. <s> marks the start of a sentence.\n")
+                for a, b, n in rows:
+                    f.write(f"{a} {b}\t{n}\n")
         size = os.path.getsize(out)
         print(f"{args.id}{' ' + variant if variant else ''}: {len(lines)} sentences, {len(nexts)} first words, {len(rows)} pairs,"
               f" {size / 1e6:.2f} MB -> {out}")
@@ -249,6 +255,59 @@ def check(args):
                   f" {res[kind + ' top 3'] / n:.1%}")
 
 
+MAGIC = b"TKNW"
+VERSION = 1
+
+
+def write_binary(path, nexts):
+    """The table as NextWords reads it in the app: compact, so loading is one read and a lookup a binary search.
+
+    Big-endian: "TKNW", version, then the counts V (words), F (first words), B (bytes of words), N (next words); the V+1
+    starts of each word in the bytes; the B bytes of every word in UTF-8, the F first words first, sorted by their bytes; the
+    F+1 starts of each first word's next words; and the N next words as word numbers, commonest first. No counts: the app
+    only needs the order.
+    """
+    import struct
+    firsts = sorted(nexts, key=lambda w: w.encode("utf-8"))
+    rest = sorted({b for bs in nexts.values() for b in bs} - set(firsts), key=lambda w: w.encode("utf-8"))
+    vocab = firsts + rest
+    number = {w: i for i, w in enumerate(vocab)}
+    blob, starts = bytearray(), [0]
+    for w in vocab:
+        blob += w.encode("utf-8")
+        starts.append(len(blob))
+    next_starts, ids = [0], []
+    for w in firsts:
+        ids += [number[b] for b in nexts[w]]
+        next_starts.append(len(ids))
+    with open(path, "wb") as f:
+        f.write(MAGIC + struct.pack(">5i", VERSION, len(vocab), len(firsts), len(blob), len(ids)))
+        f.write(struct.pack(f">{len(starts)}i", *starts))
+        f.write(bytes(blob))
+        f.write(struct.pack(f">{len(next_starts)}i", *next_starts))
+        f.write(struct.pack(f">{len(ids)}i", *ids))
+    return len(vocab), len(firsts), len(ids)
+
+
+def read_text_table(path):
+    """A pairs.txt table back as each first word's next words, in the file's order (commonest first)."""
+    nexts = {}
+    for line in open(path, encoding="utf-8"):
+        if not line.strip() or line.startswith("#") or "\t" not in line:
+            continue
+        pair = line.split("\t", 1)[0]
+        a, b = pair.split(" ", 1)
+        nexts.setdefault(a, []).append(b)
+    return nexts
+
+
+def convert(paths):
+    for path in paths:
+        out = path[:-4] + ".bin"
+        v, f, n = write_binary(out, read_text_table(path))
+        print(f"{path}: {v} words, {f} first words, {n} pairs -> {out} ({os.path.getsize(out) / 1e6:.2f} MB)")
+
+
 LEIPZIG_NOTICE = ("Next words ({file}): counts of word pairs from the Leipzig Corpora Collection's {corpus} "
                   "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0{extra}. D. Goldhahn, T. Eckart and U. Quasthoff: "
                   "Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. "
@@ -270,12 +329,16 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "notice":
         notice(*sys.argv[2:6])
         return
+    if len(sys.argv) > 1 and sys.argv[1] == "convert":
+        convert(sys.argv[2:])
+        return
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("mode", choices=["build", "check"])
     p.add_argument("id")
     p.add_argument("text", nargs="+")
     p.add_argument("--words")
-    p.add_argument("--out")
+    p.add_argument("--out", help="the table, pairs.bin by default; a .txt name writes the readable text instead")
+    p.add_argument("--text", help="also write the readable text table here")
     p.add_argument("--top", type=int, default=8)
     p.add_argument("--min", type=int, default=2)
     p.add_argument("--every", type=int, default=10)

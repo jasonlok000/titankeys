@@ -34,11 +34,11 @@ internal object InputMethodList {
         }.onFailure { Log.w(TAG, "Input method $id didn't load", it) }.getOrNull()
     }
 
-    /** [method]'s next-word table (pairs.txt, or pairs-<variant>.txt), or null where it has none. Off the main thread. */
+    /** [method]'s next-word table (pairs.bin, or pairs-<variant>.bin), or null where it has none. Off the main thread. */
     fun nextWords(context: Context, method: InputMethod, variant: String?): NextWords? {
-        val file = if (variant != null && method.variants.any { it.id == variant }) "pairs-$variant.txt" else "pairs.txt"
+        val file = if (variant != null && method.variants.any { it.id == variant }) "pairs-$variant.bin" else "pairs.bin"
         return runCatching {
-            context.assets.open("$FOLDER/${method.id}/$file").bufferedReader().useLines { NextWords.read(it) }
+            context.assets.open("$FOLDER/${method.id}/$file").use { NextWords.readBinary(it) }
         }.getOrNull()
     }
 

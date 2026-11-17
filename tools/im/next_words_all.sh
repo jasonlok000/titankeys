@@ -21,11 +21,11 @@ while read -r id corpus; do
   text=$leipzig/$corpus-sentences.txt
   [ -s "$text" ] || { echo "$id: missing $text"; continue; }
   case $id in
-    pt-BR|pt-PT) folder=pt; python3 -I "$here/next_words.py" build pt "$text" --words "$im/pt/words-$id.combined" --out "$im/pt/pairs-$id.txt"; file=pairs-$id.txt ;;
-    sr) folder=sr; python3 -I "$here/next_words.py" build sr "$text"; file=pairs.txt
+    pt-BR|pt-PT) folder=pt; python3 -I "$here/next_words.py" build pt "$text" --words "$im/pt/words-$id.combined" --out "$im/pt/pairs-$id.bin"; file=pairs-$id.bin ;;
+    sr) folder=sr; python3 -I "$here/next_words.py" build sr "$text"; file=pairs.bin
         python3 -I "$here/next_words.py" build sr-latn "$text"
-        python3 -I "$here/next_words.py" notice sr-latn "$corpus" pairs.txt "written in Latin letters letter for letter, as its word list" ;;
-    *) folder=$id; python3 -I "$here/next_words.py" build "$id" "$text"; file=pairs.txt ;;
+        python3 -I "$here/next_words.py" notice sr-latn "$corpus" pairs.bin "written in Latin letters letter for letter, as its word list" ;;
+    *) folder=$id; python3 -I "$here/next_words.py" build "$id" "$text"; file=pairs.bin ;;
   esac
   python3 -I "$here/next_words.py" notice "$folder" "$corpus" "$file" ""
 done

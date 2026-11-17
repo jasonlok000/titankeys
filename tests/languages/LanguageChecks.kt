@@ -66,6 +66,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
+    if (args.isNotEmpty()) nextWordsCost(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
@@ -841,6 +842,68 @@ private fun collect() = repeat(4) {
 
 private fun usedMb(): Long = Runtime.getRuntime().let { (it.totalMemory() - it.freeMemory()) / 1_048_576 }
 
+private fun usedBytes(): Long = Runtime.getRuntime().let { it.totalMemory() - it.freeMemory() }
+
+/**
+ * What one input method's word list and next-word table take on the heap, each read by the app's own reader, and how long each
+ * load takes (the first load, then a second once the JIT has warmed up). The budget: 40 MB for both, 300 ms for the table.
+ */
+private fun nextWordsCost(folder: File) {
+    for (id in listOf("ka", "ko", "sr", "el", "ru")) {
+        val dir = File(folder, id)
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        val listFile = File(dir, method.words ?: continue)
+        val tableFile = File(dir, "pairs.bin")
+        if (!tableFile.isFile) continue
+        // The table alone first, on a collected heap, then the list beside it.
+        collect()
+        val base = usedBytes()
+        var started = System.nanoTime()
+        var table: NextWords? = tableFile.inputStream().use { NextWords.readBinary(it) }
+        val firstMillis = (System.nanoTime() - started) / 1_000_000
+        collect()
+        val withTable = usedBytes()
+        started = System.nanoTime()
+        val again = tableFile.inputStream().use { NextWords.readBinary(it) }
+        val secondMillis = (System.nanoTime() - started) / 1_000_000
+        started = System.nanoTime()
+        var list: WordList? = WordList.read(listFile.useLines { it.toList() }.asSequence(), method.javaLocale)
+        val listMillis = (System.nanoTime() - started) / 1_000_000
+        collect()
+        val withBoth = usedBytes() - again.bytes
+        val tableMb = (withTable - base) / 1_048_576.0
+        val listMb = (withBoth - withTable) / 1_048_576.0
+        println("next words: $id: table ${"%.1f".format(tableFile.length() / 1e6)} MB as a file, ${table!!.size} first words, " +
+            "arrays ${"%.1f".format(table.bytes / 1_048_576.0)} MB; heap: table ${"%.1f".format(tableMb)} MB " +
+            "(${firstMillis} ms first, ${secondMillis} ms again), list ${"%.1f".format(listMb)} MB (${listMillis} ms); " +
+            "together ${"%.1f".format(listMb + tableMb)} MB")
+        check("$id: list and table under 40 MB of heap", listMb + tableMb <= 40) { "%.1f MB".format(listMb + tableMb) }
+        check("$id: the table loads in under 300 ms", secondMillis <= 300) { "$secondMillis ms" }
+        check("$id: a reload reads the same table", again.size == table.size)
+        list = null
+        table = null
+        if (list == null && table == null) collect()
+    }    // English's own table, read by its own reader (PairCounts), for comparison: it isn't one of these, and loads with the engine.
+    val english = File(folder.parentFile, "autocorrect/en_pairs.txt")
+    if (english.isFile) {
+        collect()
+        val base = usedBytes()
+        var started = System.nanoTime()
+        var pairs: com.titankeys.autocorrect.PairCounts? = english.bufferedReader().useLines { com.titankeys.autocorrect.PairCounts.parse(it) }
+        val firstMillis = (System.nanoTime() - started) / 1_000_000
+        collect()
+        val heap = (usedBytes() - base) / 1_048_576.0
+        started = System.nanoTime()
+        val again = english.bufferedReader().useLines { com.titankeys.autocorrect.PairCounts.parse(it) }
+        val secondMillis = (System.nanoTime() - started) / 1_000_000
+        println("next words: en (PairCounts): ${"%.1f".format(english.length() / 1e6)} MB as a file, ${pairs!!.size} pairs; " +
+            "heap ${"%.1f".format(heap)} MB (${firstMillis} ms first, ${secondMillis} ms again)")
+        check("en: a reload reads the same pairs", again.size == pairs.size)
+        pairs = null
+        if (pairs == null) collect()
+    }
+}
+
 /**
  * The phone's OutOfMemoryError after 18 switches (2026-11-17): 30 switches through the input methods with word lists, loaded
  * as the keyboard loads them ([WordListSlot]), must keep one list at most, and the heap must not grow with them.
@@ -848,18 +911,25 @@ private fun usedMb(): Long = Runtime.getRuntime().let { (it.totalMemory() - it.f
 private fun switchingKeepsOneList(folder: File) {
     val methods = folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }.mapNotNull { dir ->
         runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull()
-            ?.takeIf { it.words != null && it.engine == null }?.let { it to File(dir, it.words!!) }
+            ?.takeIf { it.words != null && it.engine == null }?.let { Triple(it, File(dir, it.words!!), File(dir, "pairs.bin")) }
     }
     check("enough input methods with word lists for 30 switches", methods.size >= 15) { "${methods.size}" }
+    check("most of them have next-word tables", methods.count { it.third.isFile } >= 15)
     val slot = WordListSlot()
+    // The table follows Languages.use: dropped as a switch to another input method begins, never loaded for a switch that a
+    // later one overtook before its turn, and kept only when its load is the latest switch's.
+    var table: NextWords? = null
     collect()
     val before = usedMb()
     var most = 0
+    var mostTables = 0
+    var peak = 0L
     var after5 = 0L
     repeat(30) { switch ->
-        val (method, file) = methods[switch % methods.size]
+        val (method, file, pairs) = methods[switch % methods.size]
         val ticket = slot.begin(method.id)
-        // A switch that a later one overtakes is dropped as its list arrives.
+        table = null
+        // A switch that a later one overtakes is dropped as its list arrives; its table is never read.
         if (switch % 7 == 3) {
             val overtaken = WordList.read(file.useLines { it.toList() }.asSequence(), method.javaLocale)
             val next = methods[(switch + 1) % methods.size].first
@@ -869,19 +939,26 @@ private fun switchingKeepsOneList(folder: File) {
             slot.begin(method.id)
         }
         val list = WordList.read(file.useLines { it.toList() }.asSequence(), method.javaLocale)
-        slot.done(slot.begin(method.id), list)
+        val loaded = if (pairs.isFile) pairs.inputStream().use { NextWords.readBinary(it) } else null
+        peak = maxOf(peak, usedMb())
+        if (slot.done(slot.begin(method.id), list)) table = loaded
         collect()
         most = maxOf(most, WordList.alive().size)
+        mostTables = maxOf(mostTables, NextWords.alive().size)
+        peak = maxOf(peak, usedMb())
         if (switch == 4) after5 = usedMb()
     }
     val after30 = usedMb()
-    println("switching: 30 switches through ${methods.size} input methods, at most $most word list(s) held, heap ${before} MB before, " +
-        "$after5 MB after 5, $after30 MB after 30")
+    println("switching: 30 switches through ${methods.size} input methods, at most $most word list(s) and $mostTables table(s) held, " +
+        "heap ${before} MB before, $after5 MB after 5, $after30 MB after 30, peak $peak MB")
     check("one word list at most in memory after each switch", most <= 1) { "$most" }
+    check("one next-word table at most in memory after each switch", mostTables <= 1) { "$mostTables" }
     check("the heap doesn't grow with switches", after30 - after5 <= 40) { "$after5 MB after 5, $after30 MB after 30" }
     slot.clear()
+    table = null
     collect()
     same("no word list once the keyboard goes", WordList.alive().size, 0)
+    same("no next-word table once the keyboard goes", NextWords.alive().size + (if (table == null) 0 else 1), 0)
 }
 
 /** The owner, 2026-11-16: "each language should have a list of starting words". Its own, in its own script; never English's. */

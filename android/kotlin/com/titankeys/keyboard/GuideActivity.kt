@@ -1807,6 +1807,16 @@ class GuideActivity : Activity() {
         minHeight = dp(TOUCH)
         setPadding(dp(16), 0, dp(16), 0)
         setTextSize(TypedValue.COMPLEX_UNIT_PX, px(LABEL_TYPE))
+        // Its name for accessibility, as a button: screen readers, and the phone checks that find it by name (A's batches
+        // stopped at Settings, which had no name in the tree).
+        contentDescription = text
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        accessibilityDelegate = object : View.AccessibilityDelegate() {
+            override fun onInitializeAccessibilityNodeInfo(host: View, info: android.view.accessibility.AccessibilityNodeInfo) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.className = android.widget.Button::class.java.name
+            }
+        }
         onPress(haptics) { press() }
     }
 

@@ -49,6 +49,7 @@ fun main(args: Array<String>) {
     theBarsWordsShowAsChoices()
     aPickedBarWordBringsItsNextWords()
     theBarsWordsNeverCoverACode()
+    aFlickKeepsWhatWasPicked()
     println("Rime checks passed")
 }
 
@@ -156,6 +157,21 @@ private class FakeRime : RimeCalls {
     override fun reset() {
         calls += "reset"
         code = ""
+    }
+
+    /** What was picked of the code so far, word by word, with its letters: tk_predict.h's DropLast takes them off. */
+    val picked = mutableListOf<String>()
+
+    /** As DropLast: the pending code goes; with none, the last picked word. */
+    override fun dropLast(): Boolean {
+        calls += "dropLast"
+        when {
+            code.isNotEmpty() && picked.isNotEmpty() -> code = ""
+            picked.isNotEmpty() -> picked.removeAt(picked.lastIndex)
+            code.isNotEmpty() -> code = ""
+            else -> return false
+        }
+        return true
     }
 
     /** As tk_predict.h's PredictAfter: the word counts as a commit, so its next words come, though nothing is typed. */
@@ -860,4 +876,25 @@ fun theBarsWordsNeverCoverACode() {
     same("n", state.typed, "a letter starts a code")
     check("w" !in state.choices, "and the offer goes")
     same(EngineState.UNHANDLED, started().first.let { e -> e.offer(listOf("w")); e.enter() }, "Enter with an offer is the keyboard's")
+}
+
+/**
+ * A flick with part of a code picked (頂你個 picked, "fai" pending) takes only the pending code; the next takes a picked word;
+ * none of it reaches the field (owner, 2026-11-17).
+ */
+fun aFlickKeepsWhatWasPicked() {
+    val (engine, rime) = started()
+    type(engine, "fai")
+    rime.picked += "dingneigo"
+    val state = engine.flick()
+    check("dropLast" in rime.calls && "reset" !in rime.calls, "the flick drops what's pending, never the whole code")
+    same("", state.commit, "and types nothing")
+    same(listOf("dingneigo"), rime.picked, "what was picked stays")
+    type(engine, "x")
+    engine.flick()
+    same("", rime.code, "a later flick with a pending code again takes only that")
+    rime.picked.clear()
+    type(engine, "nei")
+    engine.flick()
+    same("", rime.code, "with nothing picked the code goes whole")
 }

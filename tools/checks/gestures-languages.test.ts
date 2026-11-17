@@ -12,7 +12,8 @@ test("a flick with a code pending clears the code and leaves the field alone", (
   const start = ime.indexOf("if (outcome.deletesWord) {");
   const flick = ime.slice(start, ime.indexOf("val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)", start));
   expect(flick).toContain("val choices = openPicker() as? LanguagePicker.Choices");
-  expect(flick).toMatch(/languages\.engine\?\.reset\(\)\s*closePicker\(\)\s*if \(choices\.state\.composing\) \{[\s\S]*?return\s*\}/);
+  // A code goes through the engine's flick (only what's pending, owner 2026-11-17); suggestions alone just go.
+  expect(flick).toMatch(/engineState\(engine\.flick\(\)\) else \{\s*engine\?\.reset\(\)\s*closePicker\(\)\s*\}\s*if \(choices\.state\.composing\) \{[\s\S]*?return\s*\}/);
 });
 
 test("double space types the language's own full stop, and the words come from the language's breaks", () => {

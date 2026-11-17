@@ -25,6 +25,7 @@ object RimeNative : RimeCalls {
     @JvmStatic private external fun choiceList(start: Int, count: Int): Array<String>?
     @JvmStatic private external fun clear()
     @JvmStatic private external fun predictAfter0(text: String): Boolean
+    @JvmStatic private external fun dropLast0(): Boolean
     @JvmStatic private external fun sync0(): Boolean
     @JvmStatic private external fun state(): Array<Any?>?
 
@@ -39,6 +40,7 @@ object RimeNative : RimeCalls {
     override fun choices(start: Int, count: Int): List<String> = choiceList(start, count)?.toList().orEmpty()
     override fun reset() = clear()
     override fun predictAfter(text: String) = predictAfter0(text)
+    override fun dropLast() = dropLast0()
     override fun sync() = sync0()
     override fun read(): RimeCalls.Raw? = state()?.let { RimeCalls.Raw.of(it) }
 }

@@ -55,6 +55,12 @@ interface InputEngine {
      */
     fun offer(words: List<String>): EngineState = EngineState.UNHANDLED
 
+    /**
+     * A flick while text is being built (owner, 2026-11-17): the code still pending goes, and what was picked of it stays; the
+     * next flick takes the last picked word. An engine without picks in part drops everything, as [reset].
+     */
+    fun flick(): EngineState = reset()
+
     /** Drops whatever is being built, as when the field changes or the input method is switched away. */
     fun reset(): EngineState
 

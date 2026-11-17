@@ -273,6 +273,13 @@ class RimeEngine(
         else -> send(if (forward) RimeKeys.PAGE_DOWN else RimeKeys.PAGE_UP)
     }
 
+    override fun flick(): EngineState {
+        offered = emptyList()
+        if (!composing()) return reset()
+        if (!rime.dropLast()) return reset()
+        return read(handled = true)
+    }
+
     override fun reset(): EngineState {
         offered = emptyList()
         if (!ready) return EngineState.UNHANDLED

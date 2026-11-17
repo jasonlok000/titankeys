@@ -4,6 +4,7 @@ Debug's data size before and after, from Android's `dumpsys diskstats` (TitanKey
 data folder aren't open; diskstats' sizes are the system's last count). An install keeps Debug's data: whether it was a new APK
 decides whether this is the first use; the slot's log says.
 """
+import os
 import re
 import time
 
@@ -29,6 +30,10 @@ def data_size():
 
 
 def check_first_use():
+    # The slot says whether its install put a new APK on (TK_APK_NEW=1) or found it there (0): first use, or warm loads.
+    new = os.environ.get("TK_APK_NEW")
+    kind = {"1": "a new APK: first use", "0": "the APK was there already: warm loads"}.get(new, "not known (TK_APK_NEW unset)")
+    record("first-use-install", None, f"the install before these times: {kind}")
     record("first-use-data-before", None, f"Debug's data before: {data_size()}")
     for im in METHODS:
         language_checks.languages.logs_on(True)

@@ -53,8 +53,7 @@ class ConnectionEditor(
         }
         if (snapshot != null) {
             val current = identity()
-            result(if (current != null && current.connection === owner.connection
-                && current.packageName == owner.packageName && current.fieldId == owner.fieldId) snapshot else null)
+            result(if (current != null && current.same(owner)) snapshot else null)
             return
         }
         val request = StateRequest(owner, result)
@@ -99,17 +98,14 @@ class ConnectionEditor(
         val result = request.result
         request.result = null
         val owner = identity()
-        if (owner == null || owner.connection !== request.owner.connection
-            || owner.packageName != request.owner.packageName || owner.fieldId != request.owner.fieldId
-            || info.selectionStart < 0 || info.selectionEnd < 0) {
+        if (owner == null || !owner.same(request.owner) || info.selectionStart < 0 || info.selectionEnd < 0) {
             result?.invoke(null)
             return
         }
         val before = before()
         val after = after()
         val current = identity()
-        result?.invoke(if (before == null || after == null || current == null
-            || current.connection !== owner.connection || current.packageName != owner.packageName || current.fieldId != owner.fieldId) null
+        result?.invoke(if (before == null || after == null || current == null || !current.same(owner)) null
             else Editor.State(before, after, info.selectionStart, info.selectionEnd))
     }
 

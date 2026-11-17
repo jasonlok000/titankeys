@@ -15,7 +15,23 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** The text around the cursor, and the edits the keyboard makes there. */
 interface Editor {
-    data class Identity(val connection: Any, val packageName: String?, val fieldId: Int)
+    /**
+     * Which field the text is in: the app's connection to it, its app and its field id. The connection is held weakly (#85):
+     * the keyboard runs in the same process as TitanKeys' own screens, where a connection holds its text box and so the whole
+     * screen, and the last field's identity stays here until the next field starts. A connection that's gone is no field.
+     */
+    class Identity(connection: Any, val packageName: String?, val fieldId: Int) {
+        private val held = java.lang.ref.WeakReference(connection)
+
+        /** The connection, or null once nothing else holds it. */
+        val connection: Any? get() = held.get()
+
+        /** The same field, still open: the same live connection, app and field id. */
+        fun same(other: Identity): Boolean {
+            val mine = connection ?: return false
+            return mine === other.connection && packageName == other.packageName && fieldId == other.fieldId
+        }
+    }
     data class State(val before: String, val after: String, val selectionStart: Int, val selectionEnd: Int)
     enum class Enter { Newline, Next, Previous, Action, Rejected }
 
@@ -396,8 +412,7 @@ class Composer(
     private fun snapshot() = Snapshot(editor.before(), editor.after(), selection,
         selection.start >= 0 && selection.end >= 0 && selection.start != selection.end)
 
-    private fun sameIdentity(first: Editor.Identity?, second: Editor.Identity?) = first != null && second != null
-        && first.connection === second.connection && first.packageName == second.packageName && first.fieldId == second.fieldId
+    private fun sameIdentity(first: Editor.Identity?, second: Editor.Identity?) = first != null && second != null && first.same(second)
 
     /** Own selection notifications may be coalesced, or arrive after a later successful edit. */
     fun selectionChanged(start: Int, end: Int): Boolean {

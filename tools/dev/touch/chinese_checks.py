@@ -17,6 +17,8 @@ import languages
 from checks import Stop, play, record
 
 YALE = "yue-yale"
+# Every "before" ends in a pause of at least 500 ms; the screenshot starts this long before its end.
+SHOT_EARLY = 450
 CODE = "neihou"
 # A pending code goes key by key: Backspace takes one letter off.
 CLEAR_CODE = [g for _ in range(20) for g in ("key:del", "+60")]
@@ -29,8 +31,11 @@ HANDS = [
 
 def duration(*moves):
     """How long the gestures take, in ms, as the touch simulator plays them."""
+    keys = os.path.join(os.environ.get("TK_OUT", os.path.expanduser("~/tk-out")), "touch", "keys.txt")
+
     class Args:
-        keymap = None
+        # The phone's own codes (keymap.sh), as touch.sh plays them: Sym and fn have no Linux code.
+        keymap = keys if os.path.exists(keys) else None
     Args.gestures = list(moves)
     return gestures.build(Args).t
 
@@ -55,13 +60,16 @@ def read():
 
 
 def shot_then(name, before, after):
-    """Plays before + after, with a screenshot when before ends: the state the last gesture acts on."""
-    play(*before, *after, shot=name, at=int(duration(*before)) + 100)
+    """Plays before + after, with a screenshot in the pause that ends before: the state the next gesture acts on. A screenshot
+    takes a few hundred ms of its own, so it starts SHOT_EARLY ms before the pause ends (the shakedown's were all late)."""
+    play(*before, *after, shot=name, at=max(0, int(duration(*before)) - SHOT_EARLY))
     time.sleep(.5)
     return read()
 
 
 def cjk(text):
+    """Chinese characters only. A Space after a whole pick types a space of its own, so one at the end is fine."""
+    text = (text or "").rstrip(" ")
     return bool(text) and all("　" <= ch <= "鿿" or "豈" <= ch <= "￯" or ord(ch) >= 0x20000 for ch in text)
 
 
@@ -104,20 +112,20 @@ def check_flick():
 def check_menu():
     """Holding P opens the bigger menu; Enter turns to the next page and Backspace back; a press picks; Sym closes it."""
     fresh()
-    held = code("hold:p:800", "+500")
+    held = code("hold:p:800", "+600")
     shot_then("zh-menu-1", held, ["key:sym", "+300", *CLEAR_CODE])
     record("zh-menu-open", None, "the menu over three rows, ✕ at Sym, ↓ at Enter, the page at P", "zh-menu-1")
     fresh()
-    shot_then("zh-menu-2", held + ["key:enter", "+500"], ["key:sym", "+300", *CLEAR_CODE])
+    shot_then("zh-menu-2", held + ["key:enter", "+600"], ["key:sym", "+300", *CLEAR_CODE])
     record("zh-menu-next", None, "Enter: the second page (2/N at P, ↑ at Backspace)", "zh-menu-2")
     fresh()
-    shot_then("zh-menu-back", held + ["key:enter", "+500", "key:del", "+500"], ["key:sym", "+300", *CLEAR_CODE])
+    shot_then("zh-menu-back", held + ["key:enter", "+500", "key:del", "+600"], ["key:sym", "+300", *CLEAR_CODE])
     record("zh-menu-back", None, "Backspace: the first page again (1/N)", "zh-menu-back")
     fresh()
     text = shot_then("zh-menu-pick", held, ["key:s", "+400", "key:space", "+300"])
     record("zh-menu-pick", None if cjk(text) else False, f"typed {text!r}: it should start with the shot's choice over S", "zh-menu-pick")
     fresh()
-    shot_then("zh-menu-sym", held + ["key:sym", "+500"], [])
+    shot_then("zh-menu-sym", held + ["key:sym", "+600"], [])
     record("zh-menu-sym", None, "Sym closed the menu and kept the code: the row is back", "zh-menu-sym")
 
 

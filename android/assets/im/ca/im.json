@@ -7,11 +7,11 @@
   "script": "Latn",
   "keys": "qwerty",
   "accents": {
-    "a": "àáä",
+    "a": "àá",
     "c": "ç",
     "e": "éè",
     "i": "íï",
-    "o": "óòöø",
+    "o": "óò",
     "u": "úü"
   },
   "words": "words.combined",

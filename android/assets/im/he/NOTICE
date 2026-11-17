@@ -3,3 +3,5 @@ Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. C
 Key layout: SI-1452, as xkeyboard-config's symbols/il gives it (https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config), with ת on Q and the final ף and ץ held on P and M.
 
 Words: Hermit Dave's FrequencyWords (https://github.com/hermitdave/FrequencyWords, he_full.txt), built from OpenSubtitles. Its content is CC BY-SA 4.0.
+
+Ranked by how often each word appears in the Leipzig Corpora Collection's heb_wikipedia_2021_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0, and only the words it uses kept. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012.

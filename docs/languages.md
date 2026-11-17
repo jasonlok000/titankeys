@@ -201,9 +201,11 @@ data-only language is one command plus a check by eye. Where the data comes from
   language changes only that.
 - `tests/corrections` measures every language on made-up slips of its commonest words. A language whose Space would make
   more than 0.5% wrong changes gets its fixes on the bar only (`android/assets/im/corrections-bar-only.txt`, which
-  `run.sh --write` writes from the measure): Greek, Galician and Slovak today. Over all 44, on 36,760 slips, Space puts
-  in the right word for 56.4% and a wrong one for 0.1%, never changes a word typed right, and the right word is on the bar
-  for 91.3%.
+  `run.sh --write` writes from the measure): none today. Over all 44, on 37,114 slips, Space puts in the right word for
+  61.2% and a wrong one for 0.1%, never changes a word typed right, and the right word is on the bar for 92.0%.
+- Eleven lists whose own frequencies put foreign and unaccented junk on top are ranked by Leipzig's sentences for their
+  language, keeping only the words those use (`RANK_BY` in tools/im/make.py; their starters stay their own list's): af,
+  bs, ca, el, ga, gl, he, is, lv, nn and sk. Greek, Galician and Slovak, bar only before, now let Space fix.
 - Kept-once words are each language's own (`KeptOnceStore.languageKey`).
 - **Hindi and Vietnamese** build their words in an engine, so the corrector above doesn't see them. Their choices are the
   list's words that start like the word being built, so one wrong key (tirng for tieng) left nothing to pick. Where nothing

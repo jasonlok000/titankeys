@@ -3,6 +3,7 @@ import { Toggle } from "../../lib/app-haptics";
 import { type State, state, update } from "../../lib/titankeys";
 import { fixKinds } from "../../lib/fixes";
 import { shorthandLabel } from "./shorthand/index";
+import { languageValues } from "./languages/index";
 
 export const fixesLabel = ({ fixToggles }: State) => {
   const on = fixKinds.filter(({ id }) => fixToggles[id] ?? true).length;
@@ -16,7 +17,9 @@ export default function Fixes() {
   const subtitle = "It's all on to start. Switch off what you'd rather fix yourself. Backspace right after a fix puts back what you typed.";
   if (result.status !== "ready") return <Screen title={title} subtitle={subtitle} />;
   const settings = result.data;
-  const { autocorrect, fixToggles, fixOnlyWhenSure } = settings;
+  const { fixToggles, fixOnlyWhenSure } = settings;
+  // The fixes are English's: its own Fix typos switch decides (TypingSettings.PER_LANGUAGE).
+  const { autocorrect } = languageValues(settings, "en");
   return <Screen title={title} subtitle={subtitle}>
     <Section title="Fixes">
       {fixKinds.map(({ id, label, example }) => <Toggle key={id} label={label} subtitle={example} value={fixToggles[id] ?? true}

@@ -46,6 +46,7 @@ fun main(args: Array<String>) {
     aTapPicksTheTileUnderIt()
     languagesGroupTheirInputMethods()
     theAccentsSitOverTheHeldKey()
+    englishTypingRows()
     wordsCompleteIgnoringAccents()
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
@@ -1017,6 +1018,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         // The picker shows at most eight accents, W to O: a letter with more would lose some (owner, 2026-11-17).
         val crowded = method.accents.filterValues { it.size > Picker.ACCENTS }
         check("${method.id}: no letter has more than ${Picker.ACCENTS} accents", crowded.isEmpty()) { crowded.keys.joinToString(" ") }
+        typingRowsFit(method)
         if (method.keys != null) {
             same("${method.id}: every key has a letter", method.keys.keys, ('a'..'z').toSet())
             val unshifted = ('a'..'z').filter { method.letter(it, true).isNullOrEmpty() }
@@ -1079,4 +1081,36 @@ private fun eachLanguageHasItsFullStop(folder: File) {
         check("${method.id}'s full stop", method.rules.fullStop == expected) { "'${method.rules.fullStop}', expected '$expected'" }
     }
     check("English's full stop", InputMethod.ENGLISH.rules.fullStop == ". ")
+}
+
+/**
+ * The typing settings a language's page shows once a second language is on (owner, 2026-11-17): only the ones that work in it,
+ * from its own rules (LanguageSettings).
+ */
+private fun typingRowsFit(method: InputMethod) {
+    val rows = LanguageSettings.rows(method)
+    val expected = when (method.id) {
+        "fr" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace")
+        // A held letter's symbol goes through the engine as its own mark, so the hold row stays.
+        "zh-pinyin", "yue-yale", "yue-jyutping", "ja" -> listOf("doubleSpace", "hold")
+        "th" -> listOf("fixes", "commaSpace")
+        "ka" -> listOf("fixes", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        "id" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
+        else -> null
+    }
+    if (expected != null) same("${method.id}: its page's typing settings", rows, expected)
+    check("${method.id}: only English has swiping and shorthand", listOf("swipe", "shorthand").none { it in rows })
+    // Fix typos shows where the language corrects (LanguageCorrections.corrects: a list and no engine), and nowhere else.
+    same("${method.id}: Fix typos where it corrects", "fixes" in rows, method.words != null && method.engine == null)
+    // Hindi's and Vietnamese's engines build the words: their slipped-key choice is only ever a suggestion on the bar, never put in
+    // by Space, so it isn't under Fix typos, and their pages don't show it (D, 2026-11-17).
+    if (method.id == "hi" || method.id == "vi") check("${method.id}: no Fix typos row", "fixes" !in rows)
+    check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
+    check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
+}
+
+private fun englishTypingRows() {
+    same("English: every typing setting on its page", LanguageSettings.rows(InputMethod.ENGLISH),
+        listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand"))
+    same("English's Double Space types a full stop", LanguageSettings.stop(InputMethod.ENGLISH), ".")
 }

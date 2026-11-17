@@ -22,6 +22,83 @@ public final class TypingSettings {
     // never did moves from 2.x's 250 ms with the update, and a stored choice stays.
     public static final int DEFAULT_HOLD_SYMBOL_MILLIS = HoldEngine.DEFAULT_MILLIS;
 
+    /**
+     * The settings each language keeps for itself (owner, 2026-11-17: "some settings doesn't work in some languages ... so having it
+     * outside makes it look like global settings"). A language's own value is under "key@language"; one it never set reads the
+     * plain key, the single value from before, so nothing changes on update. Settings' main page writes the plain key and
+     * English's own while English is the only language on; each language's page writes its own.
+     */
+    public static final String[] PER_LANGUAGE = {
+        "autocorrect", "auto_capitalise", "auto_punctuation", "sentence_spaces", "comma_space", "hold_symbols",
+    };
+
+    public static String languageKey(String key, String language) {
+        return key + "@" + language;
+    }
+
+    private static boolean languageBoolean(Context context, String key, String language, boolean otherwise) {
+        SharedPreferences settings = preferences(context);
+        String own = languageKey(key, language);
+        return settings.contains(own) ? settings.getBoolean(own, otherwise) : settings.getBoolean(key, otherwise);
+    }
+
+    private static void putLanguageBoolean(Context context, String key, String language, boolean value) {
+        preferences(context).edit().putBoolean(languageKey(key, language), value).apply();
+    }
+
+    public static boolean autocorrectIn(Context context, String language) {
+        return languageBoolean(context, "autocorrect", language, true);
+    }
+
+    public static void autocorrectIn(Context context, String language, boolean enabled) {
+        putLanguageBoolean(context, "autocorrect", language, enabled);
+    }
+
+    public static boolean autoCapitaliseIn(Context context, String language) {
+        return languageBoolean(context, "auto_capitalise", language, true);
+    }
+
+    public static void autoCapitaliseIn(Context context, String language, boolean enabled) {
+        putLanguageBoolean(context, "auto_capitalise", language, enabled);
+    }
+
+    public static boolean autoPunctuationIn(Context context, String language) {
+        return languageBoolean(context, "auto_punctuation", language, true);
+    }
+
+    public static void autoPunctuationIn(Context context, String language, boolean enabled) {
+        putLanguageBoolean(context, "auto_punctuation", language, enabled);
+    }
+
+    public static boolean commaSpaceIn(Context context, String language) {
+        return languageBoolean(context, "comma_space", language, true);
+    }
+
+    public static void commaSpaceIn(Context context, String language, boolean enabled) {
+        putLanguageBoolean(context, "comma_space", language, enabled);
+    }
+
+    public static boolean holdSymbolsIn(Context context, String language) {
+        return languageBoolean(context, "hold_symbols", language, true);
+    }
+
+    public static void holdSymbolsIn(Context context, String language, boolean enabled) {
+        putLanguageBoolean(context, "hold_symbols", language, enabled);
+    }
+
+    public static String sentenceSpacesIn(Context context, String language) {
+        String own = languageKey("sentence_spaces", language);
+        if (!preferences(context).contains(own)) return sentenceSpaces(context);
+        String spaces = preferences(context).getString(own, "one");
+        return "two".equals(spaces) || "none".equals(spaces) ? spaces : "one";
+    }
+
+    public static void sentenceSpacesIn(Context context, String language, String spaces) {
+        if (!"one".equals(spaces) && !"two".equals(spaces) && !"none".equals(spaces))
+            throw new IllegalArgumentException("Not a number of spaces");
+        preferences(context).edit().putString(languageKey("sentence_spaces", language), spaces).apply();
+    }
+
     public static boolean autoCapitalise(Context context) {
         return preferences(context).getBoolean("auto_capitalise", true);
     }

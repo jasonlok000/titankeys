@@ -2937,10 +2937,10 @@ class GuideActivity : Activity() {
     /** The letter key for [key]: itself, or for a symbol, the key that types it with Alt on this phone. */
     private fun keyFor(key: String) = if (key.length == 1 && key[0].isLetter()) key.uppercase() else altKeys[key.firstOrNull() ?: ' '] ?: key
 
-    private fun markPushes(marks: String) = GuideScript.markKeys(marks, TypingSettings.autoPunctuation(this)) { altKeys[it] }
+    private fun markPushes(marks: String) = GuideScript.markKeys(marks, TypingSettings.autoPunctuationIn(this, InputMethod.ENGLISH_ID)) { altKeys[it] }
 
     private fun pushesFor(word: String, swiped: Boolean) = demoPushes
-        ?: GuideScript.pushes(word, swiped, TypingSettings.autoPunctuation(this)) { altKeys[it] }.also { demoPushes = it }
+        ?: GuideScript.pushes(word, swiped, TypingSettings.autoPunctuationIn(this, InputMethod.ENGLISH_ID)) { altKeys[it] }.also { demoPushes = it }
 
     /** Lights the keys of every push up to [shown] that has not lit yet. */
     private fun lightPushes(pushes: List<DemoPush>, shown: Int) {
@@ -3054,14 +3054,15 @@ class GuideActivity : Activity() {
     }
 
     private fun writeNeed(need: GuideNeed) = when (need) {
-        GuideNeed.HoldSymbols -> TypingSettings.holdSymbols(this, true)
+        // The guide types English, so English's own hold is the one it turns on (TypingSettings.PER_LANGUAGE).
+        GuideNeed.HoldSymbols -> TypingSettings.holdSymbolsIn(this, InputMethod.ENGLISH_ID, true)
         GuideNeed.CursorControl -> TypingSettings.cursorControl(this, true)
         GuideNeed.SwipeTyping -> TypingSettings.swipeTyping(this, true)
         GuideNeed.FnAsCtrl -> TypingSettings.fnAsCtrl(this, true)
     }
 
     private fun readSettings() = GuideSettings(
-        holdSymbols = TypingSettings.holdSymbols(this),
+        holdSymbols = TypingSettings.holdSymbolsIn(this, InputMethod.ENGLISH_ID),
         cursorControl = TypingSettings.cursorControl(this),
         swipeTyping = TypingSettings.swipeTyping(this),
         fnAsCtrl = TypingSettings.fnAsCtrl(this),

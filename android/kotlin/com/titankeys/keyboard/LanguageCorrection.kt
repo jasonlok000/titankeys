@@ -70,10 +70,10 @@ class LanguageCorrection(private val context: Context, private val words: Langua
     }
 
     /**
-     * Whether [method] corrects at all: Settings' Autocorrect switch. The one place to read it, so a switch for each language
-     * (claude/m3-settings-per-language) changes only this.
+     * Whether the input method typing corrects at all: its [language]'s own Fix typos switch, on its page in Settings > Languages,
+     * or Settings' single one until it has its own (TypingSettings.PER_LANGUAGE). The one place to read it.
      */
-    fun on(method: InputMethod): Boolean = TypingSettings.autocorrect(context)
+    fun on(language: String): Boolean = TypingSettings.autocorrectIn(context, language)
 
     /** The input method went: its corrections go with it. */
     fun clear() {

@@ -798,6 +798,7 @@ STARTER_SOURCES = {
     "zh-quick": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-zhuyin": ("../src/rime-essay/essay.txt", "essay"),
     "ja": ("", "fixed"),
+    "th": ("", "fixed"),
     # The lists ranked by Leipzig's sentences ([RANK_BY]) keep the starters of their own list: news and Wikipedia put
     # prepositions on top, where the chat-like lists had "som", "čo" and "nie" (Slovak), the ways to start a message.
     **{ident: ("aosp-dictionaries/wordlists/%s.combined" % name, "list") for ident, name in {
@@ -830,6 +831,10 @@ STARTER_CREDIT = ("Starters: the words that most often begin a sentence in the L
 # Japanese has no frequency list split into words that we ship, and Mozc's costs rank homophones, not common words, so its
 # starters are picked by hand: common ways to start a sentence, for the owner to confirm.
 JAPANESE_STARTERS = ["私", "今日", "はい", "これ", "それ", "何", "今", "また", "でも", "ありがとう", "そう", "明日"]
+# Thai's the same way (C, 2026-11-17, for the owner to confirm): its list's commonest words are particles and prefixes (ที่,
+# การ), and its corpus's sentences start with news datelines (วัน, วันอาทิตย์). Common ways to start a message instead.
+THAI_STARTERS = ["สวัสดี", "ขอบคุณ", "ฉัน", "ผม", "เรา", "คุณ", "วันนี้", "พรุ่งนี้", "ตอนนี้", "ไม่", "ใช่", "แล้ว"]
+FIXED_STARTERS = {"ja": JAPANESE_STARTERS, "th": THAI_STARTERS}
 
 
 def is_word(word):
@@ -864,7 +869,7 @@ def top_words(path, kind):
                 pairs.append((word, int(freq)))
         return [w for w, _ in sorted(pairs, key=lambda w: -w[1])]
     if kind == "fixed":
-        return JAPANESE_STARTERS
+        return FIXED_STARTERS[path]
     if kind == "mozc":
         # Mozc's dictionary: reading, left id, right id, cost, word; a lower cost is commoner. Only words that start a sentence
         # well, by their part of speech in id.def: pronouns, interjections, adverbs and common nouns, not verb forms or particles.
@@ -898,6 +903,10 @@ STARTER_SKIP = {
     "mk": {"проучување"},  # Wikipedia's "Проучување" headings
     "ga": {"net"},  # web boilerplate
     "ko": {"윤"},
+    "sl": {"leta"},  # news datelines, "Leta 2010 ..."
+    # Particles from Rime's essays, which never start a sentence: Mandarin's 的 了 和 在, Cantonese's 嘅.
+    **{ident: {"的", "了", "和", "在"} for ident in ("zh-pinyin", "zh-zhuyin")},
+    **{ident: {"嘅"} for ident in ("yue-yale", "yue-jyutping", "zh-cangjie", "zh-quick")},
 }
 
 
@@ -975,10 +984,12 @@ def simplified(data):
     return lambda word: "".join(table.get(c, c) for c in word)
 
 
-def write_starters(data):
-    """Adds "starters" (and Chinese's "startersSimplified") to every im.json there is."""
+def write_starters(data, only=None):
+    """Adds "starters" (and Chinese's "startersSimplified") to every im.json there is, or to those in [only]."""
     to_simplified = None
     for ident in sorted(os.listdir(ASSETS)):
+        if only and ident not in only:
+            continue
         path = os.path.join(ASSETS, ident, "im.json")
         if not os.path.isfile(path):
             continue
@@ -988,7 +999,7 @@ def write_starters(data):
         credit = None
         if ident in STARTER_SOURCES:
             file, kind = STARTER_SOURCES[ident]
-            source = os.path.normpath(os.path.join(data, file)) if file else ""
+            source = os.path.normpath(os.path.join(data, file)) if file else ident
             ranked = top_words(source, kind)
         elif corpus and im.get("words"):
             sentences = os.path.normpath(os.path.join(data, "..", "leipzig", corpus + "-sentences.txt"))
@@ -1009,8 +1020,9 @@ def write_starters(data):
                 f.write("\n")
             continue
         starters = []
+        skip = STARTER_SKIP.get(ident, set())
         for word in ranked:
-            if is_word(word) and word not in starters:
+            if is_word(word) and word not in starters and word not in skip:
                 starters.append(word)
             if len(starters) == STARTERS:
                 break
@@ -1143,8 +1155,9 @@ def main():
     global DATA
     data = DATA = sys.argv[1]
     # make.py <data dir> --starters: only the starter words, for every input method there is.
-    if sys.argv[2:] == ["--starters"]:
-        write_starters(data)
+    # make.py <data dir> --starters [id ...]: those input methods' only, as reading every corpus takes half an hour.
+    if sys.argv[2:3] == ["--starters"]:
+        write_starters(data, sys.argv[3:] or None)
         print("starters written")
         return
     # make.py <data dir> --howto: only the how-tos, into every im.json and the index.

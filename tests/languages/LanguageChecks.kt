@@ -269,6 +269,13 @@ private fun languagesGroupTheirInputMethods() {
     same("one Chinese on: the language's mark", SwitchOverlay.markLabel(zh.on("en,yue-yale,es"), "yue-yale", "耶"), "ZH")
     same("two Chinese on: the input method's", SwitchOverlay.markLabel(zh.on("en,yue-yale,zh-pinyin"), "yue-yale", "耶"), "耶")
     same("a language of one input method: the same either way", SwitchOverlay.markLabel(zh.on("en,es"), "es", "ES"), "ES")
+    fun serbian(id: String, label: String, script: String) = """{"id":"$id","name":"$id","nameEnglish":"$id","label":"$label",""" +
+        """"locale":"sr","script":"$script","language":{"id":"sr","name":"Српски","nameEnglish":"Serbian","label":"СР",""" +
+        """"script":"Cyrl","experimental":true}}"""
+    val serbianIndex = InputMethodIndex.parse("[" + serbian("sr", "СР", "Cyrl") + "," + serbian("sr-latn", "SR", "Latn") + "]")
+    same("Serbian in Latin letters alone: its own SR, not the language's Cyrillic СР",
+        SwitchOverlay.markLabel(serbianIndex.on("en,sr-latn"), "sr-latn", "SR"), "SR")
+    same("Serbian in Cyrillic alone: the language's СР", SwitchOverlay.markLabel(serbianIndex.on("en,sr"), "sr", "СР"), "СР")
     val serbianOnly = index.languagesOn("sr,sr-latn")
     same("one language with two: straight to its row", SwitchOverlay.opening(serbianOnly), serbianOnly[0])
     same("an index without languages: each its own", InputMethodIndex.parse(SPANISH_INDEX).languages.map { it.id }, listOf("en", "es"))
@@ -1111,8 +1118,8 @@ private fun barWordsAndLearning() {
     same("its next words, commonest first, a count of 0 skipped", table.after("Buenos"), listOf("aires", "días"))
     same("the bar takes them before the starters", BarWords.next("buenos", null, starters, capitals = true, table = table),
         listOf("aires", "días", "de"))
-    same("at a sentence's start too, with capitals", BarWords.next(null, null, starters, capitals = true, table = table),
-        listOf("El", "Hola", "De"))
+    same("at a sentence's start, the starters first, then the table's, with capitals",
+        BarWords.next(null, null, listOf("de"), capitals = true, table = table), listOf("De", "El", "Hola"))
 
     val learning = LanguageLearning()
     learning.kept(null, "hola", known = true)

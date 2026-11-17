@@ -160,14 +160,18 @@ object BarWords {
     const val SHOWN = 3
 
     /**
-     * After a word ends: the words learned after [previous], or at a sentence's start ([previous] null), then the input
-     * method's own next words for it from its [table] (J's tables), then the starters.
+     * After a word ends: the words learned after [previous], then the input method's own next words for it from its [table]
+     * (J's tables), then the starters. At a sentence's start ([previous] null): the sentences the user started, the starters,
+     * then the table's.
      */
     fun next(previous: String?, learning: LanguageLearning?, starters: List<String>, capitals: Boolean,
              table: NextWords? = null, rules: WordRules = WordRules.NONE): List<String> {
         val learned = if (previous == null) learning?.sentenceStarts().orEmpty() else learning?.next(previous).orEmpty()
         val listed = table?.after(previous).orEmpty()
-        val words = Favourites.first((learned + listed + starters).distinctBy { it.lowercase() }
+        // At a sentence's start the starters come before the table's: they're the same corpus's sentence starts, without its
+        // datelines, page labels and names (make.py's STARTER_SKIP), where the table counts every sentence as it stands.
+        val ordered = if (previous == null) learned + starters + listed else learned + listed + starters
+        val words = Favourites.first(ordered.distinctBy { it.lowercase() }
             .filter { rules.usable(it) && learning?.isHidden(it) != true }.take(SHOWN), rules.favourite)
         return if (previous == null && capitals) words.map { it.replaceFirstChar { c -> c.titlecase() } } else words
     }

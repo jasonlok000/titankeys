@@ -111,6 +111,14 @@ public class Canvas {
         shape(new Ellipse2D.Float(x - radius, y - radius, radius * 2, radius * 2), paint);
     }
 
+    public void drawText(String text, float x, float y, Paint paint) {
+        paint(paint);
+        g.setFont(new java.awt.Font(java.awt.Font.SANS_SERIF, paint.bold ? java.awt.Font.BOLD : java.awt.Font.PLAIN, 1).deriveFont(paint.textSize));
+        float width = g.getFontMetrics().stringWidth(text);
+        float left = paint.align == Paint.Align.RIGHT ? x - width : paint.align == Paint.Align.CENTER ? x - width / 2 : x;
+        g.drawString(text, left, y);
+    }
+
     public void drawLine(float x0, float y0, float x1, float y1, Paint paint) {
         paint(paint);
         g.setStroke(new BasicStroke(paint.strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));

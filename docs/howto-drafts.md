@@ -179,6 +179,16 @@ The three share Chinese's bar. Only the first line differs.
 > types the first one. For another, tap it, or flick up from the key under it. Sym shows more choices: Enter or a swipe up
 > turns the page. Enter types the romaji as letters. Double Space types 。.
 
+## The first-use hint in Cyrillic
+
+The bar's first-use hint, "Hold a letter for its accents.", reads wrong in `be`, `bg`, `kk`, `mk`, `ru`, `sr` and `uk`: a hold
+there gives letters the keys have no room for (ж, э, х, ъ), not accents. For those seven:
+
+> Missing a letter? Hold a key to find it.
+
+A plainer one, if that's too cute for a hint: "Hold a key for the letters with no key." Greek keeps the accents line, since
+its holds are accents (ά, έ).
+
 ## To check before G wires these in
 
 - **Picking from the row:** languages.md's "Chinese on the bar" (2026-11-17) says Space, a tap, or a flick up from the key

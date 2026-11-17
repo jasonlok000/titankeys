@@ -62,7 +62,11 @@ class RimeEngine(
             if (!open) open = runCatching { opened(rime) { data.prepareUser(); install(data) && rime.open(data.shared.path, data.user.path) } }
                 .getOrDefault(false)
             if (!open) return false
-            if ((schema != id || seen != syncs) && !select(id)) return false
+            if ((schema != id || seen != syncs) && !select(id)) {
+                // An input method turned on after Rime opened (a warm engine keeps it open): its files come now, and Rime
+                // opens again with them, as a sync does, so the other engines select theirs again ([reopen]).
+                if (!reopen(rime, data, install) || !select(id)) return false
+            }
             // A restored backup's learned words merge in now ([RimeBackup]), once the schema has opened its dictionary.
             if (RimeBackup.pending(data)) {
                 sync(rime, data)
@@ -303,6 +307,19 @@ class RimeEngine(
             }
             syncs++
             if (ok) merging.forEach { it.delete() }
+            ok
+        }
+
+        /**
+         * Puts the data of the input methods on now in place under a Rime that's open, and opens it again with them: the
+         * copy can't change files Rime has open. Each engine selects its schema again after, as after a [sync]. False if
+         * Rime wasn't open, or doesn't open again.
+         */
+        private fun reopen(rime: RimeCalls, data: RimeData, install: (RimeData) -> Boolean): Boolean = synchronized(users) {
+            if ((users[rime] ?: 0) == 0) return false
+            rime.close()
+            val ok = runCatching { install(data) && rime.open(data.shared.path, data.user.path) }.getOrDefault(false)
+            syncs++
             ok
         }
 

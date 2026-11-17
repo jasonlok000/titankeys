@@ -17,41 +17,43 @@ export const newsText = {
   hidden: "Hidden",
 };
 
-/** The short policy shown before Share swipes turns on. A clean zone: serious and plain, no jokes. */
+/**
+ * The short screen before Sharing turns on (#96): short and plain, as the owner asked ("the user main screen shd be still be simple
+ * and straight to the point"), with the full privacy policy one tap away. One switch for everything: all or nothing. A clean
+ * zone: serious and plain, no jokes. F: draft.
+ */
 export const sharePolicyText = {
   title: "Before you share",
-  subtitle: "Share swipes sends us examples of your swipes, to train the swipe models. Nothing is sent until you turn it on.",
-  sentTitle: "What's sent",
+  subtitle: "Sharing sends us examples of your swipes and daily totals of how TitanKeys works, so we can make it better. Nothing is sent until you turn it on.",
+  sentTitle: "What's shared",
   sent: [
-    "How each swipe moved across the keys, with its timing and touch size.",
-    "The word you kept, only if it's in the dictionary.",
-    "The numbers the swipe engine used to rank the words, without the words.",
-    "The app and model versions, your phone model, and a random ID.",
+    "Your swipes: how each moved across the keys, and the word you kept, only if it's in the dictionary.",
+    "Daily totals, such as fixes undone, swipes retyped, slides skipped, settings changed and crashes.",
+    "Versions, your phone model and random IDs.",
   ],
-  neverTitle: "What's never sent",
+  neverTitle: "Never shared",
   never: [
-    "What you type, or the text around a word.",
-    "Names and other words that aren't in the dictionary.",
-    "Anything from password, email, web address or private fields.",
-    "Your clipboard, snippets and shortcuts.",
+    "What you type, names, anything from password or private fields, your clipboard, your apps, contacts or location.",
   ],
-  how: "It's sent encrypted, on Wi-Fi only. You can turn it off and delete what you've sent any time in Settings > Share swipes.",
-  agree: "Turn on Share swipes",
+  how: "It's encrypted on your phone. Turn it off any time in Settings > Sharing, and delete what you've sent.",
+  agree: "Turn on sharing",
   decline: "Not now",
-  policy: "Read the full privacy policy",
+  policy: "Read the full policy",
 };
 
+/** Settings > Sharing (#96): swipes and daily totals, under one switch. F: draft. */
 export const contributeText = {
-  title: "Share swipes",
-  settingsLabel: "Share swipes",
-  subtitle: "Send us examples of your swipes, and we'll use them to make swiping better on every Titan 2 Elite. It's off until you agree.",
-  onSubtitle: "Your swipes are helping make swiping better on every Titan 2 Elite. Thanks.",
+  title: "Sharing",
+  settingsLabel: "Sharing",
+  subtitle: "Send us examples of your swipes and daily totals of how TitanKeys works, and we'll use them to make it better on every Titan 2 Elite. It's off until you agree.",
+  onSubtitle: "You're helping make TitanKeys better on every Titan 2 Elite. Thanks.",
   sentTitle: "What gets sent",
   sent: [
     "The path of each swipe, with its timing and touch sizes.",
     "The word you kept, but only if it's in the dictionary.",
     "The 18 numbers the swipe engine used to rank the words.",
-    "The TitanKeys and model versions, your phone model, and a random ID for your swipes.",
+    "Daily totals of how TitanKeys' features worked: the full list is below, with what each one means.",
+    "The TitanKeys, Android and model versions, your phone model, and random IDs.",
   ],
   neverTitle: "What never gets sent",
   never: [
@@ -59,19 +61,28 @@ export const contributeText = {
     "Names, and any other word that isn't in the dictionary.",
     "Anything from password, email, web address or private fields.",
     "Your clipboard, snippets and shortcuts.",
+    "Your apps, your contacts, your location, or what time of day you type.",
   ],
   howTitle: "How it's sent and kept",
   how: [
-    "Swipes wait on your phone, up to 4 MB. You can see them and delete them.",
-    "They're only sent on Wi-Fi, and they're encrypted on your phone first. Only our private key can open them, and it's kept offline.",
-    "We only use them to train the TitanKeys swipe models. We keep them until they're used, and 2 years at most.",
+    "Swipes wait on your phone, up to 4 MB, and go on Wi-Fi only. Daily totals go once a day, on any connection.",
+    "Everything is encrypted on your phone first. Only our private key can open it, and it's kept offline.",
+    "We only use it to make TitanKeys better. Swipes are kept until they're used, and 2 years at most; daily totals 1 year.",
     "You can stop whenever you want and delete everything you've sent. This page shows your contributor ID, so you can still ask us to delete your swipes after you uninstall TitanKeys.",
   ],
   agree: "I agree",
   decline: "No thanks",
   policy: "Privacy policy",
-  about: "What gets sent",
-  toggle: "Share my swipes",
+  about: "What's shared",
+  toggle: "Share to improve TitanKeys",
+  todayTitle: "Today so far",
+  todayEmpty: "Nothing counted yet today.",
+  waitingDays: (days: number) => days === 1 ? "1 day waiting to send" : `${days} days waiting to send`,
+  countsTitle: "Every daily total",
+  countsNote: "Each is a number for the day. We may add totals of these same kinds; they show here first. We'll ask again before we send any other kind of data.",
+  guideTitle: "The guide",
+  settingsTitle: "Settings you changed",
+  settingsNote: "By name only, never what you chose.",
   statusTitle: "Your swipes",
   sentLine: "Sent",
   waitingLine: "Waiting to send",
@@ -84,9 +95,9 @@ export const contributeText = {
   copied: "Copied",
   notReady: "Sending starts once the TitanKeys server is up. Until then, your swipes wait on your phone.",
   deletionWaiting: "Your delete request goes out as soon as you're online.",
-  confirmTitle: "Delete your swipes?",
-  confirmSubtitle: "This deletes the swipes waiting on your phone and asks our server to delete everything you've sent. You can't undo it.",
-  confirm: "Delete my swipes",
+  confirmTitle: "Delete what you've shared?",
+  confirmSubtitle: "This deletes the swipes waiting on your phone and asks our server to delete everything you've sent, swipes and daily totals. You can't undo it.",
+  confirm: "Delete it all",
 };
 
 export const swipes = (count: number) => count === 1 ? "1 swipe" : `${count} swipes`;

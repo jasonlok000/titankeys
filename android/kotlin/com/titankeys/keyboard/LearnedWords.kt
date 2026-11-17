@@ -1,6 +1,7 @@
 package com.titankeys.keyboard
 
 import android.content.Context
+import android.content.SharedPreferences
 
 /**
  * What each input method but English learned and saved ([LanguageLearning]), one copy for the whole app: the keyboard learns
@@ -16,21 +17,25 @@ internal object LearnedWords {
     private fun store(context: Context) = context.getSharedPreferences(STORE, Context.MODE_PRIVATE)
 
     /** Input method [id]'s learning, read once. */
+    fun of(context: Context, id: String): LanguageLearning = of(store(context), id)
+
     @Synchronized
-    fun of(context: Context, id: String): LanguageLearning =
-        cache.getOrPut(id) { LanguageLearning.decode(store(context).getString(id, null)) }
+    internal fun of(store: SharedPreferences, id: String): LanguageLearning =
+        cache.getOrPut(id) { LanguageLearning.decode(store.getString(id, null)) }
 
     /** Writes input method [id]'s learning. */
+    fun save(context: Context, id: String) = save(store(context), id)
+
     @Synchronized
-    fun save(context: Context, id: String) {
+    internal fun save(store: SharedPreferences, id: String) {
         val learning = cache[id] ?: return
-        store(context).edit().putString(id, learning.encode()).apply()
+        store.edit().putString(id, learning.encode()).apply()
     }
 
     /** Every input method that learned or saved a word, with its words, for Settings. */
     @Synchronized
     fun all(context: Context): Map<String, LanguageLearning> =
-        store(context).all.keys.associateWith { of(context, it) }.filterValues { it.ownWords().isNotEmpty() }
+        (store(context).all.keys + cache.keys).associateWith { of(context, it) }.filterValues { it.ownWords().isNotEmpty() }
 
     /** Settings' remove: input method [id] forgets [word], as the word menu's Unsave does to a word it learned or saved. */
     @Synchronized
@@ -40,11 +45,14 @@ internal object LearnedWords {
     }
 
     /** Remove learned words: what every input method learned from typing goes; the words saved from the menu stay. */
+    fun forgetLearned(context: Context) = forgetLearned(store(context))
+
     @Synchronized
-    fun forgetLearned(context: Context) {
-        for (id in store(context).all.keys) {
-            of(context, id).forgetLearned()
-            save(context, id)
+    internal fun forgetLearned(store: SharedPreferences) {
+        // The keyboard writes every few words, so what it learned since is only in [cache]: that goes too.
+        for (id in store.all.keys + cache.keys) {
+            of(store, id).forgetLearned()
+            save(store, id)
         }
     }
 

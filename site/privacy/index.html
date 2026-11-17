@@ -26,8 +26,9 @@
         nothing about you. You can turn it off.</li>
       <li><strong>Bug reports:</strong> only when you press Send in the report form, it sends what you wrote, sealed so
         only we can read it.</li>
-      <li><strong>Swipe contributions:</strong> only if you agree, it sends examples of your swipes to train the swipe
-        models. They're encrypted on your phone. You can stop and delete them at any time.</li>
+      <li><strong>Sharing:</strong> only if you agree, it sends examples of your swipes and, from TitanKeys 3.0, daily
+        totals of how well its features worked, to make TitanKeys better. Never what you type. It's encrypted on your
+        phone. You can stop and delete it at any time.</li>
       <li>We don't sell, rent or share data.</li>
     </ul>
   </div>
@@ -77,13 +78,14 @@
       You can also refuse the notification permission. Then the news shows only on the News page.</li>
   </ul>
 
-  <h2>What TitanKeys sends, only if you agree: swipe contributions</h2>
-  <p>You can help make swipe typing better for every Titan 2 Elite by sending examples of your swipes. This is off until
-  you agree. The guide offers it at its end until you answer, and a screen tells exactly what is sent before you agree.
-  You can change your answer at any time in Settings &gt; Share swipes.</p>
+  <h2>What TitanKeys sends, only if you agree: sharing</h2>
+  <p>You can help make TitanKeys better for every Titan 2 Elite by sharing examples of your swipes and, from TitanKeys
+  3.0, daily totals of how its features worked. One switch covers both: you share everything below, or nothing. This is
+  off until you agree. The guide offers it at its end until you answer, and a short screen says what is shared before you
+  agree. You can change your answer at any time in Settings &gt; Sharing (called Share swipes before 3.0).</p>
 
-  <h3>What is sent</h3>
-  <p>Only labelled swipe examples. Each example has:</p>
+  <h3>What is sent: swipe examples</h3>
+  <p>Labelled swipe examples. Each example has:</p>
   <ul>
     <li>The path of the swipe on the keys, with the time of each point from the start of the swipe, and the touch size
       for each point.</li>
@@ -94,9 +96,30 @@
     <li>The TitanKeys version, the version of the swipe models, the phone model (such as "Titan 2 Elite"), and whether the
       app came from GitHub or Google Play.</li>
     <li>A random contributor ID. It's made on your phone when you agree. It's not connected to your name, your
-      account or your phone, and it's only used to delete your examples when you ask. Settings &gt; Share swipes
+      account or your phone, and it's only used to delete your examples when you ask. Settings &gt; Sharing
       shows it, with a button to copy it.</li>
   </ul>
+
+  <h3>What is sent: daily totals (TitanKeys 3.0 and later)</h3>
+  <p>While sharing is on, TitanKeys keeps daily totals on your phone of how its features worked, and sends one small
+  encrypted batch a day. Only totals for the day, never what you did one by one, and nothing is counted in password,
+  email, web address or private fields. A day has:</p>
+  <ul>
+    <li>How many times TitanKeys' features acted, and how many of those you kept, swapped, undid or typed again: for
+      example joined swipes, autocorrect, apostrophe and capital fixes, swipes by word length, words picked from the
+      bar, Chinese and Japanese choices, and gestures.</li>
+    <li>How fast the keys showed for a field and how fast swipes were read, counted in rough bands.</li>
+    <li>Which settings you changed, by name only, never what you chose. Never your snippets, shorthand or word
+      lists.</li>
+    <li>How far you got in the guide, and the slides you skipped.</li>
+    <li>How many times TitanKeys crashed or froze, without any details.</li>
+    <li>The TitanKeys, Android and model versions, the phone model, whether it came from GitHub or Google Play, the
+      date (no time), and a random ID that changes every 30 days. That ID is never your contributor ID, and it isn't
+      sent with your swipes.</li>
+  </ul>
+  <p>Settings &gt; Sharing &gt; What's shared lists every total, with what it means, and shows today's so far. We may add
+  totals of these same kinds for the same purpose. They show there first. We'll ask you again before we send any other
+  kind of data or use it for anything else.</p>
 
   <h3>What is never sent</h3>
   <ul>
@@ -106,11 +129,15 @@
     <li>The clipboard, snippets and shortcuts.</li>
     <li>Your contacts or their names, the names of your apps, your location, the apps that you use, or any identifier of
       your phone or account.</li>
+    <li>What time of day you type.</li>
+    <li>Anything from the Accessibility service.</li>
   </ul>
 
-  <h3>Why</h3>
-  <p>Only to train and test the TitanKeys swipe models, so that they read swipes from more hands correctly. We don't use
-  the examples for anything else. We don't sell them, show them to other people or use them for ads. The trained models
+  <h3>Why, and on what basis</h3>
+  <p>Only to make TitanKeys work better: to train and test the swipe models, so that they read swipes from more hands
+  correctly, and to tune autocorrect, joins, suggestions, gestures and the guide, and find crashes and slow spots. Our
+  legal basis is your consent, which you can take back at any time in Settings. We don't use the examples or the totals
+  for anything else. We don't sell them, show them to other people or use them for ads. The trained models
   are part of TitanKeys, which is open source. A model is made from many examples together and doesn't hold your
   examples.</p>
 
@@ -126,6 +153,8 @@
       and never logs or stores it. Cloudflare carries the connection, as the <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare privacy
       policy</a> says.</li>
     <li>The server files each batch under a hash of your contributor ID, so even the stored files don't show the ID.</li>
+    <li>Daily totals are encrypted the same way, sent over HTTPS once a day on any connection, and filed under a hash of
+      their 30-day ID. TitanKeys Debug, the test version, never sends them.</li>
   </ul>
 
   <h3>How long it's kept</h3>
@@ -135,19 +164,24 @@
       are deleted. The server deletes its files after 2 years automatically.</li>
     <li>Examples that we opened for training are kept only on our own offline computer, within the same 2 years.</li>
     <li>At any time, on request, we delete all the examples for a contributor ID.</li>
+    <li>Daily totals: on your phone until they're sent, 7 days at most; on the server and with us, 1 year, then they
+      are deleted. The server deletes them after 1 year automatically.</li>
   </ul>
 
   <h3>How to stop and delete</h3>
   <ul>
-    <li><strong>Stop:</strong> turn off <em>Share my swipes</em>. TitanKeys stops collecting at once, and deletes the
-      examples that still wait on your phone.</li>
+    <li><strong>Stop:</strong> turn off sharing. TitanKeys stops collecting at once, and deletes the examples and the
+      daily totals that still wait on your phone.</li>
     <li><strong>Delete waiting swipes:</strong> deletes the queue on your phone.</li>
     <li><strong>Delete what I&#8217;ve sent:</strong> deletes the queue on your phone, and asks the server to delete all the
-      batches sent with your contributor ID. If your phone has no connection, it asks again when it has one. After this,
-      new examples get a new contributor ID.</li>
+      batches sent with your contributor ID, and the daily totals of every 30-day ID your phone used in the last year. If
+      your phone has no connection, it asks again when it has one. After this, new examples get a new contributor
+      ID.</li>
     <li><strong>After you remove TitanKeys:</strong> removing the app deletes the queue and the contributor ID from your
       phone, and we never know who you are. So keep a copy of your contributor ID from Settings. To have your examples
-      deleted later, send us the ID as the Contact section says, and we delete everything for it.</li>
+      deleted later, send us the ID as the Contact section says, and we delete everything for it. The 30-day IDs of the
+      daily totals go with the app, so we can't tell which totals were yours or find them; they're deleted after a year
+      anyway.</li>
   </ul>
 
   <h2>What TitanKeys sends when you report a bug: the report form</h2>
@@ -188,7 +222,7 @@
         the touchpad on the keys. TitanKeys never reads the screen.</td></tr>
       <tr><td>Accessibility</td><td>To send Back, and to read the keys that you press while the Sym panel is open or in a
         launcher search. It doesn't read the screen.</td></tr>
-      <tr><td>Internet and network state</td><td>For the news and, only if you agree, for swipe contributions.</td></tr>
+      <tr><td>Internet and network state</td><td>For the news, bug reports you send, and, only if you agree, for sharing.</td></tr>
       <tr><td>Notifications</td><td>To show news. TitanKeys asks first and tells you why. News also shows in Settings
         without it.</td></tr>
       <tr><td>Contacts (only if you turn on Names from my contacts)</td><td>To read the first and last names of your
@@ -196,6 +230,15 @@
       <tr><td>Vibration</td><td>For the feel of the keys and gestures.</td></tr>
     </tbody>
   </table>
+
+  <h2>Your rights</h2>
+  <p>If you're in the EU, the UK or another place with similar laws, you have the right to see, correct and delete your
+  data and to get a copy of it, to object to how it's used, and to take back your consent at any time. Taking it back
+  doesn't change what was done before. To use these rights, email us. Swipe examples are found by your contributor ID;
+  daily totals only while TitanKeys is still on your phone, as above. You can also complain to your data protection
+  authority.</p>
+  <p>Our server runs on Cloudflare, which processes the encrypted data for us under its data processing terms. It may
+  do so in the US, under the EU&#8211;US Data Privacy Framework and standard contractual clauses.</p>
 
   <h2>Children</h2>
   <p>TitanKeys isn't made for children under 13, and we don't knowingly collect data from them.</p>

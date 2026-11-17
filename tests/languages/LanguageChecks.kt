@@ -72,6 +72,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
+    if (args.isNotEmpty()) holdHints(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -1345,12 +1346,21 @@ private fun typingRowsFit(method: InputMethod) {
     if (method.id == "hi" || method.id == "vi") check("${method.id}: no Fix typos row", "fixes" !in rows)
     check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
     check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
+    // The quick settings panel hides the same ones while this input method types (QuickSetting.hiddenIn).
+    val hidden = QuickSetting.hiddenIn(rows)
+    for ((item, row) in listOf(QuickSetting.Autocorrect to "fixes", QuickSetting.SwipeTyping to "swipe",
+            QuickSetting.AutoCapitalise to "capitals", QuickSetting.AutoPunctuation to "doubleSpace", QuickSetting.HoldSymbols to "hold"))
+        same("${method.id}: the quick ${item.label} key is hidden where its row is", item in hidden, row !in rows)
+    if (method.id == "zh-pinyin") same("Chinese: the panel leaves out Fix, Swipe and Caps", hidden,
+        setOf(QuickSetting.Autocorrect, QuickSetting.SwipeTyping, QuickSetting.AutoCapitalise))
 }
 
 private fun englishTypingRows() {
     same("English: every typing setting on its page", LanguageSettings.rows(InputMethod.ENGLISH),
         listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand"))
     same("English's Double Space types a full stop", LanguageSettings.stop(InputMethod.ENGLISH), ".")
+    same("English: the quick settings panel hides nothing", QuickSetting.hiddenIn(LanguageSettings.rows(InputMethod.ENGLISH)),
+        emptySet<QuickSetting>())
 }
 
 /**
@@ -1434,4 +1444,13 @@ private fun cyrillicHoldsReachEveryLetter(folder: File) {
         // The apostrophe is part of Ukrainian's and Belarusian's words (сім'я, з'ява), next to х on their PC layouts: held on P.
         if (id == "uk" || id == "be") same("$id: P holds the apostrophe, after its letters", method.accents['p']?.last(), "'")
     }
+}
+
+/** The hold hint each input method says once (HoldHint): accents, Cyrillic's missing letters, or nothing. */
+private fun holdHints(folder: File) {
+    fun hint(id: String) = HoldHint.of(InputMethod.parse(File(folder, "$id/im.json").readText()))
+    for (id in listOf("be", "bg", "kk", "mk", "ru", "sr", "uk")) same("$id: a hold finds a missing letter", hint(id), HoldHint.MISSING)
+    for (id in listOf("es", "fr", "el", "sr-latn", "tr")) same("$id: a hold gives accents", hint(id), HoldHint.ACCENTS)
+    for (id in listOf("th", "he", "id", "ka")) same("$id: no hint, nothing held on the bar", hint(id), null)
+    same("English: no hint", HoldHint.of(InputMethod.ENGLISH), null)
 }

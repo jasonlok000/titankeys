@@ -215,30 +215,45 @@ internal class Languages(
             main.postDelayed({ if (ticket == loading) preparing?.invoke(entry) }, PREPARING_MILLIS)
         }
         loader.execute {
-            // Overtaken by a later switch while it waited its turn: it needn't load at all.
-            if (ticket != loading) return@execute
-            val startedAt = SystemClock.elapsedRealtime()
-            val method = InputMethodList.load(context, id)
-            // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
-            val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
-            // Its next-word table, where J's tables have one: the bar's words after a word ([NextWords]).
-            val pairs = method?.let { InputMethodList.nextWords(context, it, it.variants.firstOrNull()?.id) }
-            // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
-            val engine = method?.engine?.let { name ->
-                InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
-            }
-            main.post {
-                engineWait.loaded(ticket)
-                if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded in ${SystemClock.elapsedRealtime() - startedAt} ms: ${
-                    if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
-                    else "${words?.size ?: 0} words, no engine"
-                }")
-                if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs)
-                else {
-                    engine?.stop()
-                    Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
+            try {
+                load(id, ticket, listTicket)
+            } catch (error: Throwable) {
+                // Nothing here should throw, but if anything did, the keys waiting for this load ([EngineWait]) would wait for
+                // good: it ends as a failed load does, in English, and the gate opens.
+                Log.w(LOG_TAG, "Input method $id's load broke: typing English", error)
+                main.post {
+                    engineWait.loaded(ticket)
                     apply(InputMethod.ENGLISH, null, ticket, listTicket)
                 }
+            }
+        }
+    }
+
+    /** [use]'s load, on the loader thread: the input method's file, its words and table, and its engine, then [apply]. */
+    private fun load(id: String, ticket: Int, listTicket: Int) {
+        // Overtaken by a later switch while it waited its turn: it needn't load at all.
+        if (ticket != loading) return
+        val startedAt = SystemClock.elapsedRealtime()
+        val method = InputMethodList.load(context, id)
+        // An engine reads its own words (Telex's choices): the keyboard's suggestions never see the word it builds.
+        val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, it.variants.firstOrNull()?.id) }
+        // Its next-word table, where J's tables have one: the bar's words after a word ([NextWords]).
+        val pairs = method?.let { InputMethodList.nextWords(context, it, it.variants.firstOrNull()?.id) }
+        // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
+        val engine = method?.engine?.let { name ->
+            InputEngines.create(context, name)?.takeIf { it.start(method, java.io.File(context.filesDir, "engines/$name")) }
+        }
+        main.post {
+            engineWait.loaded(ticket)
+            if (ticket == loading) Log.i(LOG_TAG, "Input method $id loaded in ${SystemClock.elapsedRealtime() - startedAt} ms: ${
+                if (method?.engine != null) "engine ${method.engine} ${if (engine != null) "started" else "missing or didn't start"}"
+                else "${words?.size ?: 0} words, no engine"
+            }")
+            if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs)
+            else {
+                engine?.stop()
+                Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
+                apply(InputMethod.ENGLISH, null, ticket, listTicket)
             }
         }
     }

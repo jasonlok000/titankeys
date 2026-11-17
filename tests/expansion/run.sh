@@ -7,7 +7,9 @@ kotlin=${KOTLIN_HOME:?Set KOTLIN_HOME to your Kotlin compiler directory}
 stdlib=${KOTLIN_STDLIB:-$kotlin/lib/kotlin-stdlib.jar}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-"$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
+# Expansions asks SentenceCase where a sentence ends (a928c80f), so it is compiled first.
+javac --release 17 -nowarn -d "$work" android/kotlin/com/titankeys/engine/SentenceCase.java
+"$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work:$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   android/kotlin/com/titankeys/keyboard/Expansions.kt android/kotlin/com/titankeys/keyboard/ExactTyping.kt android/kotlin/com/titankeys/keyboard/Field.kt \
   tests/expansion/ExpansionChecks.kt
 java -cp "$work:$stdlib" com.titankeys.keyboard.ExpansionChecksKt

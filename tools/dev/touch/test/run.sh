@@ -51,6 +51,17 @@ ready() {
 [ -z "$(ready com.titankeys.debug/com.titankeys.keyboard.TitanKeysIme)" ] || { echo "FAIL Debug was picked again while it was already the keyboard"; exit 1; }
 echo "Held Debug checks passed"
 
+# The gate's bring-back moves the running field screen to the front, not a new one on top (2026-11-17: eight stacked).
+sent=$(bash -c '. tools/dev/env.sh; . tools/dev/phone/safety.sh; . tools/dev/touch/touchlib.sh
+  tk_adb() { echo "$*"; }; tk_bring_back')
+case "$sent" in
+  *"am start --activity-reorder-to-front -n com.titankeys.debug/com.titankeys.keyboard.SpaceGestureActivity"*) ;;
+  *) echo "FAIL the gate's bring-back doesn't reorder the running screen: $sent"; exit 1 ;;
+esac
+grep -q 'tk_bring_back' tools/dev/touch/touchlib.sh && ! grep -v '^\s*#' tools/dev/touch/touchlib.sh | grep -q 'am start -n' \
+  || { echo "FAIL a bring-back in touchlib.sh starts the screen without the reorder"; exit 1; }
+echo "Bring-back checks passed"
+
 # A batch: every named one loads, its gestures build, and its report says each result once, with what's left for hands.
 TK_OUT="$work/out" python3 - <<'PY'
 import os, sys
@@ -112,5 +123,32 @@ checks.adb = stand_in(300, "com.titankeys.debug/com.titankeys.keyboard.SpaceGest
 assert checks.phone_heat() == (30.0, False)
 checks.wait_cool()
 checks.adb, checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS = real_adb, real_steps, real_seconds
+# The rime-files batch reads LeakCheck's "rime data" part, as main 2db7a87b writes it, and its "none copied".
+import rime_batch
+rime_batch.adb = lambda *args: ('Broadcast completed: result=0, data="no guide or playground in memory; rime data: 53.8 MB in 41 '
+                                'files; tables and grammars: jyut6ping3.table.bin, tk_yue.gram"')
+assert rime_batch.rime_data() == (53.8, 41, ["jyut6ping3.table.bin", "tk_yue.gram"]), rime_batch.rime_data()
+rime_batch.adb = lambda *args: 'Broadcast completed: result=0, data="no guide; rime data: none copied"'
+assert rime_batch.rime_data() == (0.0, 0, [])
+rime_batch.adb = lambda *args: 'Broadcast completed: result=0, data="no guide"'
+assert rime_batch.rime_data() is None
+# E's delete animation batch: its counts parse, and its longest calls build within one call's 15 s.
+import delete_batch
+assert delete_batch.dots(["delete animation: dots 41", "dominoes run 100 words", "delete animation: dots 60 as dominoes, 104 words"]) == [41, 60]
+for moves in (["flick", "+300"] * 33, [delete_batch.HOLD, "+1500"], [delete_batch.HOLD, "+300", "key:x:60:none", "+800"]):
+    built = subprocess.run([sys.executable, "tools/dev/touch/gestures.py", "--out", os.path.join(os.environ["TK_OUT"], "del.tki"), *moves],
+                           capture_output=True, text=True)
+    assert built.returncode == 0, f"the delete batch's gestures don't build: {built.stderr[-300:]}"
+# languages.in_field's bring-back carries the reorder too: Debug in front on another screen, the field's screen comes up.
+import languages
+sent = []
+fronts = iter(["  mCurrentFocus=Window{1 u0 com.titankeys.debug/com.vandam.ink.MainActivity}"] * 2 + [""] * 9)
+real_languages_adb, real_sleep = languages.adb, languages.time.sleep
+languages.adb = lambda *args: sent.append(args) or (next(fronts) if "dumpsys" in args else "")
+languages.time.sleep = lambda seconds: None
+languages.in_field()
+languages.adb, languages.time.sleep = real_languages_adb, real_sleep
+starts = [args for args in sent if args[:2] == ("shell", "am")]
+assert starts and all("--activity-reorder-to-front" in args for args in starts), starts
 print("Batch checks passed")
 PY

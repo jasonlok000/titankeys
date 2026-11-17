@@ -56,3 +56,12 @@ test("TitanKeys never writes a secure or global setting", () => {
   for (const file of ["android/kotlin/com/titankeys/keyboard/PhoneSetup.kt", "android/kotlin/com/vandam/ink/AppNativeAdapters.kt"])
     expect(read(file)).not.toMatch(/Settings\.(Secure|Global)\.put/);
 });
+
+test("Names from my contacts shows on while its permission is blocked, so turning it off clears the line", () => {
+  const page = read("app/settings/data/index.tsx");
+  expect(page).toContain("value={contactNames || result.data.contactNamesBlocked}");
+  // Off reaches the setting itself; only on asks Android for the permission.
+  const bridge = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
+  expect(bridge).toContain('"contactNames" -> if (value as Boolean && !PhoneNameSource.contactsAllowed(activity)) ContactsPermissionActivity.start(activity)');
+  expect(bridge).toContain(".put(\"contactNamesBlocked\", TypingSettings.contactNames(activity) && !PhoneNameSource.contactsAllowed(activity))");
+});

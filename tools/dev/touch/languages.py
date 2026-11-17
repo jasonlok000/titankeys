@@ -163,6 +163,7 @@ def switch_to(im, ids):
 # whatever input method is on (englishOnly = inGuide || inPractice), and never another app's. The gate brings it back too.
 FIELD_ACTIVITY = "com.titankeys.keyboard.SpaceGestureActivity"
 os.environ["TK_TOUCH_ACTIVITY"] = FIELD_ACTIVITY
+REORDER = ["--activity-reorder-to-front"]  # am start: FLAG_ACTIVITY_REORDER_TO_FRONT
 APP = os.environ.get("TK_APP", "com.titankeys.debug")
 # TitanKeys Debug's own log lines about input methods ("Input method at field start: ru (the saved setting)", "… loaded: N words,
 # engine none", "… didn't load (…): typing English") and about Sym. Ids and counts only, never text.
@@ -178,7 +179,8 @@ def in_field():
     if FIELD_ACTIVITY in front():
         return True
     if f" {APP}/" in front():
-        adb("shell", "am", "start", "-n", f"{APP}/{FIELD_ACTIVITY}")
+        # The running screen moved to the front, not a new one stacked on it (2026-11-17: eight stacked).
+        adb("shell", "am", "start", *REORDER, "-n", f"{APP}/{FIELD_ACTIVITY}")
         time.sleep(2)
     return FIELD_ACTIVITY in front() and focus_field()
 

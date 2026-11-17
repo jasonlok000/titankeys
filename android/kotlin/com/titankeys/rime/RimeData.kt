@@ -77,6 +77,12 @@ class RimeData(private val root: File) {
         val installed = installedFiles()
         installed.keys.retainAll { File(shared, it).isFile }
         var changed = false
+        // What an older version's Rime compiled from the data goes before the first file changes, not after the last: an
+        // update cut short (a later file fails, or the process dies) mustn't leave it to outlive the data it came from.
+        fun changing() {
+            if (!changed) File(user, "build").deleteRecursively()
+            changed = true
+        }
         for (entry in wanted) {
             if (installed[entry.path] == entry.sha256) continue
             val target = File(shared, entry.path)
@@ -97,22 +103,25 @@ class RimeData(private val root: File) {
                     }
                 }
             }.isSuccess
-            if (!copied || hex(digest.digest()) != entry.sha256 || !fresh.renameTo(target)) {
+            if (!copied || hex(digest.digest()) != entry.sha256) {
+                fresh.delete()
+                return false
+            }
+            changing()
+            if (!fresh.renameTo(target)) {
                 fresh.delete()
                 return false
             }
             installed[entry.path] = entry.sha256
             record(installed)
-            changed = true
         }
         val keep = wanted.map { it.path }.toSet()
         for (path in installed.keys.filter { it !in keep }) {
+            changing()
             File(shared, path).delete()
             installed.remove(path)
             record(installed)
-            changed = true
         }
-        if (changed) File(user, "build").deleteRecursively()
         user.mkdirs()
         return true
     }

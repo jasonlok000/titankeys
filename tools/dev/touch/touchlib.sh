@@ -83,6 +83,11 @@ tk_focus_field() {
 
 # Fails, with a STOP line, unless the checks pass. Another app in front, or no Debug field: TitanKeys Debug's screen is brought
 # back (twice at most) and checked again. Screen off, locked or navigation: one more try a second later.
+# The field's screen brought back to the front: the running one, moved up its task. A plain am start stacked a new one each time,
+# eight of them by 2026-11-17's morning, each a Back the owner had to press.
+tk_bring_back() {
+  tk_adb shell am start --activity-reorder-to-front -n "$TK_APP/$TK_TOUCH_ACTIVITY"
+}
 tk_touch_check() {
   local why status starts=0 waits=0
   while true; do
@@ -96,7 +101,7 @@ tk_touch_check() {
     if [ $status = 3 ] && [ $starts -lt 2 ]; then
       starts=$((starts + 1))
       echo "$why: bringing $TK_APP back"
-      tk_adb shell am start -n "$TK_APP/$TK_TOUCH_ACTIVITY" >/dev/null 2>&1
+      tk_bring_back >/dev/null 2>&1
       sleep 2
       # Its screen in front, but no field of its own has the keyboard (as after Settings or a list): a tap on that field.
       tk_focus_field

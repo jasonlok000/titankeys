@@ -28,7 +28,9 @@ for out in last.feed last.keys; do
   out_last=$(tr ';' '\n' < "$TK_TOUCH_DIR/$out" | tail -1 | cut -d' ' -f2)
   awk "BEGIN{exit !(${out_last:-0} > $last)}" && last="$out_last"
 done
-awk "BEGIN{exit !($last <= 15000)}" || { echo "One call plays at most 15 s, and this is ${last} ms: split it."; exit 2; }
+# TK_TOUCH_MAX_MS raises it for one call that can't be split: a held delete of 250 words (E's dominoes, 2026-11-17).
+most="${TK_TOUCH_MAX_MS:-15000}"
+awk "BEGIN{exit !($last <= $most)}" || { echo "One call plays at most $((most / 1000)) s, and this is ${last} ms: split it."; exit 2; }
 tk_touch_install || { echo "Could not put the injector on the phone"; exit 3; }
 if [ -n "${feed[*]}" ] && { [ -s "$TK_TOUCH_DIR/last.feed" ] || [ -s "$TK_TOUCH_DIR/last.keys" ]; }; then
   tk_touch_feed "$TK_TOUCH_DIR/last.tki" "$TK_TOUCH_DIR/last.feed" "$last" "$TK_TOUCH_DIR/last.keys"

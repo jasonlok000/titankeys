@@ -7,7 +7,7 @@ Yale in Debug's Space gestures field; the bar from TitanKeysBar (D's BarLog), th
    Sym opens the panel (J).
 4. Backspace held 2 s repeats, as on a PC: in English it takes many characters (O); in Yale with a code pending the code
    goes first (O), the shot shows where it stopped (J).
-5. Chinese word units on 我哋唔該晒: a flick takes 唔該晒 (O); three Space taps select 唔該晒 (J); a slide selects one unit (J).
+5. Chinese gestures on 我哋唔該晒, by one character since 50d59aa2: a flick takes 晒 (O); three Space taps select 唔該晒 (J); a slide selects one unit (J).
 6. No "Warming up" on the bar after a switch to Yale (O).
 7. Shift with nothing more (no code, then after a pick): the bigger menu doesn't open (O).
 8. The language mark over Q: a shot in English (with its auto-capital line) and in Yale (J).
@@ -92,7 +92,7 @@ def check_word_units():
         return record("units-setup", None, f"ngodei and mgoisaai typed {text!r}, not 我哋唔該晒: the unit checks need it")
     play("+600", "flick", "+700")
     after = read()
-    record("units-flick", after == "我哋", f"a flick on 我哋唔該晒 left {after!r} (wanted 我哋)")
+    record("units-flick", after == "我哋唔該", f"a flick on 我哋唔該晒 left {after!r} (wanted 我哋唔該: by one character, 50d59aa2)")
     play(*ib.keys("mgoisaai"), "+500", "key:space", "+700", "space:3", "+700", shot="units-triple", at=2600)
     record("units-triple", None, "three Space taps: 唔該晒 selected, as picked", "units-triple")
     play("key:space", "+300")

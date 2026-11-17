@@ -216,7 +216,9 @@ def check_dominoes_every_streak():
 
 
 BATCH = [check_flick_dots, check_full_hold, check_select_all, check_dominoes, check_99_words, check_key_ends_dominoes,
-         check_uncapped_delete, check_dominoes_every_streak]
+         check_uncapped_delete]
+# check_dominoes_every_streak is out: the owner's call of 2026-11-17 (55e7054e) plays them once a streak, past 100 words, live
+# through the hold. batch2_checks' 250-word hold checks that.
 
 
 def finish():

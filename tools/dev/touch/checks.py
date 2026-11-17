@@ -225,7 +225,8 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "review-fixes": "review_batch",
            "interactions": "interactions_batch",
            "pt-spelling": "pt_spelling_batch",
-           "worker-lines": "worker_lines_batch"}
+           "worker-lines": "worker_lines_batch",
+           "batch2": "batch2_checks"}
 
 
 def report(name, stamp, hands):

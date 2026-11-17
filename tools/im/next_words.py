@@ -8,15 +8,16 @@
 sentence"; the number is dropped) or plain text. "check" holds out every 10th sentence, builds from the rest, and
 measures how often the held-out next word is the table's first, or among its first three, for a word in the table.
 
-The table goes to android/assets/im/<id>/pairs.txt by default, in the same format as English's
-android/assets/autocorrect/en_pairs.txt (PairCounts reads it): "first second<TAB>count" lines, <s> as the first word at a
-sentence's start. Only the --top next words for each first word are kept, each seen at least --min times.
+The table goes to android/assets/im/<id>/pairs.txt by default (Portuguese: pairs-pt-BR.txt and pairs-pt-PT.txt, one per
+word list), in the same format as English's android/assets/autocorrect/en_pairs.txt (PairCounts reads it): "first
+second<TAB>count" lines in lower case, <s> as the first word at a sentence's start. Only the --top next words for each
+first word are kept, each seen at least --min times. The format is agreed with the suggestion bar's reader (C).
 
 Tokens follow the input method's word list (words.combined): Unicode letters and marks, with apostrophes and hyphens
 inside a word; a token takes the word list's own spelling (German nouns keep their capital, a capitalised first word
-finds its lower-case entry); a hyphenated token not in the list splits at its hyphens. A word not in the list breaks the
-chain: no pair crosses it. Thai, written without spaces, is split by the longest word-list match. Korean has no word list,
-so its words are the corpus's own most common (--vocabulary, default 50,000) space-separated words.
+finds its lower-case entry), then lower case for the table; a hyphenated token not in the list splits at its hyphens. A word not in the list breaks the
+chain: no pair crosses it. Thai, written without spaces, is split by the longest word-list match. Korean uses its word list
+when it has one, else the corpus's own most common (--vocabulary, default 50,000) space-separated words.
 """
 import argparse
 import os
@@ -106,11 +107,16 @@ def tokens(line, words, script):
     return out
 
 
+def lowered(words):
+    """Lower case, as PairCounts looks words up (no change where the script has no case)."""
+    return [w.lower() if w is not None else None for w in words]
+
+
 def count(lines, words, script):
     pairs = Counter()
     for line in lines:
         prev = START
-        for w in tokens(line, words, script):
+        for w in lowered(tokens(line, words, script)):
             if w is not None and prev is not None:
                 pairs[(prev, w)] += 1
             prev = w
@@ -131,57 +137,68 @@ def korean_words(lines, vocabulary):
     return Words({w: n for w, n in c.most_common(vocabulary)})
 
 
+def word_lists(im, folder, args, lines):
+    """(variant, words) for each table to build: Portuguese has one per variant; Korean without a list uses the corpus."""
+    if args.words:
+        return [("", Words(read_words(args.words)))]
+    if im.get("variants") and all(v.get("words") for v in im["variants"]):
+        return [(v["id"], Words(read_words(os.path.join(folder, v["words"])))) for v in im["variants"]]
+    if im.get("words"):
+        return [("", Words(read_words(os.path.join(folder, im["words"]))))]
+    if im.get("script") == "Kore":
+        return [("", korean_words(lines, args.vocabulary))]
+    raise SystemExit(f"{im['id']} has no word list")
+
+
 def load(args):
-    folder = os.path.join(IM, args.id)
     import json
+    folder = os.path.join(IM, args.id)
     im = json.load(open(os.path.join(folder, "im.json"), encoding="utf-8"))
-    script = im.get("script") or ""
     lines = list(sentences(args.text))
-    if script == "Kore":
-        words = korean_words(lines, args.vocabulary)
-    else:
-        path = args.words or os.path.join(folder, im["words"])
-        words = Words(read_words(path))
-    return im, script, lines, words
+    return im, im.get("script") or "", lines, folder
 
 
 def build(args):
-    im, script, lines, words = load(args)
-    nexts, kept = table(count(lines, words, script), args.top, args.min)
-    out = args.out or os.path.join(IM, args.id, "pairs.txt")
-    rows = sorted(((a, b, kept[(a, b)]) for a, bs in nexts.items() for b in bs), key=lambda r: (r[0], -r[2], r[1]))
-    with open(out, "w", encoding="utf-8", newline="\n") as f:
-        f.write(f"# {im['nameEnglish']} next words: the {args.top} most common words after each word. See NOTICE.\n")
-        f.write("# Format: first<space>second<tab>count. <s> marks the start of a sentence.\n")
-        for a, b, n in rows:
-            f.write(f"{a} {b}\t{n}\n")
-    size = os.path.getsize(out)
-    print(f"{args.id}: {len(lines)} sentences, {len(nexts)} first words, {len(rows)} pairs, {size / 1e6:.2f} MB -> {out}")
+    im, script, lines, folder = load(args)
+    for variant, words in word_lists(im, folder, args, lines):
+        nexts, kept = table(count(lines, words, script), args.top, args.min)
+        name = f"pairs-{variant}.txt" if variant else "pairs.txt"
+        out = args.out or os.path.join(folder, name)
+        rows = sorted(((a, b, kept[(a, b)]) for a, bs in nexts.items() for b in bs), key=lambda r: (r[0], -r[2], r[1]))
+        with open(out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(f"# {im['nameEnglish']}{' (' + variant + ')' if variant else ''} next words: the {args.top} most common words"
+                    f" after each word. See NOTICE.\n")
+            f.write("# Format: first<space>second<tab>count. <s> marks the start of a sentence.\n")
+            for a, b, n in rows:
+                f.write(f"{a} {b}\t{n}\n")
+        size = os.path.getsize(out)
+        print(f"{args.id}{' ' + variant if variant else ''}: {len(lines)} sentences, {len(nexts)} first words, {len(rows)} pairs,"
+              f" {size / 1e6:.2f} MB -> {out}")
 
 
 def check(args):
-    im, script, lines, words = load(args)
+    im, script, lines, folder = load(args)
     train = [l for i, l in enumerate(lines) if i % args.every]
     held = [l for i, l in enumerate(lines) if not i % args.every]
-    if script == "Kore":
-        words = korean_words(train, args.vocabulary)
-    nexts, _ = table(count(train, words, script), args.top, args.min)
-    res = Counter()
-    for line in held:
-        prev = START
-        for w in tokens(line, words, script):
-            if w is not None and prev is not None:
-                kind = "start" if prev == START else "inside"
-                res[kind + " pairs"] += 1
-                guesses = nexts.get(prev, [])
-                res[kind + " with a table"] += bool(guesses)
-                res[kind + " top 1"] += guesses[:1] == [w]
-                res[kind + " top 3"] += w in guesses[:3]
-            prev = w
-    for kind in ("inside", "start"):
-        n = res[kind + " pairs"] or 1
-        print(f"{args.id} {kind}: {res[kind + ' pairs']} held-out pairs; first word in the table {res[kind + ' with a table'] / n:.1%};"
-              f" next word first {res[kind + ' top 1'] / n:.1%}, in the top 3 {res[kind + ' top 3'] / n:.1%}")
+    for variant, words in word_lists(im, folder, args, train):
+        nexts, _ = table(count(train, words, script), args.top, args.min)
+        res = Counter()
+        for line in held:
+            prev = START
+            for w in lowered(tokens(line, words, script)):
+                if w is not None and prev is not None:
+                    kind = "start" if prev == START else "inside"
+                    res[kind + " pairs"] += 1
+                    guesses = nexts.get(prev, [])
+                    res[kind + " with a table"] += bool(guesses)
+                    res[kind + " top 1"] += guesses[:1] == [w]
+                    res[kind + " top 3"] += w in guesses[:3]
+                prev = w
+        for kind in ("inside", "start"):
+            n = res[kind + " pairs"] or 1
+            print(f"{args.id}{' ' + variant if variant else ''} {kind}: {res[kind + ' pairs']} held-out pairs; first word in the table"
+                  f" {res[kind + ' with a table'] / n:.1%}; next word first {res[kind + ' top 1'] / n:.1%}, in the top 3"
+                  f" {res[kind + ' top 3'] / n:.1%}")
 
 
 def main():

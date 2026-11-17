@@ -5,6 +5,7 @@ package com.titankeys.keyboard
  * the marks and the English word. The rules are plain Kotlin (keyboard/Chinese.kt), so they run here without the phone.
  */
 fun main() {
+    theMenuOpensOnlyWithMore()
     aChoiceIsAsWideAsItNeeds()
     theRowFillsWToOInOrder()
     qAndPHaveNoChoice()
@@ -157,4 +158,13 @@ fun theEnglishWordIsNeverFirst() {
     same(listOf("hello"), EnglishOffer.withWord(emptyList(), "hello"), "alone only when Rime has nothing")
     same(listOf("你"), EnglishOffer.withWord(listOf("你"), null), "no word, the choices as they are")
     same(1, EnglishOffer.PLACE, "the second place")
+}
+
+/** Shift and a swipe up open the bigger menu only when the engine has more choices than the row shows. */
+fun theMenuOpensOnlyWithMore() {
+    check(!ChineseRow.more(listOf("你", "好")), "two choices fit the row: no menu")
+    check(!ChineseRow.more(emptyList()), "no choices: no menu")
+    check(ChineseRow.more((1..12).map { "字" }), "twelve one-character choices go past the row's eight")
+    check(ChineseRow.more((1..9).map { "字" }), "nine go past the row by one")
+    check(!ChineseRow.more((1..8).map { "字" }), "eight fill the row: no menu")
 }

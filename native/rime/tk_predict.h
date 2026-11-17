@@ -48,6 +48,20 @@ inline bool PredictFromEnd(RimeSessionId id, const rime::CommitRecord* before) {
   return false;
 }
 
+// A word typed outside Rime (a pick from the bar's next words, which the keyboard typed itself): Rime hears of it as a commit,
+// so the predictor offers what follows it, and the endings fallback after that. True if suggestions came. Nothing while Rime
+// is composing.
+inline bool PredictAfter(RimeSessionId id, const std::string& text) {
+  auto session = rime::Service::instance().GetSession(id);
+  if (!session || text.empty()) return false;
+  rime::Context* ctx = session->context();
+  if (!ctx || ctx->IsComposing() || !ctx->get_option("prediction")) return false;
+  ctx->commit_history().Push(rime::CommitRecord("tk_word", text));
+  ctx->update_notifier()(ctx);
+  if (!ctx->composition().empty()) return true;
+  return PredictFromEnd(id, nullptr);
+}
+
 }  // namespace tk
 
 #endif  // TK_PREDICT_H_

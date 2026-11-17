@@ -440,6 +440,15 @@ class SymPress {
         }
     }
 
+    /**
+     * This press cleared a code being built, and does nothing more: its repeats and release are swallowed, as a press that
+     * closes the switcher (owner, 2026-11-17: "pressing the sym button should remove the keycode stuff first").
+     */
+    fun cleared() {
+        waiting = false
+        closing = true
+    }
+
     /** The hold time passed: true if Sym is still down and the switcher opens. */
     fun held(): Boolean {
         if (waiting) opened = true

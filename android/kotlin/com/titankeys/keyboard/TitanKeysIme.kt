@@ -810,7 +810,8 @@ class TitanKeysIme : InputMethodService() {
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
-            { modifiers.autoShifted }) { barWords = it; strip?.words = it }
+            { modifiers.autoShifted }) { barWords = it; strip?.words = it; offerBarWords(it) }
+        languages.words.shown = { if (ChineseKeys.usesBar(languages.current)) ChineseRow.ASK else BarWords.SHOWN }
         composer.autoPunctuation = { TypingSettings.autoPunctuationIn(this, languages.languageId) }
         composer.sentenceSpaces = {
             when (TypingSettings.sentenceSpacesIn(this, languages.languageId)) {
@@ -3736,7 +3737,7 @@ class TitanKeysIme : InputMethodService() {
             points.last().time - points.first().time, swipe, if (open.items.isEmpty()) ", but no choices to show" else ""))
         when (swipe) {
             // Korean's syllable has no choices: nothing to open.
-            ChineseKeys.Swipe.OpenMenu -> if (open.items.isNotEmpty()) openChoicesMenu()
+            ChineseKeys.Swipe.OpenMenu -> if (open.more) openChoicesMenu()
             ChineseKeys.Swipe.NextPage -> if (choicesMenu?.next() == true) haptics.play(Haptic.PanelPage)
             ChineseKeys.Swipe.PageBefore -> if (choicesMenu?.previous() == true) haptics.play(Haptic.PanelPage)
             ChineseKeys.Swipe.Nothing -> {}
@@ -3766,6 +3767,15 @@ class TitanKeysIme : InputMethodService() {
         if (event.isSystem) return false
         if (keyCode == pickerKey && event.repeatCount > 0) return true
         val open = openPicker()
+        if (keyCode == KeyEvent.KEYCODE_SYM && event.repeatCount == 0 && open is LanguagePicker.Choices && open.state.composing) {
+            // A code being built: Sym clears it, and the choices with it, and types nothing. The next Sym opens the panel (owner,
+            // 2026-11-17: "pressing the sym button should remove the keycode stuff first. And then only on the next press show
+            // the symbol /emoji stuff").
+            symPress.cleared()
+            closeChoicesMenu()
+            languages.engine?.let { engineState(it.reset()) } ?: closePicker()
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_SYM) {
             // Sym is never the picker's key: a held Sym's repeats and its release belong to [symPress] (the next Sym stuck).
             val press = symPress.press(event.repeatCount, open is LanguagePicker.Switch) {
@@ -3894,6 +3904,19 @@ class TitanKeysIme : InputMethodService() {
         } else closePicker()
     }
 
+    /**
+     * Chinese and Japanese: the bar's words go to the engine's wide row, as many as fit, and a pick types no space and brings
+     * the engine's next words ([InputEngine.offer]). Never over a code or the engine's own suggestions.
+     */
+    private fun offerBarWords(words: List<String>) {
+        if (!ChineseKeys.usesBar(languages.current) || field.exact) return
+        val engine = languages.engine ?: return
+        val open = openPicker()
+        if (open != null && (open !is LanguagePicker.Choices || open.state.composing)) return
+        val state = engine.offer(words)
+        if (state.handled) engineState(state)
+    }
+
     /** The letters typed, as an English word to offer second, or null: see [EnglishOffer]. Chinese only. */
     private fun englishFor(state: EngineState, listed: List<String>): String? {
         if (!ChineseKeys.isChinese(languages.current) || listed == listOf(com.titankeys.rime.RimeEngine.NO_VARIANT)) return null
@@ -4011,7 +4034,7 @@ class TitanKeysIme : InputMethodService() {
             when {
                 choicesMenuOpen -> closeChoicesMenu()
                 // Shift opens it only in Chinese and Japanese: elsewhere it types capitals, or Hindi's own sounds.
-                openPicker() is LanguagePicker.Choices && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
+                (openPicker() as? LanguagePicker.Choices)?.more == true && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
                 else -> return false
             }
             choicesLog("Shift ($keyCode): the bigger menu ${if (choicesMenuOpen) "opens" else "closes"}")

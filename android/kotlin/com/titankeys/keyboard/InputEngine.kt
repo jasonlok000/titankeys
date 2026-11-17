@@ -46,6 +46,15 @@ interface InputEngine {
     /** Picks choice [index] counted across every page, as [choices] gives them. */
     fun pickAt(index: Int): EngineState = pick(index)
 
+    /**
+     * The bar's own words (starters, learned and listed next words), offered as the engine's choices while it builds nothing
+     * and suggests nothing, so they show in the engine's wide row, as many as fit (owner, 2026-11-17: "there shd be more than 3
+     * words for chinese for suggestion"). A pick of one types it with no space, and the engine's next words for it follow
+     * (owner: "chinese suggestion (first word) doesn't get updated after pressed and types a space"). UNHANDLED from an
+     * engine that offers none: the bar keeps them.
+     */
+    fun offer(words: List<String>): EngineState = EngineState.UNHANDLED
+
     /** Drops whatever is being built, as when the field changes or the input method is switched away. */
     fun reset(): EngineState
 

@@ -59,6 +59,7 @@ fun main(args: Array<String>) {
     aHeldSymWaits()
     overlaysKeepTheTouchpad()
     symWorksAfterTheSwitcher()
+    symClearsACodeFirst()
     androidsListFollowsTheOnes()
     telexMarksAndTones()
     barWordsAndLearning()
@@ -1557,4 +1558,18 @@ private fun holdHints(folder: File) {
     val start = ime.substring(from, ime.indexOf("backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS", from))
     same("the hint is offered as a field starts", "main.post { if (editing) showHoldHint() }" in start, true)
     same("and still once ever", "if (TypingSettings.holdHintShown(this, method.id)) return" in ime, true)
+}
+
+/**
+ * Sym with a code being built clears it and does nothing more: its repeats and release are swallowed. The next Sym is Sym as
+ * always (owner, 2026-11-17: "pressing the sym button should remove the keycode stuff first").
+ */
+private fun symClearsACodeFirst() {
+    val sym = SymPress()
+    sym.cleared()
+    for (repeat in 1..5) same("the clearing press's repeat $repeat", sym.press(repeat, false) { true }, SymPress.Press.Swallow)
+    same("its release does nothing more", sym.release(), SymPress.Release.Kept)
+    same("the next Sym waits as usual", sym.press(0, false) { true }, SymPress.Press.Wait)
+    same("and let go soon it opens the panel", sym.release(), SymPress.Release.Usual)
+    same("with one input method on, the next Sym is Sym", sym.press(0, false) { false }, SymPress.Press.Usual)
 }

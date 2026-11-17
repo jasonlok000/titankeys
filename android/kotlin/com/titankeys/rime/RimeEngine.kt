@@ -143,8 +143,26 @@ class RimeEngine(
     /** Rime's state now, with nothing sent. */
     fun state(): EngineState = if (ready) read(handled = false) else EngineState.UNHANDLED
 
+    /** The bar's words on offer ([offer]), empty when none are. */
+    @Volatile private var offered = emptyList<String>()
+
+    override fun offer(words: List<String>): EngineState {
+        if (!ready || !variantPicked || composing() || suggesting()) return EngineState.UNHANDLED
+        offered = words
+        return read(handled = true)
+    }
+
+    /** Picks offered word [index]: it types with no space, and Rime offers what follows it. */
+    private fun pickOffered(index: Int): EngineState {
+        val word = offered.getOrNull(index) ?: return EngineState.UNHANDLED
+        offered = emptyList()
+        rime.predictAfter(word)
+        return read(handled = true).let { it.copy(commit = word + it.commit) }
+    }
+
     override fun key(char: Char): EngineState {
         if (!ready) return EngineState.UNHANDLED
+        offered = emptyList()
         dismiss()
         return when (char) {
             in 'a'..'z' -> send(char.code)
@@ -182,6 +200,7 @@ class RimeEngine(
     }
 
     override fun space(): EngineState = when {
+        offered.isNotEmpty() && !composing() -> pickOffered(0)
         // With nothing typed, Space picks the first suggestion, if there are any.
         !composing() -> if (suggesting() && variantPicked) read(handled = rime.selectAt(0)) else EngineState.UNHANDLED
         !variantPicked -> read(handled = true)
@@ -190,16 +209,21 @@ class RimeEngine(
 
     /** Types the code as letters, as typed (Rime's input), and clears it. With no code, Enter is the keyboard's. */
     override fun enter(): EngineState {
+        offered = emptyList()
         if (!composing()) return dismissed()
         val letters = rime.read()?.input.orEmpty()
         rime.reset()
         return read(handled = true).let { it.copy(commit = it.commit + letters) }
     }
 
-    override fun backspace(): EngineState = if (composing()) send(RimeKeys.BACKSPACE) else dismissed()
+    override fun backspace(): EngineState {
+        offered = emptyList()
+        return if (composing()) send(RimeKeys.BACKSPACE) else dismissed()
+    }
 
     override fun pick(index: Int): EngineState {
         if (!ready || index < 0) return EngineState.UNHANDLED
+        if (offered.isNotEmpty() && !composing()) return pickOffered(index)
         if (!variantPicked) return read(handled = true)
         return read(handled = rime.select(index))
     }
@@ -207,22 +231,26 @@ class RimeEngine(
     override fun choices(start: Int, count: Int): List<String> {
         if (!ready || start < 0 || count <= 0) return emptyList()
         if (!variantPicked) return if (start == 0 && composing()) listOf(NO_VARIANT) else emptyList()
+        if (offered.isNotEmpty() && !composing()) return offered.drop(start).take(count)
         return rime.choices(start, count)
     }
 
     override fun pickAt(index: Int): EngineState {
         if (!ready || index < 0) return EngineState.UNHANDLED
+        if (offered.isNotEmpty() && !composing()) return pickOffered(index)
         if (!variantPicked) return read(handled = true)
         return read(handled = rime.selectAt(index))
     }
 
     override fun page(forward: Boolean): EngineState = when {
+        offered.isNotEmpty() && !composing() -> read(handled = true)
         !composing() -> dismissed()
         !variantPicked -> read(handled = true)
         else -> send(if (forward) RimeKeys.PAGE_DOWN else RimeKeys.PAGE_UP)
     }
 
     override fun reset(): EngineState {
+        offered = emptyList()
         if (!ready) return EngineState.UNHANDLED
         rime.reset()
         // Clearing makes the predictor offer the last word's suggestions again: a new field, or Back, starts with none.
@@ -268,6 +296,9 @@ class RimeEngine(
         if (code.isEmpty() && !variantPicked) return EngineState(commit = raw.commit.orEmpty(), handled = handled)
         if (code.isNotEmpty() && !variantPicked) return EngineState(commit = raw.commit.orEmpty(), code = code, choices = listOf(NO_VARIANT),
             handled = handled, typed = raw.input)
+        // The bar's words on offer, while Rime has nothing of its own to show.
+        if (code.isEmpty() && raw.choices.isEmpty() && offered.isNotEmpty())
+            return EngineState(commit = raw.commit.orEmpty(), choices = offered, handled = handled)
         return EngineState(
             commit = raw.commit.orEmpty(),
             code = code,

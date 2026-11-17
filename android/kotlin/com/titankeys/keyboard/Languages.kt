@@ -407,8 +407,13 @@ internal sealed interface LanguagePicker {
         private val columns = ChineseRow.place(items)
         /** The items in the row, in order: a choice too wide for the room left waits for the bigger menu. */
         private val shown = items.indices.filter { columns[it] != null }
+        /**
+         * The engine has more choices than the row shows, so the bigger menu has something to add: only then do Shift and a
+         * swipe up open it (owner, 2026-11-17: "disable shift to expand the bar if there's nothing besides the main bar").
+         */
+        val more = ChineseRow.more(listed)
         override val notice = Strip.Notice.Picker(shown.map { items[it] }, shown.map { columns[it]!! }, lead = state.code,
-            mark = mark, more = listed.size > shown.count { !isEnglish(it) })
+            mark = mark, more = more)
         /** The row's item over key [column], or -1. */
         fun choiceAt(column: Int) = ChineseRow.choiceAt(column, columns)
         /** The item at [position] in the row as drawn, as a tap on the screen finds it. */

@@ -132,27 +132,36 @@ The rest of the wrong joins (the ones inside 150 ms with an unclear first word) 
 
 ## Built
 
-The Master took the issue's default, "lose none of the right joins". The build keeps one rule:
+The Master took the issue's default, "lose none of the right joins". The build keeps two rules: the size check, and later the veto on a finger heading down, at the owner's 1% trade.
 
 - **Join less (C6).** Over 150 ms after the last swipe, a swipe that ended with a full-size touch doesn't join: a mean of 2 sensor steps or more over its last 60 ms. The size comes from `Sample.step`, the same `round(getSize() × 255)` the study read from the log. `Composer` and `SwipePieces` pass it to `Swipe.sameStroke`. When the size isn't known, it's left out.
 - **Join more (A1), taken back after review.** It was built first: a touch landing still moving, under 150 ms after the last swipe and 2 keys or less from where it ended, joined at once wherever it was on the pad. The review below found that 5 of the 9 pairs it joined were kept by the owner as two words, so those touches now go to Composer's 150 ms check of both readings, as they did before #83.
 - Left out: the "over 150 ms after a clear word" half of C7. It loses 4 right joins.
+- **Heading down (the owner's 1% trade, 2026-11-16).** A swipe whose last 40 ms at the top row head down faster than 0.0004 keys per ms doesn't join, unless the next touch is a flicker.
+  - A finger that runs off the top of the sensor is still heading up as it goes; one that finished a word has stopped or turned back down.
+  - The owner chose a little loss for more gain. The study is in [`83-joins-micro.md`](83-joins-micro.md).
+  - Flickers are left out: vetoing them would cost 3 right joins for 1 wrong join.
 
 On every saved pair, run with the final `Swipe.java` against the one before (`confirm.py`):
 
 | | Count |
 |---|---|
-| Right joins lost | 1 of 380 (it hadn't changed the word) |
-| Wrong joins cut | 7 of 64 (7 of 46 episodes), all in the 2.0 and 2.1 logs |
-| Unclear joins cut | 2 of 58 |
+| Right joins lost | 3 of 380: 1 to the size check (it hadn't changed the word), 2 to the veto |
+| Wrong joins cut | 10 of 64 (10 of 46 episodes): 7 to the size check, 3 to the veto; 8 in the 2.0 and 2.1 logs, 2 in 1.2 |
+| Unclear joins cut | 3 of 58 |
 | Missed joins found by shape | 0 of 18 (the 150 ms check may still find some: only the phone can tell) |
 | Pairs the owner kept apart, now joined | 0 of 1,120 |
 | Other pairs now joined (one word was corrected) | 0 of 666 |
-| Headline, rough | +6 prompted first tries (a ceiling: it assumes each change gets the word right) |
+| Headline, rough | +7 prompted first tries (a ceiling: it assumes each change gets the word right) |
 
 `tests/swipe/joins.sh` checks the rule on hand-made swipes, including the review's examples, and pins these counts on `tests/swipe/join-pairs.txt`: the 645 pairs either version could join, every logged join, every missed join and every pair within 150 ms. Each pair keeps only the last 100 ms of the first swipe and the first 100 ms of the second, plus one point either side, which is all the joining checks read, and gives the same decision as the whole pair. No words are in it.
 
 Only the phone can show whether the joins it cuts, and the ones the 150 ms check makes, give the word the owner kept. `83-joins/phone-replay.sh` reads every one of those pairs three ways with the app's recogniser and scores them.
+
+**With the veto:**
+
+- **The phone replay's readings** (unchanged, re-scored with the new rule): the first word comes out right in 317 of 645 pairs, up from 314. The rule joins 509, down from 515.
+- **The owner's recorded session** ([`83-joins-capture.md`](83-joins-capture.md)): false joins fall from 24 of 154 two-word gaps to 14 (13 of 124 at the top row). All 39 of the 49 real breaks the rule joined still join.
 
 ## Review: quick separate swipes
 

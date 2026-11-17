@@ -64,6 +64,15 @@ private fun syntheticChecks() {
     check("in, then to, isn't joined by its shape", !inWord.sameStroke(to, 120, FLICKER, Float.NaN))
     check("in, then to, doesn't carry the trail on", !inWord.couldContinue(.45f, .17f, 120, FLICKER))
 
+    // A word that ends at the top row heading down was whole: the next touch stays apart even where it carries on the
+    // same way, close by. The same return after a finger heading up, off the sensor, joins.
+    val downward = stroke(.4f, .1f, .45f, .2f, 300)
+    val onward = stroke(.47f, .25f, .6f, .25f, 200)
+    check("a word ending at the top row heading down stays apart", !downward.sameStroke(onward, 200, FLICKER, Float.NaN))
+    val upTop = stroke(.4f, .3f, .45f, .2f, 300)
+    check("the same return after a finger heading up joins", upTop.sameStroke(stroke(.47f, .17f, .6f, .25f, 200), 200, FLICKER, Float.NaN))
+    check("a flicker after a finger heading down still joins", downward.sameStroke(stroke(.46f, .21f, .5f, .25f, 50), 50, FLICKER, Float.NaN))
+
     // A flicker joins wherever it is, whatever the size.
     check("a flicker still joins", middle.sameStroke(stroke(.51f, .5f, .51f, .5f, 10), 50, FLICKER, 3f))
 }
@@ -107,9 +116,11 @@ private fun fixtureChecks(path: String) {
     check("the fixture has its 645 pairs", lines == 645)
     println("fixture: $lines pairs, changes ${outcome.toSortedMap()}")
     // The study's counts (docs/studies/83-joins.md). Any change here needs the study run again.
-    check("1 right join lost, which hadn't changed the word", outcome["right-join cut"] == 1)
-    check("7 wrong joins cut", outcome["wrong-join cut"] == 7)
-    check("2 unclear joins cut", outcome["unclear cut"] == 2)
+    // The size check: 1 right join (which hadn't changed the word), 7 wrong joins, 2 unclear. The veto on a finger heading
+    // down at the top row (the owner's 1% trade): 2 more right joins, 3 more wrong joins, 1 more unclear.
+    check("3 right joins lost", outcome["right-join cut"] == 3)
+    check("10 wrong joins cut", outcome["wrong-join cut"] == 10)
+    check("3 unclear joins cut", outcome["unclear cut"] == 3)
     // Nothing new joins by its shape: a quick touch nearby goes to Composer's check of both readings, as before #83.
     check("no missed join is joined by its shape", outcome["missed-join joined"] == null)
     check("no pair the owner kept apart joined", outcome["right-non-join joined"] == null)

@@ -84,7 +84,7 @@ class LanguageCorrection(private val context: Context, private val words: Langua
 
     /** [method]'s word pairs, its next-word table, for the corrector's context; null where it has none, or they don't help. */
     private fun pairs(method: InputMethod): com.titankeys.autocorrect.PairCounts? = if (method.id in noPairs) null else runCatching {
-        context.assets.open("im/${method.id}/pairs.txt").bufferedReader().useLines { com.titankeys.autocorrect.PairCounts.parse(it) }
+        context.assets.open("im/${method.id}/pairs.bin").use { LanguageCorrections.pairs(NextWords.readBinary(it)) }
     }.getOrNull()
 
     /** The input method went: its corrections go with it. */

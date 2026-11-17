@@ -9,9 +9,10 @@ import kotlin.random.Random
  * its commonest words with made-up slips (a neighbouring key, a letter left out, two letters swapped, an accent left off), and
  * the words themselves typed right. Space must almost never make a wrong change; the right word should often be on the bar.
  *
- * A language whose Space would make more than [LanguageCorrections.MOST_WRONG] wrong changes gets its fixes on the bar only: Space
- * never puts them in. This measures each language as if Space did, and the list it makes must match
- * android/assets/im/corrections-bar-only.txt; with --write, it writes that list.
+ * A language whose Space makes [LanguageCorrections.MID_SENTENCE_MOST_WRONG] or more wrong changes mid-sentence gets its fixes on
+ * the bar only: Space never puts them in. [contextSlips] measures that, with $CORRECTIONS_SENTENCES, and its list must match
+ * android/assets/im/corrections-bar-only.txt; with --write, it writes that list. The single words here report it as listed.
+ * Measuring mid-sentence (Master, 2026-11-17): single words understated real use, 0.1% wrong against 0.6%.
  *
  * Usage: java CorrectionChecksKt android/assets/im [--write]
  */
@@ -74,7 +75,8 @@ fun main(args: Array<String>) {
     val write = "--write" in args
     println("language  slips  measured wrong  Space         Space right  Space wrong  on the bar  accents fixed  right words changed")
     val total = Tally()
-    val barOnly = sortedSetOf<String>()
+    val listedBarOnly = File(folder, LanguageCorrections.BAR_ONLY_FILE).takeIf { it.exists() }
+        ?.useLines { LanguageCorrections.barOnly(it) }.orEmpty()
     for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
         val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
         if (!LanguageCorrections.corrects(method)) continue
@@ -111,11 +113,10 @@ fun main(args: Array<String>) {
             }
         }
         fun pct(part: Int, whole: Int) = if (whole == 0) "   -  " else "%5.1f%%".format(100.0 * part / whole)
-        // Too many wrong changes: the bar shows the fixes, and Space types what was typed.
-        val bar = tally.spaceWrong > LanguageCorrections.MOST_WRONG * tally.slips
+        // Too many wrong changes mid-sentence: the bar shows the fixes, and Space types what was typed.
+        val bar = method.id in listedBarOnly
         val measuredWrong = tally.spaceWrong
         if (bar) {
-            barOnly += method.id
             val barCorrector = LanguageCorrections.corrector(method, list, { false }, HashSet(), RecentWords(), spaceFixes = false)
             check("${method.id}: on the bar only, Space never puts a fix in", sample.none { word ->
                 slips(word, method, Random(method.id.hashCode())).any { barCorrector.check(it.typed, "", null) != null } })
@@ -139,16 +140,6 @@ fun main(args: Array<String>) {
     engineSlips(folder)
     contextSlips(folder, write)
     check("Space's wrong changes stay near zero where it puts fixes in", total.spaceWrong <= LanguageCorrections.MOST_WRONG * total.slips)
-    val file = File(folder, LanguageCorrections.BAR_ONLY_FILE)
-    if (write) {
-        file.writeText("# Input methods whose corrections show on the bar only: Space never puts them in. Written by\n" +
-            "# tests/corrections/run.sh --write: each made more than 0.5% wrong changes on its slips there.\n" +
-            barOnly.joinToString("") { "$it\n" })
-        println("wrote ${file.path}: ${barOnly.joinToString(" ")}")
-    } else {
-        val listed = if (file.exists()) file.useLines { LanguageCorrections.barOnly(it) } else emptySet<String>()
-        check("${LanguageCorrections.BAR_ONLY_FILE} is the measured list (run.sh --write)", listed == barOnly) { "has $listed, measured $barOnly" }
-    }
     if (failures > 0) {
         System.err.println("$failures failed")
         kotlin.system.exitProcess(1)
@@ -281,13 +272,14 @@ fun contextSlips(folder: File, write: Boolean) {
     println("\ncontext   words  Space right (no pairs, pairs)  Space wrong (no pairs, pairs)  on the bar (pairs)")
     val all = IntArray(5)
     val noPairs = sortedSetOf<String>()
+    val barOnly = sortedSetOf<String>()
     for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
         val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
-        if (!LanguageCorrections.corrects(method) || !File(dir, "pairs.txt").isFile) continue
+        if (!LanguageCorrections.corrects(method) || !File(dir, "pairs.bin").isFile) continue
         val corpus = found[method.id]?.firstOrNull() as? String ?: continue
         val file = File(sentences, "$corpus-sentences.txt").takeIf { it.isFile } ?: continue
         val list = File(dir, method.words!!).useLines { WordList.read(it, method.javaLocale) }
-        val pairs = File(dir, "pairs.txt").useLines { com.titankeys.autocorrect.PairCounts.parse(it) }
+        val pairs = File(dir, "pairs.bin").inputStream().use { LanguageCorrections.pairs(NextWords.readBinary(it)) }
         val plain = LanguageCorrections.corrector(method, list, { false }, HashSet(), RecentWords())
         val withPairs = LanguageCorrections.corrector(method, list, { false }, HashSet(), RecentWords(), pairs = pairs)
         val random = Random(method.id.hashCode())
@@ -309,6 +301,8 @@ fun contextSlips(folder: File, write: Boolean) {
                 val b = withPairs.check(slip.typed, before, null)?.word?.lowercase()
                 if (a == word) t[1]++ else if (a != null) t[3]++
                 if (b == word) t[2]++ else if (b != null) t[4]++
+                if (a != null && a != word && System.getenv("CORRECTIONS_WRONG") == method.id)
+                    println("  wrong ${slip.kind}: ${slip.typed} meant $word, Space gave $a")
                 if (b == word || withPairs.suggestion(slip.typed, before)?.lowercase() == word ||
                     list.complete(slip.typed, 3).any { it.lowercase() == word }) bar++
             }
@@ -317,7 +311,10 @@ fun contextSlips(folder: File, write: Boolean) {
         fun pct(n: Int) = "%5.1f%%".format(100.0 * n / t[0])
         println("%-8s %6d  %13s %13s  %13s %13s  %14s".format(method.id, t[0], pct(t[1]), pct(t[2]), pct(t[3]), pct(t[4]), pct(bar)))
         // Pairs that add wrong changes stay off: the corrector goes without them there.
-        if (t[4] - t[3] > LanguageCorrections.MOST_ADDED_WRONG) noPairs += method.id
+        val pairsOff = t[4] - t[3] > LanguageCorrections.MOST_ADDED_WRONG
+        if (pairsOff) noPairs += method.id
+        // Space's wrong changes as the keyboard has them, with pairs or without: too many, and the fixes go on the bar only.
+        if ((if (pairsOff) t[3] else t[4]) >= LanguageCorrections.MID_SENTENCE_MOST_WRONG * t[0]) barOnly += method.id
         for (i in 0..4) all[i] += t[i]
     }
     if (all[0] > 0) println("all      %6d  %12.1f%% %12.1f%%  %12.1f%% %12.1f%%".format(all[0], 100.0 * all[1] / all[0], 100.0 * all[2] / all[0],
@@ -330,5 +327,15 @@ fun contextSlips(folder: File, write: Boolean) {
     } else {
         val listed = if (file.exists()) file.useLines { LanguageCorrections.barOnly(it) } else emptySet<String>()
         check("${LanguageCorrections.NO_PAIRS_FILE} is the measured list (run.sh --write)", listed == noPairs) { "has $listed, measured $noPairs" }
+    }
+    val barFile = File(folder, LanguageCorrections.BAR_ONLY_FILE)
+    if (write) {
+        barFile.writeText("# Input methods whose corrections show on the bar only: Space never puts them in. Written by\n" +
+            "# CORRECTIONS_SENTENCES=<Leipzig folder> tests/corrections/run.sh --write: each made 1.0% or more wrong changes mid-sentence.\n" +
+            barOnly.joinToString("") { "$it\n" })
+        println("wrote ${barFile.path}: ${barOnly.joinToString(" ")}")
+    } else {
+        val listed = if (barFile.exists()) barFile.useLines { LanguageCorrections.barOnly(it) } else emptySet<String>()
+        check("${LanguageCorrections.BAR_ONLY_FILE} is the measured list (run.sh --write)", listed == barOnly) { "has $listed, measured $barOnly" }
     }
 }

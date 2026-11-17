@@ -26,8 +26,8 @@ CODE = "neihou"
 # A pending code goes key by key: Backspace takes one letter off.
 CLEAR_CODE = [g for _ in range(20) for g in ("key:del", "+60")]
 # What these checks can't do on this phone, for the owner to try by hand.
-HANDS = ["Georgian (ქართული on in Settings > Languages): Shift + W types ჭ (the keyboard twin's Shift can't be used here)",
-         "Chinese: Shift with a code pending opens the bigger menu, and Shift again closes it"]
+# Georgian's Shift + W and Shift opening and closing the bigger menu are the shift batch's (shift_checks.py, the key feed).
+HANDS = []
 # The more cue at P on the bar, on the 1076 x 1200 display: P's column, the bar's middle.
 MORE_CUE = (1022, 1170)
 FIFTH = (592, 1170)
@@ -201,6 +201,22 @@ def check_next_words():
     record("yale-next-words", None, "after 我哋今日: 係, 嘅 and 下晝 on the bar", "yale-next-words")
 
 
+def check_phrases():
+    """B's Mandarin grammar: whole phrases from one code, read back after Space (O). Pinyin: nibamenkaizhezhenshitaibuxiaoxinle
+    types 你把门开着真是太不小心了; Zhuyin (Hsu): mwlziezckcxajew types 猫儿在椅子上睡觉."""
+    import language_checks
+    for im, typed, want in (("zh-pinyin", "nibamenkaizhezhenshitaibuxiaoxinle", "你把门开着真是太不小心了"),
+                            ("zh-zhuyin", "mwlziezckcxajew", "猫儿在椅子上睡觉")):
+        fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"phrase-{im}", False, f"the field didn't start with {im}")
+            continue
+        fresh()
+        text = shot_then(f"phrase-{im}", [f"key:{k}" for k in typed] + ["+600"], ["key:space", "+500"])
+        record(f"phrase-{im}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}", f"phrase-{im}")
+    language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+
+
 def check_shape_codes():
     """Cangjie (hqi + Space types 我) and Zhuyin on the Hsu layout (ne, ㄋㄧ, + Space types one character), each with starters
     on an empty field first."""
@@ -274,7 +290,7 @@ def check_english():
 
 
 BATCH = [check_yale, check_row, check_space, check_tap, check_yale_codes, check_swipe_up, check_menu, check_sym_panel, check_enter,
-         check_comma, check_english, check_shape_codes, check_next_words,
+         check_comma, check_english, check_shape_codes, check_next_words, check_phrases,
          check_suggestions]
 
 

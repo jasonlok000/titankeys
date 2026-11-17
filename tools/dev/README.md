@@ -97,6 +97,13 @@ What works today and what doesn't (phone run, 2026-11-16):
   everything from `Touchpad.accepts` on runs as for a finger: calibration, contacts, swipes and joining, flicks, Space taps,
   hover and the trail. Keys still come through the keyboard twin, started together. What it skips is only the hardware and the
   firmware's routing to the keyboard's window. `tools/checks/touch-feed.test.ts` checks that TitanKeys never gets it.
+- The key feed does the same for keys: with `TK_KEYFEED=1`, `touch.sh` sends a script's keys to TitanKeys Debug's
+  `KeyFeed` (`android/debug/recorder/KeyFeed.kt`, behind DUMP too) instead of the keyboard twin. It builds the events the phone's
+  own keyboard sends (its `TitanKey` device, Shift's meta state, Android's repeats for a held key) and hands them to the
+  keyboard's own `onKeyDown` and `onKeyUp`; a key the keyboard doesn't take goes on to the app. The twin is a second keyboard
+  to Android, and its Shift takes the field's focus on the Titan 2 Elite, so Shift checks use the key feed: `checks.py --batch
+  shift` (Thai's Shift layer and ฉันไปโรงเรียน, Georgian's Shift + W, Shift on Chinese's and Japanese's bigger menu). It skips
+  Android's own dispatch of the key.
 
 The keys are real, so they type in whatever is in front. Before every gesture and every setup key, `touchlib.sh` checks that
 the screen is awake and unlocked, no navigation app is running, TitanKeys Debug's window is in front and one of its own text

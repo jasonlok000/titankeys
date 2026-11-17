@@ -5,19 +5,22 @@ Each input method with a word list has a next-word table: for each word, the 8 w
 ## What's built
 
 - **The files:**
-  - `android/assets/im/<id>/pairs.txt`, one per input method;
-  - Portuguese has `pairs-pt-BR.txt` and `pairs-pt-PT.txt`, one for each word list, each from its own country's corpus.
-- **The format** is the same as English's `android/assets/autocorrect/en_pairs.txt`, so `PairCounts` reads it:
-  - `first second<TAB>count`, in lower case;
-  - `<s>` as the first word for a sentence's start;
-  - the 8 most common next words per word, each seen at least twice.
-  - The format was agreed with the bar's reader.
+  - `android/assets/im/<id>/pairs.bin`, one per input method;
+  - Portuguese has `pairs-pt-BR.bin` and `pairs-pt-PT.bin`, one for each word list, each from its own country's corpus.
+- **What they hold:**
+  - the 8 most common next words per word, each seen at least twice, in lower case;
+  - `<s>` as the first word for a sentence's start.
+- **The format is compact,** for the phone's small heap (`NextWords`, in `LanguageLearning.kt`):
+  - every word once, in UTF-8, in one byte array, with the first words sorted by their bytes for a binary search;
+  - each first word's next words as word numbers, commonest first.
+  - Counts aren't kept: the bar only needs the order.
+  - `tools/im/next_words.py`'s `write_binary` describes the layout. `--text` also writes the readable form, English's `en_pairs.txt` format (`first second<TAB>count`), and `convert` turns that form into `.bin`.
 - **The source:** the Leipzig Corpora Collection, CC BY 4.0. Each folder's NOTICE names its corpus.
   - Each language's newest corpus of 1 million sentences.
   - 300,000 for Bosnian, Basque, Irish, Galician, Macedonian and Nynorsk; Thai's largest is 100,000.
   - `tools/im/next_words_corpora.json` lists them.
 - **What's left out:** Japanese, Chinese and Cantonese have their own engines' predictions.
-- **Belarusian** is built against the fixed word list on `claude/m3-be-words`. The old list stopped alphabetically at "б", so its table needs that list to land first.
+- **Belarusian** is built against C's ranked word list. The one before stopped alphabetically at "б".
 
 ## How it's made
 
@@ -58,9 +61,33 @@ The check holds out every 10th sentence, builds from the rest, and asks how ofte
 
 | | all 48 files | largest |
 |---|---|---|
-| as built | 195 MB (about 48 MB compressed in the APK) | Georgian 13.9 MB, Korean 8.4 MB, Serbian 8.1 MB |
-| capped at 3 MB a file | 131 MB | |
-| capped at 1.5 MB a file | 71 MB | |
+| as text (the first build) | 195 MB | Georgian 13.9 MB, Korean 8.4 MB, Serbian 8.1 MB |
+| compact, as shipped | 84 MB | Georgian 3.9 MB, Korean 3.2 MB, Serbian 3.0 MB |
+
+The compact files hold every pair the text did: each was decoded and compared word for word.
+
+## Memory
+
+The phone's heap is 256 MB, and switching languages must never pile up lists or tables (the OutOfMemoryError of 2026-11-16). `tests/languages/run.sh` measures it on the PC, through the app's own readers:
+
+| language | table on the heap: as text | compact | table load: as text | compact | word list | list and table together |
+|---|---|---|---|---|---|---|
+| Georgian | 18.6 MB | 3.7 MB | 2,410 ms | 127 ms | 18.8 MB | 25.2 MB |
+| Korean | 23.3 MB | 3.1 MB | 746 ms | 93 ms | 20.0 MB | 23.6 MB |
+| Serbian | 18.0 MB | 2.9 MB | 584 ms | 91 ms | 17.7 MB | 22.2 MB |
+| Greek | 14.2 MB | 2.3 MB | 482 ms | 79 ms | 17.7 MB | 20.0 MB |
+| Russian | 10.9 MB | 2.1 MB | 483 ms | 68 ms | 17.0 MB | 19.2 MB |
+
+- **How it's measured:** compact tables by their arrays. Load times are the second load, once the JIT has warmed up; the first is up to 186 ms.
+- **Load times above** were read through WSL's mount of the Windows drive, which is slow, for text and compact alike. From WSL's own disk (`try.sh`), the compact tables load in 4 to 13 ms, the word lists in 143 to 203 ms, and English's text in 231 to 374 ms.
+- **The budget,** checked by the test: 40 MB for a list and its table, and 300 ms for a table's load.
+- **English's** pairs are compact too (`en_pairs.bin`, `tools/en_pairs_bin.py`, read by `PairCounts`, loaded once with the English engine). It holds the same 471,541 pairs and counts, read back identical.
+  - On its own: 6.3 MB of heap and 13 ms, against 9.2 MB and 231 to 374 ms as text (WSL's disk).
+  - All of English's correction data, as `tests/autocorrect` loads it: 512 to 516 ms and 16 MB, against 729 to 831 ms and 19 MB.
+- **Switching:** the test makes 30 switches through 44 input methods, overtaken loads included. It holds one word list and one table at most, and the heap after 30 switches stays within 6 MB of the heap after 5. Its peak, 86 to 131 MB, is read just after a load, with that load's garbage not yet collected.
+- **Loading:** `Languages` drops the table as a switch begins, never reads one for a switch overtaken before its turn, and keeps a load only if it's still the latest switch's. Its loader is a single thread.
+
+## A size cap, not used
 
 `--max-mb` drops the rarest pairs until a table fits. The share of next words in the top 3, inside a sentence:
 
@@ -70,4 +97,4 @@ The check holds out every 10th sentence, builds from the rest, and asks how ofte
 | Korean | 22.3% | 20.8% | 19.3% |
 | Georgian | 20.1% | 18.0% | 16.4% |
 
-So a 3 MB cap costs German nothing, and Korean and Georgian about 2 points.
+So a 3 MB cap costs German nothing, and Korean and Georgian about 2 points. No cap is used (owner: don't worry about size yet).

@@ -79,9 +79,12 @@ class CorrectionData private constructor(
         /** TitanKeys' own key names, which its users type about, though the list rates them rarer than [MIN_FREQUENCY]. */
         private val KEY_NAMES = setOf("backspace", "touchpad")
 
-        /** Reads the English data files, which [open] finds by name, and indexes [lexicon]. */
-        fun read(lexicon: Lexicon, open: (String) -> Reader): CorrectionData {
-            val pairs = open("en_pairs.txt").useLines { PairCounts.parse(it) }
+        /**
+         * Reads the English data files, which [open] finds by name as text and [openBytes] as bytes (the compact
+         * en_pairs.bin), and indexes [lexicon].
+         */
+        fun read(lexicon: Lexicon, openBytes: (String) -> java.io.InputStream, open: (String) -> Reader): CorrectionData {
+            val pairs = openBytes("en_pairs.bin").use { PairCounts.readBinary(it) }
             val triples = open("en_triples.txt").useLines { TripleCounts.parse(it) }
             val confusions = open("en_confusions.txt").useLines { ConfusionTable.parse(it) }
             val misspellings = open("en_misspellings.txt").useLines { lines ->

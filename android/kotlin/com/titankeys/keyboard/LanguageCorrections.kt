@@ -82,8 +82,23 @@ object LanguageCorrections {
      */
     const val NO_PAIRS_FILE = "corrections-no-pairs.txt"
     const val MOST_ADDED_WRONG = 1
+    /** Space's most wrong changes mid-sentence, of a language's slips, before its fixes go on the bar only (Master, 2026-11-17). */
+    const val MID_SENTENCE_MOST_WRONG = 0.01
     /** The most wrong changes, of a language's slips, for Space to put fixes in (owner, 2026-11-17: near zero). */
     const val MOST_WRONG = 0.005
+
+    /**
+     * A next-word table ([NextWords], pairs.bin) as word-pair counts for the noisy channel: the table keeps only each word's
+     * commonest followers in order, not their counts, so each counts by its place, halving down the list (256 for the first).
+     */
+    fun pairs(table: NextWords): PairCounts {
+        val lines = ArrayList<String>()
+        table.forEach { first, next, rank -> lines += "$first $next\t${PAIR_TOP shr rank}" }
+        return PairCounts.parse(lines.asSequence())
+    }
+
+    /** The count a table's first follower stands for: see [pairs]. */
+    private const val PAIR_TOP = 256
 
     /** AOSP's word lists rate words from 0 to 255 on a log scale, about this many steps a nat. */
     private const val FREQUENCY_PER_NAT = 16.0

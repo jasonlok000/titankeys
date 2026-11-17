@@ -6,16 +6,20 @@ asset-packs.md). A prototype for the Play build's size: it measures, it doesn't 
 <proto.apk> is the APK converted by `aapt2 convert --output-format proto`. Each pack's assets leave the base, and the pack gets
 them under the same paths, so the app reads them through its AssetManager as before.
 """
+import fnmatch
 import os
 import sys
 import zipfile
 
-# Pack name: the asset paths it takes (a folder ends in /).
+# Pack name: the asset paths it takes (a folder ends in /; * matches within one folder name).
 PACKS = {
     "swipe2_pack": ["assets/swipe2/"],
+    # Rime's tables, both grammar models (tk_yue.gram, zh-hant-t-essay-bgw.gram) and the next-word tables.
     "rime_pack": ["assets/rime/", "assets/rime.sha256"],
     "mozc_pack": ["assets/mozc/", "assets/mozc.sha256"],
     "swipe_pack": ["assets/swipe/"],
+    # Every input method's next-word tables (docs/next-words.md).
+    "next_words_pack": ["assets/im/*/pairs*.bin"],
 }
 # What the base module keeps where (bundletool's module layout).
 SIGNATURE = (".SF", ".RSA", ".DSA", ".EC")
@@ -23,7 +27,8 @@ SIGNATURE = (".SF", ".RSA", ".DSA", ".EC")
 
 def pack_of(name):
     for pack, paths in PACKS.items():
-        if any(name == p or (p.endswith("/") and name.startswith(p)) for p in paths):
+        if any(name == p or (p.endswith("/") and name.startswith(p)) or ("*" in p and fnmatch.fnmatchcase(name, p)
+               and name.count("/") == p.count("/")) for p in paths):
             return pack
     return None
 

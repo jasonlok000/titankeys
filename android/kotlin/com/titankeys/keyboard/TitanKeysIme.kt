@@ -761,6 +761,8 @@ class TitanKeysIme : InputMethodService() {
     override fun onCreate() {
         super.onCreate()
         Calibration.init(this)
+        // Rime's data copy keeps only the Chinese input methods that are on (docs/studies/3.0-storage.md).
+        com.titankeys.rime.RimeAssets.schemasOn = InputMethodList::rimeSchemasOn
         // The word menu, the Sym panel and the swipe's path all line up with the keys as Key calibration says.
         KeyCalibration.load(this)
         Connected.start(this)
@@ -890,6 +892,13 @@ class TitanKeysIme : InputMethodService() {
             idleBarTriggerRegistered = true
             // The touch simulator's events enter where the firmware's do: this window's touchpad path (TouchpadFeedHook).
             TouchpadFeedHook.dispatch = { event -> window.callback?.dispatchGenericMotionEvent(event) == true }
+            // Its keys enter where Android's do for the keyboard: onKeyDown and onKeyUp. One the keyboard doesn't take goes on
+            // to the app, as Android would send it (KeyFeedHook).
+            KeyFeedHook.dispatch = { event ->
+                val taken = if (event.action == KeyEvent.ACTION_DOWN) onKeyDown(event.keyCode, event) else onKeyUp(event.keyCode, event)
+                if (!taken) currentInputConnection?.sendKeyEvent(event)
+                taken
+            }
         }
         updateOverlay()
         loadEmoji()
@@ -4655,6 +4664,7 @@ class TitanKeysIme : InputMethodService() {
         editing = false
         // It holds this keyboard, which must go with it (#85).
         TouchpadFeedHook.dispatch = null
+        KeyFeedHook.dispatch = null
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null

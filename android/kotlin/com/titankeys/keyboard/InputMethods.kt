@@ -197,7 +197,10 @@ object SwitchOverlay {
      * Cyrillic), else the input method's (耶, 粵 with two Chinese on).
      */
     fun markLabel(on: List<InputMethodIndex.Entry>, current: String, currentLabel: String): String {
-        val language = on.firstOrNull { it.id == current }?.language ?: return currentLabel
+        val entry = on.firstOrNull { it.id == current } ?: return currentLabel
+        val language = entry.language
+        // Serbian in Latin letters marks SR, not the language's Cyrillic СР: the mark is in the script being typed.
+        if (entry.script != language.script) return currentLabel
         return if (on.count { it.language.id == language.id } == 1) language.label else currentLabel
     }
 

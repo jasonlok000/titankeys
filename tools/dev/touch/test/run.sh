@@ -9,6 +9,21 @@ java -cp "$work" com.titankeys.engine.AlignmentDump android/assets/calibration/t
 cc -O2 -Wall -Wextra -Werror -o "$work/tk-inject" tools/dev/touch/inject.c
 python3 tools/dev/touch/test/test_touch.py "$work/alignment.txt" "$work/tk-inject"
 
+# TK_KEYFEED's scripts: gestures.py writes the keys by Android's names for the key feed, and leaves the injector none.
+python3 tools/dev/touch/gestures.py --keyfeed-out "$work/k.keys" --feed-out "$work/k.feed" --out "$work/k.tki" chord:shift+q +100 key:space:60:none
+[ "$(cat "$work/k.keys")" = "D 0 SHIFT_RIGHT;D 30 Q;U 110 Q;U 130 SHIFT_RIGHT;D 240 SPACE;U 300 SPACE" ] \
+  || { echo "FAIL the key feed's keys: $(cat "$work/k.keys")"; exit 1; }
+grep -q TitanKey "$work/k.tki" && { echo "FAIL the injector still got keys with TK_KEYFEED"; exit 1; }
+echo "Key feed scripts checks passed"
+
+# The key feed's script (TitanKeys Debug's KeyFeed): Shift's meta state, Android's repeats, bad scripts refused.
+if [ -n "${KOTLIN_HOME:-}" ]; then
+  "$KOTLIN_HOME/bin/kotlinc" -nowarn -d "$work/keyfeed" android/debug/recorder/KeyFeedPlan.kt tools/dev/touch/test/KeyFeedChecks.kt 2>&1 | grep -v '^warning' || true
+  java -cp "$work/keyfeed:${KOTLIN_STDLIB:-$KOTLIN_HOME/lib/kotlin-stdlib.jar}" com.titankeys.keyboard.KeyFeedChecksKt
+else
+  echo "Key feed checks NOT run: set KOTLIN_HOME to your Kotlin compiler directory"
+fi
+
 # The phone lock: a tool holds it for its whole run and gives it back at the end, and one it starts doesn't wait for it.
 # On a lock file of its own, never the real one.
 export TK_BUILD="$work/build"
@@ -77,5 +92,25 @@ assert checks.past_cutoff()
 os.environ["TK_CUTOFF_EPOCH"] = str(10 ** 12)
 assert not checks.past_cutoff()
 os.environ.pop("TK_CUTOFF_EPOCH")
+# A tap that worked, as TitanKeysTap logged it on 2026-11-17 (after the tag): it passes; one taken by nothing doesn't.
+import switcher_checks
+assert switcher_checks.tapped(["tap at 161,970 on b6", "screen_tap played"])
+assert not switcher_checks.tapped(["tap at 161,970 taken by nothing", "screen_tap played"])
+# The heat wait, with adb played by a stand-in: 51.2 °C and MediaTek's warning in front stop after the waits; 30.0 °C passes.
+real_adb, real_steps, real_seconds = checks.adb, checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS
+checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS = 1, 0
+def stand_in(temperature, front):
+    return lambda *args: f"  temperature: {temperature}" if "battery" in args else f"  mCurrentFocus=Window{{1 u0 {front}}}"
+checks.adb = stand_in(512, "com.mediatek.batterywarning/com.mediatek.batterywarning.BatteryWarningActivity")
+assert checks.phone_heat() == (51.2, True), checks.phone_heat()
+try:
+    checks.wait_cool()
+    raise AssertionError("a hot phone didn't stop the run")
+except checks.Stop:
+    pass
+checks.adb = stand_in(300, "com.titankeys.debug/com.titankeys.keyboard.SpaceGestureActivity")
+assert checks.phone_heat() == (30.0, False)
+checks.wait_cool()
+checks.adb, checks.HEAT_WAIT_STEPS, checks.HEAT_STEP_SECONDS = real_adb, real_steps, real_seconds
 print("Batch checks passed")
 PY

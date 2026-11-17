@@ -10,8 +10,8 @@ from checks import Stop, play, record
 WORDS = {"es": "hola", "fr": "bonjour", "ko": "gksrnr"}
 HANDS = ["A password field: the bar stays empty (no starters, no next words)",
          "Spanish: block a word from its menu, and it never shows on the bar again",
-         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it",
-         "Japanese: Shift closes the bigger menu (the keyboard twin's Shift can't be used here)"]
+         "Settings > Your words > Saved words: a Spanish word you saved is listed, with \"Español\" under it"]
+# Japanese's Shift on the bigger menu is the shift batch's (shift_checks.py, through the key feed).
 
 
 def keys(word):
@@ -349,3 +349,72 @@ def check_slips():
 
 
 BATCH += [check_first_key, check_sym_then_type, check_slips]
+
+
+def check_thai_hebrew_hindi():
+    """C's polish (2026-11-17). Thai: an empty field shows no single letter on the bar (J); after ไป and Space, next words, not
+    starters (J; the owner's ฉันไปโรงเรียน needs Shift for ฉ and โ, which the keyboard twin can't use here). Hebrew: a word's
+    best guess in the middle, the second on the right (J); a steer to the right moves the cursor back through Hebrew text (O: a
+    letter typed after it lands inside the word); after את and Space, כל is offered (J). Hindi: ki + Space types कि (O), and
+    the bar shows वह, इस (J)."""
+    field = language_checks.checks.field
+    on = ["en", "th", "he", "hi"]
+
+    def start(im):
+        language_checks.fresh()
+        if not language_checks.turn_on(on, im):
+            raise Stop(f"the field didn't start with {im}")
+        language_checks.fresh()
+
+    start("th")
+    play("+800", shot="th-empty", at=500)
+    record("th-empty", None, "Thai, empty field: no single letter on the bar", "th-empty")
+    play(*keys("wx"), "+300", "key:space", "+900", shot="th-next", at=len(keys("wx")) * 80 + 1000)  # ไป
+    record("th-next", None, "after ไป and Space: next words on the bar, not starters", "th-next")
+
+    start("he")
+    play(*keys("aku"), "+800", shot="he-guesses", at=len(keys("aku")) * 80 + 600)  # שלו
+    record("he-guesses", None, "שלו typed: the best guess in the middle, the second on the right", "he-guesses")
+    language_checks.fresh()
+    play(*keys("akuo"), "+600")  # שלום
+    word = field()
+    play("spacehold:2:1.5", "+600", "key:f", "+500")  # steer right, then כ as a marker
+    after = field()
+    inside = after != word + "כ" and "כ" in after and after.replace("כ", "", 1) == word
+    record("he-steer", inside, f"{word!r}, a steer to the right, then כ: {after!r} (the כ inside the word: the cursor went back)")
+    language_checks.fresh()
+    play(*keys("tq"), "key:space", "+900", shot="he-next", at=len(keys("tq")) * 80 + 1000)  # את
+    record("he-next", None, "after את and Space: כל offered", "he-next")
+
+    start("hi")
+    play(*keys("ki"), "+400", "key:space", "+900", shot="hi-next", at=len(keys("ki")) * 80 + 1100)
+    text = field()
+    record("hi-ki", text.strip() == "कि", f"ki + Space typed {text!r}, wanted 'कि'")
+    record("hi-next", None, "after कि: वह and इस on the bar", "hi-next")
+
+
+BATCH += [check_thai_hebrew_hindi]
+# Thai's ฉันไปโรงเรียน (ฉ and โ on Shift) is the shift batch's (shift_checks.py, through the key feed).
+
+
+def check_empty_fields():
+    """C's first-look fixes: an empty field's starters. Thai: สวัสดี, ขอบคุณ, ฉัน (J). Slovak: no "Prečítajte" (J). Pinyin: 我,
+    是, 你, with no 的 (J). Only Serbian (Latin) on, nothing else: the mark at Q reads SR (J)."""
+    for im, want in (("th", "สวัสดี, ขอบคุณ, ฉัน"), ("sk", "no \"Prečítajte\""), ("zh-pinyin", "我, 是, 你, and no 的")):
+        language_checks.fresh()
+        if not language_checks.turn_on(["en", im], im):
+            record(f"empty-{im}", False, f"the field didn't start with {im}")
+            continue
+        language_checks.fresh()
+        play("+800", shot=f"empty-{im}", at=500)
+        record(f"empty-{im}", None, f"{im}, empty field: {want}", f"empty-{im}")
+    language_checks.fresh()
+    if language_checks.turn_on(["sr-latn"], "sr-latn"):
+        language_checks.fresh()
+        play("+800", shot="empty-sr-latn-only", at=500)
+        record("mark-sr-latn", None, "only Serbian (Latin) on: the mark at Q reads SR", "empty-sr-latn-only")
+    else:
+        record("mark-sr-latn", False, "the field didn't start with sr-latn alone")
+
+
+BATCH += [check_empty_fields]

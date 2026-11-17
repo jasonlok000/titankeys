@@ -34,6 +34,14 @@ internal object InputMethodList {
         }.onFailure { Log.w(TAG, "Input method $id didn't load", it) }.getOrNull()
     }
 
+    /** [method]'s next-word table (pairs.txt, or pairs-<variant>.txt), or null where it has none. Off the main thread. */
+    fun nextWords(context: Context, method: InputMethod, variant: String?): NextWords? {
+        val file = if (variant != null && method.variants.any { it.id == variant }) "pairs-$variant.txt" else "pairs.txt"
+        return runCatching {
+            context.assets.open("$FOLDER/${method.id}/$file").bufferedReader().useLines { NextWords.read(it) }
+        }.getOrNull()
+    }
+
     /** [method]'s word list, for its spelling [variant] when it has variants. It can take a second: call it off the main thread. */
     fun words(context: Context, method: InputMethod, variant: String?): WordList? {
         val file = method.variants.firstOrNull { it.id == variant }?.words ?: method.words ?: return null

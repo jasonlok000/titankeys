@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Gaeilge",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_ga.combined"
-  }
+  },
+  "starters": [
+    "a",
+    "an",
+    "ar",
+    "agus",
+    "na",
+    "go",
+    "i",
+    "ag",
+    "le",
+    "sé",
+    "sin",
+    "is"
+  ]
 }

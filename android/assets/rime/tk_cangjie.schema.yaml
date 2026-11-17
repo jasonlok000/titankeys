@@ -1,0 +1,55 @@
+# TitanKeys: Chinese, Cangjie 5. Built from rime-cangjie's cangjie5 schema (LGPL-3.0; its dictionary, from 倉頡之友's
+# 五倉世紀, is marked GPL), without its Pinyin reverse lookup and its own simplification and character-set switches: the
+# Chinese variant (tk_variants) chooses the characters, as for every Chinese input method.
+schema:
+  schema_id: tk_cangjie
+  name: 倉頡
+  version: "2026.11.17"
+  description: Chinese, Cangjie 5 (cangjie5)
+
+__include: tk_variants:/
+
+engine:
+  processors: [ ascii_composer, recognizer, predictor, key_binder, speller, punctuator, selector, navigator, express_editor ]
+  segmentors: [ ascii_segmentor, matcher, abc_segmentor, punct_segmentor, fallback_segmentor ]
+  translators: [ predict_translator, punct_translator, table_translator ]
+  filters:
+    - simplifier@zh_hans
+    - simplifier@zh_hk
+    - simplifier@zh_tw
+    - uniquifier
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " ;"
+
+translator:
+  dictionary: cangjie5
+  prism: tk_cangjie
+  enable_charset_filter: true
+  enable_sentence: true
+  enable_encoder: true
+  encode_commit_history: true
+  max_phrase_length: 5
+  # The code as Cangjie's radicals on the bar's line: hqi → 竹手戈.
+  preedit_format:
+    - "xlit|abcdefghijklmnopqrstuvwxyz|日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜符|"
+  comment_format:
+    - "xlit|abcdefghijklmnopqrstuvwxyz~|日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜符～|"
+  disable_user_dict_for_patterns:
+    - "^z.*$"
+    - "^yyy.*$"
+
+# Cangjie's characters are Hong Kong's and Taiwan's own; Simplified and each region's forms through OpenCC, characters
+# only, so a code always gives its own character.
+zh_hans: { option_name: zh_hans, opencc_config: t2s.json, tips: none }
+zh_hk:   { option_name: zh_hk,   opencc_config: t2hk.json, tips: none }
+zh_tw:   { option_name: zh_tw,   opencc_config: t2tw.json, tips: none }
+
+# The next-word suggestions after a commit (librime-predict, #56): native/rime/predict.py's table, Cantonese's, as Cangjie and Quick are Hong Kong's input methods; as many
+# as it has (at most 8), and they go on after a suggestion is picked.
+predictor: { db: predict-yue.db, max_candidates: 0, max_iterations: 0 }
+
+punctuator: { import_preset: symbols }
+key_binder: { import_preset: default }
+recognizer: { import_preset: default }

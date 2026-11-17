@@ -35,6 +35,8 @@ internal object FreshStart {
         "refused_fixes", "favourite_words", "snippets", "autocorrect_learning", "emoji", "easter_egg", "clipboard", "phone_checks",
         // The dictionary words the word menu's Unsave took out, and the one-time repair of saved words' case having run.
         "unsaved_words", "word_case",
+        // What the other input methods learned: LanguageLearning.
+        "language_learning",
         // That the guide was seen, the release notes, the update notice and the other-phone warning: all as on a new install.
         "app",
         // Back's disclosure answer: Setup asks again while Accessibility is off, as on a new install. With it on, Back is done.

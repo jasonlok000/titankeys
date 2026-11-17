@@ -28,5 +28,19 @@
     "name": "CLDR 49 localeDisplayNames: Lietuvių",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_lt.combined"
-  }
+  },
+  "starters": [
+    "ir",
+    "buvo",
+    "į",
+    "yra",
+    "iš",
+    "su",
+    "nuo",
+    "kad",
+    "o",
+    "iki",
+    "kaip",
+    "bei"
+  ]
 }

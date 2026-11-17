@@ -41,6 +41,13 @@ data class InputMethod(
     val engineArg: String?,
     /** Where the letters and the words come from, for the licences page and for contributors. */
     val source: Map<String, String>,
+    /**
+     * Its commonest words, commonest first, for the bar at a sentence's start and after a word until the user's own take over
+     * (owner, 2026-11-16: "each language should have a list of starting words"). tools/im/make.py writes them.
+     */
+    val starters: List<String> = emptyList(),
+    /** Chinese's [starters] in Simplified characters, for the Simplified variant. Empty elsewhere. */
+    val startersSimplified: List<String> = emptyList(),
 ) {
     /**
      * What a key types: [base], and [shift] where Shift gives another letter rather than [base]'s capital (Georgian). A
@@ -65,9 +72,27 @@ data class InputMethod(
         val apostrophes: Boolean = true,
         /** The script writes no spaces between words (Thai): the word being typed is found in the word list ([WordBreak]). */
         val wordBreak: Boolean = false,
+        /**
+         * What a quick second Space types in place of the first: the language's full stop, with the space after it when the
+         * language puts one ("। " in Hindi), or none (Chinese and Japanese: "。"). Empty where the script has no full stop
+         * (Thai): two Spaces stay two spaces. The Sentence spaces setting doubles a full stop's space.
+         */
+        val fullStop: String = FULL_STOP,
     )
 
     val isEnglish get() = id == ENGLISH_ID
+
+    /**
+     * Whether Shift changes what a key types, so the bar shows Shift and Caps (owner, 2026-11-17: "if shift does nth, shift
+     * shd not show up in the first place"): capitals, Shift letters (Georgian, Thai), or an engine that reads Shift (Korean's
+     * double consonants, Hindi's sounds, Vietnamese's capitals). Not in Hebrew, where Shift types the same letter, nor in
+     * Chinese and Japanese, where Shift opens the bigger menu.
+     */
+    val shiftMatters: Boolean get() = when (engine) {
+        "rime", "mozc" -> false
+        "hangul", "rules", "telex" -> true
+        else -> rules.capitalise || keys?.values?.any { it.shift != null && it.shift != it.base } == true
+    }
     /** Hebrew, Arabic: the bar's side words swap ([BarOrder]). */
     val rightToLeft get() = script in RightToLeft.SCRIPTS
     val hasAccents get() = accents.isNotEmpty()
@@ -97,8 +122,15 @@ data class InputMethod(
 
     companion object {
         const val ENGLISH_ID = "en"
-        /** The most input methods on at once: the overlay's places, W to O. */
-        const val MAX_ON = 8
+        /** The full stop a double space types unless an input method says otherwise ([Rules.fullStop]). */
+        const val FULL_STOP = ". "
+        /**
+         * The most languages on, and the most input methods on within one language (owner, 2026-11-17: "Don't allow selecting
+         * more than 4"). No other total: four languages of four each can be on. Settings refuses a fifth; a setting that has
+         * more (a restore, an old one) keeps them, and the switcher shows the first four of each.
+         */
+        const val MAX_LANGUAGES = 4
+        const val MAX_PER_LANGUAGE = 4
         /** The longest label the overlay can show over its key. */
         const val MAX_LABEL = 3
         /** The most accents on one key: one per key column. */
@@ -157,7 +189,7 @@ data class InputMethod(
             }
             val rules = (root["rules"] as? Map<*, *>)?.let {
                 Rules(it["capitalise"] as? Boolean ?: true, it["sentenceEnd"] as? String ?: ".?!", it["openingMarks"] as? String ?: "",
-                    it["apostrophes"] as? Boolean ?: true, it["wordBreak"] as? Boolean ?: false)
+                    it["apostrophes"] as? Boolean ?: true, it["wordBreak"] as? Boolean ?: false, it["fullStop"] as? String ?: FULL_STOP)
             } ?: Rules()
             val (engine, engineArg) = when (val value = root["engine"]) {
                 null -> null to null
@@ -169,8 +201,9 @@ data class InputMethod(
                 else -> throw Json.Error("engine must be null, a name, or { name: argument }")
             }
             val source = (root["source"] as? Map<*, *>)?.entries?.associate { (k, v) -> k as String to v.toString() } ?: emptyMap()
+            fun list(key: String) = (root[key] as? List<*>)?.map { it as? String ?: throw Json.Error("$key must list text") }.orEmpty()
             return InputMethod(id, text("name"), text("nameEnglish"), label, text("locale"), text("script"), keys, accents,
-                textOrNull("words"), variants, rules, engine, engineArg, source)
+                textOrNull("words"), variants, rules, engine, engineArg, source, list("starters"), list("startersSimplified"))
         }
 
         private val ID = Regex("[a-z]{2,3}(-[a-z0-9]{2,8})*")

@@ -2,7 +2,7 @@ import { Field, Screen, Section, useAction, useRouteParams, useSnapshot } from "
 import { type InputMethodEntry, state, update } from "../../../lib/titankeys";
 import { Toggle } from "../../../lib/app-haptics";
 import { Note } from "../../../lib/note";
-import { MAX_ON, languagesOf, shownName } from "./index";
+import { MAX_LANGUAGES, MAX_PER_LANGUAGE, languagesOf, languagesOn, shownName } from "./index";
 import { spellingLabel } from "../spelling";
 import { chineseLabel } from "../chinese";
 
@@ -17,12 +17,15 @@ export default function LanguagePage() {
   if (result.status !== "ready") return <Screen title="Language" />;
   const row = languagesOf(result.data).find(each => each.language.id === id);
   if (!row) return <Screen title="Language" />;
-  const { language, methods } = row;
+  const { language, methods, on } = row;
   const { inputMethods } = result.data;
-  const full = inputMethods.length >= MAX_ON;
+  // Turning one on can't make a fifth language, nor a fifth input method in this one. Turning off is always fine.
+  const languagesFull = on.length === 0 && languagesOn(result.data).length >= MAX_LANGUAGES;
+  const methodsFull = on.length >= MAX_PER_LANGUAGE;
   const set = (im: InputMethodEntry, value: boolean) => {
+    if (value && (languagesFull || methodsFull)) return;
     const next = value ? [...inputMethods, im.id] : inputMethods.filter(other => other !== im.id);
-    if (next.length === 0 || next.length > MAX_ON) return;
+    if (next.length === 0) return;
     void save.run({ inputMethods: next });
   };
   // F: draft. Under the name, once: what "experimental" means here.
@@ -34,7 +37,9 @@ export default function LanguagePage() {
       {methods.map(im => <Toggle key={im.id} label={shownName(im.name, im.nameEnglish, im.script)}
         subtitle={im.nameEnglish === im.name || methods.length === 1 ? undefined : im.nameEnglish}
         value={inputMethods.includes(im.id)} onChange={value => set(im, value)} />)}
-      {full && <Note>Eight at a time, tops. Turn one off first.</Note>}
+      {/* F: draft. */}
+      {languagesFull && <Note>Four languages at a time, tops. Turn one off first.</Note>}
+      {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note>Four at a time in one language, tops. Turn one off first.</Note>}
     </Section>
     {language.id === "en" && <Section title="Options">
       <Field label="Spelling" href="/settings/spelling">{spellingLabel(result.data)}</Field>

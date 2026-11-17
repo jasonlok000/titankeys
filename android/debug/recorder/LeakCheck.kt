@@ -36,7 +36,9 @@ class LeakCheck : BroadcastReceiver() {
         if (!context.packageName.endsWith(".debug")) return
         collect()
         val guides = GuideActivity.inMemory()
-        val report = if (guides.isEmpty()) "no guide or playground in memory" else guides.joinToString("; ")
+        val report = (if (guides.isEmpty()) "no guide or playground in memory" else guides.joinToString("; ")) +
+            // What the input methods hold: one keyboard and one word list at most (the 18-switch OutOfMemoryError, 2026-11-17).
+            "; " + Languages.report()
         Log.d(TAG, "leak check: $report")
         if (!intent.getBooleanExtra(DUMP, false)) {
             resultData = report

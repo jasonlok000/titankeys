@@ -32,5 +32,19 @@
     "name": "CLDR 49 localeDisplayNames: Latviešu",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_lv.combined"
-  }
+  },
+  "starters": [
+    "un",
+    "ir",
+    "ar",
+    "no",
+    "gadā",
+    "par",
+    "arī",
+    "bija",
+    "gada",
+    "kas",
+    "kā",
+    "tika"
+  ]
 }

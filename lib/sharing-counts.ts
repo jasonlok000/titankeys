@@ -48,12 +48,10 @@ export const SHARED_COUNTS: readonly { title: string; counts: readonly SharedCou
     counts: [
       { key: "zh.pick.space", meaning: "Chinese choices picked with Space." },
       { key: "zh.pick.tap", meaning: "Chinese choices picked with a tap on the bar." },
-      { key: "zh.pick.flick", meaning: "Chinese choices picked with a flick up." },
       { key: "zh.pick.menu", meaning: "Chinese choices picked from the bigger menu." },
       { key: "zh.bigMenu", meaning: "Times the bigger menu opened in Chinese." },
       { key: "ja.pick.space", meaning: "Japanese choices picked with Space." },
       { key: "ja.pick.tap", meaning: "Japanese choices picked with a tap on the bar." },
-      { key: "ja.pick.flick", meaning: "Japanese choices picked with a flick up." },
       { key: "ja.pick.menu", meaning: "Japanese choices picked from the bigger menu." },
       { key: "ja.bigMenu", meaning: "Times the bigger menu opened in Japanese." },
     ],

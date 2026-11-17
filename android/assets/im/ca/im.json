@@ -27,5 +27,19 @@
     "name": "CLDR 49 localeDisplayNames: Català",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_ca__experimental.combined"
-  }
+  },
+  "starters": [
+    "de",
+    "com",
+    "no",
+    "es",
+    "un",
+    "té",
+    "una",
+    "en",
+    "per",
+    "la",
+    "seva",
+    "va"
+  ]
 }

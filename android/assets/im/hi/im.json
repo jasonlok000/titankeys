@@ -13,7 +13,8 @@
     "capitalise": false,
     "sentenceEnd": ".?!।",
     "openingMarks": "",
-    "apostrophes": false
+    "apostrophes": false,
+    "fullStop": "। "
   },
   "engine": {
     "rules": "rules.json"
@@ -22,5 +23,19 @@
     "name": "CLDR 49 localeDisplayNames: हिन्दी",
     "keys": "jquery.ime hi-transliteration",
     "words": "hi_full.txt"
-  }
+  },
+  "starters": [
+    "है",
+    "के",
+    "मैं",
+    "नहीं",
+    "हैं",
+    "में",
+    "एक",
+    "आप",
+    "लिए",
+    "और",
+    "यह",
+    "से"
+  ]
 }

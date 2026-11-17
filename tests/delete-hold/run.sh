@@ -11,6 +11,6 @@ keyboard=android/kotlin/com/titankeys/keyboard
 engine=android/kotlin/com/titankeys/engine
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
-  "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/SwipePieces.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" \
+  "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/WordBreaks.kt" "$keyboard/SwipePieces.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" \
   tests/delete-hold/DeleteHoldChecks.kt
 java -cp "$work:$stdlib" com.titankeys.keyboard.DeleteHoldChecksKt

@@ -7,7 +7,7 @@ const licences = [
   { title: "Numen", subtitle: "GPL-3.0. TitanKeys uses its autocorrect and its next-word learning, which are modified versions of Pastiera.", url: "https://github.com/jlo-aug/numen" },
   { title: "Simple English Wikipedia", subtitle: "CC BY-SA 4.0. Word pairs for autocorrect.", url: "https://simple.wikipedia.org" },
   { title: "Wikipedia misspellings", subtitle: "CC BY-SA 4.0. Known misspellings for autocorrect.", url: "https://en.wikipedia.org/wiki/Wikipedia:Lists_of_common_misspellings/For_machines" },
-  { title: "Tatoeba", subtitle: "CC BY 2.0 FR. Word pairs and word triples for autocorrect.", url: "https://tatoeba.org" },
+  { title: "Tatoeba", subtitle: "CC BY 2.0 FR. Word pairs and word triples for autocorrect, and the next Chinese words.", url: "https://tatoeba.org" },
   { title: "Google Books Ngram", subtitle: "CC BY 3.0. Word pairs for autocorrect.", url: "https://github.com/orgtre/google-books-ngram-frequency" },
   { title: "Aalto ITE typing data", subtitle: "CC BY 4.0. Word mistakes for autocorrect.", url: "https://doi.org/10.5281/zenodo.12528163" },
   { title: "SCOWL", subtitle: "SCOWL licence. Known words for autocorrect.", url: "http://wordlist.aspell.net" },
@@ -36,11 +36,17 @@ const licences = [
   { title: "gemoji", subtitle: "MIT. Emoji names, such as :smile:.", url: "https://github.com/github/gemoji" },
   // The Chinese entries (#56). F (docs/words-m1.md).
   { title: "Rime", subtitle: "BSD-3-Clause. Turns what you type into Chinese.", url: "https://github.com/rime/librime" },
+  { title: "librime-predict", subtitle: "BSD-3-Clause. Suggests the next Chinese word.", url: "https://github.com/rime/librime-predict" },
   { title: "OpenCC", subtitle: "Apache 2.0. Gives you Simplified, Hong Kong or Taiwan characters.", url: "https://github.com/BYVoid/OpenCC" },
   { title: "Rime's libraries", subtitle: "marisa-trie, LevelDB, yaml-cpp, spdlog, Snappy and Boost", url: "https://github.com/rime/librime/tree/master/deps" },
   { title: "rime-cantonese", subtitle: "CC BY 4.0, place names ODbL 1.0. Cantonese words for Yale and Jyutping.", url: "https://github.com/rime/rime-cantonese" },
+  // F: draft. words.hk's word counts in the Cantonese weights (#56).
+  { title: "words.hk (粵典)", subtitle: "Public domain. How often Cantonese words are used, to put the likelier ones first.", url: "https://words.hk" },
   { title: "rime-jyutping", subtitle: "LGPL-3.0. The Yale spelling rules, by 幸延.", url: "https://github.com/rime/rime-jyutping" },
   { title: "Rime's Pinyin and shared data", subtitle: "LGPL-3.0. rime-luna-pinyin and rime-essay for Pinyin, rime-prelude for the rest.", url: "https://github.com/rime/rime-luna-pinyin" },
+  // F: draft. Cangjie, Quick and Zhuyin (#56).
+  { title: "rime-cangjie and rime-quick", subtitle: "LGPL-3.0. Cangjie 5 and Quick 5; the Cangjie table, from 倉頡之友, is GPL.", url: "https://github.com/rime/rime-cangjie" },
+  { title: "rime-terra-pinyin and rime-bopomofo", subtitle: "LGPL-3.0. Zhuyin's words, with Chewing's data, and its spelling rules.", url: "https://github.com/rime/rime-bopomofo" },
   // The Japanese entries (#56). F: draft.
   { title: "Mozc", subtitle: "BSD-3-Clause. Turns what you type into Japanese.", url: "https://github.com/google/mozc" },
   { title: "Mozc's dictionary", subtitle: "IPAdic, the Okinawa dictionary, Japanese Usage Dictionary and Tamachi, each under its own licence.", url: "https://github.com/google/mozc/tree/master/src/data/dictionary_oss" },

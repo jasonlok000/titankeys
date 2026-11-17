@@ -1,0 +1,52 @@
+{
+  "id": "zh-quick",
+  "name": "速成",
+  "nameEnglish": "Chinese, Quick",
+  "label": "速",
+  "locale": "zh",
+  "script": "Hani",
+  "keys": "qwerty",
+  "accents": {},
+  "words": null,
+  "variants": null,
+  "rules": {
+    "capitalise": false,
+    "sentenceEnd": "。？！.?!",
+    "openingMarks": "",
+    "apostrophes": false
+  },
+  "engine": {
+    "rime": "tk_quick"
+  },
+  "source": {
+    "words": "rime-quick's Quick 5 (LGPL-3.0) on rime-cangjie's dictionary (marked GPL) and rime-essay (LGPL-3.0)"
+  },
+  "starters": [
+    "我",
+    "係",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "嘅",
+    "都",
+    "個",
+    "就",
+    "有"
+  ],
+  "startersSimplified": [
+    "我",
+    "系",
+    "你",
+    "唔",
+    "佢",
+    "好",
+    "呢",
+    "嘅",
+    "都",
+    "个",
+    "就",
+    "有"
+  ]
+}

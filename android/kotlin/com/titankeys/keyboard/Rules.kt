@@ -139,6 +139,24 @@ open class RulesComposer(protected var rules: Rules? = null, protected var words
 
     override fun page(forward: Boolean): EngineState = EngineState.UNHANDLED
 
+    /**
+     * The bigger menu's words, opened with a swipe up (owner, 2026-11-17: "Also for other relevant language"): the word list's,
+     * past the bar's [CHOICES], in the same order.
+     */
+    override fun choices(start: Int, count: Int): List<String> {
+        val code = code()
+        if (code.isEmpty() || start < 0 || count <= 0) return emptyList()
+        return words?.complete(code, start + count + 1)?.filter { it != code }.orEmpty().drop(start).take(count)
+    }
+
+    /** A pick from the bar or the bigger menu, [index] counted across all of [choices]. */
+    override fun pickAt(index: Int): EngineState {
+        val word = choices(index, 1).firstOrNull() ?: return EngineState.UNHANDLED
+        typed.setLength(0)
+        choices = emptyList()
+        return EngineState(commit = "$word ")
+    }
+
     override fun reset(): EngineState {
         typed.setLength(0)
         choices = emptyList()

@@ -170,7 +170,7 @@ and typing it again.
 | Joins (#83) | `join.total`, `join.undone`, `join.keptApart`, `join.keptApart.redone` | `Composer`'s join decision; "undone" and "redone" when that word was later swapped or retyped |
 | Fixes | `autocorrect.made/undone`, `apostrophe.made/undone`, `capital.made/undone` | `Composer.offerUndo`, and Backspace's undo; the kind by `fixKind` |
 | The bar | `bar.place.<place>` | a word tapped on the bar, by its place (1 is the first) |
-| Chinese and Japanese | `zh.` or `ja.` + `pick.space`, `pick.tap`, `pick.flick`, `pick.menu`, `bigMenu` | the keyboard's choice handling |
+| Chinese and Japanese | `zh.` or `ja.` + `pick.space`, `pick.tap`, `pick.menu`, `bigMenu` | the keyboard's choice handling |
 | Gestures | `gesture.flickDelete`, `gesture.deleteHold`, `gesture.doubleSpace`, `gesture.tripleSpace`, `gesture.steer`, `gesture.selectWords` | the keyboard, as each gesture does its job |
 | Opening speed | `speed.open.<band>` | from a new field's keys being asked for to their next draw: `<50`, `50-100`, `100-200`, `200-500`, `500+` ms |
 | Crashes | `crash.count`, `freeze.count` | written as a line when it happens (Java crashes) or found in Android's exit records (freezes, native crashes); added to the day TitanKeys next runs |

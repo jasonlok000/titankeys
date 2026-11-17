@@ -56,5 +56,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_greek.kcm",
     "words": "main_el__legacy.combined"
-  }
+  },
+  "starters": [
+    "και",
+    "του",
+    "της",
+    "το",
+    "την",
+    "από",
+    "με",
+    "να",
+    "που",
+    "ο",
+    "τον",
+    "των"
+  ]
 }

@@ -165,6 +165,7 @@ private val table = mapOf(
     Haptic.ClipPinned to Family.Lock,
     Haptic.ClipUnpinned to Family.Release,
     Haptic.ClipboardCleared to Family.Gone,
+    Haptic.ScreenTap to Family.Texture,
     Haptic.BugRecordingStarted to Family.Lock,
     Haptic.BugRecordingStopped to Family.Release,
     Haptic.GuideCelebration to Family.Celebrate,

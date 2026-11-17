@@ -27,7 +27,7 @@ mkdir -p "$work/fake" "$work/classes"
 javac -nowarn -d "$work/fake" tests/gesture-render/fake/android/graphics/*.java
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work/fake:$stdlib:$sdk/platforms/android-36/android.jar" -d "$work/classes" \
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" "$engine/TypingSettings.java" "$keyboard/Look.kt" "$keyboard/Accent.kt" \
-  "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" \
+  "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/WordBreaks.kt" "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" \
   "$keyboard/WordSelection.kt" "$keyboard/CursorMode.kt" "$keyboard/GestureDisplay.kt" "$keyboard/GestureDrawing.kt" "$keyboard/StripFit.kt" \
   "$keyboard/TrailThickness.kt" "$keyboard/KeyAlignment.kt" "$keyboard/KeyGeometry.kt" "$keyboard/Corners.kt" "$keyboard/FixedScale.kt" "$keyboard/Radii.kt" \
   tests/gesture-render/GuideStandIns.kt tests/gesture-line/GestureLine.kt

@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Eesti",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_et__experimental.combined"
-  }
+  },
+  "starters": [
+    "ja",
+    "on",
+    "ei",
+    "et",
+    "ka",
+    "kui",
+    "oli",
+    "ning",
+    "see",
+    "siis",
+    "oma",
+    "mis"
+  ]
 }

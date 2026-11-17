@@ -13,6 +13,30 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     var other = false
     /** True while it writes no spaces between words (Thai): the word being typed is found in its list ([WordBreak]). */
     var wordBreak = false
+    /** The current input method's starters ([InputMethod.starters], in Simplified for that Chinese variant). */
+    var starters: List<String> = emptyList()
+    /** Whether a sentence start takes a capital in the current input method. */
+    var capitals = true
+    /** Blocked words and Favourites, shared by every language ([WordRules]). */
+    var rules: WordRules = WordRules.NONE
+
+    /** Whether [word] may be offered or fixed to in the input method typing now: not blocked, nor unsaved in it. D's fixes ask. */
+    fun usable(word: String) = rules.usable(word) && learning?.isHidden(word) != true
+
+    /** Whether [word] is a favourite: first among similar words, in every language. */
+    fun favourite(word: String) = rules.favourite(word)
+
+    /** Whether the input method typing now has [word] in its own list or starters, for the word menu. */
+    fun listed(word: String) = list()?.contains(word) == true || word in starters
+
+    /** The current input method's next-word table, where it has one ([NextWords]). */
+    var nextWords: NextWords? = null
+    /** What the current input method learned from the user, or null where learning is off. */
+    var learning: LanguageLearning? = null
+    /** Called after [learning] changed, to keep it. */
+    var learned: () -> Unit = {}
+    /** Whether new words may be learned: Learn new words I type, English's switch too. What was learned still ranks. */
+    var mayLearn: () -> Boolean = { true }
 
     private fun list() = if (other) current() else null
 
@@ -21,7 +45,16 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
 
     override fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit) {
         if (!other) return english.complete(before, cancelled, sentenceCapitalisation, result)
-        result(list()?.complete(prefix(before)).orEmpty())
+        val prefix = prefix(before)
+        // A word ended: the next words, or the starters at a sentence's start (owner, 2026-11-16: "I dont like the bar being
+        // empty"). The field's own rules still keep the bar empty in passwords and the other fields without words.
+        if (prefix.isEmpty()) {
+            val start = com.titankeys.engine.SwipeTyping.startsSentence(before)
+            val previous = if (start) null else lastWord(before.trimEnd()).takeIf { it.isNotEmpty() }
+            result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, rules))
+            return
+        }
+        result(BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), rules))
     }
 
     override fun prefix(before: String): String {
@@ -35,16 +68,31 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     override fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit) =
         if (other) result(null) else english.lookAlike(context, word, next, result)
     /** Only the input method's own words show on the bar: English's sentence starts don't, for one. */
-    override fun allowed(word: String) = if (other) list()?.contains(word) == true else english.allowed(word)
+    override fun allowed(word: String) =
+        if (other) usable(word) && (list()?.contains(word) == true || word in starters || learning?.knows(word) == true ||
+            nextWords?.after(null)?.contains(word) == true) else english.allowed(word)
     override fun fixAllowed(typed: String, fix: String) = if (other) false else english.fixAllowed(typed, fix)
     /** Whether [word] is in English's own list, whatever input method types: Chinese offers it as a choice ([EnglishOffer]). */
     fun englishKnown(word: String) = english.known(word)
 
-    override fun known(word: String) = if (other) list()?.contains(word) == true else english.known(word)
-    override fun sentenceStarts(): List<String> = if (other) emptyList() else english.sentenceStarts()
+    override fun known(word: String) =
+        if (other) list()?.contains(word) == true || word in starters || learning?.knows(word) == true else english.known(word)
+    override fun sentenceStarts(): List<String> =
+        if (other) BarWords.next(null, learning, starters, capitals = false, table = nextWords, rules = rules) else english.sentenceStarts()
     override fun typed(word: String, rememberCase: Boolean) { if (!other) english.typed(word, rememberCase) }
-    override fun untyped(word: String) { if (!other) english.untyped(word) }
-    override fun keptPair(previous: String?, next: String) { if (!other) english.keptPair(previous, next) }
+    override fun untyped(word: String) {
+        if (!other) return english.untyped(word)
+        val learning = learning ?: return
+        learning.forget(word)
+        learned()
+    }
+    /** Every word kept, with the one before it: what another input method learns from (Composer only calls it where it may). */
+    override fun keptPair(previous: String?, next: String) {
+        if (!other) return english.keptPair(previous, next)
+        val learning = learning?.takeIf { mayLearn() } ?: return
+        learning.kept(previous, next, known = list()?.contains(next) == true || next in starters)
+        learned()
+    }
     override fun chosen(swipe: Swipe, context: String, recognition: Words.Recognition, word: String) {
         if (!other) english.chosen(swipe, context, recognition, word)
     }

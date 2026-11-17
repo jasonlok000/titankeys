@@ -12,12 +12,16 @@ HERE="$REPO/native/rime"
 WORK="${TK_RIME_WORK:-$HOME/build/tk-rime}"
 TOOL="$WORK/out-host/rime_tool"
 OPENCC_DICT="$WORK/out-host/librime/deps/opencc/src/tools/opencc_dict"
-[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] || { echo "run native/rime/build.sh first" >&2; exit 1; }
+BUILD_PREDICT="$(find "$WORK/out-host" -name build_predict -type f -perm -u+x | head -1)"
+[ -x "$TOOL" ] && [ -x "$OPENCC_DICT" ] && [ -n "$BUILD_PREDICT" ] || { echo "run native/rime/build.sh first" >&2; exit 1; }
 
 PRELUDE=https://github.com/rime/rime-prelude.git@082425ea0684bca36474415d4a0e8db9b016487e
 ESSAY=https://github.com/rime/rime-essay.git@d95eeae056df429ecf993038c325a216f0b28c5b
 LUNA=https://github.com/rime/rime-luna-pinyin.git@56b934b099dfbeab842320f13aa8b461a6ab3e42
 CANTONESE=https://github.com/rime/rime-cantonese.git@259f0e48bba840c3a2e0d117539e96937f3d89bc
+CANGJIE=https://github.com/rime/rime-cangjie.git@fcb3d7dd94ac1304663d575727d24d8107f6b082
+QUICK=https://github.com/rime/rime-quick.git@207d1efcc0dc9574510b61be861544edcf993736
+TERRA=https://github.com/rime/rime-terra-pinyin.git@723e51bc266cf9464530c1ddedb856aa18e3da34
 
 fetch() { # dir url@commit
   local dir="$WORK/src/$1" url="${2%@*}" commit="${2#*@}"
@@ -34,6 +38,9 @@ fetch rime-prelude "$PRELUDE"
 fetch rime-essay "$ESSAY"
 fetch rime-luna-pinyin "$LUNA"
 fetch rime-cantonese "$CANTONESE"
+fetch rime-cangjie "$CANGJIE"
+fetch rime-quick "$QUICK"
+fetch rime-terra-pinyin "$TERRA"
 SRC="$WORK/src"
 OCC="$SRC/librime/deps/opencc/data"
 
@@ -46,7 +53,8 @@ python3 -I - "$SRC/rime-prelude/default.yaml" default.yaml <<'PY'
 import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
 s, n = re.subn(r'schema_list:\n(  - schema: .*\n)+',
-               'schema_list:\n  - schema: tk_yale\n  - schema: tk_jyutping\n  - schema: tk_pinyin\n', s)
+               'schema_list:\n  - schema: tk_yale\n  - schema: tk_jyutping\n  - schema: tk_pinyin\n  - schema: tk_cangjie\n'
+               '  - schema: tk_quick\n  - schema: tk_zhuyin\n', s)
 assert n == 1
 s, n = re.subn(r'page_size: 5', 'page_size: 8', s)
 assert n == 1
@@ -56,6 +64,8 @@ cp "$SRC/rime-essay/essay.txt" .
 cp "$SRC/rime-luna-pinyin/luna_pinyin.dict.yaml" "$SRC/rime-luna-pinyin/pinyin.yaml" .
 cp "$SRC"/rime-cantonese/jyut6ping3*.dict.yaml "$SRC/rime-cantonese/essay-cantonese.txt" \
   "$SRC/rime-cantonese/symbols_cantonese.yaml" .
+# Cangjie 5 and Quick 5 (rime-cangjie's dictionary, which Quick builds on), and Zhuyin's dictionary (rime-terra-pinyin).
+cp "$SRC"/rime-cangjie/cangjie5*.dict.yaml "$SRC"/rime-quick/quick5*.dict.yaml "$SRC/rime-terra-pinyin/terra_pinyin.dict.yaml" .
 # TitanKeys' few changes to the Cantonese word weights (cantonese-weights.tsv says why): a word's weight replaced, or the
 # word added at the end, in the file's order.
 awk -F'\t' -v OFS='\t' '
@@ -65,6 +75,33 @@ awk -F'\t' -v OFS='\t' '
   END { for (i = 1; i <= n; i++) if (!(order[i] in seen)) print order[i], weight[order[i]] }
 ' "$HERE/cantonese-weights.tsv" essay-cantonese.txt > essay-cantonese.new
 mv essay-cantonese.new essay-cantonese.txt
+# words.hk's word counts in its Cantonese text (wordshk-counts.tsv, public domain), added to the weights: scaled so their total
+# is 0.3 of the weights' total, each word's to its own weight, a word the weights lack added at the end. Measured on held-out
+# Tatoeba phrases, it takes Space's first choice from 23.2% to 27.1% right (docs/studies/56-cantonese-dictionary.md; owner,
+# 2026-11-17: "the default Rime dictionary is actually pretty shit").
+python3 -I - "$HERE/wordshk-counts.tsv" essay-cantonese.txt <<'PY'
+import sys
+counts = {}
+for line in open(sys.argv[1], encoding='utf-8'):
+    if line.startswith('#') or not line.strip():
+        continue
+    word, count = line.rstrip('\n').split('\t')
+    counts[word] = int(count)
+order, weight = [], {}
+for line in open(sys.argv[2], encoding='utf-8'):
+    word, _, value = line.rstrip('\n').partition('\t')
+    if word not in weight:
+        order.append(word)
+    weight[word] = int(value or 0)
+scale = 0.3 * sum(weight.values()) / sum(counts.values())
+for word, count in counts.items():
+    if word not in weight:
+        order.append(word)
+        weight[word] = 0
+    weight[word] += int(round(count * scale))
+with open(sys.argv[2], 'w', encoding='utf-8', newline='\n') as out:
+    out.writelines(f'{word}\t{max(weight[word], 1)}\n' for word in order)
+PY
 cp "$HERE"/schemas/*.yaml .
 
 # OpenCC: the three variants' configs, and only the dictionaries they use, compiled.
@@ -74,6 +111,11 @@ for n in CJK_Compatibility_Ideographs TSPhrases TSCharacters TWVariantsPhrases T
   HKVariants TWPhrases; do cp "$OCC/dictionary/$n.txt" "$D/occ/"; done
 (cd "$D/occ" && python3 -I "$OCC/scripts/extract_tofu_risk.py" TSCharacters.txt TSCharactersExt.txt)
 for f in "$D"/occ/*.txt; do "$OPENCC_DICT" -i "$f" -o "opencc/$(basename "$f" .txt).ocd2" -f text -t ocd2; done
+
+# The next-word suggestions (librime-predict, #56): native/rime/predict.py's tables, compiled by the plugin's own tool.
+# Cantonese's for Yale and Jyutping, Mandarin's for Pinyin (each schema's predictor/db).
+for lang in yue cmn; do "$BUILD_PREDICT" "predict-$lang.db" < "$HERE/predict/$lang.txt" 2> "$D/predict-$lang.log" \
+  || { cat "$D/predict-$lang.log"; exit 1; }; done
 
 # Rime records each source file's time in what it compiles. Every file gets one fixed time, so two runs give the same bytes.
 # On the phone Rime never deploys (rime_jni.cc), so the copies' own times don't matter.
@@ -86,7 +128,7 @@ mkdir -p "$D/shared/build"
 for f in "$D"/user/build/*; do
   case "$(basename "$f")" in *.table.bin|*.reverse.bin|*.prism.bin|*.schema.yaml|default.yaml) cp "$f" "$D/shared/build/";; esac
 done
-for t in jyut6ping3.table.bin luna_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_pinyin.prism.bin; do
+for t in jyut6ping3.table.bin luna_pinyin.table.bin cangjie5.table.bin quick5.table.bin terra_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_pinyin.prism.bin tk_cangjie.prism.bin tk_quick.prism.bin tk_zhuyin.prism.bin; do
   test -s "$D/shared/build/$t" || { echo "missing $t" >&2; exit 1; }
 done
 # The word lists' sources don't ship: Rime uses the compiled tables.
@@ -113,6 +155,17 @@ check tk_yale zh_hans "jung man" 中文
 check tk_yale zh_hk "deui m jyu" 對唔住
 check tk_yale zh_hk "yut yu" 粵語
 check tk_yale zh_hk "ngo dei" 我哋
+# Yale's interchangeable initials: z for j, n and l for each other. 你 stays first for nei, and ng stays ng.
+check tk_yale zh_hk "nei" 你
+check tk_yale zh_hk "lei" 你
+check tk_yale zh_hk "lei hou" 你好
+check tk_yale zh_hk "zung man" 中文
+check tk_yale zh_hk "jung man" 中文
+check tk_yale zh_hk "ngo" 我
+# Jyutping keeps its own initials: lei isn't 你 there.
+rm -rf "$D/try"; mkdir -p "$D/try"
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
+  || { echo "FAIL Jyutping lei gives 你: the fuzzy initials reached Jyutping" >&2; exit 1; }
 check tk_jyutping zh_hk "jyut jyu" 粵語
 check tk_jyutping zh_hk "ngo dei" 我哋
 check tk_jyutping zh_hk "gwong dung waa" 廣東話
@@ -123,12 +176,60 @@ check tk_pinyin zh_hk "ruan jian" 軟件
 check tk_pinyin zh_tw "ruan jian" 軟體
 check tk_pinyin zh_hans "da yin ji" 打印机
 check tk_pinyin zh_tw "da yin ji" 印表機
+# Cangjie 5: 我 is hqi, 倉 oiar; Quick 5 the first and last letters (我 hi, after 的); Zhuyin on Hsu (你好 ㄋㄧˇ ㄏㄠˇ).
+check tk_cangjie zh_hk "hqi" 我
+check tk_cangjie zh_hk "oiar" 倉
+check tk_cangjie zh_hans "oiar" 仓
+check tk_quick zh_hk "hqi" 我
+check tk_quick zh_tw "oiar" 倉
+check tk_zhuyin zh_tw "nefhwf" 你好
+check tk_zhuyin zh_tw "nehw" 你好
+check tk_zhuyin zh_tw "tidxm" 臺灣
+check tk_zhuyin zh_hans "jxlxn" 中文
+# A whole phrase typed without spaces, then Space once, as the owner types (2026-11-17: "diuneiloumo"): Space takes all of it,
+# leaving nothing behind.
+phrase() { # schema variant code committed
+  local got
+  rm -rf "$D/try"; mkdir -p "$D/try"
+  got="$("$TOOL" space "$D/phone" "$D/try" "$1" "$2" "$3" 2>/dev/null)"
+  [ "$got" = "$4|" ] || { echo "FAIL $1 $2 '$3' then Space: '$got', expected '$4|'" >&2; exit 1; }
+}
+phrase tk_yale zh_hk diuneiloumou 屌你老母
+phrase tk_yale zh_hk ngodeigamyatheuiyamcha 我哋今日去飲茶
+phrase tk_yale zh_hk ngodeiyatchaiheuisikfaan 我哋一齊去食飯
+phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
+phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
+
 # 対, the Japanese form of 對, is off deui's first page in every variant.
 for v in zh_hk zh_tw zh_hans; do
   rm -rf "$D/try"; mkdir -p "$D/try"
   page="$("$TOOL" try "$D/phone" "$D/try" tk_yale "$v" "deui" 8 2>/dev/null)"
   [[ "$page" != *対* ]] || { echo "FAIL 対 on deui's first page, $v: $page" >&2; exit 1; }
 done
+
+# The next-word suggestions (#56): after a commit Rime offers the table's next words, in the variant; Space picks the first;
+# Escape (the keyboard's way to clear them) leaves none, and so does a fresh session, with nothing committed yet.
+next() { # schema variant code key step expected-choices
+  local got
+  rm -rf "$D/try"; mkdir -p "$D/try"
+  got="$("$TOOL" next "$D/phone" "$D/try" "$1" "$2" "$3" "$4" 2>/dev/null | grep "^$5 " | sed 's/^[^:]*: *//' | cut -d' ' -f1-3)"
+  [ "$got" = "$6" ] || { echo "FAIL next $1 $2 '$3' $4, $5: '$got', expected '$6'" >&2; exit 1; }
+}
+next tk_yale zh_hk "nei" esc space "嘅 哋 唔"
+next tk_yale zh_hk "nei" esc esc ""
+next tk_jyutping zh_hk "nei" esc space "嘅 哋 唔"
+# A letter starts a new code: its own choices, not the suggestions.
+next tk_pinyin zh_hans "wo" h h "和 好 还"
+next tk_pinyin zh_hk "wo" esc space "為 母親 什麼都"
+next tk_pinyin zh_hans "wo" esc space "为 母亲 什么都"
+next tk_pinyin zh_tw "wo" esc space "為 母親 什麼都"
+# Cangjie and Quick suggest from Cantonese's table, Zhuyin from Mandarin's.
+next tk_cangjie zh_hk "hqi" reset space "哋 喺 嘅"
+next tk_quick zh_hk "hqi" reset space "哋 喺 嘅"
+next tk_zhuyin zh_tw "nehw" reset space "何塞 幸福 幾次"
+rm -rf "$D/try"; mkdir -p "$D/try"
+fresh="$("$TOOL" try "$D/phone" "$D/try" tk_yale zh_hk "" 8 2>/dev/null | sed 's/^[^:]*://')"
+[ -z "$fresh" ] || { echo "FAIL suggestions with nothing committed: $fresh" >&2; exit 1; }
 
 # Learned words in Back up everything (RimeBackup): a word learned on one phone goes out in Rime's snapshot, and a fresh
 # phone merges that snapshot in from sync/restored/ with its own name, titankeys, as the app sets it.

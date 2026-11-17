@@ -469,6 +469,13 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
                 (dp(CARET_WIDTH) + (dp(STEER_CARET) - dp(CARET_WIDTH)) * thin) * wider)
             return
         }
+        // Past the streak's hundred words the hold shows the dominoes as it goes: a row of tiles, the nearest tipping into the
+        // caret as each word goes, and the count counting on, live (owner, 2026-11-17). The glow and the caret are as always.
+        if (display.dominoes) {
+            holdDominoes(canvas, display, left, stop - dp(DOMINO_COUNT_ROOM), caret, mid, alpha, look)
+            if (display.caretShown) bar(canvas, caret, mid, 2 * caretHalf(), GuideMotion.faded(look.accent, alpha), dp(STEER_CARET))
+            return
+        }
         // The words the hold is taking are orange, as triple Space's selected words are, and the ones still to come stay grey
         // (owner, 2026-11-13). In the pause zone the orange ones ease back to light grey, and the caret dims.
         val paused = display.pauseShown
@@ -492,6 +499,28 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         countPaint.textSize = text * DOMINO_COUNT_SIZE
         countPaint.color = GuideMotion.faded(look.accent, alpha)
         canvas.drawText(shown.toString(), caret - dp(DOMINO_COUNT_GAP), mid + countPaint.textSize * .36f, countPaint)
+    }
+
+    /**
+     * A hold's dominoes (#89): a row of tiles standing on the line up to [stop], the nearest tipping into the caret as each word
+     * goes ([GestureDisplay.shownDeleted]'s fraction), so the row falls one tile a word for as long as the hold goes, and the
+     * count beside the caret: the streak's words, live.
+     */
+    private fun holdDominoes(canvas: Canvas, display: GestureDisplay, left: Float, stop: Float, caret: Float, mid: Float, alpha: Float, look: Look) {
+        val step = dp(DOT_STEP) * 2.2f
+        val bite = display.shownDeleted - floor(display.shownDeleted)
+        val colour = GuideMotion.faded(look.accent, alpha)
+        var index = 0
+        while (true) {
+            val x = stop - step / 2 - (index - bite) * step
+            if (x < left) break
+            // The nearest tile falls as its word goes; the rest stand, sliding along one place a word.
+            if (index == 0) tile(canvas, x, mid, 1f - bite * bite * bite, bite, colour) else if (x <= stop) tile(canvas, x, mid, 1f, 0f, colour)
+            index++
+        }
+        countPaint.textSize = text * DOMINO_COUNT_SIZE
+        countPaint.color = colour
+        canvas.drawText(display.dominoTotal.toString(), caret - dp(DOMINO_COUNT_GAP), mid + countPaint.textSize * .36f, countPaint)
     }
 
     /**

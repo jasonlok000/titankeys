@@ -39,7 +39,7 @@ internal object InputMethodList {
     fun nextWords(context: Context, method: InputMethod, variant: String?): NextWords? {
         val file = if (variant != null && method.variants.any { it.id == variant }) "pairs-$variant.bin" else "pairs.bin"
         return runCatching {
-            context.assets.open("$FOLDER/${method.id}/$file").use { NextWords.readBinary(it) }
+            context.assets.open("$FOLDER/${method.id}/$file").use { NextWords.readBinary(it, method.id in NextWords.TURKIC) }
         }.getOrNull()
     }
 

@@ -70,6 +70,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) tablesTakeTheListsSpelling(File(args[0]))
     if (args.isNotEmpty()) nextWordsCost(File(args[0]))
     if (args.isNotEmpty()) completionsMatchTheFold(File(args[0]))
+    if (args.isNotEmpty()) turkishTablesLowerTheTurkishWay(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (args.isNotEmpty()) eachLanguageHasItsFullStop(File(args[0]))
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
@@ -853,6 +854,28 @@ private fun collect() = repeat(4) {
 }
 
 private fun usedMb(): Long = Runtime.getRuntime().let { (it.totalMemory() - it.freeMemory()) / 1_048_576 }
+
+/**
+ * Turkish and Azerbaijani lower İ to i and I to ı, in the tables and in the lookup (E's review, 2026-11-17): Python's and
+ * Kotlin's own rules would give i with a combining dot for İ, and i for I, which no Turkish word list holds.
+ */
+private fun turkishTablesLowerTheTurkishWay(folder: File) {
+    for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty()) {
+        for (file in dir.listFiles { file -> file.name.startsWith("pairs") && file.name.endsWith(".bin") }.orEmpty()) {
+            var dotted = 0
+            file.inputStream().use { NextWords.readBinary(it) }.forEach { first, next, _ ->
+                if ('̇' in first || '̇' in next) dotted++
+            }
+            check("${dir.name}/${file.name}: no word with a combining dot", dotted == 0) { "$dotted pairs" }
+        }
+    }
+    val turkish = File(folder, "tr/pairs.bin").inputStream().use { NextWords.readBinary(it, turkic = true) }
+    same("tr: İstanbul finds its next words", turkish.after("İstanbul").isNotEmpty() && turkish.after("İstanbul") == turkish.after("istanbul"), true)
+    same("tr: Işık, with I, finds ışık's", turkish.after("Işık").isNotEmpty() && turkish.after("Işık") == turkish.after("ışık"), true)
+    same("tr: İlk at a sentence's start", turkish.after("İlk") == turkish.after("ilk"), true)
+    same("the Turkish rule", NextWords.lower("IŞIK İLK", turkic = true), "ışık ilk")
+    same("other languages keep Kotlin's", NextWords.lower("Isla", turkic = false), "isla")
+}
 
 /**
  * WordList stores each word's folded length, so complete() ranks without folding the words again (2026-11-17): the same answers

@@ -455,8 +455,20 @@ private fun theDominoesAreRare() {
     now += 300
     same(streak.word(now, 2_000, 100), true, "The 100th word plays them")
     repeat(50) { now += 300; if (streak.word(now, 2_000, 100)) played++ }
-    same(played, 0, "Once a streak: the words after it don't play them again")
+    same(played, 0, "The words after it don't play them again at once")
     same(streak.words, 150, "and the count goes on")
+    // Every hundred words of a streak plays them again (owner, 2026-11-17: "it showed up once and then stopped showing again").
+    repeat(50) { now += 300; if (streak.word(now, 2_000, 100)) played++ }
+    same(played to streak.words, 1 to 200, "The 200th word plays them again")
+    // Two streaks in a row, a pause between them: each plays.
+    val twice = DeleteStreak()
+    var plays = 0
+    var t2 = 0L
+    repeat(2) {
+        repeat(100) { t2 += 250; if (twice.word(t2, 2_000, 100)) plays++ }
+        t2 += 5_000
+    }
+    same(plays, 2, "Two streaks of 100 in a row: two runs")
     now += 2_001
     streak.word(now, 2_000, 100)
     same(streak.words, 1, "More than 2 s since the last word: a new streak")
@@ -486,8 +498,45 @@ private fun theDominoesAreRare() {
     same(display.dominoes to display.softDelete, true to true, "and the dots are drawn as dominoes")
     display.startDominoes(130, 7_400)
     same(display.dominoTotal, 130, "Words that go while they show count too")
-    display.run(7_400, 10_000)
+    display.run(7_400, 20_000)
     same(display.scene to display.dominoes, Scene.None to false, "They end with the dots")
+
+    // They take their time: the dots' own time 4.5 times over, about 7 s for a full row (owner, 2026-11-17: "It also finishes
+    // reli quickly. It's a Easter egg we could take our time").
+    same(GestureDisplay.DOMINO_SLOW, 4.5f, "4.5 times the dots' time: a full row of dots takes about 1.5 s")
+    fun lasts(dominoes: Boolean): Long {
+        val run = GestureDisplay()
+        run.wordDeleted(1_000, 60)
+        if (dominoes) run.startDominoes(100, 1_000)
+        var at = 1_000L
+        while (run.busy && at < 30_000) { run.advance(at, 1f); at += 16 }
+        return at - 1_000
+    }
+    val dots = lasts(false)
+    val tiles = lasts(true)
+    isTrue(tiles in 5_500..8_500, "A full row of dominoes takes about 7 s: $tiles ms (the dots alone, $dots ms)")
+    isTrue(tiles > 4 * dots, "more than four times the dots'")
+    val slowed = GestureDisplay()
+    slowed.wordDeleted(1_000, 60)
+    slowed.startDominoes(100, 1_000)
+    same(slowed.stretched(1_000), 4_500L, "Their ticks keep to their time")
+    same(GestureDisplay().stretched(1_000), 1_000L, "and plain dots keep theirs")
+
+    // They never stand in a delete's way (owner, 2026-11-17: "it's blocking my delete"): a flick while they show ends them at
+    // once and shows its own dots; a hold takes the bar from them.
+    val flicked = GestureDisplay()
+    flicked.wordDeleted(1_000, 60)
+    flicked.startDominoes(100, 1_000)
+    flicked.run(1_000, 2_000)
+    flicked.wordDeleted(2_000, 5)
+    same(flicked.dominoes to flicked.dots, false to 5, "A flick during the run: they end, and its own five dots show")
+    same(flicked.scene, Scene.DeleteFlick, "as a flick's dots always do")
+    val held = GestureDisplay()
+    held.wordDeleted(1_000, 60)
+    held.startDominoes(100, 1_000)
+    held.run(1_000, 2_000)
+    held.deleteHeld(200, 2_000)
+    same(held.dominoes to held.scene, false to Scene.DeleteHold, "A hold during the run: they end, and the hold shows")
     val keyed = GestureDisplay()
     keyed.wordDeleted(1_000, 5)
     keyed.startDominoes(100, 1_000)
@@ -504,6 +553,9 @@ private fun theDominoesAreRare() {
         "Both the flick and the held delete count their words")
     isTrue("if (selected != null) return" in ime, "A selection's delete never counts")
     isTrue("deleteStreak.typed()\n            strip?.gesture?.stopDominoes()" in ime, "A key press ends them and starts the streak over")
+    isTrue("if (!restarting) deleteStreak.typed()" in ime, "Another field starts a new streak")
+    isTrue("gesture.dotLandings(scale).map(gesture::stretched)" in ime && "gesture?.dotsPoppedMillis(scale)?.let(gesture::stretched)" in ime,
+        "Both the flick's and the lift's ticks keep to the dominoes' time")
     val haptics = java.io.File("android/kotlin/com/titankeys/keyboard/Haptics.kt").readText()
     isTrue("fun readDominoWords(context: Context): Int? {\n            if (!debug(context)) return null" in haptics,
         "Only TitanKeys Debug reads a tried number")

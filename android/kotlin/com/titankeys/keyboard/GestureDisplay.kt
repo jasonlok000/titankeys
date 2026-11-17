@@ -159,6 +159,17 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         changed()
     }
 
+    /**
+     * The dominoes take their time (owner, 2026-11-17: "It also finishes reli quickly. It's a Easter egg we could take our time"):
+     * from when their dots start, the bar's clock runs [dominoSlow] times slower, so everything of theirs, standing, falling and
+     * the count, takes that much longer: about 7 s for a full row. [now] on that clock.
+     */
+    private fun slowed(now: Long): Long =
+        if (dominoes && softDelete && now > flourishAt) flourishAt + ((now - flourishAt) / dominoSlow()).toLong() else now
+
+    /** [millis] after the dots started, on the wall clock: the dominoes' stretched, so their ticks land as their tiles fall. */
+    fun stretched(millis: Long): Long = if (dominoes && softDelete) (millis * dominoSlow()).toLong() else millis
+
     /** A key was pressed: no more dominoes. */
     fun stopDominoes() {
         if (!dominoes) return
@@ -409,6 +420,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * the real text before the cursor, for the words on the bar: see [deleteText].
      */
     fun deleteHeld(repeatMillis: Long, now: Long, pace: Float = 1f, before: CharSequence? = null) {
+        // A hold ends the dominoes at once, as a flick does.
+        dominoes = false
         if (!begin(Scene.DeleteHold, now)) return
         deleteMillis = repeatMillis
         deletePace = pace.coerceIn(0f, 1f)
@@ -595,6 +608,12 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
             changed()
         } else {
             if (!allowed || live) return
+            // A flick while the dominoes show ends them at once, and its own dots start as always: the Easter egg never stands
+            // in a delete's way (owner, 2026-11-17: "it's blocking my delete").
+            if (dominoes) {
+                dominoes = false
+                if (flourishing) clear()
+            }
             // Dots still playing take the new ones at the end of their queue, and go on.
             if (scene == Scene.DeleteFlick && dots > 0 && !still && now - flourishAt < doneAt) {
                 chain(letters, (now - flourishAt).toFloat())
@@ -1100,7 +1119,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
 
     /** Moves the picture on to [now]. [scale] is Android's animator duration scale, and 0 means no motion. True asks for another frame. */
     fun advance(now: Long, scale: Float): Boolean {
-        val more = advanceScenes(now, scale)
+        val more = advanceScenes(slowed(now), scale)
         endDominoes()
         return more
     }
@@ -1375,6 +1394,15 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         var triedDominoWords: Int? = null
         @Volatile
         var triedDominoGap: Long? = null
+
+        /**
+         * How much slower the dominoes' dots go than the dots, and what the Haptics lab tried, or null. A full row of dots takes
+         * about 1.5 s, so 4.5 times makes the dominoes about 7 s, as asked (owner, 2026-11-17: "we could take our time").
+         */
+        const val DOMINO_SLOW = 4.5f
+        @Volatile
+        var triedDominoSlow: Float? = null
+        fun dominoSlow() = triedDominoSlow ?: DOMINO_SLOW
 
         /** The streak that plays the dominoes: the lab's, or the defaults. */
         fun dominoWords() = triedDominoWords ?: DOMINO_WORDS
@@ -1679,22 +1707,22 @@ enum class SelectionEnd(val id: String, val label: String) {
 /**
  * The delete streak that plays the dominoes (#89): words that flicks and held deletes took, each within a gap of the last, with no
  * typing between. A delete of a selection neither counts nor breaks it (owner, 2026-11-17: select-all then delete stays an
- * instant delete with the usual animation). It plays once a streak: [word] says so as the streak reaches its number.
+ * instant delete with the usual animation). It plays at every hundred words of a streak: [word] says so.
  */
 class DeleteStreak {
     var words = 0
         private set
     private var lastAt = Long.MIN_VALUE / 2
-    private var played = false
 
-    /** A word went at [now]. True if this word makes the streak [most] long and it hasn't played yet; [gap] ends a streak. */
+    /**
+     * A word went at [now]. True each time the streak reaches another [most] words: 100, 200, 300... (owner, 2026-11-17: "it
+     * showed up once and then stopped showing again"; it played once a streak, and a streak only ended after a [gap] or typing).
+     */
     fun word(now: Long, gap: Long, most: Int): Boolean {
         if (now - lastAt > gap) restart()
         lastAt = now
         words++
-        if (played || words < most) return false
-        played = true
-        return true
+        return most > 0 && words % most == 0
     }
 
     /** Something was typed: the streak starts over. */
@@ -1702,7 +1730,6 @@ class DeleteStreak {
 
     private fun restart() {
         words = 0
-        played = false
         lastAt = Long.MIN_VALUE / 2
     }
 }

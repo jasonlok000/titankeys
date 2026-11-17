@@ -544,7 +544,8 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 }
                 "labDominoes" -> {
                     lab().tryDominoes(if (data.isNull("words")) null else data.getInt("words"),
-                        if (data.isNull("gap")) null else data.getLong("gap"))
+                        if (data.isNull("gap")) null else data.getLong("gap"),
+                        if (!data.has("slow") || data.isNull("slow")) null else data.getInt("slow"))
                     "null"
                 }
                 "labFlickHold" -> {

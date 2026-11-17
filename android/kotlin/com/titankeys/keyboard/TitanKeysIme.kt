@@ -463,7 +463,8 @@ class TitanKeysIme : InputMethodService() {
         deleteLog("delete animation: dots ${gesture.dots}${if (gesture.dominoes) " as dominoes, ${gesture.dominoTotal} words" else ""}")
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val dotsAt = gesture.dotsAt
-        haptics.holdDots(gesture.dotLandings(scale)) { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }
+        // The dominoes' dots go slower: their ticks keep to them.
+        haptics.holdDots(gesture.dotLandings(scale).map(gesture::stretched)) { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }
     }
 
     private fun nextDeleteHoldStep(at: Long) {
@@ -1444,6 +1445,8 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
         main.post { showGuideExtras() }
+        // Another field starts a new delete streak: words deleted somewhere else don't count here (#89).
+        if (!restarting) deleteStreak.typed()
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
         heldLetter = null
@@ -2558,6 +2561,7 @@ class TitanKeysIme : InputMethodService() {
         // The streak's numbers, which the Haptics lab can try in TitanKeys Debug.
         GestureDisplay.triedDominoWords = Haptics.readDominoWords(this)
         GestureDisplay.triedDominoGap = Haptics.readDominoGap(this)
+        GestureDisplay.triedDominoSlow = Haptics.readDominoSlow(this)
         val now = SystemClock.uptimeMillis()
         val gesture = strip?.gesture
         if (deleteStreak.word(now, GestureDisplay.dominoGapMillis(), GestureDisplay.dominoWords())) {
@@ -3454,7 +3458,9 @@ class TitanKeysIme : InputMethodService() {
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
                         // A flick while dots still play adds its dots to theirs, and the whole queue's ticks go again with its wait.
-                        haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty(),
+                        // The dominoes' dots go slower: their ticks keep to them.
+                        haptics.flick(gesture?.dotsPoppedMillis(scale)?.let(gesture::stretched),
+                            gesture?.dotLandings(scale).orEmpty().map { gesture?.stretched(it) ?: it },
                             { dotsAt != null && strip?.gesture?.dotsAt == dotsAt })
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }

@@ -1051,12 +1051,19 @@ class Haptics(private val context: Context) {
             return preferences(context).getLong(DOMINO_GAP_KEY, -1L).takeIf { it >= 0 }?.coerceIn(DOMINO_GAP_RANGE)
         }
 
-        /** Tries [words] and [gap] for the dominoes' streak; null puts that default back. Debug build only. */
-        fun tryDominoes(context: Context, words: Int?, gap: Long?) {
+        /** How much slower the dominoes' dots go, in percent of the dots' time, as the lab tried it, or null. Debug only. */
+        fun readDominoSlow(context: Context): Float? {
+            if (!debug(context)) return null
+            return preferences(context).getInt(DOMINO_SLOW_KEY, -1).takeIf { it >= 0 }?.coerceIn(DOMINO_SLOW_RANGE)?.div(100f)
+        }
+
+        /** Tries [words], [gap] and [slowPercent] for the dominoes; null puts that default back. Debug build only. */
+        fun tryDominoes(context: Context, words: Int?, gap: Long?, slowPercent: Int? = null) {
             check(debug(context)) { "Only TitanKeys Debug can try the dominoes' streak" }
             preferences(context).edit().apply {
                 if (words == null) remove(DOMINO_WORDS_KEY) else putInt(DOMINO_WORDS_KEY, words.coerceIn(DOMINO_WORDS_RANGE))
                 if (gap == null) remove(DOMINO_GAP_KEY) else putLong(DOMINO_GAP_KEY, gap.coerceIn(DOMINO_GAP_RANGE))
+                if (slowPercent == null) remove(DOMINO_SLOW_KEY) else putInt(DOMINO_SLOW_KEY, slowPercent.coerceIn(DOMINO_SLOW_RANGE))
             }.commit()
         }
 
@@ -1066,6 +1073,9 @@ class Haptics(private val context: Context) {
 
         private const val DOMINO_WORDS_KEY = "debug_domino_words"
         private const val DOMINO_GAP_KEY = "debug_domino_gap"
+        /** How much slower the lab can make the dominoes: 100% (the dots' own time) to 800%. */
+        val DOMINO_SLOW_RANGE = 100..800
+        private const val DOMINO_SLOW_KEY = "debug_domino_slow"
 
         /** The waits that the Haptics lab can try for a single flick's dots, in ms. */
         val FLICK_HOLD_RANGE = 0L..600L

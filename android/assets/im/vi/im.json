@@ -20,5 +20,19 @@
     "name": "CLDR 49 localeDisplayNames: Tiếng Việt",
     "keys": "telex",
     "words": "main_vi__experimental.combined"
-  }
+  },
+  "starters": [
+    "và",
+    "của",
+    "là",
+    "có",
+    "được",
+    "các",
+    "một",
+    "trong",
+    "cho",
+    "với",
+    "đã",
+    "không"
+  ]
 }

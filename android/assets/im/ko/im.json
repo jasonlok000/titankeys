@@ -7,7 +7,7 @@
   "script": "Kore",
   "keys": "qwerty",
   "accents": {},
-  "words": null,
+  "words": "words.combined",
   "variants": null,
   "rules": {
     "capitalise": false,
@@ -19,6 +19,20 @@
   "source": {
     "name": "CLDR 49 localeDisplayNames: 한국어",
     "keys": "hangul",
-    "words": null
-  }
+    "words": "kor_news_2022_1M-words.txt"
+  },
+  "starters": [
+    "있다",
+    "고",
+    "수",
+    "이",
+    "등",
+    "며",
+    "있는",
+    "것으로",
+    "했다",
+    "말했다",
+    "밝혔다",
+    "한"
+  ]
 }

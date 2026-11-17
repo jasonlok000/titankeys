@@ -24,5 +24,19 @@
     "name": "CLDR 49 localeDisplayNames: Slovenščina",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_sl.combined"
-  }
+  },
+  "starters": [
+    "je",
+    "in",
+    "v",
+    "na",
+    "se",
+    "so",
+    "ki",
+    "za",
+    "pa",
+    "z",
+    "s",
+    "tudi"
+  ]
 }

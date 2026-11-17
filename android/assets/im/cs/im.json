@@ -34,5 +34,19 @@
     "name": "CLDR 49 localeDisplayNames: Čeština",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_cs.combined"
-  }
+  },
+  "starters": [
+    "a",
+    "v",
+    "se",
+    "na",
+    "je",
+    "z",
+    "s",
+    "do",
+    "byl",
+    "i",
+    "ve",
+    "jako"
+  ]
 }

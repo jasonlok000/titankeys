@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Română",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_ro.combined"
-  }
+  },
+  "starters": [
+    "de",
+    "care",
+    "și",
+    "cu",
+    "în",
+    "sau",
+    "se",
+    "la",
+    "din",
+    "pe",
+    "un",
+    "despre"
+  ]
 }

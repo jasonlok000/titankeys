@@ -419,11 +419,19 @@ def build_engine(data, ident):
         head, words = read_words(data, file)
         write_words(folder, head, words)
         notices = [CLDR_NOTICE, typing, "Words: " + source.format(file=file + ".combined")]
+    if ident == "ko":
+        # Korean's words, for the choices while a word is typed (하 → 하고, 한국) and the bar: the Leipzig Corpora Collection's
+        # 2022 news, whole Hangul syllables only.
+        file = KOREAN_WORDS
+        hangul = [chr(c) for c in range(0xAC00, 0xD7A4)]
+        head, words = read_counts(data, file, "ko", hangul)
+        write_words(folder, head, words)
+        notices = [typing, "Words: " + LEIPZIG_OWN.format(file=os.path.basename(file))]
     rules = {"capitalise": ident != "ko", "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False}
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": script,
                       "keys": "qwerty", "accents": {}, "words": "words.combined" if file else None, "variants": None,
                       "rules": rules, "engine": engine,
-                      "source": {"keys": engine, "words": file + ".combined" if file else None}})
+                      "source": {"keys": engine, "words": (os.path.basename(file) if ident == "ko" else file + ".combined") if file else None}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice(notices))
 
 
@@ -481,6 +489,9 @@ def build_national(data, ident):
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
         notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
 
+
+# Korean's word list (Leipzig Corpora Collection, CC BY 4.0), in the data dir.
+KOREAN_WORDS = "leipzig/kor_news_2022_1M/kor_news_2022_1M-words.txt"
 
 # Thai: Kedmanee (TIS 820-2538), read from xkeyboard-config's symbols/th "basic" (xkb/ in the data dir, with xorgproto's
 # keysymdef.h for the characters). The Titan's 26 letter keys keep Kedmanee's letters and Shift letters where a PC keyboard
@@ -677,6 +688,115 @@ def build_hebrew(data, ident):
         notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")]))
 
 
+# Starter words (owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty"):
+# each input method's commonest words, for the bar at a sentence's start and after a word, until the user's own words take
+# over. From its own word list, or for the ones without (an engine's): Korean from FrequencyWords, Chinese from Rime's
+# essays (rime-essay LGPL-3.0, rime-cantonese CC BY 4.0), Japanese by hand (JAPANESE_STARTERS). Chinese's
+# also come in Simplified, through OpenCC's character table (Apache 2.0).
+STARTERS = 12
+STARTER_SOURCES = {
+    "yue-yale": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
+    "yue-jyutping": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
+    "zh-pinyin": ("../src/rime-essay/essay.txt", "essay"),
+    "ja": ("", "fixed"),
+}
+# Japanese has no frequency list split into words that we ship, and Mozc's costs rank homophones, not common words, so its
+# starters are picked by hand: common ways to start a sentence, for the owner to confirm.
+JAPANESE_STARTERS = ["私", "今日", "はい", "これ", "それ", "何", "今", "また", "でも", "ありがとう", "そう", "明日"]
+
+
+def is_word(word):
+    return any(unicodedata.category(c)[0] == "L" for c in word) and not any(c.isdigit() or c in ".,!?;:\"()" for c in word)
+
+
+def top_words(path, kind):
+    """The commonest words of a frequency source, commonest first."""
+    if kind == "list":
+        words = []
+        for line in open(path, encoding="utf-8"):
+            if line.startswith(" word="):
+                fields = line.strip().split(",")
+                word = fields[0][5:]
+                freq = next((int(f[2:]) for f in fields if f.startswith("f=") and f[2:].isdigit()), 0)
+                if "not_a_word=true" not in fields and "possibly_offensive=true" not in fields:
+                    words.append((word, freq))
+        return [w for w, _ in sorted(words, key=lambda w: -w[1])]
+    if kind == "counts":
+        pairs = []
+        for line in open(path, encoding="utf-8"):
+            parts = line.split()
+            if len(parts) == 2 and parts[1].isdigit():
+                pairs.append((parts[0], int(parts[1])))
+        return [w for w, _ in sorted(pairs, key=lambda w: -w[1])]
+    if kind == "essay":
+        pairs = []
+        for line in open(path, encoding="utf-8"):
+            word, _, freq = line.rstrip("\n").partition("\t")
+            if freq.isdigit():
+                pairs.append((word, int(freq)))
+        return [w for w, _ in sorted(pairs, key=lambda w: -w[1])]
+    if kind == "fixed":
+        return JAPANESE_STARTERS
+    if kind == "mozc":
+        # Mozc's dictionary: reading, left id, right id, cost, word; a lower cost is commoner. Only words that start a sentence
+        # well, by their part of speech in id.def: pronouns, interjections, adverbs and common nouns, not verb forms or particles.
+        starts = set()
+        for line in open(os.path.join(path, "id.def"), encoding="utf-8"):
+            number, _, pos = line.rstrip("\n").partition(" ")
+            if pos.startswith(("名詞,代名詞", "感動詞", "名詞,一般", "副詞")):
+                starts.add(number)
+        best = {}
+        for name in sorted(os.listdir(path)):
+            if not re.match(r"dictionary\d+\.txt$", name):
+                continue
+            for line in open(os.path.join(path, name), encoding="utf-8"):
+                parts = line.rstrip("\n").split("\t")
+                if len(parts) == 5 and parts[3].isdigit() and parts[1] in starts:
+                    best[parts[4]] = min(best.get(parts[4], 1 << 30), int(parts[3]))
+        return [w for w, _ in sorted(best.items(), key=lambda w: w[1])]
+    raise ValueError(kind)
+
+
+def simplified(data):
+    """Traditional to Simplified, character by character, from OpenCC's TSCharacters.txt (its first choice)."""
+    table = {}
+    for line in open(os.path.join(data, "..", "rime-data", "occtxt", "TSCharacters.txt"), encoding="utf-8"):
+        trad, _, simp = line.rstrip("\n").partition("\t")
+        if trad and simp:
+            table[trad] = simp.split(" ")[0]
+    return lambda word: "".join(table.get(c, c) for c in word)
+
+
+def write_starters(data):
+    """Adds "starters" (and Chinese's "startersSimplified") to every im.json there is."""
+    to_simplified = None
+    for ident in sorted(os.listdir(ASSETS)):
+        path = os.path.join(ASSETS, ident, "im.json")
+        if not os.path.isfile(path):
+            continue
+        im = json.load(open(path, encoding="utf-8"))
+        if ident in STARTER_SOURCES:
+            file, kind = STARTER_SOURCES[ident]
+            source = os.path.normpath(os.path.join(data, file)) if file else ""
+        elif im.get("words"):
+            source, kind = os.path.join(ASSETS, ident, im["words"]), "list"
+        else:
+            continue
+        starters = []
+        for word in top_words(source, kind):
+            if is_word(word) and word not in starters:
+                starters.append(word)
+            if len(starters) == STARTERS:
+                break
+        im["starters"] = starters
+        if im["script"] == "Hani":
+            to_simplified = to_simplified or simplified(data)
+            im["startersSimplified"] = [to_simplified(w) for w in starters]
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(im, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+
+
 # Input methods built by a function of their own.
 OWN = {"th": build_thai, "hi": build_hindi, "he": build_hebrew}
 
@@ -769,6 +889,11 @@ def escape(text):
 def main():
     global DATA
     data = DATA = sys.argv[1]
+    # make.py <data dir> --starters: only the starter words, for every input method there is.
+    if sys.argv[2:] == ["--starters"]:
+        write_starters(data)
+        print("starters written")
+        return
     wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(JAPANESE) + list(OWN)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
@@ -787,6 +912,7 @@ def main():
         else:
             raise SystemExit("unknown input method " + ident)
         print("built", ident)
+    write_starters(data)
     entries = write_index_and_list()
     print("index:", len(entries), "input methods")
 

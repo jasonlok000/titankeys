@@ -89,6 +89,8 @@ internal object BackupFile {
         "autocorrect_learning" to Store.Backed(lists = mapOf("kept_once_words" to Merge.KEYED_LAST_BAR)),
         "word_case" to Store.Backed(),
         "snippets" to Store.Backed(lists = mapOf("list" to Merge.SNIPPETS)),
+        // What each input method but English learned from what the user typed (LanguageLearning), as English's learned words.
+        "language_learning" to Store.Backed(),
         "emoji" to Store.Backed(lists = mapOf("recent" to Merge.RECENT_SPACE)),
         // The News switch only: Share swipes' ID, its consent and what was sent stay on this phone, as does the news itself.
         "connected" to Store.Backed(only = setOf("announcements")),

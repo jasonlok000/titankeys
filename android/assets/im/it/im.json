@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Italiano",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_it.combined"
-  }
+  },
+  "starters": [
+    "di",
+    "e",
+    "il",
+    "la",
+    "in",
+    "a",
+    "del",
+    "che",
+    "un",
+    "è",
+    "della",
+    "per"
+  ]
 }

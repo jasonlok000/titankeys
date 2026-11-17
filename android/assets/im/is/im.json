@@ -29,5 +29,19 @@
     "name": "CLDR 49 localeDisplayNames: Íslenska",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_is__experimental.combined"
-  }
+  },
+  "starters": [
+    "að",
+    "og",
+    "í",
+    "á",
+    "er",
+    "sem",
+    "til",
+    "um",
+    "við",
+    "ekki",
+    "með",
+    "en"
+  ]
 }

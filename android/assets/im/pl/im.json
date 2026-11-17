@@ -29,5 +29,19 @@
     "name": "CLDR 49 localeDisplayNames: Polski",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_pl.combined"
-  }
+  },
+  "starters": [
+    "w",
+    "i",
+    "z",
+    "na",
+    "się",
+    "do",
+    "roku",
+    "jest",
+    "a",
+    "przez",
+    "od",
+    "oraz"
+  ]
 }

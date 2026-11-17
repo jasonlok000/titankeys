@@ -28,5 +28,19 @@
     "name": "CLDR 49 localeDisplayNames: Français",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_fr.combined"
-  }
+  },
+  "starters": [
+    "de",
+    "la",
+    "et",
+    "le",
+    "à",
+    "des",
+    "en",
+    "les",
+    "du",
+    "est",
+    "un",
+    "dans"
+  ]
 }

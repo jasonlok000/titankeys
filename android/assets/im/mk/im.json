@@ -51,5 +51,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_serbian_and_montenegrin_cyrillic.kcm",
     "words": "mk_full.txt"
-  }
+  },
+  "starters": [
+    "да",
+    "не",
+    "се",
+    "е",
+    "на",
+    "го",
+    "и",
+    "што",
+    "ќе",
+    "во",
+    "за",
+    "тоа"
+  ]
 }

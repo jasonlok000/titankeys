@@ -28,5 +28,19 @@
     "name": "CLDR 49 localeDisplayNames: Türkçe",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_tr__legacy.combined"
-  }
+  },
+  "starters": [
+    "ve",
+    "bir",
+    "de",
+    "da",
+    "ile",
+    "olarak",
+    "bu",
+    "için",
+    "olan",
+    "vardır",
+    "yoktur",
+    "sonra"
+  ]
 }

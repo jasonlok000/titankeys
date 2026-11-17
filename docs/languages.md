@@ -485,6 +485,36 @@ for 買える, 景観 for 警官), the second choice or a pick away.
 only `JNI_OnLoad` was exported), and `mozc.data` 18.96 MB, 13.19 MB compressed: 16.0 MB in the APK, and 19 MB copied out on
 the phone on the first use. The whole debug APK is 167.4 MB, under Google Play's 200 MB.
 
+## The bar's words in every language
+
+The owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty at all times
+unless it's like password or whatever. if not hard then it should be learning from the user too."
+
+- **Starters:** each input method's commonest words, in its `im.json` (`"starters"`), written by `tools/im/make.py
+  --starters`: from its own word list; Korean from FrequencyWords; Cantonese and Mandarin from Rime's essays, with a
+  Simplified copy through OpenCC's character table (`"startersSimplified"`, for that variant); Japanese picked by hand (Mozc's
+  costs rank homophones, not common words).
+- **On the bar** (`BarWords`, through `LanguageWords`): at a sentence's start, the user's own sentence starts and then the
+  starters, with a capital where the script has them; after a word, the words the user typed after it and then the
+  starters; while a word is typed, the user's words that start with it and then the list's. Nothing to offer leaves the bar
+  empty; it never shows English. Passwords and the other fields without words keep an empty bar, as before. English is
+  unchanged: its own engine answers.
+- **Learning** (`LanguageLearning`): every word kept, with the one before it or a sentence start, per input method. A word
+  the list lacks counts from its second use, so a typo typed once never shows. Bounded (2,000 words, 5,000 pairs, 200
+  sentence starts; the least used go). Kept in the `language_learning` store, one key per input method, written every five
+  words and as another is switched to: on the phone only, in the backup, kept by Reset most things and cleared by Reset
+  literally everything, as English's learned words are. Learn new words I type turns it off for every language.
+- Chinese and Japanese: the starters show on an empty bar; after a pick, Rime's and Mozc's own next words show (D's work).
+- **Next-word tables** (J's, from the Leipzig Corpora Collection): `pairs.txt` in an input method's folder (`pairs-pt-BR.txt`
+  for a variant), in English's `en_pairs.txt` format: "first second<TAB>count", '#' lines for the source, `<s>` for a
+  sentence's start, lower case where the script has case, the top 8 next words per first word. `NextWords` reads it with the
+  word list on a switch and frees it with the list; the bar puts its next words after the user's own and before the starters.
+  An input method without one has the starters and the user's own, as before.
+- **Korean** has a word list now: the Leipzig Corpora Collection's 2022 Korean news (CC BY 4.0), the 100,000 commonest
+  words of whole syllables. Its engine offers the words that start with the word so far, the syllables written and the one
+  being built, by its letters: ㅎㅏ offers 하고 and 한국 (a lone initial matches as the initial its syllables split into). A
+  choice writes the rest of the word and a space.
+
 ## Korean and Vietnamese
 
 Both are engines of TitanKeys' own, in plain Kotlin and checked on the JVM (`tests/languages`), named in `im.json` as

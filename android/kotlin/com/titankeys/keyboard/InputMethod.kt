@@ -65,6 +65,12 @@ data class InputMethod(
         val apostrophes: Boolean = true,
         /** The script writes no spaces between words (Thai): the word being typed is found in the word list ([WordBreak]). */
         val wordBreak: Boolean = false,
+        /**
+         * What a quick second Space types in place of the first: the language's full stop, with the space after it when the
+         * language puts one ("। " in Hindi), or none (Chinese and Japanese: "。"). Empty where the script has no full stop
+         * (Thai): two Spaces stay two spaces. The Sentence spaces setting doubles a full stop's space.
+         */
+        val fullStop: String = FULL_STOP,
     )
 
     val isEnglish get() = id == ENGLISH_ID
@@ -97,6 +103,8 @@ data class InputMethod(
 
     companion object {
         const val ENGLISH_ID = "en"
+        /** The full stop a double space types unless an input method says otherwise ([Rules.fullStop]). */
+        const val FULL_STOP = ". "
         /** The most input methods on at once: the overlay's places, W to O. */
         const val MAX_ON = 8
         /** The longest label the overlay can show over its key. */
@@ -157,7 +165,7 @@ data class InputMethod(
             }
             val rules = (root["rules"] as? Map<*, *>)?.let {
                 Rules(it["capitalise"] as? Boolean ?: true, it["sentenceEnd"] as? String ?: ".?!", it["openingMarks"] as? String ?: "",
-                    it["apostrophes"] as? Boolean ?: true, it["wordBreak"] as? Boolean ?: false)
+                    it["apostrophes"] as? Boolean ?: true, it["wordBreak"] as? Boolean ?: false, it["fullStop"] as? String ?: FULL_STOP)
             } ?: Rules()
             val (engine, engineArg) = when (val value = root["engine"]) {
                 null -> null to null

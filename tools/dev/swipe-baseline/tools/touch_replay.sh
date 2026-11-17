@@ -33,7 +33,7 @@ with open(out, 'w') as w:
 PY
 "$K/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$K/lib/kotlin-stdlib.jar:$AJ" -d "$OUT/cls" \
   "$S/engine/Swipe.java" "$S/engine/Calibration.java" "$S/engine/TouchAlignment.java" \
-  "$S/keyboard/Contact.kt" "$S/keyboard/SwipePieces.kt" "$S/keyboard/DeleteSwipe.kt" "$S/keyboard/Layout.kt" "$S/keyboard/Touchpad.kt" "$REPLAY" 2>&1 | grep -v "^warning" | head -20 || true
+  "$S/keyboard/Contact.kt" "$S/keyboard/SwipePieces.kt" "$S/keyboard/DeleteSwipe.kt" "$S/keyboard/WordBreaks.kt" "$S/keyboard/Layout.kt" "$S/keyboard/Touchpad.kt" "$REPLAY" 2>&1 | grep -v "^warning" | head -20 || true
 javac -nowarn -cp "$AJ" -d "$OUT/cls" "$S/engine/Swipe.java" "$S/engine/Calibration.java" "$S/engine/TouchAlignment.java" 2>&1 | grep -v "^Note" || true
 java -cp "$OUT/cls:$K/lib/kotlin-stdlib.jar:$AJ" com.titankeys.keyboard.ReplayKt "$OUT/raw.txt" "$OUT/result.txt" "$TAP" 2>&1 | tail -3
 wc -l "$OUT/result.txt"

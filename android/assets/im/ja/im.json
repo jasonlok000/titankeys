@@ -13,7 +13,8 @@
     "capitalise": false,
     "sentenceEnd": "。？！.?!",
     "openingMarks": "",
-    "apostrophes": false
+    "apostrophes": false,
+    "fullStop": "。"
   },
   "engine": {
     "mozc": "oss"

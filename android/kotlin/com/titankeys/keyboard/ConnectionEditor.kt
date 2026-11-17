@@ -148,10 +148,14 @@ class ConnectionEditor(
         removedLength = length
     }
 
+    /** The current input method's word breaks, for scripts written without spaces ([WordBreaks]): the keyboard sets it. */
+    var wordBreaker: () -> WordBreaker? = { null }
+
     /** What a word delete would take now, without taking it: see [wordToDelete]. Null where the field gives no text. */
     fun wordToTake(): String? {
         val connection = connection() ?: return null
-        return wordToDelete({ connection.getTextBeforeCursor(it, 0)?.toString() }, connection.getTextAfterCursor(1, 0)?.toString())
+        return wordToDelete({ connection.getTextBeforeCursor(it, 0)?.toString() }, connection.getTextAfterCursor(1, 0)?.toString(),
+            wordBreaker())
     }
 
     override fun delete(word: Boolean, selectionStart: Int, selectionEnd: Int): Int? {

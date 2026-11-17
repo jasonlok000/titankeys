@@ -791,6 +791,9 @@ class TitanKeysIme : InputMethodService() {
             }
         }
         composer.commaSpace = { TypingSettings.commaSpace(this) }
+        // Each language's own full stop for a double space, and its own words for the gestures that take one (owner, 2026-11-16).
+        composer.fullStopMark = { languages.current.rules.fullStop }
+        editor.wordBreaker = { IcuWords.of(languages.current.javaLocale) }
         composer.sentenceCapitals = { TypingSettings.autoCapitalise(this) && languages.current.rules.capitalise }
         // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
         composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
@@ -2832,7 +2835,9 @@ class TitanKeysIme : InputMethodService() {
      * word before the cursor past marks and spaces, for a triple tap. See [WordSelection.atOrBefore].
      */
     private fun selectWord(inFront: Boolean = false, nothing: () -> Unit = {}) = changeSelection { text, start, end, _ ->
-        val word = if (inFront) WordSelection.atOrBefore(text, start, end) else WordSelection.at(text, start, end)
+        // In Chinese, Japanese or Thai a run of letters can be a sentence: the language's word breaks pick one word in it.
+        val breaks = IcuWords.of(languages.current.javaLocale)
+        val word = if (inFront) WordSelection.atOrBefore(text, start, end, breaks) else WordSelection.at(text, start, end, breaks)
         haptics.play(Haptic.picked(found = word != null))
         if (word == null) {
             nothing()
@@ -3211,6 +3216,19 @@ class TitanKeysIme : InputMethodService() {
                 // A guide slide that doesn't teach this yet: the swipe or the flick does nothing, and the slide says so, once.
                 if (refuse(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
+                    // A code being built (Chinese, Japanese, Korean's syllable, Telex's word) goes whole, and the field stays as it
+                    // is (owner: "a flick should also delete the entire key code too"); a second flick deletes from the field.
+                    // Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
+                    val choices = openPicker() as? LanguagePicker.Choices
+                    if (choices != null) {
+                        languages.engine?.reset()
+                        closePicker()
+                        if (choices.state.composing) {
+                            haptics.play(Haptic.DeleteFlick)
+                            KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
+                            return
+                        }
+                    }
                     val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                     // A selection is something to delete, and goes whole (bug hunt 2.1, #7).
                     val selected = selectionToDelete()

@@ -59,7 +59,8 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         if (prefix.isEmpty()) {
             val start = com.titankeys.engine.SwipeTyping.startsSentence(before)
             val previous = if (start) null else previousWord(before.trimEnd())
-            result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, rules))
+            result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, rules,
+                spelling = { word -> list()?.spelling(word) ?: word }))
             return
         }
         val completions = BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), rules)
@@ -101,7 +102,8 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     override fun known(word: String) =
         if (other) list()?.contains(word) == true || word in starters || learning?.knows(word) == true else english.known(word)
     override fun sentenceStarts(): List<String> =
-        if (other) BarWords.next(null, learning, starters, capitals = false, table = nextWords, rules = rules) else english.sentenceStarts()
+        if (other) BarWords.next(null, learning, starters, capitals = false, table = nextWords, rules = rules,
+            spelling = { word -> list()?.spelling(word) ?: word }) else english.sentenceStarts()
     override fun typed(word: String, rememberCase: Boolean) { if (!other) english.typed(word, rememberCase) }
     override fun untyped(word: String) {
         if (!other) return english.untyped(word)

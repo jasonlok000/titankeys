@@ -1666,6 +1666,9 @@ class TitanKeysIme : InputMethodService() {
         // The bar may only now be set up for this field, so the wait starts once it is. A restart of the same field is no input: it
         // keeps the period and any game, unless none is running, as after the keyboard was hidden (bug hunt #34).
         if (!restarting || !idleClock.running) main.post { wakeIdleBar() }
+        // The hold hint also shows as a field starts, not only as the input method changes in one: one picked in Settings, or
+        // loaded with the keyboard away, is never changed in a field, and its hint never showed. Once ever, as before.
+        main.post { if (editing) showHoldHint() }
         offerClip()
         // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
         // for the app in front as it comes in, so this reads it a moment later and again seconds later, if the keyboard is

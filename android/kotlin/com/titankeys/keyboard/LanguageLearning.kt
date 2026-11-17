@@ -165,9 +165,10 @@ object BarWords {
      * then the table's.
      */
     fun next(previous: String?, learning: LanguageLearning?, starters: List<String>, capitals: Boolean,
-             table: NextWords? = null, rules: WordRules = WordRules.NONE): List<String> {
+             table: NextWords? = null, rules: WordRules = WordRules.NONE, spelling: (String) -> String = { it }): List<String> {
         val learned = if (previous == null) learning?.sentenceStarts().orEmpty() else learning?.next(previous).orEmpty()
-        val listed = table?.after(previous).orEmpty()
+        // The table keeps its words in lower case: each takes the word list's own spelling, so nouns and names keep their capitals.
+        val listed = table?.after(previous).orEmpty().map(spelling)
         // At a sentence's start the starters come before the table's: they're the same corpus's sentence starts, without its
         // datelines, page labels and names (make.py's STARTER_SKIP), where the table counts every sentence as it stands.
         val ordered = if (previous == null) learned + starters + listed else learned + listed + starters
@@ -262,8 +263,16 @@ class NextWords private constructor(
             val nextStart = IntArray(firstCount + 1).also { buffer.asIntBuffer().get(it) }
             buffer.position(buffer.position() + 4 * (firstCount + 1))
             val nexts = IntArray(nextCount).also { buffer.asIntBuffer().get(it) }
+            // A damaged file fails here, where InputMethodList catches it, not later as a word is looked up in it (review,
+            // 2026-11-17: a start past the end loaded, then threw while typing).
+            require(starts(wordStart, byteCount) && starts(nextStart, nextCount) && firstCount <= wordCount &&
+                nexts.all { it in 0 until wordCount }) { "A damaged next-word table" }
             return NextWords(words, wordStart, nextStart, nexts).also { live[it] = "${it.size} first words" }
         }
+
+        /** [starts] begin at 0, never go back, and end at [end]: a table's offsets, as the tool writes them. */
+        internal fun starts(starts: IntArray, end: Int): Boolean =
+            starts.isNotEmpty() && starts[0] == 0 && starts.last() == end && (1 until starts.size).all { starts[it] >= starts[it - 1] }
 
         /** The readable form, English's en_pairs.txt format ("first second<TAB>count" lines), for tests and small tables. */
         fun read(lines: Sequence<String>): NextWords {

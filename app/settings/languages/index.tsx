@@ -31,15 +31,26 @@ export const languagesOn = (settings: State): LanguageRow[] => {
   return rows.filter(row => row.on.length > 0).sort((a, b) => order.indexOf(a.language.id) - order.indexOf(b.language.id));
 };
 
+/**
+ * Scripts whose letters Ink can't place yet: it draws text without shaping, so Devanagari's vowel signs would sit after
+ * their letter (हिन्दी). Their names show in English until it can (docs/languages.md, "Hindi").
+ */
+const UNSHAPED = new Set(["Deva"]);
+
+/** The name Settings shows for a language or an input method: its own, or English's where Ink can't draw its script. */
+export const shownName = (name: string, nameEnglish: string, script: string) => UNSHAPED.has(script) ? nameEnglish : name;
+
 /** Settings' value for Languages: the names of the ones that are on, in order. */
-export const languagesLabel = (settings: State) => languagesOn(settings).map(row => row.language.name).join(", ");
+export const languagesLabel = (settings: State) =>
+  languagesOn(settings).map(({ language }) => shownName(language.name, language.nameEnglish, language.script)).join(", ");
 
 /** Under a language's name: its English name, marked experimental where it is. F: draft. */
 export const languageSubtitle = (language: Language) =>
   language.experimental ? `${language.nameEnglish} · experimental` : language.nameEnglish === language.name ? undefined : language.nameEnglish;
 
 const SCRIPTS: Record<string, string> = {
-  Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Geor: "Georgian", Kore: "Korean", Hani: "Chinese",
+  Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Geor: "Georgian", Hebr: "Hebrew", Deva: "Devanagari", Thai: "Thai",
+  Kore: "Korean", Hani: "Chinese",
   // F: draft.
   Jpan: "Japanese",
 };
@@ -57,7 +68,8 @@ export default function LanguagesPage() {
   const rows = languagesOf(result.data);
   const on = languagesOn(result.data);
   const open = (row: LanguageRow) => navigate({ path: "/settings/languages/language", params: { language: row.language.id } });
-  const row = (each: LanguageRow) => <Row key={each.language.id} title={each.language.name}
+  const row = (each: LanguageRow) => <Row key={each.language.id}
+    title={shownName(each.language.name, each.language.nameEnglish, each.language.script)}
     subtitle={each.on.length > 1 ? each.on.map(im => im.name).join(", ") : languageSubtitle(each.language)}
     endIcon={chevronRight} onPress={() => open(each)} />;
   const groups = new Map<string, LanguageRow[]>();

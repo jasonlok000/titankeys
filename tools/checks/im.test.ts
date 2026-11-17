@@ -71,7 +71,8 @@ test("each names where its letters and words come from, under a licence that can
   for (const im of ims) {
     const notice = read(`${folder}/${im.id}/NOTICE`);
     // An engine's input method takes its letters from the engine (Rime's schemas, credited in native/rime/SOURCES.md), not CLDR.
-    const cldr = im.engine ? true : notice.includes("CLDR");
+    // Thai's come from its national standard, Kedmanee (TIS 820-2538), as xkeyboard-config gives it.
+    const cldr = im.engine ? true : notice.includes("CLDR") || notice.includes("TIS 820-2538");
     expect({ id: im.id, allowed: ALLOWED.test(notice), cldr }).toEqual({ id: im.id, allowed: true, cldr: true });
   }
 });

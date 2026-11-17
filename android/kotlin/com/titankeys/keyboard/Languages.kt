@@ -40,6 +40,7 @@ internal class Languages(
             if (field == value) return
             field = value
             words.other = !current.isEnglish
+            words.wordBreak = current.rules.wordBreak
         }
 
     /** The input method typing now. English until the settings say otherwise, and always in the guide. */
@@ -180,6 +181,7 @@ internal class Languages(
         loaded = method
         list = words
         this.words.other = !current.isEnglish
+        this.words.wordBreak = current.rules.wordBreak
         changed(method)
     }
 }

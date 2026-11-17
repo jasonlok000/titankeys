@@ -44,6 +44,8 @@ interface Words {
 
     fun recognise(swipe: Swipe, context: String, personalise: Boolean, result: (Recognition) -> Unit)
     fun complete(before: String, cancelled: AtomicBoolean, sentenceCapitalisation: Boolean, result: (List<String>) -> Unit)
+    /** The start of the word being typed at the end of [before], which a picked suggestion replaces. */
+    fun prefix(before: String): String = TypedPredictions.prefix(before)
     fun prepare(text: String, cancelled: AtomicBoolean)
     fun lookAlike(context: String, word: String, next: String, result: (String?) -> Unit)
     fun allowed(word: String): Boolean
@@ -659,7 +661,10 @@ class Composer(
         fullStop = null
         var anchor = snapshot()
         if (!letterTap && text == ":" && expandShortcode(anchor)) return
-        val letter = !letterTap && text.codePointCount(0, text.length) == 1 && Character.isLetterOrDigit(text.codePointAt(0))
+        // Thai's vowels and tones, and Devanagari's signs, are marks, typed as keys of their own: they're part of the word too.
+        val letter = !letterTap && text.codePointCount(0, text.length) == 1 && text.codePointAt(0).let { code ->
+            Character.isLetterOrDigit(code) || Character.getType(code).let { it == Character.NON_SPACING_MARK.toInt() ||
+                it == Character.COMBINING_SPACING_MARK.toInt() } }
         if (!letter) {
             if (!unspaceAddress(text)) return
             anchor = snapshot()
@@ -1931,7 +1936,7 @@ class Composer(
             return
         }
         if (offerExpansions(anchor, before)) return
-        val lastWord = TypedPredictions.prefix(before.dropLast(1))
+        val lastWord = words.prefix(before.dropLast(1))
         val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
         val context = if (trailingSpace) before.dropLast(1) else before
         // Completions wait for the models, which can take seconds to load. An emptied field shows its starts at once, as a chat
@@ -1944,7 +1949,7 @@ class Composer(
         completionSnapshot = anchor
         words.complete(context, cancelled, field.sentenceCapitalisation && autoCapitalise()) { found ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
-            val prefix = TypedPredictions.prefix(context)
+            val prefix = words.prefix(context)
             val guided = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))
             // While a word of a pair is being typed, its other form waits in the bar's left place (#73): a choice, never a fix. Not
             // in the guide, where that place may hold the guide's word.

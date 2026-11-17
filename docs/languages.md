@@ -28,10 +28,12 @@ From the study's ranking:
 - **Chinese through Rime:** Cantonese in Yale, the owner's input method and the first Chinese one, then Jyutping, and
   Mandarin in Pinyin, with the Chinese variant setting.
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
-- **Thai** waits for a third layer of keys ("To check while building").
+- **Thai** (experimental), Kedmanee with a third layer of held keys and a word break for suggestions ("Thai" below).
+- **Hindi** (experimental), typed by sound through Wikimedia's jquery.ime rules ("Hindi" below).
+- **Hebrew** (experimental), the first right-to-left language ("Right to left: Hebrew" below).
 - **Japanese through Mozc,** experimental, on Chinese's bar ("Japanese" below; owner, 2026-11-16: "starting with japanese
   hindi thai etc, yes go ahead").
-- **Not in 3.0:** right-to-left scripts, Indic scripts, handwriting, swiping and a next-word model in other
+- **Not in 3.0:** handwriting, swiping and a next-word model in other
   languages, and translating the app, the guide and the playground.
 
 The order: Spanish, French and German first to prove the framework; the other big Latin languages; Chinese alongside; then
@@ -332,6 +334,59 @@ The settings live in `typing_settings` with the others: `inputMethods` (the orde
   picker's choices. A state that isn't `handled` may still commit: the keyboard writes that first, then handles the key as
   usual (Korean's syllable before a space, Rime's code before a capital). Data-only input methods use no engine.
 
+## Thai
+
+- **Keys: Kedmanee** (TIS 820-2538), read by `tools/im/make.py` from xkeyboard-config's `symbols/th`. The Titan's 26 letter
+  keys keep Kedmanee's letter and Shift letter. The 21 keys a PC has and the Titan doesn't (the number row, the punctuation
+  keys, ` and \) are a third layer: holding a letter key types the missing key's letter, and Shift + hold its Shift letter.
+  The number row sits over Q to P, then S and D; backslash on A, the bracket keys on F and G, ; and ' on H and J, ` on Z,
+  and , . / on B, N and M. An `im.json` key is then a list, `[letter, Shift, held, Shift held]`, as Kedmanee uses /.
+  A held Thai key types its third letter whatever hold for symbols is set to; Alt keeps its symbols.
+- **Measured** (`python3 -I tools/im/measure.py <data> th`): all 94 of Kedmanee's places are on the keys; every one of the
+  word list's 87,336 words can be typed; 27.1% of key presses are holds and 9.6% use Shift, weighted by each word's count.
+- **Words:** PyThaiNLP's list (CC0), via HeliBoard's aosp-dictionaries. Thai writes no spaces between words, so the word
+  being typed is found in the list (`WordBreak`, `"wordBreak": true` in `rules`): the run of letters before the cursor is
+  split into the fewest words, and the last piece is the one the bar completes. After one of the 2,000 commonest words,
+  `tests/languages` finds the next one 97.8% of the time when whole and 84.3% at any start (a letter or two may also
+  continue the word before: แม้ + น is แม้น). Folding for the bar now keeps marks outside U+0300 to U+036F, so Thai's
+  vowels and tones stay part of a word.
+- No sentence capitals or apostrophes. Settings shows ไทย with Noto Sans Thai's letters; Ink places no marks, so only names.
+
+## Hindi
+
+- **Typing by sound:** Wikimedia's jquery.ime transliteration rules (`hi-transliteration`, GPL-3.0), read by
+  `tools/im/make.py` into `android/assets/im/hi/rules.json` and run by the keyboard's own rule runner (`keyboard/Rules.kt`,
+  `"engine": {"rules": "rules.json"}`): each key is added to the word's last letters, and the first rule that matches the
+  end rewrites them, as jquery.ime does (namaste is नमस्ते). The same runner takes any other script's rule file later.
+- **The word being typed** is the engine's code, on the bar, worked out again from the keys, so Backspace takes the last key
+  off. Space goes through the rules too, so a word's last virama goes (agar is अगर, agar~ keeps it), as jquery.ime does.
+  The word list's words that start with it are the choices, as Telex's are. Shift letters are their own sounds (namaH,
+  maChiyoM), so there are no sentence capitals.
+- **Measured** (`tests/languages`): jquery.ime's own Hindi test cases pass 100 of 101 when exported to `$HI_FIXTURES` (the
+  one left is a browser's line break, \r written as \n); typing the 300 commonest words by sound, a search finds keys
+  for 290 (96.7%), 1.17 keys a letter. The ones left need chandrabindu or nukta keys the search doesn't try.
+- **Words:** FrequencyWords' Hindi (CC BY-SA 4.0), 20,026 words. HeliBoard's Hindi list says only "GPLv2", which may not
+  combine with TitanKeys' GPL-3.0, so it isn't used.
+- **Its name:** Ink draws text without shaping, so हिन्दी's vowel sign would sit after its letter. Settings shows Devanagari
+  names in English ("Hindi") until it can (`UNSHAPED` in `app/settings/languages.tsx`); Android's own list shows हिन्दी.
+
+## Right to left: Hebrew
+
+- **Keys: SI-1452,** read by `tools/im/make.py` from xkeyboard-config's `symbols/il`: 24 of its 27 letters where a PC has
+  them. The three on keys the Titan lacks: ת (the comma key) on Q, in place of the standard's /, as it's common; the
+  finals ף and ץ (; and .) held on their own letters, P and M. / is held on Q. Shift types the same letter, as Hebrew has no
+  capitals (the standard's Shift gives Latin ones), and W types the geresh ', part of a word (צ'יפס).
+- **Measured** (`python3 -I tools/im/measure.py <data> he`): all 27 letters on the keys; every one of the word list's
+  100,000 words can be typed; 0.4% of key presses are holds (the two finals), weighted by each word's count.
+- **Words:** FrequencyWords' Hebrew (CC BY-SA 4.0), the 100,000 commonest.
+- **The bar:** right to left, the second best word goes on the right, where reading starts, and the third on the left; the
+  best stays in the middle (`BarOrder`, `Strip.rightToLeft`, set as the input method changes).
+- **Steering:** Android moves the cursor visually, so the arrow keys already go the finger's way. The keyboard peeks at the
+  next letter to feel spaces and the text's ends, and now peeks on the side the cursor really goes: in a paragraph whose
+  first letter reads right to left, a step right goes back in the text (`RightToLeft`).
+- **Not yet:** the word menu's buttons keep their left-to-right order; mixed Hebrew and Latin in one line follows Android.
+- Android shapes and orders the letters; the keyboard only sends them. Settings shows עברית from Noto Sans Hebrew's letters.
+
 ## Japanese
 
 Japanese types through Mozc, Google's open-source engine (BSD-3-Clause), as the engines study recommends
@@ -470,10 +525,5 @@ can drop to 50,000 words (−11 MB), or the word lists can move into an install-
   (Apache 2.0), Macedonian and Bosnian come from FrequencyWords (CC BY-SA 4.0), and Georgian from the Leipzig Corpora
   Collection's kat_newscrawl_2016_1M (CC BY 4.0). FrequencyWords' Georgian list is mis-encoded, Macedonian's AOSP-format
   list names no licence, and HeliBoard's Bosnian list has no real counts.
-- **Thai:** Android has no Thai layout file; the Kedmanee layout puts 22 of its letters on the number row and punctuation
-  keys, which the Titan doesn't have. On 26 keys with Shift they'd be held, as Cyrillic's few are, but they include ม ล ง
-  ว ต บ ค, so about a quarter of Thai typing would be holds (PyThaiNLP's word list, CC0). Thai needs a third layer first:
-  a key or a held key that gives the number row's and punctuation keys' letters, as `"key": "base/shift/third"`. Thai's
-  vowel and tone marks also aren't letters to Java and Python (`isLetter`), which the generator and the checks assume.
 - How rime-cantonese's tones as letters (v, x, q) feel to the owner, who may type tones as digits.
 - The Rime test on the phone: its speed and that the compiled tables are reused (`~/build/lang/rime-test`).

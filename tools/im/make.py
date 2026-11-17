@@ -482,6 +482,204 @@ def build_national(data, ident):
         notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
 
 
+# Thai: Kedmanee (TIS 820-2538), read from xkeyboard-config's symbols/th "basic" (xkb/ in the data dir, with xorgproto's
+# keysymdef.h for the characters). The Titan's 26 letter keys keep Kedmanee's letters and Shift letters where a PC keyboard
+# has them. The 21 keys the Titan doesn't have go on a third layer: holding a letter key types the missing key's letter,
+# with Shift its Shift letter. The number row goes over Q to P (and on to S and D); the rest sit on the rows below, in
+# order.
+THAI_LETTER_KEYS = dict(zip(KEYS, ["AC01", "AB05", "AB03", "AC03", "AD03", "AC04", "AC05", "AC06", "AD08", "AC07", "AC08",
+                                   "AC09", "AB07", "AB06", "AD09", "AD10", "AD01", "AD04", "AC02", "AD05", "AD07", "AB04",
+                                   "AD02", "AB02", "AD06", "AB01"]))
+THAI_THIRD = {"q": "AE01", "w": "AE02", "e": "AE03", "r": "AE04", "t": "AE05", "y": "AE06", "u": "AE07", "i": "AE08",
+              "o": "AE09", "p": "AE10", "s": "AE11", "d": "AE12", "a": "BKSL", "f": "AD11", "g": "AD12", "h": "AC10",
+              "j": "AC11", "z": "TLDE", "b": "AB08", "n": "AB09", "m": "AB10"}
+THAI_NOTICE = ("Key layout: Kedmanee (Thai Industrial Standard TIS 820-2538), as xkeyboard-config's symbols/th gives it "
+               "(https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config), with the keys the Titan doesn't have held "
+               "on its letter keys.")
+THAI_WORDS = ("Words: PyThaiNLP's corpus (https://github.com/PyThaiNLP/pythainlp), via HeliBoard's aosp-dictionaries "
+              "(main_th.combined), CC0 1.0.")
+
+
+def read_xkb(data, layout="basic", file="symbols-th"):
+    """Each xkb key's characters in [layout] (base, Shift), from the keysyms' Unicode code points in keysymdef.h."""
+    codes = {}
+    for line in open(os.path.join(data, "xkb", "keysymdef.h"), encoding="utf-8"):
+        m = re.match(r"#define XK_(\w+)\s+0x[0-9a-f]+\s*/\*[ (]*U\+([0-9A-F]{4,6})", line)
+        if m:
+            codes[m.group(1)] = chr(int(m.group(2), 16))
+    text = open(os.path.join(data, "xkb", file), encoding="utf-8").read()
+    block = re.search(r'xkb_symbols "%s" \{(.*?)\n\};' % layout, text, re.S).group(1)
+    keys = {}
+    for m in re.finditer(r"key <(\w+)>\s*\{\[\s*([^\]]+)\]\}", block):
+        keys[m.group(1)] = [xkb_char(codes, name.strip()) for name in m.group(2).split(",")]
+    return keys
+
+
+def xkb_char(codes, name):
+    """A keysym's character: by its name in keysymdef.h, or U05F3 as a code point; none is nothing."""
+    if name == "none":
+        return ""
+    if re.fullmatch(r"U[0-9A-Fa-f]{4,6}", name):
+        return chr(int(name[1:], 16))
+    return codes[name]
+
+
+def thai_keys(data):
+    xkb = read_xkb(data)
+    keys = {}
+    for k in KEYS:
+        base, shift = xkb[THAI_LETTER_KEYS[k]]
+        third = xkb[THAI_THIRD[k]] if k in THAI_THIRD else []
+        keys[k] = [base, shift] + third
+    return keys
+
+
+def build_thai(data, ident):
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    head, words = read_words(data, "main_th")
+    write_words(folder, head, words)
+    write_im(folder, {"id": ident, "name": cldr_name(data, "th"), "nameEnglish": "Thai", "label": "TH", "locale": "th",
+                      "script": "Thai", "keys": thai_keys(data), "accents": {}, "words": "words.combined", "variants": None,
+                      "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False,
+                                "wordBreak": True},
+                      "engine": None,
+                      "source": {"letters": "Kedmanee (TIS 820-2538)", "keys": "xkeyboard-config symbols/th basic",
+                                 "words": "main_th.combined"}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(notice([THAI_NOTICE, THAI_WORDS]))
+
+
+# Hindi: Wikimedia's jquery.ime transliteration rules (jquery.ime/hi-transliteration.js in the data dir, GPL-3.0), run by
+# the keyboard's Rules engine, and FrequencyWords' Hindi words.
+HINDI_NOTICE = ("Typing: Wikimedia's jquery.ime, hi-transliteration (https://github.com/wikimedia/jquery.ime, "
+                "rules/hi/hi-transliteration.js) by Junaid P V, GNU GPL 3.0.")
+
+
+def js_values(text, start):
+    """The JavaScript literal at [start] in [text]: strings, lists of them and nested lists, with comments between."""
+    i = start
+
+    def skip():
+        nonlocal i
+        while i < len(text):
+            if text[i] in " \t\r\n,":
+                i += 1
+            elif text.startswith("//", i):
+                i = text.index("\n", i)
+            elif text.startswith("/*", i):
+                i = text.index("*/", i) + 2
+            else:
+                return
+
+    def value():
+        nonlocal i
+        skip()
+        if text[i] == "[":
+            i += 1
+            out = []
+            while True:
+                skip()
+                if text[i] == "]":
+                    i += 1
+                    return out
+                out.append(value())
+        quote = text[i]
+        if quote not in "'\"":
+            raise SystemExit("hi-transliteration.js: unexpected %r at %d" % (text[i], i))
+        i += 1
+        out = []
+        while text[i] != quote:
+            c = text[i]
+            if c == "\\":
+                n = text[i + 1]
+                i += 2
+                if n == "u":
+                    out.append(chr(int(text[i:i + 4], 16)))
+                    i += 4
+                else:
+                    out.append({"n": "\n", "r": "\r", "t": "\t", "0": "\0"}.get(n, n))
+                continue
+            out.append(c)
+            i += 1
+        i += 1
+        return "".join(out)
+
+    return value()
+
+
+def read_jquery_ime(data, file):
+    text = open(os.path.join(data, "jquery.ime", file), encoding="utf-8").read()
+    number = lambda key: int(re.search(r"\b%s:\s*(\d+)" % key, text).group(1))
+    patterns = js_values(text, text.index("[", text.index("patterns:")))
+    return {"maxKeyLength": number("maxKeyLength"), "contextLength": number("contextLength"), "patterns": patterns}
+
+
+def build_hindi(data, ident):
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    rules = read_jquery_ime(data, "hi-transliteration.js")
+    with open(os.path.join(folder, "rules.json"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(rules, f, ensure_ascii=False, indent=0)
+        f.write("\n")
+    # Devanagari's letters and signs (CLDR's exemplars leave out the vowel signs, which aren't alphabetic to Python), not its
+    # digits or dandas.
+    letters = [chr(c) for c in range(0x0900, 0x0980) if not 0x0964 <= c <= 0x096F and unicodedata.category(chr(c))[0] in "LM"]
+    file = "frequencywords/hi_full.txt"
+    head, words = read_counts(data, file, "hi", letters)
+    write_words(folder, head, words)
+    write_im(folder, {"id": ident, "name": cldr_name(data, "hi"), "nameEnglish": "Hindi", "label": "HI", "locale": "hi",
+                      "script": "Deva", "keys": "qwerty", "accents": {}, "words": "words.combined", "variants": None,
+                      # Shift letters are their own sounds (namaH, maChiyoM), so no sentence capitals.
+                      "rules": {"capitalise": False, "sentenceEnd": ".?!।", "openingMarks": "", "apostrophes": False},
+                      "engine": {"rules": "rules.json"},
+                      "source": {"keys": "jquery.ime hi-transliteration", "words": os.path.basename(file)}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
+        notice([CLDR_NOTICE, HINDI_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="hi_full.txt")]))
+
+
+# Hebrew: SI-1452, read from xkeyboard-config's symbols/il "basic" (xkb/ in the data dir). Its letters sit on the Titan's
+# letter keys where a PC has them; Shift types the same letter, as Hebrew has no capitals (the standard's Shift gives Latin
+# capitals). Three letters are on keys the Titan lacks: ת (the comma key) goes on Q in place of /, and the final forms ף and
+# ץ (; and .) are held on their own letters, P and M; / is held on Q.
+HEBREW_THIRD = {"q": "/", "p": "ף", "m": "ץ"}
+HEBREW_ON_Q = "ת"
+HEBREW_NOTICE = ("Key layout: SI-1452, as xkeyboard-config's symbols/il gives it "
+                 "(https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config), with ת on Q and the final ף and ץ held "
+                 "on P and M.")
+
+
+def hebrew_keys(data):
+    xkb = read_xkb(data, file="symbols-il")
+    keys = {}
+    for k in KEYS:
+        base = xkb[THAI_LETTER_KEYS[k]][0]
+        if k == "q":
+            base = HEBREW_ON_Q
+        held = HEBREW_THIRD.get(k)
+        keys[k] = [base, base, held, held] if held else base
+    return keys
+
+
+def build_hebrew(data, ident):
+    folder = os.path.join(ASSETS, ident)
+    os.makedirs(folder, exist_ok=True)
+    file = "frequencywords/he_full.txt"
+    letters = [chr(c) for c in range(0x05D0, 0x05EB)] + ["'"]
+    head, words = read_counts(data, file, "he", letters)
+    write_words(folder, head, words)
+    write_im(folder, {"id": ident, "name": cldr_name(data, "he"), "nameEnglish": "Hebrew", "label": "HE", "locale": "he",
+                      "script": "Hebr", "keys": hebrew_keys(data), "accents": {}, "words": "words.combined", "variants": None,
+                      # Geresh, typed as ', is part of a word (צ'יפס).
+                      "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": True},
+                      "engine": None,
+                      "source": {"keys": "xkeyboard-config symbols/il basic", "words": os.path.basename(file)}})
+    open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
+        notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")]))
+
+
+# Input methods built by a function of their own.
+OWN = {"th": build_thai, "hi": build_hindi, "he": build_hebrew}
+
 # The data folder, for CLDR's names as each input method is written.
 DATA = None
 
@@ -531,7 +729,7 @@ def write_index_and_list():
         entries.append({"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"],
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im)})
-    order = list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(JAPANESE)
+    order = list(LATIN) + list(NATIONAL) + list(OWN) + list(ENGINES) + list(CHINESE) + list(JAPANESE)
     entries.sort(key=lambda e: (order.index(e["id"]) if e["id"] in order else len(order), e["id"]))
     with open(os.path.join(ASSETS, "index.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(entries, f, ensure_ascii=False, indent=1)
@@ -568,7 +766,7 @@ def escape(text):
 def main():
     global DATA
     data = DATA = sys.argv[1]
-    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(JAPANESE)
+    wanted = sys.argv[2:] or list(LATIN) + list(NATIONAL) + list(ENGINES) + list(CHINESE) + list(JAPANESE) + list(OWN)
     os.makedirs(ASSETS, exist_ok=True)
     for ident in wanted:
         if ident in LATIN:
@@ -579,6 +777,8 @@ def main():
             build_engine(data, ident)
         elif ident in CHINESE:
             build_chinese(data, ident)
+        elif ident in OWN:
+            OWN[ident](data, ident)
         elif ident in JAPANESE:
             build_japanese(data, ident)
         else:

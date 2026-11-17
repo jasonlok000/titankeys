@@ -48,6 +48,9 @@ fun main(args: Array<String>) {
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
     aRestoredInputMethodTypes()
+    thaiHoldsAndBreaks()
+    hindiRulesType()
+    hebrewRightToLeft()
     aShiftedLetterIsTheKeyboards()
     aHeldSymWaits()
     symWorksAfterTheSwitcher()
@@ -328,6 +331,125 @@ private fun aShiftedLetterIsTheKeyboards() {
     check("Shift + W in English: as always", !KeysMapKeys.keeps(hasKeys = false, letterKey = true, alt = false, ctrl = false, meta = false))
 }
 
+/** Thai's third layer (a held key types the Kedmanee key the Titan lacks) and finding the word being typed with no spaces. */
+private fun thaiHoldsAndBreaks() {
+    val thai = InputMethod.parse("""{"id":"th","name":"ไทย","nameEnglish":"Thai","label":"TH","locale":"th","script":"Thai",
+        "keys":{"q":["ๆ","๐","ๅ","+"],"w":["ไ","\"","/","๑"],"k":["า","ษ"]},"accents":{},"words":null,"variants":null,
+        "rules":{"capitalise":false,"wordBreak":true},"engine":null,"source":{}}""")
+    same("Q types ๆ", thai.letter('q', false), "ๆ")
+    same("Shift + Q types ๐, not a capital", thai.letter('q', true), "๐")
+    same("held Q types ๅ (the 1 key)", thai.held('q', false), "ๅ")
+    same("held Shift + Q types +", thai.held('q', true), "+")
+    same("a slash can be a letter in a list", thai.held('w', false), "/")
+    same("K has no third", thai.held('k', false), null)
+    check("Thai breaks words", thai.rules.wordBreak)
+    val words = setOf("ที่", "การ", "กิน", "ข้าว", "ไป", "ไหน")
+    fun last(run: String) = WordBreak.last(run, { it in words }, { prefix -> words.any { it.startsWith(prefix) } })
+    same("one word", last("กิน"), "กิน")
+    same("the word after a whole one", last("กินข้"), "ข้")
+    same("three words", last("ไปกินข้าว"), "ข้าว")
+    same("a word started", last("ไปไห"), "ไห")
+    same("a mark stays with its letter", last("กินขุ"), "ขุ")
+    same("nothing", last(""), "")
+    same("a fold keeps Thai's marks", WordList.fold("กิน", java.util.Locale("th")), "กิน")
+    same("a fold still drops Latin accents", WordList.fold("Café", java.util.Locale.FRENCH), "cafe")
+}
+
+/** Hindi's rules, as jquery.ime runs them, and the keyboard's engine on them: a word, Space, Backspace and a choice. */
+private fun hindiRulesType() {
+    val file = File("android/assets/im/hi/rules.json")
+    if (!file.isFile) return
+    val rules = Rules.parse(file.readText())
+    for ((keys, word) in listOf("namaste" to "नमस्ते", "raama" to "राम", "namaH" to "नमः", "madhumaChiyoM" to "मधुमक्खियों",
+            "agar " to "अगर ", "agar~ " to "अगर् ", "//" to "ऽ", "raam," to "राम,")) same("rules: $keys", rules.spell(keys), word)
+    val engine = RulesComposer(rules)
+    check("starts with its rules", engine.start(InputMethod.ENGLISH, File(".")))
+    for (c in "agar") engine.key(c)
+    same("the word on the bar keeps its virama until Space", engine.code(), "अगर्")
+    same("Space writes it without, and the space", engine.space().commit, "अगर ")
+    for (c in "namastee") engine.key(c)
+    same("Backspace takes the last key off", engine.backspace().code, "नमस्ते")
+    same("a mark no rule takes ends the word", engine.key('!').commit, "नमस्ते")
+}
+
+/** Jquery.ime's own test cases for an input method, when $HI_FIXTURES names their JSON ([{input, output}]): how many pass. */
+private fun rulesPassTheirFixtures(method: InputMethod, rules: Rules) {
+    val path = System.getenv("HI_FIXTURES")?.takeIf { method.id == "hi" } ?: return
+    @Suppress("UNCHECKED_CAST")
+    val cases = com.titankeys.connected.Json.parse(File(path).readText()) as List<Map<String, Any?>>
+    val failed = cases.filter { rules.spell(it["input"] as String) != it["output"] }
+    println("${method.id}: jquery.ime's test cases: ${cases.size - failed.size} of ${cases.size} pass" +
+        failed.take(5).joinToString("") { "; not ${it["input"]} -> ${it["output"]} (got ${rules.spell(it["input"] as String)})" })
+}
+
+/**
+ * The commonest 300 words of an input method typed through rules (Hindi), as someone typing them by sound would: a search
+ * over the keys for a spelling that gives each word, written by Space. Says the share found and the keys per letter.
+ */
+private fun rulesTypeTheList(method: InputMethod, dir: File, list: File) {
+    val rules = Rules.parse(File(dir, method.engineArg ?: "rules.json").readText())
+    rulesPassTheirFixtures(method, rules)
+    val common = list.useLines { lines -> lines.filter { it.startsWith(" word=") }.map { it.removePrefix(" word=").substringBefore(',') }.take(300).toList() }
+    var found = 0
+    var keys = 0
+    var letters = 0
+    val missed = ArrayList<String>()
+    for (word in common) {
+        val spelling = keysFor(rules, word)
+        if (spelling == null) missed += word else {
+            found++
+            keys += spelling.length
+            letters += word.length
+        }
+    }
+    val share = 100.0 * found / common.size
+    println("${method.id}: typed by sound: %d of %d common words (%.1f%%), %.2f keys a letter; not: %s".format(found, common.size, share,
+        keys.toDouble() / maxOf(letters, 1), missed.take(10).joinToString(" ")))
+    check("${method.id}: its common words can be typed", share >= 90.0) { "%.1f%%".format(share) }
+}
+
+private val RULE_KEYS = ('a'..'z') + ('A'..'Z') + listOf('~', '.', '^', '_')
+
+/** Keys that the rules turn into [word], with Space after: a beam search, keeping the spellings closest to it. */
+private fun keysFor(rules: Rules, word: String): String? {
+    var beam = listOf("" to Rules.State("", ""))
+    repeat(word.length * 3 + 2) {
+        val next = ArrayList<Triple<String, Rules.State, Int>>()
+        for ((keys, state) in beam) for (k in RULE_KEYS) {
+            val after = rules.step(state, k)
+            if (rules.step(after, ' ').text.removeSuffix(" ") == word) return keys + k
+            val common = after.text.commonPrefixWith(word).length
+            if (after.text.length - common > rules.maxKeyLength) continue
+            next += Triple(keys + k, after, common * 10 - keys.length)
+        }
+        beam = next.sortedByDescending { it.third }.distinctBy { it.second }.take(24).map { it.first to it.second }
+        if (beam.isEmpty()) return null
+    }
+    return null
+}
+
+/** Hebrew: its final letters held on their own, and the bar and steering right to left. */
+private fun hebrewRightToLeft() {
+    val hebrew = InputMethod.parse("""{"id":"he","name":"עברית","nameEnglish":"Hebrew","label":"HE","locale":"he","script":"Hebr",
+        "keys":{"q":["ת","ת","/","/"],"p":["פ","פ","ף","ף"],"e":"ק"},"accents":{},"words":null,"variants":null,
+        "rules":{"capitalise":false},"engine":null,"source":{}}""")
+    same("Q types ת", hebrew.letter('q', false), "ת")
+    same("Shift types the same letter: Hebrew has no capitals", hebrew.letter('e', true), "ק")
+    same("held P types the final ף", hebrew.held('p', false), "ף")
+    check("Hebrew reads right to left", hebrew.rightToLeft)
+    check("Spanish doesn't", !InputMethod.parse(SPANISH).rightToLeft)
+    same("the bar left to right: second, best, third", BarOrder.of(false), listOf(1, 0, 2))
+    same("right to left: the second best on the right", BarOrder.of(true), listOf(2, 0, 1))
+    check("a Hebrew paragraph is right to left", RightToLeft.paragraph("שלום ", "עולם"))
+    check("an English one isn't", !RightToLeft.paragraph("hello ", "world"))
+    check("its first letter decides: Hebrew, then English", RightToLeft.paragraph("שלום hello", ""))
+    check("a new line starts a new paragraph", !RightToLeft.paragraph("שלום\nhello", ""))
+    check("digits and spaces decide nothing: the letter after does", RightToLeft.paragraph("12 ", "שלום"))
+    check("a step right goes forward in English", RightToLeft.forward(1, false))
+    check("a step right goes back in Hebrew", !RightToLeft.forward(1, true))
+    check("a step left goes forward in Hebrew", RightToLeft.forward(-1, true))
+}
+
 private fun aRestoredInputMethodTypes() {
     val index = InputMethodIndex(listOf(
         InputMethodIndex.Entry("ru", "Русский", "Russian", "RU", "ru", "Cyrl"),
@@ -501,6 +623,9 @@ private val textFonts by lazy {
 }
 
 /** What CLDR's own name for an input method's language is recorded as, by tools/im/make.py, which checks it against CLDR. */
+/** Scripts Settings names in English, as Ink can't shape them yet (app/settings/languages.tsx). */
+private val UNSHAPED = setOf("Deva")
+
 private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
 
 /**
@@ -515,10 +640,39 @@ private fun theNameShows(method: InputMethod, inIndex: String?) {
     same("${method.id}: its name is NFC", java.text.Normalizer.isNormalized(name, java.text.Normalizer.Form.NFC), true)
     same("${method.id}: the index has the same name", inIndex, name)
     if (method.script != "Hani") same("${method.id}: its name is CLDR's", method.source["name"], CLDR_NAME + name)
-    val missing = name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
+    // Devanagari's names show in English in Settings (app/settings/languages.tsx, UNSHAPED): Ink can't shape them yet.
+    val missing = if (method.script in UNSHAPED) emptyList() else name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
     check("${method.id}: the app's fonts have its name's letters", missing.isEmpty()) {
         missing.joinToString(" ") { String(Character.toChars(it)) }
     }
+}
+
+/**
+ * In a script with no spaces (Thai): after one of the list's 2,000 commonest words, another of them is typed, and the word
+ * being typed must be found, as the bar asks. Says the share found for any start of the word (a letter or two can also
+ * continue the word before, as แม้ + น is แม้น) and for the whole word; at least 80% and 90% pass.
+ */
+private fun wordBreakFindsTheWord(method: InputMethod, read: WordList, list: File) {
+    val common = list.useLines { lines -> lines.filter { it.startsWith(" word=") }.map { it.removePrefix(" word=").substringBefore(',') }.take(2_000).toList() }
+    val random = java.util.Random(56)
+    var started = 0
+    var whole = 0
+    val tries = 5_000
+    repeat(tries) {
+        val first = common[random.nextInt(common.size)]
+        val second = common[random.nextInt(common.size)]
+        // A start of the second word that doesn't end before a mark, as typing it would show.
+        val cuts = (1..second.length).filter { it == second.length || Character.getType(second[it]).let { type ->
+            type != Character.NON_SPACING_MARK.toInt() && type != Character.COMBINING_SPACING_MARK.toInt() } }
+        val typing = second.substring(0, cuts[random.nextInt(cuts.size)])
+        if (WordBreak.last(first + typing, read::has, read::hasPrefix) == typing) started++
+        if (WordBreak.last(first + second, read::has, read::hasPrefix) == second) whole++
+    }
+    val startShare = 100.0 * started / tries
+    val wholeShare = 100.0 * whole / tries
+    println("${method.id}: the word being typed found after another: %.1f%% of starts, %.1f%% of whole words (%d tries)".format(startShare, wholeShare, tries))
+    check("${method.id}: a word's start is found", startShare >= 80.0) { "%.1f%%".format(startShare) }
+    check("${method.id}: a whole word is found", wholeShare >= 90.0) { "%.1f%%".format(wholeShare) }
 }
 
 private fun everyInputMethodInTheFolder(folder: File) {
@@ -529,7 +683,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         .associate { it["id"] as String to it["name"] as String? }
     @Suppress("UNCHECKED_CAST")
     val languageNames = (com.titankeys.connected.Json.parse(File(folder, "index.json").readText()) as List<Map<String, Any?>>)
-        .mapNotNull { (it["language"] as? Map<String, Any?>)?.get("name") as? String }.toSet()
+        .mapNotNull { (it["language"] as? Map<String, Any?>)?.takeIf { language -> language["script"] !in UNSHAPED }?.get("name") as? String }.toSet()
     for (name in languageNames) {
         val missing = name.codePoints().toArray().filter { code -> textFonts.any { !it.canDisplay(code) } }
         check("language $name: the app's fonts have its letters", missing.isEmpty()) { missing.joinToString(" ") { String(Character.toChars(it)) } }
@@ -555,6 +709,10 @@ private fun everyInputMethodInTheFolder(folder: File) {
             check("${method.id}: Shift + every letter key types a letter", unshifted.isEmpty()) { unshifted.joinToString(" ") }
         }
         val words = method.words ?: continue
+        if (method.engine == "rules") {
+            rulesTypeTheList(method, dir, File(dir, words))
+            continue
+        }
         if (method.engine == "telex") {
             telexTypesTheList(method, File(dir, words))
             continue
@@ -563,6 +721,7 @@ private fun everyInputMethodInTheFolder(folder: File) {
         check("${method.id}: its word list is there", list.isFile)
         if (!list.isFile) continue
         val read = WordList.read(list.useLines { it.toList() }.asSequence(), method.javaLocale)
+        if (method.rules.wordBreak) wordBreakFindsTheWord(method, read, list)
         check("${method.id}: its word list has words", read.size > 1000) { "${read.size}" }
         check("${method.id}: at most 100,000 words", read.size <= 100_000) { "${read.size}" }
         check("${method.id}: at most 4 MB", list.length() <= 4_000_000) { "${list.length()}" }
@@ -572,12 +731,18 @@ private fun everyInputMethodInTheFolder(folder: File) {
             typable += method.letter(key, false) ?: key.toString()
             method.keys?.get(key)?.shift?.let { typable += it }
             typable += method.accentsOf(key, false)
+            // Thai's third layer: held, and held with Shift.
+            method.held(key, false)?.let { typable += it }
+            method.held(key, true)?.let { typable += it }
         }
         val counts = HashMap<String, Int>()
         list.useLines { lines ->
             lines.filter { it.startsWith(" word=") }.take(50_000).forEach { line ->
                 val word = line.removePrefix(" word=").substringBefore(',').lowercase(method.javaLocale)
-                for (letter in InputMethod.graphemes(word)) if (letter.first().isLetter()) counts.merge(letter, 1, Int::plus)
+                // Thai types its vowels and tones as keys of their own, so each counts by itself, not with its consonant.
+                val letters = if (method.rules.wordBreak) word.codePoints().toArray().map { String(Character.toChars(it)) }
+                    else InputMethod.graphemes(word)
+                for (letter in letters) if (letter.first().isLetter() || method.rules.wordBreak) counts.merge(letter, 1, Int::plus)
             }
         }
         val missing = counts.filter { (letter, count) -> count >= 20 && letter !in typable }.keys.sorted()

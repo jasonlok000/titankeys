@@ -1253,6 +1253,7 @@ class TitanKeysIme : InputMethodService() {
             openClipboard = { enqueue { openClipboardPage() } },
         )
         strip = words
+        if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys
         keys.emoji = emoji
         // Android can make this view after the field has started, and again when the screen settings change.
@@ -2790,7 +2791,10 @@ class TitanKeysIme : InputMethodService() {
             // Going past a space feels different from a letter, so that you can count words without looking. A cursor at the
             // start or end of the text can't move, so it plays gone, once each time it gets there. See [CursorSteps].
             val connection = currentInputConnection
-            val next = if (direction > 0) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
+            // Android moves the cursor visually, so in a right-to-left paragraph a step right goes back in the text.
+            val forward = RightToLeft.forward(direction, connection != null && RightToLeft.paragraph(
+                connection.getTextBeforeCursor(RTL_REACH, 0)?.toString().orEmpty(), connection.getTextAfterCursor(RTL_REACH, 0)?.toString().orEmpty()))
+            val next = if (forward) connection?.getTextAfterCursor(1, 0) else connection?.getTextBeforeCursor(1, 0)
             // An app that does not answer still gets the light tick.
             cursorSteps.step(if (next == null) 'a' else next.firstOrNull())?.let(haptics::play)
             if (rereadCursorText) readCursorText()
@@ -3269,6 +3273,7 @@ class TitanKeysIme : InputMethodService() {
         // In Chinese, holding the key under a choice picks it, so a hold never types a symbol (owner, 2026-11-16).
         if (ChineseKeys.usesBar(languages.current)) return false
         if (languages.current.hasAccents) return canHoldAccent(event)
+        if (heldLetterOf(event, false) != null) return canHoldThird(event)
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
         if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
         if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
@@ -3280,6 +3285,23 @@ class TitanKeysIme : InputMethodService() {
         if (device.isVirtual || device.isExternal || !event.isFromSource(InputDevice.SOURCE_KEYBOARD)) return false
         val symbol = event.getUnicodeChar(KeyEvent.META_ALT_ON)
         return symbol > 0 && !Character.isISOControl(symbol)
+    }
+
+    /** What holding [event]'s key types on the current input method's third layer (Thai), or null. */
+    private fun heldLetterOf(event: KeyEvent, shift: Boolean): String? =
+        if (event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) languages.current.held(printedLetter(event.keyCode), shift) else null
+
+    /**
+     * A key with a letter on the third layer (Thai's Kedmanee keys the Titan doesn't have): holding it types that letter, with
+     * Shift too, whatever hold for symbols is set to, as accents do. Never in exact typing, or with Alt, Ctrl or a panel on.
+     */
+    private fun canHoldThird(event: KeyEvent): Boolean {
+        if (!editing || field.exact || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
+        if (!HoldEngine.arrivedInTime(event.downTime, SystemClock.uptimeMillis())) return false
+        if (altOrPanel || event.isAltPressed || event.isCtrlPressed || event.isMetaPressed) return false
+        if (pendingInput.any { it.event?.keyCode?.let(Modifiers::isModifier) == true }) return false
+        val device = event.device ?: return false
+        return !device.isVirtual && !device.isExternal && event.isFromSource(InputDevice.SOURCE_KEYBOARD)
     }
 
     /**
@@ -3354,9 +3376,11 @@ class TitanKeysIme : InputMethodService() {
             showAccents(letter.keyCode)
             return
         }
-        val symbol = letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON)
-        if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
-        val text = String(Character.toChars(symbol))
+        // Thai: the key's letter on the third layer, with Shift its other one.
+        val text = heldLetterOf(letter, heldShift) ?: letter.getUnicodeChar(letter.metaState or KeyEvent.META_ALT_ON).let { symbol ->
+            if (symbol <= 0 || !Character.isValidCodePoint(symbol) || Character.isISOControl(symbol)) return
+            String(Character.toChars(symbol))
+        }
         haptics.play(Haptic.HeldSymbol)
         KeyboardEvents.publish { KeyboardEvent.HeldSymbol(text) }
         if (field.exact) {
@@ -3808,6 +3832,7 @@ class TitanKeysIme : InputMethodService() {
         preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
         preparingNotice = null
         closePicker()
+        strip?.rightToLeft = languages.current.rightToLeft
         if (editing) readSettings()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
@@ -4572,6 +4597,8 @@ class TitanKeysIme : InputMethodService() {
         private const val MODIFIER_RELEASE_SLOTS = 5
         private const val DRAIN_BUDGET = 8
         private const val DRAIN_NANOS = 4_000_000L
+        /** How far each way the cursor's paragraph is read for its direction. */
+        private const val RTL_REACH = 200
         private val NAVIGATION_KEYS = setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_MOVE_HOME,
             KeyEvent.KEYCODE_MOVE_END, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN)

@@ -173,13 +173,16 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             activity.runOnUiThread {
                 if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
                 crashOffer = report
-                showCrashOffer(frontScreen ?: activity)
+                showCrashOffer(frontScreen.get() ?: activity)
             }
         }.start()
     }
 
-    /** The app's screen in front: the last one resumed. One the offer doesn't show on waits for one it does. */
-    private var frontScreen: Activity? = null
+    /**
+     * The app's screen in front: the last one resumed. One the offer doesn't show on waits for one it does. Held weakly: the screen
+     * in front can be the playground, and a playground closed after this screen stopped hearing about it must not stay (#85).
+     */
+    private var frontScreen = java.lang.ref.WeakReference<Activity>(null)
 
     private fun showCrashOffer(host: Activity) {
         val report = crashOffer ?: return
@@ -220,7 +223,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     }
 
     override fun onActivityResumed(target: Activity) {
-        frontScreen = target
+        frontScreen = java.lang.ref.WeakReference(target)
         if (crashOffer != null) showCrashOffer(target)
         if (target !== activity) return
         visible = true
@@ -237,7 +240,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     override fun onActivityStopped(target: Activity) = onActivityPaused(target)
 
     override fun onActivityDestroyed(target: Activity) {
-        if (frontScreen === target) frontScreen = null
+        if (frontScreen.get() === target) frontScreen.clear()
         // A dialog can't outlive its screen. The report stays for the next screen in front, which shows it as it resumes.
         if (crashDialog?.ownerActivity === target) {
             crashDialog?.dismiss()

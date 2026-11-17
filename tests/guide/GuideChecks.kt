@@ -331,6 +331,7 @@ fun main() {
     chapterOne()
     everyTitleFitsItsLine()
     thePlaygroundKeepsItsText()
+    theReopenedPlaygroundIsFocused()
     scenarios()
     everyWayToFailIsAnswered()
     everyPassShowsNext()
@@ -1140,6 +1141,21 @@ private fun thePlaygroundKeepsItsText() {
     // The check on the phone expects exactly this.
     same("keeps its text\nwhen you leave the app and come back" in File("tools/checks/home-focus.py").readText(), true,
         "tools/checks/home-focus.py checks the same")
+}
+
+/**
+ * The playground back in front has its field focused (phone check, 2026-11-16: reopened over TitanKeys' own screen, typing reached
+ * the field, but neither uiautomator nor the served view saw it focused). Asked once laid out, as a field not laid out can't take it.
+ */
+private fun theReopenedPlaygroundIsFocused() {
+    val guide = File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText()
+    fun body(start: String) = guide.substring(guide.indexOf(start)).let { it.substring(0, it.indexOf("\n    }\n") + 6) }
+    same(body("override fun onWindowFocusChanged(").contains("if (playground) focusPlaygroundField()"), true,
+        "Back in front, the playground focuses its field")
+    same(body("private fun showPlayground()").contains("focusPlaygroundField()"), true, "and as it shows")
+    val focus = body("private fun focusPlaygroundField()")
+    same(listOf("field.post {", "settingUp || field.isFocused) return@post", "field.isFocusableInTouchMode = true", "field.requestFocus()")
+        .all { it in focus }, true, "after layout, only if it hasn't the focus, never during setup")
 }
 
 /** How much of a title's line stays free in the renders' measure, for the phone's (#66). */

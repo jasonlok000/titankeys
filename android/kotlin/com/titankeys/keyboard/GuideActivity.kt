@@ -1210,6 +1210,19 @@ class GuideActivity : Activity() {
         // The finale and the end have no field: the keyboard stays down, also back from the share screen, so its bar never shows
         // there and nothing jumps when it goes (Master, 2026-11-13: the bar showed, and the buttons dropped 88 px as it hid).
         keyboardShown(keyboardHere())
+        // The playground back in front has its field focused, as when it first opened: once laid out, if the focus didn't take
+        // (phone check, 2026-11-16: reopened over TitanKeys' own screen, typing reached the field, but it wasn't focused).
+        if (playground) focusPlaygroundField()
+    }
+
+    /** The playground's field takes the focus once it's laid out, if it hasn't got it: a field not laid out yet can't take it. */
+    private fun focusPlaygroundField() {
+        field.post {
+            if (isFinishing || isDestroyed || settingUp || field.isFocused) return@post
+            field.isFocusable = true
+            field.isFocusableInTouchMode = true
+            field.requestFocus()
+        }
     }
 
     @Deprecated("Back reaches an activity here, because the app does not opt in to predictive back")
@@ -3286,6 +3299,7 @@ class GuideActivity : Activity() {
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()
         field.requestFocus()
+        focusPlaygroundField()
     }
 
     /** Puts back what [kept] holds: the typed text, the cursor, and the line to type along to, where it was. */
@@ -5320,7 +5334,13 @@ class GuideActivity : Activity() {
                     "the playground's asker".takeIf { playgroundAsker === guide })
                 "${if (guide.playground) "playground" else "guide"} ${Integer.toHexString(System.identityHashCode(guide))}: " +
                     (if (guide.isDestroyed) "destroyed, still held" else if (guide.isFinishing) "finishing" else "open") +
-                    if (holders.isEmpty()) "" else ", held by ${holders.joinToString(" and ")}"
+                    when {
+                        holders.isNotEmpty() -> ", held by ${holders.joinToString(" and ")}"
+                        // Nothing of the guide's own: Android's or another part's. Only the heap dump can name it.
+                        guide.isDestroyed -> ", held from outside the guide's statics: run the check with --ez dump true and " +
+                            "tools/leak-paths.py on the dump to name the holder"
+                        else -> ""
+                    }
             }
         }
 

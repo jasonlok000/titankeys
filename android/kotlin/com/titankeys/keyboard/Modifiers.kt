@@ -167,6 +167,17 @@ class Modifiers {
         autoShifted = true
     }
 
+    /**
+     * Puts Shift and Alt back as they were, for TitanKeys Debug's owner mark ([OwnerMark]): its three Shift presses change
+     * nothing. The next press of either starts afresh.
+     */
+    fun restore(shift: Level, alt: Level, autoShifted: Boolean) {
+        this.shift = shift
+        this.alt = alt
+        this.autoShifted = autoShifted
+        last.fill(0L)
+    }
+
     /** Pressing Shift or Alt on the touchpad or the keyboard. With the panel open, Alt is the quick settings key. */
     fun press(key: Key, time: Long) {
         if (key == Key.Alt && panel != Panel.Closed) {

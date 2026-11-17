@@ -4045,6 +4045,7 @@ class TitanKeysIme : InputMethodService() {
     private var markShift = Modifiers.Level.Off
     private var markAlt = Modifiers.Level.Off
     private var markMenu = false
+    private var markAutoShifted = false
     /** The Shift whose release the mark keeps, or -1. */
     private var ownerMarkKey = -1
 
@@ -4065,12 +4066,12 @@ class TitanKeysIme : InputMethodService() {
             if (ownerMark.first) {
                 markShift = modifiers.shift
                 markAlt = modifiers.alt
+                markAutoShifted = modifiers.autoShifted
                 markMenu = choicesMenuOpen
             }
             return false
         }
-        modifiers.shift = markShift
-        modifiers.alt = markAlt
+        modifiers.restore(markShift, markAlt, markAutoShifted)
         if (choicesMenuOpen && !markMenu) closeChoicesMenu() else if (!choicesMenuOpen && markMenu) openChoicesMenu()
         showModifiers()
         ownerMarkKey = keyCode

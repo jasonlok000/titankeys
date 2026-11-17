@@ -70,7 +70,7 @@ describe("typing log: TitanKeys Debug only", () => {
     // The mark: Debug only, only while the log records the field, and it puts Shift, Alt and the menu back.
     const ime = await text("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
     expect(ime).toContain("if (log == null || !RawLog.available(this) || event.repeatCount > 0) return false");
-    expect(ime).toMatch(/modifiers\.shift = markShift\s+modifiers\.alt = markAlt/);
+    expect(ime).toContain("modifiers.restore(markShift, markAlt, markAutoShifted)");
     expect(ime).toContain('log.ownerMark(');
   });
 

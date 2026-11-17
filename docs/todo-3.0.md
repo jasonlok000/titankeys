@@ -343,6 +343,18 @@ a phone. The GitHub APK can stay whole.
 - Shift opening and closing the Chinese menu (the twin's Shift can't be used); Georgian Shift+W types its letter; blocking a
   Spanish word from its menu; the saved-words list.
 
+## Paused again for the usage limit (owner, 2026-11-17 morning)
+
+On resume:
+- E: the dominoes (every streak, never blocks a delete, ~2.5x longer) and a held delete with no 10 s cap (only the animation capped).
+- D: #98 broken: "di" shows "do" in the middle but Space types "di".
+- C: the bar stuck on the old language after a switch (priority), then Portugal/Brazil for Portuguese.
+- B: Yale's loading line still shows with the engine warm.
+- G: Debug's logs on by default with no time limit, a Debug-only LogPull receiver and a MARK gesture.
+- J: Turkish and Azerbaijani lower-casing in next_words.py, and their tables rebuilt.
+- A: the interactions batch (offline); slot5 waits for the owner to be at the office. Phone: 100.98.104.89:42033.
+- Then: the full phone run on a fresh build, F's wording pass, the owner's hands list, the pre-release.
+
 ## Milestones (internal; the owner gave the go at 01:20)
 
 Each milestone has a gate: a list of what must be true before the next one starts. At each gate the Orchestrator writes a

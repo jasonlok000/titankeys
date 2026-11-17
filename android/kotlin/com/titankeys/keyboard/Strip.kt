@@ -212,6 +212,7 @@ class Strip(
     var words: List<String> = emptyList()
         set(value) {
             field = value
+            logBar()
             // A word that the guide points at stops when it is no longer in its place.
             if (pointed != null && value.getOrNull(pointedIndex) != pointed) point(null)
             // While the guide changes slides, the words wait and show once, settled: see [holdWords].
@@ -330,10 +331,31 @@ class Strip(
         set(value) {
             if (field == value) return
             field = value
+            logBar()
             render()
             // The code's line floats over the app, in the effects layer: see [drawCodeLine].
             effects?.invalidate()
         }
+
+    /**
+     * TitanKeys Debug's log of what the bar shows, for the phone checks (tools/dev/touch/interactions_batch.py): null, so nothing
+     * is logged, unless the keyboard sets it ([BarLog]). It gets "LEFT | MIDDLE | RIGHT" each time the words change, "-" for an
+     * empty place, or a notice's line as "notice: TEXT". The middle is what Space types (#98): the words' first, or an engine's
+     * first choice; left and right are the second and third. It may get the same line again: the keyboard logs a change only.
+     */
+    var log: ((String) -> Unit)? = null
+
+    private fun logBar() {
+        val log = log ?: return
+        val line = when (val shown = notice) {
+            is Notice.Line -> "notice: ${shown.text}"
+            // An engine's choices (Chinese, Japanese) have its code; the accents and the input methods on a held Sym have none.
+            is Notice.Picker -> if (shown.lead.isEmpty()) return else BarLog.places(shown.items)
+            is Notice.Menu, Notice.TeamsEgg -> return
+            null -> BarLog.places(words)
+        }
+        log(line)
+    }
 
     /**
      * The word that the field has selected, shown alone so that it can be saved or forgotten, underlined in the accent until its

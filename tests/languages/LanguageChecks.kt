@@ -35,6 +35,7 @@ private val RUSSIAN_KEYS = mapOf(
     'z' to "я", 'x' to "ч", 'c' to "с", 'v' to "м", 'b' to "и", 'n' to "т", 'm' to "ь")
 
 fun main(args: Array<String>) {
+    barLogLines()
     theFileReads()
     howToReads()
     badFilesSayWhy()
@@ -1580,4 +1581,13 @@ private fun variantsArePicked(folder: File) {
     // Each variant has its own list and next words in the folder, as the keyboard loads them.
     for (variant in ids) check("$variant's list and table are there",
         File(folder, "pt/words-$variant.combined").isFile && File(folder, "pt/pairs-$variant.bin").isFile)
+}
+
+/** TitanKeys Debug's bar log (BarLog), in the format tools/dev/touch/interactions_batch.py reads: the middle is the first word. */
+private fun barLogLines() {
+    same("three words: the second left, the first in the middle", BarLog.line("en", BarLog.places(listOf("did", "do", "different"))),
+        "bar: en do | did | different")
+    same("an empty place is -", BarLog.line("yue-yale", BarLog.places(listOf("你"))), "bar: yue-yale - | 你 | -")
+    same("an empty bar", BarLog.line("ko", BarLog.places(emptyList())), "bar: ko - | - | -")
+    same("a notice", BarLog.line("yue-yale", "notice: Warming up Yale…"), "bar notice: Warming up Yale…")
 }

@@ -122,6 +122,8 @@ class TitanKeysIme : InputMethodService() {
     private var strip: Strip? = null
     /** The words the composer last put on the bar, for a strip that is made after that. */
     private var barWords = emptyList<String>()
+    /** TitanKeys Debug's last bar log line ([BarLog]), so only a change is logged. */
+    private var barLogged: String? = null
     private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
     /** The key that last picked from the panel or turned its page, so its repeats type nothing once the panel has closed. */
@@ -1321,6 +1323,16 @@ class TitanKeysIme : InputMethodService() {
             openClipboard = { enqueue { openClipboardPage() } },
         )
         strip = words
+        // TitanKeys Debug logs what the bar shows while log.tag.TitanKeysBar is D, for the phone checks (BarLog).
+        if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) words.log = { shown ->
+            if (android.util.Log.isLoggable(BarLog.TAG, android.util.Log.DEBUG)) {
+                val id = if (::languages.isInitialized) languages.current.id else InputMethod.ENGLISH_ID
+                // Only a change: the same bar in another input method is a change too.
+                val line = BarLog.line(id, shown)
+                if (line != barLogged) android.util.Log.d(BarLog.TAG, line)
+                barLogged = line
+            }
+        }
         if (::languages.isInitialized) showInputMark()
         if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys

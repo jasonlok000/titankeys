@@ -138,6 +138,7 @@ fun main(args: Array<String>) {
         100.0 * total.accentsRight / maxOf(1, total.accents), 100.0 * total.rightChanged / maxOf(1, total.right)))
     check("English isn't one of them: it keeps its own corrector", !LanguageCorrections.corrects(InputMethod.ENGLISH))
     engineSlips(folder)
+    turkicCapitals(folder)
     contextSlips(folder, write)
     check("Space's wrong changes stay near zero where it puts fixes in", total.spaceWrong <= LanguageCorrections.MOST_WRONG * total.slips)
     if (failures > 0) {
@@ -339,3 +340,49 @@ fun contextSlips(folder: File, write: Boolean) {
         check("${LanguageCorrections.BAR_ONLY_FILE} is the measured list (run.sh --write)", listed == barOnly) { "has $listed, measured $barOnly" }
     }
 }
+
+/**
+ * Turkish and Azerbaijani capitals: İ is i's capital and I is ı's, so the corrector lowers a typed word by those rules, as the word
+ * list and J's next-word tables do (NextWords.TURKIC), and gives a fix back its capital the same way. The commonest words that
+ * start with i or ı, capitalised as a sentence's start types them: typed right, nothing changes them and the bar offers nothing
+ * else; with a letter left out, the bar's word is the word, with its own capital (115 of 143 in Turkish, 123 of 145 in
+ * Azerbaijani, from none before).
+ */
+private fun turkicCapitals(folder: File) {
+    for (id in listOf("tr", "az")) {
+        val dir = File(folder, id)
+        if (!dir.isDirectory) continue
+        val method = InputMethod.parse(File(dir, "im.json").readText())
+        val list = File(dir, method.words!!).useLines { WordList.read(it, method.javaLocale) }
+        val corrector = LanguageCorrections.corrector(method, list, { false }, HashSet(), RecentWords())
+        val common = ArrayList<Pair<String, Int>>()
+        list.forEachWord { word, frequency ->
+            if (word.length in 5..10 && word.all { it.isLetter() } && (word[0] == 'i' || word[0] == 'ı')) common += word to frequency
+        }
+        val sample = common.sortedByDescending { it.second }.map { it.first }.distinct().take(TURKIC_WORDS)
+        var kept = 0
+        var slips = 0
+        var found = 0
+        val wrong = ArrayList<String>()
+        for (word in sample) {
+            val capital = word.replaceFirstChar { it.titlecase(method.javaLocale) }
+            if (corrector.check(capital, "", null) == null && corrector.suggestion(capital, "") == null) kept++
+            else if (wrong.size < 3) wrong += "$capital kept? fix ${corrector.check(capital, "", null)?.word}, bar ${corrector.suggestion(capital, "")}"
+            val slip = capital.removeRange(2, 3)
+            if (list.has(slip)) continue
+            slips++
+            val offered = corrector.suggestion(slip, "")
+            if (offered == capital) found++
+            else if (offered != null && offered.lowercase(method.javaLocale) == word && wrong.size < 6) wrong += "$slip offered $offered"
+        }
+        println("$id capitals: ${sample.size} words with İ or I kept $kept; $slips slips, their word with its capital on the bar $found" +
+            wrong.joinToString("") { "; $it" })
+        check("$id: a word typed right with İ or I is kept", kept == sample.size) { wrong.joinToString("; ") }
+        check("$id: a slip's word keeps its own capital, İ or I", wrong.none { "offered" in it }) { wrong.joinToString("; ") }
+        // Before the case rules, none was: "Ilk" lowered to ilk, never ılk, and a fix's capital was always I.
+        check("$id: most slips get their word back on the bar, with its capital", found * 10 >= slips * 7) { "$found of $slips" }
+    }
+}
+
+/** How many words [turkicCapitals] tries in each language. */
+private const val TURKIC_WORDS = 150

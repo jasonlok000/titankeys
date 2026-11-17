@@ -21,6 +21,7 @@ import javax.net.ssl.HttpsURLConnection
  *   It sends nothing about the user: no identifier, no cookie, and a plain user agent.
  * - **Contributions** ([Contributions]): only if the user agrees, sealed swipe examples go to the project, on Wi-Fi.
  * - **Bug reports** ([ReportUpload]): only when the user presses Send in the report form (#97), sealed the same way.
+ * - **Daily totals** ([Counts]): with Contributions, under the same one Sharing switch (#96), a sealed day's totals once a day.
  *
  * The privacy policy at [PRIVACY_URL] says the same, and must change whenever this does.
  */
@@ -44,6 +45,7 @@ object Connected {
     internal const val JOB_ANNOUNCEMENTS = 42_001
     internal const val JOB_CONTRIBUTIONS = 42_002
     internal const val JOB_DELETE = 42_003
+    internal const val JOB_COUNTS = 42_004
 
     private const val TIMEOUT_MILLIS = 20_000
     private const val USER_AGENT = "TitanKeys"
@@ -93,6 +95,13 @@ object Connected {
                 .setPeriodic(DAY_MILLIS / 2, FLEX_MILLIS)
                 .build()
         }
+        // Sharing's daily totals: once a day, on any network, as they are small (#96).
+        ensure(JOB_COUNTS, Contributions.enabled(context) && CONTRIBUTIONS_URL.isNotEmpty()) {
+            JobInfo.Builder(JOB_COUNTS, service)
+                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                .setPeriodic(DAY_MILLIS, FLEX_MILLIS)
+                .build()
+        }
         ensure(JOB_DELETE, Contributions.deletionPending(context) && CONTRIBUTIONS_URL.isNotEmpty()) {
             JobInfo.Builder(JOB_DELETE, service)
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
@@ -110,6 +119,7 @@ object Connected {
         this.context = app
         Thread { runCatching { schedule(app) } }.start()
         TouchSizes.recording = Contributions.enabled(app)
+        Counts.start(app)
     }
 
     /** The app, once the keyboard has started. Contributions come from the keyboard, which has no other way to pass it. */
@@ -129,6 +139,8 @@ object Connected {
         typing = active
         if (active) return
         val app = context.applicationContext
+        // A field ended: today's totals go to the phone's storage, so a restart loses none.
+        Counts.save(app)
         main.removeCallbacksAndMessages(FIELD_TOKEN)
         main.postAtTime({ if (!typing) Thread { runCatching { Announcements.showDue(app) } }.start() }, FIELD_TOKEN,
             android.os.SystemClock.uptimeMillis() + QUIET_MILLIS)

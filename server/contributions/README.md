@@ -15,8 +15,13 @@ For the app, write-only:
   `X-Report` (a random 32-hex-digit ID the phone makes for the report) and `X-Part` (`index/count`, at most 24 parts).
   A part sent again replaces the first. Answers 204. The phone packs the report into one ZIP (report.json, and any
   recording or crash report), splits it, and seals each part exactly as a batch (`Reports.kt`, `ReportUpload.kt`).
-- `POST /v1/delete`: `{"contributor": "<the ID itself>"}`. Deletes every batch stored under the hash of that ID. Only
-  the phone knows the ID, so the stored hashes cannot be used to delete anything. Answers 200 with the count.
+- `POST /v1/counts`: one sealed day of Sharing's daily totals (#96, `docs/analytics.md`), at most 4 KB, with the headers
+  `X-Counts` (the SHA-256 of the phone's 30-day counts ID, in hex) and `X-Day` (the phone's date, `YYYY-MM-DD`). A day
+  sent again for the same ID replaces the first. Answers 204. The phone makes it in `DailyCounts.kt` and seals it as a
+  batch (`Counts.kt`).
+- `POST /v1/delete`: `{"contributor": "<the ID itself>"}`, `{"counts": ["<counts ID>", ...]}` (at most 26), or both.
+  Deletes every batch stored under the hash of the contributor ID, and every day of totals under the hash of each counts
+  ID. Only the phone knows the IDs, so the stored hashes cannot be used to delete anything. Answers 200 with the count.
 
 For the owner only, with `Authorization: Bearer <EXPORT_TOKEN>` (without it, these answer 404, as if absent):
 
@@ -28,10 +33,17 @@ For the owner only, with `Authorization: Bearer <EXPORT_TOKEN>` (without it, the
 - `GET /v1/export/reports?after=ID`: up to 200 report parts as `{id, report, part, count, month, size}`, oldest first.
 - `GET /v1/export/report?id=ID`: one sealed report part.
 - `POST /v1/export/reports/confirm` with `{"through": ID}`: deletes report parts up to that ID.
+- `GET /v1/export/counts?after=ID`: up to 500 days of totals as `{id, day, month, size}`, oldest first.
+- `GET /v1/export/counts/day?id=ID`: one sealed day.
+- `POST /v1/export/counts/confirm` with `{"through": ID}`: deletes days up to that ID.
 
 `bun tools/contributions/reports.ts download <address> <token file> <folder> [--confirm]` fetches the reports, still
 sealed, and with `--confirm` deletes the whole ones on the server. `bun tools/contributions/reports.ts open <key.pem>
 <folder>` then joins and opens each whole report into `<report>.zip`.
+
+`bun tools/contributions/counts.ts download <address> <token file> <folder> [--confirm]` fetches the daily totals, still
+sealed. `bun tools/contributions/counts.ts open <key.pem> <folder>` opens them into `days.jsonl` and adds them up by date
+in `totals.json`.
 
 Everything else answers 404. The batches stay sealed on the way out: only the owner's private key, kept offline,
 opens them (`tools/contributions/open.ts`). A leaked export token shows only sealed files. The Worker logs nothing.
@@ -46,13 +58,17 @@ opens them (`tools/contributions/open.ts`). A leaked export token shows only sea
 - One `Cap` object holds the caps: 2000 uploads a day for everyone together, and 4 GB stored in all (the Free plan
   allows 5 GB for the account). It stores a date and byte counts per month, nothing about any phone. Only the last 24
   months count, since batches are deleted after 2 years. Deletes take bytes off the month each batch was uploaded in.
+- One `Counts` object holds Sharing's daily totals (#96) in a SQLite table (counts ID hash, date, upload time, month,
+  size, the sealed bytes), with its own byte total, and stops taking days at 200 MB. Its daily alarm deletes days older
+  than 1 year (365 days). Days count in the same caps below. It needs the `v3` migration in `wrangler.toml`: deploy only
+  once the Orchestrator says so.
 - Expiry: each shard has a daily alarm that deletes batches older than 2 years (730 days), as the policy promises.
 
 ## Limits against abuse
 
 Uploads need no account, so anyone who finds the address can send batches. So:
 
-- Per client: 20 uploads and 5 deletes a minute. `Cap` counts them in memory only, keyed by a SHA-256 of `RATE_SALT`
+- Per client: 20 uploads, 10 days of totals and 5 deletes a minute. `Cap` counts them in memory only, keyed by a SHA-256 of `RATE_SALT`
   and the connecting address. The keys are never written to storage, and they go when the minute ends. (Cloudflare's
   rate-limiting binding is not used: its availability on the Free plan is not documented.)
 - The daily and storage caps above. The app sends at most 256 KB of examples before gzip, and no example over 128 KB.

@@ -141,7 +141,7 @@ test("Settings has both, each asking first on the app's own confirm page, with t
   const all = read("app/settings/reset-everything.tsx");
   expect(all).toContain('title="Reset literally everything?"');
   expect(all).toContain('"Settings, your words, snippets, shorthand, app lists and clipboard. All gone, like a fresh install. It can\'t be undone. "');
-  expect(all).toContain('+ "Swipes you already shared are deleted on the Share swipes page."');
+  expect(all).toContain('+ "What you already shared is deleted on the Sharing page."');
   expect(all).toContain('action="Wipe it all" cancel="Never mind"');
   expect(all).toContain('playHaptic("app_deleted")');
   expect(fresh).toContain('const val NOTE_TEXT = "Fresh start. Don\'t waste it."');

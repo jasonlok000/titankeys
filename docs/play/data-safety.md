@@ -121,7 +121,7 @@ TitanKeys never uses an IP address to find where someone is, and never keeps one
 4. **Typing log (#16) in the Play build:** left out. It stays in the GitHub build.
 5. **Purpose:** Analytics only. Google's Analytics covers "future performance improvements", which is what training the swipe models is.
 
-## 3.0: one sharing toggle with daily counts (#96, draft, not yet in effect)
+## 3.0: one sharing switch with daily totals (#96, built, not yet released)
 
 Draft for the owner. The design is in [docs/analytics.md](../analytics.md). Fill these in on the form **before** the first Play release that sends counts, not earlier: the form must match the release on Play.
 

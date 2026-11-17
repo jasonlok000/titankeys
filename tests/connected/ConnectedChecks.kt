@@ -17,6 +17,7 @@ fun main(args: Array<String>) {
     seal(args.getOrNull(0))
     queue()
     example()
+    dailyCounts()
     println("Connected checks passed")
 }
 
@@ -266,4 +267,70 @@ private fun example() {
         must(!Example.wordAllowed(word, true), "Not one word: $word")
     fails("A bad kind must fail") { Example("typed", "a", floatArrayOf(0f), floatArrayOf(0f), floatArrayOf(0f), null, emptyList(), -1, "", "", "", "").line() }
     fails("Rows must have 18 numbers") { Example("kept", "a", floatArrayOf(0f), floatArrayOf(0f), floatArrayOf(0f), null, listOf(DoubleArray(3)), 0, "", "", "", "").line() }
+}
+
+/** Sharing's daily totals (#96): days close into the outbox, IDs turn over every 30 days, and nothing but totals goes out. */
+private fun dailyCounts() {
+    val folder = Files.createTempDirectory("counts").toFile()
+    var today = "2026-11-16"
+    var made = 0
+    fun counts() = DailyCounts(File(folder, "counts.json"), { today }, { "%032x".format(++made) }, { mapOf("app" to "3.0.0", "build" to "play") })
+    val first = counts()
+    first.add("autocorrect.made")
+    first.add("autocorrect.made")
+    first.add("swipe.kept.5-7")
+    first.add("speed.open.<50")
+    // No words, ever: a key that isn't a count's shape is dropped.
+    first.add("hello")
+    first.add("word.typed.Hello world")
+    first.guide(3, "cursor", false)
+    first.guide(1, "touchpad", false)
+    first.guideSkipped("hunt")
+    first.settings(listOf("spelling", "autocorrect"))
+    val shown = Json.parse(first.today()) as Map<*, *>
+    same(shown["counts"], mapOf("autocorrect.made" to 2.0, "speed.open.<50" to 1.0, "swipe.kept.5-7" to 1.0), "today's totals")
+    same(shown["day"], "2026-11-16", "the day, with no time")
+    same(shown["guide"], mapOf("furthest" to "cursor", "finished" to false, "skipped" to listOf("hunt")), "the guide's furthest slide")
+    same(shown["settings"], mapOf("set" to listOf("autocorrect", "spelling")), "settings by key only")
+    same(shown.keys, setOf("v", "envelope", "id", "day", "app", "build", "android", "phone", "models", "counts", "guide", "settings"),
+        "the payload holds only its listed fields")
+    same(first.due(), emptyList<DailyCounts.Day>(), "today waits until it's over")
+    first.save()
+    // The next day: yesterday is in the outbox, kept across a restart, with its own ID.
+    today = "2026-11-17"
+    val second = counts()
+    val due = second.due()
+    same(due.map { it.day }, listOf("2026-11-16"), "the closed day")
+    val sent = Json.parse(due[0].json) as Map<*, *>
+    same(sent["id"], due[0].id, "the day's ID")
+    same(sent["app"], "3.0.0", "the facts")
+    same((sent["counts"] as Map<*, *>)["autocorrect.made"], 2.0, "its totals")
+    second.sent(due[0])
+    same(second.due(), emptyList<DailyCounts.Day>(), "sent days leave")
+    // A day with nothing new sends nothing; the same settings aren't sent twice.
+    second.settings(listOf("autocorrect", "spelling"))
+    today = "2026-11-18"
+    same(second.due(), emptyList<DailyCounts.Day>(), "no news, nothing sent")
+    // The ID turns over after 30 days, and the old ones stay for a deletion.
+    val firstId = due[0].id
+    second.add("crash.count")
+    today = "2026-12-20"
+    second.add("crash.count")
+    today = "2026-12-21"
+    val later = second.due()
+    must(later.size == 2 && later[0].id == firstId && later[1].id != firstId, "a new ID after 30 days: ${later.map { it.id }}")
+    // At most 7 days wait.
+    for (day in 1..10) {
+        today = "2027-01-%02d".format(day)
+        second.add("bar.tap")
+    }
+    must(second.due().size <= DailyCounts.MAX_DAYS, "at most ${DailyCounts.MAX_DAYS} days wait")
+    // Turning off: everything waiting goes, the IDs stay for a deletion; deleting hands them all over.
+    second.clear()
+    same(second.due(), emptyList<DailyCounts.Day>(), "off deletes what waits")
+    same((Json.parse(second.today()) as Map<*, *>)["counts"], emptyMap<String, Any>(), "and today's totals")
+    val ids = second.forget()
+    must(firstId in ids && ids.size >= 2, "every ID of the year is handed over for deletion: $ids")
+    same(second.due(), emptyList<DailyCounts.Day>(), "nothing waits after a deletion")
+    folder.deleteRecursively()
 }

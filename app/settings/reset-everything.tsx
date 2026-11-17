@@ -9,7 +9,7 @@ import { ConfirmPage } from "../../lib/confirm";
 export default function ResetEverything() {
   return <ConfirmPage title="Reset literally everything?"
     body={"Settings, your words, snippets, shorthand, app lists and clipboard. All gone, like a fresh install. It can't be undone. "
-      + "Swipes you already shared are deleted on the Share swipes page."}
+      + "What you already shared is deleted on the Sharing page."}
     action="Wipe it all" cancel="Never mind"
     run={async () => {
       playHaptic("app_deleted");

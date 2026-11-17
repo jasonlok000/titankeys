@@ -2,17 +2,10 @@ package com.titankeys.keyboard
 
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
-import android.content.ContentProvider
-import android.content.ContentValues
 import android.content.Context
-import android.database.Cursor
-import android.database.MatrixCursor
 import android.net.Uri
 import android.os.Build
-import android.os.ParcelFileDescriptor
-import android.provider.OpenableColumns
 import java.io.File
-import java.io.FileNotFoundException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,12 +33,21 @@ object CrashReport {
     private const val MAX_CHARS = 24_000
     private const val MAX_TRACE_LINES = 120
 
+    /**
+     * Told of each crash and freeze, by "crash.count" or "freeze.count", for Sharing's daily totals (#96): [CrashKeeper] sets it
+     * to the Counts store as the process starts. A hook, so that this file needs none of Sharing's code.
+     */
+    @Volatile
+    var counted: ((Context, String) -> Unit)? = null
+
     /** Keeps each uncaught exception's report, then lets Android end the process as it would have. */
     fun install(context: Context) {
         val app = context.applicationContext ?: context
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {
+                // Sharing's daily totals count it, with nothing about it (#96).
+                counted?.invoke(app, "crash.count")
                 write(app, header(app, "Crashed") + "Thread: ${thread.name}\n\n" + stack(error))
             } catch (_: Throwable) {
                 // The report is a nicety: the crash itself must still reach Android.
@@ -119,9 +121,11 @@ object CrashReport {
         checked.writeText(System.currentTimeMillis().toString())
         val records = context.getSystemService(ActivityManager::class.java)
             .getHistoricalProcessExitReasons(context.packageName, 0, 10)
-        val last = records.filter { it.timestamp > since && it.processName == context.packageName &&
+        val ended = records.filter { it.timestamp > since && it.processName == context.packageName &&
             (it.reason == ApplicationExitInfo.REASON_ANR || it.reason == ApplicationExitInfo.REASON_CRASH_NATIVE) }
-            .maxByOrNull { it.timestamp } ?: return
+        // Sharing's daily totals count each, with nothing about it (#96). A Java crash counted itself as it happened.
+        for (record in ended) counted?.invoke(context, if (record.reason == ApplicationExitInfo.REASON_ANR) "freeze.count" else "crash.count")
+        val last = ended.maxByOrNull { it.timestamp } ?: return
         // A Java crash after it has its own report already.
         if (File(context.noBackupFilesDir, FILE).let { it.isFile && it.lastModified() > last.timestamp }) return
         val kind = if (last.reason == ApplicationExitInfo.REASON_ANR) FROZE else "Crashed in native code"
@@ -171,40 +175,4 @@ object CrashReport {
         }
         return out.toString()
     }
-}
-
-/**
- * Puts [CrashReport]'s handler in place as TitanKeys' process starts, before the keyboard, the app or a service: Android starts
- * a process's content providers first. It also lends a report to the mail app the user sends it with, and nothing else:
- * read-only, not exported, and only the one file named in the link, which Android grants for that mail alone.
- */
-class CrashKeeper : ContentProvider() {
-    override fun onCreate(): Boolean {
-        context?.let(CrashReport::install)
-        return true
-    }
-
-    private fun fileFor(uri: Uri): File {
-        val context = context ?: throw FileNotFoundException()
-        return CrashReport.lent(context, uri.lastPathSegment ?: throw FileNotFoundException()) ?: throw FileNotFoundException()
-    }
-
-    override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
-        if (mode != "r") throw SecurityException("Read only")
-        return ParcelFileDescriptor.open(fileFor(uri), ParcelFileDescriptor.MODE_READ_ONLY)
-    }
-
-    override fun query(uri: Uri, projection: Array<out String>?, selection: String?, selectionArgs: Array<out String>?,
-                       sortOrder: String?): Cursor {
-        val file = fileFor(uri)
-        val columns = projection ?: arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
-        return MatrixCursor(columns, 1).apply {
-            addRow(columns.map { if (it == OpenableColumns.SIZE) file.length() else if (it == OpenableColumns.DISPLAY_NAME) file.name else null })
-        }
-    }
-
-    override fun getType(uri: Uri) = if (uri.lastPathSegment.orEmpty().endsWith(".zip")) "application/zip" else "text/plain"
-    override fun insert(uri: Uri, values: ContentValues?): Uri? = throw UnsupportedOperationException()
-    override fun delete(uri: Uri, selection: String?, selectionArgs: Array<out String>?) = 0
-    override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?) = 0
 }

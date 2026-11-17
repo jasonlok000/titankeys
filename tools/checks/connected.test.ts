@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { appKey, type Envelope, type Feed, open, problems, sign } from "../announcements/feed";
 import worker, {
   Cap, CLIENT_DELETES_PER_MINUTE, CLIENT_REPORT_PARTS_PER_MINUTE, CLIENT_UPLOADS_PER_MINUTE, DAILY_UPLOADS, folder, KEEP_MILLIS, MAX_BATCH_BYTES, MAX_SHARD_BYTES,
-  MAX_REPORT_PARTS, MAX_STORED_BYTES, Reports, Shard, SHARDS,
+  MAX_REPORT_PARTS, MAX_STORED_BYTES, Reports, Shard, SHARDS, Counts, CLIENT_COUNTS_PER_MINUTE, COUNTS_KEEP_MILLIS, MAX_COUNTS_BYTES,
 } from "../../server/contributions/src/worker.js";
 
 const root = new URL("../../", import.meta.url);
@@ -102,6 +102,7 @@ const server = () => ({
   SHARDS: new Namespace(state => new Shard(state)),
   CAP: new Namespace(state => new Cap(state)),
   REPORTS: new Namespace(state => new Reports(state)),
+  COUNTS: new Namespace(state => new Counts(state)),
   RATE_SALT: "test-salt",
   EXPORT_TOKEN: TOKEN,
 });
@@ -381,6 +382,93 @@ describe("bug reports and ideas from the form (#97)", () => {
     const config = await text("server/contributions/wrangler.toml");
     expect(config).toContain('name = "REPORTS"\nclass_name = "Reports"');
     expect(config).toContain('tag = "v2"\nnew_sqlite_classes = ["Reports"]');
+  });
+});
+
+describe("Sharing's daily totals (#96)", () => {
+  const id = "9f2c41e07b3d4a5c8e1f6a2b3c4d5e6f";
+  const other = "00112233445566778899aabbccddeeff";
+  const send = async (env: Server, day = "2026-11-16", counts = id, body = sealed(), address = ADDRESS) =>
+    worker.fetch(post("/v1/counts", body, { "X-Counts": await folder(counts), "X-Day": day, "CF-Connecting-IP": address }), env);
+  const days = (env: Server) => env.COUNTS.entry("counts").storage.sql.exec("SELECT folder, day FROM days ORDER BY id").toArray();
+
+  test("stores each sealed day under a hash of its counts ID, and a day sent again replaces the first", async () => {
+    const env = server();
+    expect((await send(env)).status).toBe(204);
+    expect((await send(env)).status).toBe(204);
+    expect((await send(env, "2026-11-17")).status).toBe(204);
+    expect(days(env)).toEqual([{ folder: await folder(id), day: "2026-11-16" }, { folder: await folder(id), day: "2026-11-17" }]);
+    // The ID itself is never stored.
+    expect(JSON.stringify(days(env))).not.toContain(id);
+  });
+
+  test("refuses what isn't a sealed day, a bad ID or date, and anything too big", async () => {
+    const env = server();
+    const hash = await folder(id);
+    expect((await worker.fetch(post("/v1/counts", sealed(), { "X-Counts": id, "X-Day": "2026-11-16" }), env)).status).toBe(400);
+    expect((await worker.fetch(post("/v1/counts", sealed(), { "X-Counts": hash, "X-Day": "2026-11-16T10:00" }), env)).status).toBe(400);
+    expect((await worker.fetch(post("/v1/counts", new TextEncoder().encode("plain totals"), { "X-Counts": hash, "X-Day": "2026-11-16" }), env)).status).toBe(400);
+    expect((await send(env, "2026-11-16", id, sealed(MAX_COUNTS_BYTES + 1))).status).toBe(413);
+    expect(days(env)).toEqual([]);
+  });
+
+  test("a per-client limit of its own", async () => {
+    const env = server();
+    for (let i = 0; i < CLIENT_COUNTS_PER_MINUTE; i++) expect((await send(env, `2026-11-${10 + i}`)).status).toBe(204);
+    expect((await send(env, "2026-11-30")).status).toBe(429);
+    expect((await send(env, "2026-11-30", id, sealed(), "198.51.100.4")).status).toBe(204);
+  });
+
+  test("Delete what I've sent deletes the totals of each counts ID named, with or without a contributor", async () => {
+    const env = server();
+    await send(env);
+    await send(env, "2026-11-17", other);
+    await send(env, "2026-11-18", "ffeeddccbbaa99887766554433221100");
+    const remove = (body: unknown) => worker.fetch(post("/v1/delete", JSON.stringify(body)), env);
+    expect(await (await remove({ counts: [id, other] })).json()).toEqual({ deleted: 2 });
+    expect(days(env).length).toBe(1);
+    // Hashes, malformed IDs and too many are refused.
+    expect((await remove({ counts: [await folder(id)] })).status).toBe(400);
+    expect((await remove({ counts: Array(27).fill(id) })).status).toBe(400);
+    expect((await remove({})).status).toBe(400);
+    // Both at once.
+    const contributor = "2b7e1516-28ae-4d2a-a6d2-abf7158809cf";
+    await worker.fetch(post("/v1/batch", sealed(), { "X-Contributor": await folder(contributor) }), env);
+    expect(await (await remove({ contributor, counts: ["ffeeddccbbaa99887766554433221100"] })).json()).toEqual({ deleted: 2 });
+    expect(days(env)).toEqual([]);
+    expect(stored(env)).toBe(0);
+  });
+
+  test("days go 1 year after they arrive", async () => {
+    const env = server();
+    await send(env);
+    const store = env.COUNTS.entry("counts");
+    const alarm = store.storage.alarmAt!;
+    expect(alarm).toBeGreaterThan(0);
+    await (store.object as Counts).alarm(Date.now() + COUNTS_KEEP_MILLIS - 60_000);
+    expect(days(env).length).toBe(1);
+    await (store.object as Counts).alarm(Date.now() + COUNTS_KEEP_MILLIS + 60_000);
+    expect(days(env)).toEqual([]);
+  });
+
+  test("the owner exports them, still sealed, and deletes them once exported; nobody else can", async () => {
+    const env = server();
+    await send(env);
+    await send(env, "2026-11-17");
+    expect((await worker.fetch(get("/v1/export/counts", "wrong-token-".repeat(4)), env)).status).toBe(404);
+    const list = await (await worker.fetch(get("/v1/export/counts?after=0"), env)).json() as { items: { id: number; day: string }[]; more: boolean };
+    expect(list.items.map(item => item.day)).toEqual(["2026-11-16", "2026-11-17"]);
+    const body = new Uint8Array(await (await worker.fetch(get(`/v1/export/counts/day?id=${list.items[0].id}`), env)).arrayBuffer());
+    expect([...body.slice(0, 4)]).toEqual([0x54, 0x4b, 0x43, 0x31]);
+    const confirm = new Request(`${URL_BASE}/v1/export/counts/confirm`, { method: "POST", body: JSON.stringify({ through: list.items[1].id }),
+      headers: { Authorization: `Bearer ${TOKEN}` } });
+    expect(await (await worker.fetch(confirm, env)).json()).toEqual({ deleted: 2 });
+  });
+
+  test("the Worker's config has the counts object and its migration", async () => {
+    const config = await text("server/contributions/wrangler.toml");
+    expect(config).toContain('name = "COUNTS"\nclass_name = "Counts"');
+    expect(config).toContain('tag = "v3"\nnew_sqlite_classes = ["Counts"]');
   });
 });
 

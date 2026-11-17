@@ -20,6 +20,9 @@ echo "Key feed scripts checks passed"
 if [ -n "${KOTLIN_HOME:-}" ]; then
   "$KOTLIN_HOME/bin/kotlinc" -nowarn -d "$work/keyfeed" android/debug/recorder/KeyFeedPlan.kt tools/dev/touch/test/KeyFeedChecks.kt 2>&1 | grep -v '^warning' || true
   java -cp "$work/keyfeed:${KOTLIN_STDLIB:-$KOTLIN_HOME/lib/kotlin-stdlib.jar}" com.titankeys.keyboard.KeyFeedChecksKt
+  # The run notification's words (RunStatus): the batch line, the counts and ETA, the note, and "done".
+  "$KOTLIN_HOME/bin/kotlinc" -nowarn -d "$work/runstatus" android/debug/recorder/RunStatusText.kt tools/dev/touch/test/RunStatusChecks.kt 2>&1 | grep -v '^warning' || true
+  java -cp "$work/runstatus:${KOTLIN_STDLIB:-$KOTLIN_HOME/lib/kotlin-stdlib.jar}" com.titankeys.keyboard.RunStatusChecksKt
 else
   echo "Key feed checks NOT run: set KOTLIN_HOME to your Kotlin compiler directory"
 fi

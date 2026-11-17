@@ -11,6 +11,7 @@ Usage: checks.py [NAME...]   (default: all; see --list)
 Screenshots go to $TK_OUT/touch/shots, without the status bar, for what only the eye can judge (the dots, the trail, the pill).
 """
 import importlib
+import json
 import os
 import tempfile
 import re
@@ -283,6 +284,39 @@ def phone_heat():
     return (int(found.group(1)) / 10 if found else None), "com.mediatek.batterywarning" in front
 
 
+# The run's progress on the phone (RunStatus, Debug's silent notification), when a runner sets TK_RUN_STATUS_FILE: the totals of
+# the batches done so far live in that file, the runner sets TK_RUN_BATCH ("4/29") and TK_RUN_ETA ("02:40") per batch, and each
+# check adds its batch's results. Counts and names only. A broadcast that fails never stops a check.
+def run_status(note="", done=False, final=False):
+    path = os.environ.get("TK_RUN_STATUS_FILE")
+    if not path:
+        return
+    try:
+        base = {"yes": 0, "no": 0, "look": 0}
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                base.update(json.load(handle))
+        mine = {"yes": sum(v == "YES" for _, v in results), "no": sum(v == "NO" for _, v in results),
+                "look": sum(v == "LOOK" for _, v in results)}
+        totals = {k: base[k] + mine[k] for k in mine}
+        last_no = next((f"NO {name}: {detail[:60]}" for name, verdict, detail, _ in reversed(details) if verdict == "NO"), "")
+        batch, _, batches = os.environ.get("TK_RUN_BATCH", "0/0").partition("/")
+        args = ["shell", "am", "broadcast", "-n", f"{APP}/com.titankeys.keyboard.RunStatus", "--ei", "batch", batch,
+                "--ei", "batches", batches or "0", "--es", "name", f"'{os.environ.get('TK_RUN_NAME', '')}'",
+                "--ei", "yes", str(totals["yes"]), "--ei", "no", str(totals["no"]), "--ei", "look", str(totals["look"]),
+                "--es", "eta", f"'{os.environ.get('TK_RUN_ETA', '')}'", "--es", "note",
+                "'" + (note or last_no).replace("'", "") + "'", "--ez", "done", "true" if done else "false"]
+        # The last broadcast's words, for the owner wait in touchlib.sh to say why it waits.
+        with open(path + ".args", "w", encoding="utf-8") as handle:
+            handle.write(" ".join(args[:-6]))
+        adb(*args)
+        if final:
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(totals, handle)
+    except Exception as error:  # noqa: BLE001
+        print(f"run status not sent: {error!r}", flush=True)
+
+
 def wait_cool():
     """Waits while the phone is too hot or warns, up to an hour, saying the temperature each time; Stop if it never cools."""
     for step in range(HEAT_WAIT_STEPS + 1):
@@ -291,6 +325,7 @@ def wait_cool():
             if step:
                 print(f"{time.strftime('%T')} the phone is fine again: {celsius} °C", flush=True)
             return
+        run_status(f"paused: phone hot ({celsius} °C)")
         print(f"{time.strftime('%T')} the phone is too hot to test: {celsius} °C, the battery warning "
               f"{'in front' if warning else 'not shown'}; waiting ({step * HEAT_STEP_SECONDS // 60} of "
               f"{HEAT_WAIT_STEPS * HEAT_STEP_SECONDS // 60} min)", flush=True)
@@ -384,6 +419,7 @@ def run_batch(name):
             except (Exception, SystemExit) as error:  # noqa: BLE001 (one broken check mustn't end the night's run)
                 record(check.__name__, False, f"the check broke: {error!r}")
             crash_check(crashes)
+            run_status()
         if hasattr(module, "finish"):
             module.finish()
     except Stop as stop:
@@ -394,6 +430,7 @@ def run_batch(name):
         # A night of batches keeps Debug from the first to the last (TK_BATCH_KEEP_DEBUG=1); the runner sets release back after.
         if os.environ.get("TK_BATCH_KEEP_DEBUG") != "1":
             keyboard("release")
+        run_status(final=True)  # this batch's results join the run's totals
         path = report(name, stamp, getattr(module, "HANDS", []))
         print(f"report: {path}", flush=True)
     return stopped

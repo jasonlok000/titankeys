@@ -4,7 +4,8 @@
    one character, leaving 我 (O). B, 981a474e and 87e6db26.
 2. A Space touch with a code pending picks nothing: neihou pending, a tap in Space's touch zone leaves the field empty (O);
    Space then picks (O, Chinese characters). B, 981a474e.
-3. Cangjie, a finger resting on N: the bar shows its radical 弓 (J, a shot). B, b0cf670e.
+3. 速成 and 倉頡, a finger resting on N: 弓 in TitanKeysBar's lines, right after the switch (NO expected until B's fix) and
+   after a key (O). B, b0cf670e.
 4. Quick (速成): hqi and Space type 我 (O).
 5. The playground (the app's front page) types in the input methods that are on, and a held Sym switches there: English and
    Russian on, a held Sym, Q types й (O). Only what the check typed is deleted, never a select-all: the field is the owner's.
@@ -56,10 +57,27 @@ def check_space_touch_keeps_code():
     record("space-after-touch-picks", chinese_checks.cjk(picked), f"then Space: {picked!r}")
 
 
+def radical_shown():
+    """Whether TitanKeysBar logged 弓 (N's radical) since the log was cleared: on the bar or as a mark."""
+    return any("弓" in (" ".join(line[2]) if line[0] == "bar" else line[1]) for line in ib.bar_lines())
+
+
 def check_radical_hover():
-    ib.start(["en", "zh-cangjie"], "zh-cangjie")
-    play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot="radical-n", at=900)
-    record("radical-n", None, "Cangjie, a finger resting on N: 弓 on the bar", "radical-n")
+    """A finger resting on N shows its radical 弓, judged from TitanKeysBar: right after the switch with no key pressed (the
+    owner sees it only after a key: NO expected until B's fix), and again after a key."""
+    for im, name in (("zh-quick", "quick"), ("zh-cangjie", "cangjie")):
+        ib.start(["en", im], im)
+        adb("logcat", "-c")
+        play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot=f"radical-{name}-first", at=900)
+        first = radical_shown()
+        play("key:a", "+400", *[g for _ in range(3) for g in ("key:del", "+90")], "+300")
+        adb("logcat", "-c")
+        play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot=f"radical-{name}-after-key", at=900)
+        after = radical_shown()
+        record(f"radical-{name}-first", first, f"{im}, no key yet, resting on N: 弓 {'shown' if first else 'not shown'}",
+               f"radical-{name}-first")
+        record(f"radical-{name}-after-key", after, f"{im}, after a key, resting on N: 弓 {'shown' if after else 'not shown'}",
+               f"radical-{name}-after-key")
 
 
 def check_quick():

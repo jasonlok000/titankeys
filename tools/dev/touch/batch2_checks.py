@@ -63,7 +63,8 @@ def check_hold_250():
     record("hold-250-look", None, "40 s into the hold: the dominoes live, the count counting on", "hold-250")
 
 
-BATCH = [check_chinese_characters, check_hold_250]
+# check_hold_250 is out: the dominoes are dropped (owner, 2026-11-17 evening).
+BATCH = [check_chinese_characters]
 
 
 def finish():

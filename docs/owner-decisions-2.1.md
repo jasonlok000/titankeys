@@ -862,3 +862,5 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 
 - Bug (B): picking the first Chinese candidate leaves the bar unchanged and types a space. The bar must switch to next words for the picked word.
 - Master's call: in Chinese (and Japanese, if it uses the three-slot bar) the bar shows as many candidates as fit, in rank order, each wide enough to tap; swipe up still opens the full list. Alphabet languages keep three.
+- Owner: "the triple tap doesn't work well chracter by character in chinese." D: three taps select the candidate as it was picked, falling back to ICU's word (Master's call; D reproduces first).
+- Owner: "Enter with the chinese overlay expanded still sends.  not a issue in emoji or sym so check that code to be consistent." B: every expanded list takes Enter like the Sym panel (it turns pages, never reaches the field). Priority over the bar count.

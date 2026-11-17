@@ -12,6 +12,5 @@ keyboard=android/kotlin/com/titankeys/keyboard
 javac --release 17 -d "$work" android/kotlin/com/titankeys/engine/EmojiPages.java
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work:$stdlib" -d "$work" \
   "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" "$keyboard/InputMethods.kt" "$keyboard/WordList.kt" "$keyboard/Layout.kt" \
-  "$keyboard/Hangul.kt" "$keyboard/Telex.kt" "$keyboard/Rules.kt" "$keyboard/LanguageLearning.kt" "$keyboard/Favourites.kt" "$keyboard/LanguageSettings.kt" \
-  android/kotlin/com/titankeys/connected/Json.kt tests/languages/LanguageChecks.kt
+  "$keyboard/Hangul.kt" "$keyboard/Telex.kt" "$keyboard/Rules.kt" "$keyboard/LanguageLearning.kt" "$keyboard/Favourites.kt" "$keyboard/LanguageSettings.kt" "$keyboard/EngineWait.kt" \n  android/kotlin/com/titankeys/connected/Json.kt tests/languages/LanguageChecks.kt
 java -cp "$work:$stdlib" com.titankeys.keyboard.LanguageChecksKt android/assets/im

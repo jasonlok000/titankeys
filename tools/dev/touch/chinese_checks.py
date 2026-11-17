@@ -179,10 +179,12 @@ def check_menu():
 
 
 def check_yale_codes():
-    """Yale's j/z and n/l (B): "lei" + Space types 你, and "zungman" + Space types 中文."""
+    """Yale's j/z and n/l (B): "lei" + Space types 你, and "zungman" + Space types 中文; the grammar model: "neisikjofaanmei" +
+    Space types 你食咗飯未."""
     import language_checks
     language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
-    for typed, want in (("lei", "你"), ("zungman", "中文")):
+    # The last is B's Cantonese grammar model (main 38069d17): a whole sentence from one code.
+    for typed, want in (("lei", "你"), ("zungman", "中文"), ("neisikjofaanmei", "你食咗飯未")):
         fresh()
         text = shot_then(f"yale-{typed}", [f"key:{k}" for k in typed] + ["+500"], ["key:space", "+400"])
         record(f"yale-{typed}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}", f"yale-{typed}")

@@ -498,6 +498,15 @@ unless it's like password or whatever. if not hard then it should be learning fr
   sentence's start, lower case where the script has case, the top 8 next words per first word. `NextWords` reads it with the
   word list on a switch and frees it with the list; the bar puts its next words after the user's own and before the starters.
   An input method without one has the starters and the user's own, as before.
+- **Blocked words, Favourites and the user's own words in every language** (owner, 2026-11-17: "The dictionary and favorite
+  systems should still work for other languages"). Blocked words and Favourites stay one shared set each (`WordRules`): words
+  rarely collide across languages, and one set keeps Settings, the backup and the word menu as they are. A blocked word never
+  shows in any language; a favourite comes first among the bar's three (`Favourites.first`). The word menu works on a word in
+  any language: Block and Favourite use the shared sets; Save and Unsave act on that language's own words (saved words never
+  fade; Unsave hides a list word until it's saved again). `LearnedWords` keeps one copy for the keyboard and Settings: Saved
+  words lists every language's own words under its name, with remove; Remove all learned words clears them too. D's fixes
+  ask `LanguageWords.usable` and `favourite`. Export words carries English's only (its file is the engine's); Back up
+  everything carries every language's.
 - **Korean** has a word list now: the Leipzig Corpora Collection's 2022 Korean news (CC BY 4.0), the 100,000 commonest
   words of whole syllables. Its engine offers the words that start with the word so far, the syllables written and the one
   being built, by its letters: ㅎㅏ offers 하고 and 한국 (a lone initial matches as the initial its syllables split into). A

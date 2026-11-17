@@ -277,17 +277,25 @@ internal class Languages(
         if (learningFor == method.id) return
         saveLearning()
         learningFor = method.id
-        words.learning = if (method.isEnglish) null else LanguageLearning.decode(learningStore().getString(method.id, null))
+        words.learning = if (method.isEnglish) null else LearnedWords.of(context, method.id)
         words.learned = {
             if (++unsaved >= SAVE_EVERY) saveLearning()
         }
         words.mayLearn = ::learningOn
+        val typing = com.titankeys.engine.SwipeTyping.get(context)
+        val favourites = FavouriteWords.get(context)
+        words.rules = WordRules(typing::blockedWord, favourites::contains)
     }
 
     /** Whether the user lets TitanKeys learn their words: the same switch as English's, Learn new words I type. */
     private fun learningOn() = com.titankeys.engine.SwipeTyping.get(context).learningEnabled()
 
-    private fun learningStore() = context.getSharedPreferences(LANGUAGE_LEARNING, Context.MODE_PRIVATE)
+
+    /** The word menu changed what the current input method knows: written at once. */
+    fun learningChanged() {
+        unsaved++
+        saveLearning()
+    }
 
     /** Writes what the current input method learned. */
     fun saveLearning() {
@@ -295,7 +303,7 @@ internal class Languages(
         val learning = words.learning ?: return
         if (unsaved == 0) return
         unsaved = 0
-        learningStore().edit().putString(id, learning.encode()).apply()
+        LearnedWords.save(context, id)
     }
 
     /** What this keyboard holds of its input methods, for LeakCheck. */
@@ -322,11 +330,6 @@ internal class Languages(
 /** Every keyboard's [Languages] still in memory, weakly, for TitanKeys Debug's LeakCheck: one, or none, is right. */
 private val live = java.util.Collections.synchronizedMap(java.util.WeakHashMap<Languages, Unit>())
 
-/**
- * What each input method but English learned from the user, by input method id ([LanguageLearning]): in the backup, kept by
- * Reset most things, cleared by Reset literally everything, as English's learned words are.
- */
-internal const val LANGUAGE_LEARNING = "language_learning"
 /** How many learned words go by before they're written. */
 private const val SAVE_EVERY = 5
 

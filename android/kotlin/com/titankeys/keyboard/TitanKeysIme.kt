@@ -1921,6 +1921,17 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun menuFor(word: String): Strip.Notice.Menu {
         val typing = SwipeTyping.get(this)
+        // Another language: the word's place is in its own list and what it learned; Blocked words and Favourites are shared.
+        otherLearning()?.let { learning ->
+            val saved = learning.isSaved(word)
+            return Strip.Notice.Menu(word, MenuKeys.step(
+                blocked = typing.blockedWord(word),
+                favourite = FavouriteWords.get(this).contains(word),
+                saved = saved,
+                learned = !saved && learning.knows(word),
+                builtIn = languages.words.listed(word),
+                unsaved = learning.isHidden(word)))
+        }
         val step = pendingWords[word.lowercase()] ?: MenuKeys.step(
             blocked = typing.blockedWord(word),
             favourite = FavouriteWords.get(this).contains(word),
@@ -2156,7 +2167,17 @@ class TitanKeysIme : InputMethodService() {
      * Save, from not saved: TitanKeys knows the word now. A dictionary word you took out comes back, in the dictionary's own case;
      * any other word goes into Saved words in its own case ([keptCase]). The menu stays open, and I is Favourite now.
      */
+    /** What the input method typing now learned, when it isn't English; null for English, whose engine keeps its own. */
+    private fun otherLearning() = if (::languages.isInitialized && languages.words.other) languages.words.learning else null
+
     private fun saveWord(held: HeldWord) {
+        otherLearning()?.let { learning ->
+            learning.save(keptCase(held))
+            languages.learningChanged()
+            composer.unhide(held.word)
+            menuPressed(held, MenuKeys.Button.Save)
+            return
+        }
         val typing = SwipeTyping.get(this)
         pendingWords[held.word.lowercase()] = MenuKeys.Step.Saved
         val done: (String?) -> Unit = { error -> if (error != null) failed(held, "save", error) else settled(held.word, MenuKeys.Step.Saved) }
@@ -2171,6 +2192,13 @@ class TitanKeysIme : InputMethodService() {
      * back, and Save brings it back at once. It leaves the bar's words in this field too.
      */
     private fun unsaveWord(held: HeldWord) {
+        otherLearning()?.let { learning ->
+            learning.unsave(held.word, listed = languages.words.listed(held.word))
+            languages.learningChanged()
+            composer.hide(held.word)
+            menuPressed(held, MenuKeys.Button.Unsave)
+            return
+        }
         pendingWords[held.word.lowercase()] = MenuKeys.Step.New
         SwipeTyping.get(this).unsaveWord(held.word) { error ->
             if (error != null) failed(held, "unsave", error) else settled(held.word, MenuKeys.Step.New)
@@ -2197,6 +2225,15 @@ class TitanKeysIme : InputMethodService() {
     private fun unfavouriteWord(held: HeldWord) {
         if (!FavouriteWords.get(this).remove(held.word)) {
             haptics.play(Haptic.WordNotSaved)
+            return
+        }
+        // Another language: a favourite it didn't otherwise know goes into its saved words.
+        otherLearning()?.let { learning ->
+            if (!learning.knows(held.word) && (!languages.words.listed(held.word) || learning.isHidden(held.word))) {
+                learning.save(keptCase(held))
+                languages.learningChanged()
+            }
+            menuPressed(held, MenuKeys.Button.Unfavourite)
             return
         }
         val typing = SwipeTyping.get(this)

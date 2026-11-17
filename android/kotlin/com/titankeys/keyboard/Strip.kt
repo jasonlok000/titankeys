@@ -895,6 +895,7 @@ class Strip(
         drawMenu(canvas)
         drawPicker(canvas)
         drawAutoCapital(canvas)
+        drawInputMark(canvas)
         idle?.let { drawIdle(canvas, it) }
         drawDemoFinger(canvas)
         if (!gesture.busy) return
@@ -984,6 +985,52 @@ class Strip(
 
     /** A touch on the screen that picks one of the picker's items: its place in the items. Set by the keyboard. */
     var pickerTap: ((Int) -> Unit)? = null
+    /** A touch on the more cue at P: the keyboard opens the bigger menu of choices. */
+    var moreTap: (() -> Unit)? = null
+
+    /** Where a touch went down for the more cue, in [pickerTouched]. */
+    private val moreTouched = -2
+
+    /** True when [x] is on the more cue, while it shows. */
+    private fun onMore(x: Float): Boolean {
+        val picker = notice as? Notice.Picker ?: return false
+        return picker.more && x >= menuColumn(ChineseRow.MORE).first
+    }
+
+    /**
+     * The input method's mark over Q (耶, 粵, あ, ES) whenever one that isn't English types, the idle bar included (owner,
+     * 2026-11-17). Empty for English. With choices on the bar their own notice draws it.
+     */
+    var inputMark = ""
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    /**
+     * The mark on the idle bar, in the accent over Q, as the choices' row has it. A word whose text would reach under it pushes
+     * it small into the corner, as Shift's arrow goes.
+     */
+    private fun drawInputMark(canvas: Canvas) {
+        if (inputMark.isEmpty() || notice != null || modifiers != null || idle != null || width == 0) return
+        pickerText.typeface = typeface
+        pickerText.textSize = wordPixels()
+        pickerText.color = look.accent
+        val baseline = StripFit.baseline(line, pickerText.textSize, floor)
+        val word = wordViews.filter { it.visibility == VISIBLE && it.text.isNotEmpty() && it.layout != null }.minByOrNull { it.left }
+        val textLeft = word?.let { it.left + it.totalPaddingLeft + it.layout.getLineLeft(0) - it.scrollX }
+        val right = minOf(menuColumn(ChineseRow.MARK).second, (width - side).toFloat())
+        if (textLeft != null && textLeft < right + dp(4)) {
+            canvas.save()
+            val x = side.toFloat() / 2 + dp(2)
+            canvas.scale(INPUT_MARK_SMALL, INPUT_MARK_SMALL, x, dp(4).toFloat())
+            canvas.drawText(inputMark, x, dp(4) - pickerText.ascent(), pickerText)
+            canvas.restore()
+            return
+        }
+        drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)
+    }
     /** The picker item a touch went down on, which it picks if it lifts there too. */
     private var pickerTouched = -1
 
@@ -1420,11 +1467,12 @@ class Strip(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (notice is Notice.Picker && pickerTap != null) {
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> pickerTouched = pickerItemAt(event.x)
+                MotionEvent.ACTION_DOWN -> pickerTouched = if (onMore(event.x)) moreTouched else pickerItemAt(event.x)
                 MotionEvent.ACTION_UP -> {
                     val item = pickerTouched
                     pickerTouched = -1
-                    if (item >= 0 && pickerItemAt(event.x) == item) pickerTap?.invoke(item)
+                    if (item == moreTouched && onMore(event.x)) moreTap?.invoke()
+                    else if (item >= 0 && pickerItemAt(event.x) == item) pickerTap?.invoke(item)
                 }
                 MotionEvent.ACTION_CANCEL -> pickerTouched = -1
             }
@@ -1474,7 +1522,7 @@ class Strip(
         // A touch on one of the menu's buttons is the bar's, which draws them. Beside them it closes the menu, as before.
         if (event.actionMasked == MotionEvent.ACTION_DOWN && menuActionAt(event.x) != null) return true
         // A touch on the picker's items is the bar's, which draws them over the keys.
-        if (event.actionMasked == MotionEvent.ACTION_DOWN && pickerTap != null && pickerItemAt(event.x) >= 0) return true
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && pickerTap != null && (pickerItemAt(event.x) >= 0 || onMore(event.x))) return true
         return gesture.showing || super.onInterceptTouchEvent(event)
     }
 
@@ -1788,6 +1836,8 @@ class Strip(
         private const val MENU_SLIDE_DP = 40
         private const val MENU_SLIDE_MILLIS = 220L
         private const val MENU_WORD_TOP = 2
+        /** The idle bar's input method mark, small in the corner when a word reaches under Q. */
+        private const val INPUT_MARK_SMALL = .6f
         /** The code's line above the bar: its height, its gap over the bar, its sides' padding, in dp, and its text, in sp. */
         private const val CODE_LINE_DP = 22
         private const val CODE_GAP_DP = 3

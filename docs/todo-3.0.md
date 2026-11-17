@@ -299,7 +299,7 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **Next slot:** main-mem-debug went on at 22:36 and stays on Debug for the owner; its slot was stopped at once and runs overnight: all 49 languages, the out-of-memory count, LeakCheck,
   chinese-ui with the suggestion checks, #83's pairs.
 
-## Found 2026-11-16: the gestures assume spaces and "." (waiting for the owner's go)
+## Found 2026-11-16: the gestures assume spaces and "." (owner's go 2026-11-17: D builds it; C does the bar never empty)
 
 Read in the code, not seen on the phone yet; every gesture check so far runs in English only.
 - A delete flick takes everything back to the last space (`wordDeleteLength`), so in Chinese, Japanese and Thai it can take a

@@ -28,6 +28,11 @@ speller:
     - xform/oe/eu/
     - xform/em/im/
     - xform/ep/ip/
+    # Interchangeable initials (owner, 2026-11-17: "For yale specifically, make j and z, n and l interchangeable"): z types
+    # Yale's j, as Jyutping writes it; n and l type each other, as many speakers merge them. Initials only, and ng stays ng.
+    - derive/^j/z/
+    - derive/^n(?!g)/l/
+    - derive/^l/n/
     - abbrev/^([a-z]).+$/$1/
     - abbrev/^(ng).+$/$1/
     - abbrev/^(ch).+$/$1/

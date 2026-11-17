@@ -104,6 +104,12 @@
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=yue-jyutping" android:subtypeId="621138676" />
     <subtype android:label="@string/im_zh_pinyin" android:imeSubtypeLocale="zh" android:languageTag="zh"
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=zh-pinyin" android:subtypeId="631032624" />
+    <subtype android:label="@string/im_zh_cangjie" android:imeSubtypeLocale="zh" android:languageTag="zh"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=zh-cangjie" android:subtypeId="2015308119" />
+    <subtype android:label="@string/im_zh_quick" android:imeSubtypeLocale="zh" android:languageTag="zh"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=zh-quick" android:subtypeId="214670288" />
+    <subtype android:label="@string/im_zh_zhuyin" android:imeSubtypeLocale="zh" android:languageTag="zh"
+        android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=zh-zhuyin" android:subtypeId="-1821165126" />
     <subtype android:label="@string/im_ja" android:imeSubtypeLocale="ja" android:languageTag="ja"
         android:imeSubtypeMode="keyboard" android:imeSubtypeExtraValue="im=ja" android:subtypeId="-38894187" />
 </input-method>

@@ -26,7 +26,14 @@ From the study's ranking:
   Galician, Basque, Estonian, Latvian, Lithuanian, Icelandic, Irish, Afrikaans, Indonesian, Esperanto, Azerbaijani), and
   Cyrillic, Greek and Georgian (Russian, Ukrainian, Belarusian, Bulgarian, Serbian, Macedonian, Greek, Kazakh, Georgian).
 - **Chinese through Rime:** Cantonese in Yale, the owner's input method and the first Chinese one, then Jyutping, and
-  Mandarin in Pinyin, with the Chinese variant setting.
+  Mandarin in Pinyin, with the Chinese variant setting. Then Hong Kong's shape-based standards, 倉頡 (Cangjie 5) and 速成
+  (Quick 5), and Taiwan's 注音 (Zhuyin) on the 許氏 (Hsu) layout (owner and Orchestrator, 2026-11-17; 九方 is proprietary
+  and left out). Zhuyin's standard 大千 layout would need Alt for 15 of its keys, the number row and , . / ; -, which the
+  Titan has only behind Alt; Hsu puts every symbol on the 26 letters, with optional tones on d f j s, and Settings names it
+  "注音 · 許氏" so a 大千 user isn't surprised. Cangjie's and Quick's codes show as their radicals on the code line
+  (hqi: 竹手戈), Zhuyin's as Zhuyin (ㄋㄧˇ ㄏㄠˇ). `tests/rime/codes.sh` types Tatoeba's Cantonese text character by
+  character: Cangjie 97.7% first choice, Quick 44.7% (two letters a character, so the pick is the user's), Zhuyin 52.0%
+  (one syllable alone; in phrases Rime's sentences decide), on the first page 100%, 86.8% and 94.3%.
 - **Korean and Vietnamese,** each through a small engine of TitanKeys' own ("Korean and Vietnamese" below).
 - **Thai** (experimental), Kedmanee with a third layer of held keys and a word break for suggestions ("Thai" below).
 - **Hindi** (experimental), typed by sound through Wikimedia's jquery.ime rules ("Hindi" below).
@@ -188,9 +195,9 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 
 **The bar while a code is typed:**
 - **The code** floats just above the bar's left edge, only while a code is typed: in the bar's black, with a soft orange glow,
-  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; a tab joined to the bar's top is the
-  other look, `Strip.CODE_TAB`, while the owner chooses). It's drawn in the see-through layer over the app (the word menu's
-  effects layer), so the app never resizes. With no code, nothing floats,
+  its text at the bar's size and full brightness (owner, 2026-11-17, to see it clearly; tried as a tab joined to the bar, then
+  "I think the glow acc looks nice so we can keep that in place of linked tab"). It's drawn in the see-through layer over the
+  app (the word menu's effects layer), so the app never resizes. With no code, nothing floats,
   and the bar shows its suggestions: no language name, no tint ("keep it using the orange black theme").
 - **The language mark at Q:** the input method's label (耶, 粵, 拼, あ, ES) in the accent over Q, as Shift's arrow and Caps
   show today, whenever an input method that isn't English types, the idle bar included (owner, 2026-11-17: "The Yale Chinese
@@ -206,20 +213,25 @@ Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffe
 not working but honestly bad idea. Abandon it", "唔要hold key 揀字"):
 - **Space** picks the first choice.
 - **A tap on the screen** on a choice picks it.
-- **A flick up on the touchpad** from the key under a choice picks it (the top two rows). It needs only a quarter of a key
-  (`ChineseKeys.FLICK_KEYS`): a finger flicking up from the top row leaves the touchpad within about half a key, under a page
-  turn's length, so the owner's flicks went unseen ("flick not working"). Each flick's reading is in TitanKeys Debug's log
-  (`adb logcat -s TitanKeysChoices`). Swipes on the keys never turn the row's pages.
+- **No flick picks** (owner, 2026-11-17: "Abandon the flick to select concept"), and swipes on the keys never turn the row's
+  pages: a swipe up opens the bigger menu instead (below).
 - **Hold for symbols is back** in Chinese, as in every language: a held letter's press goes out of the code again, and its
   symbol goes through the engine, as Alt's does (a mark as Chinese writes it, the code's first choice first).
 - The row shows no hover (owner, 2026-11-17): only the bigger menu does.
 
-**The bigger menu: Sym, while a code is typed** (owner, 2026-11-17: "Let's use sym and not shift. but only when a code is
-being typed. The reasoning being that the emojis and symbols shold not be typed anyways when there's still code"). A short
-Sym opens it, Sym again closes it, and a held Sym still opens the language switcher; with no code typed, Sym is the Sym panel
-as always. A tap on the more cue `⋯` at P opens it too. The cue is orange while a code is typed, meaning Sym opens more,
-though Sym isn't under it ("not like the hover type of highlight but maybe more like just make it orange"). Shift does nothing
-special, and P is only a letter ("Abandon p too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
+**The bigger menu: Shift** (owner, 2026-11-17: "use the original shift as the plan instead. No hover effect needed for the
+shift because it's at the blind spot", after trying Sym). Either Shift opens it while choices are on the bar, a code's or
+the suggestions', and either Shift closes it; Shift itself never comes on for that press. Sym is always the Sym panel: with
+a code typed, a symbol picked there types the code's first choice first, then the symbol, as the comma does; with
+suggestions and no code, they're cleared, not picked. A swipe up on the touchpad opens it too, a page turn's length or more,
+so a resting finger or a word's swipe can't (owner, 2026-11-17: "swiping up would expand the word list for Chinese"), and so
+does a tap on the more cue `⋯` at P. The cue is orange while a code is typed, meaning Shift opens more, though Shift isn't
+under it ("not like the hover type of highlight but maybe more like just make it orange"). P is only a letter ("Abandon p
+too"). Like the Sym panel's emoji and symbol pages, in the panel's place:
+- **Every input method with choices on the bar has it** (owner, 2026-11-17: "Also for other relevant language"): Chinese,
+  Japanese, Vietnamese (Telex) and Hindi, which fill it from their word lists past the bar's eight. A swipe up opens it in
+  all of them; Shift only in Chinese and Japanese, since in Vietnamese it types capitals and in Hindi its own sounds. Korean
+  builds a syllable with no choices, so a swipe up there opens nothing.
 - The choices fill the three letter rows over the keys (W to O, S to L, Z to M), each as wide as it needs, as in the row.
   P shows the page ("2/5").
 - A press of the key under a choice picks it, and so does a tap on the screen. A resting finger highlights the choice over
@@ -227,8 +239,8 @@ special, and P is only a letter ("Abandon p too"). Like the Sym panel's emoji an
 - Enter turns to the next page and Backspace to the one before, the Sym panel's own keys; a swipe up on the keys turns to
   the next and down to the one before.
 - Sym is the ✕: it closes the menu, and so does Back. A pick closes it too.
-- No swipe opens it ("actions told apart only by speed are hard to learn"). Each key it takes is in TitanKeys Debug's log, with
-  its key code: the owner's Enter once sent where the touch feed's paged, and the log will say what the real key sends.
+- A swipe up opens it only at a page turn's length, never a short flick's ("actions told apart only by speed are hard to
+  learn"). Each key and swipe it takes is in TitanKeys Debug's log, with its key code: the owner's Enter once sent where the touch feed's paged, and the log will say what the real key sends.
 
 **Keys while a code is typed:**
 - **Enter** types the code as letters. **Backspace** takes off the last code letter.

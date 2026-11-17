@@ -16,8 +16,8 @@ Usage: gestures.py [--keymap FILE] [--out FILE] GESTURE... with GESTUREs in orde
   key:NAME[:HOLD[:AFTER]] a key pressed with the finger on its spot: held HOLD ms (default 70); AFTER is what the finger then
                           does: lift (default), rest (stays 700 ms), slide (moves a key right, then lifts) or none (no touch)
   hold:LETTER[:MS]        a letter held down (default 800 ms)
-  flickup:LETTER[:ROWS[:MS]]  a flick up on the touchpad from LETTER's key, ROWS rows (default 1) in MS (default 80): Chinese
-                          picks the choice over the key it starts on this way (ChineseKeys.flickColumn)
+  swipeup:LETTER[:ROWS[:MS]]  a swipe straight up on the touchpad from LETTER's key, ROWS rows (default 2) in MS (default
+                          150): with Chinese choices on the bar it opens the bigger menu (ChineseKeys.swipe)
   chord:A+B[+C][:MS]      keys pressed together, in order, then let go the other way round: alt+sym, shift+w (default 80 ms)
   touch:X,Y[:MS]          a still touch at a touchpad position (default 300 ms)
   rest:X0,Y0,X1,Y1[:MS]   a resting finger slid slowly from one position to the other, then lifted (default 1500 ms):
@@ -345,7 +345,7 @@ class Script:
             self.still(x1, y, hold)
         self.lift()
 
-    def flick_up(self, letter, rows=1.0, ms=80.0):
+    def swipe_up(self, letter, rows=2.0, ms=150.0):
         """Straight up from the key's middle, rows rows, then a lift: up only, so it's never read as across."""
         x, y0 = key_centre(letter)
         y1 = max(0.0, y0 - rows / 4)
@@ -575,8 +575,8 @@ def build(args, alignment=None):
             script.space_hold(count, float(parts[1]) if len(parts) > 1 else 0.0, float(parts[2]) if len(parts) > 2 else 500.0)
         elif name == "key":
             script.press(parts[0], float(parts[1]) if len(parts) > 1 else 70.0, parts[2] if len(parts) > 2 else "lift")
-        elif name == "flickup":
-            script.flick_up(parts[0], float(parts[1]) if len(parts) > 1 else 1.0, float(parts[2]) if len(parts) > 2 else 80.0)
+        elif name == "swipeup":
+            script.swipe_up(parts[0], float(parts[1]) if len(parts) > 1 else 2.0, float(parts[2]) if len(parts) > 2 else 150.0)
         elif name == "hold":
             script.press(parts[0], float(parts[1]) if len(parts) > 1 else 800.0)
         elif name == "chord":

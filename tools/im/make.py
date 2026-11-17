@@ -360,6 +360,14 @@ CHINESE = {
     "yue-jyutping": ("粵拼", "Cantonese, Jyutping", "粵", "yue", "tk_jyutping", "rime-cantonese (CC BY 4.0)"),
     "zh-pinyin": ("漢語拼音", "Mandarin, Pinyin", "拼", "zh", "tk_pinyin",
                   "rime-luna-pinyin and rime-essay (LGPL-3.0)"),
+    # Hong Kong's standard shape-based input methods, and Taiwan's Zhuyin on the Hsu layout, which fits the Titan's 26 letters
+    # (the standard 大千 layout needs the number row): owner and Orchestrator, 2026-11-17.
+    "zh-cangjie": ("倉頡", "Chinese, Cangjie", "倉", "zh", "tk_cangjie",
+                   "rime-cangjie's Cangjie 5 (LGPL-3.0; its dictionary, from 倉頡之友's 五倉世紀, marked GPL) and rime-essay (LGPL-3.0)"),
+    "zh-quick": ("速成", "Chinese, Quick", "速", "zh", "tk_quick",
+                 "rime-quick's Quick 5 (LGPL-3.0) on rime-cangjie's dictionary (marked GPL) and rime-essay (LGPL-3.0)"),
+    "zh-zhuyin": ("注音 · 許氏", "Mandarin, Zhuyin (Hsu layout)", "注", "zh", "tk_zhuyin",
+                  "rime-bopomofo's Zhuyin spelling rules on rime-terra-pinyin's word list (LGPL-3.0, refined from Chewing's)"),
 }
 
 CHINESE_NOTICE = ("Typed with Rime (librime, BSD-3-Clause) and OpenCC (Apache License 2.0). The words and spelling rules: "
@@ -825,7 +833,7 @@ def write_im(folder, im):
 LANGUAGES = {
     "sr": {"name": "Српски", "nameEnglish": "Serbian", "label": "СР", "script": "Cyrl", "methods": ["sr", "sr-latn"]},
     "zh": {"name": "中文", "nameEnglish": "Chinese", "label": "中", "script": "Hani",
-           "methods": ["yue-yale", "yue-jyutping", "zh-pinyin"]},
+           "methods": ["yue-yale", "yue-jyutping", "zh-pinyin", "zh-cangjie", "zh-quick", "zh-zhuyin"]},
 }
 # Every language is marked experimental in the app but Chinese (owner, 2026-11-16); English is the keyboard's own.
 NOT_EXPERIMENTAL = {"zh"}

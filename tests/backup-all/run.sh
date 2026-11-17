@@ -10,5 +10,5 @@ trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   android/kotlin/com/titankeys/connected/Json.kt "$keyboard/BackupFile.kt" "$keyboard/CrashReport.kt" "$keyboard/AppBuild.kt" \
-  tests/backup-all/BackupChecks.kt
+  "$keyboard/LanguageLearning.kt" "$keyboard/LearnedWords.kt" "$keyboard/Favourites.kt" "$keyboard/WordList.kt"   tests/backup-all/BackupChecks.kt tests/backup-all/LearningStoreChecks.kt
 java -cp "$work:$stdlib:$sdk/platforms/android-36/android.jar" com.titankeys.keyboard.BackupChecksKt

@@ -100,3 +100,46 @@ test("the JNI class the library registers is the one in the app, kept from shrin
   expect(kotlin.length).toBeGreaterThan(5);
   expect(registered).toEqual(kotlin);
 });
+
+test("librime-predict is built in, with each language's table, its licence and credits (#56)", () => {
+  // Merged into Rime from Trime's pinned submodule, as Trime does; its tool compiles the tables.
+  expect(read("native/rime/CMakeLists.txt")).toContain('"${TK_RIME_SOURCES}/trime/app/src/main/jni/librime-predict"');
+  expect(read("native/rime/build.sh")).toContain("--target rime_tool opencc_dict build_predict");
+  expect(read("native/rime/SOURCES.md")).toContain("67c2881914a0242fc14ec7d6877782771b75800c");
+  // Each schema has the predictor and its language's table; the switch is on.
+  const tables: Record<string, string> = { tk_yale: "predict-yue.db", tk_jyutping: "predict-yue.db", tk_pinyin: "predict-cmn.db" };
+  for (const [schema, db] of Object.entries(tables)) {
+    const text = read(`native/rime/schemas/${schema}.schema.yaml`);
+    expect(text).toMatch(/processors: \[ ascii_composer, recognizer, predictor, key_binder,/);
+    expect(text).toContain("translators: [ predict_translator,");
+    expect(text).toContain(`predictor: { db: ${db},`);
+    expect(existsSync(join(root, `android/assets/rime/${db}`))).toBe(true);
+  }
+  expect(read("native/rime/schemas/tk_variants.yaml")).toMatch(/- name: prediction\n {4}reset: 1/);
+  // The tables: best first, at most 8 next words a word, and nothing for the start of a text, so nothing shows before
+  // the first commit (owner: with nothing typed, the bar stays empty).
+  for (const lang of ["yue", "cmn"]) {
+    const rows = read(`native/rime/predict/${lang}.txt`).trimEnd().split("\n").map(line => line.split("\t"));
+    expect(rows.every(row => row.length === 3 && row[0] !== "$")).toBe(true);
+    const count = new Map<string, number>();
+    for (const [word] of rows) count.set(word, (count.get(word) ?? 0) + 1);
+    expect(Math.max(...count.values())).toBeLessThanOrEqual(8);
+  }
+  // Its licence, and the Licences page: the plugin, and Tatoeba's sentences behind the tables.
+  expect(read("licences/Rime-predict-BSD-3-Clause.txt")).toContain("BSD 3-Clause License");
+  const page = read("app/settings/licences/index.tsx");
+  expect(page).toContain('title: "librime-predict"');
+  expect(page).toMatch(/title: "Tatoeba", subtitle: "[^"]*Chinese/);
+});
+
+test("the keyboard shows the suggestions as choices, and clears them Rime's way (#56)", () => {
+  const engine = read("android/kotlin/com/titankeys/rime/RimeEngine.kt");
+  // Escape is what stops the predictor offering them again; a plain clear brings them back.
+  expect(engine).toMatch(/private fun dismiss\(\) \{\s*if \(suggesting\(\)\) rime\.process\(RimeKeys\.ESCAPE, 0\)/);
+  expect(engine).toMatch(/override fun reset\(\): EngineState \{[\s\S]*?rime\.reset\(\)\s*\/\/[^\n]*\n\s*dismiss\(\)/);
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+  // A key that's the keyboard's own closes the bar the suggestions were on.
+  expect(ime).toContain("if (state.commit.isNotEmpty() || !state.composing && openPicker() is LanguagePicker.Choices) engineState(state)");
+  // A panel symbol sends Space only for a code: with suggestions it would pick one.
+  expect(ime).toContain("engineState(if (choices.state.composing) it.space() else it.reset())");
+});

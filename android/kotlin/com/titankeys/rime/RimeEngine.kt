@@ -18,6 +18,12 @@ import java.util.IdentityHashMap
  * row and its bigger menu read the choices across Rime's pages ([choices], [pickAt]; docs/languages.md, "Chinese on the
  * bar").
  *
+ * After a word is committed, Rime offers the words that may come next (librime-predict, #56; docs/languages.md, "Next-word
+ * suggestions"): they're its choices with nothing typed, so the bar shows them as it shows a code's. Space picks the first,
+ * a tap or the bigger menu any; a letter starts a new code instead, and any other key clears them and is the keyboard's
+ * own. A new field starts with none ([reset]). They're cleared with Escape, Rime's own way: clearing alone would make the
+ * predictor offer them again.
+ *
  * Until a Chinese variant is picked (Settings > Chinese characters, no default: owner, 2026-11-16), the code still builds,
  * but the only choice says to pick one ([NO_VARIANT]), and picking it or Space types nothing. Enter still types the code.
  *
@@ -133,6 +139,7 @@ class RimeEngine(
 
     override fun key(char: Char): EngineState {
         if (!ready) return EngineState.UNHANDLED
+        dismiss()
         return when (char) {
             in 'a'..'z' -> send(char.code)
             // Rime takes printable ASCII (digits pick a choice, punctuation becomes Chinese marks); capitals and anything else
@@ -169,20 +176,21 @@ class RimeEngine(
     }
 
     override fun space(): EngineState = when {
-        !composing() -> EngineState.UNHANDLED
+        // With nothing typed, Space picks the first suggestion, if there are any.
+        !composing() -> if (suggesting() && variantPicked) read(handled = rime.selectAt(0)) else EngineState.UNHANDLED
         !variantPicked -> read(handled = true)
         else -> send(RimeKeys.SPACE)
     }
 
     /** Types the code as letters, as typed (Rime's input), and clears it. With no code, Enter is the keyboard's. */
     override fun enter(): EngineState {
-        if (!composing()) return EngineState.UNHANDLED
+        if (!composing()) return dismissed()
         val letters = rime.read()?.input.orEmpty()
         rime.reset()
         return read(handled = true).let { it.copy(commit = it.commit + letters) }
     }
 
-    override fun backspace(): EngineState = if (composing()) send(RimeKeys.BACKSPACE) else EngineState.UNHANDLED
+    override fun backspace(): EngineState = if (composing()) send(RimeKeys.BACKSPACE) else dismissed()
 
     override fun pick(index: Int): EngineState {
         if (!ready || index < 0) return EngineState.UNHANDLED
@@ -203,7 +211,7 @@ class RimeEngine(
     }
 
     override fun page(forward: Boolean): EngineState = when {
-        !composing() -> EngineState.UNHANDLED
+        !composing() -> dismissed()
         !variantPicked -> read(handled = true)
         else -> send(if (forward) RimeKeys.PAGE_DOWN else RimeKeys.PAGE_UP)
     }
@@ -211,10 +219,31 @@ class RimeEngine(
     override fun reset(): EngineState {
         if (!ready) return EngineState.UNHANDLED
         rime.reset()
+        // Clearing makes the predictor offer the last word's suggestions again: a new field, or Back, starts with none.
+        dismiss()
         return read(handled = true)
     }
 
     private fun composing() = ready && rime.read()?.input?.isNotEmpty() == true
+
+    /** Rime offers next-word suggestions: choices with nothing typed. */
+    private fun suggesting(): Boolean {
+        if (!ready) return false
+        val raw = rime.read() ?: return false
+        return raw.input.isEmpty() && raw.choices.isNotEmpty()
+    }
+
+    /** Clears the suggestions, if any, with Escape: the predictor then offers none until the next commit. */
+    private fun dismiss() {
+        if (suggesting()) rime.process(RimeKeys.ESCAPE, 0)
+    }
+
+    /** A key that's the keyboard's own with nothing typed: the suggestions go, and the bar with them. */
+    private fun dismissed(): EngineState {
+        if (!ready || !suggesting()) return EngineState.UNHANDLED
+        dismiss()
+        return read(handled = false)
+    }
 
     private fun send(keysym: Int) = read(handled = rime.process(keysym, 0))
 
@@ -229,6 +258,8 @@ class RimeEngine(
     private fun read(handled: Boolean): EngineState {
         val raw = rime.read() ?: return EngineState(handled = handled)
         val code = if (raw.input.isEmpty()) "" else raw.preedit ?: raw.input
+        // Suggestions only once a variant is picked: before, they'd be Rime's Traditional, whatever the user wants.
+        if (code.isEmpty() && !variantPicked) return EngineState(commit = raw.commit.orEmpty(), handled = handled)
         if (code.isNotEmpty() && !variantPicked) return EngineState(commit = raw.commit.orEmpty(), code = code, choices = listOf(NO_VARIANT),
             handled = handled, typed = raw.input)
         return EngineState(

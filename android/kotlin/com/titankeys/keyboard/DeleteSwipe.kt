@@ -303,7 +303,7 @@ private fun pathKeys(points: List<Sample>) = points.zipWithNext { a, b -> hypot(
  */
 internal class DeleteHold(private val contact: Contact) {
     // No cap on how long it deletes: it goes on, word by word at the pace it ramps to, for as long as the finger stays. Only the
-    // picture has caps, a bar's width of dots and the dominoes' run (#89, owner, 2026-11-17: "the visual shd be cap but the actual
+    // picture has caps, a bar's width of dots and at most 5 s of them (#89, owner, 2026-11-17: "the visual shd be cap but the actual
     // deleting shdnt b capped"; it had stopped after 10 s).
 
     private var still: Sample? = null

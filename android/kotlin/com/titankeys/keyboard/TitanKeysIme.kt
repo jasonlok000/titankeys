@@ -467,11 +467,10 @@ class TitanKeysIme : InputMethodService() {
         val gesture = strip?.gesture ?: return
         gesture.speedUp = Haptics.dotsSpeedUp(this)
         if (!gesture.deleteEnded(SystemClock.uptimeMillis())) return
-        deleteLog("delete animation: dots ${gesture.dots}${if (gesture.dominoes) " as dominoes, ${gesture.dominoTotal} words" else ""}")
+        deleteLog("delete animation: dots ${gesture.dots}")
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val dotsAt = gesture.dotsAt
-        // The dominoes' dots go slower: their ticks keep to them.
-        haptics.holdDots(gesture.dotLandings(scale).map(gesture::stretched)) { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }
+        haptics.holdDots(gesture.dotLandings(scale)) { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }
     }
 
     private fun nextDeleteHoldStep(at: Long) {
@@ -539,7 +538,7 @@ class TitanKeysIme : InputMethodService() {
         val word = heldWords.next()
         enqueue {
             // A code still being built goes first, as a flick takes it: the pending code, then what was picked, typed less its last
-            // character, each step one word for the dominoes (owner, 2026-11-17: "the same shd work for holding for delete too").
+            // character (owner, 2026-11-17: "the same shd work for holding for delete too").
             val engine = languages.engine
             if (engine != null && (openPicker() as? LanguagePicker.Choices)?.state?.composing == true) {
                 haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
@@ -564,7 +563,6 @@ class TitanKeysIme : InputMethodService() {
             val deletes = editor.deletes
             composer.backspace(true)
             strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
-            deleteStreakWord(selected)
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
@@ -1475,7 +1473,6 @@ class TitanKeysIme : InputMethodService() {
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
         main.post { showGuideExtras() }
         // Another field starts a new delete streak: words deleted somewhere else don't count here (#89).
-        if (!restarting) deleteStreak.typed()
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
         heldLetter = null
@@ -1667,7 +1664,7 @@ class TitanKeysIme : InputMethodService() {
      */
     /**
      * TitanKeys Debug only: what a delete's animation shows, as counts, never text, for the phone checks of #89:
-     * "delete animation: dots N" and "dominoes run W words". adb logcat -s TitanKeysDelete
+     * "delete animation: dots N". adb logcat -s TitanKeysDelete
      */
     private fun deleteLog(line: String) {
         if (AppBuild.kind(this) == "debug") Log.i("TitanKeysDelete", line)
@@ -2592,28 +2589,6 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** New input ends a flourish at once, and a flick's dot ticks still to come with it. */
-    /**
-     * The delete streak that plays the dominoes (#89, owner, 2026-11-17): every word a flick or a held delete takes counts, each
-     * within the streak's gap of the last, and the dominoes play once it reaches its words. A delete of a selection, as select-all
-     * then a flick, is an instant delete with the usual animation: it never counts. A key press or a typed swipe starts it over.
-     */
-    private val deleteStreak = DeleteStreak()
-
-    private fun deleteStreakWord(selected: CharSequence?) {
-        if (selected != null) return
-        // The streak's numbers, which the Haptics lab can try in TitanKeys Debug.
-        GestureDisplay.triedDominoWords = Haptics.readDominoWords(this)
-        GestureDisplay.triedDominoGap = Haptics.readDominoGap(this)
-        GestureDisplay.triedDominoSlow = Haptics.readDominoSlow(this)
-        val now = SystemClock.uptimeMillis()
-        val gesture = strip?.gesture
-        if (deleteStreak.word(now, GestureDisplay.dominoGapMillis(), GestureDisplay.dominoWords())) {
-            gesture?.startDominoes(deleteStreak.words, now)
-            deleteLog("dominoes run ${deleteStreak.words} words")
-        }
-        else if (gesture?.dominoes == true) gesture.startDominoes(deleteStreak.words, now)
-    }
-
     private fun interruptGesture() {
         strip?.gesture?.interrupt()
         haptics.cutDots()
@@ -3458,11 +3433,6 @@ class TitanKeysIme : InputMethodService() {
         inputLog()?.outcome(outcome)
         // A touch that is no delete flick cuts a delete's dots, which waited for it.
         if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()
-        // A swipe that types is typing: the dominoes end, and the delete streak starts over (#89).
-        if (outcome is Contact.Outcome.Swipe && !outcome.deletesWord) {
-            deleteStreak.typed()
-            strip?.gesture?.stopDominoes()
-        }
         // The word menu keeps the touchpad for itself: a finger there only marks its buttons, and nothing types.
         if (menuOpen && !altOrPanel) return
         if (!altOrPanel) {
@@ -3519,15 +3489,12 @@ class TitanKeysIme : InputMethodService() {
                         // How long the dots wait on the bar, which the Haptics lab can try live in TitanKeys Debug.
                         GestureDisplay.triedFlickHold = Haptics.readFlickHold(this)?.toFloat()
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
-                        deleteStreakWord(selected)
-                        gesture?.let { deleteLog("delete animation: dots ${it.dots}${if (it.dominoes) " as dominoes, ${it.dominoTotal} words" else ""}") }
+                        gesture?.let { deleteLog("delete animation: dots ${it.dots}") }
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
                         // A flick while dots still play adds its dots to theirs, and the whole queue's ticks go again with its wait.
-                        // The dominoes' dots go slower: their ticks keep to them.
-                        haptics.flick(gesture?.dotsPoppedMillis(scale)?.let(gesture::stretched),
-                            gesture?.dotLandings(scale).orEmpty().map { gesture?.stretched(it) ?: it },
+                        haptics.flick(gesture?.dotsPoppedMillis(scale), gesture?.dotLandings(scale).orEmpty(),
                             { dotsAt != null && strip?.gesture?.dotsAt == dotsAt })
                     }
                     KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = false) }
@@ -4402,11 +4369,6 @@ class TitanKeysIme : InputMethodService() {
         }
         clearTeamsEgg()
         interruptGesture()
-        // A key is typing: the dominoes end at once, and the delete streak starts over (#89).
-        if (!Modifiers.isModifier(keyCode)) {
-            deleteStreak.typed()
-            strip?.gesture?.stopDominoes()
-        }
         strip?.gesture?.glowOff()
         wakeIdleBar()
         // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.

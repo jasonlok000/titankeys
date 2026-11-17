@@ -201,5 +201,23 @@ import keyfeed_batch
 keyfeed_batch.adb = lambda *args: args
 sent = keyfeed_batch.feed("D 0 SHIFT_RIGHT;D 60 Q;U 140 Q;U 200 SHIFT_RIGHT")
 assert sent[-1] == "'D 0 SHIFT_RIGHT;D 60 Q;U 140 Q;U 200 SHIFT_RIGHT'", sent
+# The crash guard: a new FATAL of Debug stops the batch with "crash", the trace saved; Back only over Debug's own dialog.
+crash = "\n".join(["11-17 15:06:58.302 E/AndroidRuntime(27664): FATAL EXCEPTION: main",
+                   "11-17 15:06:58.302 E/AndroidRuntime(27664): Process: com.titankeys.debug, PID: 27664",
+                   "11-17 15:06:58.302 E/AndroidRuntime(27664): java.lang.OutOfMemoryError: heap",
+                   "11-17 15:06:58.302 E/AndroidRuntime(27664):     at f.a9.d(r8-map-id-00000000aaaa:85)"])
+for front, back in (("Window{1 u0 Application Error: com.titankeys.debug}", True),
+                    ("Window{1 u0 com.openai.chatgpt/com.openai.chatgpt.MainActivity}", False)):
+    sent = []
+    checks.adb = lambda *args, front=front: (sent.append(args), crash if "crash" in args else f"  mCurrentFocus={front}")[1]
+    assert len(checks.crash_blocks()) == 1
+    try:
+        checks.crash_check(0)
+        raise AssertionError("a crash didn't stop the batch")
+    except checks.Stop as stop:
+        assert str(stop).startswith("crash"), stop
+    assert (("shell", "input", "keyevent", "4") in sent) == back, (front, sent)
+    checks.crash_check(1)  # no new crash: nothing
+checks.adb = real_adb
 print("Batch checks passed")
 PY

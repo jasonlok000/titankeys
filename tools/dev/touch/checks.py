@@ -239,7 +239,9 @@ def run_batch(name):
         record("batch", None, f"STOP, the run ended: {stop}")
     finally:
         os.environ.pop("TK_IME_HELD", None)
-        keyboard("release")
+        # A night of batches keeps Debug from the first to the last (TK_BATCH_KEEP_DEBUG=1); the runner sets release back after.
+        if os.environ.get("TK_BATCH_KEEP_DEBUG") != "1":
+            keyboard("release")
         path = report(name, stamp, getattr(module, "HANDS", []))
         print(f"report: {path}", flush=True)
     return stopped

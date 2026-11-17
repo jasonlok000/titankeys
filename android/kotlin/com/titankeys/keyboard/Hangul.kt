@@ -37,10 +37,23 @@ open class HangulComposer(protected var words: WordList? = null) : InputEngine {
 
     /** [state] with the word list's words that start with the word so far, as its choices. */
     private fun withChoices(state: EngineState): EngineState {
-        val list = words ?: return state
-        val key = written.toString() + matchKey()
-        choices = if (key.isEmpty()) emptyList() else list.complete(key, CHOICES).filter { it != written.toString() + code() }
+        if (words == null) return state
+        choices = choices(0, CHOICES)
         return state.copy(choices = choices)
+    }
+
+    /**
+     * What the word so far may be, for matching: its syllables, the one being built by its letters; and where that one ends
+     * in a consonant, also that consonant starting the next syllable, as a vowel after it would make it (안녕핫 or 안녕하ᄉ…, so
+     * 안녕하세요 is offered before its ㅔ is typed).
+     */
+    private fun matchKeys(): List<String> {
+        val start = written.toString()
+        val keys = mutableListOf(start + matchKey())
+        val last = typed.lastOrNull()
+        if (typed.size >= 3 && last != null && !isVowel(last) && typed.any(::isVowel) && INITIALS.indexOf(last) >= 0)
+            keys += start + split(typed.dropLast(1)).joinToString("") { compose(it) } + (0x1100 + INITIALS.indexOf(last)).toChar()
+        return keys.filter { it.isNotEmpty() }
     }
 
     /**
@@ -69,8 +82,24 @@ open class HangulComposer(protected var words: WordList? = null) : InputEngine {
     }
 
     /** A choice: the rest of its word, after the syllables already written, and a space. */
-    override fun pick(index: Int): EngineState {
-        val word = choices.getOrNull(index) ?: return EngineState.UNHANDLED
+    override fun pick(index: Int): EngineState = pickWord(choices.getOrNull(index))
+
+    /**
+     * The bigger menu's words, opened with a swipe up, as Telex's and Hindi's are: the word list's words for the word so far,
+     * past the bar's, in the same order.
+     */
+    override fun choices(start: Int, count: Int): List<String> {
+        val list = words ?: return emptyList()
+        if (start < 0 || count <= 0) return emptyList()
+        val whole = written.toString() + code()
+        return matchKeys().flatMap { list.complete(it, start + count + 1) }.distinct().filter { it != whole }.drop(start).take(count)
+    }
+
+    /** A pick from the bar or the bigger menu, [index] counted across all of [choices]. */
+    override fun pickAt(index: Int): EngineState = pickWord(choices(index, 1).firstOrNull())
+
+    private fun pickWord(word: String?): EngineState {
+        if (word == null) return EngineState.UNHANDLED
         val rest = if (word.startsWith(written)) word.substring(written.length) else word
         typed.clear()
         written.setLength(0)

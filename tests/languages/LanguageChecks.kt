@@ -883,6 +883,34 @@ private fun koreanChoices() {
     val pick = korean.pick(after.choices.indexOfFirst { it.startsWith("한국") })
     check("a pick writes the rest of the word, after 한", pick.commit.startsWith("국") && pick.commit.endsWith(" ")) { pick.commit }
     same("then nothing is being built", korean.code(), "")
+
+    // The whole loop: 안녕하세요 typed jamo by jamo, the field getting each syllable as the next one starts.
+    val loop = HangulComposer(words)
+    val field = StringBuilder()
+    fun type(keys: String) { for (c in keys) loop.key(c).commit.let(field::append) }
+    type("dkssud")
+    same("안 written, 녕 on the bar", field.toString() + "|" + loop.code(), "안|녕")
+    same("Backspace takes 녕's last letter: 녀", loop.backspace().code, "녀")
+    type("dgk")
+    same("녕 again, then 하 being built", field.toString() + "|" + loop.code(), "안녕|하")
+    val row = loop.key('t').choices
+    check("안녕하 + ㅅ offers 안녕하세요", "안녕하세요" in row || loop.choices(0, 40).contains("안녕하세요")) {
+        (row + loop.choices(0, 40)).joinToString(" ")
+    }
+    val menu = loop.choices(0, 40)
+    check("the bigger menu has more than the row", menu.size >= row.size) { "${menu.size} ${row.size}" }
+    val at = menu.indexOf("안녕하세요")
+    if (at >= 0) {
+        val picked = loop.pickAt(at).commit
+        same("a pick from the menu writes the rest after 안녕", picked, "하세요 ")
+    }
+    // A held letter's symbol: its jamo comes off the syllable, the syllable is written, the symbol goes on as usual.
+    val held = HangulComposer(words)
+    held.key('g'); held.key('k'); held.key('s')
+    same("한 being built", held.code(), "한")
+    held.backspace()
+    val ended = held.key('!')
+    same("the hold's symbol: 하 written first, the symbol goes on", ended.commit + "|" + ended.handled, "하|false")
 }
 
 /** The bar's words in another input method, and what it learns from the user. */

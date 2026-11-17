@@ -90,10 +90,8 @@ def code_flick(im):
 
 
 def check_every_language():
-    """Every input method, seven at a time with English, each with its flick, double Space and three taps."""
-    ids = [im for im in language_checks.all_ids() if im != "en"]
-    for start in range(0, len(ids), language_checks.SET_SIZE):
-        group = ids[start:start + language_checks.SET_SIZE]
+    """Every input method, in the languages batch's sets with English, each with its flick, double Space and three taps."""
+    for group in language_checks.sets():
         for im in group:
             try:
                 if not language_checks.turn_on(["en", *group], im):

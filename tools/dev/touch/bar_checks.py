@@ -274,8 +274,8 @@ def check_first_key():
     if not language_checks.turn_on(["en", "yue-yale"], "yue-yale"):
         return record("first-key", False, "the field didn't start with yue-yale")
     language_checks.languages.logs_on(True)
-    out = __import__("subprocess").run(["adb", "install", "-r", apk], capture_output=True, text=True)
-    record("first-key-install", "Success" in out.stdout, f"the same APK installed again: {out.stdout.strip()[-80:]}")
+    out = adb("install", "-r", apk)  # through checks.adb, as every phone step here (the run holds the phone lock)
+    record("first-key-install", "Success" in out, f"the same APK installed again: {out.strip()[-80:]}")
     time.sleep(3)
     language_checks.languages.logs_on(True)
     adb("logcat", "-c")

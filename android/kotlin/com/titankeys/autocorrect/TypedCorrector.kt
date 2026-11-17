@@ -131,7 +131,8 @@ class CorrectionData private constructor(
          * keys is ever fixed, by the same noisy channel. The [most] commonest words of letters only are indexed: the lists hold
          * up to 100,000, and the index's deletes for all of them would not fit beside the keyboard.
          */
-        fun forLanguage(lexicon: Lexicon, keysOf: (String) -> String, most: Int = LANGUAGE_WORDS): CorrectionData {
+        fun forLanguage(lexicon: Lexicon, keysOf: (String) -> String, most: Int = LANGUAGE_WORDS,
+                        pairs: PairCounts = PairCounts.parse(emptySequence())): CorrectionData {
             val words = ArrayList<DictionaryEntry>()
             lexicon.forEachWord { word, frequency -> if (word.length >= 2 && word.all { it.isLetter() }) words += DictionaryEntry(word, frequency) }
             val spelling = SymSpell(maxEditDistance = 2, prefixLength = PREFIX_LENGTH)
@@ -142,7 +143,7 @@ class CorrectionData private constructor(
                 if (same.isEmpty()) spelling.addWord(keys, entry.frequency)
                 if (entry.word !in same) same += entry.word
             }
-            return CorrectionData(PairCounts.parse(emptySequence()), TripleCounts.parse(emptySequence()),
+            return CorrectionData(pairs, TripleCounts.parse(emptySequence()),
                 ConfusionTable.parse(emptySequence()), emptyMap(), KnownWords.parse(emptySequence()), KnownWords.parse(emptySequence()),
                 KnownWords.parse(emptySequence()), emptyMap(), spelling, emptyMap(), emptyMap(), emptyMap(), emptyMap(), byKeys, keysOf)
         }

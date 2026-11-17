@@ -49,7 +49,7 @@ class LanguageCorrection(private val context: Context, private val words: Langua
             val corrector = try {
                 LanguageCorrections.corrector(method, list, words::known, made.rejected, made.recent,
                     typos = { typing.fixOn(com.titankeys.autocorrect.FixKind.TYPOS.id) }, usable = words::usable,
-                    favourite = words::favourite, spaceFixes = method.id !in barOnly)
+                    favourite = words::favourite, spaceFixes = method.id !in barOnly, pairs = pairs(method))
             } catch (error: OutOfMemoryError) {
                 Log.w("TitanKeys", "Not enough memory for ${method.id}'s corrections", error)
                 null
@@ -74,6 +74,18 @@ class LanguageCorrection(private val context: Context, private val words: Langua
      * or Settings' single one until it has its own (TypingSettings.PER_LANGUAGE). The one place to read it.
      */
     fun on(language: String): Boolean = TypingSettings.autocorrectIn(context, language)
+
+    /** The input methods whose pairs added wrong changes, so their corrector goes without ([LanguageCorrections.NO_PAIRS_FILE]). */
+    private val noPairs: Set<String> by lazy {
+        runCatching {
+            context.assets.open("im/${LanguageCorrections.NO_PAIRS_FILE}").bufferedReader().useLines(LanguageCorrections::barOnly)
+        }.getOrDefault(emptySet())
+    }
+
+    /** [method]'s word pairs, its next-word table, for the corrector's context; null where it has none, or they don't help. */
+    private fun pairs(method: InputMethod): com.titankeys.autocorrect.PairCounts? = if (method.id in noPairs) null else runCatching {
+        context.assets.open("im/${method.id}/pairs.txt").bufferedReader().useLines { com.titankeys.autocorrect.PairCounts.parse(it) }
+    }.getOrNull()
 
     /** The input method went: its corrections go with it. */
     fun clear() {

@@ -207,6 +207,15 @@ data-only language is one command plus a check by eye. Where the data comes from
   language, keeping only the words those use (`RANK_BY` in tools/im/make.py; their starters stay their own list's): af,
   bs, ca, el, ga, gl, he, is, lv, nn and sk. Greek, Galician and Slovak, bar only before, now let Space fix.
 - Kept-once words are each language's own (`KeptOnceStore.languageKey`).
+- **Word pairs as context:** each language's next-word table (`pairs.txt`) weighs a slip's candidates by the word before,
+  as English's pairs do. Mid-sentence, on 25,200 slips from Leipzig's sentences, Space puts in the right word for 71.5%
+  with pairs against 68.1% without, and a wrong one for 0.7% against 0.6%. The tables come from the same sentences, so
+  the gain is an upper bound. Where pairs add more than one wrong change in 600 words, they stay off
+  (`android/assets/im/corrections-no-pairs.txt`, which `CORRECTIONS_SENTENCES=<Leipzig folder> run.sh --write` writes):
+  German, Georgian and Lithuanian today.
+- **Mid-sentence slips are harder than single words:** Space's wrong changes there are 0.6% without pairs, against 0.1%
+  for the same languages on single words, and over 0.5% in about half of them. The bar-only rule reads the single-word
+  test; whether it should read this one instead is open.
 - **Hindi and Vietnamese** build their words in an engine, so the corrector above doesn't see them. Their choices are the
   list's words that start like the word being built, so one wrong key (tirng for tieng) left nothing to pick. Where nothing
   starts like it and it's no word itself, the engine tries its keys with one slip undone (a neighbouring key, a key too

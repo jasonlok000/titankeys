@@ -1,0 +1,5 @@
+# Input methods whose word pairs add wrong changes mid-sentence, so their corrections go without them. Written
+# by CORRECTIONS_SENTENCES=<Leipzig folder> tests/corrections/run.sh --write.
+de
+ka
+lt

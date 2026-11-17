@@ -136,6 +136,11 @@ RANK_BY = {
     "ga": "gle_newscrawl_2014_300K", "gl": "glg_wikipedia_2021_300K", "he": "heb_wikipedia_2021_1M",
     "is": "isl_newscrawl_2011_1M", "lv": "lav_newscrawl_2016_1M", "nn": "nno_wikipedia_2021_300K",
     "sk": "slk_newscrawl_2016_1M",
+    # The second pass (2026-11-17): each of these fixed more slips ranked this way, with Space's wrong changes still at 0.5% or
+    # under; the others fixed fewer, and keep their own frequencies.
+    "cs": "ces_news_2024_1M", "eo": "epo_newscrawl_2017_1M", "es": "spa_news_2024_1M", "et": "est_newscrawl_2017_1M",
+    "id": "ind_news_2024_1M", "kk": "kaz_newscrawl_2016_1M", "lt": "lit_news_2020_1M", "mk": "mkd_wikipedia_2021_300K",
+    "pl": "pol_news_2024_1M", "ru": "rus_news_2024_1M", "tr": "tur_news_2024_1M",
 }
 LEIPZIG_RANK = ("Ranked by how often each word appears in the Leipzig Corpora Collection's {corpus} "
                 "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0, and only the words it uses kept. D. Goldhahn, T. Eckart "
@@ -786,14 +791,6 @@ STARTER_SOURCES = {
     "zh-quick": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-zhuyin": ("../src/rime-essay/essay.txt", "essay"),
     "ja": ("", "fixed"),
-    # The lists ranked by Leipzig's sentences ([RANK_BY]) keep the starters of their own list: news and Wikipedia put
-    # prepositions on top, where the chat-like lists had "som", "čo" and "nie" (Slovak), the ways to start a message.
-    **{ident: ("aosp-dictionaries/wordlists/%s.combined" % name, "list") for ident, name in {
-        "af": "main_af__experimental", "ca": "main_ca__experimental", "el": "main_el__legacy", "ga": "main_ga",
-        "gl": "main_gl__experimental", "is": "main_is__experimental", "lv": "main_lv", "nn": "main_nn",
-        "sk": "main_sk__experimental"}.items()},
-    "bs": ("frequencywords/bs_full.txt", "counts"),
-    "he": ("frequencywords/he_full.txt", "counts"),
 }
 # The rest start sentences the way their writers do (Orchestrator, 2026-11-17: the commonest words made odd starters, Korean's
 # particles, Bulgarian's tie of 4,500 words at the top, Russian's "года"): the words that most often begin a sentence in the

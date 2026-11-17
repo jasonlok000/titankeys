@@ -19,7 +19,8 @@ import languages
 from checks import Stop, adb, play, record
 
 RECEIVER = f"{checks.APP}/com.titankeys.keyboard.InputMethodsSet"
-SET_SIZE = 8
+# Settings keeps eight input methods on at most: seven, and English.
+SET_SIZE = 7
 # Letters most layouts move, so a wrong layout shows; no Space, so no fix runs on them.
 PLAIN = "qwertyuiop"
 # Engines and the scripts whose keys aren't one letter each: their own keys and what they must type.
@@ -130,7 +131,7 @@ def one(im, on):
 
 
 def check_all():
-    """Every input method, eight at a time with English, each typing in turn."""
+    """Every input method, seven at a time with English, each typing in turn."""
     ids = [im for im in all_ids() if im != "en"]
     for start in range(0, len(ids), SET_SIZE):
         group = ids[start:start + SET_SIZE]

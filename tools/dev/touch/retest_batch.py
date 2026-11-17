@@ -14,8 +14,21 @@ from checks import APP, Stop, adb, record
 REPO = languages.REPO
 
 
+def own_screen():
+    """Debug in front again (a tool may leave the launcher there): the gate brings its screen back, then its field."""
+    guide_checks.leave_guide()
+    checks.keyboard("debug")
+    if not languages.in_field():
+        raise Stop(f"not on TitanKeys Debug's own screen: {languages.front().strip()}")
+
+
 def run_tool(name, *command):
-    env = dict(os.environ, APP=APP, TK_PHONE_LOCKED="1", TK_IME_HELD="1")
+    own_screen()
+    build = os.environ.get("TK_BUILD", os.path.expanduser("~/build"))
+    # As the build copies have them: rg in tk-tools, Kotlin in the build folder.
+    env = dict(os.environ, APP=APP, TK_PHONE_LOCKED="1", TK_IME_HELD="1",
+               PATH=os.path.join(build, "tk-tools") + os.pathsep + os.environ.get("PATH", ""))
+    env.setdefault("KOTLIN_HOME", os.path.join(build, "kotlin-2.1.20", "kotlinc"))
     result = subprocess.run(list(command), cwd=REPO, env=env, capture_output=True, text=True)
     tail = " | ".join((result.stdout + result.stderr).strip().splitlines()[-3:])[-300:]
     record(name, result.returncode == 0, f"exit {result.returncode}: {tail}")
@@ -41,9 +54,7 @@ def check_rawlog():
 def check_85_leaks():
     """#85: the guide opened and left 15 times, then LeakCheck: no guide or playground may stay in memory."""
     for _ in range(15):
-        guide_checks.leave_guide()
-        if not languages.in_field():
-            raise Stop(f"not on TitanKeys Debug's own screen: {languages.front().strip()}")
+        own_screen()
         guide_checks.guide("steer")
         guide_checks.leave_guide()
     time.sleep(2)
@@ -59,6 +70,7 @@ def check_languages_page():
             raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
         adb("shell", "input", *command)
         time.sleep(1.5)
+    own_screen()
     adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
     time.sleep(3)
     # The places on the 1076 x 1200 display: SETTINGS at the top right, then Languages a screen down (2026-11-16).

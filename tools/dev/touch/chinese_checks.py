@@ -80,9 +80,11 @@ def cjk(text):
 
 
 def check_yale():
-    """Yale is the input method, picked in Android's list with Alt+Sym, read back from Android."""
-    ok = languages.switch_to(YALE, languages.subtype_ids())
-    record("zh-yale", ok, "Yale is typing" if ok else "Alt+Sym didn't reach Yale: is it on in Settings > Languages?")
+    """Yale and Jyutping on with English, Yale typing (Debug's InputMethodsSet), read back from the keyboard's own log."""
+    import language_checks
+    fresh()
+    ok = language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
+    record("zh-yale", ok, "the field started with Yale" if ok else "the field didn't start with Yale")
     if not ok:
         raise Stop("Yale isn't on")
 

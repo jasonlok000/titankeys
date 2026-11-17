@@ -113,14 +113,15 @@ def check_89_long_delete():
     """#89: a flick with the finger left down deletes word by word, the chomper eating a dot for each, for 10 s at most: then
     it stops though the finger stays. 400 words can't all go in 10 s, so some must be left."""
     text = " ".join(["the quick brown fox jumps over the lazy dog"] * 45)
+    # Measured from what the field holds after setup: autocorrect may add a few characters (2026-11-16: 1984 for 1979).
     before = set_text(text)
-    if len(before) != len(text):
-        return record("89-long-delete", None, f"setup typed {len(before)} characters, not {len(text)}: check autocorrect")
+    if len(before) < 1500:
+        return record("89-long-delete", None, f"setup typed only {len(before)} characters of {len(text)}")
     play("flick:3.2:90:14000", shot="89-chomper", at=3000)
     after = field()
-    gone = len(text) - len(after)
-    record("89-long-delete", 0 < gone < len(text) and text.startswith(after),
-           f"{gone} of {len(text)} characters deleted in a 14 s hold (stops at 10 s); the chomper is the shot", "89-chomper")
+    gone = len(before) - len(after)
+    record("89-long-delete", 0 < gone < len(before) and before.startswith(after),
+           f"{gone} of {len(before)} characters deleted in a 14 s hold (stops at 10 s); the chomper is the shot", "89-chomper")
 
 
 def check_89_long_word():

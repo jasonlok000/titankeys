@@ -46,3 +46,10 @@ test("a language reads its own value, or today's single one; the main page's wri
   expect(ime).toContain("TypingSettings.autocorrectIn(this, languages.languageId) && english");
   expect(ime).toContain("composer.commaSpace = { TypingSettings.commaSpaceIn(this, languages.languageId) }");
 });
+
+test("a quick setting writes the plain value only while English alone is on, as Settings' main page does", () => {
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+  expect(ime).toContain("if (languages.on.all { it.language.id == InputMethod.ENGLISH_ID }) plain()");
+  expect(ime).not.toContain("distinct().size <= 1) plain()");
+  expect(read("app/settings/languages/index.tsx")).toContain('return !(on.length === 1 && on[0].language.id === "en");');
+});

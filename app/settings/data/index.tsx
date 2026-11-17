@@ -16,7 +16,10 @@ export default function YourWords() {
       <Toggle label="Learn new words I type" value={learning} onChange={learning => save.run({ learning })} />
     </Section>
     <Section title="Names on this phone">
-      <Toggle label="Names from my contacts" value={contactNames} onChange={contactNames => save.run({ contactNames })} />
+      {/* On while the setting is, even with Android's permission taken away (the line below says so), so it can be turned off and
+          the line goes: shown off, it could only ask for the permission again. */}
+      <Toggle label="Names from my contacts" value={contactNames || result.data.contactNamesBlocked}
+        onChange={contactNames => save.run({ contactNames })} />
       <Needs list={needs.contactNames(result.data)} />
     </Section>
     <Section title="My words">

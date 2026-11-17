@@ -104,7 +104,9 @@ LATIN = {
 NATIONAL = {
     "ru": ("Русский", "Russian", "РУ", "ru", "main_ru", AOSP, "russian", {"p": "хъ", "l": "жэ", "m": "бю", "t": "ё"}),
     "uk": ("Українська", "Ukrainian", "УК", "uk", "main_uk__experimental", LEIPZIG, "ukrainian", {"p": "хї", "l": "жє", "m": "бю", "u": "ґ"}),
-    "be": ("Беларуская", "Belarusian", "БЕ", "be", "main_be", None, "belarusian", {"p": "х", "l": "жэ", "m": "бю", "t": "ё"}),
+    # GrammarDB's 4 million forms have one frequency, so they're ranked by Leipzig's Belarusian news (J's find, 2026-11-17).
+    "be": ("Беларуская", "Belarusian", "БЕ", "be", "main_be", None, "belarusian", {"p": "х", "l": "жэ", "m": "бю", "t": "ё"},
+           {"rank_by": "leipzig/bel_newscrawl_2015_1M/bel_newscrawl_2015_1M-sentences.txt"}),
     "bg": ("Български", "Bulgarian", "БГ", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "ью"}),
     "el": ("Ελληνικά", "Greek", "ΕΛ", "el", "main_el__legacy", AOSP, "greek", {}),
     "sr": ("Српски", "Serbian, Cyrillic", "СР", "sr", "main_sr", AOSP, "serbian_and_montenegrin_cyrillic",
@@ -118,7 +120,10 @@ NATIONAL = {
            "georgian", {}, {"counts": True, "script": "Geor", "capitalise": False}),
 }
 BELARUSIAN = ("Belarusian word forms from GrammarDB (https://github.com/Belarus/GrammarDB), via HeliBoard's aosp-dictionaries "
-              "({file}), CC BY-SA 4.0.")
+              "({file}), CC BY-SA 4.0. Ranked by how often each form appears in the Leipzig Corpora Collection's "
+              "bel_newscrawl_2015_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and "
+              "U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. "
+              "LREC 2012.")
 
 CLDR_NOTICE = "Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. Copyright Unicode, Inc."
 KCM_NOTICE = "Key layout: Android's {file} (platform/frameworks/base, InputDevices), Apache License 2.0."
@@ -164,7 +169,7 @@ def parse_set(text):
     return [c for c in result if len(c) == 1 and c.isalpha()]
 
 
-def read_words(data, name):
+def read_words(data, name, limit=MAX_WORDS):
     path = os.path.join(data, "aosp-dictionaries", "wordlists", name + ".combined")
     head, words = "", []
     with open(path, encoding="utf-8") as f:
@@ -186,7 +191,42 @@ def read_words(data, name):
         if word not in seen:
             seen.add(word)
             unique.append((word, freq))
-    return head, unique[:MAX_WORDS]
+    return head, unique if limit is None else unique[:limit]
+
+
+APOSTROPHES = str.maketrans({"’": "'", "ʼ": "'"})
+CORPUS_WORD = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)*")
+
+
+def ranked_by_corpus(data, words, sentences):
+    """[words], all at one frequency (GrammarDB's forms are all f=100, in alphabetical order), ranked by how often each
+    appears in a Leipzig sentences file ("id<TAB>sentence"): the [MAX_WORDS] most used, on HeliBoard's scale as
+    [read_counts]. A capital at a sentence's start counts for the word in lower case. Only the list's forms count, so the
+    corpus's own spellings (Belarusian news in Taraškievica) never become words."""
+    counts = {}
+    with open(os.path.join(data, sentences), encoding="utf-8") as f:
+        for line in f:
+            text = line.split("\t", 1)[-1].translate(APOSTROPHES)
+            for token in CORPUS_WORD.findall(text):
+                counts[token] = counts.get(token, 0) + 1
+    seen = []
+    for word, _ in words:
+        key = word.translate(APOSTROPHES)
+        n = counts.get(key, 0)
+        if key.islower():
+            n += counts.get(key[0].upper() + key[1:], 0)
+        if n:
+            seen.append((word, n))
+    ranked = sorted(seen, key=lambda w: -w[1])[:MAX_WORDS]
+    return scaled(ranked)
+
+
+def scaled(ranked):
+    """Counts, most first, as AOSP's frequencies: HeliBoard's scale, the log of the count from 15 to 254."""
+    import math
+    low, high = math.log(max(ranked[-1][1], 1)), math.log(ranked[0][1])
+    span = max(high - low, 1)
+    return [(w, int((math.log(n) - low) * (254 - 15) / span + 15)) for w, n in ranked]
 
 
 def read_counts(data, name, locale, letters):
@@ -203,11 +243,7 @@ def read_counts(data, name, locale, letters):
             if not count.isdigit() or not word or any(c not in allowed for c in word):
                 continue
             counts[word] = counts.get(word, 0) + int(count)
-    ranked = sorted(counts.items(), key=lambda w: -w[1])[:MAX_WORDS]
-    import math
-    low, high = math.log(max(ranked[-1][1], 1)), math.log(ranked[0][1])
-    span = max(high - low, 1)
-    words = [(w, int((math.log(n) - low) * (254 - 15) / span + 15)) for w, n in ranked]
+    words = scaled(sorted(counts.items(), key=lambda w: -w[1])[:MAX_WORDS])
     return "dictionary=main:%s,locale=%s,description=%s" % (locale, locale, locale), words
 
 
@@ -453,7 +489,11 @@ def build_national(data, ident):
     folder = os.path.join(ASSETS, ident)
     os.makedirs(folder, exist_ok=True)
     main, _ = cldr_letters(data, locale)
-    head, words = read_counts(data, file, locale, main) if extra.get("counts") else read_words(data, file)
+    if extra.get("rank_by"):
+        head, words = read_words(data, file, limit=None)
+        words = ranked_by_corpus(data, words, extra["rank_by"])
+    else:
+        head, words = read_counts(data, file, locale, main) if extra.get("counts") else read_words(data, file)
     if extra.get("own_letters"):
         # AOSP's Serbian list has a few words in Latin letters ("a" among them), which its Cyrillic keys can't type.
         own = set(main)

@@ -321,6 +321,12 @@ Every worker was told to commit its work in progress to its own branch and stop 
 - B: the Cantonese dictionary study (baseline 71.6% of characters, 10.6% of long phrases exact), then Cangjie, Quick and Zhuyin.
 - E: the guide fixes (swipe slide ignores keys, the "e" stays); G: #96 analytics.
 - A: read the 01:00 main-mem slot's reports (it runs in WSL during the pause).
+- New on resume (owner, 2026-11-17):
+  - D, after gestures: conservative corrections for every language with a word list, at least on the bar, reusing English's
+    key-neighbour engine; Space applies one only at English's strict confidence. Tests with made-up typos per language.
+  - J (free): word-pair tables for every language from Leipzig's CC BY corpora (licence checked per language), for next
+    words; size no concern for now. C's bar-words reads them.
+  - C: a language with one input method shows the language's mark at Q.
 
 ## Milestones (internal; the owner gave the go at 01:20)
 

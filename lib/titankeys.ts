@@ -162,6 +162,8 @@ export type State = {
   rawLogBytes: number;
   words: { word: string; description: string }[];
   blockedWords: string[];
+  /** Each other input method's own words, saved or learned (LearnedWords): only those that have any. */
+  languageWords: { inputMethod: string; name: string; nameEnglish: string; words: string[] }[];
 };
 
 /**
@@ -280,6 +282,15 @@ export async function removeSnippet(shortcut: string) {
 export async function addWord(word: string) {
   try {
     await titankeys("addWord", { word });
+  } finally {
+    await state.refresh();
+  }
+}
+
+/** Another input method's own word comes off its saved and learned words (Settings > Your words > Saved words). */
+export async function removeLanguageWord(inputMethod: string, word: string) {
+  try {
+    await titankeys("removeLanguageWord", { inputMethod, word });
   } finally {
     await state.refresh();
   }

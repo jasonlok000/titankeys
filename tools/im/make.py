@@ -126,6 +126,30 @@ BELARUSIAN = ("Belarusian word forms from GrammarDB (https://github.com/Belarus/
               "LREC 2012.")
 
 CLDR_NOTICE = "Letters and accents: Unicode CLDR 49, exemplar characters. Unicode License v3. Copyright Unicode, Inc."
+
+# Lists whose own frequencies left junk on top (foreign and unaccented words, as Slovak's est and jane), so corrections fixed
+# few slips or too often wrongly: each is ranked by how often its words appear in the Leipzig Corpora Collection's sentences
+# for that language, and words the corpus never uses are left out (tests/corrections; owner's go via the Master, 2026-11-17).
+# The sentences files are the ones the next-word tables use, in <data dir>/leipzig/.
+RANK_BY = {
+    "af": "afr_mixed_2019_1M", "bs": "bos_wikipedia_2021_300K", "ca": "cat_wikipedia_2021_1M", "el": "ell_news_2024_1M",
+    "ga": "gle_newscrawl_2014_300K", "gl": "glg_wikipedia_2021_300K", "he": "heb_wikipedia_2021_1M",
+    "is": "isl_newscrawl_2011_1M", "lv": "lav_newscrawl_2016_1M", "nn": "nno_wikipedia_2021_300K",
+    "sk": "slk_newscrawl_2016_1M",
+}
+LEIPZIG_RANK = ("Ranked by how often each word appears in the Leipzig Corpora Collection's {corpus} "
+                "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0, and only the words it uses kept. D. Goldhahn, T. Eckart "
+                "and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 "
+                "Languages. LREC 2012.")
+
+
+def reranked(data, ident, words, notices):
+    """[words] ranked by [RANK_BY]'s corpus for [ident], with its credit added to [notices]; as they are for other lists."""
+    corpus = RANK_BY.get(ident)
+    if not corpus:
+        return words
+    notices.append(LEIPZIG_RANK.format(corpus=corpus))
+    return ranked_by_corpus(data, words, "leipzig/%s-sentences.txt" % corpus)
 KCM_NOTICE = "Key layout: Android's {file} (platform/frameworks/base, InputDevices), Apache License 2.0."
 
 
@@ -199,8 +223,8 @@ CORPUS_WORD = re.compile(r"[^\W\d_]+(?:'[^\W\d_]+)*")
 
 
 def ranked_by_corpus(data, words, sentences):
-    """[words], all at one frequency (GrammarDB's forms are all f=100, in alphabetical order), ranked by how often each
-    appears in a Leipzig sentences file ("id<TAB>sentence"): the [MAX_WORDS] most used, on HeliBoard's scale as
+    """[words] (GrammarDB's forms, all f=100 in alphabetical order, or a list whose own frequencies are poor: [RANK_BY]),
+    ranked by how often each appears in a Leipzig sentences file ("id<TAB>sentence"): the [MAX_WORDS] most used, on HeliBoard's scale as
     [read_counts]. A capital at a sentence's start counts for the word in lower case. Only the list's forms count, so the
     corpus's own spellings (Belarusian news in Taraškievica) never become words."""
     counts = {}
@@ -356,6 +380,8 @@ def build_latin(data, ident):
     os.makedirs(folder, exist_ok=True)
     main, aux = cldr_letters(data, locale)
     head, words = read_counts(data, file, locale, main + aux) if extra.get("counts") else read_words(data, file)
+    ranking = []
+    words = reranked(data, ident, words, ranking)
     if extra.get("transliterate") == "sr":
         words = transliterated(words)
         head = "dictionary=main:sr_Latn,locale=sr_Latn,description=Srpski"
@@ -378,6 +404,7 @@ def build_latin(data, ident):
         words_file = "words.combined"
         file = os.path.basename(file) if extra.get("counts") else file + ".combined"
         notices.append("Words: " + source.format(file=file))
+        notices += ranking
     rules = {"capitalise": True, "sentenceEnd": ".?!", "openingMarks": extra.get("openingMarks", ""),
              "apostrophes": extra.get("apostrophes", True)}
     write_im(folder, {"id": ident, "name": name, "nameEnglish": english, "label": label, "locale": locale, "script": "Latn",
@@ -494,6 +521,8 @@ def build_national(data, ident):
         words = ranked_by_corpus(data, words, extra["rank_by"])
     else:
         head, words = read_counts(data, file, locale, main) if extra.get("counts") else read_words(data, file)
+    ranking = []
+    words = reranked(data, ident, words, ranking)
     if extra.get("own_letters"):
         # AOSP's Serbian list has a few words in Latin letters ("a" among them), which its Cyrillic keys can't type.
         own = set(main)
@@ -539,7 +568,7 @@ def build_national(data, ident):
                       "source": {"letters": "CLDR 49 exemplarCharacters", "keys": "keyboard_layout_%s.kcm" % layout,
                                  "words": shown}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, layout_line, "Words: " + source_line]))
+        notice([CLDR_NOTICE, layout_line, "Words: " + source_line] + ranking))
 
 
 # Korean's word list (Leipzig Corpora Collection, CC BY 4.0), in the data dir.
@@ -729,6 +758,8 @@ def build_hebrew(data, ident):
     file = "frequencywords/he_full.txt"
     letters = [chr(c) for c in range(0x05D0, 0x05EB)] + ["'"]
     head, words = read_counts(data, file, "he", letters)
+    ranking = []
+    words = reranked(data, ident, words, ranking)
     write_words(folder, head, words)
     write_im(folder, {"id": ident, "name": cldr_name(data, "he"), "nameEnglish": "Hebrew", "label": "עב", "locale": "he",
                       "script": "Hebr", "keys": hebrew_keys(data), "accents": {}, "words": "words.combined", "variants": None,
@@ -737,7 +768,7 @@ def build_hebrew(data, ident):
                       "engine": None,
                       "source": {"keys": "xkeyboard-config symbols/il basic", "words": os.path.basename(file)}})
     open(os.path.join(folder, "NOTICE"), "w", encoding="utf-8", newline="\n").write(
-        notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")]))
+        notice([CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")] + ranking))
 
 
 # Starter words (owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty"):
@@ -755,6 +786,14 @@ STARTER_SOURCES = {
     "zh-quick": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-zhuyin": ("../src/rime-essay/essay.txt", "essay"),
     "ja": ("", "fixed"),
+    # The lists ranked by Leipzig's sentences ([RANK_BY]) keep the starters of their own list: news and Wikipedia put
+    # prepositions on top, where the chat-like lists had "som", "čo" and "nie" (Slovak), the ways to start a message.
+    **{ident: ("aosp-dictionaries/wordlists/%s.combined" % name, "list") for ident, name in {
+        "af": "main_af__experimental", "ca": "main_ca__experimental", "el": "main_el__legacy", "ga": "main_ga",
+        "gl": "main_gl__experimental", "is": "main_is__experimental", "lv": "main_lv", "nn": "main_nn",
+        "sk": "main_sk__experimental"}.items()},
+    "bs": ("frequencywords/bs_full.txt", "counts"),
+    "he": ("frequencywords/he_full.txt", "counts"),
 }
 # Japanese has no frequency list split into words that we ship, and Mozc's costs rank homophones, not common words, so its
 # starters are picked by hand: common ways to start a sentence, for the owner to confirm.
@@ -770,7 +809,8 @@ def top_words(path, kind):
     if kind == "list":
         words = []
         for line in open(path, encoding="utf-8"):
-            if line.startswith(" word="):
+            # The shipped lists write " word=", some of HeliBoard's sources (Slovak's, Nynorsk's) "word=".
+            if line.lstrip(" ").startswith("word="):
                 fields = line.strip().split(",")
                 word = fields[0][5:]
                 freq = next((int(f[2:]) for f in fields if f.startswith("f=") and f[2:].isdigit()), 0)

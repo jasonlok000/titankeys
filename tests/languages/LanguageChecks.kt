@@ -42,6 +42,7 @@ fun main(args: Array<String>) {
     englishIsAlwaysThereAndFirst()
     turningOnAndOff()
     theOverlaySpansTwoKeysWhenFewAreOn()
+    aTapPicksTheTileUnderIt()
     languagesGroupTheirInputMethods()
     theAccentsSitOverTheHeldKey()
     wordsCompleteIgnoringAccents()
@@ -152,6 +153,25 @@ private fun turningOnAndOff() {
     same("a setting with more than four keeps them all", six.on("en,es,fr,de,it,pt").size, 6)
     same("move up", InputMethodIndex.move(listOf("en", "es", "fr"), "fr", up = true), listOf("en", "fr", "es"))
     same("the first can't move up", InputMethodIndex.move(listOf("en", "es"), "en", up = true), listOf("en", "es"))
+}
+
+/** A finger's tap on the screen picks what a key under it picks: each tile's span is its keys', edge to edge. */
+private fun aTapPicksTheTileUnderIt() {
+    val key = 108f
+    val cell = { column: Int -> column * key to (column + 1) * key }
+    for (count in 1..4) {
+        val columns = SwitchOverlay.columns(count)
+        for ((tile, span) in columns.withIndex()) {
+            val middle = (span.first + span.last + 1) * key / 2
+            same("$count tiles: a tap in tile $tile's middle picks it", Picker.itemAt(middle, columns, count, cell), tile)
+            for (letter in listOf(Layout.rows[0][span.first], Layout.rows[1][span.first]))
+                same("$count tiles: the key $letter picks the same tile", SwitchOverlay.choice(letter, count), tile)
+        }
+    }
+    same("Q's place picks nothing", Picker.itemAt(key / 2, SwitchOverlay.columns(2), 2, cell), -1)
+    same("P's place picks nothing", Picker.itemAt(9.5f * key, SwitchOverlay.columns(2), 2, cell), -1)
+    same("with three, W's place picks nothing", Picker.itemAt(1.5f * key, SwitchOverlay.columns(3), 3, cell), -1)
+    same("a column past the items picks nothing", Picker.itemAt(7.5f * key, SwitchOverlay.columns(4), 2, cell), -1)
 }
 
 private fun theOverlaySpansTwoKeysWhenFewAreOn() {

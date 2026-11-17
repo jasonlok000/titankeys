@@ -1313,7 +1313,12 @@ class TitanKeysIme : InputMethodService() {
         words.menuPress = { haptics.play(Haptic.MenuPress) }
         // The keyboard sits on the bottom of a window as tall as the screen. See [fillScreen]. Its root feels every tap on the
         // screen that plays nothing of its own ([TapHaptics]).
-        return TapHaptics(ui) { downTime -> if (!haptics.playedSince(downTime)) haptics.play(Haptic.ScreenTap) }.apply {
+        return TapHaptics(ui) { downTime ->
+            val own = haptics.playedSince(downTime)
+            if (!own) haptics.play(Haptic.ScreenTap)
+            if (AppBuild.kind(this) == "debug") Log.i("TitanKeysTap", if (own) "the tap played its own haptic" else "screen_tap played")
+        }.apply {
+            if (AppBuild.kind(this@TitanKeysIme) == "debug") log = { line -> Log.i("TitanKeysTap", line) }
             addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
             addView(effects, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }

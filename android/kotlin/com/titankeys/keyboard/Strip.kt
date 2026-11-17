@@ -1072,11 +1072,7 @@ class Strip(
     /** The picker's item under [x], or -1. */
     private fun pickerItemAt(x: Float): Int {
         val picker = notice as? Notice.Picker ?: return -1
-        for ((index, columns) in picker.columns.withIndex()) {
-            if (index >= picker.items.size) break
-            if (x >= menuColumn(columns.first).first && x <= menuColumn(columns.last).second) return index
-        }
-        return -1
+        return Picker.itemAt(x, picker.columns, picker.items.size, ::menuColumn)
     }
 
     private val codeText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)

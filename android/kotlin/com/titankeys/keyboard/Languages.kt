@@ -138,6 +138,7 @@ internal class Languages(
      * punctuation, Rime's ascii_punct, off unless Settings turns it on.
      */
     fun variant() {
+        barWords()
         val engine = loadedEngine ?: return
         val chosen = TypingSettings.chineseVariant(context)
         for (option in CHINESE_VARIANTS) engine.option(option, option == chosen)
@@ -233,6 +234,7 @@ internal class Languages(
         slot.done(listTicket, words)
         this.words.other = !current.isEnglish
         this.words.wordBreak = current.rules.wordBreak
+        barWords()
         changed(method)
     }
 
@@ -241,6 +243,7 @@ internal class Languages(
      * a new keyboard, and this one's data mustn't stay with it.
      */
     fun stop() {
+        saveLearning()
         loading++
         slot.clear()
         loadedEngine?.stop()
@@ -249,6 +252,44 @@ internal class Languages(
         warm.clear()
         loader.shutdownNow()
         live.remove(this)
+    }
+
+    /** The input method whose learning [words] holds now, and the changes not written yet. */
+    private var learningFor: String? = null
+    private var unsaved = 0
+
+    /**
+     * The current input method's starters and what it learned, for the bar's words ([LanguageWords]): Chinese's in Simplified
+     * for that variant. Its learning is read from the `language_learning` store as it's switched to, and written back every
+     * few words and as another is switched to. With Learn new words off, nothing is learned.
+     */
+    private fun barWords() {
+        val method = loaded
+        words.starters = if (method.startersSimplified.isNotEmpty() && TypingSettings.chineseVariant(context) == "zh_hans")
+            method.startersSimplified else method.starters
+        words.capitals = method.rules.capitalise
+        if (learningFor == method.id) return
+        saveLearning()
+        learningFor = method.id
+        words.learning = if (method.isEnglish) null else LanguageLearning.decode(learningStore().getString(method.id, null))
+        words.learned = {
+            if (++unsaved >= SAVE_EVERY) saveLearning()
+        }
+        words.mayLearn = ::learningOn
+    }
+
+    /** Whether the user lets TitanKeys learn their words: the same switch as English's, Learn new words I type. */
+    private fun learningOn() = com.titankeys.engine.SwipeTyping.get(context).learningEnabled()
+
+    private fun learningStore() = context.getSharedPreferences(LANGUAGE_LEARNING, Context.MODE_PRIVATE)
+
+    /** Writes what the current input method learned. */
+    fun saveLearning() {
+        val id = learningFor ?: return
+        val learning = words.learning ?: return
+        if (unsaved == 0) return
+        unsaved = 0
+        learningStore().edit().putString(id, learning.encode()).apply()
     }
 
     /** What this keyboard holds of its input methods, for LeakCheck. */
@@ -274,6 +315,14 @@ internal class Languages(
 
 /** Every keyboard's [Languages] still in memory, weakly, for TitanKeys Debug's LeakCheck: one, or none, is right. */
 private val live = java.util.Collections.synchronizedMap(java.util.WeakHashMap<Languages, Unit>())
+
+/**
+ * What each input method but English learned from the user, by input method id ([LanguageLearning]): in the backup, kept by
+ * Reset most things, cleared by Reset literally everything, as English's learned words are.
+ */
+internal const val LANGUAGE_LEARNING = "language_learning"
+/** How many learned words go by before they're written. */
+private const val SAVE_EVERY = 5
 
 /** Where [KeyboardListSync]'s entry is kept: Android's list is this phone's, so it isn't in the backup. */
 internal const val KEYBOARD_LIST = "keyboard_list"

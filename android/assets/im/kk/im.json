@@ -61,5 +61,19 @@
     "letters": "CLDR 49 exemplarCharacters",
     "keys": "keyboard_layout_russian.kcm",
     "words": "main_kk__experimental.combined"
-  }
+  },
+  "starters": [
+    "да",
+    "мен",
+    "деп",
+    "және",
+    "де",
+    "бұл",
+    "бар",
+    "деген",
+    "ол",
+    "жоқ",
+    "бір",
+    "болып"
+  ]
 }

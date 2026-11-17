@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Afrikaans",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_af__experimental.combined"
-  }
+  },
+  "starters": [
+    "die",
+    "en",
+    "van",
+    "is",
+    "in",
+    "het",
+    "nie",
+    "n",
+    "wat",
+    "te",
+    "om",
+    "vir"
+  ]
 }

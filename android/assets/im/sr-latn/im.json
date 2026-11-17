@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Srpski",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_sr.combined"
-  }
+  },
+  "starters": [
+    "je",
+    "i",
+    "u",
+    "se",
+    "na",
+    "su",
+    "da",
+    "od",
+    "a",
+    "za",
+    "godine",
+    "sa"
+  ]
 }

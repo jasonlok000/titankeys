@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Dansk",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_da.combined"
-  }
+  },
+  "starters": [
+    "i",
+    "og",
+    "af",
+    "en",
+    "er",
+    "at",
+    "til",
+    "som",
+    "den",
+    "på",
+    "for",
+    "med"
+  ]
 }

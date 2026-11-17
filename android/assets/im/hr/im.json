@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Hrvatski",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_hr.combined"
-  }
+  },
+  "starters": [
+    "je",
+    "i",
+    "u",
+    "se",
+    "na",
+    "su",
+    "od",
+    "za",
+    "da",
+    "a",
+    "koji",
+    "s"
+  ]
 }

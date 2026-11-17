@@ -21,5 +21,19 @@
   "source": {
     "name": "CLDR 49 localeDisplayNames: 日本語",
     "words": "Mozc's open-source dictionary"
-  }
+  },
+  "starters": [
+    "私",
+    "今日",
+    "はい",
+    "これ",
+    "それ",
+    "何",
+    "今",
+    "また",
+    "でも",
+    "ありがとう",
+    "そう",
+    "明日"
+  ]
 }

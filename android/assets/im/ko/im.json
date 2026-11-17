@@ -20,5 +20,19 @@
     "name": "CLDR 49 localeDisplayNames: 한국어",
     "keys": "hangul",
     "words": null
-  }
+  },
+  "starters": [
+    "내가",
+    "그",
+    "난",
+    "내",
+    "안",
+    "수",
+    "이",
+    "네",
+    "거야",
+    "좀",
+    "그래",
+    "있어"
+  ]
 }

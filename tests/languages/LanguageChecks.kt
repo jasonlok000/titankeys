@@ -57,6 +57,8 @@ fun main(args: Array<String>) {
     symWorksAfterTheSwitcher()
     androidsListFollowsTheOnes()
     telexMarksAndTones()
+    barWordsAndLearning()
+    if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
     if (args.isNotEmpty()) switchingKeepsOneList(File(args[0]))
     if (failures > 0) {
@@ -739,6 +741,50 @@ private fun switchingKeepsOneList(folder: File) {
     slot.clear()
     collect()
     same("no word list once the keyboard goes", WordList.alive().size, 0)
+}
+
+/** The owner, 2026-11-16: "each language should have a list of starting words". Its own, in its own script; never English's. */
+private fun everyInputMethodHasStarters(folder: File) {
+    val english = setOf("the", "I", "and", "to", "a", "of")
+    for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        check("${method.id}: has starters", method.starters.size in 5..12) { "${method.starters.size}" }
+        check("${method.id}: its starters are words", method.starters.all { word -> word.any { it.isLetter() } })
+        if (method.script != "Latn") check("${method.id}: no English among its starters", method.starters.none { it in english }) {
+            method.starters.joinToString(" ")
+        }
+        if (method.script == "Hani") same("${method.id}: Simplified starters too", method.startersSimplified.size, method.starters.size)
+    }
+}
+
+/** The bar's words in another input method, and what it learns from the user. */
+private fun barWordsAndLearning() {
+    val starters = listOf("de", "la", "en", "el", "y")
+    same("a sentence starts: the starters, with a capital", BarWords.next(null, null, starters, capitals = true), listOf("De", "La", "En"))
+    same("no capitals in a script without them", BarWords.next(null, null, listOf("我", "你", "佢"), capitals = false), listOf("我", "你", "佢"))
+    same("after a word, nothing learned: the starters", BarWords.next("hola", null, starters, capitals = true), listOf("de", "la", "en"))
+    same("while a word is typed: the list's", BarWords.complete("ho", null, listOf("hola", "hoy")), listOf("hola", "hoy"))
+    same("nothing to offer: empty, never English", BarWords.next(null, null, emptyList(), capitals = true), emptyList<String>())
+
+    val learning = LanguageLearning()
+    learning.kept(null, "hola", known = true)
+    same("a known word kept once starts sentences", BarWords.next(null, learning, starters, capitals = true).first(), "Hola")
+    learning.kept("buenos", "días", known = true)
+    learning.kept("buenos", "días", known = true)
+    same("a learned next word rises", BarWords.next("buenos", learning, starters, capitals = true), listOf("días", "de", "la"))
+    learning.kept("es", "Titankeys", known = false)
+    same("a word the list lacks, typed once, isn't offered (a typo)", BarWords.complete("Tit", learning, emptyList()), emptyList<String>())
+    learning.kept("es", "Titankeys", known = false)
+    same("typed twice, it rises above the list's", BarWords.complete("tit", learning, listOf("título")), listOf("Titankeys", "título"))
+    learning.forget("Titankeys")
+    check("taken back, it's under twice again", !learning.knows("Titankeys"))
+    val copy = LanguageLearning.decode(learning.encode())
+    same("kept as text and read back", copy.next("buenos"), listOf("días"))
+    same("its sentence starts too", copy.sentenceStarts(), listOf("hola"))
+    same("a damaged line is skipped", LanguageLearning.decode("w\thola\tx\nw\tadiós\t3").completions("adi"), listOf("adiós"))
+    val many = LanguageLearning()
+    for (i in 0 until LanguageLearning.MAX_WORDS + 50) many.kept(null, "w$i", known = true)
+    check("its words are bounded", many.encode().lines().count { it.startsWith("w\t") } <= LanguageLearning.MAX_WORDS)
 }
 
 private fun everyInputMethodInTheFolder(folder: File) {

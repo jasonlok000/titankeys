@@ -25,5 +25,19 @@
     "name": "CLDR 49 localeDisplayNames: Suomi",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_fi.combined"
-  }
+  },
+  "starters": [
+    "ja",
+    "on",
+    "oli",
+    "myös",
+    "hän",
+    "vuonna",
+    "joka",
+    "ei",
+    "ovat",
+    "mutta",
+    "että",
+    "sekä"
+  ]
 }

@@ -26,5 +26,19 @@
     "name": "CLDR 49 localeDisplayNames: Deutsch",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_de__legacy.combined"
-  }
+  },
+  "starters": [
+    "der",
+    "und",
+    "die",
+    "in",
+    "von",
+    "den",
+    "des",
+    "im",
+    "mit",
+    "ist",
+    "dem",
+    "das"
+  ]
 }

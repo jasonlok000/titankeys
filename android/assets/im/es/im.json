@@ -27,5 +27,19 @@
     "name": "CLDR 49 localeDisplayNames: Español",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_es.combined"
-  }
+  },
+  "starters": [
+    "de",
+    "la",
+    "en",
+    "el",
+    "y",
+    "que",
+    "a",
+    "del",
+    "los",
+    "se",
+    "por",
+    "un"
+  ]
 }

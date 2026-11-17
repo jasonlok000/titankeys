@@ -24,5 +24,19 @@
     "name": "CLDR 49 localeDisplayNames: Norsk nynorsk",
     "letters": "CLDR 49 exemplarCharacters",
     "words": "main_nn.combined"
-  }
+  },
+  "starters": [
+    "og",
+    "i",
+    "det",
+    "til",
+    "som",
+    "er",
+    "på",
+    "av",
+    "med",
+    "for",
+    "var",
+    "å"
+  ]
 }

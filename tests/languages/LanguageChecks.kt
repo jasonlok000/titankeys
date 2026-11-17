@@ -49,6 +49,7 @@ fun main(args: Array<String>) {
     wordsCompleteIgnoringAccents()
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
+    keysWaitForALoadingEngine()
     aRestoredInputMethodTypes()
     thaiHoldsAndBreaks()
     hindiRulesType()
@@ -917,6 +918,33 @@ private fun koreanChoices() {
     held.backspace()
     val ended = held.key('!')
     same("the hold's symbol: 하 written first, the symbol goes on", ended.commit + "|" + ended.handled, "하|false")
+}
+
+/**
+ * The first key in an engine's input method (owner, 2026-11-17): while its engine loads, at a field start or a switch, keys
+ * wait, also with the keyboard hidden, and go on once the load ends. Only the last load counts.
+ */
+private fun keysWaitForALoadingEngine() {
+    val wait = EngineWait()
+    same("nothing loading: keys go on", wait.waiting, false)
+    wait.loading(1, engine = true)
+    same("Yale loading at a field start: keys wait", wait.waiting, true)
+    same("an older load's end lets nothing go", wait.loaded(0), false)
+    same("still waiting", wait.waiting, true)
+    same("its own load's end: the keys go on", wait.loaded(1), true)
+    same("and nothing waits after", wait.waiting, false)
+    wait.loading(2, engine = false)
+    same("an input method without an engine (Spanish): nothing waits", wait.waiting, false)
+    wait.loading(3, engine = true)
+    wait.loading(4, engine = true)
+    same("a switch overtook the load: its end doesn't count", wait.loaded(3), false)
+    same("the newer one's does", wait.loaded(4), true)
+    wait.loading(5, engine = true)
+    wait.loading(6, engine = false)
+    same("a switch to English overtook it: nothing waits", wait.waiting, false)
+    wait.loading(7, engine = true)
+    wait.stop()
+    same("the keyboard going: nothing waits", wait.waiting, false)
 }
 
 /** The bar's words in another input method, and what it learns from the user. */

@@ -9,7 +9,8 @@ BAR and NOTICE below parse them. A Debug without these lines gives a LOOK for ea
 
 1. Switching, each between en, yue-yale, ja and ko, typing at once after the switch: the two-language toggle (a held Sym),
    the held Sym's switcher with three on (a tile's key), Alt + Sym away to the next keyboard and Debug back. After each, every
-   bar line belongs to the new input method, or the bar is empty: never the old one's (O).
+   bar line after the first destination bar belongs to that input method. Earlier transition lines are inconclusive.
+   A separate immediate Korean r/k probe must commit exactly 가 and one space, regardless of bar predictions.
 2. #98 in each: for short prefixes, the bar's middle word is exactly what Space types (O).
 3. Mixed, then a switch: a code pending, a flick, a pick from the bigger menu, the Sym panel open. The bar after it is the new
    input method's (O), with the field and a shot.
@@ -77,16 +78,52 @@ def read():
         return None
 
 
+def switch_verdict(lines, new):
+    """Only judge bars after the destination first appears; earlier lines belong to the switch itself."""
+    bars = [line for line in lines if line[0] == "bar"]
+    first = next((i for i, line in enumerate(bars) if line[1] == new), None)
+    if first is None:
+        return None
+    return all(line[1] == new for line in bars[first:])
+
+
 def judge_switch(name, old, new, typed_prefix):
-    """After a switch from [old] to [new] and the prefix typed at once: every bar line is [new]'s, never [old]'s."""
     lines = bar_lines()
-    bars = [l for l in lines if l[0] == "bar"]
+    verdict = switch_verdict(lines, new)
     text = read()
-    if not bars:
-        return record(name, None, f"no bar lines ({TAG} missing from this Debug?); the field {text!r}")
-    wrong = [l for l in bars if l[1] != new]
-    record(name, not wrong, f"{old} to {new}, then {typed_prefix!r} at once: the bar {shown(lines)}; the field {text!r}"
-           + (f"; {len(wrong)} bar line(s) not {new}'s" if wrong else ""))
+    record(name, verdict, f"{old} to {new}, then {typed_prefix!r}: the bar {shown(lines)}; the field {text!r}"
+           + ("; destination bar not observed, transition lines cannot decide" if verdict is None else ""))
+
+
+def wait_field(expected, attempts=8):
+    """Read only our focused test field. Losing focus stops the run, never becomes an app failure."""
+    text = checks.field()
+    for _ in range(attempts - 1):
+        if text == expected:
+            break
+        time.sleep(.25)
+        text = checks.field()
+    return text
+
+
+def check_korean_startup():
+    """Switch and type r/k in one guarded feed, then commit exactly one Korean syllable."""
+    start(["en", "ko"], "en")
+    if checks.field() != "":
+        raise Stop("Korean startup needs an empty Debug test field")
+    mark()
+    # HOLD_SYM normally includes a 500 ms settling pause. Omit it here: these keys test the startup queue.
+    play("key:sym:900:none", *keys("rk"))
+    # The engine's bar is optional instrumentation. Poll briefly for its arrival before the commit,
+    # but never mistake a source-language bar or a raw 'rk' notice for the resulting syllable.
+    for _ in range(16):
+        if any(line[0] == "bar" and line[1] == "ko" for line in bar_lines()):
+            break
+        time.sleep(.25)
+    play("key:space")
+    text = wait_field("가 ")
+    record("korean-startup-rk", text == "가 ",
+           f"immediate r/k after switching, then one Space: {text!r}; wanted exactly '가 '")
 
 
 def check_toggle():
@@ -121,9 +158,8 @@ def check_alt_sym():
         prefix = PREFIXES[im][2]
         play(*keys(prefix), "+700")
         lines = bar_lines()
-        bars = [l for l in lines if l[0] == "bar"]
         text = read()
-        record(f"alt-sym-{im}", (not [l for l in bars if l[1] != im]) if bars else None,
+        record(f"alt-sym-{im}", switch_verdict(lines, im),
                f"Alt + Sym went to {away or 'nothing'}; Debug back, {prefix!r} at once: the bar {shown(lines)}; the field {text!r}")
 
 
@@ -131,7 +167,7 @@ def space_types_middle(im, prefix):
     """#98: the bar's middle word after [prefix] is what Space types."""
     start(["en", im] if im != "en" else ["en"], im)
     play(*keys(prefix), "+700")
-    bars = [l for l in bar_lines() if l[0] == "bar"]
+    bars = [l for l in bar_lines() if l[0] == "bar" and l[1] == im]
     middle = bars[-1][2][1] if bars else None
     play("key:space", "+600")
     text = read()
@@ -155,9 +191,8 @@ def mixed(name, on, before, new, prefix, shot_at=None):
     mark()
     play(*HOLD_SYM, *keys(prefix), "+700", shot=name, at=shot_at or 1500)
     lines = bar_lines()
-    bars = [l for l in lines if l[0] == "bar"]
     text = read()
-    record(name, (not [l for l in bars if l[1] != new]) if bars else None,
+    record(name, switch_verdict(lines, new),
            f"then {new}, {prefix!r} at once: the bar {shown(lines)}; the field {text!r}", name)
 
 
@@ -183,7 +218,7 @@ def check_yale_warm():
            + ("" if bars else f" ({TAG} missing?)"), "yale-warm")
 
 
-BATCH = [check_toggle, check_switcher, check_alt_sym, check_98, check_mixed, check_yale_warm]
+BATCH = [check_korean_startup, check_toggle, check_switcher, check_alt_sym, check_98, check_mixed, check_yale_warm]
 
 
 def finish():

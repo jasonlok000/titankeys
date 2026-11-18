@@ -8,6 +8,7 @@ sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/dev/touch"))
 import checks
 import language_checks
+import chinese_checks
 
 
 class LanguageProbes(unittest.TestCase):
@@ -27,6 +28,15 @@ class LanguageProbes(unittest.TestCase):
                 language_checks.one(method, ["en", method])
                 self.assertEqual(list(play.call_args.args[:-1]), language_checks.gestures(actions))
                 self.assertIs(record.call_args.args[1], True)
+
+    def test_space_with_only_predictions(self):
+        for first, second, expected in [("我", "我 ", True), ("我", "我為", False), ("", " ", False)]:
+            with self.subTest(second=second), patch.object(chinese_checks, "fresh"), \
+                    patch.object(language_checks, "turn_on", return_value=True), \
+                    patch.object(chinese_checks, "shot_then", side_effect=[first, second]), \
+                    patch.object(chinese_checks, "record") as record:
+                chinese_checks.suggestions("zh-next-pinyin", "zh-pinyin", "wo")
+                self.assertIs(record.call_args.args[1], expected)
 
     def read(self, dumps, windows):
         def adb(*args):

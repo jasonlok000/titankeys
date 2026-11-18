@@ -232,7 +232,8 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "sym-hold": "sym_hold_batch",
            "zh-back": "zh_back_batch",
            "heap": "heap_batch",
-           "b-lines": "b_lines_batch"}
+           "b-lines": "b_lines_batch",
+           "evening": "evening_batch"}
 
 
 def report(name, stamp, hands):

@@ -77,12 +77,12 @@ object BugRecording {
 
     /**
      * A field starts while recording: returns where its lines go, or null if the field must not be recorded. Only fields
-     * that allow learning count, so passwords, addresses and private fields are left out, with a gap line in their place.
+     * allowed by [Field.logged] count, with a gap line for a field left out.
      */
     internal fun fieldStart(context: Context, info: EditorInfo, restarting: Boolean): RawLogWriter? {
         val writer = writer ?: return null
         val now = SystemClock.uptimeMillis()
-        if (!Field.of(info.inputType, info.imeOptions).learning) {
+        if (!Field.logged(info.inputType, info.imeOptions, null)) {
             writer.add(RawLogLines.gap("field", 0, now))
             return null
         }

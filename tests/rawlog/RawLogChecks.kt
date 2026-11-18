@@ -57,6 +57,11 @@ private fun fieldRule() {
     must(Field.logged(TEXT, NO_LEARNING, REFERENCE), "A reference field must be logged although it asks for no learning")
     must(Field.logged(TEXT, NO_LEARNING, "nm,$REFERENCE"), "The reference option can sit among others")
     must(Field.logged(TEXT, 0, REFERENCE), "A reference field that allows learning must be logged")
+    val appSuggestions = TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+    for (options in listOf(0, 0x12000003, 0x12000003 or NO_LEARNING)) {
+        must(!Field.logged(appSuggestions, options, null), "An app-managed suggestions field stays out of recordings")
+        must(!Field.logged(appSuggestions, options, REFERENCE), "A reference cannot add an app-managed suggestions field to recordings")
+    }
     for (password in listOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
             InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) {
         must(!Field.logged(TEXT or password, 0, null), "A password field must not be logged")

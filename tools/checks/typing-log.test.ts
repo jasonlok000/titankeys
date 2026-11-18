@@ -87,9 +87,9 @@ describe("record a bug", () => {
     expect(await text("android/kotlin/com/titankeys/keyboard/RawLog.kt")).toContain('private const val DIRECTORY = "rawlog"');
   });
 
-  test("records only in fields that allow learning, never the text around the cursor, and stops by itself", async () => {
+  test("uses the recording field rule without Debug references, omits surrounding text, and stops by itself", async () => {
     const bug = await text("android/kotlin/com/titankeys/keyboard/BugRecording.kt");
-    expect(bug).toContain("if (!Field.of(info.inputType, info.imeOptions).learning) {");
+    expect(bug).toContain("if (!Field.logged(info.inputType, info.imeOptions, null)) {");
     expect(bug).toMatch(/RawLogLines\.fieldStart\([^)]*info\.initialSelStart, info\.initialSelEnd, null, now\)/);
     expect(bug).toContain("const val MAX_MILLIS = 3 * 60_000L");
     expect(bug).toContain("main.postDelayed(autoStop, MAX_MILLIS)");

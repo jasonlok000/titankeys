@@ -2194,7 +2194,7 @@ private fun capitalI(world: Realistic) {
         "a normal field" to { Typist(world, field = sentences) },
         "a field with typo fixes off" to { Typist(world, field = noFixes) },
         "a field whose word data hasn't loaded" to { Typist(world, autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), field = sentences) },
-        "a field with no suggestions" to { Typist(world, field = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0)) },
+        "an app-managed suggestions field" to { Typist(world, field = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0)) },
     )
     for ((name, typist) in typists) {
         same(typist().type("i ").text, "I ", "\"i\" at the start of $name")
@@ -2695,17 +2695,6 @@ private fun bugHunt(world: Realistic) {
     same(typed("andMary ", setOf(FixKind.MISSING_SPACES)), "andMary ", "#9: Missing spaces off leaves it")
     same(typed("andMary ", FixKind.entries.toSet()), "andMary ", "#9: and so does every switch off")
 
-    // #10: a text field that asks for no suggestions was still autocorrected and still taught words.
-    val unsuggested = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0)
-    must(!unsuggested.autocorrect && !unsuggested.suggestions && !unsuggested.learning, "#10: a field that asks for no suggestions gets none")
-    Typist(world, field = unsuggested).type("jsmith zorblat ").also {
-        same(it.text, "jsmith zorblat ", "#10: nothing is fixed there")
-        same(it.words.typed.toList(), emptyList<String>(), "#10: and nothing is learned")
-        same(it.bar, emptyList<String>(), "#10: and the bar offers nothing")
-    }
-    must(Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0).suggestions,
-        "#10: an address bar that asks for no suggestions still gets the bar")
-
     // #29: Sym's "&" and "=" got spaces around them in an address bar.
     fun symbols(field: Field) = Typist(world, field = field, autoCapitalise = false).type("a").also { it.composer.symbol("="); it.settle() }
         .type("1").also { it.composer.symbol("&"); it.settle() }.type("b").text
@@ -2842,6 +2831,71 @@ private fun spaceTypesTheMiddleWordInOtherLanguages(world: Realistic) {
     }
 }
 
+private fun ordinaryTextFields(world: Realistic) {
+    val maps = "com.google.android.apps.maps"
+    // The live Maps editor has NO_EXTRACT_UI and NO_FULLSCREEN. Neither asks for no personalised learning.
+    val mapsType = 0x80001
+    val mapsOptions = 0x12000003
+    val noSuggestions = InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+    val noLearning = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+    same(mapsType, InputType.TYPE_CLASS_TEXT or noSuggestions, "$maps reports ordinary text with NO_SUGGESTIONS")
+    same(mapsOptions, EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_ACTION_SEARCH,
+        "$maps asks for Search without asking to block learning")
+    same(Field.of(0, 0), Field.None, "$maps briefly reports a window without an editor")
+
+    val mapsSearch = Field.of(mapsType, mapsOptions)
+    val otherText = listOf(InputType.TYPE_CLASS_TEXT, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT)
+    for ((label, type, options) in listOf(Triple(maps, mapsType, mapsOptions)) + otherText.flatMap { type ->
+        listOf(Triple("ordinary text with Done", type or noSuggestions, EditorInfo.IME_ACTION_DONE),
+            Triple("an app that completes its own words", type or noSuggestions or InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE, 0))
+    }) {
+        val field = Field.of(type, options)
+        same(field, Field.of(type and noSuggestions.inv(), options), "$label: an app's own suggestions don't change typing policy")
+        val editor = Typist(world, field = field)
+        must(editor.bar.isNotEmpty(), "$label: the empty editor has starting words")
+        editor.words.completions = listOf("hello", "help")
+        must("hello" in editor.type("hel").bar, "$label: typing offers a word on the bar")
+        val typed = Typist(world, field = field).type("teh zorblax now ").swipe("park")
+        same(typed.text, "the zorblax now park ", "$label: the editor receives a correction and a swiped word")
+        must("zorblax" in typed.words.typed, "$label: an ordinary editor can teach a typed word after the next word ends")
+        must(!Field.logged(type, options, null), "$label: typing with NO_SUGGESTIONS still stays out of recordings")
+    }
+    same(Typist(world, autocorrect = null, field = mapsSearch).type("teh ").text, "teh ", "$maps: Fix typos off leaves the word as typed")
+    same(Typist(world, field = mapsSearch).type("park ").quickSpace().text, "park. ", "$maps: Double Space types a full stop")
+    same(Typist(world, field = mapsSearch).also { it.composer.autoPunctuation = { false } }.type("park ").quickSpace().text,
+        "park  ", "$maps: Double Space off types two spaces")
+    same(Typist(world, field = mapsSearch).type("park,museum").text, "park, museum", "$maps: the comma gets a space")
+    same(Typist(world, field = mapsSearch).also { it.composer.commaSpace = { false } }.type("park,museum").text,
+        "park,museum", "$maps: the comma keeps its own spacing with the setting off")
+    val sentenceField = Field.of(mapsType or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES, mapsOptions)
+    same(Typist(world, field = sentenceField, autoCapitalise = true).swipe("park").text, "Park ",
+        "An editor requesting sentence capitals gets them with the setting on")
+    same(Typist(world, field = sentenceField, autoCapitalise = false).swipe("park").text, "park ",
+        "The same editor gets lowercase with the setting off")
+
+    val private = Field.of(mapsType, mapsOptions or noLearning)
+    same(private, mapsSearch.copy(learning = false), "$maps: the explicit privacy flag only turns learning off")
+    val privateText = Typist(world, field = private).type("teh zorblax now ").swipe("park")
+    same(privateText.text, "the zorblax now park ", "$maps: a private editor can still correct and swipe")
+    must(privateText.words.typed.isEmpty() && privateText.words.pairs.isEmpty() && privateText.words.kept.isEmpty(),
+        "$maps: private typing and swipes teach the keyboard nothing")
+    must(!Field.logged(mapsType, mapsOptions or noLearning, null), "$maps: the private editor is not recorded")
+
+    for (variation in listOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+            InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+            InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS)) {
+        val field = Field.of(mapsType or variation or InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE, mapsOptions)
+        val typed = Typist(world, field = field).type("teh ").swipe("park")
+        same(typed.text, "teh ", "A password or email keeps exact text even with search hints: $variation")
+        must(typed.bar.isEmpty() && typed.words.typed.isEmpty(), "A password or email has no text suggestions or learning: $variation")
+    }
+    for (field in listOf(Field.of(InputType.TYPE_CLASS_NUMBER, mapsOptions), Field.Exact)) {
+        val typed = Typist(world, field = field).type("teh ").swipe("park")
+        same(typed.text, "teh ", "Number and exact-typing contexts keep their restrictions")
+        must(typed.bar.isEmpty() && typed.words.typed.isEmpty(), "Number and exact-typing contexts offer and learn no words")
+    }
+}
+
 fun main() {
     val world = Realistic()
     favourites()
@@ -2865,6 +2919,7 @@ fun main() {
     capitalI(world)
     apostrophes(world)
     fixSwitches(world)
+    ordinaryTextFields(world)
     bugHunt(world)
     simulation(world)
     speed(world)

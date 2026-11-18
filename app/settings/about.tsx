@@ -4,6 +4,7 @@ import { state } from "../../lib/titankeys";
 import { PRIVACY_URL } from "../../lib/connected";
 import { hasReleaseNotes } from "../../lib/release-notes";
 import { Note } from "../../lib/note";
+import { supportTitle } from "../../lib/support";
 import icon from "../../assets/icon.png";
 
 export default function About() {
@@ -18,6 +19,7 @@ export default function About() {
         <Row title="Based on Atlas" subtitle="A modified version of Atlas by Julian Hall" endIcon={arrowOutward}
           onPress={() => void openURL("https://github.com/juleshall4/atlas")} />
         <Row title="Licences" endIcon={chevronRight} href="/settings/licences" />
+        <Row title={supportTitle} endIcon={chevronRight} href="/support" />
         <Row title="Privacy policy" endIcon={arrowOutward} onPress={() => void openURL(PRIVACY_URL)} />
       </Stack>
       <Stack align="center" gap={4}>

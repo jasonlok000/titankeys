@@ -469,7 +469,7 @@ export const wipeEverything = () => titankeys("wipeEverything");
  * Opens the playground, and tells where its buttons asked to go: "setup" when it closed from its setup slide, and "closed"
  * when something else closed it, such as a link that opened the app's own screen over it.
  */
-export type PlaygroundExit = "guide" | "settings" | "setup" | "closed" | "back";
+export type PlaygroundExit = "guide" | "settings" | "support" | "setup" | "closed" | "back";
 
 /**
  * Opens the playground, and tells `closed` how it closed. One the guide's end opened (`fromEnd`) closes with "back" on Back, to go

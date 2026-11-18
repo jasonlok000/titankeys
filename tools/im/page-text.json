@@ -16,7 +16,7 @@
     "learn": "Learn my words",
     "corrections": "Fix slips as I type",
     "layout": "Layout",
-    "lazySounds": "Lazy sounds (n for l, z for j)",
+    "lazySounds": "Lazy sounds (n and l, z and j, ng and gw)",
     "radicals": "Show the radicals as I type",
     "alphabets": "Alphabets",
     "fixes": "Fix slips as I type",
@@ -29,7 +29,8 @@
     "shorthand": "Spell out shorthand",
     "spelling": "Spelling",
     "chineseCharacters": "Characters",
-    "variant": "Spelling"
+    "variant": "Spelling",
+    "radicalPreview": "Show a key's radical as I rest on it"
   },
   "notAvailable": {
     "corrections": "Corrections: not in {X}. Pick the word you mean from the bar instead.",
@@ -44,7 +45,8 @@
     "noCapitals": "{X} has no capitals.",
     "noSpaceAfterFullStop": "{X} puts no space after a full stop.",
     "engineMarks": "{X}'s marks come with their own spacing.",
-    "noFullStop": "{X} has no full stop, so double Space types two spaces."
+    "noFullStop": "{X} has no full stop, so double Space types two spaces.",
+    "notThisMethod": "Only for {methods}."
   },
   "roles": {
     "shift": {

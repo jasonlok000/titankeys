@@ -1,2 +1,0 @@
-# Never offered on the bar: see NOTICE. tools/im/blocklist.py writes it.
-самогубство

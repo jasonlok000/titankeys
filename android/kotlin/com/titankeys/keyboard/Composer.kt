@@ -182,7 +182,9 @@ class Composer(
     /** Whether autocorrect changed the text when a typed word ended, and which word to learn now. */
     private class Ended(val changed: Boolean, val learn: String?)
     private class Barrier(val identity: Editor.Identity, val navigation: Boolean = false, val command: Boolean = false,
-                          val leaves: Boolean = false)
+                          val leaves: Boolean = false) {
+        var reportedSelection: Selection? = null
+    }
 
     private var field = Field.None
     private var composition: Composition = Composition.None
@@ -320,6 +322,7 @@ class Composer(
     private data class PickedAddress(val owner: Editor.Identity, val before: String, val after: String,
                                      val start: Int, val end: Int)
     private var pickedAddress: PickedAddress? = null
+    private val addressField get() = this.field.words && this.field.suggestions && !this.field.fullStops
 
     private fun settledAddress(anchor: Snapshot): Boolean {
         val picked = pickedAddress ?: return false
@@ -474,6 +477,7 @@ class Composer(
         if (waiting?.navigation == true) return false
         if (waiting?.command == true && sameIdentity(editor.identity(), waiting.identity)) {
             // The ordered state query acknowledges all effects of this app-handled command together.
+            waiting.reportedSelection = Selection(start, end)
             return false
         }
         val updated = Selection(start, end)
@@ -1105,7 +1109,7 @@ class Composer(
 
     /** [predictNow] skips the wait that batches fast typing, for an edit such as a tapped word that ends a burst. */
     private fun confirmState(expected: Snapshot? = null, notifyExternal: Boolean = false, predictNow: Boolean = false,
-                             result: (Boolean) -> Unit = {}) {
+                             afterPick: Boolean = false, result: (Boolean) -> Unit = {}) {
         val owner = editor.identity()
         if (owner == null || !sameIdentity(identity, owner)) {
             reset()
@@ -1114,23 +1118,38 @@ class Composer(
         }
         val waiting = Barrier(owner, command = true)
         val current = epoch
+        // A transient read after a pick may look like an empty field or a selection. Wait for the app's next cursor report.
+        val waitAfterPick = afterPick && expected?.available == true && expected.knownSelection
         barrier = waiting
         editor.state { state ->
             if (barrier !== waiting || current != epoch) return@state
             barrier = null
-            if (state == null || !sameIdentity(owner, editor.identity())) {
+            val sameField = sameIdentity(owner, editor.identity())
+            val read = state?.let {
+                Snapshot(it.before, it.after, Selection(it.selectionStart, it.selectionEnd), it.selectionStart != it.selectionEnd)
+            }
+            // The cursor update may have arrived while the separate state query was pending.
+            val reportedPick = expected?.takeIf {
+                waitAfterPick && sameField && read != it && waiting.reportedSelection == it.selection &&
+                    editor.before() == it.before && editor.after() == it.after
+            }
+            val actual = reportedPick ?: read
+            if (actual == null || !sameField) {
                 selection = Selection(-1, -1)
                 selectionConfirmed = false
-                reset()
+                reset(predicts = !waitAfterPick)
                 if (notifyExternal) externalChange()
                 result(false)
                 return@state
             }
-            selection = Selection(state.selectionStart, state.selectionEnd)
+            selection = actual.selection
             selectionConfirmed = true
-            val actual = Snapshot(state.before, state.after, selection, selection.start != selection.end)
             if (expected != null && actual != expected) {
-                reset()
+                if (waitAfterPick) {
+                    selection = Selection(-1, -1)
+                    selectionConfirmed = false
+                }
+                reset(predicts = !waitAfterPick)
                 if (notifyExternal) externalChange()
                 result(false)
                 return@state
@@ -1169,10 +1188,10 @@ class Composer(
     /** While a word is typed, its middle word is worked out again: it may be the hidden fix, which Space then skips (#98). */
     private fun showAgain() {
         val typed = composition as? Composition.Typed
-        if (typed == null || typed.trailingSpace) return show(composition.alternatives)
+        if (typed == null || typed.trailingSpace && !addressField) return show(composition.alternatives)
         val space = spaceWord(typed.alternatives, typed.snapshot, typed.prefix, false)
         val again = ApostropheContext.offerOther(space?.let { spaceFirst(typed.alternatives, it) } ?: typed.alternatives, typed.prefix)
-        composition = Composition.Typed(typed.prefix, false, typed.snapshot, again)
+        composition = Composition.Typed(typed.prefix, typed.trailingSpace, typed.snapshot, again)
         show(again, keepFirst = space != null)
     }
 
@@ -1218,7 +1237,7 @@ class Composer(
                 remember(swiped)
                 automaticSpace = accepted.takeIf { current.trailingSpace }
                 // A chosen word is settled, so the strip moves straight on to what comes next.
-                confirmState(accepted, predictNow = true) { confirmed ->
+                confirmState(accepted, predictNow = true, afterPick = true) { confirmed ->
                     if (!confirmed || composition !== swiped) return@confirmState
                     leave()
                     composition = Composition.None
@@ -1226,8 +1245,8 @@ class Composer(
             }
             is Composition.Typed -> {
                 val tail = current.prefix + if (current.trailingSpace) " " else ""
-                // A starter word replaces a selection. Any other word would leave it behind.
-                if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected && tail.isNotEmpty()) return
+                // A starter replaces a selection. An address completion can also replace the browser's selected suffix.
+                if (anchor != current.snapshot || !before.endsWith(tail) || anchor.selected && tail.isNotEmpty() && !addressField) return
                 invalidate(false)
                 val space = if (current.prefix.isEmpty()) wordSpace(before) else ""
                 // A tapped word is whole, so it gets the capitals step that a typed word gets at its end ("WhatsApp").
@@ -1239,7 +1258,7 @@ class Composer(
                 manualWord.clear()
                 correcting = null
                 // Keep the old words until the next words arrive, so the bar does not flash empty.
-                confirmState(snapshot(), predictNow = true) { confirmed ->
+                confirmState(snapshot(), predictNow = true, afterPick = true) { confirmed ->
                     if (confirmed) learnWord(chosen, correction, rememberCase = false)
                 }
             }
@@ -1255,7 +1274,7 @@ class Composer(
                 val accepted = snapshot()
                 composition = current.copy(word = word, before = chosen.length, after = 0, snapshot = accepted)
                 // Moving the cursor away is how most people leave this word, so learn the choice now.
-                confirmState(accepted) { confirmed ->
+                confirmState(accepted, afterPick = true) { confirmed ->
                     if (confirmed && field.learning && chosen != current.word.word)
                         words.chosen(word.swipe, word.context, word.recognition, chosen)
                 }
@@ -1278,7 +1297,7 @@ class Composer(
         automaticSpace = snapshot().takeIf { trailingSpace }
         manualWord.clear()
         correcting = null
-        confirmState(snapshot(), predictNow = true)
+        confirmState(snapshot(), predictNow = true, afterPick = true)
     }
 
     private fun remember(swiped: Composition.Swiped) {
@@ -1410,7 +1429,7 @@ class Composer(
         val owner = identity
         // Address-like fields do not learn or add sentence punctuation. Remember only an explicit bar pick here,
         // before commitText: an editor filter can synchronously report its normalized text from that call.
-        pickedAddress = if (cause == EditCause.Choose && field.words && field.suggestions && !field.fullStops &&
+        pickedAddress = if (cause == EditCause.Choose && addressField &&
             owner != null && anchor.available && anchor.knownSelection && text.endsWith(" ")) {
             val start = minOf(anchor.selection.start, anchor.selection.end) - count
             PickedAddress(owner, (anchor.before!!.dropLast(count) + text.dropLast(1)).takeLast(Editor.CONTEXT_LENGTH),
@@ -1969,6 +1988,11 @@ class Composer(
         && (text[0].isLetterOrDigit() || text[0] in "@_-")
 
     private fun predictLater() {
+        // Space keeps the address as it stands. Update its middle word as each edit changes it.
+        if (addressField) {
+            predict()
+            return
+        }
         val current = epoch
         later(PREDICTION_DELAY_MILLIS) { if (current == epoch) predict() }
     }
@@ -2018,6 +2042,7 @@ class Composer(
      * middle, but space still types di anyways").
      */
     private fun spaceWord(found: List<String>, anchor: Snapshot, prefix: String, guided: Boolean): String? {
+        if (addressField) return prefix.takeIf { it.isNotEmpty() }
         val word = typedWordAt(anchor)
         // A swiped word being fixed by hand isn't autocorrected: Space keeps it as it stands (endingWord).
         val fix = word?.takeIf { correcting == null }?.let { findFix(it, anchor) }
@@ -2035,7 +2060,8 @@ class Composer(
     }
 
     /** [found] with [space], what Space types, first: see [spaceWord]. */
-    private fun spaceFirst(found: List<String>, space: String) = listOf(space) + found.filterNot { it.equals(space, ignoreCase = true) }
+    private fun spaceFirst(found: List<String>, space: String) =
+        listOf(space) + found.filterNot { it.equals(space, ignoreCase = !addressField) }
 
     private fun sameLetters(a: String, b: String) = a.filter(Char::isLetter).equals(b.filter(Char::isLetter), ignoreCase = true)
 
@@ -2074,8 +2100,10 @@ class Composer(
             barIdle = true
             return
         }
-        // Typing or a swipe replaces a selection, and so does a start. Nothing but a start fits one.
-        if (anchor.selected) {
+        // A browser can select its own inline completion after the word being typed. A light tap already puts a space after it.
+        val addressBefore = if (addressField && pickedAddress == null && automaticSpace == anchor) before.removeSuffix(" ") else before
+        val addressPrefix = if (addressField) addressBefore.takeLastWhile { it.isLetterOrDigit() || it == '\'' || it == '’' } else ""
+        if (anchor.selected && addressPrefix.isEmpty()) {
             offerStarts(anchor)
             return
         }
@@ -2086,17 +2114,29 @@ class Composer(
         }
         readKeptWords(anchor)
         if (recall(anchor)) return
-        if (after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) {
+        if (addressPrefix.isEmpty() && after.firstOrNull()?.let { it.isLetter() || it == '\'' || it == '’' } == true) {
             offerStarts(anchor)
             return
         }
         if (offerExpansions(anchor, before)) return
-        val lastWord = words.prefix(before.dropLast(1))
-        val trailingSpace = before.endsWith(" ") && lastWord.isNotEmpty() && !words.known(lastWord)
+        val lastWord = if (addressField || !before.endsWith(" ")) "" else words.prefix(before.dropLast(1))
+        val trailingSpace = if (addressField) addressPrefix.isNotEmpty() && addressBefore != before
+            else lastWord.isNotEmpty() && !words.known(lastWord)
+        val completeUnknownWord = trailingSpace && !addressField
         val context = if (trailingSpace) before.dropLast(1) else before
+        val prefix = if (addressField) addressPrefix else words.prefix(context)
+        val afterAddressPick = pickedAddress != null
         // Completions wait for the models, which can take seconds to load. An emptied field shows its starts at once, as a chat
         // app's does after it sends: the last message's words must not stay on the bar meanwhile (owner, 2026-11-12).
-        if (barIdle || barForText && before.isEmpty() && after.isEmpty()) offerStarts(anchor)
+        if (addressPrefix.isNotEmpty() || barIdle && automaticSpace != anchor && !afterAddressPick) {
+            val pending = if (completeUnknownWord) null else spaceWord(emptyList(), anchor, prefix, guided = false)
+            if (pending == null) offerStarts(anchor)
+            else {
+                composition = Composition.Typed(prefix, trailingSpace, anchor, listOf(pending))
+                show(composition.alternatives, keepFirst = true)
+                barIdle = true
+            }
+        } else if (barForText && before.isEmpty() && after.isEmpty()) offerStarts(anchor)
         val current = epoch
         completion?.set(true)
         val cancelled = AtomicBoolean(false)
@@ -2104,15 +2144,14 @@ class Composer(
         completionSnapshot = anchor
         words.complete(context, cancelled, field.sentenceCapitalisation && autoCapitalise()) { found ->
             if (cancelled.get() || current != epoch || snapshot() != anchor) return@complete
-            val prefix = words.prefix(context)
             val guided = guideSuggestions(found, prefix, intended(context.dropLast(prefix.length)))
             // While a word of a pair is being typed, its other form waits in the bar's left place (#73): a choice, never a fix. Not
             // in the guide, where that place may hold the guide's word.
-            val space = if (trailingSpace) null else spaceWord(guided, anchor, prefix, guided !== found)
-            val suggestions = if (trailingSpace) guided
+            val space = if (completeUnknownWord) null else spaceWord(guided, anchor, prefix, guided !== found)
+            val suggestions = if (completeUnknownWord) guided
                 else (space?.let { spaceFirst(guided, it) } ?: guided).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
             if (suggestions.isEmpty()) {
-                offerStarts(anchor)
+                if (!afterAddressPick) offerStarts(anchor)
                 return@complete
             }
             composition = Composition.Typed(prefix, trailingSpace, anchor, suggestions)

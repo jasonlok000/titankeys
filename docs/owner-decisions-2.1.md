@@ -913,3 +913,9 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Owner: "first flick it should remove the not typed out words" in a partially picked composition. The second delete flick clears the remaining keycode and picked portion without committing either to the field. The third flick works on the existing text in the field. Check the editor text after each flick, including with text already there.
 - Owner: "the input method e.g. 耶 isn't centered vertically against the upper case of the other words." Use the visible capitals as the alignment reference. The owner will choose an offset on a phone mockup. No final offset has been chosen.
 - The suggestion flash can occur with Chinese in ChatGPT as well as in Maps. Cover a Chinese candidate pick in an ordinary chat field.
+
+## Codex (2026-11-18, language guides and setup recovery)
+
+- Owner: "the F: is a placeholder, which should be re-written by the subagents initiated with that particular language in the correct languge." Replace language-specific draft text with instructions written for speakers of that language.
+- Owner: "it's not a sample it's a table." A language guide shows every mapped physical key, including all Cangjie radicals, and shows supported modifier outputs on the keyboard drawing.
+- Owner: If previously granted Accessibility or another verified Setup setting is lost outside TitanKeys Setup, show the setup sequence again on the next app launch. Remember confirmed setup settings and distinguish a change the user made through Setup. Preserve explicit choices to skip optional settings.

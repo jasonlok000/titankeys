@@ -13,7 +13,7 @@ javac --release 17 -d "$work" android/kotlin/com/titankeys/engine/EmojiPages.jav
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$work:$stdlib" -d "$work" \
   "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" "$keyboard/InputMethods.kt" "$keyboard/WordList.kt" "$keyboard/Layout.kt" \
   "$keyboard/Hangul.kt" "$keyboard/Telex.kt" "$keyboard/Rules.kt" "$keyboard/LanguageLearning.kt" "$keyboard/Favourites.kt" \
-  "$keyboard/LanguageSettings.kt" "$keyboard/QuickSetting.kt" "$keyboard/EngineWait.kt" "$keyboard/HoldHint.kt" "$keyboard/EngineSlips.kt" "$keyboard/BarLog.kt" "$keyboard/BlockedWords.kt" "$keyboard/WordNoise.kt" android/kotlin/com/titankeys/autocorrect/KeyNeighbours.kt \
+  "$keyboard/LanguageSettings.kt" "$keyboard/QuickSetting.kt" "$keyboard/EngineWait.kt" "$keyboard/HoldHint.kt" "$keyboard/EngineSlips.kt" "$keyboard/BarLog.kt" "$keyboard/WordNoise.kt" android/kotlin/com/titankeys/autocorrect/KeyNeighbours.kt \
   android/kotlin/com/titankeys/autocorrect/PairCounts.kt \
   android/kotlin/com/titankeys/connected/Json.kt tests/languages/LanguageChecks.kt
 java -cp "$work:$stdlib" com.titankeys.keyboard.LanguageChecksKt android/assets/im

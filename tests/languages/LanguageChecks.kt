@@ -81,7 +81,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (args.isNotEmpty()) holdHints(File(args[0]))
     if (args.isNotEmpty()) everyGuideIsComplete(File(args[0]))
-    if (args.isNotEmpty()) noBlockedWordIsOffered(File(args[0]))
+    if (args.isNotEmpty()) noFragmentIsOffered(File(args[0]))
     if (args.isNotEmpty()) onlyTheOnesOnStayWarm(File(args[0]))
     if (args.isNotEmpty()) variantsArePicked(File(args[0]))
     if (failures > 0) {
@@ -1708,39 +1708,29 @@ private fun everyGuideIsComplete(folder: File) {
 }
 
 /**
- * The native review (2026-11-17): the bar never offers a blocked word (profanity, slurs, sexual violence, self-harm;
- * tools/im/blocklist.py), as a starter, a sentence start or a next word, in any input method with a blocked.txt; nor
- * Korean's bound endings or Thai's fragments and rare names. Words the user typed and learned may come back.
+ * The native review (2026-11-17): the bar offers no fragment, as a starter, a sentence start or a next word: Korean's bound
+ * endings (있다 고) and Thai's fragments and rare names ([WordNoise]). Words the user typed and learned may come back.
  */
-private fun noBlockedWordIsOffered(folder: File) {
+private fun noFragmentIsOffered(folder: File) {
     var checked = 0
-    for (dir in folder.listFiles { file -> File(file, "blocked.txt").isFile }.orEmpty().sortedBy { it.name }) {
+    for (id in listOf("ko", "th")) {
+        val dir = File(folder, id)
         val method = InputMethod.parse(File(dir, "im.json").readText())
-        val blocked = File(dir, "blocked.txt").useLines { BlockedWords.read(it, method.script) }
-        val rules = WordRules({ blocked.blocks(it) || WordNoise.fragment(method.id, it) }, { false })
-        same("${method.id}: no starter is blocked", method.starters.filter(blocked::blocks), emptyList<String>())
-        val table = File(dir, "pairs.bin").takeIf { it.isFile }?.inputStream()?.use { NextWords.readBinary(it, method.id in NextWords.TURKIC) }
-            ?: continue
-        val list = method.words?.let { name -> File(dir, name).takeIf { it.isFile }?.useLines { WordList.read(it, method.javaLocale) } }
-        val nextWord = { word: String -> WordNoise.nextWord(method.id, word) { list?.frequency(it) ?: Int.MAX_VALUE } }
-        val previous = listOf<String?>(null) + method.starters + table.after(null) +
-            (list?.let { l -> File(dir, method.words!!).useLines { lines -> lines.filter { it.startsWith(" word=") }.take(300)
-                .map { it.trim().removePrefix("word=").substringBefore(',') }.toList() } }.orEmpty())
+        val rules = WordRules({ WordNoise.fragment(method.id, it) }, { false })
+        val table = File(dir, "pairs.bin").inputStream().use { NextWords.readBinary(it) }
+        val list = File(dir, method.words!!).useLines { WordList.read(it, method.javaLocale) }
+        val nextWord = { word: String -> WordNoise.nextWord(method.id, word) { list.frequency(it) } }
+        val previous = listOf<String?>(null) + method.starters + table.after(null) + File(dir, method.words!!).useLines { lines ->
+            lines.filter { it.startsWith(" word=") }.take(300).map { it.trim().removePrefix("word=").substringBefore(',') }.toList()
+        }
         for (word in previous.distinct()) {
             val offered = BarWords.next(word, null, method.starters, capitals = false, table = table, rules = rules, shown = 8,
                 nextWord = nextWord)
-            val bad = offered.filter { blocked.blocks(it) || WordNoise.fragment(method.id, it) }
-            if (bad.isNotEmpty()) same("${method.id}: after ${word ?: "a sentence's start"}, nothing blocked", bad, emptyList<String>())
+            val bad = offered.filter { WordNoise.fragment(method.id, it) || !nextWord(it) && it !in method.starters }
+            if (bad.isNotEmpty()) same("$id: after ${word ?: "a sentence's start"}, no fragment", bad, emptyList<String>())
             checked++
         }
     }
-    check("the next words of every input method with a blocklist were checked", checked > 1000) { "$checked" }
-    // The review's own: Thai's swears are blocked, Korean's endings and Thai's rare names after คุณ aren't offered.
-    val th = File(folder, "th/blocked.txt").useLines { BlockedWords.read(it, "Thai") }
-    for (word in listOf("ควย", "เหี้ย", "เย็ด", "หี", "สัส", "แม่ง")) check("Thai blocks $word", th.blocks(word))
-    check("but not หีบ, which holds หี", !th.blocks("หีบ"))
-    val zh = File(folder, "yue-yale/blocked.txt").useLines { BlockedWords.read(it, "Hani") }
-    check("Cantonese blocks 仆街 and 自殺 inside a phrase", zh.blocks("仆街") && zh.blocks("想自殺"))
-    check("but not 奶茶 or 一致性, which hold one-character entries", !zh.blocks("奶茶") && !zh.blocks("一致性"))
+    check("Korean's and Thai's next words were checked", checked > 400) { "$checked" }
     check("Korean's 고 is a fragment", WordNoise.fragment("ko", "고"))
 }

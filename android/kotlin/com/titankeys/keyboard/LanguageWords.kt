@@ -27,18 +27,15 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     var capitals = true
     /** Blocked words and Favourites, shared by every language ([WordRules]). */
     var rules: WordRules = WordRules.NONE
-    /** The words the bar never offers in the input method typing ([BlockedWords]); one the user typed and learned may come back. */
-    var safety: BlockedWords = BlockedWords.NONE
 
     /** The input method typing now, for [WordNoise]. */
     var id = ""
 
-    /** [rules], and the input method's blocked words and fragments, for everything the bar offers and every fix. */
+    /** [rules], and the input method's fragments ([WordNoise]), for everything the bar offers and every fix. */
     private val offered: WordRules get() {
         val rules = rules
-        val safety = safety
         val id = id
-        return WordRules({ rules.blocked(it) || (safety.blocks(it) || WordNoise.fragment(id, it)) && learning?.knows(it) != true },
+        return WordRules({ rules.blocked(it) || WordNoise.fragment(id, it) && learning?.knows(it) != true },
             rules.favourite)
     }
 

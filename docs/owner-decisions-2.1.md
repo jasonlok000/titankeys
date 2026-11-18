@@ -896,3 +896,8 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Pending work is integrated on task branches. Existing phone and build jobs finish first; new builds share the full-build lock. No phone job runs alongside the existing night runner.
 - Reported night failures are reproduced before app changes. A missing field read or an incorrect expected result is a test-tool failure, not proof of an app failure.
 - Owner: Google Maps search "shd act like a normal field. same with other similar fields." TYPE_TEXT_FLAG_NO_SUGGESTIONS is ignored for ordinary text fields: the bar, corrections, starters and learning, as anywhere. Passwords, email and URL fields keep their handling. (Handed to Codex, T3b, with the Chrome address-bar bug.)
+
+## Codex (2026-11-18)
+
+- Rebuilt the Mandarin and Cantonese prediction tables from the unfiltered word lists for the owner's 17 November suggestion decision. Both packaged tables match the Rime checksum list. Korean endings and Thai word fragments still use the existing word-quality rules.
+- For field regressions, the checks use the input type and editor action Android reports. To check a Chrome suggestion pick on the phone, use a fresh address-bar tab, leave the entry unsubmitted, and record the selection after the pick together with the next state of the bar. These are the test conditions for the owner's field decisions above.

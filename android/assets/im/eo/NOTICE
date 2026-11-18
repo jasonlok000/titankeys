@@ -7,5 +7,3 @@ Ranked by how often each word appears in the Leipzig Corpora Collection's epo_ne
 Next words (pairs.bin): counts of word pairs from the Leipzig Corpora Collection's epo_newscrawl_2017_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0. D. Goldhahn, T. Eckart and U. Quasthoff: Building Large Monolingual Dictionaries at the Leipzig Corpora Collection: From 100 to 200 Languages. LREC 2012. Built by tools/im/next_words.py; only the counts of the most common word pairs are included.
 
 Starters: the words that most often begin a sentence in the Leipzig Corpora Collection's epo_newscrawl_2017_1M (https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0.
-
-Blocked words (blocked.txt), never offered on the bar: LDNOOBW's List of Dirty, Naughty, Obscene and Otherwise Bad Words (eo, https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words), CC BY 4.0, with TitanKeys' own short list (tools/im/blocklist-extra.tsv).

@@ -43,6 +43,11 @@ internal object InputMethodList {
         }.getOrNull()
     }
 
+    /** The words [method]'s bar never offers (blocked.txt, [BlockedWords]); none where it has no file. Off the main thread. */
+    fun blocked(context: Context, method: InputMethod): BlockedWords = runCatching {
+        context.assets.open("$FOLDER/${method.id}/blocked.txt").bufferedReader().useLines { BlockedWords.read(it, method.script) }
+    }.getOrDefault(BlockedWords.NONE)
+
     /** [method]'s word list, for its spelling [variant] when it has variants. It can take a second: call it off the main thread. */
     fun words(context: Context, method: InputMethod, variant: String?): WordList? {
         val file = method.variants.firstOrNull { it.id == variant }?.words ?: method.words ?: return null

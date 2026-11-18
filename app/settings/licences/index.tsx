@@ -27,6 +27,8 @@ const licences = [
   { title: "Noto Sans Georgian", subtitle: "SIL Open Font Licence. The Georgian letters in Settings.", url: "https://github.com/notofonts/georgian" },
   // F: draft. The Hebrew letters in the app's text fonts (tools/im/fonts.py), for Hebrew's name.
   { title: "Noto Sans Hebrew", subtitle: "SIL Open Font Licence. The Hebrew letters in Settings.", url: "https://github.com/notofonts/hebrew" },
+  // F: draft.
+  { title: "Noto Sans Devanagari", subtitle: "SIL Open Font Licence. The Devanagari letters in Settings.", url: "https://github.com/notofonts/devanagari" },
   // F: draft. The Thai letters in the app's text fonts (tools/im/fonts.py), for Thai's name.
   { title: "Noto Sans Thai", subtitle: "SIL Open Font Licence. The Thai letters in Settings.", url: "https://github.com/notofonts/thai" },
   // F: draft. The Korean and Chinese characters in the app's text fonts (tools/im/fonts.py).

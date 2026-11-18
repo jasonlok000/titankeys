@@ -27,12 +27,19 @@ CLEAN = "no guide or playground in memory"
 
 
 def leakcheck(name, after):
-    """A plain LeakCheck (no dump): YES when nothing is held."""
+    """A plain LeakCheck (no dump): YES when nothing is held. LeakCheck collects (gc and runFinalization, three times) before it
+    answers, yet a guide it saw held at 12:35 on 2026-11-17 was gone by the dump a moment later: late finalization. So a held
+    answer gets a second read 3 s on, after its own collection, and only one still held there is a NO."""
     global held_seen
     line = answer_of(adb("shell", "am", "broadcast", "-n", RECEIVER))
+    first = line
+    if CLEAN not in line:
+        time.sleep(3)
+        line = answer_of(adb("shell", "am", "broadcast", "-n", RECEIVER))
     clean = CLEAN in line
     held_seen = held_seen or not clean
-    record(name, clean, f"LeakCheck after {after}: {line[:400]}")
+    again = "" if first is line else f" (the first read, 3 s before: {first[:160]})"
+    record(name, clean, f"LeakCheck after {after}: {line[:400]}{again}")
 
 
 def guide_runs(count=15):

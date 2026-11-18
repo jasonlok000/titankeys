@@ -57,7 +57,16 @@ def guard(action):
 
 
 def hierarchy():
-    shell("uiautomator", "dump", DUMP)
+    # uiautomator answers 255 when the screen won't go idle for it or another dump is running (2026-11-17's slot5, home-focus):
+    # a few tries, a second apart, before failing.
+    for attempt in range(4):
+        try:
+            shell("uiautomator", "dump", DUMP)
+            break
+        except subprocess.CalledProcessError:
+            if attempt == 3:
+                raise
+            time.sleep(1)
     try:
         return ET.fromstring(shell("cat", DUMP))
     finally:

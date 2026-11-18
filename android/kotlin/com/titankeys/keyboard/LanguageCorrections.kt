@@ -41,6 +41,12 @@ object LanguageCorrections {
         return NoisyChannel.Keys(key, ::base, shorthand = false)
     }
 
+    /**
+     * The case rules [method]'s corrector lowers and capitalises by: Turkish's and Azerbaijani's, where i's capital is İ and ı's
+     * is I, as their word lists and next-word tables lower them ([NextWords.TURKIC]); the root's for every other.
+     */
+    fun caseRules(method: InputMethod): java.util.Locale = if (method.id in NextWords.TURKIC) method.javaLocale else java.util.Locale.ROOT
+
     /** [c] without its accents, in lower case: é is e, ñ is n. A letter that isn't Latin stays as it is. */
     fun base(c: Char): Char = Normalizer.normalize(c.lowercaseChar().toString(), Normalizer.Form.NFD).firstOrNull() ?: c
 
@@ -64,7 +70,7 @@ object LanguageCorrections {
         val data = if (pairs == null) CorrectionData.forLanguage(lexicon, keysOf)
             else CorrectionData.forLanguage(lexicon, keysOf, pairs = pairs)
         return TypedCorrector(lexicon, data, rejected, recent, nextWordChance = chance,
-            keys = keys, spaceFixes = spaceFixes)
+            keys = keys, spaceFixes = spaceFixes, locale = caseRules(method))
     }
 
     /**

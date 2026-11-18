@@ -35,6 +35,7 @@ private val RUSSIAN_KEYS = mapOf(
     'z' to "я", 'x' to "ч", 'c' to "с", 'v' to "м", 'b' to "и", 'n' to "т", 'm' to "ь")
 
 fun main(args: Array<String>) {
+    barLogLines()
     theFileReads()
     howToReads()
     badFilesSayWhy()
@@ -68,6 +69,7 @@ fun main(args: Array<String>) {
     koreanChoices()
     if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
+    if (args.isNotEmpty()) everyTextShows(File(args[0]))
     if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
     if (args.isNotEmpty()) tablesTakeTheListsSpelling(File(args[0]))
     if (args.isNotEmpty()) nextWordsCost(File(args[0]))
@@ -78,6 +80,8 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (args.isNotEmpty()) holdHints(File(args[0]))
+    if (args.isNotEmpty()) noBlockedWordIsOffered(File(args[0]))
+    if (args.isNotEmpty()) onlyTheOnesOnStayWarm(File(args[0]))
     if (args.isNotEmpty()) variantsArePicked(File(args[0]))
     if (failures > 0) {
         System.err.println("$failures failed")
@@ -790,6 +794,34 @@ private val textFonts by lazy {
 private val UNSHAPED = setOf("Deva")
 
 private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
+
+/**
+ * Every character of every input method's own text shows: its how-to and every other text in its im.json, in the app's fonts,
+ * since Android's fonts don't reach Ink on the phone (owner, 2026-11-17: Korean's how-to had blanks for its letters). A character
+ * with no glyph fails here, with the input method and the character, so tools/im/fonts.py runs again.
+ */
+private fun everyTextShows(folder: File) {
+    fun walk(value: Any?, out: MutableList<String>) {
+        when (value) {
+            is String -> out += value
+            is List<*> -> for (item in value) walk(item, out)
+            is Map<*, *> -> for (item in value.values) walk(item, out)
+        }
+    }
+    for (dir in folder.listFiles().orEmpty().filter { File(it, "im.json").isFile }) {
+        val json = Json.parse(File(dir, "im.json").readText()) as Map<*, *>
+        val texts = ArrayList<String>()
+        walk(json["howTo"], texts)
+        // A Devanagari name shows in English in Settings (UNSHAPED), so only its how-to's letters need the fonts.
+        if (json["script"] !in UNSHAPED) for (key in listOf("name", "nameEnglish")) (json[key] as? String)?.let(texts::add)
+        val missing = texts.joinToString(" ").codePoints().toArray().filter { code ->
+            !Character.isWhitespace(code) && code > 0x7F && textFonts.any { !it.canDisplay(code) }
+        }.distinct()
+        check("${dir.name}: every character of its texts has a glyph in the app's fonts", missing.isEmpty()) {
+            missing.joinToString(" ") { "U+%04X %s".format(it, String(Character.toChars(it))) }
+        }
+    }
+}
 
 /**
  * An input method's own name, as Settings > Input methods shows it: there, the same in the index, CLDR's name for the
@@ -1586,6 +1618,15 @@ private fun variantsArePicked(folder: File) {
         File(folder, "pt/words-$variant.combined").isFile && File(folder, "pt/pairs-$variant.bin").isFile)
 }
 
+/** TitanKeys Debug's bar log (BarLog), in the format tools/dev/touch/interactions_batch.py reads: the middle is the first word. */
+private fun barLogLines() {
+    same("three words: the second left, the first in the middle", BarLog.line("en", BarLog.places(listOf("did", "do", "different"))),
+        "bar: en do | did | different")
+    same("an empty place is -", BarLog.line("yue-yale", BarLog.places(listOf("你"))), "bar: yue-yale - | 你 | -")
+    same("an empty bar", BarLog.line("ko", BarLog.places(emptyList())), "bar: ko - | - | -")
+    same("a notice", BarLog.line("yue-yale", "notice: Warming up Yale…"), "bar notice: Warming up Yale…")
+}
+
 /**
  * Sym with a code being built clears it and does nothing more: its repeats and release are swallowed. The next Sym is Sym as
  * always (owner, 2026-11-17: "pressing the sym button should remove the keycode stuff first").
@@ -1609,4 +1650,50 @@ private fun heldKeysShowAsPlainLetters() {
     same("Backspace takes the last off", HeldLetters.of(push(n) + push(e) + push(67)), "n")
     same("nothing typed, nothing shown", HeldLetters.of(emptyList()), "")
     same("Space and the rest show nothing", HeldLetters.of(push(62)), "")
+}
+
+/** The owner's rule: an input method that's off loads nothing. With English and Yale on, only Rime stays warm. */
+private fun onlyTheOnesOnStayWarm(folder: File) {
+    val index = InputMethodIndex.parse(File(folder, "index.json").readText())
+    same("English and Yale on: Rime alone is warm", WarmEngines.wanted(index.on("en,yue-yale")).keys, setOf("rime"))
+    same("English alone: no engine", WarmEngines.wanted(index.on("en")).keys, emptySet<String>())
+    same("Japanese and Korean on: Mozc and Hangul", WarmEngines.wanted(index.on("en,ja,ko")).keys, setOf("mozc", "hangul"))
+}
+
+/**
+ * The native review (2026-11-17): the bar never offers a blocked word (profanity, slurs, sexual violence, self-harm;
+ * tools/im/blocklist.py), as a starter, a sentence start or a next word, in any input method with a blocked.txt; nor
+ * Korean's bound endings or Thai's fragments and rare names. Words the user typed and learned may come back.
+ */
+private fun noBlockedWordIsOffered(folder: File) {
+    var checked = 0
+    for (dir in folder.listFiles { file -> File(file, "blocked.txt").isFile }.orEmpty().sortedBy { it.name }) {
+        val method = InputMethod.parse(File(dir, "im.json").readText())
+        val blocked = File(dir, "blocked.txt").useLines { BlockedWords.read(it, method.script) }
+        val rules = WordRules({ blocked.blocks(it) || WordNoise.fragment(method.id, it) }, { false })
+        same("${method.id}: no starter is blocked", method.starters.filter(blocked::blocks), emptyList<String>())
+        val table = File(dir, "pairs.bin").takeIf { it.isFile }?.inputStream()?.use { NextWords.readBinary(it, method.id in NextWords.TURKIC) }
+            ?: continue
+        val list = method.words?.let { name -> File(dir, name).takeIf { it.isFile }?.useLines { WordList.read(it, method.javaLocale) } }
+        val nextWord = { word: String -> WordNoise.nextWord(method.id, word) { list?.frequency(it) ?: Int.MAX_VALUE } }
+        val previous = listOf<String?>(null) + method.starters + table.after(null) +
+            (list?.let { l -> File(dir, method.words!!).useLines { lines -> lines.filter { it.startsWith(" word=") }.take(300)
+                .map { it.trim().removePrefix("word=").substringBefore(',') }.toList() } }.orEmpty())
+        for (word in previous.distinct()) {
+            val offered = BarWords.next(word, null, method.starters, capitals = false, table = table, rules = rules, shown = 8,
+                nextWord = nextWord)
+            val bad = offered.filter { blocked.blocks(it) || WordNoise.fragment(method.id, it) }
+            if (bad.isNotEmpty()) same("${method.id}: after ${word ?: "a sentence's start"}, nothing blocked", bad, emptyList<String>())
+            checked++
+        }
+    }
+    check("the next words of every input method with a blocklist were checked", checked > 1000) { "$checked" }
+    // The review's own: Thai's swears are blocked, Korean's endings and Thai's rare names after คุณ aren't offered.
+    val th = File(folder, "th/blocked.txt").useLines { BlockedWords.read(it, "Thai") }
+    for (word in listOf("ควย", "เหี้ย", "เย็ด", "หี", "สัส", "แม่ง")) check("Thai blocks $word", th.blocks(word))
+    check("but not หีบ, which holds หี", !th.blocks("หีบ"))
+    val zh = File(folder, "yue-yale/blocked.txt").useLines { BlockedWords.read(it, "Hani") }
+    check("Cantonese blocks 仆街 and 自殺 inside a phrase", zh.blocks("仆街") && zh.blocks("想自殺"))
+    check("but not 奶茶 or 一致性, which hold one-character entries", !zh.blocks("奶茶") && !zh.blocks("一致性"))
+    check("Korean's 고 is a fragment", WordNoise.fragment("ko", "고"))
 }

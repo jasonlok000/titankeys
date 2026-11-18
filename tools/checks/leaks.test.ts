@@ -47,3 +47,19 @@ test("a held playground that none of the guide's statics holds says how to name 
   expect(memory).toContain("guide.isDestroyed -> \", held from outside the guide's statics: run the check with --ez dump true and \"");
   expect(memory).toContain("tools/leak-paths.py on the dump to name the holder");
 });
+
+test("the open playgrounds' list holds them weakly and drops closed ones as it's read (#85, leak-85 on the phone)", () => {
+  const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
+  expect(guide).toContain("private val playgrounds = ArrayList<java.lang.ref.WeakReference<GuideActivity>>()");
+  expect(guide).toContain("playgrounds += java.lang.ref.WeakReference(this)");
+  expect(guide).toContain("playgrounds.removeAll { it.get()?.isDestroyed != false }");
+  expect(guide).not.toMatch(/playgrounds \+= this\b/);
+});
+
+test("the front page's Settings and Guide buttons have their names for accessibility, which the phone checks find them by", () => {
+  const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
+  const action = guide.slice(guide.indexOf("private fun topAction("), guide.indexOf("onPress(haptics) { press() }", guide.indexOf("private fun topAction(")));
+  expect(action).toContain("contentDescription = text");
+  expect(action).toContain("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES");
+  expect(guide).toContain('topAction("Settings")');
+});

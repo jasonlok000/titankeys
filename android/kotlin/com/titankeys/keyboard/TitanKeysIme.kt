@@ -122,6 +122,13 @@ class TitanKeysIme : InputMethodService() {
     private var strip: Strip? = null
     /** The words the composer last put on the bar, for a strip that is made after that. */
     private var barWords = emptyList<String>()
+    /** TitanKeys Debug's last bar log line ([BarLog]), so only a change is logged. */
+    private var barLogged: String? = null
+    /** The units picked in this field, Chinese's and Japanese's words for the gestures and the bar ([PickedWords]). */
+    private val pickedWords = PickedWords()
+    /** A held Backspace's repeats, where Android sends none ([BackspaceRepeat]), and its first press, which they copy. */
+    private val backspaceRepeat = BackspaceRepeat()
+    private var heldBackspace: KeyEvent? = null
     private var panel: SymPanel? = null
     private var emoji: EmojiPages? = null
     /** The key that last picked from the panel or turned its page, so its repeats type nothing once the panel has closed. */
@@ -460,7 +467,7 @@ class TitanKeysIme : InputMethodService() {
         val gesture = strip?.gesture ?: return
         gesture.speedUp = Haptics.dotsSpeedUp(this)
         if (!gesture.deleteEnded(SystemClock.uptimeMillis())) return
-        deleteLog("delete animation: dots ${gesture.dots}${if (gesture.dominoes) " as dominoes, ${gesture.dominoTotal} words" else ""}")
+        deleteLog("delete animation: dots ${gesture.dots}")
         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
         val dotsAt = gesture.dotsAt
         haptics.holdDots(gesture.dotLandings(scale)) { dotsAt != null && strip?.gesture?.dotsAt == dotsAt }
@@ -531,7 +538,7 @@ class TitanKeysIme : InputMethodService() {
         val word = heldWords.next()
         enqueue {
             // A code still being built goes first, as a flick takes it: the pending code, then what was picked, typed less its last
-            // character, each step one word for the dominoes (owner, 2026-11-17: "the same shd work for holding for delete too").
+            // character (owner, 2026-11-17: "the same shd work for holding for delete too").
             val engine = languages.engine
             if (engine != null && (openPicker() as? LanguagePicker.Choices)?.state?.composing == true) {
                 haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
@@ -556,7 +563,6 @@ class TitanKeysIme : InputMethodService() {
             val deletes = editor.deletes
             composer.backspace(true)
             strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
-            deleteStreakWord(selected)
             KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
         }
     }
@@ -835,7 +841,7 @@ class TitanKeysIme : InputMethodService() {
         composer.commaSpace = { TypingSettings.commaSpaceIn(this, languages.languageId) }
         // Each language's own full stop for a double space, and its own words for the gestures that take one (owner, 2026-11-16).
         composer.fullStopMark = { languages.current.rules.fullStop }
-        editor.wordBreaker = { IcuWords.of(languages.current.javaLocale) }
+        editor.wordBreaker = ::wordBreaker
         composer.sentenceCapitals = { TypingSettings.autoCapitaliseIn(this, languages.languageId) && languages.current.rules.capitalise }
         // Every fix is English's, "i" to "I" included: Italian's "i" is a word (docs/languages.md).
         composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
@@ -1332,6 +1338,16 @@ class TitanKeysIme : InputMethodService() {
             openClipboard = { enqueue { openClipboardPage() } },
         )
         strip = words
+        // TitanKeys Debug logs what the bar shows while log.tag.TitanKeysBar is D, for the phone checks (BarLog).
+        if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) words.log = { shown ->
+            if (android.util.Log.isLoggable(BarLog.TAG, android.util.Log.DEBUG)) {
+                val id = if (::languages.isInitialized) languages.current.id else InputMethod.ENGLISH_ID
+                // Only a change: the same bar in another input method is a change too.
+                val line = BarLog.line(id, shown)
+                if (line != barLogged) android.util.Log.d(BarLog.TAG, line)
+                barLogged = line
+            }
+        }
         if (::languages.isInitialized) showInputMark()
         if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys
@@ -1456,6 +1472,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
         main.post { showGuideExtras() }
+        // Another field starts a new delete streak: words deleted somewhere else don't count here (#89).
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
         heldLetter = null
@@ -1465,6 +1482,8 @@ class TitanKeysIme : InputMethodService() {
         closePicker()
         // Text an engine was building belongs to the field before.
         if (::languages.isInitialized) languages.engine?.reset()
+        // The units picked belong to the field before ([PickedWords]), unless the same one restarts.
+        if (!restarting) pickedWords.clear()
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
@@ -1487,7 +1506,8 @@ class TitanKeysIme : InputMethodService() {
         // Android only calls onFinishInput first when the input is not restarting.
         rawLog?.finish()
         // Exact typing is for commands and remote computers, which are no typing to learn from.
-        rawLog = if (editing && !exact && !ownSettings) RawLog.start(this, info, restarting) else null
+        // Every field gets a start line with its app; only ones whose typing may be recorded get a session (RawLog.start).
+        rawLog = if (editing) RawLog.start(this, info, restarting, textAllowed = !exact && !ownSettings) else null
         composer.log = rawLog
         inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
         barHidden = info.packageName in TypingSettings.hiddenBarApps(this)
@@ -1537,8 +1557,10 @@ class TitanKeysIme : InputMethodService() {
 
     /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
     private fun readSettings() {
-        // The guide and the playground teach English, so they type it whatever input method is on.
-        languages.englishOnly = inGuide || inPractice
+        // The guide's lessons teach English, so they type it whatever input method is on. The playground is free practice: it
+        // types in the input methods that are on, and a held Sym opens the switcher there (owner, 2026-11-17: "long press for
+        // sym doesn't trigger the language selection in the playground").
+        languages.englishOnly = inGuide
         languages.refresh()
         // Which input methods are on may have changed, and with them the mark at Q.
         if (::languages.isInitialized) showInputMark()
@@ -1643,7 +1665,7 @@ class TitanKeysIme : InputMethodService() {
      */
     /**
      * TitanKeys Debug only: what a delete's animation shows, as counts, never text, for the phone checks of #89:
-     * "delete animation: dots N" and "dominoes run W words". adb logcat -s TitanKeysDelete
+     * "delete animation: dots N". adb logcat -s TitanKeysDelete
      */
     private fun deleteLog(line: String) {
         if (AppBuild.kind(this) == "debug") Log.i("TitanKeysDelete", line)
@@ -2428,6 +2450,9 @@ class TitanKeysIme : InputMethodService() {
     private var barSelected: String? = null
 
     override fun onFinishInput() {
+        // A held Backspace stops with its field.
+        backspaceRepeat.up()
+        main.removeCallbacks(repeatBackspace)
         closeMenu()
         barSelected = null
         strip?.selected = null
@@ -2565,27 +2590,6 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** New input ends a flourish at once, and a flick's dot ticks still to come with it. */
-    /**
-     * The delete streak that plays the dominoes (#89, owner, 2026-11-17): every word a flick or a held delete takes counts, each
-     * within the streak's gap of the last, and the dominoes play once it reaches its words. A delete of a selection, as select-all
-     * then a flick, is an instant delete with the usual animation: it never counts. A key press or a typed swipe starts it over.
-     */
-    private val deleteStreak = DeleteStreak()
-
-    private fun deleteStreakWord(selected: CharSequence?) {
-        if (selected != null) return
-        // The streak's numbers, which the Haptics lab can try in TitanKeys Debug.
-        GestureDisplay.triedDominoWords = Haptics.readDominoWords(this)
-        GestureDisplay.triedDominoGap = Haptics.readDominoGap(this)
-        val now = SystemClock.uptimeMillis()
-        val gesture = strip?.gesture
-        if (deleteStreak.word(now, GestureDisplay.dominoGapMillis(), GestureDisplay.dominoWords())) {
-            gesture?.startDominoes(deleteStreak.words, now)
-            deleteLog("dominoes run ${deleteStreak.words} words")
-        }
-        else if (gesture?.dominoes == true) gesture.startDominoes(deleteStreak.words, now)
-    }
-
     private fun interruptGesture() {
         strip?.gesture?.interrupt()
         haptics.cutDots()
@@ -2684,7 +2688,10 @@ class TitanKeysIme : InputMethodService() {
                     traceCursor(samples, ended = false)
                     return
                 }
+                // Only the latest swipe's worth of points: one long stream of moves with no DOWN between (a resting finger, or
+                // Debug's TouchFeed) grew this until the heap ran out (OutOfMemoryError, 2026-11-17, the phone run's languages batch).
                 cursorPath.addAll(samples.filter { it.valid })
+                if (cursorPath.size > Swipe.MAX_POINTS) cursorPath.subList(0, cursorPath.size - Swipe.MAX_POINTS).clear()
                 contact.move(samples)
                 // A held delete flick waits for the finger to lift, and goes faster the further the finger is from where it started.
                 if (contact.deleting) {
@@ -3029,7 +3036,7 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun selectWord(inFront: Boolean = false, nothing: () -> Unit = {}) = changeSelection { text, start, end, _ ->
         // In Chinese, Japanese or Thai a run of letters can be a sentence: the language's word breaks pick one word in it.
-        val breaks = IcuWords.of(languages.current.javaLocale)
+        val breaks = wordBreaker()
         val word = if (inFront) WordSelection.atOrBefore(text, start, end, breaks) else WordSelection.at(text, start, end, breaks)
         haptics.play(Haptic.picked(found = word != null))
         if (word == null) {
@@ -3041,6 +3048,20 @@ class TitanKeysIme : InputMethodService() {
         word
     }
 
+    /**
+     * The word breaks every word gesture uses (three taps, a slide, a flick, Ctrl + Backspace): in Chinese, one character
+     * ([PickedWords.CHARACTERS], owner); in Japanese, the units as picked, then ICU's ([PickedWords]); elsewhere ICU's, which only
+     * narrow a run of a script without spaces ([WordBreaks]).
+     */
+    private fun wordBreaker(): WordBreaker {
+        if (::languages.isInitialized && ChineseKeys.isChinese(languages.current)) return PickedWords.CHARACTERS
+        val icu = IcuWords.of(languages.current.javaLocale)
+        return if (::languages.isInitialized && languages.current.id == "ja") pickedWords.breaker(icu) else icu
+    }
+
+    /** The word that ends at the end of [before], as the gestures take it: the bar's word in Chinese and Japanese (B's call). */
+    fun chineseLastWord(before: String): String? = pickedWords.lastWord(before, IcuWords.of(languages.current.javaLocale))
+
     /** Selects the word at the cursor, the part that a word drag keeps selected. Between words the drag starts from the cursor. */
     private fun startWordDrag() {
         GestureDisplay.selectionEnd = SelectionEnd.stored(Haptics.selectionEndId(this))
@@ -3048,7 +3069,8 @@ class TitanKeysIme : InputMethodService() {
         selectionWall.left()
         rememberCursor()
         changeSelection { text, start, end, offset ->
-            val word = WordSelection.at(text, start, end) ?: (start to end)
+            // The same word three taps take ([wordBreaker]): in Chinese a unit, not the whole run.
+            val word = WordSelection.at(text, start, end, wordBreaker()) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
             showWordText(text, start, end, word)
             word
@@ -3059,7 +3081,7 @@ class TitanKeysIme : InputMethodService() {
     private fun extendWords(direction: Int) = enqueue {
         changeSelection { text, start, end, offset ->
             val anchor = wordAnchor ?: return@changeSelection null
-            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction)
+            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction, wordBreaker())
             if (range == start to end) {
                 // Nothing more that way: the selection reached an end of the text. It plays once, until it moves away.
                 if (selectionWall.reached()) haptics.play(Haptic.SelectionEnd)
@@ -3425,11 +3447,6 @@ class TitanKeysIme : InputMethodService() {
         inputLog()?.outcome(outcome)
         // A touch that is no delete flick cuts a delete's dots, which waited for it.
         if (!(outcome is Contact.Outcome.Swipe && outcome.deletesWord) && strip?.gesture?.softDelete == true) interruptGesture()
-        // A swipe that types is typing: the dominoes end, and the delete streak starts over (#89).
-        if (outcome is Contact.Outcome.Swipe && !outcome.deletesWord) {
-            deleteStreak.typed()
-            strip?.gesture?.stopDominoes()
-        }
         // The word menu keeps the touchpad for itself: a finger there only marks its buttons, and nothing types.
         if (menuOpen && !altOrPanel) return
         if (!altOrPanel) {
@@ -3486,8 +3503,7 @@ class TitanKeysIme : InputMethodService() {
                         // How long the dots wait on the bar, which the Haptics lab can try live in TitanKeys Debug.
                         GestureDisplay.triedFlickHold = Haptics.readFlickHold(this)?.toFloat()
                         gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
-                        deleteStreakWord(selected)
-                        gesture?.let { deleteLog("delete animation: dots ${it.dots}${if (it.dominoes) " as dominoes, ${it.dominoTotal} words" else ""}") }
+                        gesture?.let { deleteLog("delete animation: dots ${it.dots}") }
                         val scale = if (GuideMotion.enabled) ValueAnimator.getDurationScale() else 0f
                         // The dots tick as they land in the caret, only while this flick's dots are still on the bar.
                         val dotsAt = gesture?.dotsAt
@@ -3932,6 +3948,8 @@ class TitanKeysIme : InputMethodService() {
             val text = state.commit
             rawLog?.committed(languages.current.engine, text)
             if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
+            // What was picked stays one word for every gesture and the bar ([PickedWords]).
+            pickedWords.picked(text)
         }
         if (state.composing || state.choices.isNotEmpty()) {
             val listed = languages.engine?.choices(0, ChineseRow.ASK + 1).orEmpty().ifEmpty { state.choices }
@@ -4124,8 +4142,8 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun ownerMarked(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
-        val log = rawLog
-        if (log == null || !RawLog.available(this) || event.repeatCount > 0) return false
+        // In any field, recorded or not (Maps' search, Chrome's address bar): the mark needs only the log to be on.
+        if (!editing || !RawLog.on(this) || event.repeatCount > 0) return false
         if (keyCode != KeyEvent.KEYCODE_SHIFT_LEFT && keyCode != KeyEvent.KEYCODE_SHIFT_RIGHT) {
             ownerMark.other()
             return false
@@ -4143,7 +4161,9 @@ class TitanKeysIme : InputMethodService() {
         if (choicesMenuOpen && !markMenu) closeChoicesMenu() else if (!choicesMenuOpen && markMenu) openChoicesMenu()
         showModifiers()
         ownerMarkKey = keyCode
-        log.ownerMark(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.ROOT).format(java.util.Date()))
+        val info = currentInputEditorInfo
+        RawLog.ownerMark(this, java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.ROOT).format(java.util.Date()),
+            info?.packageName, info?.inputType ?: 0)
         haptics.play(Haptic.PanelPage)
         Log.i(LOG_TAG, "Owner MARK written to the log")
         return true
@@ -4334,6 +4354,28 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode != KeyEvent.KEYCODE_DEL) return keyDown(keyCode, event)
+        // A held Backspace repeats, as on a PC: Android's own repeats where they come, else TitanKeys' ([BackspaceRepeat]).
+        val handled = keyDown(keyCode, event)
+        if (backspaceRepeat.down(event.repeatCount, handled && editing)) {
+            main.removeCallbacks(repeatBackspace)
+            main.postDelayed(repeatBackspace, android.view.ViewConfiguration.getKeyRepeatTimeout().toLong())
+        } else if (event.repeatCount > 0 && !backspaceRepeat.sending) main.removeCallbacks(repeatBackspace)
+        return handled
+    }
+
+    /** The held Backspace's next repeat, through the same path as Android's ([BackspaceRepeat]). */
+    private val repeatBackspace: Runnable = Runnable {
+        val count = backspaceRepeat.next()
+        if (count < 0 || !editing) return@Runnable
+        val now = SystemClock.uptimeMillis()
+        val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL, 0)
+        backspaceRepeat.send { onKeyDown(KeyEvent.KEYCODE_DEL, KeyEvent.changeTimeRepeat(heldBackspace ?: down, now, count)) }
+        main.postDelayed(repeatBackspace, android.view.ViewConfiguration.getKeyRepeatDelay().toLong())
+    }
+
+    private fun keyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DEL && event.repeatCount == 0 && !backspaceRepeat.sending) heldBackspace = KeyEvent(event)
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym down, repeat ${event.repeatCount}: shown $isInputViewShown, " +
             "panel ${modifiers.panel}, guide $inGuide, menu $menuOpen, waiting ${pendingInput.size}")
         // The panel's mark of the key under a resting finger stays while a key is down, as when it toggles a quick setting.
@@ -4344,11 +4386,6 @@ class TitanKeysIme : InputMethodService() {
         }
         clearTeamsEgg()
         interruptGesture()
-        // A key is typing: the dominoes end at once, and the delete streak starts over (#89).
-        if (!Modifiers.isModifier(keyCode)) {
-            deleteStreak.typed()
-            strip?.gesture?.stopDominoes()
-        }
         strip?.gesture?.glowOff()
         wakeIdleBar()
         // A guide slide that doesn't teach this key yet: it does nothing at all, and its release is kept too.
@@ -4511,7 +4548,12 @@ class TitanKeysIme : InputMethodService() {
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
         }
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
-        if (keyCode == KeyEvent.KEYCODE_DEL) modifiers.backspaceReleased()
+        if (keyCode == KeyEvent.KEYCODE_DEL) {
+            modifiers.backspaceReleased()
+            backspaceRepeat.up()
+            heldBackspace = null
+            main.removeCallbacks(repeatBackspace)
+        }
         if (lockedKeys.remove(keyCode)) return true
         if (editing && chineseKeyUp(keyCode)) return true
         // Sym's release always ends its press first, so the next Sym is never swallowed ([SymPress]).

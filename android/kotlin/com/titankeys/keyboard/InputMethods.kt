@@ -318,7 +318,7 @@ object SymHold {
     fun whyNot(onCount: Int, englishOnly: Boolean, panelOpen: Boolean, altOn: Boolean, inGuide: Boolean, exact: Boolean,
                waiting: Int): String? = when {
         onCount < 2 -> "only $onCount input method on"
-        englishOnly -> "this field types English: the guide or the playground"
+        englishOnly -> "this field types English: the guide's lessons"
         altOn -> "Alt is on"
         inGuide -> "the guide"
         exact -> "an exact typing app"
@@ -528,4 +528,14 @@ object InputMethodVariants {
             ?: return@mapNotNull null
         id.trim() to variant.trim()
     }.toMap()
+}
+
+/**
+ * Which engines stay warm (Languages.warmUp): only those of the input methods that are on, one input method for each (owner,
+ * 2026-11-17: "if the language or input method is not chosen, it should not load. Meaning that disabling it should disable
+ * that engine as well"). An engine no input method on uses is stopped at the next field start.
+ */
+object WarmEngines {
+    fun wanted(on: List<InputMethodIndex.Entry>): Map<String, InputMethodIndex.Entry> =
+        on.filter { it.engine != null }.associateBy { it.engine!! }
 }

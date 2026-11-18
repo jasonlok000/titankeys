@@ -20,6 +20,9 @@ echo "Key feed scripts checks passed"
 if [ -n "${KOTLIN_HOME:-}" ]; then
   "$KOTLIN_HOME/bin/kotlinc" -nowarn -d "$work/keyfeed" android/debug/recorder/KeyFeedPlan.kt tools/dev/touch/test/KeyFeedChecks.kt 2>&1 | grep -v '^warning' || true
   java -cp "$work/keyfeed:${KOTLIN_STDLIB:-$KOTLIN_HOME/lib/kotlin-stdlib.jar}" com.titankeys.keyboard.KeyFeedChecksKt
+  # The run notification's words (RunStatus): the batch line, the counts and ETA, the note, and "done".
+  "$KOTLIN_HOME/bin/kotlinc" -nowarn -d "$work/runstatus" android/debug/recorder/RunStatusText.kt tools/dev/touch/test/RunStatusChecks.kt 2>&1 | grep -v '^warning' || true
+  java -cp "$work/runstatus:${KOTLIN_STDLIB:-$KOTLIN_HOME/lib/kotlin-stdlib.jar}" com.titankeys.keyboard.RunStatusChecksKt
 else
   echo "Key feed checks NOT run: set KOTLIN_HOME to your Kotlin compiler directory"
 fi
@@ -75,6 +78,16 @@ owner() {
 [ "$(owner com.android.launcher3/com.android.launcher3.Launcher)" = "$(printf 'free\ngone')" ] || { echo "FAIL the home screen was waited for"; exit 1; }
 [ "$(owner com.titankeys/com.vandam.ink.MainActivity)" = "$(printf 'owner\nstayed')" ] || { echo "FAIL release TitanKeys' screen wasn't left to the owner"; exit 1; }
 owner com.anthropic.claude/x | grep -q SENT && { echo "FAIL the wait sent something to the phone"; exit 1; }
+# A Settings page TitanKeys Debug opened is the run's (one Back); one the owner opened isn't. As dumpsys prints them (2026-11-17).
+opened() {
+  FROM=$1 bash -c '. tools/dev/env.sh; . tools/dev/phone/safety.sh; . tools/dev/touch/touchlib.sh
+    tk_adb() { printf "%s\n" "  * Hist #0: ActivityRecord{44175795 u0 com.android.settings/.SubSettings t38722}" \
+      "      launchedFromUid=10338 launchedFromPackage=$FROM launchedFromFeature=null userId=0" \
+      "    topResumedActivity=ActivityRecord{44175795 u0 com.android.settings/.SubSettings t38722}"; }
+    tk_debug_opened && echo debug || echo owner'
+}
+[ "$(opened com.titankeys.debug)" = debug ] || { echo "FAIL a page Debug opened wasn't seen as the run's"; exit 1; }
+[ "$(opened com.android.settings)" = owner ] || { echo "FAIL a page the owner opened was taken for the run's"; exit 1; }
 echo "Owner wait checks passed"
 
 # A batch: every named one loads, its gestures build, and its report says each result once, with what's left for hands.
@@ -165,6 +178,15 @@ languages.in_field()
 languages.adb, languages.time.sleep = real_languages_adb, real_sleep
 starts = [args for args in sent if args[:2] == ("shell", "am")]
 assert starts and all("--activity-reorder-to-front" in args for args in starts), starts
+# From the home screen too (nobody's app): the field's screen is opened, not a stop.
+sent = []
+fronts = iter(["  mCurrentFocus=Window{1 u0 com.android.launcher3/com.android.launcher3.Launcher}"] * 2 + [""] * 9)
+languages.adb = lambda *args: sent.append(args) or ("com.android.launcher3/.Launcher" if "resolve-activity" in args
+                                                   else next(fronts) if "dumpsys" in args else "")
+languages.time.sleep = lambda seconds: None
+languages.in_field()
+languages.adb, languages.time.sleep = real_languages_adb, real_sleep
+assert any(args[:3] == ("shell", "am", "start") for args in sent), sent
 # The interactions batch reads TitanKeysBar's lines (the format it was written for, D's line) and builds its longest calls.
 import interactions_batch as ib
 ib.adb = lambda *args: ("11-17 08:00:00.000 1 2 D TitanKeysBar: bar: yue-yale 你 | 呢 | 尼\n"
@@ -177,5 +199,28 @@ for moves in ([*ib.keys("neihou"), "+500", "swipeup:b", "+700", "key:s", "+500"]
     built = subprocess.run([sys.executable, "tools/dev/touch/gestures.py", "--out", os.path.join(os.environ["TK_OUT"], "ib.tki"), *moves],
                            capture_output=True, text=True)
     assert built.returncode == 0, f"the interactions batch's gestures don't build: {built.stderr[-300:]}"
+# The key feed's script reaches the phone as one quoted argument: the phone's shell splits on spaces and ";" (2026-11-17: "bad keys").
+import keyfeed_batch
+keyfeed_batch.adb = lambda *args: args
+sent = keyfeed_batch.feed("D 0 SHIFT_RIGHT;D 60 Q;U 140 Q;U 200 SHIFT_RIGHT")
+assert sent[-1] == "'D 0 SHIFT_RIGHT;D 60 Q;U 140 Q;U 200 SHIFT_RIGHT'", sent
+# The crash guard: a new FATAL of Debug stops the batch with "crash", the trace saved; Back only over Debug's own dialog.
+crash = "\n".join(["11-17 15:06:58.302 E/AndroidRuntime(27664): FATAL EXCEPTION: main",
+                   "11-17 15:06:58.302 E/AndroidRuntime(27664): Process: com.titankeys.debug, PID: 27664",
+                   "11-17 15:06:58.302 E/AndroidRuntime(27664): java.lang.OutOfMemoryError: heap",
+                   "11-17 15:06:58.302 E/AndroidRuntime(27664):     at f.a9.d(r8-map-id-00000000aaaa:85)"])
+for front, back in (("Window{1 u0 Application Error: com.titankeys.debug}", True),
+                    ("Window{1 u0 com.openai.chatgpt/com.openai.chatgpt.MainActivity}", False)):
+    sent = []
+    checks.adb = lambda *args, front=front: (sent.append(args), crash if "crash" in args else f"  mCurrentFocus={front}")[1]
+    assert len(checks.crash_blocks()) == 1
+    try:
+        checks.crash_check(0)
+        raise AssertionError("a crash didn't stop the batch")
+    except checks.Stop as stop:
+        assert str(stop).startswith("crash"), stop
+    assert (("shell", "input", "keyevent", "4") in sent) == back, (front, sent)
+    checks.crash_check(1)  # no new crash: nothing
+checks.adb = real_adb
 print("Batch checks passed")
 PY

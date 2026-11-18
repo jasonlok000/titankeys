@@ -20,17 +20,24 @@ def keys(word):
 
 
 def case(name, gestures, want=None):
-    """Plays [gestures] after a fresh "so ", shoots the bar, presses Space and reads what Space left."""
+    """Plays [gestures] after a fresh "so ", shoots the bar, presses Space and reads what Space left. #98's rule is that Space
+    types the bar's middle word, so the verdict compares with the middle TitanKeysBar logged (D's BarLog), not with [want]:
+    a hard-coded want judged "The" wrong where the bar showed The and Space typed it (2026-11-17). [want] is only reported."""
+    import interactions_batch as ib
+    checks.adb("shell", "setprop", f"log.tag.{ib.TAG}", "D")
     checks.set_text(LEAD)
+    checks.adb("logcat", "-c")
     play(*gestures)
     time.sleep(1.2)  # the bar settles: the completions arrive after a short wait
     shot = guide_checks.shot(f"98-{name}")
+    bars = [line for line in ib.bar_lines() if line[0] == "bar"]
+    middle = bars[-1][2][1] if bars else None
     play("key:space", "+400")
     text = checks.field()
     typed = text.rstrip().rsplit(" ", 1)[-1]
-    ok = None if want is None else typed == want
-    record(f"98-{name}", ok, f"Space typed {typed!r}" + (f" (wanted {want!r})" if want else "")
-           + ": it must be the shot's middle word", shot)
+    ok = None if middle in (None, "", "-") else typed == middle
+    record(f"98-{name}", ok, f"Space typed {typed!r}; the bar's middle {middle!r}" + (f" (expected about {want!r})" if want else "")
+           + ("" if ok is not None else ": no TitanKeysBar middle, see the shot"), shot)
 
 
 def check_typed():
@@ -88,3 +95,5 @@ HANDS = ["#98 with a contact's name and a saved word: type half of one, look at 
 
 def finish():
     checks.set_text("")
+    # The bar's log off again: the owner's own typing logs nothing.
+    checks.adb("shell", "setprop", "log.tag.TitanKeysBar", "''")

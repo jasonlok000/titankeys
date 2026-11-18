@@ -12,7 +12,7 @@ private const val ON_SPACE = 5.3f
 private const val RIGHT_OF_SPACE = 7.5f
 
 fun main() {
-    theDominoesAreRare()
+    theDotsLastFiveSecondsAtMost()
     aBigDeleteShowsItsAnimation()
     aLateFrameDoesNotEatTheDots()
     aLongWordShowsEveryDot()
@@ -437,76 +437,26 @@ private fun theHoldEndsHideIt() {
 }
 
 /**
- * The dominoes (#89, owner, 2026-11-17: "make it rare enough and requires deleting a legitimately large amount of text, and
- * actually plays"): a streak of 100 words, flicks and held deletes each within 2 s of the last, with no typing between. A
- * selection's delete never counts. Once they start they play their whole run, through the lift, and only a key ends them early.
- * Every other delete keeps the dots.
+ * A delete's dots last 5 s at most, however much went (owner, 2026-11-17: "make sure that LONG hold delete will still show the dot
+ * animations... max 5 seconds for the dot animations"), while the hold deletes on for as long as the finger stays (DeleteHold).
  */
-private fun theDominoesAreRare() {
-    same(GestureDisplay.DOMINO_WORDS to GestureDisplay.DOMINO_GAP_MILLIS, 100 to 2_000L, "100 words, 2 s apart at most")
-    same(GestureDisplay.dominoWords() to GestureDisplay.dominoGapMillis(), 100 to 2_000L, "with nothing tried, every build but Debug")
-
-    // The streak.
-    val streak = DeleteStreak()
-    var played = 0
-    var now = 0L
-    repeat(99) { now += 300; if (streak.word(now, 2_000, 100)) played++ }
-    same(played to streak.words, 0 to 99, "99 words: nothing")
-    now += 300
-    same(streak.word(now, 2_000, 100), true, "The 100th word plays them")
-    repeat(50) { now += 300; if (streak.word(now, 2_000, 100)) played++ }
-    same(played, 0, "Once a streak: the words after it don't play them again")
-    same(streak.words, 150, "and the count goes on")
-    now += 2_001
-    streak.word(now, 2_000, 100)
-    same(streak.words, 1, "More than 2 s since the last word: a new streak")
-    repeat(98) { now += 300; streak.word(now, 2_000, 100) }
-    streak.typed()
-    now += 300
-    same(streak.word(now, 2_000, 100) to streak.words, false to 1, "Typing starts it over")
-    // Holds of about 35 words each, 10 s apart at most, joined by flicks within 2 s: 3 holds make it.
-    val holds = DeleteStreak()
-    var at = 0L
-    var playedAt = -1
-    for (hold in 0 until 3) {
-        repeat(35) { if (holds.word(at, 2_000, 100) && playedAt < 0) playedAt = holds.words; at += 280 }
-        at += 1_500
+private fun theDotsLastFiveSecondsAtMost() {
+    same(GestureDisplay.DOTS_MOST, 5_000f, "5 s at most")
+    val hold = GestureDisplay()
+    hold.deleteHeld(120, 1_000)
+    repeat(300) { hold.wordDeleted(1_000L + it * 120, 7) }
+    same(hold.deleteEnded(37_000), true, "A long hold's lift shows its dots")
+    var at = 37_000L
+    var shown = 0
+    while (hold.busy && at < 60_000) {
+        hold.advance(at, 1f)
+        if (hold.softDelete) shown++
+        at += 16
     }
-    same(playedAt, 100, "Three full holds, flicked again within 2 s, play them on the 100th word")
-
-    // The display: the dominoes are the delete's dots, drawn as tiles. They play through the lift, with the dots; a key ends them.
-    val display = GestureDisplay()
-    display.deleteHeld(200, 1_000)
-    repeat(30) { display.wordDeleted(1_000L + it * 200, 5) }
-    display.startDominoes(100, 6_900)
-    same(display.dominoes, true, "They start mid-hold")
-    same(display.scene, Scene.DeleteHold, "and the hold still shows its words, the orange one, the glow and the caret, as in 2.1")
-    same(display.deleteEnded(7_000), true, "At the lift the hold's words turn into its dots, as always")
-    display.run(7_000, 7_400)
-    same(display.dominoes to display.softDelete, true to true, "and the dots are drawn as dominoes")
-    display.startDominoes(130, 7_400)
-    same(display.dominoTotal, 130, "Words that go while they show count too")
-    display.run(7_400, 10_000)
-    same(display.scene to display.dominoes, Scene.None to false, "They end with the dots")
-    val keyed = GestureDisplay()
-    keyed.wordDeleted(1_000, 5)
-    keyed.startDominoes(100, 1_000)
-    keyed.run(1_000, 1_100)
-    keyed.stopDominoes()
-    same(keyed.dominoes, false, "A key ends them at once")
-    val plain = GestureDisplay()
-    plain.wordDeleted(1_000, 5)
-    same(plain.dominoes, false, "A flick on its own: dots")
-
-    // The keyboard feeds it: flicks and held deletes, never a selection's delete; a key ends it.
-    val ime = java.io.File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
-    same(Regex("""deleteDots\(deletes, before, selected\)\)\s*\n\s*deleteStreakWord\(selected\)""").findAll(ime).count(), 2,
-        "Both the flick and the held delete count their words")
-    isTrue("if (selected != null) return" in ime, "A selection's delete never counts")
-    isTrue("deleteStreak.typed()\n            strip?.gesture?.stopDominoes()" in ime, "A key press ends them and starts the streak over")
-    val haptics = java.io.File("android/kotlin/com/titankeys/keyboard/Haptics.kt").readText()
-    isTrue("fun readDominoWords(context: Context): Int? {\n            if (!debug(context)) return null" in haptics,
-        "Only TitanKeys Debug reads a tried number")
+    isTrue(shown > 10, "They show")
+    isTrue(at - 37_000 <= 5_100, "and are over within 5 s: ${at - 37_000} ms")
+    val source = java.io.File("android/kotlin/com/titankeys/keyboard/GestureDisplay.kt").readText()
+    isTrue("min(if (dots > 0) (doneAt + FLICK_BACK * scale) / scale else FLICK_MILLIS, DOTS_MOST)" in source, "Every delete's dots keep to it")
 }
 
 /**
@@ -1450,13 +1400,15 @@ private fun anyNumberOfWordsShowsItsDots() {
     var shown = 0
     repeat(100) {
         flicks.wordDeleted(now, 7)
-        isTrue(flicks.dots > shown, "Flick ${it + 1} adds its dots: ${flicks.dots}")
+        // Each joins the stream, which lasts 5 s at most (DOTS_MOST); then the next starts a new one.
+        isTrue(flicks.dots > shown || !flicks.chained && flicks.dots == 7, "Flick ${it + 1} adds its dots: ${flicks.dots}")
         shown = flicks.dots
-        same(flicks.chained, it > 0, "Every flick after the first joins the one stream")
         flicks.run(now, now + 184)
         now += 200
     }
-    landsAll(flicks, now)
+    // The last stream ends within 5 s, cut short there if it must be (DOTS_MOST).
+    flicks.run(now, now + 5_100)
+    same(flicks.scene, Scene.None, "The flicks' last stream ends within 5 s")
 }
 
 /** Each dot's landing, in real ms after the stream started. */
@@ -2091,16 +2043,17 @@ private fun aLongRunOfWordsShowsEveryDot() {
     same(hold.dots, GestureDisplay.DOT_CAP, "#89: a row the bar's width")
     hold.landsEvery(1_000L + words.size * 80, "#89: a hold through 5,000 characters")
 
-    // Flicks one after another along it join the one stream, none squeezed.
+    // Flicks one after another along it: each shows its dots, in one stream for 5 s at most, then a new one, none squeezed.
     val flicks = GestureDisplay()
     var now = 1_000L
     for (word in words.asReversed().take(200)) {
         flicks.wordDeleted(now, word.length)
+        isTrue(flicks.scene == Scene.DeleteFlick && flicks.dots > 0, "#89: every flick shows dots")
         flicks.run(now, now + 144)
         now += 160
     }
-    same(flicks.dots, words.asReversed().take(200).sumOf { it.length }, "#89: 200 flicks keep every dot")
-    flicks.landsEvery(now, "#89: 200 flicks along the run")
+    flicks.run(now, now + 5_100)
+    same(flicks.scene, Scene.None, "#89: 200 flicks along the run: the last stream ends within 5 s")
 }
 
 /** #89: a field that gives no text still shows a dot when a flick deletes in it. */

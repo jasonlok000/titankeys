@@ -83,19 +83,11 @@ fun main(args: Array<String>) {
     sheet("speed-up", out, 64) { display, now ->
         if (now == 1_000L) { display.speedUp = true; display.wordDeleted(now, 30) }
     }
-    // A short hold, short of the dominoes' streak: its words go orange and turn into dots at the lift, as always (#89).
+    // A short hold, a short delete: its words go orange and turn into dots at the lift, as always (#89).
     sheet("hold-short", out, 64) { display, now ->
         if (now == 1_000L) display.deleteHeld(200, now, .4f)
         if (now in 1_000L..1_960L && (now - 1_000L) % 192L == 0L) display.wordDeleted(now, 5)
         if (now == 2_008L) display.deleteEnded(now)
-    }
-    // The dominoes, in place of the dots: a hold whose streak reached them, its words as pills, then its lift (#89).
-    sheet("dominoes", out, 48) { display, now ->
-        if (now == 1_000L) display.deleteHeld(160, now, .6f)
-        if (now in 1_000L..2_600L && (now - 1_000L) % 160L == 0L) display.wordDeleted(now, 6)
-        if (now == 1_800L) display.startDominoes(100, now)
-        if (now == 2_600L) display.startDominoes(111, now)
-        if (now == 2_664L) display.deleteEnded(now)
     }
     // A flick at the end of a long line: a row the bar's width, not 2,000 dots.
     sheet("long-flick", out, 80) { display, now -> if (now == 1_000L) display.wordDeleted(now, 2_000) }

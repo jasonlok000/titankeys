@@ -235,7 +235,7 @@ def check_language_settings():
     adb("shell", "am", "start", "-n", f"{language_checks.checks.APP}/com.vandam.ink.MainActivity")
     import time
     time.sleep(3)
-    adb("shell", "input", "tap", "952", "166")  # SETTINGS
+    retest_batch.open_settings(lambda *c: (adb("shell", "input", *c), time.sleep(1.5)))
     time.sleep(2)
     record("settings-typing", None, 'Settings: the Typing row reads "Typing in each language: English, …"',
            guide_checks.shot("settings-typing"))

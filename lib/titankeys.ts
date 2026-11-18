@@ -217,11 +217,6 @@ export type HapticsLab = {
   /** How long a single flick's dots sit on the bar before they go into the caret, in ms, and its default. */
   flickHoldMillis: number;
   flickHoldDefault: number;
-  /** The dominoes' streak (#89): its words and the most ms between deletes, and their defaults. */
-  dominoWords: number;
-  dominoWordsDefault: number;
-  dominoGapMillis: number;
-  dominoGapDefault: number;
   /** What marks the moving end of a triple press's selection, by id, and the marks it can try. */
   selectionEnd: string;
   selectionEnds: { id: string; label: string }[];
@@ -407,11 +402,6 @@ export async function setLabFlickHold(millis: number | null) {
   await state.refresh();
 }
 
-/** Tries the dominoes' streak: its words and the most ms between deletes; null puts that default back. TitanKeys Debug only. */
-export async function setLabDominoes(words: number | null, gap: number | null) {
-  await titankeys("labDominoes", { words, gap });
-  await state.refresh();
-}
 
 /** Plays a flick's dots as they play now, so the wait can be felt without flicking. TitanKeys Debug only. */
 export const playLabFlick = () => titankeys("labPlayFlick");

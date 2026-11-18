@@ -17,7 +17,7 @@ describe("typing log: TitanKeys Debug only", () => {
     const rawLog = await text("android/kotlin/com/titankeys/keyboard/RawLog.kt");
     expect(rawLog).toContain("fun available(context: Context) = RawLogGate.allows(context.packageName)");
     expect(rawLog).toContain("fun on(context: Context) = available(context) && TypingSettings.rawLog(context)");
-    expect(rawLog).toContain("val debug = if (on(context)) debugField(context, info, restarting) else null");
+    expect(rawLog).toContain("val debug = if (on(context)) debugField(context, info, restarting, textAllowed) else null");
     expect(rawLog).toMatch(/fun enabled\(context: Context, enabled: Boolean\) \{\s*check\(!enabled \|\| available\(context\)\)/);
     expect(rawLog).toMatch(/fun export\(context: Context, out: OutputStream\) \{\s*check\(available\(context\)\)/);
     expect(rawLog).toContain("fun size(context: Context) = if (available(context))");
@@ -69,9 +69,9 @@ describe("typing log: TitanKeys Debug only", () => {
     expect(pull).toContain('context.getExternalFilesDir("logs")');
     // The mark: Debug only, only while the log records the field, and it puts Shift, Alt and the menu back.
     const ime = await text("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
-    expect(ime).toContain("if (log == null || !RawLog.available(this) || event.repeatCount > 0) return false");
     expect(ime).toContain("modifiers.restore(markShift, markAlt, markAutoShifted)");
-    expect(ime).toContain('log.ownerMark(');
+    expect(ime).toContain("RawLog.ownerMark(this,");
+    expect(ime).toContain("if (!editing || !RawLog.on(this) || event.repeatCount > 0) return false");
   });
 
   test("no public text points to the typing log", async () => {

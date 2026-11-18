@@ -54,18 +54,6 @@ class HapticsLab(private val context: Context) {
         GestureDisplay.selectionEnd = SelectionEnd.stored(Haptics.selectionEndId(context))
     }
 
-    /** The dominoes' streak now: its words and the most ms between deletes. */
-    fun dominoes(): Pair<Int, Long> {
-        GestureDisplay.triedDominoWords = Haptics.readDominoWords(context)
-        GestureDisplay.triedDominoGap = Haptics.readDominoGap(context)
-        return GestureDisplay.dominoWords() to GestureDisplay.dominoGapMillis()
-    }
-
-    /** Tries [words] and [gap] for the dominoes' streak; null puts that default back. The next delete uses them. */
-    fun tryDominoes(words: Int?, gap: Long?) {
-        Haptics.tryDominoes(context, words, gap)
-        dominoes()
-    }
 
     /** Tries [millis] as that wait, or puts the default back with null. The next real flick's dots wait that long. */
     fun tryFlickHold(millis: Long?) {
@@ -112,8 +100,6 @@ class HapticsLab(private val context: Context) {
     /** Each family's pattern in use now, each haptic's family and what it plays, and the experiments. */
     fun state(): JSONObject = JSONObject().put("families", families()).put("haptics", haptics())
         .put("flickHoldMillis", flickHold()).put("flickHoldDefault", GestureDisplay.FLICK_HOLD.toLong())
-        .put("dominoWords", dominoes().first).put("dominoWordsDefault", GestureDisplay.DOMINO_WORDS)
-        .put("dominoGapMillis", dominoes().second).put("dominoGapDefault", GestureDisplay.DOMINO_GAP_MILLIS)
         .put("selectionEnd", SelectionEnd.stored(Haptics.selectionEndId(context)).id)
         .put("selectionEnds", JSONArray().apply { for (end in SelectionEnd.entries) put(JSONObject().put("id", end.id).put("label", end.label)) })
         .put("experiments", JSONObject().put(DOTS_SPEED_UP, Haptics.dotsSpeedUp(context)).put(ZONE_TICKS, Haptics.zoneTicks(context))

@@ -86,7 +86,7 @@ object BugRecording {
             writer.add(RawLogLines.gap("field", 0, now))
             return null
         }
-        writer.add(RawLogLines.fieldStart(info.inputType, info.imeOptions, false, restarting,
+        writer.add(RawLogLines.fieldStart(info.packageName, info.inputType, info.imeOptions, false, restarting,
             info.initialSelStart, info.initialSelEnd, null, now))
         return writer
     }

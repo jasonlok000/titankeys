@@ -10,8 +10,8 @@ the dominoes (100 words, each within 2 s of the last, flicks and held deletes, n
    (O); a shot about 500 ms after it (J).
 5. A streak of 99 words, one flick a word: no dominoes (O); the 100th flick then plays them, which shows the streak held.
 6. A letter key while the tiles fall: they're gone at once (J, a shot).
-7. The held delete uncapped: a 14 s hold deletes clearly more than a 10 s one (O; a LOOK until E's fix lands).
-8. The dominoes on every 100-word streak, longer, never blocking a delete (O and J; LOOKs until E's fix lands).
+7. The held delete uncapped: a 14 s hold deletes clearly more than a 10 s one (O).
+8. The dominoes on every 100-word streak, longer, never blocking a delete (O and J).
 
 One touch call plays at most 15 s, so a streak spans calls, and the gap between two calls (the gate's adb calls) counts against
 the streak's 2 s. Each call's time past its script goes in the report; when it's over 2 s, a missing dominoes line is a LOOK.
@@ -172,13 +172,9 @@ def check_key_ends_dominoes():
            f"{over}); X 300 ms after the lift: no tiles 150 ms after it", "delete-key-ends")
 
 
-# E's fixes after the owner tried 5f4d7224 (owner-decisions-2.1, 2026-11-17), checked before they land: until E's branch is on
-# main their NOs are expected, so each says so and is a LOOK; a YES counts.
-E_PENDING = "expected to fail until E's branch lands"
-
-
+# E's fixes after the owner tried 5f4d7224 (owner-decisions-2.1, 2026-11-17), on main since 561eb1de.
 def expected_fail(name, ok, detail, shot=None):
-    record(name, True if ok else None, detail if ok else f"{detail} ({E_PENDING})", shot)
+    record(name, bool(ok), detail, shot)
 
 
 def check_uncapped_delete():
@@ -209,10 +205,7 @@ def check_dominoes_every_streak():
     slow = any(ms > GAP_MS for ms in over + over2)
     detail = (f"first streak {'played' if ran[0] else 'no dominoes'}, second {'played' if ran[1] else 'no dominoes'}; "
               f"ms past each call's script {over + over2}")
-    if ran[0] and not ran[1] and not slow:
-        expected_fail("dominoes-every-streak", False, detail)
-    else:
-        record("dominoes-every-streak", True if all(ran) else None, detail)
+    record("dominoes-every-streak", True if all(ran) else (None if slow else False), detail)
     record("dominoes-longer", None, "1.5 s after the last lift: the dominoes still falling (about 2.5 times longer)", "dominoes-long")
     # A flick while they may still show: it deletes a word.
     before_flick = words(checks.field())
@@ -222,8 +215,25 @@ def check_dominoes_every_streak():
                   f"a flick just after the dominoes: {before_flick} words, then {after_flick}")
 
 
-BATCH = [check_flick_dots, check_full_hold, check_select_all, check_dominoes, check_99_words, check_key_ends_dominoes,
-         check_uncapped_delete, check_dominoes_every_streak]
+# The dominoes are dropped (owner, 2026-11-17 evening; E removes them): their checks are out, the uncapped delete stays.
+def check_dots_cap():
+    """E's 5 s cap (fff4b1c7): a 10 s hold's dots end within 5 s (J, a shot at 6 s), and deleting goes on: a 10 s hold takes
+    clearly more words than a 5 s one (O)."""
+    gone = []
+    for hold_ms, shot in ((5000, None), (10000, "dots-cap")):
+        before = long_text("dots-cap")
+        if before is None:
+            return
+        checks.play(f"flick:3.2:90:{hold_ms}", "+800", shot=shot, at=6000)
+        gone.append(words(before) - words(checks.field()))
+    record("dots-cap-deleting", gone[1] >= gone[0] * 1.5, f"5 s held: {gone[0]} words; 10 s held: {gone[1]} (deleting goes on)")
+    record("dots-cap-shot", None, "6 s into a 10 s hold: no dots left, deleting still going", "dots-cap")
+
+
+# The dominoes are gone (fff4b1c7): their checks are out; the uncapped delete and the 5 s dots cap stay.
+BATCH = [check_flick_dots, check_full_hold, check_select_all, check_uncapped_delete, check_dots_cap]
+# check_dominoes_every_streak is out: the owner's call of 2026-11-17 (55e7054e) plays them once a streak, past 100 words, live
+# through the hold. batch2_checks' 250-word hold checks that.
 
 
 def finish():

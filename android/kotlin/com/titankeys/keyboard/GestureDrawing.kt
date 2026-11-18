@@ -36,11 +36,6 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         strokeJoin = Paint.Join.ROUND
     }
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
-    /** The dominoes' count: bold, set right against the caret. */
-    private val countPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.RIGHT
-        isFakeBoldText = true
-    }
     private var glowHeight = 0f
     private var glowTall = 0f
     private var glowColour = 0
@@ -449,14 +444,11 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         val slot = (right - left) / GestureDisplay.VISIBLE_WORDS
         val alpha = display.reveal
         if (display.softDelete) {
-            // The dominoes' row ends short of the caret, where their count goes (#89).
-            val stop = if (display.dominoes) stop - dp(DOMINO_COUNT_ROOM) else stop
             // The dots show only the orange part: a dot for each character that went, and the caret.
             clearBehindDots(canvas, display, left, stop, caret, mid, alpha, look)
             val morphing = display.fromHold && display.dotsIn < 1f
             val pulse = if (morphing) { morph(canvas, display, left, stop, slot, mid, alpha, look); 0f }
                 else dots(canvas, display, left, stop, caret, mid, alpha, look)
-            if (display.dominoes) dominoCount(canvas, display, caret, mid, alpha, look)
             // A lifted hold's thin solid caret grows into the dots' own while its lines turn into dots.
             val thin = if (display.fromHold) 1f - display.dotsIn.let { it * it * (3 - 2 * it) } else 0f
             // The dots' caret is a little taller than the letters, and grows as each dot lands, as far as the room under the line
@@ -479,36 +471,6 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         // A thin solid caret, as a triple press's pick has, that blinks in the pause zone, dimmed.
         if (display.caretShown) bar(canvas, caret, mid, 2 * caretHalf(),
             GuideMotion.faded(look.accent, alpha * (1f - (1f - PAUSED_CARET) * paused)), dp(STEER_CARET))
-    }
-
-    /**
-     * The dominoes' count (#89): the streak's words, counted up as its tiles land, beside the caret where the dots' row leaves
-     * room for it, in the accent.
-     */
-    private fun dominoCount(canvas: Canvas, display: GestureDisplay, caret: Float, mid: Float, alpha: Float, look: Look) {
-        val dots = display.dots
-        val landed = (0 until dots).count { display.dotTravel(it) >= 1f }
-        val shown = if (dots == 0) display.dominoTotal else (display.dominoTotal.toLong() * landed / dots).toInt()
-        countPaint.textSize = text * DOMINO_COUNT_SIZE
-        countPaint.color = GuideMotion.faded(look.accent, alpha)
-        canvas.drawText(shown.toString(), caret - dp(DOMINO_COUNT_GAP), mid + countPaint.textSize * .36f, countPaint)
-    }
-
-    /**
-     * One dot as a domino tile (#89): a small upright tile, its foot on the line at [x], as tall as [size] makes it, that tips over
-     * toward the caret as it goes in, [u] 0 to 1, so the row falls one tile after another as the dots land.
-     */
-    private fun tile(canvas: Canvas, x: Float, mid: Float, size: Float, u: Float, colour: Int) {
-        val tall = 2f * caretHalf() * DOMINO_TALL * size
-        val thick = dp(DOMINO_THICK) * size.coerceAtMost(1f)
-        if (tall <= 0f || thick <= 0f) return
-        val angle = (PI.toFloat() / 2) * u * u
-        val sin = kotlin.math.sin(angle)
-        val cos = kotlin.math.cos(angle)
-        val base = mid + 2f * caretHalf() * DOMINO_TALL / 2
-        stroke.strokeWidth = thick
-        stroke.color = colour
-        canvas.drawLine(x, base - thick / 2, x + sin * (tall - thick / 2), base - thick / 2 - cos * (tall - thick), stroke)
     }
 
     /**
@@ -653,8 +615,7 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
             val swell = 1f + DOT_SWELL * sin(u * PI.toFloat())
             val size = popped * (1f + .25f * (1f - popped)) * swell * (1f - u * u) * edge
             if (size <= 0f) continue
-            if (display.dominoes) tile(canvas, x, mid, popped * edge * (1f - u * u * u), u, GuideMotion.faded(look.accent, alpha))
-            else dot(canvas, x, mid, dp(DOT_RADIUS) * size, GuideMotion.faded(look.accent, alpha))
+            dot(canvas, x, mid, dp(DOT_RADIUS) * size, GuideMotion.faded(look.accent, alpha))
         }
         return pulse
     }
@@ -752,15 +713,6 @@ internal class GestureDrawing(private val density: Float, private val radius: Fl
         const val CARET_HEIGHT = 24f / 17f
         const val CARET_GAP = 4f
         const val CARET_END = 8f
-        /**
-         * The dominoes (#89): a tile's thickness and its height as a share of the caret's, the room the row leaves beside the caret
-         * for the count, the count's size as a share of the words' and its gap to the caret.
-         */
-        const val DOMINO_THICK = 2.6f
-        const val DOMINO_TALL = .8f
-        const val DOMINO_COUNT_ROOM = 44f
-        const val DOMINO_COUNT_SIZE = .9f
-        const val DOMINO_COUNT_GAP = 6f
         const val WORD = .28f
         const val SELECTED = .85f
         /** The dots: their size and how far apart they are at most. */

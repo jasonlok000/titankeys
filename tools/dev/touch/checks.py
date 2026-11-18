@@ -11,7 +11,9 @@ Usage: checks.py [NAME...]   (default: all; see --list)
 Screenshots go to $TK_OUT/touch/shots, without the status bar, for what only the eye can judge (the dots, the trail, the pill).
 """
 import importlib
+import json
 import os
+import tempfile
 import re
 import subprocess
 import sys
@@ -30,9 +32,9 @@ class Stop(Exception):
     pass
 
 
-def adb(*args):
+def adb(*args, timeout=60):
     command = ["adb"] + (["-s", SERIAL] if SERIAL else []) + list(args)
-    return subprocess.run(command, capture_output=True, text=True, timeout=60).stdout.replace("\r", "")
+    return subprocess.run(command, capture_output=True, text=True, timeout=timeout).stdout.replace("\r", "")
 
 
 def play(*gestures, shot=None, at=0):
@@ -224,7 +226,13 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "how-to": "howto_batch",
            "review-fixes": "review_batch",
            "interactions": "interactions_batch",
-           "pt-spelling": "pt_spelling_batch"}
+           "pt-spelling": "pt_spelling_batch",
+           "worker-lines": "worker_lines_batch",
+           "batch2": "batch2_checks",
+           "sym-hold": "sym_hold_batch",
+           "zh-back": "zh_back_batch",
+           "heap": "heap_batch",
+           "b-lines": "b_lines_batch"}
 
 
 def report(name, stamp, hands):
@@ -276,6 +284,39 @@ def phone_heat():
     return (int(found.group(1)) / 10 if found else None), "com.mediatek.batterywarning" in front
 
 
+# The run's progress on the phone (RunStatus, Debug's silent notification), when a runner sets TK_RUN_STATUS_FILE: the totals of
+# the batches done so far live in that file, the runner sets TK_RUN_BATCH ("4/29") and TK_RUN_ETA ("02:40") per batch, and each
+# check adds its batch's results. Counts and names only. A broadcast that fails never stops a check.
+def run_status(note="", done=False, final=False):
+    path = os.environ.get("TK_RUN_STATUS_FILE")
+    if not path:
+        return
+    try:
+        base = {"yes": 0, "no": 0, "look": 0}
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                base.update(json.load(handle))
+        mine = {"yes": sum(v == "YES" for _, v in results), "no": sum(v == "NO" for _, v in results),
+                "look": sum(v == "LOOK" for _, v in results)}
+        totals = {k: base[k] + mine[k] for k in mine}
+        last_no = next((f"NO {name}: {detail[:60]}" for name, verdict, detail, _ in reversed(details) if verdict == "NO"), "")
+        batch, _, batches = os.environ.get("TK_RUN_BATCH", "0/0").partition("/")
+        args = ["shell", "am", "broadcast", "-n", f"{APP}/com.titankeys.keyboard.RunStatus", "--ei", "batch", batch,
+                "--ei", "batches", batches or "0", "--es", "name", f"'{os.environ.get('TK_RUN_NAME', '')}'",
+                "--ei", "yes", str(totals["yes"]), "--ei", "no", str(totals["no"]), "--ei", "look", str(totals["look"]),
+                "--es", "eta", f"'{os.environ.get('TK_RUN_ETA', '')}'", "--es", "note",
+                "'" + (note or last_no).replace("'", "") + "'", "--ez", "done", "true" if done else "false"]
+        # The last broadcast's words, for the owner wait in touchlib.sh to say why it waits.
+        with open(path + ".args", "w", encoding="utf-8") as handle:
+            handle.write(" ".join(args[:-6]))
+        adb(*args)
+        if final:
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(totals, handle)
+    except Exception as error:  # noqa: BLE001
+        print(f"run status not sent: {error!r}", flush=True)
+
+
 def wait_cool():
     """Waits while the phone is too hot or warns, up to an hour, saying the temperature each time; Stop if it never cools."""
     for step in range(HEAT_WAIT_STEPS + 1):
@@ -284,6 +325,7 @@ def wait_cool():
             if step:
                 print(f"{time.strftime('%T')} the phone is fine again: {celsius} °C", flush=True)
             return
+        run_status(f"paused: phone hot ({celsius} °C)")
         print(f"{time.strftime('%T')} the phone is too hot to test: {celsius} °C, the battery warning "
               f"{'in front' if warning else 'not shown'}; waiting ({step * HEAT_STEP_SECONDS // 60} of "
               f"{HEAT_WAIT_STEPS * HEAT_STEP_SECONDS // 60} min)", flush=True)
@@ -291,6 +333,61 @@ def wait_cool():
             break
         time.sleep(HEAT_STEP_SECONDS)
     raise Stop(f"the phone stayed too hot or kept its battery warning ({celsius} °C)")
+
+
+# The crash guard (the Master, 2026-11-17, for night runs): after each check, a new FATAL of TitanKeys Debug in logcat's crash buffer
+# ends the batch with "STOP: crash", its trace retraced with the build's kept mapping (debug.sh writes <apk>.mapping-<id8>.txt), and
+# Debug's own crash dialog, if it's in front, gets one Back. The runner then goes on with the next batch.
+MAPPINGS = os.environ.get("TK_MAPPING_DIR", os.path.expanduser("~/build/m1-apks"))
+
+
+def crash_blocks():
+    """TitanKeys Debug's FATAL EXCEPTION blocks in the crash buffer, oldest first, each as its lines."""
+    blocks, block = [], None
+    for line in adb("logcat", "-d", "-b", "crash", "-v", "time").splitlines():
+        if "FATAL EXCEPTION" in line:
+            block = [line]
+            blocks.append(block)
+        elif block is not None and "AndroidRuntime" in line:
+            block.append(line)
+        else:
+            block = None
+    return [b for b in blocks if any(f"Process: {APP}," in line for line in b)]
+
+
+def retraced(block):
+    """The block's frames, retraced with the kept mapping its r8-map-id names, or as they are when there's none."""
+    raw = "\n".join(line.split("): ", 1)[-1] for line in block)
+    found = re.search(r"r8-map-id-([0-9a-f]{8})", raw)
+    mapping = None
+    if found and os.path.isdir(MAPPINGS):
+        mapping = next((os.path.join(MAPPINGS, f) for f in sorted(os.listdir(MAPPINGS)) if f"mapping-{found.group(1)}" in f), None)
+    retrace = os.path.expanduser("~/android-sdk/cmdline-tools/latest/bin/retrace")
+    if not mapping or not os.path.exists(retrace):
+        return raw + f"\n(not retraced: {'no mapping for ' + found.group(1) if found else 'no map id'})"
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as handle:
+        handle.write(raw)
+    try:
+        return subprocess.run([retrace, mapping, handle.name], capture_output=True, text=True, timeout=300).stdout
+    finally:
+        os.unlink(handle.name)
+
+
+def crash_check(seen):
+    """If Debug crashed since [seen] blocks: the trace saved, the dialog cleared if it's Debug's, and a Stop."""
+    blocks = crash_blocks()
+    if len(blocks) <= seen:
+        return
+    out = os.path.join(os.environ.get("TK_OUT", os.path.expanduser("~/tk-out")), "touch", f"crash-{time.strftime('%Y%m%d-%H%M%S')}.txt")
+    with open(out, "w", encoding="utf-8") as handle:
+        handle.write(retraced(blocks[-1]))
+    time.sleep(1)
+    front = next((line for line in adb("shell", "dumpsys", "window").splitlines() if "mCurrentFocus" in line), "")
+    # Only Debug's own crash dialog ("Application Error: com.titankeys.debug"), never another app's window.
+    if APP in front and any(word in front for word in ("Application Error", "Application Not Responding")):
+        adb("shell", "input", "keyevent", "4")
+    raise Stop(f"crash: TitanKeys Debug died ({blocks[-1][2].split('): ', 1)[-1][:160] if len(blocks[-1]) > 2 else 'see the trace'});"
+               f" the trace, retraced, in {out}")
 
 
 def run_batch(name):
@@ -310,6 +407,7 @@ def run_batch(name):
         celsius, warning = phone_heat()
         print(f"{time.strftime('%T')} battery at the batch's start: {celsius} °C, warning {'in front' if warning else 'not shown'}",
               flush=True)
+        crashes = len(crash_blocks())
         for check in module.BATCH:
             if past_cutoff():
                 raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the batch didn't run")
@@ -320,16 +418,19 @@ def run_batch(name):
                 raise
             except (Exception, SystemExit) as error:  # noqa: BLE001 (one broken check mustn't end the night's run)
                 record(check.__name__, False, f"the check broke: {error!r}")
+            crash_check(crashes)
+            run_status()
         if hasattr(module, "finish"):
             module.finish()
     except Stop as stop:
         stopped = stop
-        record("batch", None, f"STOP, the run ended: {stop}")
+        record("batch", None, f"STOP: {stop}" if str(stop).startswith("crash") else f"STOP, the run ended: {stop}")
     finally:
         os.environ.pop("TK_IME_HELD", None)
         # A night of batches keeps Debug from the first to the last (TK_BATCH_KEEP_DEBUG=1); the runner sets release back after.
         if os.environ.get("TK_BATCH_KEEP_DEBUG") != "1":
             keyboard("release")
+        run_status(final=True)  # this batch's results join the run's totals
         path = report(name, stamp, getattr(module, "HANDS", []))
         print(f"report: {path}", flush=True)
     return stopped

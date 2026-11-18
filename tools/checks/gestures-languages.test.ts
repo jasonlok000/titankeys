@@ -18,13 +18,20 @@ test("a flick with a code pending clears the code and leaves the field alone", (
 
 test("double space types the language's own full stop, and the words come from the language's breaks", () => {
   expect(ime).toContain("composer.fullStopMark = { languages.current.rules.fullStop }");
-  expect(ime).toContain("editor.wordBreaker = { IcuWords.of(languages.current.javaLocale) }");
+  // The words come from one place, [wordBreaker]: ICU's, and in Chinese and Japanese the units as picked first (PickedWords).
+  expect(ime).toContain("editor.wordBreaker = ::wordBreaker");
+  expect(ime).toContain("ChineseKeys.isChinese(languages.current)) return PickedWords.CHARACTERS");
+  expect(ime).toContain("val icu = IcuWords.of(languages.current.javaLocale)");
   const composer = read("android/kotlin/com/titankeys/keyboard/Composer.kt");
   // The full stop is the only place double Space's mark comes from: no "." of its own.
   expect(composer).not.toContain('".$spaces"');
   expect(composer).toContain("if (mark.endsWith(\" \")) mark.trimEnd() + spaces else mark");
   // Three Space taps pick a word with the same breaks.
   expect(ime).toContain("WordSelection.atOrBefore(text, start, end, breaks)");
+  expect(ime).toContain("val breaks = wordBreaker()");
+  // A slide starts from the same word and steps by the same words.
+  expect(ime).toContain("WordSelection.at(text, start, end, wordBreaker())");
+  expect(ime).toContain("direction, wordBreaker())");
 });
 
 test("a held delete takes a code being built as flicks do, one step a word, before the field (owner, 2026-11-17)", () => {

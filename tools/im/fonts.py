@@ -2,7 +2,7 @@
 """Builds the app's two text fonts, assets/fonts/Inter-Regular.otf and Inter-Medium.otf (theme.ts), so every input
 method's own name shows in Settings > Input methods (docs/languages.md, "Names").
 
-    python3 -I tools/im/fonts.py <Inter dir> <Noto Sans Georgian dir> <Noto Sans CJK dir>
+    python3 -I tools/im/fonts.py <Inter dir> <Noto Sans Georgian dir> <Noto Sans CJK dir> [<Noto Sans Devanagari file>]
 
 <Inter dir> holds Inter-Regular.otf and Inter-Medium.otf from the official Inter 4.1 release
 (https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip, extras/otf). <Noto Sans Georgian dir> holds
@@ -21,6 +21,11 @@ Cyrillic, with Noto Sans Georgian's letters added, drawn at Inter's size. Androi
 method names in android/assets/im/index.json, and the TypeScript in app/ and lib/) are added too, from Noto Sans CJK: Korean
 from its Korean cut, Chinese from its Hong Kong cut. Run this again when a new name or text brings a new one;
 tests/languages fails until then.
+
+Every input method's how-to is the app's own text too (owner, 2026-11-17: Korean's how-to showed blanks where its letters were):
+every character of every im.json's howTo, and of tools/im/howto.json, is added, from the first of the sources above that has
+it, and Devanagari from Noto Sans Devanagari (Android's own NotoSansDevanagari-VF.ttf, SIL OFL 1.1), given as the fourth
+argument; Medium is its weight 500. Ink places no marks, so Devanagari's vowel signs sit beside their letters, not on them.
 """
 import glob
 import json
@@ -70,6 +75,28 @@ def names_in(script):
     return sorted({ord(c) for m in index for c in m["name"] + m["language"]["name"] if script(ord(c))})
 
 
+def howto_text():
+    """Every how-to's text: each input method's howTo in android/assets/im, and tools/im/howto.json."""
+    out = []
+
+    def walk(value):
+        if isinstance(value, str):
+            out.append(value)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+        elif isinstance(value, dict):
+            for item in value.values():
+                walk(item)
+
+    for path in glob.glob(os.path.join(ROOT, "android", "assets", "im", "*", "im.json")):
+        walk(json.load(open(path, encoding="utf-8")).get("howTo", []))
+    howto = os.path.join(ROOT, "tools", "im", "howto.json")
+    if os.path.exists(howto):
+        walk(json.load(open(howto, encoding="utf-8")))
+    return out
+
+
 def cjk_in_text():
     """Every Hangul and Chinese character in the input methods' names and in the app's own text."""
     index = json.load(open(os.path.join(ROOT, "android", "assets", "im", "index.json"), encoding="utf-8"))
@@ -77,6 +104,7 @@ def cjk_in_text():
     for pattern in ("app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"):
         for path in glob.glob(os.path.join(ROOT, pattern), recursive=True):
             text.append(open(path, encoding="utf-8").read())
+    text += howto_text()
     codes = {ord(c) for chunk in text for c in chunk}
     return sorted(c for c in codes if is_hangul(c)), sorted(c for c in codes if is_han(c))
 # As the Latin-1 fonts had: names and settings are whole letters (NFC), so no accent placement.
@@ -143,8 +171,33 @@ def add_glyphs(font, source_path, codes):
     return len(added)
 
 
+def devanagari_font(path, weight):
+    """Noto Sans Devanagari at [weight]: the variable font's default (400) for Regular, its weight 500 for Medium."""
+    font = TTFont(path)
+    if weight == "Medium" and "fvar" in font:
+        from fontTools.varLib import instancer
+        font = instancer.instantiateVariableFont(font, {"wght": 500})
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".devanagari-%s.ttf" % weight)
+    font.save(out)
+    return out
+
+
+def rest_of_howtos(font, sources):
+    """Every how-to character [font] still lacks, from the first of [sources] that has it. Exits on one none has."""
+    have = set(font.getBestCmap())
+    wanted = sorted({ord(c) for chunk in howto_text() for c in chunk if ord(c) > 0x7F and not c.isspace()} - have)
+    groups = {}
+    for code in wanted:
+        source = next((path for path in sources if path and code in TTFont(path, lazy=True).getBestCmap()), None)
+        if source is None:
+            sys.exit("U+%04X in a how-to is in none of the sources: give Noto Sans Devanagari, or add a source" % code)
+        groups.setdefault(source, []).append(code)
+    return sum(add_glyphs(font, source, codes) for source, codes in groups.items())
+
+
 def main():
     inter, georgian, cjk = sys.argv[1], sys.argv[2], sys.argv[3]
+    devanagari = sys.argv[4] if len(sys.argv) > 4 else None
     hangul, han = cjk_in_text()
     for weight in ("Regular", "Medium"):
         font = cut(os.path.join(inter, "Inter-%s.otf" % weight))
@@ -156,10 +209,15 @@ def main():
         add_glyphs(font, os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight), names_in(is_hebrew))
         count_hangul = add_glyphs(font, os.path.join(cjk, "NotoSansKR-%s.otf" % weight), hangul)
         count_han = add_glyphs(font, os.path.join(cjk, "NotoSansHK-%s.otf" % weight), han)
+        # The how-tos' other letters: kana, Hebrew, Devanagari, Bopomofo and the rest, from the first source that has each.
+        count_howto = rest_of_howtos(font, [
+            georgian_path, os.path.join(georgian, "NotoSansThai-%s.ttf" % weight), os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight),
+            os.path.join(cjk, "NotoSansKR-%s.otf" % weight), os.path.join(cjk, "NotoSansHK-%s.otf" % weight),
+            devanagari_font(devanagari, weight) if devanagari else None])
         out = os.path.join(ROOT, "assets", "fonts", "Inter-%s.otf" % weight)
         font.save(out)
-        print("%s: %d glyphs, %d Georgian, %d Hangul, %d Chinese, %d bytes"
-              % (out, len(font.getGlyphOrder()), count, count_hangul, count_han, os.path.getsize(out)))
+        print("%s: %d glyphs, %d Georgian, %d Hangul, %d Chinese, %d more for the how-tos, %d bytes"
+              % (out, len(font.getGlyphOrder()), count, count_hangul, count_han, count_howto, os.path.getsize(out)))
 
 
 if __name__ == "__main__":

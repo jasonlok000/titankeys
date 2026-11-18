@@ -84,11 +84,11 @@ tk_focus_field() {
 # Fails, with a STOP line, unless the checks pass. Another app in front, or no Debug field: TitanKeys Debug's screen is brought
 # back (twice at most) and checked again. Screen off, locked or navigation: one more try a second later.
 # The window in front, as dumpsys says it ("mCurrentFocus=Window{... u0 PACKAGE/ACTIVITY}").
-tk_front() { tk_adb shell dumpsys window | tr -d '' | grep -m1 mCurrentFocus; }
+tk_front() { tk_adb shell dumpsys window | tr -d '\r' | grep -m1 mCurrentFocus; }
 
 # The home screen's package (the launcher), as Android resolves HOME.
 tk_home_package() {
-  tk_adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '' |
+  tk_adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' |
     tail -1 | cut -d/ -f1
 }
 
@@ -103,11 +103,28 @@ tk_owner_app() {
   return 0
 }
 
+# True when the activity in front was started by TitanKeys Debug (launchedFromPackage), as an Android Settings page it sent the
+# screen to: then it's the run's own doing, not the owner's.
+tk_debug_opened() {
+  local acts hash
+  acts=$(tk_adb shell dumpsys activity activities | tr -d '\r')
+  hash=$(grep -m1 -oE 'topResumedActivity=ActivityRecord\{[0-9a-f]+' <<<"$acts" | grep -oE '[0-9a-f]+$')
+  [ -n "$hash" ] || return 1
+  # That record's own block: the first launchedFromPackage after its "Hist #N: ActivityRecord{HASH" line.
+  awk -v h="ActivityRecord{$hash " 'index($0, "Hist #") && index($0, h) { on = 1; next } on && /launchedFromPackage=/ { print; exit }' \
+    <<<"$acts" | grep -q "launchedFromPackage=$TK_APP "
+}
+
 # Waits while the owner's app stays in front: every TK_OWNER_POLL_S (20) s, for TK_OWNER_WAIT_S (1800) s at most. Sends nothing to
 # the phone but reads. False if the owner's app is still there at the end.
 tk_wait_for_owner() {
   local waited=0 step="${TK_OWNER_POLL_S:-20}" most="${TK_OWNER_WAIT_S:-1800}"
   echo "waiting: the owner's app is in front ($(tk_front | sed 's/.* u0 //; s/}.*//')); touching nothing"
+  # The run's notification says why it waits (checks.py's run_status left its last words beside its file). A broadcast, no touch.
+  if [ -n "${TK_RUN_STATUS_FILE:-}" ] && [ -s "$TK_RUN_STATUS_FILE.args" ]; then
+    # shellcheck disable=SC2046
+    tk_adb $(cat "$TK_RUN_STATUS_FILE.args") --es note "'waiting: another app in front'" --ez done false >/dev/null 2>&1
+  fi
   while tk_owner_app; do
     [ "$waited" -ge "$most" ] && return 1
     sleep "$step"
@@ -122,7 +139,7 @@ tk_bring_back() {
   tk_adb shell am start --activity-reorder-to-front -n "$TK_APP/$TK_TOUCH_ACTIVITY"
 }
 tk_touch_check() {
-  local why status starts=0 waits=0
+  local why status starts=0 waits=0 backs=0
   while true; do
     why=$(tk_touch_check_once) && return 0
     status=$?
@@ -133,6 +150,15 @@ tk_touch_check() {
     [ $status = 4 ] && { echo "STOP: $why"; return 1; }
     # TK_WAIT_FOR_OWNER=1 (a run while the owner uses the phone, 2026-11-17): another app in front is the owner's, so the run
     # waits, touching nothing, until it goes; only Debug's own screens and the home screen are the run's to bring Debug back over.
+    # A page Debug itself opened over its screen (an Android Settings page from a row a check tapped, 2026-11-17) is the run's:
+    # one Back, once per check, and the gate looks again. Anything else in front still waits.
+    if [ $status = 3 ] && [ "${TK_WAIT_FOR_OWNER:-}" = 1 ] && [ "$backs" = 0 ] && tk_owner_app && tk_debug_opened; then
+      backs=1
+      echo "$why: a page TitanKeys Debug opened; one Back"
+      tk_adb shell input keyevent 4
+      sleep 2
+      continue
+    fi
     if [ $status = 3 ] && [ "${TK_WAIT_FOR_OWNER:-}" = 1 ] && tk_owner_app; then
       tk_wait_for_owner || { echo "STOP: $why, and still after ${TK_OWNER_WAIT_S:-1800} s"; return 1; }
       continue

@@ -43,6 +43,11 @@
             android:name="com.titankeys.keyboard.LeakCheck"
             android:exported="true"
             android:permission="android.permission.DUMP" />
+        <!-- The phone run's progress as one silent notification (RunStatus.kt). Only adb can send to it. -->
+        <receiver
+            android:name="com.titankeys.keyboard.RunStatus"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
         <!-- Lists the files of Rime's data copy, "BYTES NAME" per line, for the storage checks. Only adb can send to it. -->
         <receiver
             android:name="com.titankeys.keyboard.RimeFiles"

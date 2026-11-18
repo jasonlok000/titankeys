@@ -65,6 +65,21 @@ class MozcEngine(
 
     private fun composing() = open && typed.isNotEmpty()
 
+    /** The bar's own words on offer while nothing is typed ([offer]), after Mozc's next words. */
+    @Volatile private var offered = emptyList<String>()
+
+    /** Mozc's next words, then the bar's that aren't among them: as many as the row fits (owner, 2026-11-17). */
+    private fun suggestionsWithOffered(): List<String> {
+        val own = if (suggesting()) last.choices else emptyList()
+        return own + offered.filter { it !in own }
+    }
+
+    override fun offer(words: List<String>): EngineState {
+        if (!open || composing()) return EngineState.UNHANDLED
+        offered = words
+        return read(handled = true)
+    }
+
     /** Mozc offers next-word suggestions: choices with nothing typed. */
     private fun suggesting() = open && typed.isEmpty() && last.choices.isNotEmpty()
 
@@ -84,6 +99,7 @@ class MozcEngine(
 
     override fun key(char: Char): EngineState {
         if (!open) return EngineState.UNHANDLED
+        offered = emptyList()
         // A letter starts new text over the suggestions; anything else clears them first.
         if (char !in 'a'..'z' && char !in 'A'..'Z') dismiss()
         return when (char) {
@@ -133,10 +149,18 @@ class MozcEngine(
         return out
     }
 
-    /** Types the first choice; with nothing typed, the first suggestion, if there are any. */
-    override fun space(): EngineState = if (composing() || suggesting()) pickAt(0) else EngineState.UNHANDLED
+    /**
+     * Types the first choice. With nothing typed, Space is a space: next words are picked only by a tap or their keys (owner,
+     * 2026-11-17: "space shdnt type the next word"), and they go.
+     */
+    override fun space(): EngineState {
+        if (composing()) return pickAt(0)
+        offered = emptyList()
+        return dismissed()
+    }
 
     override fun enter(): EngineState {
+        offered = emptyList()
         if (!composing()) return dismissed()
         val letters = typed.toString()
         mozc.reset()
@@ -145,6 +169,7 @@ class MozcEngine(
     }
 
     override fun backspace(): EngineState {
+        offered = emptyList()
         if (!composing()) return dismissed()
         typed.deleteCharAt(typed.length - 1)
         mozc.reset()
@@ -155,6 +180,17 @@ class MozcEngine(
     override fun pick(index: Int): EngineState = pickAt(index)
 
     override fun pickAt(index: Int): EngineState {
+        if (!composing() && offered.isNotEmpty() && index >= 0) {
+            val own = if (suggesting()) last.choices.size else 0
+            if (index >= own) {
+                // One of the bar's own words: typed as it is, with no space. Mozc can't hear of it, so no next words follow.
+                val word = offered.filter { it !in last.choices }.getOrNull(index - own) ?: return EngineState.UNHANDLED
+                offered = emptyList()
+                dismiss()
+                return read(handled = true, extra = word)
+            }
+            offered = emptyList()
+        }
         if (!(composing() || suggesting()) || index < 0) return EngineState.UNHANDLED
         val picked = mozc.pick(shown.getOrElse(index) { -1 })
         val state = read(handled = picked)
@@ -164,12 +200,17 @@ class MozcEngine(
         return state.copy(typed = typed.toString())
     }
 
-    override fun choices(start: Int, count: Int): List<String> =
-        if (!(composing() || suggesting()) || start < 0 || count <= 0) emptyList() else last.choices.drop(start).take(count)
+    override fun choices(start: Int, count: Int): List<String> = when {
+        start < 0 || count <= 0 -> emptyList()
+        !composing() && offered.isNotEmpty() -> suggestionsWithOffered().drop(start).take(count)
+        !(composing() || suggesting()) -> emptyList()
+        else -> last.choices.drop(start).take(count)
+    }
 
     override fun page(forward: Boolean): EngineState = EngineState.UNHANDLED
 
     override fun reset(): EngineState {
+        offered = emptyList()
         if (!open) return EngineState.UNHANDLED
         mozc.reset()
         typed.clear()
@@ -187,7 +228,11 @@ class MozcEngine(
             commit = raw.commit.orEmpty() + extra,
             code = code,
             // With nothing being built, Mozc's choices are its next-word suggestions.
-            choices = if (code.isEmpty() && raw.preedit.isNotEmpty()) emptyList() else raw.choices.take(PAGE),
+            choices = when {
+                code.isEmpty() && raw.preedit.isNotEmpty() -> emptyList()
+                code.isEmpty() && offered.isNotEmpty() -> raw.choices + offered.filter { it !in raw.choices }
+                else -> raw.choices.take(PAGE)
+            },
             handled = handled,
             typed = typed.toString(),
         )

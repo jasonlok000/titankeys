@@ -214,11 +214,19 @@ fun nextWordsAfterAPick() {
     same("", picked.code, "nothing is typed after it")
     same(listOf("NEXT0", "NEXT1", "NEXT2"), picked.choices, "and Mozc's next words are the bar's choices, without the emoji")
     same(listOf("NEXT1", "NEXT2"), engine.choices(1, 8), "the bigger menu reads them too")
-    // Space picks the first suggestion, and a pick offers the next ones.
+    // Space never picks a next word (owner, 2026-11-17: "space shdnt type the next word"): it's a space, and they go.
     val next = engine.space()
-    same("NEXT0", next.commit, "Space picks the first suggestion")
-    same(3, next.choices.size, "and the next ones come")
+    check(!next.handled && next.commit.isEmpty(), "Space with only next words is a plain space")
+    type(engine, "ne"); engine.space()
     same("NEXT2", engine.pickAt(2).commit, "a tap or the menu picks any: the bar's third, Mozc's fifth")
+    // The bar's own words fill the row behind Mozc's, as many as fit (owner: Chinese "or similar family").
+    type(engine, "ne"); engine.space()
+    val topped = engine.offer(listOf("NEXT1", "w1", "w2"))
+    same(listOf("NEXT0", "NEXT1", "NEXT2", "w1", "w2"), topped.choices, "Mozc's next words, then the bar's not among them")
+    same("w2", engine.pickAt(4).commit, "a tap on one of the bar's types it")
+    engine.reset()
+    val alone = engine.offer((1..8).map { "s$it" })
+    same(8, alone.choices.size, "with nothing to follow, the bar's words alone fill the row: eight, not three")
     // A letter starts new text over them; the suggestions don't come back with it.
     val letter = engine.key('k')
     same("K", letter.code, "a letter starts new text")

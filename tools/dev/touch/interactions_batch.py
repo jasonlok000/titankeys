@@ -184,12 +184,12 @@ def check_98():
             space_types_middle(im, prefix)
 
 
-def mixed(name, on, before, new, prefix, shot_at=None, expected_field=None):
+def mixed(name, on, before, new, prefix, expected_field=None):
     """[before] in on[0], then a held Sym to [new] (two on: straight to it) and its prefix at once."""
     start(on, on[0])
     play(*before)
     mark()
-    play(*HOLD_SYM, *keys(prefix), "+700", shot=name, at=shot_at or 1500)
+    play(*HOLD_SYM, *keys(prefix), "+700")
     lines = bar_lines()
     text = read()
     verdict = switch_verdict(lines, new)
@@ -199,7 +199,7 @@ def mixed(name, on, before, new, prefix, shot_at=None, expected_field=None):
         if text != expected_field:
             verdict = False
     record(name, verdict,
-           f"then {new}, {prefix!r} at once: the bar {shown(lines)}; the field {text!r}", name)
+           f"then {new}, {prefix!r} at once: the bar {shown(lines)}; the field {text!r}")
 
 
 def check_mixed():
@@ -215,13 +215,13 @@ def check_yale_warm():
     start(["en", "yue-yale", "zh-pinyin"], "zh-pinyin")
     play(*keys("nihao"), "+500", "key:space", "+800")
     mark()
-    play(*HOLD_SYM, f"key:{TILE_KEYS[1]}", "+500", *keys("nei"), "+800", shot="yale-warm", at=1600)
+    play(*HOLD_SYM, f"key:{TILE_KEYS[1]}", "+500", *keys("nei"), "+800")
     lines = bar_lines()
     warming = [l[1] for l in lines if l[0] == "notice" and "Warming up" in l[1]]
     bars = [l for l in lines if l[0] == "bar"]
     record("yale-warm", (not warming) if lines else None,
            f"Rime warm from Pinyin, then Yale: notices {warming or 'none'}; the bar {shown(lines)}"
-           + ("" if bars else f" ({TAG} missing?)"), "yale-warm")
+           + ("" if bars else f" ({TAG} missing?)"))
 
 
 BATCH = [check_korean_startup, check_toggle, check_switcher, check_alt_sym, check_98, check_mixed, check_yale_warm]

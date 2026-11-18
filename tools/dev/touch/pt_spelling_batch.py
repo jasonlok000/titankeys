@@ -56,35 +56,30 @@ def pick(variant):
                 time.sleep(1)
 
 
-def offers(prefix, name):
-    """The bar after [prefix] in pt: its words from TitanKeysBar, or None without the line; a shot either way."""
+def offers(prefix, name, ok_if, detail):
+    """Read the words after a prefix. If the log missed the row, keep it for visual comparison."""
     interactions_batch.start(["en", "pt"], "pt")
-    play(*interactions_batch.keys(prefix), "+800", shot=name, at=len(prefix) * 150 + 600)
+    play(*interactions_batch.keys(prefix), "+800")
     bars = [line for line in interactions_batch.bar_lines() if line[0] == "bar"]
+    if bars:
+        words = bars[-1][2]
+        record(name, ok_if(words), f"{detail}: the bar {' | '.join(words)}")
+    else:
+        record(name, None, f"{detail}: compare the words on the bar", guide_checks.shot(name))
     language_checks.fresh()
-    return (bars[-1][2] if bars else None), name
-
-
-def judge(name, words, shot, ok_if, detail):
-    if words is None:
-        return record(name, None, f"{detail}: no TitanKeysBar line, see the shot", shot)
-    record(name, ok_if(words), f"{detail}: the bar {' | '.join(words)}", shot)
 
 
 def check_portugal():
     if not pick("pt-PT"):
         return record("pt-PT-picked", None, "no Português > Spelling > Portugal found: the dump has no Ink row text yet (a harness LOOK until E labels the rows)")
-    words, shot = offers("proje", "pt-PT-proje")
-    judge("pt-PT-projecto", words, shot, lambda w: "projecto" in w, "Portugal, proje")
-    words, shot = offers("activi", "pt-PT-activi")
-    judge("pt-PT-actividade", words, shot, lambda w: "actividade" in w, "Portugal, activi")
+    offers("proje", "pt-PT-projecto", lambda w: "projecto" in w, "Portugal, proje")
+    offers("activi", "pt-PT-actividade", lambda w: "actividade" in w, "Portugal, activi")
 
 
 def check_brasil():
     picked = pick("pt-BR")
-    words, shot = offers("proje", "pt-BR-proje")
-    judge("pt-BR-projeto", words, shot, lambda w: "projeto" in w and "projecto" not in w,
-          f"Brasil{'' if picked else ' (the default: no Spelling row to pick it)'}, proje")
+    offers("proje", "pt-BR-projeto", lambda w: "projeto" in w and "projecto" not in w,
+           f"Brasil{'' if picked else ' (the default: no Spelling row to pick it)'}, proje")
 
 
 BATCH = [check_portugal, check_brasil]

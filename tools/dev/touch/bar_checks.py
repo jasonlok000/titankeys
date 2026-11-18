@@ -143,8 +143,8 @@ def check_japanese_menu():
     play(*moves)
     import guide_checks
     own_field()
-    guide_checks.shot('ja-kyou-menu')
-    record("ja-kyou-menu", None, "kyou then a swipe up: inspect the S tile before the pick; dates are valid candidates", "ja-kyou-menu")
+    record("ja-kyou-menu", None, "kyou then a swipe up: inspect the S tile before the pick; dates are valid candidates",
+           guide_checks.shot("ja-kyou-menu"))
     play("key:s", "+500")  # the cell over S
     picked = own_field()
     # Current Debug logs expose three bar choices, not the expanded menu's S
@@ -207,13 +207,14 @@ def check_japanese_polish():
         play('key:space', '+900')
         first = own_field()
     import guide_checks
-    guide_checks.shot('ja-ohayou-next')
+    record("ja-ohayou-predictions", None, "The row after picking ohayou, before the plain Space",
+           guide_checks.shot("ja-ohayou-next"))
     play("key:space", "+500")
     second = own_field()
     record('ja-ohayou', space_verdict(first, zero, ''),
-           f'ohayou + Space committed {first!r}; observed candidate zero {zero!r}', 'ja-ohayou-next')
+           f'ohayou + Space committed {first!r}; observed candidate zero {zero!r}')
     record('ja-ohayou-next', suffix_verdict(first, second, ' '),
-           f'after committed {first!r}, Space produced {second!r}; expected exactly the same prefix plus a plain space', 'ja-ohayou-next')
+           f'after committed {first!r}, Space produced {second!r}; expected exactly the same prefix plus a plain space')
     fresh_ja()
     play(*keys("ohayou"), "+500", "key:space", "+700", "chord:alt+w", "+600", shot="ja-digit", at=len(keys("ohayou")) * 80 + 1700)
     record("ja-digit", None, f"a digit after a pick (field {field()!r}): the suggestions are gone", "ja-digit")
@@ -330,8 +331,8 @@ def check_first_key():
     play("touch:0.65,0.625:80", "+1500", shot="first-touch", at=1200)  # N's middle on the touchpad
     text = language_checks.checks.field()
     lines = waits_lines()
-    record("first-touch", text == "", f"a tap on N after the restart left the field {text!r}: Yale's code on the bar (the shot)",
-           "first-touch")
+    record("first-touch", text == "", f"a tap on N after the restart left the field {text!r}")
+    record("first-touch-code", None, "N after the restart appears in Yale's pending code", "first-touch")
     record("first-touch-log", "A touch waits: the input method is still loading" in lines
            and "What waited goes to yue-yale" in lines, f"TitanKeysIM: {lines}")
     restarted_hidden(["en", "ru"], "ru")

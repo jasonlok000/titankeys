@@ -76,12 +76,12 @@ def flick(im):
         play(*keys(SECOND), "+400")
         typed = checks.field()
         name = f"flick-{im}"
-    play(FLICK_AFTER_TYPING, "flick", "+500", shot=name, at=1000)
+    play(FLICK_AFTER_TYPING, "flick", "+500")
     after = checks.field()
     # Chinese flicks take one character, even when a pick committed several.
     expected = typed[:-1] if im in ("zh-pinyin", "yue-jyutping", "yue-yale") else before
     record(name, bool(before) and typed != before and after == expected,
-           f"{before!r} then {typed!r}; the flick left {after!r}, wanted {expected!r}", name)
+           f"{before!r} then {typed!r}; the flick left {after!r}, wanted {expected!r}")
 
 
 def double_space(im):
@@ -125,8 +125,8 @@ def code_flick(im):
     before = first_word(im)
     play(*keys(CODE_FLICK[im]), FLICK_AFTER_TYPING, "flick", "+500", shot=f"code-flick-{im}", at=1000)
     text = checks.field()
-    record(f"code-flick-{im}", text == before, f"field {before!r}, a code, then a flick: {text!r} (the bar is the shot)",
-           f"code-flick-{im}")
+    record(f"code-flick-{im}", text == before, f"field {before!r}, a code, then a flick: {text!r}")
+    record(f"code-flick-{im}-bar", None, "The flick leaves no code on the bar", f"code-flick-{im}")
 
 
 def check_every_language():

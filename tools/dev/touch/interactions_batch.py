@@ -184,7 +184,7 @@ def check_98():
             space_types_middle(im, prefix)
 
 
-def mixed(name, on, before, new, prefix, shot_at=None):
+def mixed(name, on, before, new, prefix, shot_at=None, expected_field=None):
     """[before] in on[0], then a held Sym to [new] (two on: straight to it) and its prefix at once."""
     start(on, on[0])
     play(*before)
@@ -192,12 +192,18 @@ def mixed(name, on, before, new, prefix, shot_at=None):
     play(*HOLD_SYM, *keys(prefix), "+700", shot=name, at=shot_at or 1500)
     lines = bar_lines()
     text = read()
-    record(name, switch_verdict(lines, new),
+    verdict = switch_verdict(lines, new)
+    if expected_field is not None:
+        if text is None:
+            raise Stop("the Debug field lost focus after the switch")
+        if text != expected_field:
+            verdict = False
+    record(name, verdict,
            f"then {new}, {prefix!r} at once: the bar {shown(lines)}; the field {text!r}", name)
 
 
 def check_mixed():
-    mixed("mixed-code-pending", ["yue-yale", "en"], [*keys("neihou"), "+500"], "en", "th")
+    mixed("mixed-code-pending", ["yue-yale", "en"], [*keys("neihou"), "+500"], "en", "th", expected_field="th")
     mixed("mixed-flick", ["en", "yue-yale"], [*keys("hello"), "key:space", "+90", *keys("there"), "+800", "flick", "+600"],
           "yue-yale", "ngo")
     mixed("mixed-menu-pick", ["yue-yale", "ja"], [*keys("neihou"), "+500", "swipeup:b", "+700", "key:s", "+500"], "ja", "ka")

@@ -26,6 +26,15 @@ class OracleChecks(unittest.TestCase):
         self.assertIsNone(ib.switch_verdict([old, ("notice", "rk")], "ko"))
         self.assertIsNone(ib.switch_verdict([], "ko"))
 
+    def test_mixed_pending_code_checks_committed_text(self):
+        for field, passed in [("th", True), ("neihouth", False), ("", False)]:
+            with self.subTest(field=field), patch.object(ib, "start"), patch.object(ib, "play"), \
+                    patch.object(ib, "mark"), patch.object(ib, "read", return_value=field), \
+                    patch.object(ib, "bar_lines", return_value=[("bar", "en", ["the", "I", "and"])]), \
+                    patch.object(ib, "record") as record:
+                ib.mixed("pending", ["yue-yale", "en"], [], "en", "th", expected_field="th")
+                self.assertIs(record.call_args.args[1], passed)
+
     def korean(self, fields):
         with patch.object(ib, "start"), patch.object(ib, "mark"), \
                 patch.object(ib, "play") as play, patch.object(ib, "record") as record, \

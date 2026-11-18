@@ -4669,6 +4669,9 @@ class TitanKeysIme : InputMethodService() {
         clearKeyPreview()
         chineseOffers.clear()
         choiceRowLogged = null
+        // Closing the picker reveals these words. The composer's refresh may wait for an older edit.
+        barWords = emptyList()
+        strip?.words = emptyList()
         rawLog?.inputMethod(loggedInputMethod, method.id)
         loggedInputMethod = method.id
         showInputMark()

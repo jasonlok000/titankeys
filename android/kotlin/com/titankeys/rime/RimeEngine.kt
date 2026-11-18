@@ -171,15 +171,33 @@ class RimeEngine(
     @Volatile private var offered = emptyList<String>()
 
     override fun offer(words: List<String>): EngineState {
-        if (!ready || !variantPicked || composing() || suggesting()) return EngineState.UNHANDLED
+        if (!ready || !variantPicked || composing()) return EngineState.UNHANDLED
         offered = words
         return read(handled = true)
     }
 
-    /** Picks offered word [index]: it types with no space, and Rime offers what follows it. */
+    /** Rime's own next words, when it has any: they come first, before the bar's ([offered]). */
+    private fun rimeSuggestions(): List<String> = if (suggesting()) rime.choices(0, MOST_SUGGESTIONS) else emptyList()
+
+    /**
+     * With nothing typed: Rime's next words, then the bar's own that aren't among them, so the row always has as many as fit
+     * (owner, 2026-11-17: "sometimes there's only 3 suggestions for Chinese", where Rime's table has only three).
+     */
+    private fun suggestionsWithOffered(): List<String> {
+        val own = rimeSuggestions()
+        return own + offered.filter { it !in own }
+    }
+
+    /** Picks item [index] of [suggestionsWithOffered]: Rime's own as Rime picks, else the bar's word, typed with no space. */
     private fun pickOffered(index: Int): EngineState {
-        val word = offered.getOrNull(index) ?: return EngineState.UNHANDLED
+        val own = rimeSuggestions()
+        if (index < own.size) {
+            offered = emptyList()
+            return read(handled = rime.selectAt(index))
+        }
+        val word = offered.filter { it !in own }.getOrNull(index - own.size) ?: return EngineState.UNHANDLED
         offered = emptyList()
+        dismiss()
         rime.predictAfter(word)
         return read(handled = true).let { it.copy(commit = word + it.commit) }
     }
@@ -224,9 +242,13 @@ class RimeEngine(
     }
 
     override fun space(): EngineState = when {
-        offered.isNotEmpty() && !composing() -> pickOffered(0)
-        // With nothing typed, Space picks the first suggestion, if there are any.
-        !composing() -> if (suggesting() && variantPicked) read(handled = rime.selectAt(0)) else EngineState.UNHANDLED
+        // With nothing typed, Space is a space: next words and the bar's own words are picked only by a tap or their keys
+        // (owner, 2026-11-17: "space shdnt type the next word"). They go, and the keyboard types the space.
+        !composing() -> {
+            offered = emptyList()
+            // Before a variant is picked, Rime's suggestions stay hidden there, untouched.
+            if (variantPicked) dismissed() else EngineState.UNHANDLED
+        }
         !variantPicked -> read(handled = true)
         else -> send(RimeKeys.SPACE)
     }
@@ -235,7 +257,12 @@ class RimeEngine(
     override fun enter(): EngineState {
         offered = emptyList()
         if (!composing()) return dismissed()
-        val letters = rime.read()?.input.orEmpty()
+        // What was picked of the code, then the letters still pending (owner, 2026-11-17: "typing enter shd type out alr
+        // selected word + remaining keycode"): 頂你個 picked and fai pending types 頂你個fai. Cleared, not committed: Rime
+        // learns nothing.
+        val input = rime.read()?.input.orEmpty()
+        val (picked, from) = rime.picked()
+        val letters = picked + input.substring(from.coerceIn(0, input.length))
         rime.reset()
         return read(handled = true).let { it.copy(commit = it.commit + letters) }
     }
@@ -255,7 +282,7 @@ class RimeEngine(
     override fun choices(start: Int, count: Int): List<String> {
         if (!ready || start < 0 || count <= 0) return emptyList()
         if (!variantPicked) return if (start == 0 && composing()) listOf(NO_VARIANT) else emptyList()
-        if (offered.isNotEmpty() && !composing()) return offered.drop(start).take(count)
+        if (offered.isNotEmpty() && !composing()) return suggestionsWithOffered().drop(start).take(count)
         return rime.choices(start, count)
     }
 
@@ -333,8 +360,8 @@ class RimeEngine(
         if (code.isNotEmpty() && !variantPicked) return EngineState(commit = raw.commit.orEmpty(), code = code, choices = listOf(NO_VARIANT),
             handled = handled, typed = raw.input)
         // The bar's words on offer, while Rime has nothing of its own to show.
-        if (code.isEmpty() && raw.choices.isEmpty() && offered.isNotEmpty())
-            return EngineState(commit = raw.commit.orEmpty(), choices = offered, handled = handled)
+        if (code.isEmpty() && offered.isNotEmpty())
+            return EngineState(commit = raw.commit.orEmpty(), choices = raw.choices + offered.filter { it !in raw.choices }, handled = handled)
         return EngineState(
             commit = raw.commit.orEmpty(),
             code = code,
@@ -351,6 +378,8 @@ class RimeEngine(
     companion object {
         /** The engine's name in im.json. */
         const val ENGINE = "rime"
+        /** How many of Rime's own next words are read, at most: more than the row and its menu's first page show. */
+        private const val MOST_SUGGESTIONS = 64
 
         /** The only choice until a Chinese variant is picked. F (docs/words-m1.md). */
         const val NO_VARIANT = "Simplified or Traditional? Settings."

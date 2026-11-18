@@ -20,6 +20,8 @@ interface RimeCalls {
     fun predictAfter(text: String): Boolean = false
     /** A flick: the code still pending after a pick goes and what was picked stays. False with nothing picked or pending. */
     fun dropLast(): Boolean = false
+    /** What was picked of the code being built, and where in the input its pending letters start: ("", 0) with no pick. */
+    fun picked(): Pair<String, Int> = "" to 0
     fun read(): Raw?
     /**
      * Rime's own backup of the learned words: merges every snapshot in the user folder's sync/ and writes its own there.

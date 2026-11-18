@@ -1109,6 +1109,16 @@ class Strip(
 
     /** The right edge of the mark drawn over Q, while it is; -1 when it isn't. */
     private var markRight = -1f
+
+    /**
+     * Where a tap on the mark over Q ends, or -1 where there's none: the idle bar's, or the choices row's own mark (耶, 粵), which
+     * Chinese now shows with nothing typed too (owner, 2026-11-17: "pressing the word like 耶 did nothing").
+     */
+    private fun markTouchRight(): Float = when {
+        markRight > 0 -> markRight
+        (notice as? Notice.Picker)?.mark?.isNotEmpty() == true -> menuColumn(ChineseRow.MARK).second
+        else -> -1f
+    }
     private var markTouched = false
     /** The picker item a touch went down on, which it picks if it lifts there too. */
     private var pickerTouched = -1
@@ -1565,12 +1575,12 @@ class Strip(
     private var menuTouched: Action? = null
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (markTouched || event.actionMasked == MotionEvent.ACTION_DOWN && markRight > 0 && event.x <= markRight) {
+        if (markTouched || event.actionMasked == MotionEvent.ACTION_DOWN && markTouchRight() > 0 && event.x <= markTouchRight()) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> markTouched = true
                 MotionEvent.ACTION_UP -> {
                     markTouched = false
-                    if (markRight > 0 && event.x <= markRight + dp(8)) markTap?.invoke()
+                    if (markTouchRight() > 0 && event.x <= markTouchRight() + dp(8)) markTap?.invoke()
                 }
                 MotionEvent.ACTION_CANCEL -> markTouched = false
             }
@@ -1633,7 +1643,7 @@ class Strip(
         // A touch on one of the menu's buttons is the bar's, which draws them. Beside them it closes the menu, as before.
         if (event.actionMasked == MotionEvent.ACTION_DOWN && menuActionAt(event.x) != null) return true
         // A touch on the language mark over Q is the bar's: it switches input method ([markTap]).
-        if (event.actionMasked == MotionEvent.ACTION_DOWN && markTap != null && markRight > 0 && event.x <= markRight) return true
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && markTap != null && markTouchRight() > 0 && event.x <= markTouchRight()) return true
         // A touch on the picker's items is the bar's, which draws them over the keys.
         if (event.actionMasked == MotionEvent.ACTION_DOWN && pickerTap != null && (pickerItemAt(event.x) >= 0 || onMore(event.x))) return true
         return gesture.showing || super.onInterceptTouchEvent(event)

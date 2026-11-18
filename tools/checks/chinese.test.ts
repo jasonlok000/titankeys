@@ -220,3 +220,13 @@ test("a Space touch never picks a code: only a press does, so a steer or a selec
 test("a flick with a code takes only what's pending, through the engine (owner, 2026-11-17)", () => {
   expect(ime).toContain("if (choices.state.composing && engine != null) engineState(engine.flick()) else {");
 });
+
+test("the mark over Q takes a tap over the choices row too, not only on the idle bar (owner, 2026-11-17: 耶 did nothing)", () => {
+  const right = body(strip, "markTouchRight");
+  expect(right).toContain("markRight > 0 -> markRight");
+  expect(right).toContain("(notice as? Notice.Picker)?.mark?.isNotEmpty() == true -> menuColumn(ChineseRow.MARK).second");
+  // The tap is tested before the row's own items, so the mark never falls through to a choice or to nothing.
+  const touch = body(strip, "onTouchEvent");
+  expect(touch.indexOf("markTouchRight()")).toBeGreaterThan(-1);
+  expect(touch.indexOf("markTouchRight()")).toBeLessThan(touch.indexOf("notice is Notice.Picker && pickerTap != null"));
+});

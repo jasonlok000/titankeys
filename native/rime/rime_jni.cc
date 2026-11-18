@@ -137,6 +137,14 @@ jboolean dropLast(JNIEnv*, jclass) {
   return tk::DropLast(s) ? JNI_TRUE : JNI_FALSE;
 }
 
+// What was picked of the code, and where its pending letters start (tk_predict.h).
+jstring picked(JNIEnv* env, jclass) {
+  std::lock_guard<std::mutex> guard(lock);
+  RimeSessionId s = live();
+  if (!s) return nullptr;
+  return env->NewStringUTF(tk::Picked(s).c_str());
+}
+
 // A word the keyboard typed itself, outside Rime: its next words come up (tk_predict.h).
 jboolean predictAfter(JNIEnv* env, jclass, jstring text) {
   std::lock_guard<std::mutex> guard(lock);
@@ -283,6 +291,7 @@ const JNINativeMethod kMethods[] = {
     {"pickAt", "(I)Z", (void*)pickAt},
     {"predictAfter0", "(Ljava/lang/String;)Z", (void*)predictAfter},
     {"dropLast0", "()Z", (void*)dropLast},
+    {"picked0", "()Ljava/lang/String;", (void*)picked},
     {"choiceList", "(II)[Ljava/lang/String;", (void*)choices},
     {"clear", "()V", (void*)clear},
     {"sync0", "()Z", (void*)sync},

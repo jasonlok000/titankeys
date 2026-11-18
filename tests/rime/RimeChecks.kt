@@ -166,6 +166,8 @@ private class FakeRime : RimeCalls {
     var pickedCode = ""
     var pickedText = ""
 
+    override fun picked(): Pair<String, Int> = pickedText to pickedCode.length
+
     /** As tk_predict.h's DropLast: the code pending after a pick goes; false with nothing picked or nothing pending. */
     override fun dropLast(): Boolean {
         calls += "dropLast"
@@ -750,12 +752,13 @@ fun nextWordSuggestionsFollowACommit() {
     same(listOf("NEI0+0", "NEI0+1", "NEI0+2"), engine.choices(0, 9), "the bar's row reads them as it reads a code's choices")
 }
 
+/** Space never picks a next word (owner, 2026-11-17: "space shdnt type the next word"): it's a space, and the words go. */
 fun spacePicksTheFirstSuggestion() {
     val (engine, _) = committedNei()
     val state = engine.space()
-    check(state.handled, "Space is taken while there are suggestions")
-    same("NEI0+0", state.commit, "and types the first, at the left")
-    same(listOf("NEI0+0+0", "NEI0+0+1", "NEI0+0+2"), state.choices, "and the next words follow it")
+    check(!state.handled, "Space with only next words is the keyboard's: a plain space")
+    same("", state.commit, "and types no next word")
+    same(emptyList<String>(), state.choices, "and the next words go")
     val (other, _) = committedNei()
     same("NEI0+2", other.pickAt(2).commit, "a tap or the bigger menu picks any of them")
 }
@@ -852,10 +855,10 @@ fun theBarsWordsShowAsChoices() {
  * (first word) doesn't get updated after pressed and types a space").
  */
 fun aPickedBarWordBringsItsNextWords() {
-    for (how in listOf("tap", "space")) {
+    for (how in listOf("tap")) {
         val (engine, rime) = started()
         engine.offer(listOf("你好", "我"))
-        val state = if (how == "tap") engine.pickAt(0) else engine.space()
+        val state = engine.pickAt(0)
         same("你好", state.commit, "a $how types the word, with no space")
         check("after 你好" in rime.calls, "and Rime hears of it ($how)")
         same(listOf("你好+0", "你好+1", "你好+2"), state.choices, "so its next words show ($how)")
@@ -869,13 +872,18 @@ fun theBarsWordsNeverCoverACode() {
     type(engine, "nei")
     same(EngineState.UNHANDLED, engine.offer(listOf("w")), "not while a code is typed")
     engine.space()
-    same(EngineState.UNHANDLED, engine.offer(listOf("w")), "not over Rime's own next words")
+    val topped = engine.offer(listOf("w", "NEI0+1"))
+    same(listOf("NEI0+0", "NEI0+1", "NEI0+2", "w"), topped.choices,
+        "after Rime's own next words, the bar's that aren't among them: the row is never short (owner: only 3 suggestions)")
+    same("w", engine.pickAt(3).commit, "and a tap on one of the bar's picks it")
     engine.reset()
     engine.offer(listOf("w"))
     val state = engine.key('n')
     same("n", state.typed, "a letter starts a code")
     check("w" !in state.choices, "and the offer goes")
     same(EngineState.UNHANDLED, started().first.let { e -> e.offer(listOf("w")); e.enter() }, "Enter with an offer is the keyboard's")
+    val space = started().first.let { e -> e.offer(listOf("w")); e.space() }
+    check(!space.handled && space.commit.isEmpty(), "Space with the bar's words is a plain space, picking none")
 }
 
 /**
@@ -895,6 +903,15 @@ fun aFlickKeepsWhatWasPicked() {
     same("頂你", second.commit, "the next types what was picked, less its last character")
     same("", second.code, "and nothing is left being built")
     check("reset" in rime.calls, "cleared, never committed: Rime learns nothing from it")
+    rime.calls.clear()
+    // Enter with part picked types the picked words, then the letters still pending (owner, 2026-11-17).
+    type(engine, "fai")
+    rime.pickedCode = "dingneigo"
+    rime.pickedText = "頂你個"
+    val entered = engine.enter()
+    same("頂你個fai", entered.commit, "Enter types what was picked, then the pending letters")
+    same("", entered.code, "and clears the bar")
+    rime.calls.clear()
     type(engine, "nei")
     val whole = engine.flick()
     same("", whole.commit, "with nothing picked the code goes whole, typing nothing")

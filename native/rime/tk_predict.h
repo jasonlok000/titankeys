@@ -6,6 +6,7 @@
 #ifndef TK_PREDICT_H_
 #define TK_PREDICT_H_
 
+#include <rime/candidate.h>
 #include <rime/commit_history.h>
 #include <rime/context.h>
 #include <rime/service.h>
@@ -78,6 +79,23 @@ inline bool DropLast(RimeSessionId id) {
   }
   if (picked == 0 || picked >= length) return false;
   return ctx->PopInput(length - picked);
+}
+
+// What was picked of the code being built, the selected words' text, and where the pending letters start in the input, as
+// "text	index" (Enter types both: RimeEngine.enter). "	0" with nothing picked.
+inline std::string Picked(RimeSessionId id) {
+  auto session = rime::Service::instance().GetSession(id);
+  if (!session || !session->context()) return "	0";
+  std::string text;
+  size_t end = 0;
+  for (const auto& segment : session->context()->composition()) {
+    if (segment.status < rime::Segment::kSelected) break;
+    auto candidate = segment.GetSelectedCandidate();
+    if (!candidate) break;
+    text += candidate->text();
+    end = segment.end;
+  }
+  return text + "	" + std::to_string(end);
 }
 
 }  // namespace tk

@@ -75,6 +75,10 @@ internal object StripFit {
      */
     fun baseline(line: Float, size: Float, floor: Float) = minOf(baseline(line, size), floor - size * DESCENT)
 
+    /** Aligns the mark's painted bounds to the visible capitals and keeps it above the bottom edge. */
+    fun markBaseline(capitals: Float, top: Int, bottom: Int, scale: Float, floor: Float): Float =
+        minOf(capitals - (top + bottom) * scale / 2, floor - bottom * scale)
+
     /**
      * Where a one-line text view starts its text, as its top padding with its gravity at the top, so that its baseline is the
      * line of words [lineSize] px big on the bar's [line] ([baseline], kept over [floor]), in whole pixels. Every word sits on

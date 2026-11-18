@@ -861,13 +861,6 @@ class Strip(
      * Where Shift's automatic arrow goes. [corner]: small in the corner whatever the words, as beside the language mark,
      * [after] px further right (past a mark that's small there too).
      */
-    /** The middle of English's auto-capital arrow, as [placeCapital] places it: the language mark over Q shares it (owner, 2026-11-17). */
-    private fun capitalCentre(): Float {
-        val height = capitalHeight()
-        val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
-        return minOf(line - wordPixels() * CAPITAL_LIFT, floor - arrow / 2 - dp(1))
-    }
-
     private fun placeCapital(corner: Boolean = false, after: Float = 0f): Pair<Float, Float> {
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
@@ -980,6 +973,7 @@ class Strip(
         }
 
     private val pickerText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val markInkBounds = android.graphics.Rect()
 
     /**
      * The picker (docs/languages.md, "Accents and the picker on the bar"): each item centred over its keys on the bar's line, in
@@ -996,7 +990,7 @@ class Strip(
         // The input method's mark over Q, in the accent, and P's cue when there are more choices: each kept to its key.
         if (picker.mark.isNotEmpty()) {
             pickerText.color = look.accent
-            drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)
+            drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline, alignMark = true)
         }
         if (picker.more) {
             // Orange while a code is typed: Shift opens the bigger menu.
@@ -1026,15 +1020,21 @@ class Strip(
     }
 
     /** [text] centred over key [column] on the bar's line, shrunk to the key, in [pickerText]'s colour. */
-    private fun drawOnKey(canvas: Canvas, text: String, column: Int, baseline: Float) {
+    private fun drawOnKey(canvas: Canvas, text: String, column: Int, baseline: Float, alignMark: Boolean = false) {
         val left = maxOf(menuColumn(column).first, side.toFloat())
         val right = minOf(menuColumn(column).second, (width - side).toFloat())
         val room = right - left - dp(4)
         val textWidth = pickerText.measureText(text)
         val scale = if (textWidth > room && textWidth > 0f) room / textWidth else 1f
+        val y = if (alignMark) {
+            pickerText.getTextBounds("H", 0, 1, markInkBounds)
+            val capitals = baseline + markInkBounds.exactCenterY()
+            pickerText.getTextBounds(text, 0, text.length, markInkBounds)
+            StripFit.markBaseline(capitals, markInkBounds.top, markInkBounds.bottom, scale, floor)
+        } else baseline
         canvas.save()
-        canvas.scale(scale, scale, (left + right) / 2, baseline)
-        canvas.drawText(text, (left + right) / 2 - textWidth / 2, baseline, pickerText)
+        canvas.scale(scale, scale, (left + right) / 2, y)
+        canvas.drawText(text, (left + right) / 2 - textWidth / 2, y, pickerText)
         canvas.restore()
     }
 
@@ -1073,9 +1073,6 @@ class Strip(
         pickerText.typeface = typeface
         pickerText.textSize = wordPixels()
         pickerText.color = look.accent
-        // Centred on the line English's auto-capital arrow is centred on (owner, 2026-11-17: "match the vertical positioning
-        // center with the auto cap in english"), not on the words' baseline.
-        val baseline = capitalCentre() - (pickerText.ascent() + pickerText.descent()) / 2
         if (markIsSmall()) {
             canvas.save()
             val x = side.toFloat() / 2 + dp(2)
@@ -1084,7 +1081,8 @@ class Strip(
             canvas.restore()
             return
         }
-        drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)
+        val baseline = StripFit.baseline(line, pickerText.textSize, floor)
+        drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline, alignMark = true)
         // Only the mark drawn over Q is touched: small in the corner, a touch there is the left word's.
         markRight = menuColumn(ChineseRow.MARK).second
     }

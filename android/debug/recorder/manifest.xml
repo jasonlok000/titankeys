@@ -46,6 +46,8 @@
         <!-- Private, bounded own-surface PNG capture/readback. No display capture. -->
         <receiver android:name="com.titankeys.keyboard.OwnSurfaceCapture"
             android:exported="true" android:permission="android.permission.DUMP" />
+        <receiver android:name="com.titankeys.keyboard.TestScreenLease"
+            android:exported="true" android:permission="android.permission.DUMP" />
         <!-- The phone run's progress as one silent notification (RunStatus.kt). Only adb can send to it. -->
         <receiver
             android:name="com.titankeys.keyboard.RunStatus"

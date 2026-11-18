@@ -17,8 +17,6 @@ const status = (done: boolean) => done ? "Done" : "To do";
 /** Optional steps show what they are, never Done or To do, so they never make setup look unfinished (#87). */
 const onOff = (on: boolean) => on ? "On" : "Off";
 
-/** The step names the mode (owner, 2026-11-13: "turn on scroll assistant, let's specify mode 1"). */
-export const scrollAssistantStep = "Turn on Scroll assistant, Sliding Mode 1";
 export const overlayListNote = "Android opened its whole list. Find TitanKeys Keyboard in it, open it and flip the switch.";
 export const backListNote = "Android opened its whole list. Find TitanKeys Keyboard in it and turn it on.";
 // The line that stays at the top of Settings > Setup on phones other than the Titan 2 Elite (#75).
@@ -38,6 +36,8 @@ export default function Setup() {
   if (result.status !== "ready") return <Screen title="Setup" />;
   const settings = result.data;
   const outside = settings.outsideSlidingMode;
+  const scrollAssistantStep = !settings.scrollAssistant ? "Turn on Scroll assistant, Sliding Mode 1"
+    : outside.length ? `Put ${names(outside)} on Sliding Mode 1` : "Scroll assistant, Sliding Mode 1";
   return <Screen title="Setup" subtitle="Make every step say Done. Each one opens the right page.">
     {otherPhone(settings) && <Note>{otherPhoneNote}</Note>}
     <Section title="Steps">

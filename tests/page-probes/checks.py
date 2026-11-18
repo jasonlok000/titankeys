@@ -16,6 +16,96 @@ def node(text='', **extra):
 
 
 class ProbeTests(unittest.TestCase):
+    def test_open_language_requires_destination_state(self):
+        ui = PageUI(Mock(), sleep=lambda _: None)
+        ui.open_list = Mock()
+        ui.tap = Mock()
+        ui.snapshot = Mock(return_value=[])
+        def find(label, kind=None):
+            if label == 'Try it':
+                raise Missing('Still on list')
+            return node(label)
+        ui.find = Mock(side_effect=find)
+        with patch('page_probe.assets', return_value=({'page': {'tryIt': 'Try it', 'moved': 'Moved'}}, {}, None)):
+            with self.assertRaises(Missing):
+                ui.open_language('Português')
+        ui.tap.assert_called_once()
+
+    def test_variant_requires_persisted_selection(self):
+        ui = PageUI(Mock())
+        ui.variant_options = Mock(return_value=({'pt-PT': node('Portugal')}, 'pt-BR'))
+        ui.tap = Mock()
+        with self.assertRaisesRegex(Missing, 'did not persist'):
+            ui.set_variant('pt', 'pt-PT')
+        self.assertEqual(ui.variant_options.call_count, 2)
+
+    def test_selected_variant_read_back_without_mutation(self):
+        ui = PageUI(Mock())
+        ui.variant_options = Mock(return_value=({'pt-PT': node('Portugal')}, 'pt-PT'))
+        ui.tap = Mock()
+        self.assertEqual(ui.set_variant('pt', 'pt-PT'), 'pt-PT')
+        ui.tap.assert_not_called()
+        self.assertEqual(ui.variant_options.call_count, 2)
+
+    def test_variant_options_need_one_selected_radio(self):
+        ui = PageUI(Mock())
+        ui.open_language = Mock()
+        ui.tap = Mock()
+        im = {'name': 'Português', 'script': 'Latn', 'variants': [{'id': 'pt-BR', 'name': 'Brasil'}, {'id': 'pt-PT', 'name': 'Portugal'}]}
+        ui.find = Mock(side_effect=lambda label, kind: node(label, checked='false'))
+        with patch('page_probe.assets', return_value=({'settings': {'variant': 'Spelling'}}, {}, lambda _: im)):
+            with self.assertRaisesRegex(Missing, 'exactly one'):
+                ui.variant_options('pt')
+        self.assertEqual(ui.find.call_args_list[-1].args, ('Portugal', 'choice'))
+
+    def test_howto_uses_current_generated_points(self):
+        ui = PageUI(Mock())
+        ui.open_language = Mock()
+        ui.find = Mock()
+        im = {'name': 'Español', 'script': 'Latn', 'guide': {'family': 'latin', 'points': ['Current one', 'Current two']}}
+        with patch('page_probe.assets', return_value=({'page': {'how': 'How it works'}, 'points': {}}, {}, lambda _: im)):
+            self.assertEqual(ui.howto('es'), im['guide']['points'])
+        self.assertEqual([c.args[0] for c in ui.find.call_args_list], ['How it works', *im['guide']['points']])
+
+    def test_scroll_uses_owned_container_bounds(self):
+        ui = PageUI(Mock(), sleep=lambda _: None)
+        ui.own = Mock()
+        ui.scroll([node('body', scrollable='true', bounds='[100,200][500,800]')], True)
+        ui.c.adb.assert_called_once_with('shell', 'input', 'swipe', '300', '650', '300', '350', '350')
+
+
+    def portuguese_batch(self):
+        import importlib.util
+        fake_checks = SimpleNamespace(APP=APP, Stop=RuntimeError, adb=Mock(), play=Mock(), record=Mock())
+        imports = {'checks': fake_checks, 'guide_checks': Mock(), 'interactions_batch': Mock(),
+                   'language_checks': Mock(), 'languages': Mock(), 'retest_batch': Mock()}
+        path = Path(__file__).resolve().parents[2] / 'tools/dev/touch/pt_spelling_batch.py'
+        spec = importlib.util.spec_from_file_location('pt_fixture', path)
+        module = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, imports):
+            spec.loader.exec_module(module)
+        return module
+
+    def test_portuguese_failed_selection_never_types_default(self):
+        batch = self.portuguese_batch()
+        with patch.object(batch, 'pick', return_value=False), patch.object(batch, 'offers') as offers:
+            batch.check_brasil()
+            batch.check_portugal()
+            offers.assert_not_called()
+
+    def test_portuguese_restores_original_even_after_failed_selection(self):
+        batch = self.portuguese_batch()
+        ui = Mock()
+        ui.variant_options.return_value = ({}, 'pt-PT')
+        ui.set_variant.side_effect = [Missing('not persisted'), None]
+        with patch('page_probe.PageUI', return_value=ui):
+            self.assertFalse(batch.pick('pt-BR'))
+            self.assertEqual(batch._original_variant, 'pt-PT')
+            batch.finish()
+        self.assertEqual(ui.set_variant.call_args.args, ('pt', 'pt-PT'))
+        self.assertIsNone(batch._original_variant)
+
+
     def test_exact_accented_accessible_label(self):
         rows = parse_nodes(f'<hierarchy><node package="{APP}" text="Português" clickable="true" bounds="[1,2][3,4]"/></hierarchy>')
         self.assertTrue(matches(rows[0], 'Português', 'action'))

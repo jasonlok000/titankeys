@@ -32,39 +32,17 @@ def screen_dump():
 
 
 def check_spanish_howto():
-    """Settings > Languages > Español: its how-to. Taps only while TitanKeys Debug is in front, as the languages-page check."""
-    def step(*command):
-        if f" {APP}/" not in languages.front():
-            raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
-        adb("shell", "input", *command)
-        time.sleep(1.5)
+    from page_probe import Missing, PageUI, Unobservable
+    ui = PageUI(checks)
     retest_batch.own_screen()
-    adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
-    time.sleep(3)
     try:
-        retest_batch.open_settings(step)
-        x, y = retest_batch.row_at("Languages") or (540, 452)
-        step("tap", str(x), str(y))
-        row = None
-        for _ in range(10):  # by script, Latin's long: scroll down until Español shows
-            row = retest_batch.row_at("Español")
-            if row:
-                break
-            step("swipe", "540", "950", "540", "350", "400")
-        if not row:
-            return record("howto-es", None, "no Español row found on Settings > Languages", guide_checks.shot("howto-es"))
-        step("tap", str(row[0]), str(row[1]))
-        xml = screen_dump()
-        shot = guide_checks.shot("howto-es")
-        found = HOWTO in xml or HOWTO.replace("ñ", "&#241;") in xml
-        # Ink may draw the page's text itself, out of the dump's reach: then the shot says.
-        record("howto-es", True if found else None,
-               f"the how-to {'read from the dump' if found else 'not in the dump: see the shot'}", shot)
-    finally:
-        for _ in range(4):
-            if f" {APP}/" in languages.front() and not languages.in_field():
-                adb("shell", "input", "keyevent", "4")
-                time.sleep(1)
+        lines = ui.howto('es')
+        record('howto-es', True, f'{len(lines)} current Spanish how-to points found on its language page',
+               guide_checks.shot('howto-es'))
+    except Missing as error:
+        record('howto-es', False, str(error))
+    except Unobservable as error:
+        record('howto-es', None, str(error))
 
 
 def first_switch(im, line, name):

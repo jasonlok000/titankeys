@@ -107,6 +107,8 @@ class PageUI:
         self.c.adb('shell', 'am', 'start', '-W', '-n', APP + '/com.vandam.ink.MainActivity',
                    '--es', 'com.vandam.ink.notification.HREF', '/settings/languages')
         self.sleep(1)
+        wording = assets()[0]
+        self.find(wording['list']['limit'].replace('{max}', '4'))
 
     def scroll(self, nodes, down):
         scrolls = [n for n in nodes if n.get('scrollable') == 'true']
@@ -157,11 +159,50 @@ class PageUI:
         self.open_list()
         self.tap(self.find(label, 'action'))
         self.find(label)
+        self.find(assets()[0]['page']['tryIt'])
         # The page itself acknowledges its one-time onboarding note on entry.
         # Record ordinary navigation behavior; do not edit that preference.
         moved = assets()[0]['page']['moved']
         if any(matches(n, moved) for n in self.snapshot()):
             self.navigation_notes.append('one-time typing-settings note displayed and acknowledged by the page')
+
+    def howto(self, method_id):
+        wording, _, method = assets()
+        im = method(method_id)
+        self.open_language(shown_name(im))
+        self.find(wording['page']['how'])
+        guide = im.get('guide', {})
+        lines = guide.get('points') or wording['points'].get(guide.get('family'), [])
+        if not lines:
+            raise Unobservable('No generated how-to points for ' + method_id)
+        for line in lines:
+            self.find(line)
+        return lines
+
+    def variant_options(self, method_id):
+        wording, _, method = assets()
+        im = method(method_id)
+        self.open_language(shown_name(im))
+        self.tap(self.find(wording['settings']['variant'], 'action'))
+        options = {v['id']: self.find(v['name'], 'choice') for v in im['variants']}
+        selected = [identifier for identifier, node in options.items()
+                    if node.get('checked') == 'true' or node.get('selected') == 'true']
+        if len(selected) != 1:
+            raise Missing('Spelling page does not expose exactly one selected region')
+        return options, selected[0]
+
+    def set_variant(self, method_id, variant):
+        options, before = self.variant_options(method_id)
+        if variant not in options:
+            raise Unobservable('Unknown spelling variant')
+        if before != variant:
+            self.tap(options[variant])
+        # Re-open: a tap may navigate back, and persistence must survive that.
+        _, after = self.variant_options(method_id)
+        if after != variant:
+            raise Missing('Spelling selection did not persist: wanted ' + variant + ', got ' + after)
+        return before
+
 
     def binding(self, method_id):
         self.own()

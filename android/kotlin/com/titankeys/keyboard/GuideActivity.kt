@@ -2246,7 +2246,7 @@ class GuideActivity : Activity() {
         hideHint()
         // The Space-tap slides count their taps from nothing; the raw log notes the slide (#90).
         tapMeter = (step.cue as? GuideCue.Taps)?.let { TapMeter(it.count) }
-        keys.taps(0, false)
+        keys.taps(null)
         logMark(GuideLog.SLIDE, step.id)
         liveShown = null
         panelHintShown = null
@@ -3582,7 +3582,7 @@ class GuideActivity : Activity() {
             if (tap && first != null && !CursorGesture.inZone(first[0], first[1]) && flow.stage == 0 && !passed && !settingUp)
                 missed(GuideMiss.Beside, tapMissLine(GuideMiss.Beside, meter.taps))
         }
-        meter?.let { keys.taps(it.landed, it.held) }
+        if (meter != null && (reset || lifted)) keys.taps(meter)
     }
 
     /** Says what a miss was, as a chip, and notes it in the raw log. */
@@ -3877,10 +3877,12 @@ class GuideActivity : Activity() {
             }
             // The drawing of the keys doesn't copy the panel: the real panel is on the screen. See ModifierState above.
             is KeyboardEvent.PanelFace -> Unit
-            // The last tap stayed down: the drawing lights every step (#90).
+            // Show the slide cue only when the lesson's own mode has started.
             is KeyboardEvent.CursorStarted -> tapMeter?.let {
-                it.hold()
-                keys.taps(it.landed, it.held)
+                if (event.words == (it.taps >= 3)) {
+                    it.hold(SystemClock.uptimeMillis())
+                    keys.taps(it, flow.tapSlideLeft)
+                }
             }
             is KeyboardEvent.Recognised -> if (!playground && event.words.isNotEmpty()) coachSwipe()
             // On the slide about the bar, every swipe comes out wrong, so that there is always something to fix with one tap.
@@ -4164,7 +4166,7 @@ class GuideActivity : Activity() {
     /** The slide moved on, or back, to another instruction: only that one shows, and the ghost follows it. */
     private fun showStage() {
         tapMeter?.reset()
-        keys.taps(0, false)
+        keys.taps(null)
         startHunt()
         hideHint()
         hideChip(now = true)

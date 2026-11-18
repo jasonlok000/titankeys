@@ -910,3 +910,7 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Orange animation (owner): the glass fills to the supporter's cumulative cups (coffee and juice cost the same, about $5 a cup) and overfills with a spill past one cup.
 - Custom support amount (owner): the one-time row gets "Custom", a $1 Play product bought in any quantity (Play multi-quantity) through an in-app slider in dollars and cups; fallback, a ladder of fixed tips the slider snaps to. Subscriptions stay at three tiers.
 - Key preview for every input method (owner): the resting-finger preview from Cangjie/Quick generalised through the guide key maps (Korean ㅂ on Q, Russian й…), one code path; the "Key preview" setting is on by default where keys differ from their printed letters (Codex T3e).
+
+## Codex cursor lessons, November 18
+
+- Both cursor lessons give numbered taps and the held tap the same full highlight. The previous taps go dark when their timing expires or when the mode starts. After activation, the thumb slides toward the lesson's marked word or range. The cursor lesson usually points left, and selection follows the range, matching the on-screen instruction.

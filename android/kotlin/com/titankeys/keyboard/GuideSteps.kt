@@ -2259,11 +2259,15 @@ internal class GuideFlow(
     val modeLine: String? get() {
         val taps = step.cue as? GuideCue.Taps ?: return null
         if (!taps.drag || memory.stage != 1) return null
+        return modeStartLine(words = taps.count >= 3, left = tapSlideLeft)
+    }
+
+    val tapSlideLeft: Boolean get() {
+        val taps = step.cue as? GuideCue.Taps ?: return true
         val aim = memory.target
         val at = memory.cursor
         // With nothing marked or no cursor known, the words to the left, as the cursor slide marks them.
-        val left = if (aim == null || at < 0) true else if (taps.count >= 3) aim.last < at else aim.first < at
-        return modeStartLine(words = taps.count >= 3, left = left)
+        return if (aim == null || at < 0) true else if (taps.count >= 3) aim.last < at else aim.first < at
     }
     val cue get() = step.stages.getOrNull(memory.stage)?.cue ?: step.cue
     /** What the drawing of the keys shows on its keys now, if anything. See [GuideStage.labels]. */

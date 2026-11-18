@@ -34,6 +34,13 @@ placeholders for the prices. Nothing here guilt-trips, and nothing claims "best"
 - About 1/5 of a cup
 - About 2/5 of a cup
 
+**Custom, on the one-time row** (Play's multi-quantity, $1 units):
+
+- **Button:** Pick your own
+- **Sheet title:** How much juice?
+- **Slider readout:** ${n} · about {cups} cups, with friendly fractions ("1 2/5"), and "about 1 cup" for one.
+- **Over 5 cups:** That's a jug. I'll need a bigger table.
+
 **Thank-you, after paying** (`{drink}` follows the tier: "this sip", "this fifth of a cup" or "these two fifths of a cup"):
 
 The tiers: the lowest price Play allows, then $1 and $2, with Play's rounding in local currency. A cup is about $5.

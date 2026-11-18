@@ -907,3 +907,9 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 
 - Owner: In Chrome's address bar, "the middle word shd stay whats supposed to be typedout after pressing space." Keep a correction available as a side choice when appropriate. Check the middle against the exact text committed by Space.
 - In Maps, the owner tapped the first suggestion after typing "testing" and saw an unrelated suggestion briefly. Check both the left slot and the top-ranked middle slot because "first" can refer to either. Capture each row through the tap in the Debug test field with Maps' editor flags. Keep the existing recording exclusions for the owner's Maps searches.
+
+## Codex (2026-11-18, partial Chinese code and mark alignment)
+
+- Owner: "first flick it should remove the not typed out words" in a partially picked composition. The second delete flick clears the remaining keycode and picked portion without committing either to the field. The third flick works on the existing text in the field. Check the editor text after each flick, including with text already there.
+- Owner: "the input method e.g. 耶 isn't centered vertically against the upper case of the other words." Use the visible capitals as the alignment reference. The owner will choose an offset on a phone mockup. No final offset has been chosen.
+- The suggestion flash can occur with Chinese in ChatGPT as well as in Maps. Cover a Chinese candidate pick in an ordinary chat field.

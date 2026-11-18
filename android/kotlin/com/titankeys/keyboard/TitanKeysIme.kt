@@ -3766,7 +3766,7 @@ class TitanKeysIme : InputMethodService() {
         val open = openPicker() as? LanguagePicker.Choices ?: return false
         val down = (points.last().y - points.first().y) * 4
         val across = (points.last().x - points.first().x) * 10
-        val swipe = ChineseKeys.swipe(across, down, choicesMenuOpen)
+        val swipe = ChineseKeys.swipe(across, down, choicesMenuOpen, choicesMenu?.onFirstPage == true)
         choicesLog("swipe: %.2f keys across, %.2f rows down, %d ms: %s%s".format(across, down,
             points.last().time - points.first().time, swipe, if (open.items.isEmpty()) ", but no choices to show" else ""))
         when (swipe) {
@@ -3774,6 +3774,7 @@ class TitanKeysIme : InputMethodService() {
             ChineseKeys.Swipe.OpenMenu -> if (open.more) openChoicesMenu()
             ChineseKeys.Swipe.NextPage -> if (choicesMenu?.next() == true) haptics.play(Haptic.PanelPage)
             ChineseKeys.Swipe.PageBefore -> if (choicesMenu?.previous() == true) haptics.play(Haptic.PanelPage)
+            ChineseKeys.Swipe.CloseMenu -> closeChoicesMenu()
             ChineseKeys.Swipe.Nothing -> {}
         }
         return true

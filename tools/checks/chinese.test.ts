@@ -75,7 +75,8 @@ test("hold for symbols is back in Chinese: the letter leaves the code, the symbo
 
 test("a swipe up opens the bigger menu, a page turn's length, each logged; no flick picks, and the row never pages", () => {
   const swipes = body(ime, "pageChoices");
-  expect(swipes).toContain("val swipe = ChineseKeys.swipe(across, down, choicesMenuOpen)");
+  expect(swipes).toContain("val swipe = ChineseKeys.swipe(across, down, choicesMenuOpen, choicesMenu?.onFirstPage == true)");
+  expect(swipes).toContain("ChineseKeys.Swipe.CloseMenu -> closeChoicesMenu()");
   // In every input method with choices on the bar (owner, 2026-11-17: "Also for other relevant language"); Korean has none.
   expect(swipes).toContain("ChineseKeys.Swipe.OpenMenu -> if (open.more) openChoicesMenu()");
   expect(swipes).not.toContain("usesBar");

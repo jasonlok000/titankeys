@@ -133,6 +133,10 @@ fun aSwipeUpOpensTheMenu() {
     // With the menu open, up and down turn its pages, as on the Sym panel.
     same(ChineseKeys.Swipe.NextPage, ChineseKeys.swipe(across = 0f, down = -0.8f, menuOpen = true), "up: the next page")
     same(ChineseKeys.Swipe.PageBefore, ChineseKeys.swipe(across = 0f, down = 0.8f, menuOpen = true), "down: the page before")
+    same(ChineseKeys.Swipe.CloseMenu, ChineseKeys.swipe(across = 0f, down = 0.8f, menuOpen = true, firstPage = true),
+        "down on the first page closes the menu, as Shift does (owner, 2026-11-17)")
+    same(ChineseKeys.Swipe.NextPage, ChineseKeys.swipe(across = 0f, down = -0.8f, menuOpen = true, firstPage = true),
+        "up on the first page still turns to the next")
     same(nothing, ChineseKeys.swipe(across = 2f, down = 0.5f, menuOpen = true), "sideways turns no page")
 }
 

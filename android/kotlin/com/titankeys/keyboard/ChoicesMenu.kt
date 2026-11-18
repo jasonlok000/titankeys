@@ -93,6 +93,9 @@ class ChoicesMenu(
     }
 
     /** Turns to the page before. False on the first. */
+    /** True on the menu's first page, where there's no page before. */
+    val onFirstPage get() = !hasPrevious
+
     fun previous(): Boolean {
         if (!hasPrevious) return false
         starts.removeAt(starts.size - 1)

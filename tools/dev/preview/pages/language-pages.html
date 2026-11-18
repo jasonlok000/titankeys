@@ -16,7 +16,8 @@
   :root { --bg: #000; --surface: #161210; --divider: #2A2623; --ink: #FFF1E6; --muted: #99918A; --accent: #F07C4A; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 Inter, system-ui, sans-serif; }
-  main { max-width: 430px; margin: 0 auto; padding: 18px 16px 40px; }
+  /* The Titan's square screen, as the app's own pages lay out: full width, the same side margins as Settings. */
+  main { margin: 0; padding: 18px 60px 40px; }
   .back { color: var(--muted); font-size: 22px; }
   header h1 { margin: 10px 0 2px; font-size: 32px; font-weight: 700; }
   header .english { color: var(--muted); }
@@ -119,6 +120,10 @@
 </script>
 
 <script>
+// The first tap anywhere fills the screen (Chrome needs a tap for that), so the page shows as the app would.
+document.addEventListener("click", () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+}, { once: false });
 const pages = JSON.parse(document.getElementById("pages").textContent);
 const id = new URLSearchParams(location.search).get("lang") || "ko";
 const data = pages[id] || pages.ko;

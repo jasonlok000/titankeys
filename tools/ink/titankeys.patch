@@ -44,7 +44,7 @@ index 668ee33..43a4093 100644
  }
  
 diff --git a/crates/ink-core/src/lib.rs b/crates/ink-core/src/lib.rs
-index 3999e45..35e86ab 100644
+index 3999e45..5e9140e 100644
 --- a/crates/ink-core/src/lib.rs
 +++ b/crates/ink-core/src/lib.rs
 @@ -102,6 +102,37 @@ const DEFAULT_ICON_SIZE: f32 = 28.0;
@@ -555,7 +555,45 @@ index 3999e45..35e86ab 100644
                  Rect { y: text_y + text_height, height: subtitle_height, ..label_rect });
          }
          for run in &mut self.scene.text[start..] {
-@@ -6052,7 +6212,7 @@ fn invert_colour(colour: Colour) -> Colour {
+@@ -5890,6 +6050,37 @@ impl Engine {
+         PressTarget { node, role }
+     }
+ 
++    /// What can be pressed on screen now, for Android's accessibility (screen readers, uiautomator): one line per press region,
++    /// "x\ty\twidth\theight\tlabel" in screen pixels, the label being the text drawn inside it. Regions scrolled out of view
++    /// are left out. TitanKeys (tools/ink/titankeys.patch).
++    pub fn accessible_nodes(&self) -> String {
++        let mut lines = Vec::new();
++        for region in &self.hit_regions {
++            let shift = if region.scrolling { self.scroll_origin - self.scroll_offset } else { 0.0 };
++            let rect = Rect { y: region.rect.y + shift, ..region.rect };
++            if region.scrolling
++                && let Some(clip) = self.scene.scroll_clip
++                && (rect.y + rect.height <= clip.y || rect.y >= clip.y + clip.height)
++            {
++                continue;
++            }
++            let mut label = self
++                .scene
++                .text
++                .iter()
++                .filter(|run| run.scrolling == region.scrolling && !run.text.trim().is_empty())
++                .filter(|run| region.rect.contains(run.rect.x + run.rect.width / 2.0, run.rect.y + run.rect.height / 2.0))
++                .map(|run| run.text.replace(['\t', '\n'], " "))
++                .collect::<Vec<_>>()
++                .join(" ");
++            if label.is_empty() && matches!(region.action, Action::Back) {
++                label = "Back".to_owned();
++            }
++            lines.push(format!("{}\t{}\t{}\t{}\t{}", rect.x, rect.y, rect.width, rect.height, label));
++        }
++        lines.join("\n")
++    }
++
+     fn hit_region_at(&self, x: f32, y: f32) -> Option<&HitRegion> {
+         self.hit_regions.iter().rev().find(|region| {
+             if region.scrolling && !self.scene.scroll_clip.is_some_and(|clip| clip.contains(x, y)) {
+@@ -6052,7 +6243,7 @@ fn invert_colour(colour: Colour) -> Colour {
  
  fn tone_colour(tone: Tone) -> Colour {
      match tone {
@@ -923,8 +961,86 @@ index 9f7305d..8d9d6b9 100644
      </application>
      <queries>
          <package android:name="${inkLightServerPackage}" />
+diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
+index 76930fe..935bcbb 100644
+--- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
++++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
+@@ -2,6 +2,8 @@ package com.vandam.ink
+ 
+ import android.content.Context
+ import android.graphics.PixelFormat
++import android.graphics.Rect
++import android.os.Bundle
+ import android.os.Handler
+ import android.os.Looper
+ import android.util.Log
+@@ -13,6 +15,8 @@ import android.view.SurfaceView
+ import android.view.VelocityTracker
+ import android.view.View
+ import android.view.ViewConfiguration
++import android.view.accessibility.AccessibilityNodeInfo
++import android.view.accessibility.AccessibilityNodeProvider
+ import android.widget.OverScroller
+ import kotlin.math.abs
+ 
+@@ -152,6 +156,55 @@ internal class InkHost(context: Context, private val callbacks: Callbacks, priva
+     }
+ 
+     inner class InkSurfaceView(context: Context) : SurfaceView(context) {
++        // Ink draws every row, button and switch itself, so Android sees none of them: this lists what can be pressed, each with
++        // the text drawn on it, for screen readers and uiautomator, and presses it on request (TitanKeys).
++        private var accessibleNodes: List<Pair<Rect, String>> = emptyList()
++        private val accessibility = object : AccessibilityNodeProvider() {
++            override fun createAccessibilityNodeInfo(virtualViewId: Int): AccessibilityNodeInfo? {
++                if (virtualViewId == View.NO_ID) {
++                    val info = AccessibilityNodeInfo(this@InkSurfaceView)
++                    onInitializeAccessibilityNodeInfo(info)
++                    accessibleNodes = if (handle == 0L) emptyList() else InkNative.nativeAccessibleNodes(handle).lines().mapNotNull { line ->
++                        val parts = line.split('\t', limit = 5)
++                        if (parts.size < 5) return@mapNotNull null
++                        val (x, y, w, h) = parts.take(4).map { it.toFloatOrNull() ?: return@mapNotNull null }
++                        Rect(x.toInt(), y.toInt(), (x + w).toInt(), (y + h).toInt()) to parts[4]
++                    }
++                    accessibleNodes.indices.forEach { info.addChild(this@InkSurfaceView, it) }
++                    return info
++                }
++                val (bounds, label) = accessibleNodes.getOrNull(virtualViewId) ?: return null
++                val info = AccessibilityNodeInfo(this@InkSurfaceView, virtualViewId)
++                info.setParent(this@InkSurfaceView)
++                info.packageName = context.packageName
++                info.className = android.widget.Button::class.java.name
++                info.setBoundsInParent(bounds)
++                val origin = IntArray(2).also { getLocationOnScreen(it) }
++                info.setBoundsInScreen(Rect(bounds).apply { offset(origin[0], origin[1]) })
++                info.contentDescription = label
++                info.text = label
++                info.isEnabled = true
++                info.isVisibleToUser = true
++                info.isClickable = true
++                info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK)
++                return info
++            }
++
++            override fun performAction(virtualViewId: Int, action: Int, arguments: Bundle?): Boolean {
++                if (virtualViewId == View.NO_ID) return performAccessibilityAction(action, arguments)
++                val (bounds) = accessibleNodes.getOrNull(virtualViewId) ?: return false
++                if (action != AccessibilityNodeInfo.ACTION_CLICK || handle == 0L) return false
++                val x = bounds.exactCenterX()
++                val y = bounds.exactCenterY()
++                InkNative.nativePointer(handle, MotionEvent.ACTION_DOWN, 0, x, y)
++                InkNative.nativePointer(handle, MotionEvent.ACTION_UP, 0, x, y)
++                postFrame()
++                return true
++            }
++        }
++
++        override fun getAccessibilityNodeProvider(): AccessibilityNodeProvider = accessibility
++
+         private val longPresses = mutableMapOf<Int, Runnable>()
+         private val touchStarts = mutableMapOf<Int, Pair<Float, Float>>()
+ 
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
-index aa4bc3b..234c7ad 100644
+index aa4bc3b..abbffc8 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
 @@ -17,6 +17,10 @@ internal object InkNative {
@@ -938,6 +1054,17 @@ index aa4bc3b..234c7ad 100644
  
      @JvmStatic
      external fun nativeTakeJavaScriptError(handle: Long): String?
+@@ -130,6 +134,10 @@ internal object InkNative {
+     @JvmStatic
+     external fun nativeRender(handle: Long): String
+ 
++    /** What can be pressed now, a line each: x, y, width, height and label, tab-separated, in pixels (TitanKeys). */
++    @JvmStatic
++    external fun nativeAccessibleNodes(handle: Long): String
++
+     @JvmStatic
+     external fun nativeInstallSystemGlyph(
+         handle: Long,
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 index 46ad203..0688f9a 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
@@ -1110,7 +1237,7 @@ index eb0a9b2..c293366 100644
      override fun dismiss(): Boolean {
          if (!active) return false
 diff --git a/platform/android/native/src/android.rs b/platform/android/native/src/android.rs
-index 0c6ae7c..20f27d7 100644
+index 0c6ae7c..f806e17 100644
 --- a/platform/android/native/src/android.rs
 +++ b/platform/android/native/src/android.rs
 @@ -761,6 +761,41 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeResize(
@@ -1155,6 +1282,24 @@ index 0c6ae7c..20f27d7 100644
  #[unsafe(no_mangle)]
  pub extern "system" fn Java_com_vandam_ink_InkNative_nativeSetViewportScale(
      _env: EnvUnowned<'_>,
+@@ -932,6 +967,17 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeScrollBy(
+         .is_some_and(|mut engine| engine.scroll_by(delta)) as jboolean
+ }
+ 
++#[unsafe(no_mangle)]
++pub extern "system" fn Java_com_vandam_ink_InkNative_nativeAccessibleNodes<'local>(
++    mut env: EnvUnowned<'local>,
++    _class: JClass<'local>,
++    handle: jlong,
++) -> JString<'local> {
++    let value = engine(handle).map(|engine| engine.lock_arc().engine.accessible_nodes()).unwrap_or_default();
++    env.with_env(|env| env.new_string(value))
++        .resolve::<jni::errors::ThrowRuntimeExAndDefault>()
++}
++
+ #[unsafe(no_mangle)]
+ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeRender<'local>(
+     mut env: EnvUnowned<'local>,
 diff --git a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 index 2b6b330..9435f8c 100644
 --- a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt

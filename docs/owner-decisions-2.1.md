@@ -886,3 +886,4 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   - Fragments and news noise are filtered from word lists and next words (C).
   - Yale: the low-tone h is optional; ng/zero, gw/g and kw/k lazy sounds; 冇 over 無; junk demoted; 說/啟 in zh_hk; 嗰 kept in simplified; natural starters (B).
   - How-to fixes: no profanity showcase; no promised corrections where there are none; where the Thai digits are (F).
+- Language pages mockup: owner likes the layout. "How it works" goes above "The keys"; Cantonese's keys show Shift, Sym, Enter, Space and Backspace roles, not just letters (E). Owner: in Chinese's bigger menu, a swipe down on the first page closes it (B).

@@ -2860,6 +2860,7 @@ fun main() {
     ownerTypos(world)
     singleLetters(world)
     spaceTypesTheMiddleWord(world)
+    spaceNeverTypesAPrediction(world)
     heldBackspaceRepeats(world)
     capitalI(world)
     apostrophes(world)
@@ -2967,4 +2968,27 @@ private fun heldBackspaceRepeats(world: Realistic) {
         typist.settle()
         same(typist.text, line.dropLast(20), "Held Backspace: 20 repeats delete 20 letters (${if (settled) "each reported" else "reports after"})")
     }
+}
+
+/**
+ * The owner's rule for every language (2026-11-17): Space picks a bar word only while a word is being typed. With only next words
+ * or starters on the bar, Space types a space and picks nothing. In English, and in another language through its own words.
+ */
+private fun spaceNeverTypesAPrediction(world: Realistic) {
+    val next = listOf("world", "there", "everyone")
+    val english = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = next }).type("so hello ")
+    must(english.bar.isNotEmpty(), "English: the next words are on the bar (bar ${english.bar})")
+    same(english.type(" ").text, "so hello  ", "English: Space after a word types a space, never a next word (bar ${english.bar})")
+    val starts = Typist(world, words = FakeWords(Lists(world.words)).also { it.completions = next })
+    same(starts.type(" ").text, " ", "English: Space in an empty field types a space, never a starter")
+    val folder = File("android/assets/im/es")
+    if (!folder.isDirectory) return
+    val method = com.titankeys.keyboard.InputMethod.parse(File(folder, "im.json").readText())
+    val list = File(folder, method.words!!).useLines { com.titankeys.keyboard.WordList.read(it, method.javaLocale) }
+    val spanish = com.titankeys.keyboard.LanguageWords(FakeWords(Lists(world.words)), { list }).also {
+        it.other = true
+        it.starters = listOf("Hola", "Gracias")
+    }
+    val typist = Typist(world, autocorrect = null, composerWords = spanish).type("pero hola ")
+    same(typist.type(" ").text, "pero hola  ", "Spanish: Space after a word types a space, never a next word (bar ${typist.bar})")
 }

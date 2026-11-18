@@ -69,5 +69,65 @@
   "howTo": [
     "Each key types the letter that sounds like it: A is а, B is б, D is д. The odd ones: Q is ч, W is ш, X is ж, Y is ъ. Hold M for ю or ь, and P for я or щ.",
     "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "cyrillic",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "a": "а",
+        "b": "б",
+        "c": "ц",
+        "d": "д",
+        "e": "е",
+        "f": "ф",
+        "g": "г",
+        "h": "х",
+        "i": "и",
+        "j": "й",
+        "k": "к",
+        "l": "л",
+        "m": "м",
+        "n": "н",
+        "o": "о",
+        "p": "п",
+        "q": "ч",
+        "r": "р",
+        "s": "с",
+        "t": "т",
+        "u": "у",
+        "v": "в",
+        "w": "ш",
+        "x": "ж",
+        "y": "ъ",
+        "z": "з"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "accents"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

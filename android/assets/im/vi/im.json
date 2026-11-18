@@ -37,5 +37,37 @@
   ],
   "howTo": [
     "Type in Telex. Letters: aa is â, aw ă, ee ê, oo ô, ow ơ, uw ư, dd đ. Tones go after the word's letters: s sắc, f huyền, r hỏi, x ngã, j nặng, and z takes the tone off. Press the same key again to undo its mark. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "vietnamese",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "roles": [
+        {
+          "key": "shift",
+          "role": "letters"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "code"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

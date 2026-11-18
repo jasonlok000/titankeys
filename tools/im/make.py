@@ -1065,6 +1065,149 @@ def write_howto():
             f.write("\n")
 
 
+# The language pages' guide (owner-approved flow; E builds the pages, F's text is tools/im/page-text.json): each im.json's
+# "guide" and android/assets/im/languages.json, made from what's already there. Ids are page-text.json's keys: a role's
+# "role" is roles.<key>.<role>, a guide's "family" is points.<family>, a setting's "reason" is notAvailable.<reason>.
+ENGINE_MAPS = {
+    # Korean's 2-set (Hangul.kt) and Shift's tense consonants and two vowels.
+    "ko": ({"q": "ㅂ", "w": "ㅈ", "e": "ㄷ", "r": "ㄱ", "t": "ㅅ", "y": "ㅛ", "u": "ㅕ", "i": "ㅑ", "o": "ㅐ", "p": "ㅔ", "a": "ㅁ",
+            "s": "ㄴ", "d": "ㅇ", "f": "ㄹ", "g": "ㅎ", "h": "ㅗ", "j": "ㅓ", "k": "ㅏ", "l": "ㅣ", "z": "ㅋ", "x": "ㅌ", "c": "ㅊ",
+            "v": "ㅍ", "b": "ㅠ", "n": "ㅜ", "m": "ㅡ"},
+           {"q": "ㅃ", "w": "ㅉ", "e": "ㄸ", "r": "ㄲ", "t": "ㅆ", "o": "ㅒ", "p": "ㅖ"}),
+}
+CANGJIE = {"q": "手", "w": "田", "e": "水", "r": "口", "t": "廿", "y": "卜", "u": "山", "i": "戈", "o": "人", "p": "心", "a": "日",
+           "s": "尸", "d": "木", "f": "火", "g": "土", "h": "竹", "j": "十", "k": "大", "l": "中", "z": "重", "x": "難", "c": "金",
+           "v": "女", "b": "月", "n": "弓", "m": "一"}
+ENGINE_MAPS["zh-cangjie"] = (CANGJIE, {})
+ENGINE_MAPS["zh-quick"] = (CANGJIE, {})
+# Zhuyin's Hsu layout (tk_zhuyin): the symbol each letter key types first.
+ENGINE_MAPS["zh-zhuyin"] = ({"q": "ㄑ", "w": "ㄨ", "e": "ㄜ", "r": "ㄖ", "t": "ㄊ", "y": "ㄩ", "u": "ㄧ", "i": "ㄞ", "o": "ㄛ",
+                             "p": "ㄆ", "a": "ㄚ", "s": "ㄙ", "d": "ㄉ", "f": "ㄈ", "g": "ㄍ", "h": "ㄏ", "j": "ㄐ", "k": "ㄎ",
+                             "l": "ㄌ", "z": "ㄗ", "x": "ㄒ", "c": "ㄘ", "v": "ㄔ", "b": "ㄅ", "n": "ㄋ", "m": "ㄇ"}, {})
+LANGUAGE_GROUPS = {
+    "zh": [{"title": "Cantonese", "methods": ["yue-yale", "yue-jyutping"]}, {"title": "Mandarin", "methods": ["zh-pinyin", "zh-zhuyin"]},
+           {"title": "By shape", "methods": ["zh-cangjie", "zh-quick"]}],
+    "sr": [{"title": "Alphabets", "methods": ["sr", "sr-latn"]}],
+}
+# Each setting a language's page may show, with its level. A row that doesn't apply gives why, as LanguageSettings.rows
+# decides (checked against it in tests/languages).
+GUIDE_SETTINGS = [("fixes", "language"), ("capitals", "language"), ("doubleSpace", "language"), ("sentenceSpaces", "language"),
+                  ("commaSpace", "language"), ("hold", "language"), ("swipe", "language"), ("shorthand", "language"),
+                  ("spelling", "language"), ("chineseCharacters", "language"), ("variant", "input-method")]
+GUIDE_OWN_MARKS = {"rime", "mozc"}
+
+
+def engine_name(im):
+    engine = im.get("engine")
+    return next(iter(engine)) if isinstance(engine, dict) else engine
+
+
+def key_letters(value):
+    """A key's letters in im.json, as [base, shift, held, shift held]: "a/A", a list, or one letter."""
+    if isinstance(value, list):
+        return value + [None] * (4 - len(value))
+    base, _, shift = value.partition("/")
+    return [base, shift or None, None, None]
+
+
+def held_keys(im):
+    keys = im.get("keys")
+    return isinstance(keys, dict) and any(isinstance(v, list) and len(v) > 2 and v[2] for v in keys.values())
+
+
+def setting_reason(row, im):
+    """Why [row] doesn't apply to [im], as an id (page-text.json's notAvailable where it has one), or None where it does."""
+    engine = engine_name(im)
+    rules = im["rules"]
+    english = im["id"] == "en"
+    full_stop = rules.get("fullStop", ". ")
+    chinese = im.get("script") == "Hani"
+    return {
+        "fixes": None if english or (im.get("words") and engine is None) else ("correctionsChinese" if chinese else "corrections"),
+        "capitals": None if rules.get("capitalise") else "noCapitals",
+        "doubleSpace": None if full_stop.strip() else "noFullStop",
+        "sentenceSpaces": None if full_stop.endswith(" ") else "noSpaceAfterFullStop",
+        "commaSpace": None if engine not in GUIDE_OWN_MARKS else "engineMarks",
+        "hold": None if not im.get("accents") and not held_keys(im) else ("holdAccents" if im.get("accents") else "holdLetters"),
+        "swipe": None if english else "swiping",
+        "shorthand": None if english else "englishOnly",
+        "spelling": None if english else "englishOnly",
+        "chineseCharacters": None if chinese else "chineseOnly",
+        "variant": None if im.get("variants") else "noVariants",
+    }[row]
+
+
+def family_of(im):
+    """page-text.json's points family for [im]."""
+    engine, script, ident = engine_name(im), im.get("script"), im["id"]
+    if script == "Hani":
+        return "chinese"
+    return {"ko": "korean", "ja": "japanese", "vi": "vietnamese", "hi": "hindi", "th": "thai", "he": "hebrew", "ka": "georgian",
+            "el": "greek"}.get(ident) or ("cyrillic" if script == "Cyrl" else "latin" if im.get("accents") else "plain")
+
+
+def guide_of(im, experimental):
+    ident, engine, keys = im["id"], engine_name(im), im.get("keys")
+    shown, shifted, held = {}, {}, {}
+    if isinstance(keys, dict):
+        for key, value in keys.items():
+            base, shift, hold, _ = key_letters(value)
+            if base and base != key:
+                shown[key] = base
+            if shift and shift != (base or key).upper():
+                shifted[key] = shift
+            if hold:
+                held[key] = hold
+    if ident in ENGINE_MAPS:
+        shown, shifted = dict(ENGINE_MAPS[ident][0]), dict(ENGINE_MAPS[ident][1])
+    chinese = im.get("script") == "Hani"
+    if engine in GUIDE_OWN_MARKS:
+        roles = {"shift": "choices", "space": "choices", "enter": "code", "backspace": "chinese" if chinese else "code",
+                 "sym": "choices"}
+    elif engine == "hangul":
+        roles = {"shift": "secondLetter", "space": "syllable", "enter": "default", "backspace": "syllable", "sym": "default"}
+    elif engine in ("telex", "rules"):
+        roles = {"shift": "letters" if im["rules"].get("capitalise") else "secondLetter", "space": "default", "enter": "default",
+                 "backspace": "code", "sym": "default"}
+    else:
+        shift = "secondLetter" if shifted else ("accents" if im.get("accents") else "letters")
+        roles = {"shift": shift, "space": "default", "enter": "default", "backspace": "default", "sym": "default"}
+    return {"status": "experimental" if experimental else "ready", "family": family_of(im), "line": "", "points": [],
+            "practice": "",
+            "keys": {"legend": "", **({"map": shown} if shown else {}), **({"shift": shifted} if shifted else {}),
+                     **({"held": held} if held else {}),
+                     "roles": [{"key": key, "role": role} for key, role in roles.items()]}}
+
+
+def write_guides():
+    """Adds "guide" to every im.json (keeping F's line, points and practice), and writes languages.json."""
+    languages = {}
+    for ident in sorted(os.listdir(ASSETS)):
+        path = os.path.join(ASSETS, ident, "im.json")
+        if not os.path.isfile(path):
+            continue
+        im = json.load(open(path, encoding="utf-8"))
+        language = language_of(im)
+        kept = {k: v for k, v in im.get("guide", {}).items() if k in ("line", "points", "practice") and v}
+        im["guide"] = {**guide_of(im, language["experimental"]), **kept}
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(im, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        languages.setdefault(language["id"], []).append(im)
+    out = {}
+    for lang, ims in sorted(languages.items()):
+        settings = []
+        for row, level in GUIDE_SETTINGS:
+            reasons = [setting_reason(row, im) for im in ims]
+            # A language's row shows where any of its input methods has it, as its page does.
+            available = any(reason is None for reason in reasons)
+            settings.append({"id": row, "level": level, "available": available, **({} if available else {"reason": reasons[0]})})
+        out[lang] = {"points": [], "roles": [], "groups": LANGUAGE_GROUPS.get(lang, []), "settings": settings}
+    with open(os.path.join(ASSETS, "languages.json"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+
+
 # Input methods built by a function of their own.
 OWN = {"th": build_thai, "hi": build_hindi, "he": build_hebrew}
 
@@ -1122,6 +1265,8 @@ def write_index_and_list():
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im),
                         **({"howTo": im["howTo"]} if im.get("howTo") else {}),
+                        # The language pages' guide (write_guides).
+                        **({"guide": im["guide"]} if im.get("guide") else {}),
                         # Its spelling variants (Portuguese's Brasil and Portugal), for Settings' choice: the first is the default.
                         **({"variants": [{"id": v["id"], "name": v["name"]} for v in im["variants"]]}
                            if im.get("variants") else {})})
@@ -1169,6 +1314,11 @@ def main():
         print("starters written")
         return
     # make.py <data dir> --howto: only the how-tos, into every im.json and the index.
+    # make.py <data dir> --guide: only the language pages' guide data, into every im.json and languages.json.
+    if sys.argv[2:] == ["--guide"]:
+        write_guides()
+        print("guides written")
+        return
     if sys.argv[2:] == ["--howto"]:
         write_howto()
         print("index:", len(write_index_and_list()), "input methods, how-tos written")
@@ -1193,6 +1343,7 @@ def main():
         print("built", ident)
     write_starters(data)
     write_howto()
+    write_guides()
     entries = write_index_and_list()
     print("index:", len(entries), "input methods")
 

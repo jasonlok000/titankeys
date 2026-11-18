@@ -37,5 +37,37 @@
   ],
   "howTo": [
     "Types the way English does: no accents, and nothing to hold for them. Hold a letter for its symbol, as in English."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "plain",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "roles": [
+        {
+          "key": "shift",
+          "role": "letters"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

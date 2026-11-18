@@ -49,5 +49,37 @@
   ],
   "howTo": [
     "Hold a letter for its accents: hold A for ā, E for ē, K for ķ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "latin",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "roles": [
+        {
+          "key": "shift",
+          "role": "accents"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

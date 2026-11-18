@@ -79,5 +79,70 @@
   ],
   "howTo": [
     "Writes right to left, and the keys follow the Israeli PC layout: A is ש, E is ק. Q types ת, and W types ', for words like צ'יפס. Hold P for ף, M for ץ, and Q for /. Hebrew has no capitals, so Shift types the same letter. The bar reads right to left too: the best word stays in the middle, the next one on the right."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "hebrew",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "a": "ש",
+        "b": "נ",
+        "c": "ב",
+        "d": "ג",
+        "e": "ק",
+        "f": "כ",
+        "g": "ע",
+        "h": "י",
+        "i": "ן",
+        "j": "ח",
+        "k": "ל",
+        "l": "ך",
+        "m": "צ",
+        "n": "מ",
+        "o": "ם",
+        "p": "פ",
+        "q": "ת",
+        "r": "ר",
+        "s": "ד",
+        "t": "א",
+        "u": "ו",
+        "v": "ה",
+        "w": "'",
+        "x": "ס",
+        "y": "ט",
+        "z": "ז"
+      },
+      "held": {
+        "m": "ץ",
+        "p": "ף",
+        "q": "/"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "letters"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

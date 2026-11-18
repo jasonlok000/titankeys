@@ -187,5 +187,116 @@
   ],
   "howTo": [
     "The keys follow Thai's Kedmanee layout, and Shift gives each key's second letter. The keys a PC has and the Titan doesn't, digits included, are held: hold a key for its third letter, and Shift + hold for its fourth. Thai has no spaces between words, so the bar finds the word you're typing, and next words come after a space. Double Space types two spaces, as Thai has no full stop."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "thai",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "a": "ฟ",
+        "b": "ิ",
+        "c": "แ",
+        "d": "ก",
+        "e": "ำ",
+        "f": "ด",
+        "g": "เ",
+        "h": "้",
+        "i": "ร",
+        "j": "่",
+        "k": "า",
+        "l": "ส",
+        "m": "ท",
+        "n": "ื",
+        "o": "น",
+        "p": "ย",
+        "q": "ๆ",
+        "r": "พ",
+        "s": "ห",
+        "t": "ะ",
+        "u": "ี",
+        "v": "อ",
+        "w": "ไ",
+        "x": "ป",
+        "y": "ั",
+        "z": "ผ"
+      },
+      "shift": {
+        "a": "ฤ",
+        "b": "ฺ",
+        "c": "ฉ",
+        "d": "ฏ",
+        "e": "ฎ",
+        "f": "โ",
+        "g": "ฌ",
+        "h": "็",
+        "i": "ณ",
+        "j": "๋",
+        "k": "ษ",
+        "l": "ศ",
+        "m": "?",
+        "n": "์",
+        "o": "ฯ",
+        "p": "ญ",
+        "q": "๐",
+        "r": "ฑ",
+        "s": "ฆ",
+        "t": "ธ",
+        "u": "๊",
+        "v": "ฮ",
+        "w": "\"",
+        "x": ")",
+        "y": "ํ",
+        "z": "("
+      },
+      "held": {
+        "a": "ฃ",
+        "b": "ม",
+        "d": "ช",
+        "e": "-",
+        "f": "บ",
+        "g": "ล",
+        "h": "ว",
+        "i": "ค",
+        "j": "ง",
+        "m": "ฝ",
+        "n": "ใ",
+        "o": "ต",
+        "p": "จ",
+        "q": "ๅ",
+        "r": "ภ",
+        "s": "ข",
+        "t": "ถ",
+        "u": "ึ",
+        "w": "/",
+        "y": "ุ",
+        "z": "_"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "secondLetter"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

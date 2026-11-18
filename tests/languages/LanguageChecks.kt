@@ -79,6 +79,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (args.isNotEmpty()) holdHints(File(args[0]))
+    if (args.isNotEmpty()) everyGuideIsComplete(File(args[0]))
     if (args.isNotEmpty()) onlyTheOnesOnStayWarm(File(args[0]))
     if (args.isNotEmpty()) variantsArePicked(File(args[0]))
     if (failures > 0) {
@@ -1628,4 +1629,50 @@ private fun onlyTheOnesOnStayWarm(folder: File) {
     same("English and Yale on: Rime alone is warm", WarmEngines.wanted(index.on("en,yue-yale")).keys, setOf("rime"))
     same("English alone: no engine", WarmEngines.wanted(index.on("en")).keys, emptySet<String>())
     same("Japanese and Korean on: Mozc and Hangul", WarmEngines.wanted(index.on("en,ja,ko")).keys, setOf("mozc", "hangul"))
+}
+
+/**
+ * The language pages' guide data (make.py write_guides, agreed with E): every input method's guide is complete, and each
+ * language's settings in languages.json say available exactly where LanguageSettings.rows has the row.
+ */
+private fun everyGuideIsComplete(folder: File) {
+    val roles = setOf("shift", "space", "enter", "backspace", "sym")
+    val index = Json.parse(File(folder, "index.json").readText()) as List<*>
+    val indexed = index.associate { entry -> (entry as Map<*, *>)["id"] as String to entry["guide"] }
+    val byLanguage = HashMap<String, MutableList<InputMethod>>()
+    for (dir in folder.listFiles { file -> File(file, "im.json").isFile }.orEmpty().sortedBy { it.name }) {
+        val root = Json.parse(File(dir, "im.json").readText()) as Map<*, *>
+        val guide = root["guide"] as? Map<*, *>
+        check("${dir.name}: has a guide", guide != null)
+        guide ?: continue
+        check("${dir.name}: its status", guide["status"] in setOf("ready", "experimental"))
+        check("${dir.name}: its family", (guide["family"] as? String).orEmpty().isNotEmpty())
+        for (field in listOf("line", "practice")) check("${dir.name}: its $field", guide[field] is String)
+        check("${dir.name}: its points", guide["points"] is List<*>)
+        val keys = guide["keys"] as? Map<*, *>
+        val listed = (keys?.get("roles") as? List<*>).orEmpty().map { (it as Map<*, *>)["key"] }.toSet()
+        check("${dir.name}: a role for each special key", listed == roles) { "$listed" }
+        val method = InputMethod.parse(File(dir, "im.json").readText())
+        // Keys that type their own script draw what each types: all 26 (not the ones typing by sound in Latin letters: Hindi,
+        // Japanese, Yale, Jyutping, Pinyin).
+        val ownKeys = method.keys != null || dir.name in setOf("ko", "zh-cangjie", "zh-quick", "zh-zhuyin")
+        if (ownKeys) check("${dir.name}: what all 26 keys type", (keys?.get("map") as? Map<*, *>)?.size == 26) {
+            "${(keys?.get("map") as? Map<*, *>)?.size}"
+        }
+        check("${dir.name}: the index carries it", indexed[dir.name] == guide)
+        val language = (index.first { (it as Map<*, *>)["id"] == dir.name } as Map<*, *>)["language"] as? Map<*, *>
+        byLanguage.getOrPut(language?.get("id") as? String ?: dir.name) { mutableListOf() } += method
+    }
+    val settings = Json.parse(File(folder, "languages.json").readText()) as Map<*, *>
+    for ((language, methods) in byLanguage) {
+        val rows = (settings[language] as Map<*, *>)["settings"] as List<*>
+        val available = rows.map { it as Map<*, *> }.filter { it["available"] == true }.map { it["id"] }.toSet()
+        val shown = methods.flatMap { LanguageSettings.rows(it) }.toSet()
+        // The page rows LanguageSettings decides: they agree. Spelling, characters and variants are their own pages.
+        val decided = setOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand")
+        same("$language: its settings as LanguageSettings shows them", available.filter { it in decided }.toSet(), shown)
+        check("$language: every row not available says why", rows.map { it as Map<*, *> }.all { it["available"] == true || it["reason"] is String })
+    }
+    val zh = (settings["zh"] as Map<*, *>)["groups"] as List<*>
+    same("Chinese's groups", zh.map { (it as Map<*, *>)["title"] }, listOf("Cantonese", "Mandarin", "By shape"))
 }

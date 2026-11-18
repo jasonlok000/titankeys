@@ -13,6 +13,8 @@ import { sentenceSpacesLabel } from "../sentence-spaces";
 import { shorthandLabel } from "../shorthand/index";
 import { HowTo } from "../../../lib/how-to";
 import { TryIt } from "../../../lib/try-it";
+import { KeysDrawing } from "../../../lib/keys-drawing";
+import { MethodCard, MethodGroups, NotAvailable, languagePage } from "../../../lib/method-card";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
@@ -50,6 +52,7 @@ export default function LanguagePage() {
     ? `${language.nameEnglish}. Experimental: it types, and its words and fixes are still being tuned.`
     : language.nameEnglish === language.name ? undefined : language.nameEnglish;
   const settings = result.data;
+  const page = languagePage(language.id);
   const own = languageValues(settings, language.id);
   const write = (values: Partial<LanguageValues>) => void save.run({ languageSettings: { [language.id]: values } });
   const open = (path: string) => navigate({ path, params: { language: language.id } });
@@ -63,14 +66,17 @@ export default function LanguagePage() {
   return <Screen title={shownName(language.name, language.nameEnglish, language.script)} subtitle={subtitle}>
     {/* F: draft. Once, the first time the settings move. */}
     {moved && <Note>Typing settings for each language now live on its page.</Note>}
-    <Section title={methods.length > 1 ? "Input methods" : "Input method"}>
-      {methods.map(im => <Toggle key={im.id} label={shownName(im.name, im.nameEnglish, im.script)}
-        subtitle={im.nameEnglish === im.name || methods.length === 1 ? undefined : im.nameEnglish}
+    {/* Several input methods: a card each, under the language's groups (中文's Cantonese, Mandarin, By shape). */}
+    {methods.length > 1 && <MethodGroups page={page} methods={methods} card={im => <MethodCard key={im.id} im={im}
+      name={shownName(im.name, im.nameEnglish, im.script)} subtitle={im.nameEnglish === im.name ? undefined : im.nameEnglish}
+      value={inputMethods.includes(im.id)} onChange={value => set(im, value)} settings={page?.settings ?? []} />} />}
+    {(methods.length === 1 || languagesFull || methodsFull) && <Section title={methods.length > 1 ? "Input methods" : "Input method"}>
+      {methods.length === 1 && methods.map(im => <Toggle key={im.id} label={shownName(im.name, im.nameEnglish, im.script)}
         value={inputMethods.includes(im.id)} onChange={value => set(im, value)} />)}
       {/* F: draft. */}
       {languagesFull && <Note>Four languages at a time, tops. Turn one off first.</Note>}
       {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note>Four at a time in one language, tops. Turn one off first.</Note>}
-    </Section>
+    </Section>}
     {options && <Section title="Options">
       {language.id === "en" && <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>}
       {language.id === "zh" && <Field label="Characters" href="/settings/chinese">{chineseLabel(settings)}</Field>}
@@ -93,8 +99,10 @@ export default function LanguagePage() {
         onChange={swipeTyping => void save.run({ swipeTyping })} />}
       {has("shorthand") && <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>}
     </Section>}
+    <NotAvailable page={page} english={language.nameEnglish} />
     {/* The owner-approved order (language-flow.html): Turn on and options, How it works, the keys, Try it. */}
     <HowTo methods={methods} />
+    {methods.length === 1 && <KeysDrawing im={methods[0]} />}
     <TryIt methods={methods.filter(im => inputMethods.includes(im.id))} />
   </Screen>;
 }

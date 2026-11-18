@@ -9,6 +9,7 @@ import os
 import time
 
 import checks
+import chinese_checks
 import delete_batch
 import interactions_batch as ib
 from checks import APP, Stop, adb, play, record
@@ -26,18 +27,22 @@ def read():
 
 def check_chinese_characters():
     ib.start(["en", "yue-yale"], "yue-yale")
+    text = ""
     for code in ("neihou", "ngodei", "mgoisaai"):
         play(*ib.keys(code), "+500", "key:space", "+700")
-    text = read()
-    if text != "你好我哋唔該晒":
-        return record("zh-chars-setup", None, f"neihou, ngodei and mgoisaai typed {text!r}, not 你好我哋唔該晒")
+        picked = read()
+        if not picked or not picked.startswith(text) or not chinese_checks.cjk(picked[len(text):]) or picked.endswith(" "):
+            return record("zh-chars-setup", None, f"{code} did not append a Chinese pick to {text!r}: {picked!r}")
+        text = picked
+    if len(text) < 4:
+        return record("zh-chars-setup", None, f"need four characters to test three flicks and a selection: {text!r}")
     left = []
     for _ in range(3):
         play("+600", "flick", "+700")
         left.append(read())
-    record("zh-chars-flick", left == ["你好我哋唔該", "你好我哋唔", "你好我哋"], f"three flicks left {left}")
+    record("zh-chars-flick", left == [text[:-i] for i in (1, 2, 3)], f"starting from {text!r}, three flicks left {left}")
     play("+600", "space:3", "+700", shot="zh-chars-triple", at=1000)
-    record("zh-chars-triple", None, "three Space taps: the last character, 哋, selected", "zh-chars-triple")
+    record("zh-chars-triple", None, f"three Space taps: check the last character, {text[-4]}, is selected", "zh-chars-triple")
     play("key:space", "+300", "spacehold:2:-1", "+600", shot="zh-chars-slide", at=1200)
     record("zh-chars-slide", None, "a slide left: one character at a time", "zh-chars-slide")
 

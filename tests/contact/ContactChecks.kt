@@ -13,6 +13,8 @@ fun main() {
     panelTakesATouchDuringAKey()
     panelTakesATouchAfterAKey()
     panelSwipe()
+    pagingAllowsHeldDeleteFlick()
+    pagingRejectsHeldPageSwipe()
     panelShortSwipe()
     panelSlowPath()
     keyPressCancelsPanelSwipe()
@@ -93,6 +95,31 @@ private fun panelSwipe() {
     same(across is Contact.Outcome.Swipe, true, "A swipe across one key must count")
     val limit = contact.touch(at(.5f, .4f, 3_000), at(.5f - KEY_WIDTH, .4f, 3_000 + Contact.PAGE_MILLIS))
     same(limit is Contact.Outcome.Swipe, true, "A swipe that takes the full page time must count")
+}
+
+private fun pagingAllowsHeldDeleteFlick() {
+    val contact = Contact()
+    contact.paging = true
+    contact.down(at(.95f, .4f, 1_000))
+    contact.move(listOf(at(.75f, .4f, 1_100)))
+    val held = contact.holdDelete(1_500)
+    same(held?.deletesWord, true, "A delete flick can hold while choices remain on the bar")
+    same(contact.deleting, true, "The contact stays in delete mode until lift")
+    same(contact.holdDelete(1_600), null, "The same contact cannot begin a second hold")
+    val lifted = contact.up(emptyList(), 1_700)
+    same(lifted?.let { contact.settle(it, it.deadline) }, null, "Lifting after held deletion must not also page or type")
+    same(contact.deleting, false, "Lifting ends held deletion")
+}
+
+private fun pagingRejectsHeldPageSwipe() {
+    for ((x, y) in listOf(.5f to .5f, .3f to .2f)) {
+        val contact = Contact()
+        contact.paging = true
+        contact.down(at(.5f, .2f, 1_000))
+        contact.move(listOf(at(x, y, 1_100)))
+        same(contact.holdDelete(1_500), null, "A page swipe must not become held deletion")
+        same(contact.deleting, false, "Page navigation leaves delete mode off")
+    }
 }
 
 private fun panelShortSwipe() {

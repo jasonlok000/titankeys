@@ -889,3 +889,9 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Language pages mockup: owner likes the layout. "How it works" goes above "The keys"; Cantonese's keys show Shift, Sym, Enter, Space and Backspace roles, not just letters (E). Owner: in Chinese's bigger menu, a swipe down on the first page closes it (B).
 - Owner on the flow mockup: "start implementing I think this is already a step up." Build: C the guide data in im.json (key maps, roles, method points, setting levels), E the pages (list, language page, method cards, drawn keys, Try it, "not available" notes), F the shared English text. Owner asked whether the text should be in each native language: Master's call is English first, native versions after the weekly reset, translated and checked by the native reviewers, with English one tap away.
 - Owner on the suggestion safety filter: "no. do not filter." C removes it from every language (BlockedWords, the blocklists, the Rime predict filtering); B rebuilds the predict DBs unfiltered. The fragment filter (Korean endings, Thai junk) stays: it's about quality.
+
+## Codex (2026-11-17)
+
+- The handover leaves signing to the owner. The existing Debug and Reference scripts use the release key, so verification uses a private build copy with a disposable Android Debug key and an explicit tool environment. It runs the same offline suites and builds without reading the owner's signing files. The app source and release signing configuration stay unchanged.
+- Pending work is integrated on task branches. Existing phone and build jobs finish first; new builds share the full-build lock. No phone job runs alongside the existing night runner.
+- Reported night failures are reproduced before app changes. A missing field read or an incorrect expected result is a test-tool failure, not proof of an app failure.

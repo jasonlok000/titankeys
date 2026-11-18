@@ -41,3 +41,10 @@ test("a held delete takes a code being built as flicks do, one step a word, befo
   expect(step).toContain("strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), 1)");
   expect(step).toContain("return@enqueue");
 });
+
+test("a delete flick stays a flick with a choices row up, and holds (night run 2026-11-17: 我哋唔該晒 unchanged)", () => {
+  expect(ime).toContain("isDeleteWordSwipe(outcome.points)) return outcome(outcome.copy(deletesWord = true))");
+  expect(ime).toContain("if (!altOrPanel && !outcome.deletesWord && pageChoices(outcome.points)) return");
+  const contact = read("android/kotlin/com/titankeys/keyboard/Contact.kt");
+  expect(contact).toContain("paging && !isDeleteWordSwipe(touching.points)) return null");
+});

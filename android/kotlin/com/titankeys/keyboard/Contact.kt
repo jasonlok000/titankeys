@@ -100,7 +100,8 @@ class Contact {
     /** The finger stayed on a delete flick, so this contact now deletes words. Returns the flick as it stands, or null if it can no longer delete. */
     fun holdDelete(now: Long): Outcome.Swipe? {
         val touching = state as? State.Touching ?: return null
-        if (touching.deleting || !touching.counts || !swipes || paging) return null
+        // With choices on the bar (paging), a delete flick still holds: Chinese and Japanese keep a row up with nothing typed.
+        if (touching.deleting || !touching.counts || !swipes || paging && !isDeleteWordSwipe(touching.points)) return null
         touching.deleting = true
         return Outcome.Swipe(touching.points.toList(), touching.first.time, now, deletesWord = true)
     }

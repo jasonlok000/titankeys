@@ -29,7 +29,8 @@ import kotlin.math.min
 class Contact {
     sealed interface Outcome {
         data class Tap(val key: String, val endedAt: Long) : Outcome
-        data class Swipe(val points: List<Sample>, val startedAt: Long, val endedAt: Long, val deletesWord: Boolean = false) : Outcome
+        data class Swipe(val points: List<Sample>, val startedAt: Long, val endedAt: Long,
+                         val deletesWord: Boolean = false, val forPaging: Boolean = false) : Outcome
     }
 
     private sealed interface State {
@@ -78,16 +79,17 @@ class Contact {
     /** Whether another touch or a key has come since the rest, so that finger may still be on the keys. */
     private var restCovered = false
 
-    /**
-     * The Sym panel is on screen, so a finger counts even while a key is held.
-     * Swipes turn the panel's pages: they can be shorter and start on any key.
-     */
-    var paging = false
+    /** A paging swipe can be shorter and start on any key. Only the bar's choices also take delete flicks. */
+    enum class Paging { None, Choices, PagesOnly }
+    var paging = Paging.None
     /** Hears each paging contact's decision, for TitanKeys Debug's log; null when nothing listens. */
     var pageLog: ((String) -> Unit)? = null
 
-    /** Turned off with the Swipe typing setting. A swipe then types nothing and deletes nothing. Taps and the panel do not change. */
-    var swipes = true
+    /** Only English recognises words. Other languages still take a delete flick in a field that accepts words. */
+    enum class Swipes { Off, DeletesOnly, WordsAndDeletes }
+    var swipes = Swipes.WordsAndDeletes
+    val wordSwipes get() = swipes == Swipes.WordsAndDeletes && paging == Paging.None
+    val deleteFlicks get() = swipes != Swipes.Off && paging != Paging.PagesOnly
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.takeIf { it.counts }?.travel
@@ -101,7 +103,7 @@ class Contact {
     fun holdDelete(now: Long): Outcome.Swipe? {
         val touching = state as? State.Touching ?: return null
         // With choices on the bar (paging), a delete flick still holds: Chinese and Japanese keep a row up with nothing typed.
-        if (touching.deleting || !touching.counts || !swipes || paging && !isDeleteWordSwipe(touching.points)) return null
+        if (touching.deleting || !touching.counts || !deleteFlicks || !isDeleteWordSwipe(touching.points)) return null
         touching.deleting = true
         return Outcome.Swipe(touching.points.toList(), touching.first.time, now, deletesWord = true)
     }
@@ -123,7 +125,7 @@ class Contact {
         for (contact in pending) if (burst || (far && contact.outcome is Outcome.Tap)) contact.cancelled = true
         state = when {
             // The panel needs a resting finger, so a key or its cooldown does not block a touch there.
-            paging -> State.Touching(sample, false, false, true)
+            paging != Paging.None -> State.Touching(sample, false, false, true)
             heldKeys.isNotEmpty() || burst -> State.Ignored
             else -> State.Touching(sample, sample.time < blockedUntil, returning(sample, swapped), !swapped)
         }
@@ -172,7 +174,7 @@ class Contact {
      * A finger that does not move sends nothing, so a key press can be the first thing to reach this.
      */
     private fun judge(touching: State.Touching, time: Long) {
-        if (touching.judged || paging || time - touching.first.time < RESTING_MILLIS) return
+        if (touching.judged || paging != Paging.None || time - touching.first.time < RESTING_MILLIS) return
         touching.judged = true
         touching.resting = touching.travel < RESTING_KEYS
     }
@@ -243,17 +245,21 @@ class Contact {
         val points = touching.points
         val first = points.first()
         val last = points.last()
+        // Read the original path before either paging or letter pickup can change its meaning.
+        val swipe = touching.travel >= SWIPE_KEYS
+        val deletes = swipe && deleteFlicks && isDeleteWordSwipe(points)
+        if (deletes && !wordSwipes) {
+            return Outcome.Swipe(points.toList(), first.time, last.time, deletesWord = true)
+        }
         // A finger that takes its time is looking at the keys in the panel, so its path turns no page.
-        if (paging) {
+        if (paging != Paging.None) {
             val swiped = touching.travel >= PAGE_KEYS && last.time - first.time <= PAGE_MILLIS
             pageLog?.invoke("touch on the keys: %.2f keys in %d ms: %s".format(touching.travel, last.time - first.time,
                 if (swiped) "a swipe" else if (touching.travel < PAGE_KEYS) "too short (under %.2f keys)".format(PAGE_KEYS) else "too slow"))
-            return if (swiped) Outcome.Swipe(points.toList(), first.time, last.time) else null
+            return if (swiped) Outcome.Swipe(points.toList(), first.time, last.time, forPaging = true) else null
         }
-        if (touching.travel >= SWIPE_KEYS) {
-            if (!swipes) return null
-            // Checked here because the pickup below trims a swipe to its first letter, which loses its real start.
-            val deletes = isDeleteWordSwipe(points)
+        if (swipe) {
+            if (!wordSwipes) return null
             touching.pickup.finish()
             val entry = touching.pickup.entry
             if (entry != null) return Outcome.Swipe(listOf(entry) + points.subList(touching.pickup.entryIndex, points.size), first.time, last.time, deletes)

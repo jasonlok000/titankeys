@@ -39,6 +39,7 @@ fun main() {
     longContactsInARowAreNotTwoFingersHeldDown()
     panelHoverKeepsARestingFinger()
     swipesOffTypeNothing()
+    otherLanguagesDeleteWithoutTypingSwipes()
     swipesOffKeepTapsAndThePanel()
     aBrushUnderASwipeNeverTicks()
     aSwipeStillTicks()
@@ -70,7 +71,7 @@ private fun typingBlocksATouch() {
 
 private fun panelTakesATouchDuringAKey() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     contact.key(KeyEvent.KEYCODE_SYM, true, 1_000)
     contact.down(at(.25f, .4f, 1_010))
     same(contact.travel, 0f, "The panel must take a resting finger while a key is held")
@@ -78,7 +79,7 @@ private fun panelTakesATouchDuringAKey() {
 
 private fun panelTakesATouchAfterAKey() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     contact.key(KeyEvent.KEYCODE_SYM, true, 1_000)
     contact.key(KeyEvent.KEYCODE_SYM, false, 1_050)
     val start = at(.25f, .4f, 1_060)
@@ -88,7 +89,7 @@ private fun panelTakesATouchAfterAKey() {
 
 private fun panelSwipe() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     val down = contact.touch(at(.5f, .2f, 1_000), at(.5f, .2f + ROW_HEIGHT, 1_200))
     same(down is Contact.Outcome.Swipe, true, "A swipe down one row must count")
     val across = contact.touch(at(.5f, .4f, 2_000), at(.5f - KEY_WIDTH, .4f, 2_200))
@@ -124,7 +125,7 @@ private fun pagingRejectsHeldPageSwipe() {
 
 private fun panelShortSwipe() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     val outcome = contact.touch(at(.5f, .4f, 1_000), at(.5f + KEY_WIDTH * Contact.PAGE_KEYS * .9f, .4f, 1_100))
     same(outcome, null, "A small movement in the panel must do nothing")
     val rest = contact.touch(at(.5f, .4f, 2_000), at(.5f, .4f, 2_900))
@@ -133,14 +134,14 @@ private fun panelShortSwipe() {
 
 private fun panelSlowPath() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     val outcome = contact.touch(at(.2f, .4f, 1_000), at(.3f, .4f, 1_400), at(.6f, .4f, 1_000 + Contact.PAGE_MILLIS + 1))
     same(outcome, null, "A finger that moves slowly from key to key must not change the page")
 }
 
 private fun keyPressCancelsPanelSwipe() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     contact.down(at(.2f, .4f, 1_000))
     contact.move(listOf(at(.4f, .4f, 1_100)))
     val settlement = contact.up(emptyList(), 1_100)!!
@@ -338,7 +339,7 @@ private fun longContactsInARowAreNotTwoFingersHeldDown() {
 
 private fun panelHoverKeepsARestingFinger() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     contact.down(at(.25f, .4f, 1_000))
     contact.move(listOf(at(.25f, .4f, 2_000)))
     same(contact.travel, 0f, "The panel must keep a finger that rests past the time limit")
@@ -355,17 +356,40 @@ private fun swipesOffTypeNothing() {
     val deletes = on.touch(flick.first, flick.second) as? Contact.Outcome.Swipe
     same(deletes?.deletesWord, true, "A flick left from Backspace must delete while swipe typing is on")
     val off = Contact()
-    off.swipes = false
+    off.swipes = Contact.Swipes.Off
     same(off.touch(word.first, word.second), null, "A swipe must type nothing while swipe typing is off")
     same(off.touch(flick.first, flick.second), null, "A flick left from Backspace must delete nothing while swipe typing is off")
 }
 
+private fun otherLanguagesDeleteWithoutTypingSwipes() {
+    val contact = Contact()
+    contact.swipes = Contact.Swipes.DeletesOnly
+    fun flick(time: Long) = contact.touch(at(.95f, .35f, time), at(.7f, .35f, time + 120)) as? Contact.Outcome.Swipe
+    fun word(time: Long) = contact.touch(at(.15f, .4f, time), at(.45f, .4f, time + 120))
+
+    same(flick(1_000)?.deletesWord, true, "A non-English field takes the delete flick")
+    same(word(2_000), null, "A non-English field never sends a stroke to the word recogniser")
+    contact.paging = Contact.Paging.Choices
+    same(flick(3_000)?.deletesWord, true, "The choices row still takes a delete flick")
+    val page = contact.touch(at(.45f, .6f, 4_000), at(.45f, .35f, 4_120)) as? Contact.Outcome.Swipe
+    same(page?.forPaging, true, "A swipe up on choices remains a page gesture even after its overlay closes")
+    same(contact.wordSwipes, false, "A choice page gesture cannot become a word")
+    contact.paging = Contact.Paging.PagesOnly
+    same(flick(5_000)?.deletesWord, false, "The Sym panel and the larger overlays take only page gestures")
+    contact.paging = Contact.Paging.Choices
+    contact.swipes = Contact.Swipes.Off
+    same(flick(6_000)?.deletesWord, false, "Swipe typing off blocks deletion even on the choices row")
+    contact.paging = Contact.Paging.None
+    contact.swipes = Contact.Swipes.WordsAndDeletes
+    same(word(7_000) is Contact.Outcome.Swipe, true, "English word swipes resume after a language switch")
+}
+
 private fun swipesOffKeepTapsAndThePanel() {
     val contact = Contact()
-    contact.swipes = false
+    contact.swipes = Contact.Swipes.Off
     val tap = contact.touch(at(.05f, .4f, 1_000), at(.05f, .4f, 1_080))
     same(tap is Contact.Outcome.Tap, true, "A tap must still tap while swipe typing is off")
-    contact.paging = true
+    contact.paging = Contact.Paging.PagesOnly
     val page = contact.touch(at(.5f, .2f, 3_000), at(.5f, .2f + ROW_HEIGHT, 3_200))
     same(page is Contact.Outcome.Swipe, true, "A swipe must still turn the panel's page while swipe typing is off")
     contact.down(at(.25f, .4f, 4_000))

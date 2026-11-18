@@ -811,7 +811,8 @@ private fun everyTextShows(folder: File) {
         val json = Json.parse(File(dir, "im.json").readText()) as Map<*, *>
         val texts = ArrayList<String>()
         walk(json["howTo"], texts)
-        for (key in listOf("name", "nameEnglish")) (json[key] as? String)?.let(texts::add)
+        // A Devanagari name shows in English in Settings (UNSHAPED), so only its how-to's letters need the fonts.
+        if (json["script"] !in UNSHAPED) for (key in listOf("name", "nameEnglish")) (json[key] as? String)?.let(texts::add)
         val missing = texts.joinToString(" ").codePoints().toArray().filter { code ->
             !Character.isWhitespace(code) && code > 0x7F && textFonts.any { !it.canDisplay(code) }
         }.distinct()

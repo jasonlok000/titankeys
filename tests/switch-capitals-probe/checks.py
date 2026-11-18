@@ -14,3 +14,14 @@ for text, method, want in (("Й", "ru", True), ("й", "ru", False), ("Й", "en",
         play.assert_called_once_with("key:sym:900:none", "key:q", "+400")
         assert record.call_args.args[1] is want
 print("Exact case, destination and single-key controls passed")
+
+from search_row import transient_starters, words_rows
+
+starter = ("the", "I", "you")
+next_row = ("a", "new", "one")
+assert transient_starters([starter, next_row], starter) is True
+assert transient_starters([next_row], starter) is False
+assert transient_starters([starter], starter) is None
+assert transient_starters([], starter) is None
+assert words_rows([("notice", "warm"), ("bar", "ja", list(starter)), ("bar", "en", list(next_row))]) == [next_row]
+print("Search row transition controls passed")

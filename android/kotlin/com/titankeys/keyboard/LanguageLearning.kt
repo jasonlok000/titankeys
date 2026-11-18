@@ -184,10 +184,11 @@ object BarWords {
      */
     fun next(previous: String?, learning: LanguageLearning?, starters: List<String>, capitals: Boolean,
              table: NextWords? = null, rules: WordRules = WordRules.NONE, spelling: (String) -> String = { it },
-             shown: Int = SHOWN): List<String> {
+             shown: Int = SHOWN, nextWord: (String) -> Boolean = { true }): List<String> {
         val learned = if (previous == null) learning?.sentenceStarts().orEmpty() else learning?.next(previous).orEmpty()
         // The table keeps its words in lower case: each takes the word list's own spelling, so nouns and names keep their capitals.
-        val listed = table?.after(previous).orEmpty().map(spelling)
+        // The table's own words only where they're worth offering ([WordNoise]): no fragment, no rare name.
+        val listed = table?.after(previous).orEmpty().filter(nextWord).map(spelling)
         // At a sentence's start the starters come before the table's: they're the same corpus's sentence starts, without its
         // datelines, page labels and names (make.py's STARTER_SKIP), where the table counts every sentence as it stands.
         val ordered = if (previous == null) learned + starters + listed else learned + listed + starters

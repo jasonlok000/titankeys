@@ -1,1 +1,3 @@
 Typed with Mozc (BSD-3-Clause, Google) and its open-source dictionary (IPAdic, Okinawa dictionary, Japanese Usage Dictionary and others, under their own permissive licences). Their versions and licences: native/mozc/SOURCES.md and licences/Mozc-*.txt.
+
+Blocked words (blocked.txt), never offered on the bar: LDNOOBW's List of Dirty, Naughty, Obscene and Otherwise Bad Words (ja, https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words), CC BY 4.0, with TitanKeys' own short list (tools/im/blocklist-extra.tsv).

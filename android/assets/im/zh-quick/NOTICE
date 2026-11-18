@@ -1,1 +1,3 @@
 Typed with Rime (librime, BSD-3-Clause) and OpenCC (Apache License 2.0). The words and spelling rules: rime-quick's Quick 5 (LGPL-3.0) on rime-cangjie's dictionary (marked GPL) and rime-essay (LGPL-3.0). OpenCC's conversion dictionaries: Apache License 2.0. Their versions and licences: native/rime/SOURCES.md and licences/Rime-*.txt.
+
+Blocked words (blocked.txt), never offered on the bar: LDNOOBW's List of Dirty, Naughty, Obscene and Otherwise Bad Words (zh, https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words), CC BY 4.0, with TitanKeys' own short list (tools/im/blocklist-extra.tsv).

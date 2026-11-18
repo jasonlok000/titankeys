@@ -381,7 +381,7 @@ def notice(lines):
 
 # Paragraphs of a NOTICE that other steps write, kept when an input method is built again: J's next words
 # (tools/im/next_words.py) and the starters ([write_starters]).
-KEPT_NOTICES = ("Next words", "Starters: ")
+KEPT_NOTICES = ("Next words", "Starters: ", "Blocked words")
 
 
 def write_notice(folder, lines):

@@ -2,17 +2,58 @@
 from pathlib import Path
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/dev/touch"))
 import checks
 import language_checks
 import chinese_checks
+import review_batch
 import switcher_checks
 
 
 class LanguageProbes(unittest.TestCase):
+    def test_review_restart_reorders_both_owned_activities_before_focusing(self):
+        app = checks.APP
+        field = review_batch.languages.FIELD_ACTIVITY
+        main = "com.vandam.ink.MainActivity"
+        windows = [f"mCurrentFocus=Window{{123 u0 {app}/{activity}}}" for activity in [field, main, field, field]]
+        with patch.object(review_batch.languages, "front", side_effect=windows) as front, \
+                patch.object(review_batch.languages, "focus_field", return_value=True) as focus, \
+                patch.object(review_batch, "adb") as adb, patch.object(review_batch.time, "sleep"):
+            events = Mock()
+            events.attach_mock(front, "front")
+            events.attach_mock(focus, "focus")
+            events.attach_mock(adb, "adb")
+            review_batch.field_start_again()
+        self.assertEqual(events.mock_calls, [
+            call.front(), call.adb("shell", "am", "start", "--activity-reorder-to-front", "-n", f"{app}/{main}"),
+            call.front(), call.adb("shell", "am", "start", "--activity-reorder-to-front", "-n", f"{app}/{field}"),
+            call.front(), call.focus(), call.front(),
+        ])
+
+    def test_review_restart_stops_without_focusing_if_own_activity_is_unverified(self):
+        app = checks.APP
+        field = review_batch.languages.FIELD_ACTIVITY
+        in_field = f"mCurrentFocus=Window{{123 u0 {app}/{field}}}"
+        in_main = f"mCurrentFocus=Window{{123 u0 {app}/com.vandam.ink.MainActivity}}"
+        in_release = f"mCurrentFocus=Window{{123 u0 com.titankeys/{field}}}"
+        in_owner = "mCurrentFocus=Window{123 u0 other.app/.Main}"
+        for windows, starts in [
+            ([in_release], 0),
+            ([in_field, in_owner], 1),
+            ([in_field, in_main, in_owner], 2),
+            ([in_field, in_main, in_main], 2),
+        ]:
+            with self.subTest(starts=starts), patch.object(review_batch.languages, "front", side_effect=windows), \
+                    patch.object(review_batch.languages, "focus_field") as focus, \
+                    patch.object(review_batch, "adb") as adb, patch.object(review_batch.time, "sleep"):
+                with self.assertRaises(checks.Stop):
+                    review_batch.field_start_again()
+                self.assertEqual(adb.call_count, starts)
+                focus.assert_not_called()
+
     def test_shape_and_phonetic_methods_use_composition(self):
         for method, actions, expected in [
             ("zh-cangjie", ["h", "q", "i", "space"], "我"),

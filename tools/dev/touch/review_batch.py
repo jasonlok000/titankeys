@@ -1,7 +1,7 @@
 """The review fixes on main 6f389de6, for checks.py --batch review-fixes.
 
 1. C's Rime fix (9d26103c): Yale on and used, so Rime is open; then Cangjie on through InputMethodsSet and typing at the next
-   field start, which comes from Settings and back, not from a keyboard switch. hqi + Space types 我 (O), and Debug's process
+   field start, which comes from moving Debug's main screen and then its field to the front. hqi + Space types 我 (O), and Debug's process
    is the same one before and after (no keyboard restart).
 2. B's quick-settings fix (a2157bef): French alone on, Fix typos off from the Sym panel's quick settings (Sym, Alt, F; the
    haptic says off). Then English back on alone: its Fix typos is still on. Settings' main page row (O where the dump reads its
@@ -20,6 +20,7 @@ import switcher_checks
 from checks import APP, Stop, adb, play, record
 
 FIX_TYPOS = "Fix typos as you type"
+MAIN_ACTIVITY = "com.vandam.ink.MainActivity"
 QUICK_F = ["key:sym", "+700", "key:alt", "+700", "key:f", "+600", "key:sym", "+600"]  # Sym, quick settings, Fix, closed
 
 
@@ -27,15 +28,23 @@ def debug_pid():
     return adb("shell", "pidof", APP).strip()
 
 
+def require_review_activity(activity):
+    if not APP.endswith(".debug") or not languages.front().strip().endswith(f" u0 {APP}/{activity}}}"):
+        raise Stop(f"the review check couldn't confirm Debug's {activity.rsplit('.', 1)[-1]} in front")
+
+
 def field_start_again():
-    """A new field start without a keyboard switch: Debug's Settings in front, then Back to the field."""
-    adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
+    """Move to Debug's main screen and back to its field to start input again."""
+    require_review_activity(languages.FIELD_ACTIVITY)
+    adb("shell", "am", "start", *languages.REORDER, "-n", f"{APP}/{MAIN_ACTIVITY}")
     time.sleep(2.5)
-    checks.to_field()
+    require_review_activity(MAIN_ACTIVITY)
+    adb("shell", "am", "start", *languages.REORDER, "-n", f"{APP}/{languages.FIELD_ACTIVITY}")
     time.sleep(1)
-    if not languages.in_field():
-        languages.focus_field()
-        time.sleep(1)
+    require_review_activity(languages.FIELD_ACTIVITY)
+    if not languages.focus_field():
+        raise Stop("the review check couldn't focus Debug's Space gestures field")
+    require_review_activity(languages.FIELD_ACTIVITY)
 
 
 def check_cangjie_after_yale():

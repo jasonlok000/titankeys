@@ -127,6 +127,7 @@ export default function Home() {
   const connected = useSnapshot(connectedState);
   if (result.status !== "ready") return <Screen />;
   const { version, whatsNew, guideDue } = result.data;
+  if (!guideDue && result.data.setupRepairDue) return <Screen />;
   const choice = frontChoice(result.data);
   if (choice === "warning") return <PhoneWarning />;
   if (choice === "setup") return <SetupStart first={guideDue} />;

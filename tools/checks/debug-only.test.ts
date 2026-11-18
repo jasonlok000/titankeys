@@ -26,8 +26,8 @@ test("the release is TitanKeys Keyboard outside the app, and the debug build Tit
 
 test("Settings > Setup and the boring guide name the list entries TitanKeys Keyboard", () => {
   const setup = read("app/settings/setup.tsx");
-  expect(setup).toContain('<Field label="Turn on TitanKeys Keyboard" onPress={enableKeyboard}>');
-  expect(setup).toContain('<Field label="Turn on TitanKeys Keyboard in Accessibility" onPress={allowBack}>');
+  expect(setup).toContain('<Field label="Turn on TitanKeys Keyboard" onPress={() => void openSetupStep("enable")}>');
+  expect(setup).toContain('<Field label="Turn on TitanKeys Keyboard in Accessibility" onPress={() => void openSetupStep("backService")}>');
   expect(read("app/settings/guide-boring.tsx")).toContain("Turn TitanKeys Keyboard on in Accessibility.");
   // Ink names the build's files after the app name, so Play's bundle is titankeys-keyboard-<version>.aab.
   expect(read("tools/play.sh")).toContain('bundle="dist/titankeys-keyboard-$version.aab"');

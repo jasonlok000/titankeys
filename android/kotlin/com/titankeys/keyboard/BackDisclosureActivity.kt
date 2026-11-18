@@ -113,9 +113,12 @@ class BackDisclosureActivity : Activity() {
 
     private fun answer(agreed: Boolean) {
         getSharedPreferences(PREFERENCES, MODE_PRIVATE).edit().putString(ANSWER, if (agreed) AGREED else DECLINED).apply()
+        if (!agreed) PhoneSetup.declined(this, SetupPart.Back)
         // From Settings the screen opens Accessibility itself. The guide opens it, to watch for the switch.
         if (agreed && intent.getBooleanExtra(OPEN_PAGE, false)) {
-            try { PhoneSetup.open(this, SetupPart.Back, ::startActivity) } catch (_: RuntimeException) {}
+            try {
+                PhoneSetup.open(this, SetupPart.Back, intent.getBooleanExtra(FROM_SETUP, false), ::startActivity)
+            } catch (_: RuntimeException) {}
         }
         setResult(if (agreed) RESULT_OK else RESULT_CANCELED)
         finish()
@@ -171,6 +174,7 @@ class BackDisclosureActivity : Activity() {
         private const val AGREED = "agreed"
         private const val DECLINED = "declined"
         private const val OPEN_PAGE = "open_page"
+        private const val FROM_SETUP = "from_setup"
 
         fun agreed(context: Context) =
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).getString(ANSWER, null) == AGREED
@@ -183,6 +187,7 @@ class BackDisclosureActivity : Activity() {
         fun forGuide(context: Context) = Intent(context, BackDisclosureActivity::class.java)
 
         /** The screen for Settings > Setup, which opens Accessibility after "Agree". */
-        fun forSettings(context: Context) = Intent(context, BackDisclosureActivity::class.java).putExtra(OPEN_PAGE, true)
+        fun forSettings(context: Context, fromSetup: Boolean) = Intent(context, BackDisclosureActivity::class.java)
+            .putExtra(OPEN_PAGE, true).putExtra(FROM_SETUP, fromSetup)
     }
 }

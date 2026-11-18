@@ -18,8 +18,8 @@ test("the phone checks only read", () => {
 test("Setup shows each phone setting as a step that opens its page", () => {
   const setup = read("app/settings/setup.tsx");
   for (const step of ["Set Sym to Programmable key", "Set fn to Programmable key"]) expect(setup).toContain(step);
-  expect(setup).toContain("onPress={openShortcutKeys}");
-  expect(setup).toContain("onPress={openScrollAssistant}");
+  expect(setup).toContain('openSetupStep("shortcutKeys")');
+  expect(setup).toContain('openSetupStep("scrollAssistant")');
   // Scroll assistant and each app's Sliding Mode 1 are one step (owner, 2026-11-14: the second row was "redundant").
   expect(setup).not.toContain("Sliding Mode 1 in your apps");
   expect(setup).toContain("status(settings.scrollAssistant && outside.length === 0)");
@@ -63,7 +63,7 @@ test("Display over other apps and Accessibility try TitanKeys' own page first, t
   expect(setup).toContain("catch (error: ActivityNotFoundException)");
   expect(setup).toContain("catch (error: SecurityException)");
   // Every way in goes through open(), so each falls back alike.
-  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain("PhoneSetup.open(activity, part, activity::startActivity)");
+  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain("PhoneSetup.open(activity, part, fromSetup, activity::startActivity)");
   expect(read("android/kotlin/com/titankeys/keyboard/BackDisclosureActivity.kt")).toContain("PhoneSetup.open(this, SetupPart.Back, ::startActivity)");
   expect(read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt")).toContain("PhoneSetup.open(this, part) { page -> startActivityForResult(page, SETUP_REQUEST) }");
   for (const path of ["android/kotlin/com/vandam/ink/AppNativeAdapters.kt", "android/kotlin/com/titankeys/keyboard/BackDisclosureActivity.kt", "android/kotlin/com/titankeys/keyboard/GuideActivity.kt"])
@@ -74,7 +74,7 @@ test("Setup names Sliding Mode 1, and says what to find when Android shows its w
   const page = read("app/settings/setup.tsx");
   expect(page).toContain('!settings.scrollAssistant ? "Turn on Scroll assistant, Sliding Mode 1"');
   expect(page).toContain('outside.length ? `Put ${names(outside)} on Sliding Mode 1` : "Scroll assistant, Sliding Mode 1"');
-  expect(page).toContain("<Field label={scrollAssistantStep} onPress={openScrollAssistant}>");
+  expect(page).toContain('<Field label={scrollAssistantStep} onPress={() => void openSetupStep("scrollAssistant")}>');
   expect(page).toContain("{!settings.overlay && settings.overlayOnList && <Note>{overlayListNote}</Note>}");
   expect(page).toContain("{!settings.backService && settings.backOnList && <Note>{backListNote}</Note>}");
   expect(page).toMatch(/overlayListNote = "[^"]*Find TitanKeys Keyboard in it/);

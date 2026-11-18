@@ -1,16 +1,18 @@
-import { ExpiredSubscription, hash, knownProduct, playVerifier, SupportError } from "./play.js";
+import { ExpiredSubscription, hash, knownProduct, playPostingConfigured, playVerifier, SupportError } from "./play.js";
 
 const BODY_LIMIT = 32_768;
 const ACCOUNT_KEY = /^[0-9a-f]{64}$/;
 const PUBLIC_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const PURCHASE_TOKEN = /^[A-Za-z0-9._~+=/-]{1,2048}$/;
+const ADMIN_SCHEME = "Bearer ";
+const ADMIN_HEADER_LIMIT = 256;
 const RESPONSE_HEADERS = {
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
 };
 
-function json(data, status = 200) {
-    return Response.json(data, { status, headers: RESPONSE_HEADERS });
+function json(data, status = 200, headers = RESPONSE_HEADERS) {
+    return Response.json(data, { status, headers });
 }
 
 function done() {
@@ -69,14 +71,23 @@ function cups(cents) {
     return Math.round(cents / 50) / 10;
 }
 
-async function board(db) {
-    const { results } = await db.prepare(`
+function validAdminToken(token) {
+    return typeof token === "string" && token.length >= 32;
+}
+
+async function board(env) {
+    const { results } = await env.DB.prepare(`
         SELECT s.public_id AS id, s.name, s.message, SUM(o.cents) AS cents
         FROM supporters s JOIN support_orders o ON s.account_id = o.account_id
         GROUP BY s.account_id HAVING SUM(o.cents) > 0
         ORDER BY cents DESC, s.public_id ASC LIMIT 10
     `).all();
-    return json({ entries: results.map(({ id, name, message, cents }) => ({ id, name, message, cups: cups(cents) })) });
+    const entries = results.map(({ id, name, message, cents }) => ({ id, name, message, cups: cups(cents) }));
+    const adminToken = env.ADMIN_TOKEN;
+    const ready = validAdminToken(adminToken) && adminToken.trimEnd() === adminToken &&
+        adminToken.length <= ADMIN_HEADER_LIMIT - ADMIN_SCHEME.length && await playPostingConfigured(env);
+    const headers = ready ? { ...RESPONSE_HEADERS, "X-TitanKeys-Posting": "ready" } : RESPONSE_HEADERS;
+    return json({ entries }, 200, headers);
 }
 
 async function publish(request, env, verifier) {
@@ -133,9 +144,9 @@ async function remove(request, db) {
 async function adminDelete(request, env) {
     const candidate = request.headers.get("Authorization");
     const secret = env.ADMIN_TOKEN;
-    if (typeof secret !== "string" || secret.length < 32 || candidate === null ||
-        !candidate.startsWith("Bearer ") || candidate.length > 256) return json({ error: "not_found" }, 404);
-    const [supplied, expected] = await Promise.all([hash(candidate.slice(7)), hash(secret)]);
+    if (!validAdminToken(secret) || candidate === null ||
+        !candidate.startsWith(ADMIN_SCHEME) || candidate.length > ADMIN_HEADER_LIMIT) return json({ error: "not_found" }, 404);
+    const [supplied, expected] = await Promise.all([hash(candidate.slice(ADMIN_SCHEME.length)), hash(secret)]);
     let difference = 0;
     for (let i = 0; i < expected.length; i++) difference |= supplied.charCodeAt(i) ^ expected.charCodeAt(i);
     if (difference !== 0) return json({ error: "not_found" }, 404);
@@ -180,7 +191,7 @@ export function createWorker(verifier = playVerifier()) {
         async fetch(request, env) {
             try {
                 const path = new URL(request.url).pathname;
-                if (request.method === "GET" && path === "/v1/leaderboard") return await board(env.DB);
+                if (request.method === "GET" && path === "/v1/leaderboard") return await board(env);
                 if (request.method === "POST" && path === "/v1/support") return await publish(request, env, verifier);
                 if (request.method === "POST" && path === "/v1/remove") return await remove(request, env.DB);
                 if (request.method === "POST" && path === "/v1/admin/delete") return await adminDelete(request, env);

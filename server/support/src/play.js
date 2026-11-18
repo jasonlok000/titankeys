@@ -33,9 +33,13 @@ export function knownProduct(kind, productId) {
 function catalogCents(env, kind, productId) {
     const price = (kind === "tip" ? TIPS : MONTHLY).get(productId);
     if (typeof price === "number") return price;
-    const value = env[price];
-    if (!/^[1-9][0-9]?$/.test(value ?? "")) throw new SupportError(503, "play_unavailable");
-    return Number(value);
+    const cents = configuredSipCents(env[price]);
+    if (cents === null) throw new SupportError(503, "play_unavailable");
+    return cents;
+}
+
+function configuredSipCents(value) {
+    return /^[1-9][0-9]?$/.test(value ?? "") ? Number(value) : null;
 }
 
 export async function hash(value) {
@@ -47,20 +51,36 @@ function base64url(bytes) {
     return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 
+async function readPlayAccount(secret) {
+    const { client_email, private_key } = JSON.parse(secret);
+    const pem = typeof private_key === "string" &&
+        private_key.match(/^-----BEGIN PRIVATE KEY-----\s+([A-Za-z0-9+/=\s]+)-----END PRIVATE KEY-----\s*$/);
+    if (typeof client_email !== "string" || !client_email.trim() || !pem) throw new Error();
+    const key = await crypto.subtle.importKey(
+        "pkcs8", Uint8Array.from(atob(pem[1].replace(/\s/g, "")), char => char.charCodeAt(0)),
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"],
+    );
+    return { email: client_email, key };
+}
+
+export async function playPostingConfigured(env) {
+    if (typeof env.APP_PACKAGE !== "string" || !env.APP_PACKAGE.trim() ||
+        configuredSipCents(env.TIP_SIP_CENTS) === null || configuredSipCents(env.MONTHLY_SIP_CENTS) === null) return false;
+    try {
+        await readPlayAccount(env.PLAY_SERVICE_ACCOUNT);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 async function authorize(env, fetcher) {
     try {
-        const { client_email, private_key } = JSON.parse(env.PLAY_SERVICE_ACCOUNT);
-        if (!client_email || !private_key) throw new Error();
-        const pem = private_key.match(/^-----BEGIN PRIVATE KEY-----\s+([A-Za-z0-9+/=\s]+)-----END PRIVATE KEY-----\s*$/);
-        if (pem === null) throw new Error();
-        const key = await crypto.subtle.importKey(
-            "pkcs8", Uint8Array.from(atob(pem[1].replace(/\s/g, "")), char => char.charCodeAt(0)),
-            { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"],
-        );
+        const { email, key } = await readPlayAccount(env.PLAY_SERVICE_ACCOUNT);
         const now = Math.floor(Date.now() / 1000);
         const header = base64url(encoder.encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
         const claims = base64url(encoder.encode(JSON.stringify({
-            iss: client_email, scope: SCOPE, aud: TOKEN_URL, iat: now, exp: now + 600,
+            iss: email, scope: SCOPE, aud: TOKEN_URL, iat: now, exp: now + 600,
         })));
         const jwt = `${header}.${claims}`;
         const signature = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(jwt)));

@@ -14,6 +14,7 @@ const PROVIDER_ERRORS = new Map();
 const outgoing = [];
 let voided = [];
 let failAt;
+let oauthRequests;
 let db;
 let worker;
 let env;
@@ -52,6 +53,7 @@ function fixtureD1(sqlite) {
 
 async function fakeGoogle(url, options) {
     if (url === "https://oauth2.googleapis.com/token") {
+        oauthRequests++;
         const assertion = options.body.get("assertion");
         expect(assertion.split(".")).toHaveLength(3);
         return Response.json({ access_token: "fake-oauth", expires_in: 3600 });
@@ -92,6 +94,7 @@ beforeEach(() => {
     outgoing.length = 0;
     voided = [];
     failAt = undefined;
+    oauthRequests = 0;
 });
 
 function money(cents, currencyCode = CURRENCY) {
@@ -132,6 +135,47 @@ async function entries() {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     return (await response.json()).entries;
 }
+
+test("the leaderboard advertises posting only with complete local configuration", async () => {
+    const assertBoard = async readiness => {
+        const response = await api("leaderboard");
+        expect(response.status).toBe(200);
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        expect(response.headers.get("X-TitanKeys-Posting")).toBe(readiness);
+        expect(await response.json()).toEqual({ entries: [] });
+    };
+    await assertBoard("ready");
+    for (const [setting, invalid] of [
+        ["APP_PACKAGE", undefined],
+        ["PLAY_SERVICE_ACCOUNT", undefined],
+        ["PLAY_SERVICE_ACCOUNT", '{"client_email":"fixture@example.invalid"}'],
+        ["PLAY_SERVICE_ACCOUNT", JSON.stringify({
+            client_email: "fixture@example.invalid",
+            private_key: "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n",
+        })],
+        ["ADMIN_TOKEN", undefined],
+        ["ADMIN_TOKEN", "too-short"],
+        ["ADMIN_TOKEN", "a".repeat(250)],
+        ["TIP_SIP_CENTS", undefined],
+        ["TIP_SIP_CENTS", "0"],
+        ["MONTHLY_SIP_CENTS", undefined],
+        ["MONTHLY_SIP_CENTS", "100"],
+    ]) {
+        const original = env[setting];
+        env[setting] = invalid;
+        await assertBoard(null);
+        env[setting] = original;
+    }
+    env.PLAY_SERVICE_ACCOUNT = undefined;
+    const tip = await paid({ label: "unconfigured" });
+    const response = await publish([tip]);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("X-TitanKeys-Posting")).toBeNull();
+    expect(await response.json()).toEqual({ error: "play_unavailable" });
+    await assertBoard(null);
+    expect(oauthRequests).toBe(0);
+    expect(outgoing).toEqual([]);
+});
 
 test("only verified opt-in changes the board and the database stores hashes", async () => {
     expect(await entries()).toEqual([]);

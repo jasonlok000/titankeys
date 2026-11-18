@@ -13,6 +13,7 @@ import { sentenceSpacesLabel } from "../sentence-spaces";
 import { shorthandLabel } from "../shorthand/index";
 import { HowTo } from "../../../lib/how-to";
 import { TryIt } from "../../../lib/try-it";
+import { KeysDrawing } from "../../../lib/keys-drawing";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
@@ -95,6 +96,7 @@ export default function LanguagePage() {
     </Section>}
     {/* The owner-approved order (language-flow.html): Turn on and options, How it works, the keys, Try it. */}
     <HowTo methods={methods} />
+    {methods.length === 1 && <KeysDrawing im={methods[0]} />}
     <TryIt methods={methods.filter(im => inputMethods.includes(im.id))} />
   </Screen>;
 }

@@ -899,3 +899,5 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 ## Codex (2026-11-18, language settings)
 
 - Owner: "basically within that language settings everything shd be in their native language. and for chinese specifically, call traditional chinese 正體中文." This applies to the settings, input-method cards, typing instructions, key tables and practice prompts now. The Characters screen names Hong Kong and Taiwan separately.
+
+- In Cangjie and Quick, typing the hovered key replaces its faded radical with the committed radical in one update. While a finger stays on the touchpad, the preview follows the hovered key and returns to its earlier radical if the finger moves back.

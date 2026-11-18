@@ -775,6 +775,7 @@ class GuideActivity : Activity() {
     private lateinit var guideAction: TextView
     private lateinit var settingsAction: TextView
     private lateinit var supportCard: LinearLayout
+    private var supportStatsShowing = false
     private lateinit var close: ImageView
     private lateinit var title: TextView
     private lateinit var body: TextView
@@ -3331,7 +3332,11 @@ class GuideActivity : Activity() {
 
     private fun paintSupport() {
         val fixture = SupportStats.preview(this)
-        val due = SupportStats.due(this, fixture)
+        if (!supportStatsShowing && SupportStats.due(this, fixture)) {
+            supportStatsShowing = true
+            if (!fixture) SupportStats.seen(this)
+        }
+        val due = supportStatsShowing
         val totals = if (due) SupportStats.totals(this, fixture) else null
         supportCard.removeAllViews()
         supportCard.setPadding(dp(14), dp(9), dp(14), dp(9))
@@ -3370,6 +3375,7 @@ class GuideActivity : Activity() {
                 addView(topAction("Support TitanKeys", open).apply { setTextColor(Accent.colour) })
                 addView(topAction("Nah") {
                     SupportStats.dismiss(this@GuideActivity)
+                    supportStatsShowing = false
                     paintSupport()
                 }.apply { setTextColor(GuideColours.CREAM) })
             })

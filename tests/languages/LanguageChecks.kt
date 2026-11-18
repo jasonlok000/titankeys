@@ -279,6 +279,13 @@ private fun languagesGroupTheirInputMethods() {
     val threeChinese = InputMethodIndex.parse("[" + listOf(entry("yue-yale", "zh"), entry("yue-jyutping", "zh"),
         entry("zh-pinyin", "zh")).joinToString(",") + "]").languagesOn("en,yue-yale,yue-jyutping,zh-pinyin")
     same("three: the language's row in the switcher", SwitchOverlay.markTap(threeChinese, "yue-yale"), SwitchPick.Row(threeChinese[1]))
+    val oldChineseRow = index.languagesOn("en,yue-yale,zh-pinyin")[1]
+    same("an open Chinese row gains Jyutping in place", SwitchOverlay.refreshedRow(threeChinese, oldChineseRow),
+        threeChinese[1])
+    same("removing a method rebuilds the open row", SwitchOverlay.refreshedRow(
+        index.languagesOn("en,yue-yale,zh-pinyin"), threeChinese[1]), oldChineseRow)
+    same("only one method left: return to languages", SwitchOverlay.refreshedRow(
+        index.languagesOn("en,yue-yale"), oldChineseRow), null)
     // The mark at Q: the language's where it has one input method on, the input method's where it has more.
     val zh = InputMethodIndex.parse("[" + listOf(entry("yue-yale", "zh"), entry("zh-pinyin", "zh"), entry("es", "es")).joinToString(",") + "]")
     same("one Chinese on: the language's mark", SwitchOverlay.markLabel(zh.on("en,yue-yale,es"), "yue-yale", "耶"), "ZH")

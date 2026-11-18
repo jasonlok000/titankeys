@@ -10,6 +10,8 @@
 
 The input methods go on through InputMethodsSet, and each check types in Debug's Space gestures field.
 """
+import os
+from pathlib import Path
 import re
 import time
 
@@ -239,11 +241,37 @@ def check_two_toggle():
 
 
 def check_q_mark():
-    """C's mark at Q (main 2ef3bf2d): Chinese with only Yale on shows 中, its language; with Pinyin on too, Yale's own 耶."""
-    for on, want in ((["en", "yue-yale"], "中"), (["en", "yue-yale", "zh-pinyin"], "耶")):
-        setup(on, "yue-yale")
-        play("+300", shot=f"q-mark-{len(on)}", at=100)
-        record(f"q-mark-{'-'.join(on[1:])}", None, f"{', '.join(on)} on, Yale typing: {want} at Q", f"q-mark-{len(on)}")
+    """Compare Q in the same editor to fresh-field reference frames, including with Yale code pending."""
+    from PIL import Image
+
+    single = ["en", "yue-yale"]
+    multiple = [*single, "zh-pinyin"]
+    def frame(name):
+        shot = guide_checks.shot(name)
+        path = Path(os.environ["TK_OUT"]) / "touch" / "shots" / (shot + ".png")
+        with Image.open(path) as image:
+            # Status bar was cropped by the harness. Q occupies the first tenth of the bottom strip.
+            return image.convert("RGB").crop((0, image.height - 55, image.width // 10, image.height)).tobytes()
+
+    for row in ("idle", "choices"):
+        references = {}
+        for label, methods in (("single", single), ("multiple", multiple)):
+            setup(methods, "yue-yale")
+            if row == "choices":
+                play("key:n", "key:e", "+500")
+            name = f"q-mark-{row}-{label}"
+            references[label] = frame(name)
+            record(name, None, "Expected " + ("中" if label == "single" else "耶") + " at Q", name)
+        for label, methods in (("single", single), ("multiple", multiple)):
+            answer = adb("shell", "am", "broadcast", "-n", language_checks.RECEIVER, "--es", "on", ",".join(methods),
+                         "--es", "current", "yue-yale")
+            if "typing yue-yale" not in answer:
+                raise Stop("Changing the enabled methods failed")
+            time.sleep(.4)
+            name = f"q-mark-live-{row}-{label}"
+            pixels = frame(name)
+            record(name, references["single"] != references["multiple"] and pixels == references[label],
+                   "Q compared with the fresh-field reference after changing methods in place", name)
 
 
 BATCH = [check_centred, check_one_mark_per_tile, check_screen_taps, check_fifth_language, check_fifth_language_refused,

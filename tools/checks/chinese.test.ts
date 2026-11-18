@@ -36,7 +36,7 @@ test("the code floats over the app, above the bar's left edge, only while a code
 
 test("the mark sits over Q and the more cue over P", () => {
   const picker = body(strip, "drawPicker");
-  expect(picker).toContain("drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)");
+  expect(picker).toContain("drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)");
   expect(picker).toContain("drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)");
   // Orange while a code is typed: Shift opens more, though Shift isn't under it.
   expect(picker).toContain("pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted");
@@ -140,6 +140,19 @@ test("the mark shows whenever an input method that isn't English types, the idle
   expect(body(ime, "showInputMark")).toContain("strip?.inputMark = if (languages.current.isEnglish) \"\" else markLabel()");
   expect(body(ime, "inputMethodChanged")).toContain("showInputMark()");
   expect(body(strip, "dispatchDraw")).toContain("drawInputMark(canvas)");
+});
+
+test("changing the enabled methods refreshes the mark and open picker in the current editor", () => {
+  const observer = ime.slice(ime.indexOf("private val overlaySetting"), ime.indexOf("private val methodsChanged"));
+  expect(observer).toContain("TypingSettings.INPUT_METHODS ->");
+  expect(observer).toContain("main.post(methodsChanged)");
+  const update = ime.slice(ime.indexOf("private val methodsChanged"), ime.indexOf("// The idle games", ime.indexOf("private val methodsChanged")));
+  expect(update).toContain("refreshFieldMethods()");
+  expect(update).not.toContain("LanguagePicker.Choices");
+  expect(update).toContain("SwitchOverlay.refreshedRow(on, open.opened)");
+  expect(body(ime, "refreshFieldMethods")).toContain("languages.refresh(sample)");
+  expect(body(ime, "refreshFieldMethods")).toContain("showInputMark()");
+  expect(body(ime, "onDestroy")).toContain("main.removeCallbacks(methodsChanged)");
 });
 
 

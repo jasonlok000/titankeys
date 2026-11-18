@@ -979,9 +979,26 @@ class TitanKeysIme : InputMethodService() {
 
     /** The settings screen is open when this changes, so the keyboard is idle and no field start would apply it. */
     private val overlaySetting = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key != TypingSettings.TOUCHPAD_ONLY_IN_FIELDS) return@OnSharedPreferenceChangeListener
-        updateOverlay()
-        updateHold()
+        when (key) {
+            TypingSettings.TOUCHPAD_ONLY_IN_FIELDS -> {
+                updateOverlay()
+                updateHold()
+            }
+            TypingSettings.INPUT_METHODS -> {
+                // Settings and restore write the enabled list and current choice together.
+                main.removeCallbacks(methodsChanged)
+                main.post(methodsChanged)
+            }
+        }
+    }
+
+    private val methodsChanged = Runnable {
+        if (!editing) return@Runnable
+        refreshFieldMethods()
+        val open = openPicker() as? LanguagePicker.Switch ?: return@Runnable
+        val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
+        if (!languages.switching) closePicker()
+        else showPicker(LanguagePicker.Switch(on, SwitchOverlay.refreshedRow(on, open.opened), languages.current.id))
     }
 
     // The idle games on the bar (an Easter egg, see IdlePlayer): an idle period starts with each key, touch or swipe, a new field or
@@ -1555,8 +1572,7 @@ class TitanKeysIme : InputMethodService() {
         updateHold()
     }
 
-    /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
-    private fun readSettings() {
+    private fun refreshFieldMethods() {
         // The guide's lessons teach English, so they type it whatever input method is on. The playground is free practice: it
         // types in the input methods that are on, and a held Sym opens the switcher there (owner, 2026-11-17: "long press for
         // sym doesn't trigger the language selection in the playground").
@@ -1566,6 +1582,11 @@ class TitanKeysIme : InputMethodService() {
         languages.refresh(sample)
         // Which input methods are on may have changed, and with them the mark at Q.
         if (::languages.isInitialized) showInputMark()
+    }
+
+    /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
+    private fun readSettings() {
+        refreshFieldMethods()
         languages.variant()
         val english = languages.current.isEnglish
         // Each input method's own sentence ends and opening marks, for capitals and spaces (Greek's ;, Hindi's ।, Spanish's ¿¡).
@@ -5045,6 +5066,7 @@ class TitanKeysIme : InputMethodService() {
         if (::languages.isInitialized) languages.stop()
         editor.cancelState()
         TypingSettings.stopListening(this, overlaySetting)
+        main.removeCallbacks(methodsChanged)
         barSize?.let { FixedScale.stopListening(this, it) }
         overlay.hide()
         BackService.releaseTouchpad(overlayEvent)

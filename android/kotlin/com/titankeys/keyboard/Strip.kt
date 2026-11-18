@@ -994,9 +994,10 @@ class Strip(
         val baseline = StripFit.baseline(line, pickerText.textSize, floor)
         val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, barHeight.toFloat(), inside))
         // The input method's mark over Q, in the accent, and P's cue when there are more choices: each kept to its key.
-        if (picker.mark.isNotEmpty()) {
+        if (picker.mark.isNotEmpty() && inputMark.isNotEmpty()) {
+            // The choices can outlive a method change. Q uses the same current label as the idle bar.
             pickerText.color = look.accent
-            drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)
+            drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)
         }
         if (picker.more || picker.lead.isNotEmpty()) {
             // Orange while a code is typed: Sym opens the bigger menu, though Sym isn't under it (owner, 2026-11-17: "not like

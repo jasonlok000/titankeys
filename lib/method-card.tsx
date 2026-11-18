@@ -60,3 +60,22 @@ export function MethodGroups({ page, methods, card }: {
     {rest.length > 0 && <Section title={groups.length ? "F: Other input methods" : "Input methods"}>{rest.map(card)}</Section>}
   </>;
 }
+
+const reasons = pageText as { notAvailable?: Record<string, string> };
+
+/**
+ * What this language can't do, and why (owner-approved flow: settings levels with "not available" notes): each language-level
+ * setting languages.json marks unavailable, in page-text's notAvailable words, {X} as the language's English name. F: drafts
+ * where page-text has none yet. Input-method rows that don't apply to a method aren't listed: its card simply hasn't them.
+ */
+export function NotAvailable({ page, english }: { page: LanguagePage | null; english: string }) {
+  const rows = (page?.settings ?? []).filter(setting => setting.level === "language" && !setting.available && setting.reason);
+  if (!rows.length) return null;
+  const said = new Set<string>();
+  const lines = rows.map(row => {
+    const words = reasons.notAvailable?.[row.reason!];
+    return words ? words.replaceAll("{X}", english) : `F: notAvailable.${row.reason}`;
+  }).filter(line => !said.has(line) && said.add(line));
+  // F: draft title.
+  return <Section title="Not in this language">{lines.map(line => <Note key={line}>{line}</Note>)}</Section>;
+}

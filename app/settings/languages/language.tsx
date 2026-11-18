@@ -14,7 +14,7 @@ import { shorthandLabel } from "../shorthand/index";
 import { HowTo } from "../../../lib/how-to";
 import { TryIt } from "../../../lib/try-it";
 import { KeysDrawing } from "../../../lib/keys-drawing";
-import { MethodCard, MethodGroups, languagePage } from "../../../lib/method-card";
+import { MethodCard, MethodGroups, NotAvailable, languagePage } from "../../../lib/method-card";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
@@ -99,6 +99,7 @@ export default function LanguagePage() {
         onChange={swipeTyping => void save.run({ swipeTyping })} />}
       {has("shorthand") && <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>}
     </Section>}
+    <NotAvailable page={page} english={language.nameEnglish} />
     {/* The owner-approved order (language-flow.html): Turn on and options, How it works, the keys, Try it. */}
     <HowTo methods={methods} />
     {methods.length === 1 && <KeysDrawing im={methods[0]} />}

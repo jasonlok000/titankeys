@@ -2853,9 +2853,9 @@ class TitanKeysIme : InputMethodService() {
                 main.removeCallbacks(confirmDoubleTap)
                 cursorPath = ArrayList(samples.filter { it.valid })
                 // With Alt on or the panel open the touchpad does not type, so the cursor waits until they are off.
-                // A finger the contact ignored landed while typing, so it must not start the cursor.
+                // Page-only overlays keep the touchpad, and a finger the contact ignored must not start the cursor.
                 // On a guide slide that doesn't teach them yet, Space gestures still count and glow, and are refused as they act.
-                val gestureCounts = cursorControl && !altOrPanel && contact.travel != null
+                val gestureCounts = cursorControl && !altOrPanel && contact.cursorEligible
                 Recording.sink?.gesture("down", first.time, "counts=$gestureCounts cursorControl=$cursorControl " +
                     "altOrPanel=$altOrPanel contact=${contact.travel != null}")
                 cursorGesture.down(first, gestureCounts)
@@ -3208,14 +3208,14 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** A key press or something else interrupted the touchpad, so this ends cursor mode and calls off a double tap. */
-    private fun endCursor() {
+    private fun endCursor(typeHeldTaps: Boolean = true) {
         Recording.sink?.gesture("cancel", SystemClock.uptimeMillis(), "")
         stopCursor()
         main.removeCallbacks(confirmDoubleTap)
         main.removeCallbacks(confirmTriple)
         main.removeCallbacks(registerGestureLater)
         cursorGesture.cancel(SystemClock.uptimeMillis())
-        settleHeldTaps()
+        finishHeldTaps(type = typeHeldTaps)
     }
 
     private fun stopCursor() {
@@ -4031,11 +4031,14 @@ class TitanKeysIme : InputMethodService() {
     /** Swipes on the keys go to the panel or the bar's overlay while one is open, a page turn's length or more. */
     private fun setPaging() {
         val open = openOverlay
+        val previous = contact.paging
         contact.paging = when {
             !panelOpen && open == Overlays.Open.Choices -> Contact.Paging.Choices
             Overlays.paging(open, panelOpen) -> Contact.Paging.PagesOnly
             else -> Contact.Paging.None
         }
+        // The overlay takes over any Space gesture already waiting or dragging in the field.
+        if (previous != Contact.Paging.PagesOnly && contact.paging == Contact.Paging.PagesOnly) endCursor(typeHeldTaps = false)
         contact.pageLog = if (picker is LanguagePicker.Choices && AppBuild.kind(this) == "debug") { line -> choicesLog(line) } else null
     }
 

@@ -52,3 +52,16 @@ test("language and field changes select the touch gestures the keyboard can use"
   expect(ime).toContain("if (!altOrPanel && !outcome.deletesWord && pageChoices(outcome.points)) return");
   expect(ime).toContain("val allowed = if (outcome.deletesWord) contact.deleteFlicks else contact.wordSwipes");
 });
+
+test("page-only overlays take over from Space gestures already underway", () => {
+  expect(ime).toContain("val gestureCounts = cursorControl && !altOrPanel && contact.cursorEligible");
+  const start = ime.indexOf("private fun setPaging()");
+  const paging = ime.slice(start, ime.indexOf("private fun closePicker()", start));
+  expect(paging).toContain("val previous = contact.paging");
+  expect(paging).toContain("if (previous != Contact.Paging.PagesOnly && contact.paging == Contact.Paging.PagesOnly) endCursor(typeHeldTaps = false)");
+  const end = ime.indexOf("private fun endCursor(");
+  const cancel = ime.slice(end, ime.indexOf("private fun stopCursor()", end));
+  expect(cancel).toContain("stopCursor()");
+  expect(cancel).toContain("cursorGesture.cancel(SystemClock.uptimeMillis())");
+  expect(cancel).toContain("finishHeldTaps(type = typeHeldTaps)");
+});

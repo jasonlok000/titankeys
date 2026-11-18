@@ -106,6 +106,7 @@ fun main() {
     aboveSpaceTheWholeBottomLetterRow()
     aWordFromVWithoutTapsStaysAWord()
     aHeldTouchRegistersBeforeAnySlide()
+    overlaysKeepSpaceGesturesInTheCompactRow()
     theThirdTouchIsKnownAsItLands()
     threeQuickTapsPickAWord()
     manyTapsNeverLockTheGesturesOut()
@@ -139,7 +140,7 @@ private class Pad {
 
     fun down(sample: Sample) {
         contact.down(sample)
-        gesture.down(sample, contact.travel != null)
+        gesture.down(sample, contact.cursorEligible)
         tapped = false
     }
 
@@ -1097,6 +1098,60 @@ private fun aHeldTouchRegistersBeforeAnySlide() {
     val single = Pad()
     single.down(at(COLUMN, 1_000))
     same(single.gesture.held(1_000 + 500), 0, "A first touch alone never registers")
+}
+
+/** The expanded menu and language switcher share page-only touch routing. Compact choices can still steer and select. */
+private fun overlaysKeepSpaceGesturesInTheCompactRow() {
+    val strokes = listOf(1 to 2f, 2 to -2f, 3 to 2f)
+
+    fun gestures(paging: Contact.Paging) = strokes.map { (touches, keys) ->
+        val pad = Pad()
+        pad.contact.paging = paging
+        var now = 1_000L
+        repeat(touches - 1) {
+            pad.tap(COLUMN, now, 70)
+            now += 160
+        }
+        pad.down(at(COLUMN, now))
+        val picksOnLand = pad.gesture.tapsBefore == 2
+        val registered = pad.gesture.held(now + 250)
+        repeat(12) { step ->
+            pad.move(at(COLUMN + keys * (step + 1) / 12, now + 250 + 50L * (step + 1)))
+        }
+        pad.up(now + 970)
+        Triple(picksOnLand, registered, pad.started?.let { pad.words })
+    }
+
+    val nothing = Triple(false, 0, null)
+    same(gestures(Contact.Paging.PagesOnly), List(3) { nothing },
+        "Expanded choices and the switcher neither steer nor select on Space touches")
+    same(gestures(Contact.Paging.Choices), listOf(nothing, Triple(false, 2, false), Triple(true, 3, true)),
+        "The compact choices row keeps steering and selection")
+
+    val paging = Pad()
+    paging.contact.paging = Contact.Paging.PagesOnly
+    paging.down(at(7f, 1_000, 3f))
+    paging.move(*path(7f, 3f, 7f, 1f, 1_000))
+    same((paging.up(1_080) as? Contact.Outcome.Swipe)?.forPaging, true, "The expanded menu still receives a quick page swipe")
+
+    val armed = Pad()
+    armed.contact.paging = Contact.Paging.Choices
+    val landed = armed.tapThenLand()
+    same(armed.gesture.touchPending, true, "The compact row can be waiting for a steer when the menu opens")
+    armed.contact.paging = Contact.Paging.PagesOnly
+    armed.gesture.cancel(landed + 10)
+    same(armed.gesture.held(landed + 250), 0, "The menu interrupts the waiting steer")
+    armed.move(*path(COLUMN, ROW, COLUMN - 2, ROW, landed + 250))
+    same(armed.started, null, "The same contact cannot start steering from the menu")
+
+    val waiting = Pad()
+    waiting.contact.paging = Contact.Paging.Choices
+    val second = waiting.tapThenLand()
+    waiting.up(second + 70)
+    same(waiting.tapped, true, "The compact row can be waiting to confirm two taps")
+    waiting.contact.paging = Contact.Paging.PagesOnly
+    waiting.gesture.cancel(second + 80)
+    same(waiting.gesture.confirm(), false, "Even after the finger lifted, the menu cancels the pending selection")
 }
 
 /** Three quick taps on Space pick the word at the cursor, once no fourth touch has followed. */

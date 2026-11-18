@@ -94,6 +94,9 @@ class Contact {
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.takeIf { it.counts }?.travel
 
+    /** Whether the current contact can count toward a cursor gesture. */
+    val cursorEligible get() = paging != Paging.PagesOnly && travel != null
+
     val points: List<Sample> get() = (state as? State.Touching)?.takeUnless { it.deleting }?.points ?: emptyList()
 
     /** Whether the current contact is deleting words. A lift, a key press or a cancel ends it. */

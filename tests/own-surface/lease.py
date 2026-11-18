@@ -13,7 +13,8 @@ def block(marker):
 valid=source[source.index('fun valid(): Boolean'):source.index('fun watch(')]
 limited=block('private class LimitedOutput(').replace('private class','class',1)
 native='\n'.join(block(marker) for marker in (
-    'private fun ownedContent(', 'private fun spaceEditor(', 'private fun guideKeys(', 'private fun descendants(',
+    'private fun ownedContent(', 'private fun spaceEditor(', 'private fun guideKeys(', 'private fun panelView(',
+    'private fun panelState(', 'private fun descendants(',
 ))
 fixture=r'''
 package com.titankeys.keyboard
@@ -29,16 +30,22 @@ object android { object R { object id { const val content=1 } } }
 object EditorInfo { const val IME_FLAG_NO_PERSONALIZED_LEARNING=1 }
 object GuideHooks { const val FIELD="com.titankeys.guide" }
 class Display(val displayId:Int)
+class Rect(var left:Int=0,var top:Int=0,var right:Int=0,var bottom:Int=0)
 open class View(val context:Context=Context()) {
  var focus=true; var isAttachedToWindow=true; var isShown=true
  var width=100; var height=100; var windowToken=Any(); var rootView:View=this
  var imeWindow=true; var display:Display?=Display(0); var settings:View?=null
  var content:ViewGroup?=null; var focused:View?=null
+ var clipped=false; var alpha=1f
  var x=0; var y=0
  fun hasWindowFocus()=focus
  fun findFocus()=focused
  inline fun <reified V:View> findViewById(id:Int)=content as? V
  fun getLocationOnScreen(at:IntArray) { at[0]=x; at[1]=y }
+ fun getLocalVisibleRect(rect:Rect):Boolean {
+  rect.right=width; rect.bottom=if (clipped) height-1 else height
+  return isShown
+ }
 }
 open class ViewGroup(context:Context=Context()):View(context) {
  val children=mutableListOf<View>()
@@ -52,6 +59,15 @@ class EditText(context:Context):View(context) {
  var privateImeOptions:String?=null
 }
 class GuideKeyboardView(context:Context):View(context)
+class ChoicesMenu:View() {
+ data class Page(val cells:List<Int>)
+ var page=Page(listOf(1))
+ var revision=1
+}
+class Strip:View() {
+ sealed interface Notice { data class Picker(val items:List<String>,val back:Boolean):Notice }
+ var notice:Notice?=null
+}
 class Surface { var isValid=true }
 class Holder { var surface=Surface() }
 class SurfaceView:View() { val holder=Holder() }
@@ -65,6 +81,7 @@ class Lease(val context:Context, window:View, target:View, val kind:String, val 
  val width=target.width; val height=target.height
  val location=IntArray(2).also(target::getLocationOnScreen)
  val surface=(target as? SurfaceView)?.holder?.surface?.let { WeakReference(it) }
+ val panelAtCapture=if (kind=="panel") panelState(target) else null
  var lost=false
  fun selected(context:Context)=context.selected
  fun isImeWindow(root:View)=root.imeWindow
@@ -133,11 +150,35 @@ fun main(args: Array<String>) {
  guideContent.children.removeAt(guideContent.children.lastIndex)
  guide.window.decorView=View(); check(!guideLease.valid())
  guide.window.decorView=guideWindow; guide.packageName="com.titankeys"; check(!guideLease.valid())
+ val (panelWindow,_)=fixture()
+ val imeWindow=ViewGroup()
+ val choices=ChoicesMenu().apply { rootView=imeWindow }
+ val strip=Strip().apply { rootView=imeWindow; isShown=false }
+ imeWindow.children.addAll(listOf(strip,choices))
+ val panelEditor=FeedEditor()
+ val menu=Lease(Context(),panelWindow,choices,"panel",panelEditor)
+ check(panelView(imeWindow)===choices && menu.valid())
+ choices.clipped=true; check(!menu.valid())
+ choices.clipped=false; check(menu.valid())
+ choices.alpha=0f; check(panelView(imeWindow)==null)
+ choices.alpha=1f; check(menu.valid())
+ choices.revision++; check(!menu.valid())
+ choices.revision--; panelEditor.good=false; check(!menu.valid())
+ panelEditor.good=true; imeWindow.imeWindow=false; check(!menu.valid())
+ imeWindow.imeWindow=true; choices.page=ChoicesMenu.Page(emptyList()); check(panelView(imeWindow)==null)
+ choices.page=ChoicesMenu.Page(listOf(1)); choices.isShown=false; check(panelView(imeWindow)==null)
+ strip.isShown=true; strip.notice=Strip.Notice.Picker(listOf("a"),false); check(panelView(imeWindow)==null)
+ strip.notice=Strip.Notice.Picker(emptyList(),true); check(panelView(imeWindow)==null)
+ strip.notice=Strip.Notice.Picker(listOf("English"),true)
+ val switcher=Lease(Context(),panelWindow,strip,"panel",panelEditor)
+ check(panelView(imeWindow)===strip && switcher.valid())
+ strip.notice=Strip.Notice.Picker(listOf("Japanese"),true); check(!switcher.valid())
+ choices.isShown=true; check(panelView(imeWindow)==null)
  val bytes=ByteArrayOutputStream(); val capped=LimitedOutput(bytes)
  capped.write(ByteArray(OwnCapturePolicy.MAX_BYTES))
  try { capped.write(1); error("Limit not enforced") } catch (_:IOException) {}
  check(bytes.size()==OwnCapturePolicy.MAX_BYTES)
- println("PASS capture owner and window identity, fixture-only editor, guide key scope, selected IME, focus and exact PNG limit")
+ println("PASS capture owner and window identity, fixture editor, guide keys, occupied panels, selected IME and exact PNG limit")
  com.titankeys.keyboard.lifecycle.lifecycle(File(args.single()))
 }
 '''.replace('VALID',valid).replace('LIMITED',limited).replace('NATIVE',native)

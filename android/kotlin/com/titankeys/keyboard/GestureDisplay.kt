@@ -1542,8 +1542,10 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
          * A delete flick or a held delete's step, with [before] the text before the cursor and [selected] the selected text, or
          * null for no selection. A selection goes first, whole, as Backspace takes it (bug hunt
          * 2.1, #7): it's something to delete even at the start of the text, and its dots are its characters, not the word before.
+         * A flick also has something to delete when [codePending] is true, even with an empty field.
          */
-        fun nothingToDelete(before: CharSequence?, selected: CharSequence?) = selected == null && before?.isEmpty() == true
+        fun nothingToDelete(before: CharSequence?, selected: CharSequence?, codePending: Boolean = false) =
+            !codePending && selected == null && before?.isEmpty() == true
 
         /**
          * How many dots a delete takes, read before it goes: the selection's characters, not counting spaces, or else the last

@@ -3235,11 +3235,12 @@ class TitanKeysIme : InputMethodService() {
 
     /**
      * Whether a stroke from [first] may have something to delete: always, unless it starts where a delete flick does and the
-     * field has nothing before the cursor. Typing still on its way, or a field that doesn't answer, counts as something.
+     * field has nothing before the cursor, no selection and no code being built. Typing still on its way, or a field that
+     * doesn't answer, counts as something.
      */
     private fun somethingToDelete(first: Sample): Boolean {
         if (!startsDeleteFlick(first.x, first.y) || pendingInput.isNotEmpty() || composer.hasPendingInput) return true
-        return !GestureDisplay.nothingToDelete(currentInputConnection?.getTextBeforeCursor(1, 0), selectionToDelete())
+        return !GestureDisplay.nothingToDelete(currentInputConnection?.getTextBeforeCursor(1, 0), selectionToDelete(), codePending = codePending())
     }
 
     /**

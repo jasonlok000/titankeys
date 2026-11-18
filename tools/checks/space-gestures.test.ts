@@ -96,6 +96,11 @@ test("a delete with nothing says no once per stroke, and only a hold that ran ou
   expect(ime).toContain("&& somethingToDelete(first))");
 });
 
+test("code pending in an empty field counts towards the flick glow preflight", () => {
+  expect(body("somethingToDelete")).toContain("selectionToDelete(), codePending = codePending())");
+  expect(body("codePending")).toContain("state?.composing == true");
+});
+
 test("a double space with text selected steers, never says no", () => {
   expect(body("nothingHere")).toContain("if (!words && lastSelectionStart >= 0 && lastSelectionStart != lastSelectionEnd) return false");
   expect(body("registerGesture")).toContain("if (!words && collapseSelection()) enqueue { readCursorText() }");

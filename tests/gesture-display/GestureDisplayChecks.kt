@@ -26,6 +26,7 @@ fun main() {
     aHeldDeleteGlowFollowsItsPace()
     aFlicksGlowFollowsTheFinger()
     everyFlickShowsItsGlow()
+    aFlickClearingCodeGlowsInAnEmptyField()
     aWordDragOnLongTextNeverRunsOutOfPills()
     unspacedWordDragDrawsEachStep()
     theSelectionsEndMarkTurnsSmoothly()
@@ -1849,6 +1850,32 @@ private fun everyFlickShowsItsGlow() {
     still.flickLifted(.6f, 6_000)
     still.advance(6_016, 0f)
     same(still.glowing, false, "With animations off the late glow doesn't hang on")
+}
+
+private fun aFlickClearingCodeGlowsInAnEmptyField() {
+    val start = Sample(.95f, .35f, 1_000)
+    val middle = Sample(.85f, .35f, 1_015)
+    val lift = Sample(.65f, .35f, 1_030)
+    val stroke = listOf(start, middle, lift)
+    val contact = Contact().apply {
+        swipes = Contact.Swipes.DeletesOnly
+        paging = Contact.Paging.Choices
+        down(start)
+        move(listOf(middle))
+    }
+    val pending = contact.up(listOf(lift), lift.time) ?: error("Missing flick outcome")
+    val outcome = contact.settle(pending, pending.deadline) as? Contact.Outcome.Swipe
+    same(outcome?.deletesWord, true, "A compact choices row still dispatches this flick as a delete")
+    for (codePending in listOf(true, false)) {
+        val crunch = FlickCrunch()
+        val display = GestureDisplay()
+        crunch.begin(!GestureDisplay.nothingToDelete("", null, codePending))
+        crunch.move(stroke.take(2))
+        if (crunch.lifted(stroke)) display.flickLifted(lift.x, lift.time)
+        display.advance(lift.time + FRAME, 1f)
+        same(display.glowAlpha > 0f, codePending, "In an empty field the flick only glows if it has pending code to clear")
+        same(display.dots, 0, "No field text was removed, so there are no dots")
+    }
 }
 
 /**

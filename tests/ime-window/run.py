@@ -14,6 +14,11 @@ import sys
 import time
 
 
+DEBUG = "com.titankeys.debug"
+SPACE = "com.titankeys.keyboard.SpaceGestureActivity"
+KEEP_EDITOR = "com.titankeys.debug.keepEditorOnBack"
+
+
 def shell(*args):
     return subprocess.check_output(["adb", "shell", *args], text=True)
 
@@ -60,6 +65,32 @@ def same_editor(package, actual_type, expected_package, expected_type):
         f"got {package} type=0x{actual_type:x}")
 
 
+def debug_back_stays_in_editor():
+    """Use the Debug recorder's one-shot Back fixture to keep the same field in view."""
+    def focus():
+        return next((line for line in shell("dumpsys", "window").splitlines() if "mCurrentFocus" in line), "")
+
+    assert f" {DEBUG}/" in focus(), "STOP: Debug must be in front before the Back fixture"
+    shell("am", "start", "-W", "-n", f"{DEBUG}/{SPACE}", "--ez", KEEP_EDITOR, "true")
+    for _ in range(12):
+        assert f" {DEBUG}/" in focus(), "STOP: Debug lost the foreground during Back setup"
+        package, input_type, visible = state()
+        if package == DEBUG and input_type & 0xF == 1 and visible and f"/{SPACE}" in focus():
+            break
+        time.sleep(.5)
+    else:
+        raise AssertionError("Back fixture did not obtain a focused editor and visible TitanKeys bar")
+
+    assert f" {DEBUG}/{SPACE}" in focus(), "STOP: Back fixture lost focus"
+    shell("input", "keyevent", "BACK")
+    time.sleep(2)
+    assert f" {DEBUG}/{SPACE}" in focus(), "Back closed the keep-editor fixture"
+    package, actual_type, visible = state()
+    same_editor(package, actual_type, DEBUG, input_type)
+    assert not visible, "TitanKeys remained or came back after Back in the same field"
+    print("PASS back: TitanKeys stayed hidden in the same field", flush=True)
+
+
 def main():
     # The maintainer's phone lock, if there is one (tools/phone_lock.py).
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../tools"))
@@ -68,8 +99,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("package", help="App containing the focused text field")
     parser.add_argument("--cycles", type=int, default=12)
+    parser.add_argument("--same-field", action="store_true", help="Check Back with the TitanKeys Debug keep-editor fixture")
     args = parser.parse_args()
     assert args.cycles > 0, "cycles must be positive"
+    assert not args.same_field or args.package == DEBUG, "--same-field requires TitanKeys Debug"
     selected = shell("settings", "get", "secure", "default_input_method").strip()
     assert selected.startswith("com.titankeys") and selected.endswith("TitanKeysIme"), "Select TitanKeys before running"
     prepare_debug(args.package)
@@ -106,6 +139,9 @@ def main():
         assert visible, f"TitanKeys window stayed hidden after return {cycle + 1} (home delay {delay}s)"
         print(f"PASS return {cycle + 1}: TitanKeys visible after {delay}s home delay", flush=True)
 
+    if args.same_field:
+        debug_back_stays_in_editor()
+        return
     # Back also reaches the app, which can close the screen. Only a field that stays can show the result.
     shell("input", "keyevent", "BACK")
     time.sleep(2)

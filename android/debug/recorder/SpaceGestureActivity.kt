@@ -168,9 +168,19 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
 
     override fun onPause() {
         super.onPause()
+        intent.removeExtra(KEEP_EDITOR_ON_BACK)
         if (Recording.sink === this) Recording.sink = null
         main.removeCallbacks(finish)
         finishTry()
+    }
+
+    @Deprecated("Back reaches this legacy window after the keyboard handles it")
+    override fun onBackPressed() {
+        if (intent.getBooleanExtra(KEEP_EDITOR_ON_BACK, false)) {
+            intent.removeExtra(KEEP_EDITOR_ON_BACK)
+            return
+        }
+        super.onBackPressed()
     }
 
     override fun motion(event: MotionEvent, samples: List<Sample>) {
@@ -380,6 +390,7 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
     }
 
     private companion object {
+        const val KEEP_EDITOR_ON_BACK = "com.titankeys.debug.keepEditorOnBack"
         const val EXPORT = 1
         const val QUIET_MILLIS = 1500L
         val MUTED = Color.rgb(142, 142, 147)

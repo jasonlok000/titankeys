@@ -11,9 +11,18 @@ APP = "com.titankeys.debug"
 ACTIVITY = "com.titankeys.keyboard.SpaceGestureActivity"
 WINDOW = f"mCurrentFocus=Window{{abcd u0 {APP}/{ACTIVITY}}}"
 IDS = {1: "en", 2: "yue-yale"}
+MARKER = "charter-aaaa"
+ATTEMPT = (MARKER, "1795000000.000")
 YALE = "Input method at field start: yue-yale (saved)"
-OPEN = "TitanKeysSym: Sym handled: panel now Symbols, shown true"
+OPEN = f"Sym handled: panel now Symbols, shown true (app {APP}, editing true)"
 CODE = [*(f"key:{letter}" for letter in "neihou"), "+600"]
+
+
+def event(tag, message, pid=123, time="16:22:01.234"):
+    return f"11-18 {time} I/{tag}( {pid}): {message}"
+
+
+MARK = event("TitanKeysCodex", MARKER, pid=456)
 
 
 class Stop(Exception):
@@ -31,17 +40,24 @@ class ZhBackProbeTest(unittest.TestCase):
         self.languages = SimpleNamespace(FIELD_ACTIVITY=ACTIVITY, front=Mock(return_value=WINDOW), subtype_ids=Mock(return_value=IDS))
         spec = importlib.util.spec_from_file_location("zh_back_batch_test_target", PROBE)
         self.probe = importlib.util.module_from_spec(spec)
+        observer = SimpleNamespace(MARK_TAG="TitanKeysCodex", Unobservable=RuntimeError, mark_attempt=Mock(return_value=ATTEMPT))
         with patch.dict(sys.modules, checks=self.checks, chinese_checks=self.chinese,
-                        language_checks=self.language_checks, languages=self.languages):
+                        language_checks=self.language_checks, languages=self.languages, bar_observations=observer):
             spec.loader.exec_module(self.probe)
         self.probe.time = SimpleNamespace(sleep=Mock())
-        self.probe.lines = Mock(side_effect=[[], [OPEN], [OPEN], [OPEN]])
+        self.raw = "\n".join((MARK, event("TitanKeysSym", OPEN)))
         self.operations = Mock()
         self.operations.attach_mock(self.chinese.fresh, "fresh")
         self.operations.attach_mock(self.chinese.play, "play")
         self.operations.attach_mock(self.checks.guarded, "guarded")
 
     def adb(self, *args):
+        if args == ("shell", "pidof", APP):
+            return "123\n"
+        if args[:2] == ("logcat", "-d"):
+            self.assertEqual(args, ("logcat", "-d", "-v", "time", "-T", ATTEMPT[1], "-s",
+                                    "TitanKeysCodex:I", "TitanKeysSym", "TitanKeysIM", "*:S"))
+            return self.raw
         if args == ("shell", "dumpsys", "input_method"):
             return "mShowRequested=true mInputShown=true"
         if args[:2] == ("shell", "getprop"):
@@ -90,7 +106,7 @@ class ZhBackProbeTest(unittest.TestCase):
                 self.chinese.play.reset_mock()
                 self.language_checks.active_method.side_effect = ["yue-yale", method]
                 # The old field-start message still says Yale.
-                self.probe.lines.side_effect = [[YALE], [YALE, OPEN], [YALE, OPEN]]
+                self.raw = "\n".join((event("TitanKeysIM", YALE), MARK, event("TitanKeysSym", OPEN)))
                 self.probe.check_back_then_enter()
                 self.assertIsNone(self.verdict("zh-back-method"))
                 self.chinese.play.assert_called_once_with("key:sym", "+700")
@@ -98,13 +114,33 @@ class ZhBackProbeTest(unittest.TestCase):
 
     def test_saved_yale_without_live_readback_refuses_input_despite_old_log(self):
         self.language_checks.active_method.return_value = None
-        self.probe.lines.side_effect = [[YALE]]
+        self.raw = event("TitanKeysIM", YALE)
         self.probe.check_back_then_enter()
         self.assertIsNone(self.verdict("zh-back-setup"))
         self.assertEqual(self.operations.mock_calls, [])
 
     def test_no_android_back_if_symbols_is_unverified(self):
-        self.probe.lines.side_effect = [[], []]
+        self.raw = "\n".join((event("TitanKeysSym", OPEN), MARK, event("TitanKeysSym", OPEN, pid=999)))
+        self.probe.check_back_then_enter()
+        self.assertIsNone(self.verdict("zh-back-setup"))
+        self.checks.guarded.assert_not_called()
+
+    def test_time_headers_keep_only_exact_tag_and_current_pid_after_marker(self):
+        raw = "\n".join((
+            event("TitanKeysSym", "old"),
+            event("TitanKeysCodex", MARKER + "-earlier"),
+            event("TitanKeysSym", "still old"),
+            MARK,
+            event("Other", f"TitanKeysSym: {OPEN}"),
+            event("TitanKeysSym", "wrong pid", pid=321),
+            event("TitanKeysSym", OPEN),
+            event("TitanKeysIM", YALE, time="16:22:02.345"),
+        ))
+        self.assertEqual(self.probe.trace_lines(raw, MARKER, "123"), [("TitanKeysSym", OPEN), ("TitanKeysIM", YALE)])
+        self.assertEqual(self.probe.trace_lines(raw, "missing-marker", "123"), [])
+
+    def test_debug_restart_before_log_read_refuses_back(self):
+        self.probe.debug_pid = Mock(side_effect=["123", "321"])
         self.probe.check_back_then_enter()
         self.assertIsNone(self.verdict("zh-back-setup"))
         self.checks.guarded.assert_not_called()

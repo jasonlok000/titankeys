@@ -95,6 +95,8 @@ internal object InputMethodList {
     fun rimeSchemasOn(context: Context): Set<String> = index(context).on(TypingSettings.inputMethods(context))
         .filter { it.engine == com.titankeys.rime.RimeEngine.ENGINE }
         .mapNotNull { entry -> load(context, entry.id)?.engineArg }
+        // A schema with lazy sounds brings its strict twin, which the setting may pick at any time (RimeEngine.LAZY_SOUNDS).
+        .flatMap { id -> if (id in com.titankeys.rime.RimeEngine.LAZY_SCHEMAS) listOf(id, id + com.titankeys.rime.RimeEngine.STRICT) else listOf(id) }
         .toSet()
 
     /** TitanKeys' own id in Android's keyboard list. */

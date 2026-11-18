@@ -17,12 +17,17 @@ speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba
   delimiter: " '"
   algebra:
+    # Standard Yale's low tones (4, 5, 6) write an h after the vowels: sihk 食, faahn 飯, neih 你, and m̀h 唔 on a syllabic
+    # nasal. Typed or not, as the user likes (native review, 2026-11-17): the h spelling is added, the plain one stays.
+    - derive/^([a-z]*?[aeiou]+)(ng|m|n|p|t|k)?([456])$/$1h$2$3/
+    - derive/^(m|ng)([456])$/$1h$2/
     - xform/\d$//
     - xform/^jy/y/
     - xform/^j/y/
     - xform/^z/j/
     - xform/^c/ch/
     - xform/aa$/a/
+    - xform/aah$/ah/
     - xform/eu/iu/
     - xform/eo/eu/
     - xform/oe/eu/
@@ -30,9 +35,18 @@ speller:
     - xform/ep/ip/
     # Interchangeable initials (owner, 2026-11-17: "For yale specifically, make j and z, n and l interchangeable"): z types
     # Yale's j, as Jyutping writes it; n and l type each other, as many speakers merge them. Initials only, and ng stays ng.
-    - derive/^j/z/
-    - derive/^n(?!g)/l/
-    - derive/^l/n/
+    - derive/^j/z/  # lazy
+    - derive/^n(?!g)/l/  # lazy
+    - derive/^l/n/  # lazy
+    # Lazy sounds, as many speakers say them (native review, 2026-11-17): ng and no initial for each other (o for 我, aam for
+    # 啱, ngoi for 愛), and gw as g (gok for 國). Not kw as k: it put 規 over 啟 for kai (Master, 2026-11-17).
+    - derive/^ng([aeiou])/$1/  # lazy
+    - derive/^([aeiou])/ng$1/  # lazy
+    - derive/^gw/g/  # lazy
+    # Jyutping's spellings typed in Yale: c for ch (cing 情) and oe for eu (hoeng 香), so they find real syllables, not
+    # letters taken one by one as abbreviations (native review: ci, cing, hoeng gave 出嚙我, 可誒五).
+    - derive/^ch/c/
+    - derive/eu/oe/
     - abbrev/^([a-z]).+$/$1/
     - abbrev/^(ng).+$/$1/
     - abbrev/^(ch).+$/$1/
@@ -40,7 +54,7 @@ speller:
 translator:
   dictionary: jyut6ping3
   prism: tk_yale
-zh_hans: { option_name: zh_hans, opencc_config: t2s.json, tips: none }
+zh_hans: { option_name: zh_hans, opencc_config: tk_t2s_yue.json, tips: none }
 zh_hk:   { option_name: zh_hk,   opencc_config: t2hkf.json, tips: none }
 zh_tw:   { option_name: zh_tw,   opencc_config: t2tw.json, tips: none }
 # Cantonese's grammar model (librime-octagram, #56): data.sh's tk_yue.gram, which words follow which in Cantonese text,

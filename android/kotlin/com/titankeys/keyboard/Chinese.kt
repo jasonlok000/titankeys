@@ -206,7 +206,7 @@ object ChineseKeys {
     }
 
     /** What a swipe on the keys does while an engine's choices are on the bar. */
-    enum class Swipe { OpenMenu, NextPage, PageBefore, Nothing }
+    enum class Swipe { OpenMenu, NextPage, PageBefore, CloseMenu, Nothing }
 
     /**
      * A swipe on the touchpad with choices on the bar, a page turn's length or more ([Contact.PAGE_KEYS], which Contact asks of
@@ -214,10 +214,13 @@ object ChineseKeys {
      * menu open, up and down turn its pages, as on the Sym panel. Mostly sideways, or less than half a row up or down, is
      * nothing: a slip, or a swipe meant for something else. [across] and [down] are in keys and rows; up is negative.
      */
-    fun swipe(across: Float, down: Float, menuOpen: Boolean): Swipe {
+    fun swipe(across: Float, down: Float, menuOpen: Boolean, firstPage: Boolean = false): Swipe {
         if (kotlin.math.abs(down) * 10 < kotlin.math.abs(across) * 4 || kotlin.math.abs(down) < SWIPE_ROWS) return Swipe.Nothing
         return when {
-            menuOpen -> if (down < 0f) Swipe.NextPage else Swipe.PageBefore
+            menuOpen && down < 0f -> Swipe.NextPage
+            // Down on the first page closes the menu, as Shift does (owner, 2026-11-17: "when already at the first page, when
+            // expanded, a swipe down shd close the menu"); on a later page it goes back one.
+            menuOpen -> if (firstPage) Swipe.CloseMenu else Swipe.PageBefore
             down < 0f -> Swipe.OpenMenu
             else -> Swipe.Nothing
         }

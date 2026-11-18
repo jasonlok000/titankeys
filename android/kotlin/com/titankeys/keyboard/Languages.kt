@@ -167,6 +167,7 @@ internal class Languages(
         val chosen = TypingSettings.chineseVariant(context)
         for (option in CHINESE_VARIANTS) engine.option(option, option == chosen)
         engine.option(ChineseKeys.PLAIN_PUNCTUATION, TypingSettings.chinesePlainPunctuation(context))
+        engine.option(com.titankeys.rime.RimeEngine.LAZY_SOUNDS, TypingSettings.lazySounds(context, current.id))
     }
 
     /** Switches to input method [id], saved for next time. Its files load in the background; English is at once. */

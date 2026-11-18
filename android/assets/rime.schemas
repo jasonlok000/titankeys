@@ -7,6 +7,11 @@ tk_jyutping	build/jyut6ping3.reverse.bin
 tk_jyutping	build/tk_jyutping.prism.bin
 tk_jyutping	tk_yue.gram
 tk_jyutping	predict-yue.db
+tk_jyutping_strict	build/jyut6ping3.table.bin
+tk_jyutping_strict	build/jyut6ping3.reverse.bin
+tk_jyutping_strict	build/tk_jyutping_strict.prism.bin
+tk_jyutping_strict	tk_yue.gram
+tk_jyutping_strict	predict-yue.db
 tk_pinyin	build/luna_pinyin.table.bin
 tk_pinyin	build/luna_pinyin.reverse.bin
 tk_pinyin	build/tk_pinyin.prism.bin
@@ -21,6 +26,11 @@ tk_yale	build/jyut6ping3.reverse.bin
 tk_yale	build/tk_yale.prism.bin
 tk_yale	tk_yue.gram
 tk_yale	predict-yue.db
+tk_yale_strict	build/jyut6ping3.table.bin
+tk_yale_strict	build/jyut6ping3.reverse.bin
+tk_yale_strict	build/tk_yale_strict.prism.bin
+tk_yale_strict	tk_yue.gram
+tk_yale_strict	predict-yue.db
 tk_zhuyin	build/terra_pinyin.table.bin
 tk_zhuyin	build/terra_pinyin.reverse.bin
 tk_zhuyin	build/tk_zhuyin.prism.bin

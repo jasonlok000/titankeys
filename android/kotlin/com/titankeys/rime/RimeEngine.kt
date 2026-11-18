@@ -121,7 +121,7 @@ class RimeEngine(
         selected(rime, this)
         schema = null
         seen = syncs
-        if (!rime.schema(id)) return false
+        if (!rime.schema(effective(id))) return false
         schema = id
         for ((name, on) in options) rime.option(name, on)
         return true
@@ -131,7 +131,7 @@ class RimeEngine(
         val id = schema ?: return@synchronized
         schema = null
         seen = syncs
-        if (rime.schema(id)) {
+        if (rime.schema(effective(id))) {
             schema = id
             for ((name, on) in options) rime.option(name, on)
         }
@@ -146,7 +146,18 @@ class RimeEngine(
     }
 
     /** Sets an option, such as one of the Chinese variants ([ChineseVariant.options]). Kept for the next schema too. */
+    /** Lazy sounds on ([LAZY_SOUNDS]): the input method's own schema; off, its strict twin, with only its own spellings. */
+    @Volatile private var lazy = true
+
+    /** The schema Rime selects for input method schema [id]: its strict twin when lazy sounds are off and it has one. */
+    private fun effective(id: String) = if (!lazy && id in LAZY_SCHEMAS) id + STRICT else id
+
     override fun option(name: String, on: Boolean) {
+        if (name == LAZY_SOUNDS) {
+            val changed = synchronized(this) { (lazy != on).also { lazy = on } }
+            if (changed && open && schema != null) reselect()
+            return
+        }
         synchronized(this) {
             options[name] = on
             if (open && schema != null) rime.option(name, on)
@@ -378,6 +389,14 @@ class RimeEngine(
     companion object {
         /** The engine's name in im.json. */
         const val ENGINE = "rime"
+        /**
+         * The keyboard's option for Yale's and Jyutping's lazy sounds (Settings, on by default): n and l, j and z, ng and no
+         * initial, gw as g. Off selects the schema's strict twin (data.sh's tk_*_strict), with its own spellings only.
+         */
+        const val LAZY_SOUNDS = "tk_lazy_sounds"
+        /** The schemas with lazy sounds, and their strict twins' suffix. */
+        val LAZY_SCHEMAS = setOf("tk_yale", "tk_jyutping")
+        const val STRICT = "_strict"
         /** How many of Rime's own next words are read, at most: more than the row and its menu's first page show. */
         private const val MOST_SUGGESTIONS = 64
 

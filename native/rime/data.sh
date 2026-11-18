@@ -76,7 +76,7 @@ import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
 s, n = re.subn(r'schema_list:\n(  - schema: .*\n)+',
                'schema_list:\n  - schema: tk_yale\n  - schema: tk_jyutping\n  - schema: tk_pinyin\n  - schema: tk_cangjie\n'
-               '  - schema: tk_quick\n  - schema: tk_zhuyin\n', s)
+               '  - schema: tk_quick\n  - schema: tk_zhuyin\n  - schema: tk_yale_strict\n  - schema: tk_jyutping_strict\n', s)
 assert n == 1
 s, n = re.subn(r'page_size: 5', 'page_size: 8', s)
 assert n == 1
@@ -86,6 +86,13 @@ cp "$SRC/rime-essay/essay.txt" .
 cp "$SRC/rime-luna-pinyin/luna_pinyin.dict.yaml" "$SRC/rime-luna-pinyin/pinyin.yaml" .
 cp "$SRC"/rime-cantonese/jyut6ping3*.dict.yaml "$SRC/rime-cantonese/essay-cantonese.txt" \
   "$SRC/rime-cantonese/symbols_cantonese.yaml" .
+# Native review (2026-11-17), for Yale and Jyutping:
+# - Hong Kong's standard forms first: 説, 啓 and 靑 are written 說, 啟 and 青 throughout the word list.
+# - Words of Latin letters alone (D, Dee, del, Do do: rime-cantonese's lettered list) go: they came before real syllables,
+#   and English types them anyway. Words mixing them with characters (開zoom, 出M) stay, at weight 0, below real matches.
+sed -i 's/説/說/g; s/啓/啟/g; s/靑/青/g' jyut6ping3*.dict.yaml essay-cantonese.txt
+awk -F'	' -v OFS='	' '/^[^#.][^	]*	[a-z]/ { if ($1 ~ /^[ -~]+$/) next; $3 = "0" } { print }' jyut6ping3.lettered.dict.yaml > lettered.new
+mv lettered.new jyut6ping3.lettered.dict.yaml
 # Cangjie 5 and Quick 5 (rime-cangjie's dictionary, which Quick builds on), and Zhuyin's dictionary (rime-terra-pinyin).
 cp "$SRC"/rime-cangjie/cangjie5*.dict.yaml "$SRC"/rime-quick/quick5*.dict.yaml "$SRC/rime-terra-pinyin/terra_pinyin.dict.yaml" .
 # TitanKeys' few changes to the Cantonese word weights (cantonese-weights.tsv says why): a word's weight replaced, or the
@@ -125,13 +132,22 @@ with open(sys.argv[2], 'w', encoding='utf-8', newline='\n') as out:
     out.writelines(f'{word}\t{max(weight[word], 1)}\n' for word in order)
 PY
 cp "$HERE"/schemas/*.yaml .
+# Lazy sounds off (RimeEngine.LAZY_SOUNDS): Yale's and Jyutping's strict twins, without the lines marked lazy, on the same
+# dictionary, each with its own small prism.
+sed '/# lazy$/d; s/schema_id: tk_yale$/schema_id: tk_yale_strict/; s/prism: tk_yale$/prism: tk_yale_strict/' tk_yale.schema.yaml > tk_yale_strict.schema.yaml
+sed '/# lazy$/d' tk_jyutping_algebra.yaml > tk_jyutping_algebra_strict.yaml
+sed 's/schema_id: tk_jyutping$/schema_id: tk_jyutping_strict/; s/prism: tk_jyutping$/prism: tk_jyutping_strict/; s/tk_jyutping_algebra:/tk_jyutping_algebra_strict:/' tk_jyutping.schema.yaml > tk_jyutping_strict.schema.yaml
 
 # OpenCC: the three variants' configs, and only the dictionaries they use, compiled.
-cp "$OCC/config/t2s.json" "$OCC/config/t2hk.json" "$OCC/config/t2tw.json" "$HERE/schemas/tk_t2twp.json" \
+cp "$OCC/config/t2s.json" "$OCC/config/t2hk.json" "$OCC/config/t2tw.json" "$HERE/schemas/tk_t2twp.json" "$HERE/schemas/tk_t2s_yue.json" \
   "$SRC/rime-cantonese/opencc/t2hkf.json" "$SRC/rime-cantonese/opencc/HKVariantsFull.txt" opencc/
+# Hong Kong keeps 說, 啟 and 青 (native review, 2026-11-17): rime-cantonese's table would turn 說 into 説.
+sed -i '/^說	/d; /^啟	/d; /^青	/d' opencc/HKVariantsFull.txt
 for n in CJK_Compatibility_Ideographs TSPhrases TSCharacters TWVariantsPhrases TWVariants HKVariantsPhrases \
   HKVariants TWPhrases; do cp "$OCC/dictionary/$n.txt" "$D/occ/"; done
 (cd "$D/occ" && python3 -I "$OCC/scripts/extract_tofu_risk.py" TSCharacters.txt TSCharactersExt.txt)
+# Simplified Cantonese keeps 嗰 and 係 (tk_t2s_yue.json; native review, 2026-11-17). The comment line isn't OpenCC's.
+grep -v '^#' "$HERE/TKYueKeep.txt" > "$D/occ/TKYueKeep.txt"
 for f in "$D"/occ/*.txt; do "$OPENCC_DICT" -i "$f" -o "opencc/$(basename "$f" .txt).ocd2" -f text -t ocd2; done
 
 # The next-word suggestions (librime-predict, #56): native/rime/predict.py's tables, compiled by the plugin's own tool.
@@ -172,7 +188,7 @@ mkdir -p "$D/shared/build"
 for f in "$D"/user/build/*; do
   case "$(basename "$f")" in *.table.bin|*.reverse.bin|*.prism.bin|*.schema.yaml|default.yaml) cp "$f" "$D/shared/build/";; esac
 done
-for t in jyut6ping3.table.bin luna_pinyin.table.bin cangjie5.table.bin quick5.table.bin terra_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_pinyin.prism.bin tk_cangjie.prism.bin tk_quick.prism.bin tk_zhuyin.prism.bin; do
+for t in jyut6ping3.table.bin luna_pinyin.table.bin cangjie5.table.bin quick5.table.bin terra_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_yale_strict.prism.bin tk_jyutping_strict.prism.bin tk_pinyin.prism.bin tk_cangjie.prism.bin tk_quick.prism.bin tk_zhuyin.prism.bin; do
   test -s "$D/shared/build/$t" || { echo "missing $t" >&2; exit 1; }
 done
 # The word lists' sources don't ship: Rime uses the compiled tables.
@@ -206,10 +222,37 @@ check tk_yale zh_hk "lei hou" 你好
 check tk_yale zh_hk "zung man" 中文
 check tk_yale zh_hk "jung man" 中文
 check tk_yale zh_hk "ngo" 我
-# Jyutping keeps its own initials: lei isn't 你 there.
+# Native review (2026-11-17): standard Yale's h for the low tones, typed or not; lazy sounds; Jyutping's c and oe in Yale;
+# Hong Kong's 說 and 啟; Simplified Cantonese keeps 係.
+check tk_yale zh_hk "sihk" 食
+check tk_yale zh_hk "faahn" 飯
+check tk_yale zh_hk "hoyih" 可以
+check tk_yale zh_hk "ngoh" 我
+check tk_yale zh_hk "dojeh" 多謝
+check tk_yale zh_hk "neihhou" 你好
+check tk_yale zh_hk "neihou" 你好
+check tk_yale zh_hk "hou" 好
+check tk_yale zh_hk "o" 我
+check tk_yale zh_hk "aam" 啱
+check tk_yale zh_hk "gwok" 國
+check tk_yale zh_hk "gwongdungwa" 廣東話
+check tk_yale zh_hk "cing" 情
+check tk_yale zh_hk "hoeng" 向
+check tk_yale zh_hk "di" 啲
+check tk_jyutping zh_hk "syut" 說
+
+check tk_jyutping zh_hk "kai" 啟
+check tk_yale zh_hans "hai" 係
+# Lazy sounds off: the strict twins keep their own initials, so lei isn't 你 in Jyutping, nor o 我 in Yale.
 rm -rf "$D/try"; mkdir -p "$D/try"
-[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
-  || { echo "FAIL Jyutping lei gives 你: the fuzzy initials reached Jyutping" >&2; exit 1; }
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping_strict zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
+  || { echo "FAIL strict Jyutping lei gives 你: lazy sounds reached the strict twin" >&2; exit 1; }
+rm -rf "$D/try"; mkdir -p "$D/try"
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_yale_strict zh_hk o 1 2>/dev/null | sed 's/^[^:]*: //')" != 我 ] \
+  || { echo "FAIL strict Yale o gives 我: lazy sounds reached the strict twin" >&2; exit 1; }
+check tk_jyutping zh_hk "lei" 你
+check tk_yale_strict zh_hk "nei hou" 你好
+check tk_jyutping_strict zh_hk "nei hou" 你好
 check tk_jyutping zh_hk "jyut jyu" 粵語
 check tk_jyutping zh_hk "ngo dei" 我哋
 check tk_jyutping zh_hk "gwong dung waa" 廣東話
@@ -241,6 +284,9 @@ phrase() { # schema variant code committed
 phrase tk_yale zh_hk diuneiloumou 屌你老母
 phrase tk_yale zh_hk ngodeigamyatheuiyamcha 我哋今日去飲茶
 phrase tk_yale zh_hk ngodeiyatchaiheuisikfaan 我哋一齊去食飯
+phrase tk_yale zh_hk sihkfaahn 食飯
+phrase tk_yale zh_hk neimouheui 你冇去
+phrase tk_yale zh_hk dimyeung 點樣
 phrase tk_jyutping zh_hk ngohaihoenggongjan 我係香港人
 phrase tk_pinyin zh_hans womenyiqiquchifanba 我们一起去吃饭吧
 # With the grammar model, a phrase the word weights alone got wrong (你識咗反美).

@@ -1,0 +1,22 @@
+# TitanKeys: Jyutping's spelling rules, copied from
+# rime-cantonese's jyut6ping3.schema.yaml (CC BY 4.0).
+jyutping:
+  - derive/^([aeiou])/q$1/
+  - derive/^jy?([aeiou])/y$1/
+  - derive/^jyu/ju/
+  - derive/yu(?!ng|k)/y/
+  - derive/(g|k)u(?!ng|k)/$1wu/
+  - derive/eoi(?=\d)/eoy/
+  - derive/eo/oe/
+  - derive/oe/eo/
+  - derive/aa(?=\d)/a/
+  - derive/\d//
+  # Lazy sounds, as Yale's (native review, 2026-11-17; a setting, on by default): n and l, ng and no initial, gw as g
+  # (not kw as k: 規 over 啟 for kai). data.sh's strict twin leaves the lines marked lazy out.
+  - abbrev/^([a-z]).+$/$1/
+  - xform/1/v/
+  - xform/4/vv/
+  - xform/2/x/
+  - xform/5/xx/
+  - xform/3/q/
+  - xform/6/qq/

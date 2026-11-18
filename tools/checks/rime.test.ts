@@ -190,7 +190,9 @@ test("the app copies only the Chinese input methods that are on, file by file (d
     expect(files.has(path)).toBe(true);
     groups.set(schema, [...(groups.get(schema) ?? []), path]);
   }
-  expect([...groups.keys()].sort()).toEqual(["tk_cangjie", "tk_jyutping", "tk_pinyin", "tk_quick", "tk_yale", "tk_zhuyin"]);
+  // With Yale's and Jyutping's strict twins, for lazy sounds off (RimeEngine.LAZY_SOUNDS).
+  expect([...groups.keys()].sort()).toEqual(["tk_cangjie", "tk_jyutping", "tk_jyutping_strict", "tk_pinyin", "tk_quick", "tk_yale",
+    "tk_yale_strict", "tk_zhuyin"]);
   // Yale's: Cantonese's table and grammar, never Mandarin's.
   expect(groups.get("tk_yale")).toContain("build/jyut6ping3.table.bin");
   expect(groups.get("tk_yale")).toContain("tk_yue.gram");

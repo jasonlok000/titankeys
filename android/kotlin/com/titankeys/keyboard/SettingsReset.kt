@@ -30,6 +30,9 @@ internal object SettingsReset {
     /** What gets fixed: one switch for each kind of fix, "fix_" and its id. */
     const val FIX_PREFIX = "fix_"
 
+    /** Input-method switches, one per input method (TypingSettings): Yale's and Jyutping's lazy sounds, Cangjie's radical preview. */
+    val INPUT_METHOD_PREFIXES = listOf("lazy_sounds_", "radical_preview_")
+
     /** What's yours in [TYPING], which a reset leaves: the app lists, the snippets' start, and your own shorthand. */
     val TYPING_DATA = setOf(
         "enter_apps", "exact_apps", "hidden_bar_apps", "recent_apps", "recent_enter_apps", "own_shorthand", "snippet_start",
@@ -43,7 +46,7 @@ internal object SettingsReset {
     /** Puts every setting back to how it started, and tells the windows that show them. */
     fun reset(context: Context) {
         val typing = context.getSharedPreferences(TYPING, Context.MODE_PRIVATE)
-        val fixes = typing.all.keys.filter { it.startsWith(FIX_PREFIX) }
+        val fixes = typing.all.keys.filter { key -> key.startsWith(FIX_PREFIX) || INPUT_METHOD_PREFIXES.any { key.startsWith(it) } }
         // Each language's own values too ("autocorrect@fr"): see TypingSettings.PER_LANGUAGE.
         val languages = typing.all.keys.filter { key -> TypingSettings.PER_LANGUAGE.any { key.startsWith("$it@") } }
         typing.edit().apply { (TYPING_SETTINGS + fixes + languages).forEach { remove(it) } }.apply()

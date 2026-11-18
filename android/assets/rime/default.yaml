@@ -10,6 +10,8 @@ schema_list:
   - schema: tk_cangjie
   - schema: tk_quick
   - schema: tk_zhuyin
+  - schema: tk_yale_strict
+  - schema: tk_jyutping_strict
 
 switcher:
   caption: 〔方案選單〕

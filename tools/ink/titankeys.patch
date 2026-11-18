@@ -22,6 +22,173 @@ index e5e9c50..c26b1ee 100644
  };
  
  async function describe(theme) {
+diff --git a/crates/ink-core/src/accessibility.rs b/crates/ink-core/src/accessibility.rs
+new file mode 100644
+index 0000000..3857c7f
+--- /dev/null
++++ b/crates/ink-core/src/accessibility.rs
+@@ -0,0 +1,161 @@
++use super::*;
++use serde_json::{json, Value};
++
++#[derive(Clone, Debug, PartialEq)]
++pub(super) struct StackLabel {
++    pub text: String,
++    pub value: String,
++    pub selected: Option<bool>,
++    pub enabled: bool,
++    pub clickable: bool,
++}
++
++pub(super) struct Control {
++    id: NodeIdentity,
++    end: bool,
++    rect: Rect,
++    scrolling: bool,
++    text: String,
++    detail: String,
++    role: &'static str,
++    enabled: bool,
++    checked: Option<bool>,
++    target: Option<PressTarget>,
++}
++
++fn row_label(children: &[Node], subtitle: bool) -> Option<&str> {
++    children.iter().find_map(|child| match &child.kind {
++        NodeKind::RowTitle { text, .. } if !subtitle => Some(text.as_str()),
++        NodeKind::Text { text, .. } if !subtitle => Some(text.as_str()),
++        NodeKind::RowSubtitle { text, .. } if subtitle => Some(text.as_str()),
++        NodeKind::Stack { children, .. } => row_label(children, subtitle),
++        _ => None,
++    })
++}
++
++pub(super) fn icon_label(icon: &str) -> Option<&'static str> {
++    match icon.rsplit(':').next()? {
++        "close" => Some("×"),
++        "arrow_back" => Some("←"),
++        "arrow_back_ios" => Some("‹"),
++        _ => None,
++    }
++}
++
++impl Engine {
++    pub(super) fn header_control(&mut self, rect: Rect, text: &str, action: &Action, end: bool) {
++        if self.accessibility_enabled {
++            self.accessible.push(Control {
++                id: self.layout_owner, end, rect, scrolling: false, text: text.to_owned(), detail: String::new(),
++                role: "button", enabled: true, checked: None, target: Some(self.press_target(action)),
++            });
++        }
++    }
++
++    pub(super) fn collect_control(&mut self, node: &Node, rect: Rect) {
++        if node.identity.0 == 0 { return; }
++        let mut add = |rect: Rect, text: &str, detail: &str, role, enabled, checked, target, end| {
++            let rect = rect.intersection(self.clip);
++            if !text.is_empty() && rect.width > 0.0 && rect.height > 0.0 {
++                self.accessible.push(Control {
++                    id: node.identity, end, rect, scrolling: self.scrolling, text: text.to_owned(),
++                    detail: detail.to_owned(), role, enabled, checked, target,
++                });
++            }
++        };
++        let event = |name| Some(PressTarget { node: node.identity, role: PressRole::Event(name) });
++        match &node.kind {
++            NodeKind::Field { label, value, action, disabled } => {
++                let role = if action.is_some() || *disabled { "button" } else { "text" };
++                add(rect, label, value, role, !disabled, None, action.as_ref().and(event("onPress")), false);
++            }
++            NodeKind::SectionTitle { title, .. } => {
++                add(rect, title, "", "heading", true, None, None, false);
++            }
++            NodeKind::Toggle { label, subtitle, value, action, .. } => {
++                add(rect, label, subtitle.as_deref().unwrap_or_default(), "switch", action.is_some(),
++                    Some(*value), action.as_ref().and(event("onChange")), false);
++            }
++            NodeKind::Button { label, selectable, underline, action, .. } => {
++                add(rect, label, "", if *selectable { "radio" } else { "button" }, action.is_some(),
++                    selectable.then_some(*underline), action.as_ref().and(event("onPress")), false);
++            }
++            NodeKind::Row { children, action, end, end_label, .. } => {
++                let Some(title) = row_label(children, false) else { return };
++                let detail = row_label(children, true).unwrap_or_default();
++                let separate_end = matches!(end, Some((_, Some(_))));
++                // The end button has its own hit region at the trailing edge of the row.
++                let end_width = if separate_end {
++                    rect.height.max((ROW_END_ICON_SIZE + 2.0 * BUTTON_ICON_GAP) * self.viewport.scale).min(rect.width)
++                } else { 0.0 };
++                let primary = Rect { width: rect.width - end_width, ..rect };
++                add(primary, title, detail, if action.is_some() { "button" } else { "text" }, true,
++                    None, action.as_ref().and(event("onPress")), false);
++                if separate_end {
++                    add(Rect { x: rect.x + primary.width, width: end_width, ..rect },
++                        end_label.as_deref().unwrap_or(title), title, "button", true, None, event("onEndPress"), true);
++                }
++            }
++            NodeKind::Stack { accessible: Some(label), .. } => {
++                let role = if label.selected.is_some() { "radio" } else if label.clickable { "button" } else { "text" };
++                let target = if label.clickable && label.enabled { event("onPress") } else { None };
++                add(rect, &label.text, &label.value, role, label.enabled, label.selected, target, false);
++            }
++            _ => {}
++        }
++    }
++
++    fn control_bounds(&self, control: &Control) -> Option<Rect> {
++        let mut rect = control.rect;
++        if control.scrolling {
++            rect.y += self.scene.scroll_origin - self.scene.scroll_offset;
++            rect = rect.intersection(self.scene.scroll_clip?);
++        }
++        rect = rect.intersection(Rect {
++            width: self.viewport.width as f32, height: self.viewport.height as f32, ..Rect::default()
++        });
++        (rect.width > 0.0 && rect.height > 0.0).then_some(rect)
++    }
++
++    pub fn accessibility_snapshot(&mut self) -> Value {
++        if !self.accessibility_enabled {
++            self.accessibility_enabled = true;
++            self.relayout_scene();
++        }
++        let controls: Vec<_> = self.accessible.iter().filter_map(|control| {
++            let rect = self.control_bounds(control)?;
++            Some(json!({
++                "id": control.id.0 as i64, "end": control.end, "text": control.text,
++                "detail": control.detail, "role": control.role, "enabled": control.enabled,
++                "checked": control.checked, "click": control.target.is_some(),
++                "bounds": [rect.x.floor() as i32, rect.y.floor() as i32,
++                    (rect.x + rect.width).ceil() as i32, (rect.y + rect.height).ceil() as i32]
++            }))
++        }).collect();
++        let title = match &self.root.kind {
++            NodeKind::Screen(screen) => screen.title.as_deref(),
++            _ => None,
++        };
++        json!({ "title": title.unwrap_or_default(), "controls": controls, "revision": self.scene.revision, "offset": self.scene.scroll_offset, "backward": self.scene.scroll_offset > 0.0,
++            "forward": self.scene.scroll_offset < self.scene.scroll_max })
++    }
++
++    pub fn accessibility_click(&mut self, id: i64, end: bool) -> PointerOutcome {
++        let target = self.accessible.iter()
++            .find(|c| c.id.0 == id as usize && c.end == end && self.control_bounds(c).is_some())
++            .and_then(|c| c.target);
++        let Some(region) = target.and_then(|target| self.hit_regions.iter().find(|r| r.target == target)) else {
++            return PointerOutcome::default();
++        };
++        let action = region.action.clone();
++        let preserve_input = region.preserve_input;
++        let haptic = region.haptic;
++        let revision = self.scene.revision;
++        let activated = self.apply_tap_action(Some(action), preserve_input);
++        PointerOutcome { activated, haptic: activated && haptic, changed: self.scene.revision != revision, captured: false }
++    }
++}
++
++#[cfg(test)]
++#[path = "../../../test/unit/core-accessibility.rs"]
++mod tests;
 diff --git a/crates/ink-core/src/input.rs b/crates/ink-core/src/input.rs
 index 668ee33..ff93c48 100644
 --- a/crates/ink-core/src/input.rs
@@ -45,10 +212,18 @@ index 668ee33..ff93c48 100644
  }
  
 diff --git a/crates/ink-core/src/lib.rs b/crates/ink-core/src/lib.rs
-index 3999e45..5e9140e 100644
+index 3999e45..54d6623 100644
 --- a/crates/ink-core/src/lib.rs
 +++ b/crates/ink-core/src/lib.rs
-@@ -102,6 +102,37 @@ const DEFAULT_ICON_SIZE: f32 = 28.0;
+@@ -16,6 +16,7 @@ use unicode_segmentation::UnicodeSegmentation;
+ 
+ pub use ink_protocol::SmolStr;
+ 
++mod accessibility;
+ mod fonts;
+ mod canvas;
+ mod capture;
+@@ -102,6 +103,37 @@ const DEFAULT_ICON_SIZE: f32 = 28.0;
  const BUTTON_HEIGHT: f32 = 40.0;
  const BUTTON_ICON_SIZE: f32 = 30.0;
  const BUTTON_ICON_GAP: f32 = 12.0;
@@ -86,7 +261,7 @@ index 3999e45..5e9140e 100644
  const FIELD_LABEL_SIZE: f32 = 20.0;
  const FIELD_LABEL_HEIGHT: f32 = 25.0;
  const CONTENT_INSET_START: f32 = 37.0;
-@@ -424,6 +455,8 @@ pub enum Tone {
+@@ -424,6 +456,8 @@ pub enum Tone {
      #[default]
      Primary,
      Muted,
@@ -95,7 +270,23 @@ index 3999e45..5e9140e 100644
  }
  
  #[derive(Clone, Debug, PartialEq, Eq)]
-@@ -678,9 +711,11 @@ enum NodeKind {
+@@ -648,6 +682,7 @@ enum NodeKind {
+     PitchIndicator { cents: Option<f32> },
+     CaptureReadout { controller: u64, kind: CaptureKind },
+     Row {
++        end_label: Option<&'static str>,
+         children: Vec<Node>,
+         has_image: bool,
+         action: Option<Action>,
+@@ -666,6 +701,7 @@ enum NodeKind {
+     },
+     Screen(Box<ScreenNode>),
+     Stack {
++        accessible: Option<Box<accessibility::StackLabel>>,
+         children: Vec<Node>,
+         axis: Axis,
+         gap: Option<f32>,
+@@ -678,9 +714,11 @@ enum NodeKind {
          title: String,
          upper: String,
      },
@@ -108,7 +299,7 @@ index 3999e45..5e9140e 100644
      },
      Text {
          links: Vec<(std::ops::Range<usize>, Action)>,
-@@ -690,6 +725,7 @@ enum NodeKind {
+@@ -690,6 +728,7 @@ enum NodeKind {
          align: TextAlign,
          max_lines: Option<u32>,
          tabular_numbers: bool,
@@ -116,7 +307,35 @@ index 3999e45..5e9140e 100644
      },
      TextInput {
          placeholder: String,
-@@ -849,6 +885,7 @@ impl Node {
+@@ -765,6 +804,8 @@ enum NodeKind {
+     },
+ }
+ 
++type HeaderAction = (Mask, Action, Option<&'static str>);
++
+ #[derive(Clone, Debug, PartialEq)]
+ struct ScreenNode {
+     children: Vec<Node>,
+@@ -782,8 +823,8 @@ struct ScreenNode {
+     pinned_footer: bool,
+     wide: bool,
+     bottom_inset: bool,
+-    left_action: Option<(Mask, Action)>,
+-    right_action: Option<(Mask, Action)>,
++    left_action: Option<HeaderAction>,
++    right_action: Option<HeaderAction>,
+     media_picker: bool,
+ }
+ 
+@@ -822,6 +863,7 @@ impl Node {
+         Self {
+             identity: NodeIdentity(0),
+             kind: NodeKind::Stack {
++                accessible: None,
+                 children,
+                 axis,
+                 gap,
+@@ -849,6 +891,7 @@ impl Node {
                  align,
                  max_lines,
                  tabular_numbers,
@@ -124,7 +343,7 @@ index 3999e45..5e9140e 100644
              },
          }
      }
-@@ -1220,8 +1257,13 @@ pub struct Scene {
+@@ -1220,8 +1263,13 @@ pub struct Scene {
      pub scroll_offset: f32,
      pub scroll_max: f32,
      pub scroll_clip: Option<Rect>,
@@ -138,7 +357,7 @@ index 3999e45..5e9140e 100644
  }
  
  #[derive(Clone, Copy, Debug, PartialEq)]
-@@ -1267,6 +1309,15 @@ impl Scene {
+@@ -1267,6 +1315,15 @@ impl Scene {
      pub fn background(&self) -> Colour {
          if self.light { self.palette.light.background } else { self.palette.dark.background }
      }
@@ -154,7 +373,7 @@ index 3999e45..5e9140e 100644
  }
  
  #[derive(Clone, Debug)]
-@@ -1563,6 +1614,8 @@ const PLAYBACK_CLOCK_JUMP: f32 = 0.25;
+@@ -1563,6 +1620,8 @@ const PLAYBACK_CLOCK_JUMP: f32 = 0.25;
  
  pub struct Engine {
      root: Node,
@@ -163,7 +382,16 @@ index 3999e45..5e9140e 100644
      marquees: HashMap<NodeIdentity, Marquee>,
      playback_progress: HashMap<NodeIdentity, PlaybackProgress>,
      playback_clocks: HashMap<u64, PlaybackClock>,
-@@ -1676,6 +1729,7 @@ impl Engine {
+@@ -1577,6 +1636,8 @@ pub struct Engine {
+     fixed_text_runs: rustc_hash::FxHashMap<NodeIdentity, FixedTextRun>,
+     react_list_positions: HashMap<usize, f32>,
+     list_metrics: HashMap<usize, list::ListMetrics>,
++    accessible: Vec<accessibility::Control>,
++    accessibility_enabled: bool,
+     hit_regions: Vec<HitRegion>,
+     hit_slops: HashMap<NodeIdentity, HitInsets>,
+     action_hit_slops: HashMap<(NodeIdentity, &'static str), HitInsets>,
+@@ -1676,6 +1737,7 @@ impl Engine {
              root: Node::screen(vec![], None, false),
              state: Vec::new(),
              viewport: Viewport::default(),
@@ -171,7 +399,16 @@ index 3999e45..5e9140e 100644
              keyboard_inset: 0,
              display_cutouts: Vec::new(),
              native_editor_state: None,
-@@ -2033,7 +2087,7 @@ impl Engine {
+@@ -1684,6 +1746,8 @@ impl Engine {
+             fixed_text_runs: rustc_hash::FxHashMap::default(),
+             react_list_positions: HashMap::new(),
+             list_metrics: HashMap::new(),
++            accessible: Vec::new(),
++            accessibility_enabled: false,
+             hit_regions: Vec::new(),
+             hit_slops: HashMap::new(),
+             action_hit_slops: HashMap::new(),
+@@ -2033,7 +2097,7 @@ impl Engine {
              width,
              height,
              scale: if width > 0 {
@@ -180,7 +417,7 @@ index 3999e45..5e9140e 100644
              } else {
                  1.0
              },
-@@ -2047,6 +2101,20 @@ impl Engine {
+@@ -2047,6 +2111,20 @@ impl Engine {
          true
      }
  
@@ -201,7 +438,19 @@ index 3999e45..5e9140e 100644
      pub fn set_viewport_scale(&mut self, scale: f32) -> bool {
          if !scale.is_finite() || scale <= 0.0 || self.viewport.scale == scale {
              return false;
-@@ -2913,11 +2981,22 @@ impl Engine {
+@@ -2123,7 +2201,10 @@ impl Engine {
+                 action => action,
+             }, region.preserve_input));
+         let preserve_input = action.as_ref().is_some_and(|(_, preserve)| *preserve);
+-        let action = action.map(|(action, _)| action);
++        self.apply_tap_action(action.map(|(action, _)| action), preserve_input)
++    }
++
++    fn apply_tap_action(&mut self, action: Option<Action>, preserve_input: bool) -> bool {
+         let blurred = self.focused_input.is_some()
+             && !preserve_input
+             && !matches!(
+@@ -2913,11 +2994,22 @@ impl Engine {
          let theme = theme.clone();
          self.scene.palette = theme.palette;
          if self.viewport.width > 0 {
@@ -225,15 +474,17 @@ index 3999e45..5e9140e 100644
      pub fn set_colour_scheme(&mut self, light: bool) -> bool {
          if self.scene.light == light {
              return false;
-@@ -3273,6 +3352,7 @@ impl Engine {
+@@ -3273,7 +3365,9 @@ impl Engine {
          self.scene.scroll_origin = self.scroll_origin;
          self.scene.scroll_offset = self.scroll_offset;
          self.scene.scroll_clip = None;
 +        self.scene.scroll_fade = None;
          self.scene.scroll_bar = None;
++        self.accessible.clear();
          self.hit_regions.clear();
          self.text_inputs.clear();
-@@ -3541,6 +3621,7 @@ impl Engine {
+         self.visible_images.clear();
+@@ -3541,6 +3635,7 @@ impl Engine {
                  max_lines,
                  tabular_numbers,
                  links,
@@ -241,7 +492,7 @@ index 3999e45..5e9140e 100644
              } => {
                  let size = font_size.unwrap_or(DEFAULT_TEXT_SIZE);
                  let font_size = self.scaled_font(size);
-@@ -3586,8 +3667,8 @@ impl Engine {
+@@ -3586,8 +3681,8 @@ impl Engine {
                      height: self.scaled(BUTTON_HEIGHT).min(available.height),
                  }
              }
@@ -252,7 +503,7 @@ index 3999e45..5e9140e 100644
                  self.measure(&text, available)
              }
              // The rest of the content gap sits above the title, so titles group with their rows.
-@@ -3597,10 +3678,11 @@ impl Engine {
+@@ -3597,10 +3692,11 @@ impl Engine {
                      .min(available.height),
              },
              NodeKind::Field { label, value, action, .. } if self.theme.field == FieldLayout::Inline => {
@@ -266,7 +517,7 @@ index 3999e45..5e9140e 100644
                  }
              }
              NodeKind::Field { label, value, .. } => {
-@@ -3674,10 +3756,13 @@ impl Engine {
+@@ -3674,10 +3770,13 @@ impl Engine {
              NodeKind::Toggle { label, subtitle, .. } => {
                  let width = (available.width - self.scaled(self.toggle_control_width() + TOGGLE_LABEL_GAP)).max(0.0);
                  let lines = self.wrap_text(label, self.scaled_font(DEFAULT_TEXT_SIZE), width, None, false);
@@ -281,7 +532,32 @@ index 3999e45..5e9140e 100644
                          .max(self.scaled(TOGGLE_HEIGHT))
                          .min(available.height),
                  }
-@@ -4114,7 +4199,7 @@ impl Engine {
+@@ -3702,6 +3801,7 @@ impl Engine {
+ 
+     fn layout_node(&mut self, node: &Node, rect: Rect, screen_bottom_inset: bool) {
+         let previous = std::mem::replace(&mut self.layout_owner, node.identity);
++        if self.accessibility_enabled { self.collect_control(node, rect); }
+         self.layout_node_inner(node, rect, screen_bottom_inset);
+         self.layout_owner = previous;
+     }
+@@ -4003,7 +4103,7 @@ impl Engine {
+                     self.push_hit_region(Rect { y: bar.y - self.scaled(15.0), height: self.scaled(36.0), ..bar }, Action::Seek { id: node.identity.0, left: rect.x, width: rect.width, duration: *duration });
+                 }
+             }
+-            NodeKind::Row { children, has_image, action, long_action, end } => {
++            NodeKind::Row { children, has_image, action, long_action, end, .. } => {
+                 let image_width = if *has_image { self.scaled(65.0).min(rect.width) } else { 0.0 };
+                 let end_width = if end.is_some() { self.scaled(ROW_END_ICON_SIZE + BUTTON_ICON_GAP) } else { 0.0 };
+                 if *has_image {
+@@ -4100,6 +4200,7 @@ impl Engine {
+                 theme_gap,
+                 align,
+                 justify,
++                ..
+             } => self.layout_stack(
+                 children,
+                 *axis,
+@@ -4114,7 +4215,7 @@ impl Engine {
                  align,
                  max_lines,
                  tabular_numbers,
@@ -290,7 +566,7 @@ index 3999e45..5e9140e 100644
              } => {
                  let size = font_size.unwrap_or(DEFAULT_TEXT_SIZE);
                  let font = self.scaled_font(size);
-@@ -4149,6 +4234,12 @@ impl Engine {
+@@ -4149,6 +4250,12 @@ impl Engine {
                  }
                  let run = self.scene.text.len();
                  self.layout_text_lines(&lines, size, *align, *tabular_numbers, rect);
@@ -303,7 +579,7 @@ index 3999e45..5e9140e 100644
                  if node.identity.0 != 0 && *max_lines == Some(1) && links.is_empty() && self.scene.text.len() == run + 1 {
                      if let Some(width) = width { self.fixed_text_runs.insert(node.identity, FixedTextRun {
                          run, width: *width, font_size: *font_size, align: *align, tabular_numbers: *tabular_numbers,
-@@ -4261,9 +4352,9 @@ impl Engine {
+@@ -4261,9 +4368,9 @@ impl Engine {
                  );
              }
              NodeKind::Tabs { value, tabs } => self.layout_tabs(value, tabs, rect),
@@ -315,7 +591,7 @@ index 3999e45..5e9140e 100644
                  self.layout(&text, rect);
                  if self.theme.subtitle_muted == Some(true) {
                      let muted = self.scene.colour(Colour::MUTED);
-@@ -4278,7 +4369,7 @@ impl Engine {
+@@ -4278,7 +4385,7 @@ impl Engine {
                  let top = self.scaled((self.content_gap() - self.section_gap()).max(0.0));
                  let start = self.scene.text.len();
                  self.layout_text(text, Some(size), TextAlign::Start, Some(1), false, Rect { y: rect.y + top, height: (rect.height - top).max(0.0), ..rect });
@@ -324,7 +600,18 @@ index 3999e45..5e9140e 100644
                  for run in &mut self.scene.text[start..] {
                      run.colour = colour;
                  }
-@@ -4367,7 +4458,7 @@ impl Engine {
+@@ -4319,8 +4426,8 @@ impl Engine {
+         pinned_header: bool,
+         pinned_footer: bool,
+         wide: bool,
+-        left_action: Option<&(Mask, Action)>,
+-        right_action: Option<&(Mask, Action)>,
++        left_action: Option<&HeaderAction>,
++        right_action: Option<&HeaderAction>,
+         media_picker: bool,
+         bottom_inset: bool,
+         rect: Rect,
+@@ -4367,7 +4474,7 @@ impl Engine {
              header_inset
          };
          let has_left = (back_visible && !back_at_end) || left_action.is_some();
@@ -333,7 +620,7 @@ index 3999e45..5e9140e 100644
              let header = self.unobstructed_header(Rect { height: header_height, ..rect });
              let back_x = if back_at_end { header.x + header.width - end_inset - header_button_size } else { header.x + header_inset };
              // An end back button takes the end slot; the screen's end action moves in beside it.
-@@ -4378,15 +4469,22 @@ impl Engine {
+@@ -4378,35 +4485,38 @@ impl Engine {
                  else { header.x + header.width - self.scaled(self.content_inset()) };
              let width = (end - x).max(0.0);
              let lines = subtitle.map(|text| self.wrap_text(text, subtitle_font_size, width, None, false));
@@ -358,8 +645,34 @@ index 3999e45..5e9140e 100644
 +            break (header, back_x, end_x, x, width, lines, title_lines);
          };
          if back_visible {
-             self.push_hit_region(
-@@ -4419,21 +4517,24 @@ impl Engine {
+-            self.push_hit_region(
+-                Rect {
+-                    x: back_x,
+-                    y: header_centre - header_button_size / 2.0,
+-                    width: header_button_size,
+-                    height: header_button_size,
+-                },
+-                Action::Back,
+-            );
++            let bounds = Rect { x: back_x, y: header_centre - header_button_size / 2.0,
++                width: header_button_size, height: header_button_size };
++            self.header_control(bounds, if self.theme.back_arrow { "←" } else { "‹" }, &Action::Back, false);
++            self.push_hit_region(bounds, Action::Back);
+         }
+         for (is_left, action) in [(true, left_action), (false, right_action)] {
+-            let Some((icon, action)) = action else { continue };
++            let Some((icon, action, label)) = action else { continue };
+             let action_rect = Rect {
+                 x: if is_left { header.x + header_inset } else { end_x },
+                 y: header_centre - header_button_size / 2.0,
+                 width: header_button_size,
+                 height: header_button_size,
+             };
++            if let Some(label) = label { self.header_control(action_rect, label, action, !is_left); }
+             self.push_hit_region(action_rect, action.clone());
+             let size = self.scaled(header_icon);
+             // In large headers, the outermost end icon's drawn edge meets the content edge.
+@@ -4419,21 +4529,24 @@ impl Engine {
                  scrolling: false,
              });
          }
@@ -396,7 +709,7 @@ index 3999e45..5e9140e 100644
                  let colour = self.scene.colour(if self.theme.subtitle_muted == Some(false) { Colour::WHITE } else { Colour::MUTED });
                  for (index, line) in lines.iter().enumerate() {
                      self.scene.text.push(TextRun { font: self.theme.body_font,
-@@ -4469,7 +4570,7 @@ impl Engine {
+@@ -4469,7 +4582,7 @@ impl Engine {
                  rect: title_rect,
                  clip: self.clip,
                  font_size,
@@ -405,7 +718,7 @@ index 3999e45..5e9140e 100644
                  align: TextAlign::Centre,
                  scrolling: self.scrolling,
              });
-@@ -4547,13 +4648,14 @@ impl Engine {
+@@ -4547,13 +4660,14 @@ impl Engine {
          let rect = if let Some(note) = note {
              let inset = self.scaled(self.content_inset());
              let width = (rect.width - inset * 2.0).max(0.0);
@@ -423,7 +736,7 @@ index 3999e45..5e9140e 100644
              let colour = self.scene.colour(Colour::MUTED);
              for run in &mut self.scene.text[start..] {
                  run.colour = colour;
-@@ -4675,6 +4777,12 @@ impl Engine {
+@@ -4675,6 +4789,12 @@ impl Engine {
              height: content.height,
          };
          self.scene.scroll_clip = Some(scroll_clip);
@@ -436,7 +749,7 @@ index 3999e45..5e9140e 100644
          let previous_clip = self.clip;
          self.clip = Rect {
              y: scroll_clip.y - scroll_clip.height * SCROLL_OVERSCAN,
-@@ -5090,12 +5198,24 @@ impl Engine {
+@@ -5090,12 +5210,24 @@ impl Engine {
          if pressable { self.scaled(BUTTON_ICON_SIZE * 0.6 + BUTTON_ICON_GAP) } else { 0.0 }
      }
  
@@ -465,7 +778,7 @@ index 3999e45..5e9140e 100644
      }
  
      /// Label at the start with the value and a chevron at the end. Values that don't fit wrap
-@@ -5108,17 +5228,20 @@ impl Engine {
+@@ -5108,17 +5240,20 @@ impl Engine {
          let first = Rect { y: rect.y + self.scaled(1.0), height: (line_height - self.scaled(1.0)).max(0.0), width: available, ..rect };
          let primary = self.scene.colour(if disabled { Colour::MUTED } else { Colour::WHITE });
          let muted = self.scene.colour(Colour::MUTED);
@@ -494,7 +807,7 @@ index 3999e45..5e9140e 100644
          }
          for (text, run_rect, colour, align) in runs {
              self.scene.text.push(TextRun { font: self.theme.body_font, text: text.into(), rect: run_rect, clip: self.clip, font_size, colour, align, tabular_numbers: false, scrolling: self.scrolling });
-@@ -5245,6 +5368,42 @@ impl Engine {
+@@ -5245,6 +5380,42 @@ impl Engine {
          let alpha = if enabled { 1.0 } else { 0.5 };
          match &self.theme.toggle {
              ToggleStyle::Line => {}
@@ -537,7 +850,7 @@ index 3999e45..5e9140e 100644
              ToggleStyle::Custom { height, images, .. } => {
                  let height = self.scaled(*height);
                  self.scene.images.push(ImageRun {
-@@ -5300,7 +5459,8 @@ impl Engine {
+@@ -5300,7 +5471,8 @@ impl Engine {
          let lines = self.wrap_text(label, label_font_size, label_rect.width, None, false);
          let text_height = self.text_line_height(DEFAULT_TEXT_SIZE) * lines.len() as f32;
          let subtitle_size = self.toggle_subtitle_size();
@@ -547,7 +860,7 @@ index 3999e45..5e9140e 100644
          let text_y = rect.y + (rect.height - text_height - subtitle_height).max(0.0) / 2.0;
          let start = self.scene.text.len();
          self.layout_text(
-@@ -5313,7 +5473,7 @@ impl Engine {
+@@ -5313,7 +5485,7 @@ impl Engine {
          );
          let subtitle_start = self.scene.text.len();
          if let Some(subtitle) = subtitle {
@@ -556,45 +869,7 @@ index 3999e45..5e9140e 100644
                  Rect { y: text_y + text_height, height: subtitle_height, ..label_rect });
          }
          for run in &mut self.scene.text[start..] {
-@@ -5890,6 +6050,37 @@ impl Engine {
-         PressTarget { node, role }
-     }
- 
-+    /// What can be pressed on screen now, for Android's accessibility (screen readers, uiautomator): one line per press region,
-+    /// "x\ty\twidth\theight\tlabel" in screen pixels, the label being the text drawn inside it. Regions scrolled out of view
-+    /// are left out. TitanKeys (tools/ink/titankeys.patch).
-+    pub fn accessible_nodes(&self) -> String {
-+        let mut lines = Vec::new();
-+        for region in &self.hit_regions {
-+            let shift = if region.scrolling { self.scroll_origin - self.scroll_offset } else { 0.0 };
-+            let rect = Rect { y: region.rect.y + shift, ..region.rect };
-+            if region.scrolling
-+                && let Some(clip) = self.scene.scroll_clip
-+                && (rect.y + rect.height <= clip.y || rect.y >= clip.y + clip.height)
-+            {
-+                continue;
-+            }
-+            let mut label = self
-+                .scene
-+                .text
-+                .iter()
-+                .filter(|run| run.scrolling == region.scrolling && !run.text.trim().is_empty())
-+                .filter(|run| region.rect.contains(run.rect.x + run.rect.width / 2.0, run.rect.y + run.rect.height / 2.0))
-+                .map(|run| run.text.replace(['\t', '\n'], " "))
-+                .collect::<Vec<_>>()
-+                .join(" ");
-+            if label.is_empty() && matches!(region.action, Action::Back) {
-+                label = "Back".to_owned();
-+            }
-+            lines.push(format!("{}\t{}\t{}\t{}\t{}", rect.x, rect.y, rect.width, rect.height, label));
-+        }
-+        lines.join("\n")
-+    }
-+
-     fn hit_region_at(&self, x: f32, y: f32) -> Option<&HitRegion> {
-         self.hit_regions.iter().rev().find(|region| {
-             if region.scrolling && !self.scene.scroll_clip.is_some_and(|clip| clip.contains(x, y)) {
-@@ -6052,7 +6243,7 @@ fn invert_colour(colour: Colour) -> Colour {
+@@ -6052,7 +6224,7 @@ fn invert_colour(colour: Colour) -> Colour {
  
  fn tone_colour(tone: Tone) -> Colour {
      match tone {
@@ -636,7 +911,7 @@ index 813bb54..cb48603 100644
          }).to_string()
      }
 diff --git a/crates/ink-core/src/react.rs b/crates/ink-core/src/react.rs
-index ea746fc..4bf986a 100644
+index ea746fc..732c07f 100644
 --- a/crates/ink-core/src/react.rs
 +++ b/crates/ink-core/src/react.rs
 @@ -56,6 +56,7 @@ enum HostProps {
@@ -680,7 +955,54 @@ index ea746fc..4bf986a 100644
              }
              node.identity = NodeIdentity(id);
              return Ok(Some(node));
-@@ -1084,6 +1093,8 @@ impl ReactTree {
+@@ -919,6 +928,7 @@ impl ReactTree {
+             HostKind::Row => Node {
+                 identity: NodeIdentity(id),
+                 kind: NodeKind::Row {
++                    end_label: None,
+                     end: None,
+                     children: self.children(host, depth)?,
+                     has_image: props.get("hasImage") == Some(&Json::Bool(true)),
+@@ -949,11 +959,11 @@ impl ReactTree {
+             HostKind::Screen | HostKind::MediaPickerScreen => {
+                 let left_action = string(props, "leftIcon").map(|icon| {
+                     ensure!(props.get("onLeftPress") == Some(&Json::Bool(true)), "Screen left action requires onPress");
+-                    Ok((self.icon(icon)?, event(id, "onLeftPress", vec![])))
++                    Ok((self.icon(icon)?, event(id, "onLeftPress", vec![]), super::accessibility::icon_label(icon)))
+                 }).transpose()?;
+                 let right_action = string(props, "rightIcon").map(|icon| {
+                     ensure!(props.get("onRightPress") == Some(&Json::Bool(true)), "Screen right action requires onPress");
+-                    Ok((self.icon(icon)?, event(id, "onRightPress", vec![])))
++                    Ok((self.icon(icon)?, event(id, "onRightPress", vec![]), super::accessibility::icon_label(icon)))
+                 }).transpose()?;
+                 let background = canvas_colour(props, "background")?.map(super::Colour::to_linear);
+                 let props = props.object().context("invalid Screen properties")?;
+@@ -1035,10 +1045,22 @@ impl ReactTree {
+                     align,
+                     justify,
+                 );
+-                if let NodeKind::Stack { theme_gap: value, .. } = &mut stack.kind {
++                let enabled = props.get("disabled") != Some(&Json::Bool(true));
++                let clickable = props.get("onPress") == Some(&Json::Bool(true));
++                if let NodeKind::Stack { theme_gap: value, accessible, .. } = &mut stack.kind {
+                     *value = theme_gap;
++                    if let Some(label) = string(props, "accessibilityLabel") {
++                        stack.identity = NodeIdentity(id);
++                        *accessible = Some(Box::new(super::accessibility::StackLabel {
++                            text: label.to_owned(),
++                            value: string(props, "accessibilityValue").unwrap_or_default().to_owned(),
++                            selected: props.get("accessibilitySelected").and_then(Json::as_bool),
++                            enabled,
++                            clickable,
++                        }));
++                    }
+                 }
+-                if props.get("onPress") == Some(&Json::Bool(true)) {
++                if clickable && enabled {
+                     Node { identity: NodeIdentity(id), kind: NodeKind::Pressable {
+                         haptic: props.get("haptic") != Some(&Json::Bool(false)),
+                         selected: false,
+@@ -1084,6 +1106,8 @@ impl ReactTree {
                      options.read_only = props.get("readOnly") == Some(&Json::Bool(true));
                      options.error = string(props, "error").unwrap_or("").to_owned();
                      options.label = string(props, "label").unwrap_or("").to_owned();
@@ -689,7 +1011,7 @@ index ea746fc..4bf986a 100644
                      options.description = string(props, "description").unwrap_or("").to_owned();
                      options.invalid = !options.error.is_empty() || props.get("invalid") == Some(&Json::Bool(true));
                      options.clearable = props.get("clearable") != Some(&Json::Bool(false));
-@@ -1330,7 +1341,7 @@ impl Engine {
+@@ -1330,7 +1354,7 @@ impl Engine {
          let mut result = Vec::with_capacity(patches.len());
          for patch in patches {
              let node = patch.as_ref()?;
@@ -699,7 +1021,7 @@ index ea746fc..4bf986a 100644
              if !links.is_empty() || *align == TextAlign::Justify || previous.width != *width || previous.font_size != *font_size
                  || previous.align != *align || previous.tabular_numbers != *tabular_numbers { return None; }
 diff --git a/crates/ink-core/src/react/row.rs b/crates/ink-core/src/react/row.rs
-index 30adcfd..25baf60 100644
+index 30adcfd..a228115 100644
 --- a/crates/ink-core/src/react/row.rs
 +++ b/crates/ink-core/src/react/row.rs
 @@ -15,7 +15,8 @@ impl ReactTree {
@@ -712,6 +1034,14 @@ index 30adcfd..25baf60 100644
          if !subtitle.is_empty() { content.push(Node::stack(subtitle, Axis::Horizontal, Some(6.0), Alignment::Centre, Justification::Start)); }
          let mut children = Vec::new();
          let image = string(props, "image");
+@@ -24,6 +25,7 @@ impl ReactTree {
+         let end_action = (props.get("onEndPress") == Some(&Json::Bool(true))).then(|| event(id, "onEndPress", vec![]));
+         let end = string(props, "endIcon").map(|name| Ok::<_, anyhow::Error>((self.icon(name)?, end_action))).transpose()?;
+         Ok(Node { identity: NodeIdentity(id), kind: NodeKind::Row { children, has_image: image.is_some(), end,
++            end_label: string(props, "endIcon").and_then(super::super::accessibility::icon_label),
+             action: (props.get("onPress") == Some(&Json::Bool(true))).then(|| event(id, "onPress", vec![])),
+             long_action: (props.get("onLongPress") == Some(&Json::Bool(true))).then(|| event(id, "onLongPress", vec![])),
+         } })
 diff --git a/crates/ink-core/src/theme.rs b/crates/ink-core/src/theme.rs
 index e13751e..300025d 100644
 --- a/crates/ink-core/src/theme.rs
@@ -808,7 +1138,7 @@ index 7a02cfd..5b2b2e1 100644
      let y = clip.y.max(0.0).floor() as u32;
      let right = (clip.x + clip.width)
 diff --git a/packages/ink/src/index.ts b/packages/ink/src/index.ts
-index 1ceb202..74c219c 100644
+index 1ceb202..891d5bc 100644
 --- a/packages/ink/src/index.ts
 +++ b/packages/ink/src/index.ts
 @@ -13,7 +13,7 @@ export { useSnapshot, type Snapshot, type SnapshotSource } from "./snapshot";
@@ -820,7 +1150,19 @@ index 1ceb202..74c219c 100644
  
  export function Screen({ header, children, leftAction, rightAction, ...props }: {
    children?: ReactNode;
-@@ -61,6 +61,8 @@ export type TextProps<D extends Destination = Destination> = PressProps<D> & {
+@@ -43,6 +43,11 @@ export function Screen({ header, children, leftAction, rightAction, ...props }:
+ }
+ 
+ export interface StackProps extends HitAreaProps {
++  /** The visible label and value of a custom drawn control. */
++  accessibilityLabel?: string;
++  accessibilityValue?: string;
++  accessibilitySelected?: boolean;
++  disabled?: boolean;
+   children?: ReactNode;
+   axis?: "vertical" | "horizontal";
+   gap?: number;
+@@ -61,6 +66,8 @@ export type TextProps<D extends Destination = Destination> = PressProps<D> & {
    align?: "start" | "center" | "end" | "justify";
    maxLines?: number;
    tabularNumbers?: boolean;
@@ -966,86 +1308,283 @@ index 9f7305d..8d9d6b9 100644
      </application>
      <queries>
          <package android:name="${inkLightServerPackage}" />
-diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
-index 76930fe..935bcbb 100644
---- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
-+++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
-@@ -2,6 +2,8 @@ package com.vandam.ink
- 
- import android.content.Context
- import android.graphics.PixelFormat
+diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkAccessibility.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkAccessibility.kt
+new file mode 100644
+index 0000000..14ae999
+--- /dev/null
++++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkAccessibility.kt
+@@ -0,0 +1,214 @@
++package com.vandam.ink
++
 +import android.graphics.Rect
 +import android.os.Bundle
- import android.os.Handler
- import android.os.Looper
- import android.util.Log
-@@ -13,6 +15,8 @@ import android.view.SurfaceView
- import android.view.VelocityTracker
- import android.view.View
- import android.view.ViewConfiguration
++import android.view.MotionEvent
++import android.view.View
++import android.view.accessibility.AccessibilityEvent
++import android.view.accessibility.AccessibilityManager
 +import android.view.accessibility.AccessibilityNodeInfo
 +import android.view.accessibility.AccessibilityNodeProvider
- import android.widget.OverScroller
- import kotlin.math.abs
++import org.json.JSONObject
++
++/** Android's view of the controls drawn in the current Ink viewport. All bounds from Ink are surface pixels. */
++internal class InkAccessibility(
++    private val host: View,
++    private val read: (Long, Float) -> String,
++    private val click: (Long, Boolean) -> Boolean,
++    private val scroll: (Float) -> Boolean,
++) : AccessibilityNodeProvider() {
++    private data class Key(val node: Long, val end: Boolean)
++    private data class Control(
++        val key: Key, val text: String, val detail: String, val role: String,
++        val enabled: Boolean, val checked: Boolean?, val clickable: Boolean, val bounds: Rect,
++    ) {
++        val className get() = when (role) {
++            "switch" -> "android.widget.Switch"
++            "radio" -> "android.widget.RadioButton"
++            "button" -> "android.widget.Button"
++            else -> "android.widget.TextView"
++        }
++    }
++
++    private val manager = requireNotNull(host.context.getSystemService(AccessibilityManager::class.java))
++    private var controls = linkedMapOf<Int, Control>()
++    private var nextId = 1
++    private var focused: Int? = null
++    private var hovered: Int? = null
++    private var revision = -1L
++    private var offset = 0f
++    private var title = ""
++    private var forward = false
++    private var backward = false
++    private val notifyChanged = Runnable { send(HOST_VIEW_ID, AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) }
++
++    fun clear() {
++        host.removeCallbacks(notifyChanged)
++        controls.clear()
++        focused = null
++        hovered = null
++        title = ""
++        revision = -1L
++        forward = false
++        backward = false
++    }
++
++    fun frame() {
++        if (revision >= 0 && manager.isEnabled) refresh()
++    }
++
++    private fun refresh() {
++        val data = read(revision, offset)
++        if (data.isEmpty()) return
++        val snapshot = JSONObject(data)
++        val rows = snapshot.getJSONArray("controls")
++        val previousIds = controls.entries.associate { (id, row) -> row.key to id }
++        val next = linkedMapOf<Int, Control>()
++        for (index in 0 until rows.length()) {
++            val row = rows.getJSONObject(index)
++            val key = Key(row.getLong("id"), row.getBoolean("end"))
++            val box = row.getJSONArray("bounds")
++            val id = previousIds[key] ?: nextId++
++            next[id] = Control(key, row.getString("text"), row.getString("detail"), row.getString("role"),
++                row.getBoolean("enabled"), if (row.isNull("checked")) null else row.getBoolean("checked"),
++                row.getBoolean("click"), Rect(box.getInt(0), box.getInt(1), box.getInt(2), box.getInt(3)))
++        }
++        focused?.takeUnless(next::containsKey)?.let { send(it, AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED); focused = null }
++        hovered?.takeUnless(next::containsKey)?.let { send(it, AccessibilityEvent.TYPE_VIEW_HOVER_EXIT); hovered = null }
++        val canAdvance = snapshot.getBoolean("forward")
++        val canRetreat = snapshot.getBoolean("backward")
++        val nextTitle = snapshot.getString("title")
++        val changed = nextTitle != title || next != controls || forward != canAdvance || backward != canRetreat
++        if (changed && revision >= 0) {
++            host.removeCallbacks(notifyChanged)
++            host.post(notifyChanged)
++        }
++        title = nextTitle
++        controls = next
++        forward = canAdvance
++        backward = canRetreat
++        revision = snapshot.getLong("revision")
++        offset = snapshot.getDouble("offset").toFloat()
++    }
++
++    override fun createAccessibilityNodeInfo(virtualViewId: Int): AccessibilityNodeInfo? {
++        refresh()
++        if (virtualViewId == HOST_VIEW_ID) {
++            return AccessibilityNodeInfo.obtain(host).also { info ->
++                host.onInitializeAccessibilityNodeInfo(info)
++                if (title.isNotBlank()) {
++                    info.paneTitle = title
++                    info.contentDescription = title
++                }
++                for (id in controls.keys) info.addChild(host, id)
++                info.isScrollable = forward || backward
++                if (forward) info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD)
++                if (backward) info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD)
++            }
++        }
++        val row = controls[virtualViewId] ?: return null
++        val rect = Rect(row.bounds)
++        val visible = Rect()
++        if (!host.getLocalVisibleRect(visible) || !rect.intersect(visible)) return null
++        return AccessibilityNodeInfo.obtain().also { info ->
++            info.setSource(host, virtualViewId)
++            info.setParent(host)
++            info.packageName = host.context.packageName
++            info.className = row.className
++            info.text = row.text
++            if (row.detail.isNotEmpty()) {
++                if (row.checked == null) info.stateDescription = row.detail
++                else info.contentDescription = listOf(row.text, row.detail).joinToString(", ")
++            }
++            info.isEnabled = row.enabled
++            info.isClickable = row.clickable
++            info.isHeading = row.role == "heading"
++            info.isCheckable = row.checked != null
++            info.isChecked = row.checked == true
++            info.isSelected = row.role == "radio" && row.checked == true
++            info.isVisibleToUser = host.isShown && host.windowVisibility == View.VISIBLE
++            info.isFocusable = true
++            info.isAccessibilityFocused = virtualViewId == focused
++            info.setBoundsInParent(rect)
++            val position = IntArray(2)
++            host.getLocationOnScreen(position)
++            rect.offset(position[0], position[1])
++            info.setBoundsInScreen(rect)
++            if (row.clickable) info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK)
++            info.addAction(if (info.isAccessibilityFocused) AccessibilityNodeInfo.AccessibilityAction.ACTION_CLEAR_ACCESSIBILITY_FOCUS
++                else AccessibilityNodeInfo.AccessibilityAction.ACTION_ACCESSIBILITY_FOCUS)
++        }
++    }
++
++    override fun findFocus(focus: Int): AccessibilityNodeInfo? =
++        if (focus == AccessibilityNodeInfo.FOCUS_ACCESSIBILITY) focused?.let(::createAccessibilityNodeInfo) else null
++
++    override fun findAccessibilityNodeInfosByText(text: String, virtualViewId: Int): List<AccessibilityNodeInfo> {
++        refresh()
++        return controls.filter { (id, row) ->
++            (virtualViewId == HOST_VIEW_ID || id == virtualViewId) && row.text.contains(text, ignoreCase = true)
++        }.keys.mapNotNull(::createAccessibilityNodeInfo)
++    }
++
++    override fun performAction(virtualViewId: Int, action: Int, arguments: Bundle?): Boolean {
++        refresh()
++        if (virtualViewId == HOST_VIEW_ID) {
++            return when (action) {
++                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD -> forward && scroll(host.height * 0.7f)
++                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD -> backward && scroll(-host.height * 0.7f)
++                else -> host.performAccessibilityAction(action, arguments)
++            }
++        }
++        val row = controls[virtualViewId] ?: return false
++        return when (action) {
++            AccessibilityNodeInfo.ACTION_CLICK -> {
++                val activated = row.enabled && row.clickable && click(row.key.node, row.key.end)
++                if (activated) send(virtualViewId, AccessibilityEvent.TYPE_VIEW_CLICKED)
++                activated
++            }
++            AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS -> {
++                if (focused == virtualViewId) return false
++                focused?.let { send(it, AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED) }
++                focused = virtualViewId
++                send(virtualViewId, AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED)
++                true
++            }
++            AccessibilityNodeInfo.ACTION_CLEAR_ACCESSIBILITY_FOCUS -> {
++                if (focused != virtualViewId) return false
++                focused = null
++                send(virtualViewId, AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED)
++                true
++            }
++            else -> false
++        }
++    }
++
++    fun hover(event: MotionEvent): Boolean {
++        if (!manager.isEnabled || !manager.isTouchExplorationEnabled) return false
++        refresh()
++        val next = when (event.actionMasked) {
++            MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE ->
++                controls.entries.lastOrNull { it.value.bounds.contains(event.x.toInt(), event.y.toInt()) }?.key
++            MotionEvent.ACTION_HOVER_EXIT -> null
++            else -> return false
++        }
++        val previous = hovered
++        if (next != previous) {
++            hovered = next
++            next?.let { send(it, AccessibilityEvent.TYPE_VIEW_HOVER_ENTER) }
++            previous?.let { send(it, AccessibilityEvent.TYPE_VIEW_HOVER_EXIT) }
++        }
++        return next != null || previous != null
++    }
++
++    private fun send(id: Int, type: Int) {
++        if (!manager.isEnabled) return
++        val event = AccessibilityEvent.obtain(type)
++        event.packageName = host.context.packageName
++        event.className = controls[id]?.className ?: host.javaClass.name
++        if (id == HOST_VIEW_ID) event.setSource(host) else event.setSource(host, id)
++        controls[id]?.let { event.text.add(it.text); event.isEnabled = it.enabled; event.isChecked = it.checked == true }
++        if (type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) event.contentChangeTypes = AccessibilityEvent.CONTENT_CHANGE_TYPE_SUBTREE
++        host.parent?.requestSendAccessibilityEvent(host, event)
++    }
++}
+diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
+index 76930fe..958585e 100644
+--- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
++++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
+@@ -70,6 +70,7 @@ internal class InkHost(context: Context, private val callbacks: Callbacks, priva
+     override fun surfaceDestroyed(holder: SurfaceHolder) = detachSurface()
  
-@@ -152,6 +156,55 @@ internal class InkHost(context: Context, private val callbacks: Callbacks, priva
+     private fun detachSurface() {
++        view.clearAccessibility()
+         handler.removeCallbacksAndMessages(null)
+         view.stopScrolling()
+         if (handle != 0L && surfaceAttached) InkNative.nativeDetachSurface(handle)
+@@ -114,6 +115,7 @@ internal class InkHost(context: Context, private val callbacks: Callbacks, priva
+             }
+             val request = InkNative.nativeRender(handle)
+             if (request == "presented") {
++                view.accessibilityFrame()
+                 callbacks.presented()
+                 return
+             }
+@@ -152,10 +154,34 @@ internal class InkHost(context: Context, private val callbacks: Callbacks, priva
      }
  
      inner class InkSurfaceView(context: Context) : SurfaceView(context) {
-+        // Ink draws every row, button and switch itself, so Android sees none of them: this lists what can be pressed, each with
-+        // the text drawn on it, for screen readers and uiautomator, and presses it on request (TitanKeys).
-+        private var accessibleNodes: List<Pair<Rect, String>> = emptyList()
-+        private val accessibility = object : AccessibilityNodeProvider() {
-+            override fun createAccessibilityNodeInfo(virtualViewId: Int): AccessibilityNodeInfo? {
-+                if (virtualViewId == View.NO_ID) {
-+                    val info = AccessibilityNodeInfo(this@InkSurfaceView)
-+                    onInitializeAccessibilityNodeInfo(info)
-+                    accessibleNodes = if (handle == 0L) emptyList() else InkNative.nativeAccessibleNodes(handle).lines().mapNotNull { line ->
-+                        val parts = line.split('\t', limit = 5)
-+                        if (parts.size < 5) return@mapNotNull null
-+                        val (x, y, w, h) = parts.take(4).map { it.toFloatOrNull() ?: return@mapNotNull null }
-+                        Rect(x.toInt(), y.toInt(), (x + w).toInt(), (y + h).toInt()) to parts[4]
-+                    }
-+                    accessibleNodes.indices.forEach { info.addChild(this@InkSurfaceView, it) }
-+                    return info
-+                }
-+                val (bounds, label) = accessibleNodes.getOrNull(virtualViewId) ?: return null
-+                val info = AccessibilityNodeInfo(this@InkSurfaceView, virtualViewId)
-+                info.setParent(this@InkSurfaceView)
-+                info.packageName = context.packageName
-+                info.className = android.widget.Button::class.java.name
-+                info.setBoundsInParent(bounds)
-+                val origin = IntArray(2).also { getLocationOnScreen(it) }
-+                info.setBoundsInScreen(Rect(bounds).apply { offset(origin[0], origin[1]) })
-+                info.contentDescription = label
-+                info.text = label
-+                info.isEnabled = true
-+                info.isVisibleToUser = true
-+                info.isClickable = true
-+                info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK)
-+                return info
-+            }
++        private val accessibility = InkAccessibility(this,
++            read = { revision, offset ->
++                if (handle != 0L && surfaceAttached) InkNative.nativeAccessibilitySnapshot(handle, revision, offset) else ""
++            },
++            click = { id, end ->
++                val result = if (handle != 0L && surfaceAttached) InkNative.nativeAccessibilityClick(handle, id, end) else 0
++                if (processPointerResult(result)) requestFrame()
++                (result and POINTER_ACTIVATED) != 0
++            },
++            scroll = { delta ->
++                val moved = handle != 0L && surfaceAttached && InkNative.nativeScrollBy(handle, delta)
++                if (moved) { requestFrame(); callbacks.changed() }
++                moved
++            },
++        )
 +
-+            override fun performAction(virtualViewId: Int, action: Int, arguments: Bundle?): Boolean {
-+                if (virtualViewId == View.NO_ID) return performAccessibilityAction(action, arguments)
-+                val (bounds) = accessibleNodes.getOrNull(virtualViewId) ?: return false
-+                if (action != AccessibilityNodeInfo.ACTION_CLICK || handle == 0L) return false
-+                val x = bounds.exactCenterX()
-+                val y = bounds.exactCenterY()
-+                InkNative.nativePointer(handle, MotionEvent.ACTION_DOWN, 0, x, y)
-+                InkNative.nativePointer(handle, MotionEvent.ACTION_UP, 0, x, y)
-+                postFrame()
-+                return true
-+            }
-+        }
++        init { importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES }
 +
-+        override fun getAccessibilityNodeProvider(): AccessibilityNodeProvider = accessibility
++        override fun getAccessibilityNodeProvider() = accessibility
++        override fun dispatchHoverEvent(event: MotionEvent): Boolean = accessibility.hover(event) || super.dispatchHoverEvent(event)
++        fun accessibilityFrame() = accessibility.frame()
++        fun clearAccessibility() = accessibility.clear()
 +
          private val longPresses = mutableMapOf<Int, Runnable>()
          private val touchStarts = mutableMapOf<Int, Pair<Float, Float>>()
  
+         override fun onDetachedFromWindow() {
++            accessibility.clear()
+             cancelLongPresses()
+             removeCallbacks(commitFrame)
+             commitFramePosted = false
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
-index aa4bc3b..abbffc8 100644
+index aa4bc3b..4e6a0b9 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
 @@ -17,6 +17,10 @@ internal object InkNative {
@@ -1059,17 +1598,19 @@ index aa4bc3b..abbffc8 100644
  
      @JvmStatic
      external fun nativeTakeJavaScriptError(handle: Long): String?
-@@ -130,6 +134,10 @@ internal object InkNative {
-     @JvmStatic
-     external fun nativeRender(handle: Long): String
+@@ -124,6 +128,12 @@ internal object InkNative {
+         y: Float,
+     ): Int
  
-+    /** What can be pressed now, a line each: x, y, width, height and label, tab-separated, in pixels (TitanKeys). */
 +    @JvmStatic
-+    external fun nativeAccessibleNodes(handle: Long): String
++    external fun nativeAccessibilitySnapshot(handle: Long, revision: Long, offset: Float): String
++
++    @JvmStatic
++    external fun nativeAccessibilityClick(handle: Long, id: Long, end: Boolean): Int
 +
      @JvmStatic
-     external fun nativeInstallSystemGlyph(
-         handle: Long,
+     external fun nativeScrollBy(handle: Long, delta: Float): Boolean
+ 
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 index 46ad203..0688f9a 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
@@ -1253,10 +1794,45 @@ index eb0a9b2..7837908 100644
      override fun dismiss(): Boolean {
          if (!active) return false
 diff --git a/platform/android/native/src/android.rs b/platform/android/native/src/android.rs
-index 0c6ae7c..f806e17 100644
+index 0c6ae7c..e0ba543 100644
 --- a/platform/android/native/src/android.rs
 +++ b/platform/android/native/src/android.rs
-@@ -761,6 +761,41 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeResize(
+@@ -239,16 +239,7 @@ impl AndroidEngine {
+             3 => self.engine.pointer_cancel(),
+             _ => PointerOutcome::default(),
+         };
+-        if outcome.changed
+-            && let Some(script) = &mut self.script
+-            && let Err(error) = script.notify_inputs(&mut self.engine)
+-        {
+-            android_log(
+-                ANDROID_LOG_ERROR,
+-                &format!("JavaScript input failed: {error:#}"),
+-            );
+-            self.script = None;
+-        }
++        self.notify_pointer_input(outcome);
+         #[cfg(feature = "benchmark")]
+         if action == 1 && outcome.changed {
+             self.update_ns = elapsed_ns(started);
+@@ -258,6 +249,16 @@ impl AndroidEngine {
+         pointer_result(outcome)
+     }
+ 
++    fn notify_pointer_input(&mut self, outcome: PointerOutcome) {
++        if outcome.changed
++            && let Some(script) = &mut self.script
++            && let Err(error) = script.notify_inputs(&mut self.engine)
++        {
++            android_log(ANDROID_LOG_ERROR, &format!("JavaScript input failed: {error:#}"));
++            self.script = None;
++        }
++    }
++
+     fn image_pinch_begin(&mut self, x: f32, y: f32) -> jint {
+         if self.engine.image_pinch_begin(x, y) {
+             POINTER_CAPTURED
+@@ -761,6 +762,41 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeResize(
      engine.resize(dimension(width), dimension(height));
  }
  
@@ -1298,24 +1874,38 @@ index 0c6ae7c..f806e17 100644
  #[unsafe(no_mangle)]
  pub extern "system" fn Java_com_vandam_ink_InkNative_nativeSetViewportScale(
      _env: EnvUnowned<'_>,
-@@ -932,6 +967,17 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeScrollBy(
-         .is_some_and(|mut engine| engine.scroll_by(delta)) as jboolean
+@@ -920,6 +956,31 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeImageDoubleTap(
+         .map_or(0, |mut engine| engine.image_double_tap(x, y))
  }
  
 +#[unsafe(no_mangle)]
-+pub extern "system" fn Java_com_vandam_ink_InkNative_nativeAccessibleNodes<'local>(
-+    mut env: EnvUnowned<'local>,
-+    _class: JClass<'local>,
-+    handle: jlong,
++pub extern "system" fn Java_com_vandam_ink_InkNative_nativeAccessibilitySnapshot<'local>(
++    mut env: EnvUnowned<'local>, _class: JClass<'local>, handle: jlong, revision: jlong, offset: jfloat,
 +) -> JString<'local> {
-+    let value = engine(handle).map(|engine| engine.lock_arc().engine.accessible_nodes()).unwrap_or_default();
-+    env.with_env(|env| env.new_string(value))
-+        .resolve::<jni::errors::ThrowRuntimeExAndDefault>()
++    let value = engine(handle).map(|engine| {
++        let mut engine = engine.lock_arc();
++        let scene = engine.engine.scene();
++        if revision == scene.revision as i64 && offset == scene.scroll_offset { String::new() }
++        else { engine.engine.accessibility_snapshot().to_string() }
++    }).unwrap_or_default();
++    env.with_env(|env| env.new_string(value)).resolve::<jni::errors::ThrowRuntimeExAndDefault>()
++}
++
++#[unsafe(no_mangle)]
++pub extern "system" fn Java_com_vandam_ink_InkNative_nativeAccessibilityClick(
++    _env: EnvUnowned<'_>, _class: JClass<'_>, handle: jlong, id: jlong, end: jboolean,
++) -> jint {
++    engine(handle).map_or(0, |engine| {
++        let mut engine = engine.lock_arc();
++        let outcome = engine.engine.accessibility_click(id, end != 0);
++        engine.notify_pointer_input(outcome);
++        pointer_result(outcome)
++    })
 +}
 +
  #[unsafe(no_mangle)]
- pub extern "system" fn Java_com_vandam_ink_InkNative_nativeRender<'local>(
-     mut env: EnvUnowned<'local>,
+ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeScrollBy(
+     _env: EnvUnowned<'_>,
 diff --git a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 index 2b6b330..9435f8c 100644
 --- a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
@@ -1345,3 +1935,143 @@ index 2b6b330..9435f8c 100644
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
      mapOf("device-benchmark" to DeviceBenchmark(activity))
  
+diff --git a/test/unit/core-accessibility.rs b/test/unit/core-accessibility.rs
+new file mode 100644
+index 0000000..7bb3969
+--- /dev/null
++++ b/test/unit/core-accessibility.rs
+@@ -0,0 +1,134 @@
++use super::*;
++use ink_protocol::{HostKind, Operation};
++
++fn control(id: usize, parent: usize, kind: HostKind, props: Value) -> [Operation; 2] {
++    [
++        Operation::Create { id, r#type: kind, props: props.as_object().unwrap().clone() },
++        Operation::Insert { id, parent, before: None },
++    ]
++}
++
++fn page(height: u32, children: Vec<Operation>) -> (ReactTree, Engine) {
++    let icon = ReactIcon { name: "close".into(), filled: false, id: 7, width: 1, height: 1, pixels: vec![255] };
++    let mut tree = ReactTree::with_icons(&ReactIcon::encode(&[icon]).unwrap()).unwrap();
++    let mut engine = Engine::new();
++    engine.set_viewport(720, height);
++    let mut ops = Vec::from(control(1, 0, HostKind::Screen, json!({ "title": "Settings" })));
++    ops.extend(children);
++    tree.apply(ReactCommit(ops), &mut engine).unwrap();
++    (tree, engine)
++}
++
++fn row(snapshot: &Value, id: i64, end: bool) -> &Value {
++    snapshot["controls"].as_array().unwrap().iter().find(|r| r["id"] == id && r["end"] == end).unwrap()
++}
++
++fn assert_click(engine: &mut Engine, id: i64, end: bool, event: &str, args: Value) {
++    assert!(engine.accessibility_click(id, end).activated);
++    let request = engine.take_native_request().unwrap();
++    assert_eq!(serde_json::from_str::<Value>(request.payload()).unwrap(),
++        json!({ "type": "event", "id": id, "name": event, "args": args }));
++    assert!(engine.take_native_request().is_none());
++}
++
++#[test]
++fn accessibility_uses_visible_titles_roles_and_current_actions() {
++    let toggle = |value| json!({ "label": "Português", "value": value, "onChange": true });
++    let ops = [
++        control(2, 1, HostKind::RowContent, json!({ "title": "Português", "subtitle": "Portuguese",
++            "onPress": true, "endIcon": "outlined:close", "onEndPress": true })),
++        control(3, 1, HostKind::Toggle, toggle(false)),
++        control(4, 1, HostKind::Field, json!({ "label": "Spelling", "onPress": true })),
++        control(5, 4, HostKind::RawText, json!({ "text": "Portugal" })),
++        control(6, 1, HostKind::Button, json!({ "onPress": true, "selected": true })),
++        control(7, 6, HostKind::RawText, json!({ "text": "Portugal" })),
++        control(8, 1, HostKind::Field, json!({ "label": "Shorter", "onPress": true, "disabled": true })),
++    ].into_iter().flatten().collect();
++    let (mut tree, mut engine) = page(1800, ops);
++    tree.apply(ReactCommit(vec![Operation::Update { id: 1,
++        props: json!({ "title": "Settings", "rightIcon": "outlined:close", "onRightPress": true }).as_object().unwrap().clone()
++    }]), &mut engine).unwrap();
++    let snapshot = engine.accessibility_snapshot();
++    assert_eq!(snapshot["controls"].as_array().unwrap().len(), 7);
++    assert_eq!(row(&snapshot, 1, true)["text"], "×");
++    assert_click(&mut engine, 1, true, "onRightPress", json!([]));
++    assert_eq!(row(&snapshot, 2, false)["text"], "Português");
++    assert_eq!(row(&snapshot, 2, false)["detail"], "Portuguese");
++    assert_eq!(row(&snapshot, 2, true)["text"], "×");
++    let primary_right = row(&snapshot, 2, false)["bounds"][2].as_i64().unwrap();
++    let end_left = row(&snapshot, 2, true)["bounds"][0].as_i64().unwrap();
++    assert!((primary_right - end_left).abs() <= 1);
++    assert_eq!(row(&snapshot, 3, false)["role"], "switch");
++    assert_eq!(row(&snapshot, 3, false)["text"], "Português");
++    assert_eq!(row(&snapshot, 3, false)["checked"], false);
++    assert_eq!(row(&snapshot, 4, false)["detail"], "Portugal");
++    assert_eq!(row(&snapshot, 6, false)["text"], "Portugal");
++    assert_eq!(row(&snapshot, 6, false)["role"], "radio");
++    assert_eq!(row(&snapshot, 6, false)["checked"], true);
++    assert_eq!(row(&snapshot, 8, false)["enabled"], false);
++    assert!(!engine.accessibility_click(8, false).activated);
++    assert_click(&mut engine, 2, false, "onPress", json!([]));
++    assert_click(&mut engine, 2, true, "onEndPress", json!([]));
++    assert_click(&mut engine, 3, false, "onChange", json!([true]));
++    tree.apply(ReactCommit(vec![Operation::Update { id: 3, props: toggle(true).as_object().unwrap().clone() }]), &mut engine).unwrap();
++    assert_eq!(row(&engine.accessibility_snapshot(), 3, false)["checked"], true);
++    assert_click(&mut engine, 3, false, "onChange", json!([false]));
++}
++
++#[test]
++fn accessibility_custom_drawn_controls_dispatch_once_and_read_only_values_stay_read_only() {
++    let ops = [
++        control(2, 1, HostKind::Stack, json!({ "accessibilityLabel": "Confirm", "onPress": true })),
++        control(3, 2, HostKind::Canvas, json!({ "width": 596, "height": 96 })),
++        control(4, 1, HostKind::Stack, json!({ "accessibilityLabel": "Status", "accessibilityValue": "Ready" })),
++        control(5, 4, HostKind::Canvas, json!({ "width": 596, "height": 48 })),
++        control(6, 1, HostKind::Stack, json!({ "accessibilityLabel": ";", "accessibilitySelected": true, "onPress": true })),
++        control(7, 6, HostKind::Canvas, json!({ "width": 596, "height": 72 })),
++    ].into_iter().flatten().collect();
++    let (mut tree, mut engine) = page(1400, ops);
++    let snapshot = engine.accessibility_snapshot();
++    assert_eq!(snapshot["controls"].as_array().unwrap().len(), 3);
++    assert_eq!(row(&snapshot, 4, false)["detail"], "Ready");
++    assert_eq!(row(&snapshot, 4, false)["click"], false);
++    assert_eq!(row(&snapshot, 6, false)["checked"], true);
++    assert_click(&mut engine, 2, false, "onPress", json!([]));
++    assert!(!engine.accessibility_click(4, false).activated);
++    tree.apply(ReactCommit(vec![Operation::Remove { id: 2, parent: 1 }]), &mut engine).unwrap();
++    assert!(!engine.accessibility_click(2, false).activated);
++}
++
++#[test]
++fn accessibility_tracks_scroll_between_layouts_and_rejects_offscreen_actions() {
++    let ops = (2..42).flat_map(|id| control(id, 1, HostKind::Field,
++        json!({ "label": format!("Language {id}"), "onPress": true }))).collect();
++    let (_, mut engine) = page(800, ops);
++    let initial = engine.accessibility_snapshot();
++    let clip = engine.scene.scroll_clip.unwrap();
++    let bounds = &row(&initial, 2, false)["bounds"];
++    let origin = engine.scene.scroll_origin;
++    let delta = (bounds[1].as_i64().unwrap() + bounds[3].as_i64().unwrap()) as f32 / 2.0 - clip.y;
++    assert!(engine.scroll_by(delta));
++    assert_eq!(engine.scene.scroll_origin, origin, "exercise native scrolling between layout passes");
++    let partial = engine.accessibility_snapshot();
++    assert_eq!(row(&partial, 2, false)["bounds"][1], clip.y.floor() as i64);
++    assert!(row(&partial, 2, false)["bounds"][3].as_i64().unwrap() < bounds[3].as_i64().unwrap());
++    assert!(engine.scroll_by(engine.scene.scroll_max));
++    let last = engine.accessibility_snapshot();
++    assert!(last["controls"].as_array().unwrap().iter().all(|r| r["id"] != 2));
++    assert!(!engine.accessibility_click(2, false).activated);
++    assert_eq!(last["forward"], false);
++    assert_eq!(last["backward"], true);
++}
++
++#[test]
++fn accessibility_reads_the_screen_and_section_headings() {
++    let (_, mut engine) = page(1400, Vec::from(control(2, 1, HostKind::SectionTitle,
++        json!({ "title": "Cantonese" }))));
++    let snapshot = engine.accessibility_snapshot();
++    assert_eq!(snapshot["title"], "Settings");
++    let heading = row(&snapshot, 2, false);
++    assert_eq!(heading["text"], "Cantonese");
++    assert_eq!(heading["role"], "heading");
++    assert_eq!(heading["click"], false);
++    assert!(!engine.accessibility_click(2, false).activated);
++}

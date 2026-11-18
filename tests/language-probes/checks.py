@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/dev/touch"))
 import checks
 import language_checks
 import chinese_checks
+import switcher_checks
 
 
 class LanguageProbes(unittest.TestCase):
@@ -28,6 +29,16 @@ class LanguageProbes(unittest.TestCase):
                 language_checks.one(method, ["en", method])
                 self.assertEqual(list(play.call_args.args[:-1]), language_checks.gestures(actions))
                 self.assertIs(record.call_args.args[1], True)
+
+    def test_switcher_tap_has_its_own_single_haptic(self):
+        lines = ["tap at 538,1170 on y6", "the tap played its own haptic"]
+        press = ("menu_press", "Played")
+        for played, text, passed in [
+            ([press], "й", True), ([press], "Й", True), ([press], "q", False),
+            ([], "й", False), ([("menu_press", "Skipped")], "й", False),
+            ([press, ("screen_tap", "Played")], "й", False), ([press, press], "й", False),
+        ]:
+            self.assertIs(switcher_checks.switcher_tap_ok(lines, played, text), passed)
 
     def test_space_with_only_predictions(self):
         for first, second, expected in [("我", "我 ", True), ("我", "我為", False), ("", " ", False)]:

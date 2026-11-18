@@ -3,7 +3,7 @@
 1. Three languages on, a held Sym: the tiles over E-R, T-Y and U-I, centred within W to O (the screenshot's margins).
 2. A resting finger slid across the switcher: one menu_mark per tile it enters, not one per key (Debug's HapticsDump).
 3. A tap on the screen on a Sym panel item and on a switcher tile picks it, logs "tap at … on …" and a haptic line
-   (TitanKeysTap), and plays one screen_tap; on a bar word: bar_word, no screen_tap.
+   (TitanKeysTap). A panel item plays screen_tap, a switcher tile menu_press, and a bar word bar_word.
 4. Five languages through InputMethodsSet all stay on; the switcher shows the first four (Settings' own refusal is for hands).
 5. Two languages on: a held Sym switches straight to the other, and back.
 6. The mark at Q: Chinese with only Yale on shows 中; with Pinyin on too, 耶.
@@ -94,9 +94,15 @@ def tapped(lines):
             and not any("taken by nothing" in line for line in lines))
 
 
+def switcher_tap_ok(lines, played, text):
+    # pick() plays MenuPress itself. A second generic screen tick would double the feedback.
+    ticks = [(name, result) for name, result in played if name in ("menu_press", "screen_tap")]
+    return tapped(lines) and text.lower() == "й" and ticks == [("menu_press", "Played")]
+
+
 def check_screen_taps():
     """C's finger taps (main c8de2255): a tap on a Sym panel item and on a switcher tile picks, logs "tap at … on …" and a haptic
-    line, and plays one screen_tap; a tap on a bar word plays bar_word and no screen_tap. TitanKeysTap's lines go in the report."""
+    line. Each switcher tile plays menu_press itself. A bar word plays bar_word. Neither adds a screen_tap."""
     setup(["en", "ru", "el"], "en")
     # The Sym panel with no code: its first item, over W on the panel's top row. It types into the field.
     play("key:sym", "+700")
@@ -116,11 +122,10 @@ def check_screen_taps():
     since = now()
     lines = tap_lines(lambda: checks.guarded("tap", str(column_x(4.5)), str(BAR_Y)))
     played, _ = haptics_since(since)
-    taps = [name for name, _ in played if name == "screen_tap"]
     play("key:q", "+500")
     typed = checks.field()
-    record("tap-switcher", tapped(lines) and typed == "й" and len(taps) == 1,
-           f"Q after the tap typed {typed!r} (й: Russian picked); {len(taps)} screen_tap; TitanKeysTap: {lines}")
+    record("tap-switcher", switcher_tap_ok(lines, played, typed),
+           f"Q after the tap typed {typed!r}; haptics {played}; TitanKeysTap: {lines}")
     setup(["en", "ru", "el"], "en")
     # A bar word: English's suggestions after "hel".
     play("key:h", "+90", "key:e", "+90", "key:l", "+600")

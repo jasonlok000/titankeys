@@ -5,7 +5,7 @@ import uuid
 
 import checks
 from bar_observations import MARK_TAG, BAR_TAG, attempt_lines, observed_bar, own_field
-from switch_capitals import ACTIVITY, select
+from switch_capitals import launch_editor, select
 
 
 def words_rows(events):
@@ -33,7 +33,7 @@ def rows_since(marker):
 
 
 def trial(slot):
-    checks.adb("shell", "am", "start", "-W", "-n", ACTIVITY, "--ez", "maps_search", "true")
+    launch_editor("MAPS_EDITOR_FIXTURE", "maps_search", True)
     select(["en"], "en")
     details = checks.adb("shell", "dumpsys", "input_method")
     if not re.search(r"mCurrentEditorInfo:\s*\n\s*inputType=0x80001 imeOptions=0x12000003\b", details):

@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language pages</title>
+<!--
+  MOCKUP of the per-language guide pages (owner approved, 2026-11-17). Not app code. Open with ?lang=ko, ?lang=yue-yale or ?lang=es.
+  Every page is one template, filled from the JSON block below, which the real pages would generate from each im.json:
+  name, nameEnglish and the status from the index; options from variants; keys from the layout and accents; points from F's text.
+  Lines marked "F:" are placeholders for F to write.
+-->
+<style>
+  @font-face { font-family: Inter; src: url(inter_regular.otf); }
+  @font-face { font-family: Inter; font-weight: 700; src: url(inter_bold.otf); }
+  :root { --bg: #000; --surface: #161210; --divider: #2A2623; --ink: #FFF1E6; --muted: #99918A; --accent: #F07C4A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 19px/1.4 Inter, system-ui, sans-serif; }
+  /* The Titan's square screen (1076 x 1200 px at density 250, about 690 CSS px): full width, the same side margins as Settings. */
+  main { margin: 0; padding: 24px 60px 48px; }
+  .back { color: var(--muted); font-size: 28px; }
+  header h1 { margin: 12px 0 2px; font-size: 40px; font-weight: 700; }
+  header .english { color: var(--muted); font-size: 20px; }
+  .pill { display: inline-block; margin-top: 10px; padding: 4px 14px; border-radius: 999px; font-size: 14px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; }
+  .pill.ready { background: var(--accent); color: #160A04; }
+  .pill.experimental { border: 1.5px solid var(--accent); color: var(--accent); }
+  h2 { margin: 34px 0 10px; color: var(--accent); font-size: 15px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--divider); }
+  .row .value { color: var(--accent); }
+  .switch { width: 52px; height: 30px; border-radius: 15px; background: var(--accent); position: relative; }
+  .switch::after { content: ""; position: absolute; right: 4px; top: 4px; width: 22px; height: 22px; border-radius: 50%; background: #160A04; }
+  .keys { background: var(--surface); border-radius: 14px; padding: 10px 6px; }
+  .krow { display: flex; gap: 5px; margin: 5px 0; justify-content: center; }
+  .key { position: relative; flex: 1; min-width: 0; height: 58px; border-radius: 9px; background: #241E1A; display: flex;
+    align-items: center; justify-content: center; font-size: 22px; }
+  .key .latin { position: absolute; left: 5px; bottom: 3px; font-size: 11px; color: var(--muted); }
+  .key .shift { position: absolute; right: 5px; top: 3px; font-size: 13px; color: var(--accent); }
+  .key .dot { position: absolute; right: 6px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .key.wide { flex: 1.6; font-size: 14px; color: var(--muted); }
+  .key.space { flex: 3.2; }
+  /* A special key with a role on this page: an orange ring and its number, which the legend explains. */
+  .key.role { box-shadow: inset 0 0 0 2px var(--accent); color: var(--ink); }
+  .key .num { position: absolute; left: 5px; top: 3px; font-size: 12px; font-weight: 700; color: var(--accent); }
+  .legend { color: var(--muted); font-size: 16px; margin-top: 10px; }
+  .legend b { color: var(--ink); font-weight: 400; }
+  .roles { list-style: none; padding: 0; margin: 10px 0 0; font-size: 17px; }
+  .roles li { display: flex; gap: 10px; margin: 6px 0; }
+  .roles .n { color: var(--accent); font-weight: 700; min-width: 18px; }
+  .roles .k { color: var(--ink); min-width: 92px; }
+  .roles .what { color: var(--muted); }
+  ul.points { margin: 0; padding-left: 22px; }
+  ul.points li { margin: 8px 0; }
+  .f { color: var(--muted); font-size: 13px; }
+  .field { background: var(--surface); border-radius: 14px; padding: 18px; min-height: 80px; color: var(--muted); font-size: 22px; }
+  .field .caret { display: inline-block; width: 2px; height: 24px; background: var(--accent); vertical-align: -4px; }
+  nav { display: flex; gap: 10px; margin-bottom: 10px; }
+  nav a { color: var(--muted); font-size: 14px; text-decoration: none; border: 1px solid var(--divider); border-radius: 999px; padding: 4px 12px; }
+</style>
+</head>
+<body>
+<main id="page"></main>
+
+<!-- The data each page is made from: one block per language. The real pages would build these from im.json. -->
+<script type="application/json" id="pages">
+{
+  "ko": {
+    "name": "한국어", "nameEnglish": "Korean", "status": "Ready",
+    "options": [{ "label": "F: Layout", "value": "두벌식 (2-set)" }],
+    "keys": {
+      "kind": "letters",
+      "rows": [
+        [["q","ㅂ","ㅃ"],["w","ㅈ","ㅉ"],["e","ㄷ","ㄸ"],["r","ㄱ","ㄲ"],["t","ㅅ","ㅆ"],["y","ㅛ"],["u","ㅕ"],["i","ㅑ"],["o","ㅐ","ㅒ"],["p","ㅔ","ㅖ"]],
+        [["a","ㅁ"],["s","ㄴ"],["d","ㅇ"],["f","ㄹ"],["g","ㅎ"],["h","ㅗ"],["j","ㅓ"],["k","ㅏ"],["l","ㅣ"]],
+        [["z","ㅋ"],["x","ㅌ"],["c","ㅊ"],["v","ㅍ"],["b","ㅠ"],["n","ㅜ"],["m","ㅡ"]]
+      ],
+      "legend": "F: Small orange letters are Shift's.",
+      "roles": [
+        { "key": "shift", "name": "Shift", "what": "F: The doubled letters, the small ones in the corners." },
+        { "key": "space", "name": "Space", "what": "F: Finishes the syllable and writes the bar's first word." },
+        { "key": "sym", "name": "Sym", "what": "F: Hold for languages." }
+      ]
+    },
+    "points": [
+      "F: Type the letters; the syllable builds above the bar and goes in when the next letter can't join it.",
+      "F: Space writes what the bar starts with. Tap another word to pick it.",
+      "F: Flick left from Backspace takes the last word. Double Space ends the sentence.",
+      "F: Swipe up on the keys for more words."
+    ],
+    "practice": "F: 안녕하세요"
+  },
+  "yue-yale": {
+    "name": "耶魯拼音", "nameEnglish": "Cantonese, Yale", "status": "Experimental",
+    "options": [{ "label": "F: Characters", "value": "Hong Kong" }],
+    "keys": {
+      "kind": "code",
+      "rows": [
+        [["q"],["w"],["e"],["r"],["t"],["y"],["u"],["i"],["o"],["p"]],
+        [["a"],["s"],["d"],["f"],["g"],["h"],["j"],["k"],["l"]],
+        [["z"],["x"],["c"],["v"],["b"],["n"],["m"]]
+      ],
+      "legend": "F: You type the sounds in Yale romanisation, no tones: neihou gives 你好. The code floats above the bar.",
+      "roles": [
+        { "key": "space", "name": "Space", "what": "F: Picks the first choice." },
+        { "key": "shift", "name": "Shift", "what": "F: More choices: the bigger menu." },
+        { "key": "sym", "name": "Sym", "what": "F: Steps back: the menu, then the code, then the panel. Hold for languages." },
+        { "key": "enter", "name": "Enter", "what": "F: Types the code as letters." },
+        { "key": "backspace", "name": "Backspace", "what": "F: Takes the code's last letter." }
+      ]
+    },
+    "points": [
+      "F: Type a code; the choices sit over the top row. Space types the first, a tap picks any.",
+      "F: Shift, a swipe up or ⋯ shows more. Enter or a swipe turns the page.",
+      "F: Enter types the code as letters. Double Space types 。",
+      "F: A whole phrase can go in one run, no spaces."
+    ],
+    "practice": "F: neihou"
+  },
+  "es": {
+    "name": "Español", "nameEnglish": "Spanish", "status": "Ready",
+    "options": [],
+    "keys": {
+      "kind": "accents",
+      "rows": [
+        [["q"],["w"],["e","","é"],["r"],["t"],["y"],["u","","ú ü"],["i","","í"],["o","","ó"],["p"]],
+        [["a","","á"],["s"],["d"],["f"],["g"],["h"],["j"],["k"],["l"]],
+        [["z"],["x"],["c"],["v"],["b"],["n","","ñ"],["m"]]
+      ],
+      "legend": "F: Hold a dotted key for its accents.",
+      "roles": [
+        { "key": "shift", "name": "Shift", "what": "F: The capital accent, held with the letter." },
+        { "key": "sym", "name": "Sym", "what": "F: Symbols, as holding gives accents. Hold for languages." }
+      ]
+    },
+    "points": [
+      "F: Hold a letter for its accent; the choices show on the bar over the keys.",
+      "F: Shift gives the capital one. Symbols are on Alt and Sym.",
+      "F: A sentence opening with ¿ or ¡ still gets its capital.",
+      "F: Flick left from Backspace takes the last word."
+    ],
+    "practice": "F: ¿Qué tal?"
+  }
+}
+</script>
+
+<script>
+// The first tap anywhere fills the screen (Chrome needs a tap for that), so the page shows as the app would.
+document.addEventListener("click", () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+}, { once: false });
+const pages = JSON.parse(document.getElementById("pages").textContent);
+const id = new URLSearchParams(location.search).get("lang") || "ko";
+const data = pages[id] || pages.ko;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function key([latin, typed, extra]) {
+  if (data.keys.kind === "letters") {
+    return `<div class="key"><span class="latin">${esc(latin.toUpperCase())}</span>${esc(typed)}${extra ? `<span class="shift">${esc(extra)}</span>` : ""}</div>`;
+  }
+  return `<div class="key">${esc(latin.toUpperCase())}${extra ? '<span class="dot"></span>' : ""}</div>`;
+}
+
+function special(name, label, cls = "wide") {
+  const roles = data.keys.roles || [];
+  const at = roles.findIndex(r => r.key === name);
+  return at < 0 ? `<div class="key ${cls}">${label}</div>`
+    : `<div class="key ${cls} role"><span class="num">${at + 1}</span>${label}</div>`;
+}
+
+function roles() {
+  const list = data.keys.roles || [];
+  if (!list.length) return "";
+  return `<ol class="roles">${list.map((r, i) => `<li><span class="n">${i + 1}</span><span class="k">${esc(r.name)}</span><span class="what">${esc(r.what)}</span></li>`).join("")}</ol>`;
+}
+
+function keyboard() {
+  const [top, home, bottom] = data.keys.rows;
+  const accents = data.keys.kind === "accents"
+    ? `<div class="legend">${data.keys.rows.flat().filter(k => k[2]).map(k => `<b>${esc(k[0].toUpperCase())}</b> ${esc(k[2])}`).join(" · ")}</div>` : "";
+  return `<div class="keys">
+    <div class="krow">${top.map(key).join("")}</div>
+    <div class="krow">${home.map(key).join("")}${special("backspace", "⌫")}</div>
+    <div class="krow"><div class="key wide">alt</div>${bottom.map(key).join("")}${special("sym", "sym")}${special("enter", "↵")}</div>
+    <div class="krow">${special("shift", "⇧")}<div class="key wide">○</div><div class="key wide">◁</div>${special("space", "", "space")}<div class="key wide">□</div><div class="key wide">fn</div>${special("shift", "⇧")}</div>
+  </div>
+  <div class="legend">${esc(data.keys.legend)}</div>${accents}${roles()}`;
+}
+
+document.getElementById("page").innerHTML = `
+  <nav>${Object.keys(pages).map(k => `<a href="?lang=${k}">${esc(pages[k].name)}</a>`).join("")}</nav>
+  <div class="back">←</div>
+  <header>
+    <h1>${esc(data.name)}</h1>
+    <div class="english">${esc(data.nameEnglish)}</div>
+    <span class="pill ${data.status.toLowerCase()}">${esc(data.status)}</span>
+  </header>
+  <h2>Turn on</h2>
+  <div class="row"><span>${esc(data.name)}</span><span class="switch"></span></div>
+  ${data.options.map(o => `<div class="row"><span>${esc(o.label)}</span><span class="value">${esc(o.value)}</span></div>`).join("")}
+  <h2>How it works</h2>
+  <ul class="points">${data.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
+  <h2>The keys</h2>
+  ${keyboard()}
+  <h2>Try it</h2>
+  <div class="field">${esc(data.practice)} <span class="caret"></span></div>
+  <p class="f">F: lines marked F: are placeholders.</p>`;
+</script>
+</body>
+</html>

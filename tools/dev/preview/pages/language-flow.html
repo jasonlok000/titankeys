@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Languages flow</title>
+<!--
+  MOCKUP, not app code: Settings > Languages as a clickable flow, with the owner's decisions of 2026-11-17 (v2).
+  Start: language-flow.html?v=2 . Each page is drawn from the DATA block below, which the real pages would build from index.json
+  and each im.json. Lines marked "F:" are placeholders for F.
+-->
+<style>
+  @font-face { font-family: Inter; src: url(inter_regular.otf); }
+  @font-face { font-family: Inter; font-weight: 700; src: url(inter_bold.otf); }
+  :root { --bg: #000; --surface: #161210; --raised: #241E1A; --divider: #2A2623; --ink: #FFF1E6; --muted: #99918A; --accent: #F07C4A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 19px/1.4 Inter, system-ui, sans-serif; }
+  /* The Titan's square screen (1076 x 1200 px at density 250, about 690 CSS px), Settings' side margins. */
+  main { padding: 24px 60px 56px; }
+  a { color: inherit; text-decoration: none; }
+  .back { color: var(--muted); font-size: 28px; display: inline-block; padding: 4px 8px 4px 0; cursor: pointer; }
+  h1 { margin: 12px 0 2px; font-size: 40px; }
+  .english { color: var(--muted); font-size: 20px; }
+  .pill { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .pill.ready { background: var(--accent); color: #160A04; }
+  .pill.experimental { border: 1.5px solid var(--accent); color: var(--accent); }
+  header .pill { margin-top: 10px; }
+  h2 { margin: 34px 0 10px; color: var(--accent); font-size: 15px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  h3 { margin: 22px 0 6px; color: var(--muted); font-size: 15px; font-weight: 700; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--divider); cursor: pointer; }
+  .row .sub { color: var(--muted); font-size: 16px; }
+  .row .value { color: var(--accent); white-space: nowrap; }
+  .label { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 40px; margin-right: 14px; border-radius: 10px;
+    background: var(--raised); font-weight: 700; }
+  .switch { flex: none; width: 52px; height: 30px; border-radius: 15px; background: #3A332E; position: relative; cursor: pointer; }
+  .switch::after { content: ""; position: absolute; left: 4px; top: 4px; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); }
+  .switch.on { background: var(--accent); }
+  .switch.on::after { left: auto; right: 4px; background: #160A04; }
+  .note { color: var(--muted); font-size: 16px; padding: 14px 0; border-bottom: 1px solid var(--divider); }
+  .card { background: var(--surface); border-radius: 14px; padding: 16px 18px; margin: 10px 0; }
+  .card .top { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .card .top .names { flex: 1; }
+  .card .line { color: var(--muted); font-size: 16px; }
+  .card .more { margin-top: 12px; border-top: 1px solid var(--divider); padding-top: 12px; }
+  .chev { color: var(--muted); }
+  ul.points { margin: 0; padding-left: 22px; }
+  ul.points li { margin: 8px 0; }
+  .keys { background: var(--surface); border-radius: 14px; padding: 10px 6px; }
+  .card .keys { background: #0E0B0A; }
+  .krow { display: flex; gap: 5px; margin: 5px 0; justify-content: center; }
+  .key { position: relative; flex: 1; min-width: 0; height: 58px; border-radius: 9px; background: var(--raised); display: flex;
+    align-items: center; justify-content: center; font-size: 21px; }
+  .key .latin { position: absolute; left: 5px; bottom: 3px; font-size: 11px; color: var(--muted); }
+  .key .shift { position: absolute; right: 5px; top: 3px; font-size: 13px; color: var(--accent); }
+  .key .dot { position: absolute; right: 6px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .key.wide { flex: 1.6; font-size: 14px; color: var(--muted); }
+  .key.space { flex: 3.2; }
+  .key.role { box-shadow: inset 0 0 0 2px var(--accent); color: var(--ink); }
+  .key .num { position: absolute; left: 5px; top: 3px; font-size: 12px; font-weight: 700; color: var(--accent); }
+  .legend { color: var(--muted); font-size: 16px; margin-top: 10px; }
+  .roles { list-style: none; padding: 0; margin: 10px 0 0; font-size: 17px; }
+  .roles li { display: flex; gap: 10px; margin: 6px 0; }
+  .roles .n { color: var(--accent); font-weight: 700; min-width: 18px; }
+  .roles .k { min-width: 96px; }
+  .roles .what { color: var(--muted); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--divider); color: var(--muted); cursor: pointer; font-size: 16px; }
+  .chip.on { border-color: var(--accent); color: var(--accent); }
+  .field { background: var(--surface); border-radius: 14px; padding: 18px; min-height: 80px; color: var(--muted); font-size: 22px; }
+  .caret { display: inline-block; width: 2px; height: 24px; background: var(--accent); vertical-align: -4px; }
+  .f { color: var(--muted); font-size: 13px; margin-top: 28px; }
+  .limit { color: var(--muted); font-size: 15px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<script type="application/json" id="data">
+{
+  "languages": [
+    { "id": "en", "name": "English", "english": "English", "label": "EN", "status": "Ready", "methods": ["en"] },
+    { "id": "ko", "name": "한국어", "english": "Korean", "label": "한", "status": "Ready", "methods": ["ko"] },
+    { "id": "zh", "name": "中文", "english": "Chinese", "label": "中", "status": "Experimental",
+      "methods": ["yue-yale", "yue-jyutping", "zh-pinyin", "zh-zhuyin", "zh-cangjie", "zh-quick"] },
+    { "id": "es", "name": "Español", "english": "Spanish", "label": "ES", "status": "Ready", "methods": ["es"] },
+    { "id": "sr", "name": "Српски", "english": "Serbian", "label": "СР", "status": "Experimental", "methods": ["sr", "sr-latn"] },
+    { "id": "de", "name": "Deutsch", "english": "German", "label": "DE", "status": "Ready", "methods": ["de"] },
+    { "id": "ja", "name": "日本語", "english": "Japanese", "label": "あ", "status": "Experimental", "methods": ["ja"] },
+    { "id": "th", "name": "ไทย", "english": "Thai", "label": "ก", "status": "Experimental", "methods": ["th"] }
+  ],
+  "on": ["en", "zh", "ko"],
+  "methodsOn": { "en": ["en"], "zh": ["yue-yale", "zh-pinyin"], "ko": ["ko"] },
+  "pages": {
+    "ko": {
+      "options": [{ "label": "F: Layout", "value": "두벌식 (2-set)" }],
+      "points": [
+        "F: Type the letters; the syllable builds above the bar and goes in when the next can't join it.",
+        "F: Space finishes the syllable and writes the bar's first word.",
+        "F: A flick from Backspace takes the last word; double Space ends the sentence.",
+        "F: Swipe up on the keys for more words."
+      ],
+      "keys": { "kind": "letters", "rows": [
+        [["q","ㅂ","ㅃ"],["w","ㅈ","ㅉ"],["e","ㄷ","ㄸ"],["r","ㄱ","ㄲ"],["t","ㅅ","ㅆ"],["y","ㅛ"],["u","ㅕ"],["i","ㅑ"],["o","ㅐ","ㅒ"],["p","ㅔ","ㅖ"]],
+        [["a","ㅁ"],["s","ㄴ"],["d","ㅇ"],["f","ㄹ"],["g","ㅎ"],["h","ㅗ"],["j","ㅓ"],["k","ㅏ"],["l","ㅣ"]],
+        [["z","ㅋ"],["x","ㅌ"],["c","ㅊ"],["v","ㅍ"],["b","ㅠ"],["n","ㅜ"],["m","ㅡ"]]],
+        "legend": "F: Small orange letters are Shift's.",
+        "roles": [
+          { "key": "shift", "name": "Shift", "what": "F: The doubled letters in the corners." },
+          { "key": "space", "name": "Space", "what": "F: Finishes the syllable." },
+          { "key": "enter", "name": "Enter", "what": "F: A new line." },
+          { "key": "backspace", "name": "Backspace", "what": "F: Takes the syllable's last letter." },
+          { "key": "sym", "name": "Sym", "what": "F: Symbols. Hold for languages." }] },
+      "practice": "F: 안녕하세요"
+    },
+    "es": {
+      "options": [],
+      "points": [
+        "F: Hold a letter for its accent; the choices show on the bar over the keys.",
+        "F: Shift gives the capital one. Symbols are on Alt and Sym.",
+        "F: A sentence opening with ¿ or ¡ still gets its capital.",
+        "F: A flick from Backspace takes the last word."
+      ],
+      "keys": { "kind": "accents", "rows": [
+        [["q"],["w"],["e","","é"],["r"],["t"],["y"],["u","","ú ü"],["i","","í"],["o","","ó"],["p"]],
+        [["a","","á"],["s"],["d"],["f"],["g"],["h"],["j"],["k"],["l"]],
+        [["z"],["x"],["c"],["v"],["b"],["n","","ñ"],["m"]]],
+        "legend": "F: Hold a dotted key for its accents.",
+        "roles": [
+          { "key": "shift", "name": "Shift", "what": "F: The capital accent." },
+          { "key": "sym", "name": "Sym", "what": "F: Symbols. Hold for languages." }] },
+      "practice": "F: ¿Qué tal?"
+    },
+    "zh": {
+      "settings": [
+        { "label": "F: Characters", "value": "Hong Kong", "choices": ["Hong Kong", "Taiwan", "Simplified"] },
+        { "label": "F: Suggestions", "toggle": true },
+        { "label": "F: Learn my words", "toggle": true }
+      ],
+      "note": "F: Corrections: not available in Chinese. Pick the character you mean from the choices instead.",
+      "groups": [
+        { "title": "F: Cantonese", "methods": ["yue-yale", "yue-jyutping"] },
+        { "title": "F: Mandarin", "methods": ["zh-pinyin", "zh-zhuyin"] },
+        { "title": "F: By shape", "methods": ["zh-cangjie", "zh-quick"] }
+      ],
+      "points": [
+        "F: Space picks the first choice, only while you're typing a code.",
+        "F: Enter types the code as letters.",
+        "F: Sym steps back: the menu, then the code, then the panel. Hold it for languages.",
+        "F: Shift or a swipe up shows more; a swipe down on page 1 closes them.",
+        "F: A flick from Backspace takes one character. Double Space types 。, a triple tap picks a word."
+      ],
+      "roles": [
+        { "key": "space", "name": "Space", "what": "F: Picks the first choice." },
+        { "key": "shift", "name": "Shift", "what": "F: More choices: the bigger menu." },
+        { "key": "sym", "name": "Sym", "what": "F: Steps back. Hold for languages." },
+        { "key": "enter", "name": "Enter", "what": "F: Types the code as letters." },
+        { "key": "backspace", "name": "Backspace", "what": "F: Takes the code's last letter." }
+      ]
+    },
+    "sr": {
+      "settings": [{ "label": "F: Suggestions", "toggle": true }],
+      "groups": [{ "title": "F: Alphabets", "methods": ["sr", "sr-latn"] }],
+      "points": [
+        "F: Each alphabet types on its own keys; switch with a held Sym.",
+        "F: Words learned in one alphabet are offered in the other."
+      ],
+      "roles": [{ "key": "sym", "name": "Sym", "what": "F: Hold to switch alphabet." }]
+    }
+  },
+  "methods": {
+    "yue-yale": { "name": "耶魯", "english": "Yale", "line": "F: Cantonese by its sounds, as Yale spells them.",
+      "keys": "latin", "keyNote": "F: Plain letters: you type the sounds. neihou gives 你好.",
+      "points": ["F: Tones are never typed.", "F: The h after a vowel is optional."],
+      "settings": [{ "label": "F: Lazy sounds (n for l, z for j)", "toggle": true }], "practice": "neihou" },
+    "yue-jyutping": { "name": "粵拼", "english": "Jyutping", "line": "F: Cantonese by its sounds, as Jyutping spells them.",
+      "keys": "latin", "keyNote": "F: Plain letters: nei hou gives 你好.", "points": ["F: Tones are never typed."], "settings": [], "practice": "neihou" },
+    "zh-pinyin": { "name": "拼音", "english": "Pinyin", "line": "F: Mandarin by its sounds.",
+      "keys": "latin", "keyNote": "F: Plain letters: nihao gives 你好.", "points": ["F: v types ü."], "settings": [], "practice": "nihao" },
+    "zh-zhuyin": { "name": "注音", "english": "Zhuyin", "line": "F: Mandarin by Zhuyin's symbols, on the Hsu layout.",
+      "keys": "zhuyin", "keyNote": "F: Each letter types a Zhuyin symbol.", "points": ["F: Tones on D, F, J and S, if you want them."], "settings": [], "practice": "ㄋㄧ ㄏㄠ" },
+    "zh-cangjie": { "name": "倉頡", "english": "Cangjie", "line": "F: Characters by their shapes, up to five parts.",
+      "keys": "cangjie", "keyNote": "F: Each letter is a radical.", "points": ["F: Type a character's parts in order: 竹 by H H."],
+      "settings": [{ "label": "F: Show the radicals as I type", "toggle": true }], "practice": "日" },
+    "zh-quick": { "name": "速成", "english": "Quick", "line": "F: Cangjie's first and last parts only.",
+      "keys": "cangjie", "keyNote": "F: The same radicals as Cangjie.", "points": ["F: Two letters per character."],
+      "settings": [{ "label": "F: Show the radicals as I type", "toggle": true }], "practice": "日" },
+    "sr": { "name": "Ћирилица", "english": "Cyrillic", "line": "F: Serbian in Cyrillic.", "keys": "cyrillic", "keyNote": "F: Њ on Q, Љ on W, Џ on X.", "points": [], "settings": [], "practice": "Здраво" },
+    "sr-latn": { "name": "Latinica", "english": "Latin", "line": "F: Serbian in Latin letters.", "keys": "latin", "keyNote": "F: Hold C, S, Z or D for č ć š ž đ.", "points": [], "settings": [], "practice": "Zdravo" }
+  }
+}
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const MAX_ON = 4;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const lang = id => DATA.languages.find(l => l.id === id);
+const state = { open: {}, chip: null };
+
+// The letter maps for the multi-method cards.
+const LATIN = ["qwertyuiop", "asdfghjkl", "zxcvbnm"].map(r => [...r].map(c => [c]));
+const MAPS = {
+  latin: LATIN,
+  cangjie: [[["q","手"],["w","田"],["e","水"],["r","口"],["t","廿"],["y","卜"],["u","山"],["i","戈"],["o","人"],["p","心"]],
+            [["a","日"],["s","尸"],["d","木"],["f","火"],["g","土"],["h","竹"],["j","十"],["k","大"],["l","中"]],
+            [["z","重"],["x","難"],["c","金"],["v","女"],["b","月"],["n","弓"],["m","一"]]],
+  zhuyin: [[["q","ㄑ"],["w","ㄨ"],["e","ㄜ"],["r","ㄖ"],["t","ㄊ"],["y","ㄩ"],["u","ㄧ"],["i","ㄞ"],["o","ㄛ"],["p","ㄆ"]],
+           [["a","ㄚ"],["s","ㄙ"],["d","ㄉ"],["f","ㄈ"],["g","ㄍ"],["h","ㄏ"],["j","ㄐ"],["k","ㄎ"],["l","ㄌ"]],
+           [["z","ㄗ"],["x","ㄒ"],["c","ㄘ"],["v","ㄔ"],["b","ㄅ"],["n","ㄋ"],["m","ㄇ"]]],
+  cyrillic: [[["q","љ"],["w","њ"],["e","е"],["r","р"],["t","т"],["y","з"],["u","у"],["i","и"],["o","о"],["p","п"]],
+             [["a","а"],["s","с"],["d","д"],["f","ф"],["g","г"],["h","х"],["j","ј"],["k","к"],["l","л"]],
+             [["z","ѕ"],["x","џ"],["c","ц"],["v","в"],["b","б"],["n","н"],["m","м"]]]
+};
+
+function keyCell([latin, typed, extra], kind) {
+  if (kind === "letters" || (typed && kind !== "accents")) {
+    return `<div class="key"><span class="latin">${esc(latin.toUpperCase())}</span>${esc(typed || latin.toUpperCase())}${extra ? `<span class="shift">${esc(extra)}</span>` : ""}</div>`;
+  }
+  return `<div class="key">${esc(latin.toUpperCase())}${extra ? '<span class="dot"></span>' : ""}</div>`;
+}
+
+function keyboard(rows, kind, roles = []) {
+  const special = (name, label, cls = "wide") => {
+    const at = roles.findIndex(r => r.key === name);
+    return at < 0 ? `<div class="key ${cls}">${label}</div>` : `<div class="key ${cls} role"><span class="num">${at + 1}</span>${label}</div>`;
+  };
+  const [top, home, bottom] = rows;
+  return `<div class="keys">
+    <div class="krow">${top.map(k => keyCell(k, kind)).join("")}</div>
+    <div class="krow">${home.map(k => keyCell(k, kind)).join("")}${special("backspace", "⌫")}</div>
+    <div class="krow"><div class="key wide">alt</div>${bottom.map(k => keyCell(k, kind)).join("")}${special("sym", "sym")}${special("enter", "↵")}</div>
+    <div class="krow">${special("shift", "⇧")}<div class="key wide">○</div><div class="key wide">◁</div>${special("space", "", "space")}<div class="key wide">□</div><div class="key wide">fn</div>${special("shift", "⇧")}</div>
+  </div>`;
+}
+
+const rolesList = roles => roles && roles.length
+  ? `<ol class="roles">${roles.map((r, i) => `<li><span class="n">${i + 1}</span><span class="k">${esc(r.name)}</span><span class="what">${esc(r.what)}</span></li>`).join("")}</ol>` : "";
+
+function header(l) {
+  return `<span class="back" onclick="history.back()">←</span>
+    <header><h1>${esc(l.name)}</h1><div class="english">${esc(l.english)}</div>
+    <span class="pill ${l.status.toLowerCase()}">${esc(l.status)}</span></header>`;
+}
+
+// 1) Settings > Languages: the ones on first (at most 4), with their label and methods on; then the rest with their status.
+function list() {
+  const on = DATA.on.map(lang);
+  const rest = DATA.languages.filter(l => !DATA.on.includes(l.id));
+  const row = (l, isOn) => `<a class="row" href="#${l.id}">
+      <span style="display:flex;align-items:center"><span class="label">${esc(l.label)}</span>
+        <span><div>${esc(l.name)}</div><div class="sub">${esc(l.english)}${isOn && l.methods.length > 1 ? ` · ${(DATA.methodsOn[l.id] || []).length} of ${l.methods.length} on` : ""}</div></span></span>
+      ${isOn ? '<span class="value">On</span>' : `<span class="pill ${l.status.toLowerCase()}">${esc(l.status)}</span>`}</a>`;
+  return `<span class="back">←</span><h1>Languages</h1>
+    <h2>On</h2>${on.map(l => row(l, true)).join("")}
+    <div class="limit">F: Up to ${MAX_ON} at once. Hold Sym to switch.</div>
+    <h2>All languages</h2>${rest.map(l => row(l, false)).join("")}`;
+}
+
+// 2) A language with one input method.
+function single(l) {
+  const p = DATA.pages[l.id];
+  const isOn = DATA.on.includes(l.id);
+  return `${header(l)}
+    <h2>Turn on</h2>
+    <div class="row"><span>${esc(l.name)}</span><span class="switch ${isOn ? "on" : ""}"></span></div>
+    ${p.options.map(o => `<div class="row"><span>${esc(o.label)}</span><span class="value">${esc(o.value)}</span></div>`).join("")}
+    <h2>How it works</h2><ul class="points">${p.points.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <h2>The keys</h2>${keyboard(p.keys.rows, p.keys.kind, p.keys.roles)}
+    <div class="legend">${esc(p.keys.legend)}</div>${rolesList(p.keys.roles)}
+    <h2>Try it</h2><div class="field">${esc(p.practice)} <span class="caret"></span></div>`;
+}
+
+// 3) A language with several input methods: shared settings, a card for each, shared how-to, a practice field with chips.
+function multi(l) {
+  const p = DATA.pages[l.id];
+  const on = DATA.methodsOn[l.id] || [];
+  const card = id => {
+    const m = DATA.methods[id];
+    const open = state.open[id];
+    return `<div class="card">
+      <div class="top" onclick="toggleCard('${id}')"><span class="names"><div>${esc(m.name)} <span class="sub">${esc(m.english)}</span></div>
+        <div class="line">${esc(m.line)}</div></span>
+        <span class="chev">${open ? "▾" : "▸"}</span>
+        <span class="switch ${on.includes(id) ? "on" : ""}" onclick="event.stopPropagation(); toggleMethod('${l.id}','${id}')"></span></div>
+      ${open ? `<div class="more">${keyboard(MAPS[m.keys], m.keys === "latin" ? "plain" : "map", [])}
+        <div class="legend">${esc(m.keyNote)}</div>
+        ${m.points.length ? `<ul class="points">${m.points.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+        ${m.settings.map(s => `<div class="row"><span>${esc(s.label)}</span><span class="switch on"></span></div>`).join("")}</div>` : ""}
+    </div>`;
+  };
+  const chips = on.length ? on : [l.methods[0]];
+  const chip = state.chip && chips.includes(state.chip) ? state.chip : chips[0];
+  return `${header(l)}
+    <h2>Settings</h2>
+    ${p.settings.map(s => `<div class="row"><span>${esc(s.label)}</span>${s.toggle ? '<span class="switch on"></span>' : `<span class="value">${esc(s.value)}</span>`}</div>`).join("")}
+    ${p.note ? `<div class="note">${esc(p.note)}</div>` : ""}
+    <h2>Input methods</h2>
+    ${p.groups.map(g => `<h3>${esc(g.title)}</h3>${g.methods.map(card).join("")}`).join("")}
+    <div class="limit">F: ${on.length} of ${MAX_ON} on across your languages.</div>
+    <h2>How it works</h2><ul class="points">${p.points.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+    <h2>The keys</h2>${keyboard(LATIN, "plain", p.roles)}${rolesList(p.roles)}
+    <h2>Try it</h2>
+    <div class="chips">${chips.map(id => `<span class="chip ${id === chip ? "on" : ""}" onclick="pickChip('${id}')">${esc(DATA.methods[id].name)}</span>`).join("")}</div>
+    <div class="field">${esc(DATA.methods[chip].practice)} <span class="caret"></span></div>`;
+}
+
+function toggleCard(id) { state.open[id] = !state.open[id]; render(); }
+function pickChip(id) { state.chip = id; render(); }
+function toggleMethod(l, id) {
+  const on = DATA.methodsOn[l] = DATA.methodsOn[l] || [];
+  const total = Object.values(DATA.methodsOn).reduce((n, x) => n + x.length, 0);
+  if (on.includes(id)) on.splice(on.indexOf(id), 1); else if (total < MAX_ON) on.push(id);
+  render();
+}
+
+function render() {
+  const id = location.hash.slice(1);
+  const l = lang(id);
+  const html = !l ? list() : l.methods.length > 1 ? multi(l) : DATA.pages[l.id] ? single(l)
+    : `${header(l)}<p class="english">F: This page isn't in the mockup.</p>`;
+  document.getElementById("app").innerHTML = html + '<p class="f">Mockup. Lines marked F: are placeholders.</p>';
+}
+window.addEventListener("hashchange", () => { state.chip = null; render(); scrollTo(0, 0); });
+render();
+</script>
+</body>
+</html>

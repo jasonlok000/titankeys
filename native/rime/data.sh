@@ -76,7 +76,7 @@ import re, sys
 s = open(sys.argv[1], encoding='utf-8').read()
 s, n = re.subn(r'schema_list:\n(  - schema: .*\n)+',
                'schema_list:\n  - schema: tk_yale\n  - schema: tk_jyutping\n  - schema: tk_pinyin\n  - schema: tk_cangjie\n'
-               '  - schema: tk_quick\n  - schema: tk_zhuyin\n', s)
+               '  - schema: tk_quick\n  - schema: tk_zhuyin\n  - schema: tk_yale_strict\n  - schema: tk_jyutping_strict\n', s)
 assert n == 1
 s, n = re.subn(r'page_size: 5', 'page_size: 8', s)
 assert n == 1
@@ -132,6 +132,11 @@ with open(sys.argv[2], 'w', encoding='utf-8', newline='\n') as out:
     out.writelines(f'{word}\t{max(weight[word], 1)}\n' for word in order)
 PY
 cp "$HERE"/schemas/*.yaml .
+# Lazy sounds off (RimeEngine.LAZY_SOUNDS): Yale's and Jyutping's strict twins, without the lines marked lazy, on the same
+# dictionary, each with its own small prism.
+sed '/# lazy$/d; s/schema_id: tk_yale$/schema_id: tk_yale_strict/; s/prism: tk_yale$/prism: tk_yale_strict/' tk_yale.schema.yaml > tk_yale_strict.schema.yaml
+sed '/# lazy$/d' tk_jyutping_algebra.yaml > tk_jyutping_algebra_strict.yaml
+sed 's/schema_id: tk_jyutping$/schema_id: tk_jyutping_strict/; s/prism: tk_jyutping$/prism: tk_jyutping_strict/; s/tk_jyutping_algebra:/tk_jyutping_algebra_strict:/' tk_jyutping.schema.yaml > tk_jyutping_strict.schema.yaml
 
 # OpenCC: the three variants' configs, and only the dictionaries they use, compiled.
 cp "$OCC/config/t2s.json" "$OCC/config/t2hk.json" "$OCC/config/t2tw.json" "$HERE/schemas/tk_t2twp.json" "$HERE/schemas/tk_t2s_yue.json" \
@@ -183,7 +188,7 @@ mkdir -p "$D/shared/build"
 for f in "$D"/user/build/*; do
   case "$(basename "$f")" in *.table.bin|*.reverse.bin|*.prism.bin|*.schema.yaml|default.yaml) cp "$f" "$D/shared/build/";; esac
 done
-for t in jyut6ping3.table.bin luna_pinyin.table.bin cangjie5.table.bin quick5.table.bin terra_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_pinyin.prism.bin tk_cangjie.prism.bin tk_quick.prism.bin tk_zhuyin.prism.bin; do
+for t in jyut6ping3.table.bin luna_pinyin.table.bin cangjie5.table.bin quick5.table.bin terra_pinyin.table.bin tk_yale.prism.bin tk_jyutping.prism.bin tk_yale_strict.prism.bin tk_jyutping_strict.prism.bin tk_pinyin.prism.bin tk_cangjie.prism.bin tk_quick.prism.bin tk_zhuyin.prism.bin; do
   test -s "$D/shared/build/$t" || { echo "missing $t" >&2; exit 1; }
 done
 # The word lists' sources don't ship: Rime uses the compiled tables.
@@ -237,10 +242,16 @@ check tk_yale zh_hk "di" 啲
 check tk_jyutping zh_hk "syut" 說
 check tk_jyutping zh_hk "kai" 啟
 check tk_yale zh_hans "hai" 係
-# Jyutping keeps its own initials: lei isn't 你 there.
+# Lazy sounds off: the strict twins keep their own initials, so lei isn't 你 in Jyutping, nor o 我 in Yale.
 rm -rf "$D/try"; mkdir -p "$D/try"
-[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
-  || { echo "FAIL Jyutping lei gives 你: the fuzzy initials reached Jyutping" >&2; exit 1; }
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_jyutping_strict zh_hk lei 1 2>/dev/null | sed 's/^[^:]*: //')" != 你 ] \
+  || { echo "FAIL strict Jyutping lei gives 你: lazy sounds reached the strict twin" >&2; exit 1; }
+rm -rf "$D/try"; mkdir -p "$D/try"
+[ "$("$TOOL" try "$D/phone" "$D/try" tk_yale_strict zh_hk o 1 2>/dev/null | sed 's/^[^:]*: //')" != 我 ] \
+  || { echo "FAIL strict Yale o gives 我: lazy sounds reached the strict twin" >&2; exit 1; }
+check tk_jyutping zh_hk "lei" 你
+check tk_yale_strict zh_hk "nei hou" 你好
+check tk_jyutping_strict zh_hk "nei hou" 你好
 check tk_jyutping zh_hk "jyut jyu" 粵語
 check tk_jyutping zh_hk "ngo dei" 我哋
 check tk_jyutping zh_hk "gwong dung waa" 廣東話

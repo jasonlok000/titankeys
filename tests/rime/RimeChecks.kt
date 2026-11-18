@@ -51,6 +51,7 @@ fun main(args: Array<String>) {
     aPickedBarWordBringsItsNextWords()
     theBarsWordsNeverCoverACode()
     aFlickKeepsWhatWasPicked()
+    lazySoundsOffSelectsTheStrictTwin()
     println("Rime checks passed")
 }
 
@@ -917,4 +918,19 @@ fun aFlickKeepsWhatWasPicked() {
     same("", whole.commit, "with nothing picked the code goes whole, typing nothing")
     same("", whole.code, "and leaves nothing")
     same("𠮩", ChineseKeys.dropLastCharacter("𠮩𠮩"), "a character outside the BMP counts as one")
+}
+
+/** Lazy sounds off (a setting, on by default): Rime selects Yale's strict twin, and back again when they're on. */
+fun lazySoundsOffSelectsTheStrictTwin() {
+    val (engine, rime) = started()
+    rime.calls.clear()
+    engine.option(RimeEngine.LAZY_SOUNDS, false)
+    check("schema tk_yale_strict" in rime.calls, "off: the strict twin")
+    check(rime.calls.none { it.startsWith("option tk_lazy") }, "and it's never a Rime option")
+    rime.calls.clear()
+    engine.option(RimeEngine.LAZY_SOUNDS, true)
+    check("schema tk_yale" in rime.calls, "on again: the schema itself")
+    rime.calls.clear()
+    engine.option(RimeEngine.LAZY_SOUNDS, true)
+    check(rime.calls.isEmpty(), "unchanged: nothing selected again")
 }

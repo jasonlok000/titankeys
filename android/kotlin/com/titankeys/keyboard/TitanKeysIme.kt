@@ -2951,7 +2951,8 @@ class TitanKeysIme : InputMethodService() {
         // Cangjie and Quick: a finger that stays still on a key previews its radical in the code's tab, faded ([RadicalPreview]).
         strip?.nextKey = ""
         main.removeCallbacks(showRadical)
-        if (RadicalPreview.of(languages.current, restingKey) != null) main.postDelayed(showRadical, RadicalPreview.REST_MILLIS)
+        if (RadicalPreview.of(languages.current, restingKey) != null && TypingSettings.radicalPreview(this, languages.current.id))
+            main.postDelayed(showRadical, RadicalPreview.REST_MILLIS)
     }
 
     /** The rested key's radical, faded at the end of the code's tab, once the finger has stayed [RadicalPreview.REST_MILLIS]. */

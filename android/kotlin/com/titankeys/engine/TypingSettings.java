@@ -635,6 +635,27 @@ public final class TypingSettings {
         preferences(context).edit().putString("input_method_variants", setting).apply();
     }
 
+    /**
+     * Yale's and Jyutping's lazy sounds, per input method [id]: n and l, j and z, ng and no initial, gw and kw as g and k. On by
+     * default; off types the strict spelling only (RimeEngine.LAZY_SOUNDS).
+     */
+    public static boolean lazySounds(Context context, String id) {
+        return preferences(context).getBoolean("lazy_sounds_" + id, true);
+    }
+
+    public static void lazySounds(Context context, String id, boolean on) {
+        preferences(context).edit().putBoolean("lazy_sounds_" + id, on).apply();
+    }
+
+    /** Cangjie's and Quick's radical preview, per input method [id]: a resting finger shows its key's radical. On by default. */
+    public static boolean radicalPreview(Context context, String id) {
+        return preferences(context).getBoolean("radical_preview_" + id, true);
+    }
+
+    public static void radicalPreview(Context context, String id, boolean on) {
+        preferences(context).edit().putBoolean("radical_preview_" + id, on).apply();
+    }
+
     /** Whether input method [id] has said its hold hint on the bar (HoldHint): once, the first time it types. */
     public static boolean holdHintShown(Context context, String id) {
         return preferences(context).getStringSet("hold_hints_shown", java.util.Collections.emptySet()).contains(id);

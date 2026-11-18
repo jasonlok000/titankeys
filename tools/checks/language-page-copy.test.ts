@@ -30,17 +30,17 @@ test("generated language pages keep global, language and input-method controls a
   expect(availableSettings(globalSettings, "global").map(row => row.id)).toEqual(["learn"]);
   expect(availableSettings(chinese.settings, "language").map(row => row.id)).toContain("chineseCharacters");
   expect(availableSettings(chinese.settings, "language").map(row => row.id)).not.toContain("lazySounds");
-  for (const [id, option] of [
-    ["yue-yale", "lazySounds"], ["yue-jyutping", "lazySounds"],
-    ["zh-cangjie", "radicalPreview"], ["zh-quick", "radicalPreview"],
-  ]) {
-    expect(availableSettings(chinese.settings, "input-method", id).map(row => row.id)).toEqual([option]);
+  for (const id of ["yue-yale", "yue-jyutping", "zh-pinyin", "zh-zhuyin", "zh-cangjie", "zh-quick"]) {
+    const options = id.startsWith("yue-") ? ["lazySounds", "keyPreview"] : ["keyPreview"];
+    expect(availableSettings(chinese.settings, "input-method", id).map(row => row.id)).toEqual(options);
   }
-  expect(availableSettings(chinese.settings, "input-method", "zh-pinyin")).toEqual([]);
-  expect(availableSettings(languagePage("pt")!.settings, "input-method", "pt").map(row => row.id)).toEqual(["variant"]);
+  expect(availableSettings(languagePage("pt")!.settings, "input-method", "pt").map(row => row.id)).toEqual(["variant", "keyPreview"]);
+  expect(availableSettings(languagePage("en")!.settings, "input-method", "en").map(row => row.id)).toEqual(["keyPreview"]);
   expect(availableSettings(languagePage("en")!.settings, "language").map(row => row.id)).toContain("spelling");
   for (const method of methods) {
     const shared = availableSettings(languagePage(method.language.id)!.settings, "language").map(row => row.id);
+    const specific = availableSettings(languagePage(method.language.id)!.settings, "input-method", method.id);
+    expect(specific.some(row => row.id === "keyPreview")).toBe(true);
     expect(shared.includes("spelling")).toBe(false);
     expect(shared.includes("chineseCharacters")).toBe(method.language.id === "zh");
   }

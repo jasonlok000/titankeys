@@ -57,7 +57,7 @@ test("every key in typing_settings is a setting both resets clear, or something 
   expect(keys.length).toBeGreaterThan(30);
   for (const key of keys) {
     // "fix_" + id, and the input-method switches' prefix + id (SettingsReset.INPUT_METHOD_PREFIXES), reset by prefix.
-    const known = settings.includes(key) || data.includes(key) || ["fix_", "lazy_sounds_", "radical_preview_"].includes(key);
+    const known = settings.includes(key) || data.includes(key) || ["fix_", "lazy_sounds_", "radical_preview_", "key_preview_"].includes(key);
     expect({ key, known }).toEqual({ key, known: true });
   }
   expect(settings.filter(key => data.includes(key))).toEqual([]);

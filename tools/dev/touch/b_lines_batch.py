@@ -120,6 +120,31 @@ def check_quick():
     record("quick-hqi", (text or "").strip() == "我", f"速成, hqi and Space: {text!r} (wanted 我)")
 
 
+def check_mapped_key_preview():
+    for method, key, legend in (("ko", "q", "ㅂ"), ("ru", "q", "й"), ("th", "q", "ๆ"), ("zh-zhuyin", "p", "ㄆ")):
+        ib.start(["en", method], method)
+        x, y = key_centre(key)
+        shot = f"key-preview-{method}"
+        play(f"touch:{x},{y}:1000", "+100", shot=shot, at=450)
+        record(shot, None, f"Rested {key.upper()}: faded {legend} above the bar, with the normal suggestions still in place", shot)
+        record(f"{shot}-editor", read() == "", "Resting on the key leaves the editor empty")
+    # Put a key press inside the same touch, with enough time to draw the faded preview beforehand.
+    ib.start(["en", "ru"], "ru")
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8") as trace:
+        x, y = key_centre("q")
+        for t, action in ((0, 0), (320, 2), (440, None), (610, None), (850, 1)):
+            if action is None:
+                event = {"k": "key", "c": ANDROID_CODES["q"], "d": t == 440, "t": t}
+            else:
+                event = {"k": "m", "a": action, "t": t, "s": [[x, y, t]], "sz": [2]}
+            trace.write(json.dumps(event, separators=(",", ":")) + "\n")
+        trace.flush()
+        play(f"replay-rawlog:{trace.name}", shot="key-preview-ru-press", at=485)
+    record("key-preview-ru-press", (read() or "").casefold() == "й",
+           "Pressing a previewed Q types й immediately. Check the frame during key-down for the editor and dismissed ghost.",
+           "key-preview-ru-press")
+
+
 def check_playground_switch():
     language_checks.guide_checks.leave_guide()
     if not language_checks.turn_on(["en", "ru"], "en"):
@@ -143,7 +168,8 @@ def check_playground_switch():
     languages.in_field()
 
 
-BATCH = [check_flick_pending_code, check_space_touch_keeps_code, check_radical_hover, check_quick, check_playground_switch]
+BATCH = [check_flick_pending_code, check_space_touch_keeps_code, check_radical_hover, check_mapped_key_preview,
+         check_quick, check_playground_switch]
 
 
 def finish():

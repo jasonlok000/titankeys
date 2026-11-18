@@ -31,6 +31,13 @@ class ProbeTests(unittest.TestCase):
                 ui.open_language('Português')
         ui.tap.assert_called_once()
 
+    def test_open_language_uses_the_localized_practice_heading(self):
+        ui = PageUI(Mock(), sleep=lambda _: None)
+        ui.open_list, ui.tap, ui.find = Mock(), Mock(), Mock()
+        ui.snapshot = Mock(return_value=[])
+        ui.open_language('Português', 'pt')
+        self.assertEqual([call.args[0] for call in ui.find.call_args_list], ['Português', 'Português', 'Experimente'])
+
     def test_variant_requires_persisted_selection(self):
         ui = PageUI(Mock())
         ui.variant_options = Mock(return_value=({'pt-PT': node('Portugal')}, 'pt-BR'))
@@ -56,6 +63,7 @@ class ProbeTests(unittest.TestCase):
         with patch('page_probe.assets', return_value=({'settings': {'variant': 'Spelling'}}, {}, lambda _: im)):
             with self.assertRaisesRegex(Missing, 'exactly one'):
                 ui.variant_options('pt')
+        self.assertEqual(ui.find.call_args_list[0].args, ('Ortografia', 'action'))
         self.assertEqual(ui.find.call_args_list[-1].args, ('Portugal', 'choice'))
 
     def test_howto_uses_current_generated_points(self):
@@ -65,7 +73,7 @@ class ProbeTests(unittest.TestCase):
         im = {'name': 'Español', 'script': 'Latn', 'guide': {'family': 'latin', 'points': ['Current one', 'Current two']}}
         with patch('page_probe.assets', return_value=({'page': {'how': 'How it works'}, 'points': {}}, {}, lambda _: im)):
             self.assertEqual(ui.howto('es'), im['guide']['points'])
-        self.assertEqual([c.args[0] for c in ui.find.call_args_list], ['How it works', *im['guide']['points']])
+        self.assertEqual([c.args[0] for c in ui.find.call_args_list], ['Cómo funciona', *im['guide']['points']])
 
     def test_scroll_uses_owned_container_bounds(self):
         ui = PageUI(Mock(), sleep=lambda _: None)
@@ -196,7 +204,7 @@ class ProbeTests(unittest.TestCase):
 
     def test_practice_method_binding_and_result_cleanup(self):
         ui = Mock()
-        ui.find.return_value = node('', **{'class': 'android.widget.EditText'})
+        ui.find.return_value = node('Digite aqui', **{'class': 'android.widget.EditText'})
         ui.binding.return_value = True
         ui.c.field.return_value = 'O'
         with patch('page_probe.assets', return_value=({'page': {'typeHere': 'Type here'}}, {}, lambda _: {})):
@@ -232,7 +240,7 @@ class ProbeTests(unittest.TestCase):
                         yield
                     finally:
                         self.restored = True
-                def open_language(self, label):
+                def open_language(self, label, language):
                     pass
                 def find(self, label, kind=None):
                     return node(label, checkable='true', checked='true' if label in ids[:4] else 'false')

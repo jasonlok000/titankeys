@@ -50,6 +50,8 @@ data class InputMethod(
     val startersSimplified: List<String> = emptyList(),
     /** A few lines on what's special to typing it, for Settings > Languages (tools/im/howto.json). Empty where it has none. */
     val howTo: List<String> = emptyList(),
+    /** Printed, shifted and held legends from the same guide as the language settings. */
+    val previewKeys: Map<*, *>? = null,
 ) {
     /**
      * What a key types: [base], and [shift] where Shift gives another letter rather than [base]'s capital (Georgian). A
@@ -114,6 +116,22 @@ data class InputMethod(
     fun held(printed: Char, shift: Boolean): String? {
         val key = keys?.get(printed.lowercaseChar()) ?: return null
         return if (shift) key.heldShift ?: key.held else key.held
+    }
+
+    val keyPreviewDefault: Boolean get() = mappedPreview(previewKeys, script)
+
+    /** Returns the legend only. Typing and the input engine do not receive this value. */
+    fun keyPreview(printed: Char, shift: Boolean, hold: Boolean = false): String {
+        val key = printed.lowercaseChar()
+        if (key !in 'a'..'z') return ""
+        fun legend(layer: String) = (previewKeys?.get(layer) as? Map<*, *>)?.get(key.toString()) as? String
+        if (hold) return (if (shift) legend("heldShift") else null)
+            ?: legend("held") ?: held(key, shift) ?: accentsOf(key, shift).firstOrNull().orEmpty()
+        if (shift) legend("shift")?.let { return it }
+        val base = legend("map")
+        if (base != null) return if (shift && previewKeys?.get("capitals") == true) base.uppercase(javaLocale) else base
+        if (id == "zh-zhuyin") return ""
+        return letter(key, shift) ?: if (shift && shiftMatters) key.toString().uppercase(javaLocale) else key.toString()
     }
 
     /** The letters held on the key printed [printed], in capitals with [shift], or none. */
@@ -204,8 +222,15 @@ data class InputMethod(
             }
             val source = (root["source"] as? Map<*, *>)?.entries?.associate { (k, v) -> k as String to v.toString() } ?: emptyMap()
             fun list(key: String) = (root[key] as? List<*>)?.map { it as? String ?: throw Json.Error("$key must list text") }.orEmpty()
+            val preview = (root["guide"] as? Map<*, *>)?.get("keys") as? Map<*, *>
             return InputMethod(id, text("name"), text("nameEnglish"), label, text("locale"), text("script"), keys, accents,
-                textOrNull("words"), variants, rules, engine, engineArg, source, list("starters"), list("startersSimplified"), list("howTo"))
+                textOrNull("words"), variants, rules, engine, engineArg, source, list("starters"), list("startersSimplified"), list("howTo"), preview)
+        }
+
+        fun mappedPreview(guideKeys: Map<*, *>?, script: String): Boolean {
+            if (script == "Latn") return false
+            val map = guideKeys?.get("map") as? Map<*, *> ?: return false
+            return map.any { (printed, output) -> output is String && output.isNotEmpty() && output != printed }
         }
 
         private val ID = Regex("[a-z]{2,3}(-[a-z0-9]{2,8})*")

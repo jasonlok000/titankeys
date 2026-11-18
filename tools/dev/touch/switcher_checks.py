@@ -190,7 +190,7 @@ def row_switch(xml, label):
 def check_fifth_language_refused():
     """Four enabled languages: a fifth toggle stays off in UI and saved state."""
     import retest_batch
-    from page_probe import Missing, PageUI, Unobservable, assets, shown_name
+    from page_probe import Missing, PageUI, Unobservable, assets, shown_name, translator
     retest_batch.own_screen()
     ui = PageUI(checks)
     wanted = ['en', 'ru', 'el', 'de']
@@ -198,8 +198,9 @@ def check_fifth_language_refused():
         with ui.methods(wanted, 'en'):
             wording, _, method = assets()
             label = shown_name(method('af'))
-            ui.open_language(label)
-            ui.find(wording['page']['languagesFull'])
+            limit = translator('af')(wording['page']['languagesFull'])
+            ui.open_language(label, 'af')
+            ui.find(limit)
             toggle = ui.find(label, 'toggle')
             if toggle.get('checked') != 'false':
                 raise Missing('Fifth language toggle already appears enabled')
@@ -207,7 +208,7 @@ def check_fifth_language_refused():
                 ui.tap(toggle)
             if ui.find(label, 'toggle').get('checked') != 'false' or ui.state() != (wanted, 'en'):
                 raise Missing('Fifth language changed the four-language selection')
-            ui.find(wording['page']['languagesFull'])
+            ui.find(limit)
             record('fifth-language-refused', True, 'Limit note visible; fifth stays off in UI and saved state')
     except Missing as error:
         record('fifth-language-refused', False, str(error))

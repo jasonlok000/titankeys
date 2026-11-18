@@ -31,7 +31,7 @@ internal object SettingsReset {
     const val FIX_PREFIX = "fix_"
 
     /** Input-method switches, one per input method (TypingSettings): Yale's and Jyutping's lazy sounds, Cangjie's radical preview. */
-    val INPUT_METHOD_PREFIXES = listOf("lazy_sounds_", "radical_preview_")
+    val INPUT_METHOD_PREFIXES = listOf("lazy_sounds_", "radical_preview_", "key_preview_")
 
     /** What's yours in [TYPING], which a reset leaves: the app lists, the snippets' start, and your own shorthand. */
     val TYPING_DATA = setOf(

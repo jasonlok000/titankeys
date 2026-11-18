@@ -3,7 +3,7 @@ import { Field, Screen, Section, navigate, useAction, useRouteParams, useSnapsho
 import { type InputMethodEntry, type LanguageValues, markLanguageNoteSeen, state, update } from "../../../lib/titankeys";
 import { Toggle } from "../../../lib/app-haptics";
 import { Note } from "../../../lib/note";
-import { MAX_LANGUAGES, MAX_PER_LANGUAGE, languageValues, languagesOf, languagesOn, shownName, typingPerLanguage } from "./index";
+import { MAX_LANGUAGES, MAX_PER_LANGUAGE, languageValues, languagesOf, languagesOn, typingPerLanguage } from "./index";
 import { spellingLabel } from "../spelling";
 import { chineseLabel } from "../chinese";
 import { fixesLabel } from "../fixes";
@@ -15,14 +15,17 @@ import { TryIt } from "../../../lib/try-it";
 import { KeysDrawing } from "../../../lib/keys-drawing";
 import { MethodCard, MethodControls, MethodGroups } from "../../../lib/method-card";
 import { availableSettings, languagePage, unavailableNotes, type PageSetting } from "../../../lib/language-page";
-import pageText from "../../../tools/im/page-text.json";
+import { textFor, translator } from "../../../lib/language-copy";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
  * route's `language` parameter is the language's id. the user keeps at least one input method on.
  */
 export default function LanguagePage() {
-  const id = useRouteParams().language;
+  const { language: routeLanguage } = useRouteParams();
+  const id = typeof routeLanguage === "string" ? routeLanguage : undefined;
+  const pageText = textFor(id);
+  const t = translator(id);
   const result = useSnapshot(state);
   const save = useAction(update);
   // The first time anything but English alone is on, the typing settings move here: a line says so, once, and stays for this
@@ -48,9 +51,7 @@ export default function LanguagePage() {
     if (next.length === 0) return;
     void save.run({ inputMethods: next });
   };
-  const subtitle = language.experimental
-    ? `${language.nameEnglish}. ${pageText.status.experimentalNote}`
-    : language.nameEnglish === language.name ? undefined : language.nameEnglish;
+  const subtitle = language.experimental ? pageText.status.experimentalNote : undefined;
   const settings = result.data;
   const page = languagePage(language.id);
   const own = languageValues(settings, language.id);
@@ -61,15 +62,15 @@ export default function LanguagePage() {
   const languageRows = availableSettings(pageRows, "language")
     .filter(row => perLanguage || row.id === "spelling" || row.id === "chineseCharacters");
   const has = (id: PageSetting["id"]) => languageRows.some(row => row.id === id);
-  const notes = unavailableNotes(pageRows, language.nameEnglish);
+  const notes = unavailableNotes(pageRows, language.name, pageText);
   const wording = pageText.settings;
   const doubleSpace = language.stop === "." ? wording.doubleSpace : pageText.page.languageFullStop.replace("{stop}", language.stop);
   const single = methods.length === 1 ? methods[0] : undefined;
   const options = languageRows.length > 0 || (single ? availableSettings(pageRows, "input-method", single.id).length > 0 : false);
-  return <Screen title={shownName(language.name, language.nameEnglish, language.script)} subtitle={subtitle}>
+  return <Screen title={language.name} subtitle={subtitle}>
     {moved && <Note>{pageText.page.moved}</Note>}
     {single && <Section title={pageText.page.method}>
-      <Toggle label={shownName(single.name, single.nameEnglish, single.script)}
+      <Toggle label={single.name}
         value={inputMethods.includes(single.id)} onChange={value => set(single, value)} />
     </Section>}
     {options && <Section title={pageText.page.options}>
@@ -87,19 +88,19 @@ export default function LanguagePage() {
       {has("hold") && <Field label={wording.hold} onPress={() => open("/settings/hold")}>{holdLabel(settings, language.id)}</Field>}
       {has("swipe") && <Toggle label={wording.swipe} value={settings.swipeTyping}
         onChange={swipeTyping => void save.run({ swipeTyping })} />}
-      {has("shorthand") && <Field label={wording.shorthand} href="/settings/shorthand">{shorthandLabel(settings)}</Field>}
+      {has("shorthand") && <Field label={wording.shorthand} href="/settings/shorthand">{t(shorthandLabel(settings))}</Field>}
       {single && <MethodControls im={single} rows={pageRows} settings={settings} />}
     </Section>}
     {notes.length > 0 && <Section title={pageText.page.unavailable}>{notes.map(line => <Note key={line}>{line}</Note>)}</Section>}
-    {!single && <MethodGroups page={page} methods={methods} card={im => <MethodCard key={im.id} im={im}
-      name={shownName(im.name, im.nameEnglish, im.script)} subtitle={im.nameEnglish === im.name ? undefined : im.nameEnglish}
+    {!single && <MethodGroups language={language.id} page={page} methods={methods} card={im => <MethodCard key={im.id} im={im}
+      name={im.name}
       value={inputMethods.includes(im.id)} onChange={value => set(im, value)}>
       <MethodControls im={im} rows={pageRows} settings={settings} />
     </MethodCard>} />}
     {languagesFull && <Note>{pageText.page.languagesFull}</Note>}
     {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note>{pageText.page.methodsFull}</Note>}
-    <HowTo methods={methods} />
+    <HowTo language={language.id} methods={methods} />
     {single && <KeysDrawing im={single} />}
-    <TryIt key={language.id} methods={on} />
+    <TryIt language={language.id} key={language.id} methods={on} />
   </Screen>;
 }

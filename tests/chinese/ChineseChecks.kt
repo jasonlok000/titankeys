@@ -1,11 +1,13 @@
 package com.titankeys.keyboard
 
+import java.io.File
+
 /**
  * Chinese on the bar (docs/languages.md, "Chinese on the bar"): the row's places, the bigger menu's pages, the keys that pick,
  * the marks and the English word. The rules are plain Kotlin (keyboard/Chinese.kt), so they run here without the phone.
  */
 fun main() {
-    radicalsOnlyInCangjieAndQuick()
+    previewLegendsUseTheGuide()
     radicalPreviewFollowsTheFingerAfterTheFirstRest()
     theMenuOpensOnlyWithMore()
     aChoiceIsAsWideAsItNeeds()
@@ -195,23 +197,46 @@ fun englishAlternativesUseTheirShownIndex() {
     same(1, second.engineIndex(2), "Rime's second choice keeps its index after the inserted English word")
 }
 
-/** Cangjie's and Quick's keys are radicals, N 弓, as their codes show; other input methods have none. */
-fun radicalsOnlyInCangjieAndQuick() {
-    same("弓", ChineseKeys.radical(method("tk_quick"), "N"), "Quick's N")
-    same("日", ChineseKeys.radical(method("tk_cangjie"), "A"), "Cangjie's A")
-    same("難", ChineseKeys.radical(method("tk_cangjie"), "X"), "Cangjie's X")
-    same(null, ChineseKeys.radical(method("tk_yale"), "N"), "Yale types letters")
+private fun previewLegendsUseTheGuide() {
+    val korean = method("ko")
+    same(true, korean.keyPreviewDefault, "Korean preview defaults on")
+    same("ㅂ", korean.keyPreview('Q', false), "Korean Q")
+    same("ㅃ", korean.keyPreview('Q', true), "Korean Shift+Q")
+    val russian = method("ru")
+    same(true, russian.keyPreviewDefault, "Russian preview defaults on")
+    val preview = KeyPreview()
+    for (resting in listOf(false, true)) {
+        if (resting && preview.follow("Q", russian.keyPreview('Q', false))) preview.rest(russian.keyPreview('Q', false))
+        preview.consume("Q")
+        same("й", russian.letter('q', false), "Russian Q is the same immediate letter with or without a preview")
+        same("", preview.shown, "Russian press clears the ghost")
+        preview.clear()
+    }
+    same("Й", russian.keyPreview('Q', true), "Russian Shift+Q")
+    val thai = method("th")
+    same(true, thai.keyPreviewDefault, "Thai preview defaults on")
+    same("ๆ", thai.keyPreview('Q', false), "Thai Q")
+    same("๐", thai.keyPreview('Q', true), "Thai Shift+Q")
+    same("ๅ", thai.keyPreview('Q', false, hold = true), "Thai held Q")
+    same("+", thai.keyPreview('Q', true, hold = true), "Thai held Shift+Q")
+    val zhuyin = method("zh-zhuyin")
+    same(true, zhuyin.keyPreviewDefault, "Zhuyin preview defaults on")
+    same("ㄆ", zhuyin.keyPreview('P', false), "Hsu P")
+    same("", zhuyin.keyPreview('Q', false), "Hsu Q has no mapped symbol")
+    same("弓", method("zh-quick").keyPreview('N', false), "Quick's N")
+    same("難", method("zh-cangjie").keyPreview('X', false), "Cangjie's X")
+    same(false, method("yue-yale").keyPreviewDefault, "Yale uses the printed letters")
+    same(false, InputMethod.ENGLISH.keyPreviewDefault, "English preview defaults off")
 }
 
-private fun method(schema: String) = InputMethod.parse("""{ "id": "zh-test", "name": "t", "nameEnglish": "t", "label": "t", "locale": "zh",
-    "script": "Hani", "keys": "qwerty", "engine": { "rime": "$schema" } }""")
+private fun method(id: String) = InputMethod.parse(File("android/assets/im/$id/im.json").readText())
 
 private fun radicalPreviewFollowsTheFingerAfterTheFirstRest() {
-    for (schema in listOf("tk_quick", "tk_cangjie")) {
+    for (schema in listOf("zh-quick", "zh-cangjie")) {
         val method = method(schema)
         val hover = SteadyKey(Layout::keyAt)
-        val preview = RadicalPreview()
-        fun radical() = ChineseKeys.radical(method, hover.key).orEmpty()
+        val preview = KeyPreview()
+        fun radical() = hover.key.singleOrNull()?.let { method.keyPreview(it, false) }.orEmpty()
         fun follow() = preview.follow(hover.key, radical())
         fun landOn(letter: Char) {
             val (x, y) = Layout.centre(letter)

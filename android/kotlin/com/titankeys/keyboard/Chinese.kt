@@ -198,20 +198,6 @@ object ChineseKeys {
     /** Whether [method] types through the bar of choices: Chinese and Japanese. The English word is Chinese's alone. */
     fun usesBar(method: InputMethod) = method.engine in BAR_ENGINES
 
-    /** Cangjie's and Quick's radicals, A to Z, as their schemas show the code (preedit_format). */
-    private const val RADICALS = "日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜符"
-    private val RADICAL_SCHEMAS = setOf("tk_cangjie", "tk_quick")
-
-    /**
-     * The radical key [letter] types in [method], for a finger resting on it (owner, 2026-11-17: "it should show 弓 when my
-     * finger is hovered over n"), or null where the input method types letters.
-     */
-    fun radical(method: InputMethod, letter: String): String? {
-        if (method.engine != "rime" || method.engineArg !in RADICAL_SCHEMAS || letter.length != 1) return null
-        val index = letter[0].uppercaseChar() - 'A'
-        return if (index in RADICALS.indices) RADICALS[index].toString() else null
-    }
-
     /** Rime's option for plain (ASCII) punctuation, the setting's. */
     const val PLAIN_PUNCTUATION = "ascii_punct"
 
@@ -291,31 +277,35 @@ object EnglishOffer {
 }
 
 /**
- * Cangjie's and Quick's next-key preview (owner, 2026-11-17): a finger resting still on a letter shows that key's radical,
- * faded at the end of the code's tab. The first radical waits for [REST_MILLIS] so quick typing never flashes it.
+ * A finger resting on a letter shows its faded key legend. The first preview waits for [REST_MILLIS]
+ * so quick typing never flashes it.
  * Once the preview is up, it follows the finger from key to key until the touch ends.
  */
-class RadicalPreview {
+class KeyPreview {
     private var key = ""
     private var ready = false
     private var consumed = false
     var shown = ""
         private set
 
-    /** Follows a key change. Returns true when this radical still needs the initial dwell. */
-    fun follow(key: String, radical: String): Boolean {
+    /** Follows a key change. Returns true when this legend still needs the initial dwell. */
+    fun follow(key: String, legend: String): Boolean {
         if (key != this.key) {
             this.key = key
             consumed = false
         }
-        shown = if (ready && !consumed) radical else ""
-        return !ready && !consumed && radical.isNotEmpty()
+        shown = if (ready && !consumed) legend else ""
+        return !ready && !consumed && legend.isNotEmpty()
     }
 
-    fun rest(radical: String) {
+    fun rest(legend: String) {
         if (consumed) return
-        ready = radical.isNotEmpty()
-        shown = radical
+        ready = legend.isNotEmpty()
+        shown = legend
+    }
+
+    fun refresh(legend: String) {
+        if (ready && !consumed) shown = legend
     }
 
     /** Typing the hovered key takes its preview until the finger changes keys or lifts. */

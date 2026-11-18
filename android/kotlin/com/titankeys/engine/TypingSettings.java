@@ -648,13 +648,20 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("lazy_sounds_" + id, on).apply();
     }
 
-    /** Cangjie's and Quick's radical preview, per input method [id]: a resting finger shows its key's radical. On by default. */
-    public static boolean radicalPreview(Context context, String id) {
-        return preferences(context).getBoolean("radical_preview_" + id, true);
+    /** A resting finger can show the current input method's key legend. Keep existing shape-method choices on upgrade. */
+    public static boolean keyPreview(Context context, String id, boolean defaultOn) {
+        SharedPreferences prefs = preferences(context);
+        String setting = "key_preview_" + id;
+        String old = "radical_preview_" + id;
+        if (prefs.contains(setting)) return prefs.getBoolean(setting, defaultOn);
+        if (!prefs.contains(old)) return defaultOn;
+        boolean on = prefs.getBoolean(old, defaultOn);
+        prefs.edit().putBoolean(setting, on).remove(old).apply();
+        return on;
     }
 
-    public static void radicalPreview(Context context, String id, boolean on) {
-        preferences(context).edit().putBoolean("radical_preview_" + id, on).apply();
+    public static void setKeyPreview(Context context, String id, boolean on) {
+        preferences(context).edit().putBoolean("key_preview_" + id, on).remove("radical_preview_" + id).apply();
     }
 
     /** Whether input method [id] has said its hold hint on the bar (HoldHint): once, the first time it types. */

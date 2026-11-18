@@ -223,7 +223,7 @@ export type LanguageSetting = "fixes" | "capitals" | "doubleSpace" | "sentenceSp
 /** A language's own values for them: today's single value until the language sets its own (TypingSettings.PER_LANGUAGE). */
 export type LanguageValues = Pick<State, "autocorrect" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "holdSymbols">;
 
-export type MethodOptions = { lazySounds?: boolean; radicalPreview?: boolean };
+export type MethodOptions = { lazySounds?: boolean; keyPreview?: boolean };
 
 export type ChineseVariant = "zh_hk" | "zh_tw" | "zh_hans";
 

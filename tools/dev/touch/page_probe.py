@@ -1,5 +1,6 @@
 """Accessible Settings probes. No coordinates or private settings are guessed."""
 from contextlib import contextmanager
+from functools import cache
 from pathlib import Path
 import json
 import re
@@ -9,6 +10,7 @@ import xml.etree.ElementTree as ET
 APP = 'com.titankeys.debug'
 RECEIVER = APP + '/com.titankeys.keyboard.InputMethodsSet'
 UI_PATH = '/data/local/tmp/tk-touch-ui.xml'
+ROOT = Path(__file__).resolve().parents[3]
 
 
 class Unobservable(Exception):
@@ -155,35 +157,39 @@ class PageUI:
         finally:
             self.set_methods(*before)
 
-    def open_language(self, label):
+    def open_language(self, label, language=None):
+        page = assets()[0]['page']
+        translate = translator(language)
         self.open_list()
         self.tap(self.find(label, 'action'))
         self.find(label)
-        self.find(assets()[0]['page']['tryIt'])
+        self.find(translate(page['tryIt']))
         # The page itself acknowledges its one-time onboarding note on entry.
         # Record ordinary navigation behavior; do not edit that preference.
-        moved = assets()[0]['page']['moved']
+        moved = translate(page['moved'])
         if any(matches(n, moved) for n in self.snapshot()):
             self.navigation_notes.append('one-time typing-settings note displayed and acknowledged by the page')
 
     def howto(self, method_id):
         wording, _, method = assets()
         im = method(method_id)
-        self.open_language(shown_name(im))
-        self.find(wording['page']['how'])
+        language = method_languages()[method_id]
+        self.open_language(shown_name(im), language)
+        self.find(translator(language)(wording['page']['how']))
         guide = im.get('guide', {})
         lines = guide.get('points') or wording['points'].get(guide.get('family'), [])
         if not lines:
             raise Unobservable('No generated how-to points for ' + method_id)
+        translate = translator(method_id)
         for line in lines:
-            self.find(line)
+            self.find(translate(line))
         return lines
 
     def variant_options(self, method_id):
         wording, _, method = assets()
         im = method(method_id)
-        self.open_language(shown_name(im))
-        self.tap(self.find(wording['settings']['variant'], 'action'))
+        self.open_language(shown_name(im), method_languages()[method_id])
+        self.tap(self.find(translator(method_id)(wording['settings']['variant']), 'action'))
         options = {v['id']: self.find(v['name'], 'choice') for v in im['variants']}
         selected = [identifier for identifier, node in options.items()
                     if node.get('checked') == 'true' or node.get('selected') == 'true']
@@ -221,12 +227,30 @@ class PageUI:
 
 
 def assets():
-    root = Path(__file__).resolve().parents[3]
-    text = json.loads((root / 'tools/im/page-text.json').read_text(encoding='utf-8'))
-    pages = json.loads((root / 'android/assets/im/languages.json').read_text(encoding='utf-8'))
+    text = json.loads((ROOT / 'tools/im/page-text.json').read_text(encoding='utf-8'))
+    pages = json.loads((ROOT / 'android/assets/im/languages.json').read_text(encoding='utf-8'))
     def method(identifier):
-        return json.loads((root / 'android/assets/im' / identifier / 'im.json').read_text(encoding='utf-8'))
+        return json.loads((ROOT / 'android/assets/im' / identifier / 'im.json').read_text(encoding='utf-8'))
     return text, pages, method
+
+
+@cache
+def method_languages():
+    methods = json.loads((ROOT / 'android/assets/im/index.json').read_text(encoding='utf-8'))
+    return {method['id']: method['language']['id'] for method in methods}
+
+
+@cache
+def translations():
+    return json.loads((ROOT / 'tools/im/native-pages.json').read_text(encoding='utf-8'))
+
+
+def translator(identifier):
+    """Use the same per-method override and Chinese fallback as lib/language-copy.ts."""
+    dictionaries = translations()
+    parent = 'zh' if identifier and identifier.startswith(('zh-', 'yue-')) else identifier
+    labels = {**dictionaries.get(parent, {}), **dictionaries.get(identifier, {})}
+    return lambda source: labels.get(source, source)
 
 
 def shown_name(method):
@@ -236,12 +260,13 @@ def shown_name(method):
 
 def practice(ui, method_id, key, choose=False):
     text, _, method = assets()
+    placeholder = translator(method_languages()[method_id])(text['page']['typeHere'])
     if choose:
         # TryIt supplies Button.selected even when false: T5 exposes both the
         # selected and unselected practice buttons as checkable RadioButtons.
         ui.tap(ui.find(shown_name(method(method_id)), 'choice'))
     editor = ui.find(kind='editor')
-    if editor.get('text', '') not in ('', text['page']['typeHere']):
+    if editor.get('text', '') not in ('', placeholder):
         raise Unobservable('Practice editor already has text; left untouched')
     ui.tap(editor)
     for _ in range(15):
@@ -259,10 +284,10 @@ def practice(ui, method_id, key, choose=False):
         if not ui.binding(method_id):
             raise Unobservable('Practice field changed during input; no cleanup input sent')
         value = ui.c.field()
-        if value and value != text['page']['typeHere']:
+        if value and value != placeholder:
             break
         ui.sleep(.25)
-    if not value or value == text['page']['typeHere']:
+    if not value or value == placeholder:
         raise Unobservable('Practice produced no committed text within 15 s; loading/composition needs review')
     okay = bool(re.fullmatch(r'[\u3400-\u9fff]+\s*', value or '')) if choose else value in (key, key.upper())
     if value and len(value) <= 8 and (okay or value.strip().lower() == key):

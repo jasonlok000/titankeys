@@ -1091,8 +1091,7 @@ LANGUAGE_GROUPS = {
 GUIDE_SETTINGS = [("fixes", "language"), ("capitals", "language"), ("doubleSpace", "language"), ("sentenceSpaces", "language"),
                   ("commaSpace", "language"), ("hold", "language"), ("swipe", "language"), ("shorthand", "language"),
                   ("spelling", "language"), ("chineseCharacters", "language"), ("variant", "input-method"),
-                  # B's switches (claude/m3-chinese-enter, TypingSettings.lazySounds and radicalPreview, on by default).
-                  ("lazySounds", "input-method"), ("radicalPreview", "input-method")]
+                  ("lazySounds", "input-method"), ("keyPreview", "input-method")]
 GUIDE_OWN_MARKS = {"rime", "mozc"}
 
 
@@ -1134,7 +1133,7 @@ def setting_reason(row, im):
         "chineseCharacters": None if chinese else "chineseOnly",
         "variant": None if im.get("variants") else "noVariants",
         "lazySounds": None if im["id"] in ("yue-yale", "yue-jyutping") else "notThisMethod",
-        "radicalPreview": None if im["id"] in ("zh-cangjie", "zh-quick") else "notThisMethod",
+        "keyPreview": None,
     }[row]
 
 

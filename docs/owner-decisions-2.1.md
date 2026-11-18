@@ -928,3 +928,11 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Owner: "it's not a sample it's a table." A language guide shows every mapped physical key, including all Cangjie radicals, and shows supported modifier outputs on the keyboard drawing.
 - Owner: If previously granted Accessibility or another verified Setup setting is lost outside TitanKeys Setup, show the setup sequence again on the next app launch. Remember confirmed setup settings and distinguish a change the user made through Setup. Preserve explicit choices to skip optional settings.
 - The owner chose −3 px in the alignment mockup. The regular and picker marks use that offset from the mockup's shared text baseline at the Titan's 1,076 px width. The mark also rises by the same amount when it occupies the small corner position.
+
+## Codex (2026-11-18, language settings)
+
+- Owner: "basically within that language settings everything shd be in their native language. and for chinese specifically, call traditional chinese 正體中文." This applies to the settings, input-method cards, typing instructions, key tables and practice prompts now. The Characters screen names Hong Kong and Taiwan separately.
+
+- In Cangjie and Quick, typing the hovered key replaces its faded radical with the committed radical in one update. While a finger stays on the touchpad, the preview follows the hovered key and returns to its earlier radical if the finger moves back.
+- Apply the same handoff to any other input method with an untyped-key preview. Cangjie and Quick are the two methods that preview the untyped letter in the code tab. Japanese conversion and Korean composition begin after the key is pressed.
+- Chinese first-word suggestions should use the wide row on all field paths. Japanese shares this row and uses its capacity too.

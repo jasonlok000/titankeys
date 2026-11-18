@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { keyFace, keyLayers, type KeyLayer } from "./key-layers";
 import { Button, Canvas, CanvasText, Section } from "ink";
-import pageText from "../tools/im/page-text.json";
+import { textFor, translator } from "./language-copy";
 import { CREAM, MUTED, useAccent } from "./brand";
 import { Note } from "./note";
 import { guideFor } from "./language-page";
@@ -25,7 +25,7 @@ const KEY = WIDTH / 10;
 const ROW = 56;
 const ROLE_NAMES: Record<KeyRole["key"], string> = { space: "Space", shift: "Shift", sym: "Sym", enter: "Enter", backspace: "Backspace" };
 
-function roleText(role: KeyRole) {
+function roleText(role: KeyRole, pageText: ReturnType<typeof textFor>) {
   const texts = (pageText as { roles?: Record<string, Record<string, string>> }).roles;
   return texts?.[role.key]?.[role.role];
 }
@@ -37,13 +37,15 @@ function roleText(role: KeyRole) {
  */
 export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?: boolean }) {
   const accent = useAccent();
+  const pageText = textFor(im.id);
+  const t = translator(im.id);
   const keys = guideFor(im)?.keys;
   const [selected, setLayer] = useState<KeyLayer>("base");
   if (!keys) return null;
   const map = keys.map ?? {};
   const layers = keyLayers(keys);
   const layer = layers.includes(selected) ? selected : "base";
-  const roles = (keys.roles ?? []).filter(role => role.key in ROLE_NAMES && roleText(role));
+  const roles = (keys.roles ?? []).filter(role => role.key in ROLE_NAMES && roleText(role, pageText));
   if (!Object.keys(map).length && !roles.length) return null;
   const number = (key?: string) => roles.findIndex(role => role.key === key) + 1;
   const parts = [];
@@ -63,6 +65,14 @@ export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?:
           {glyph}</CanvasText>);
         parts.push(<CanvasText key={`l${id}`} x={x + 5} y={y + ROW - 20} width={24} height={18} size={16} colour={MUTED}>
           {cap.letter.toUpperCase()}</CanvasText>);
+        if (layer === "base") {
+          const shifted = keys.shift?.[cap.letter];
+          if (shifted && shifted !== glyph) parts.push(<CanvasText key={`s${id}`} x={x + width - 23} y={y + 3}
+            width={20} height={18} size={16} colour={accent} align="center">{shifted}</CanvasText>);
+          if (keys.held?.[cap.letter] || keys.accents?.[cap.letter] || keys.heldShift?.[cap.letter])
+            parts.push(<CanvasText key={`h${id}`} x={x + width - 18} y={y + ROW - 20}
+              width={14} height={18} size={16} colour={accent} align="center">•</CanvasText>);
+        }
       } else {
         parts.push(<CanvasText key={`t${id}`} x={x} y={y} width={width} height={ROW} size={18} colour={at ? CREAM : MUTED} align="center">
           {cap.label ?? ""}</CanvasText>);
@@ -83,8 +93,8 @@ export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?:
       });
       return entries.length ? <Note key={index}>{entries.join("   ·   ")}</Note> : null;
     })}
-    {keys.legend ? <Note>{keys.legend}</Note> : null}
-    {roles.map((role, index) => <Note key={role.key}>{`${index + 1}  ${ROLE_NAMES[role.key]}: ${roleText(role)}`}</Note>)}
+    {keys.legend ? <Note>{t(keys.legend)}</Note> : null}
+    {roles.map((role, index) => <Note key={role.key}>{`${index + 1}  ${t(ROLE_NAMES[role.key])}: ${roleText(role, pageText)}`}</Note>)}
   </>;
   // A card already has a section of its own.
   return bare ? body : <Section title={pageText.page.keys}>{body}</Section>;

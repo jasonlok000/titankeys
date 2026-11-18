@@ -832,6 +832,20 @@ private fun everyTextShows(folder: File) {
             missing.joinToString(" ") { "U+%04X %s".format(it, String(Character.toChars(it))) }
         }
     }
+    val nativeCopy = File("tools/im/native-pages.json")
+    if (nativeCopy.isFile) {
+        val languages = Json.parse(nativeCopy.readText()) as Map<*, *>
+        for ((language, copy) in languages) {
+            val texts = ArrayList<String>()
+            walk(copy, texts)
+            val missing = texts.joinToString(" ").codePoints().toArray().filter { code ->
+                !Character.isWhitespace(code) && code > 0x7F && textFonts.any { !it.canDisplay(code) }
+            }.distinct()
+            check("$language: the localized settings have glyphs in both fonts", missing.isEmpty()) {
+                missing.joinToString(" ") { "U+%04X %s".format(it, String(Character.toChars(it))) }
+            }
+        }
+    }
 }
 
 /**

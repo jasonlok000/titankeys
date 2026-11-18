@@ -688,11 +688,14 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("languageNoteSeen", appPreferences().getBoolean(LANGUAGE_NOTE_SEEN, false))
             .put("chineseVariant", TypingSettings.chineseVariant(activity))
             .put("methodOptions", JSONObject().apply {
-                for (id in listOf("yue-yale", "yue-jyutping")) {
-                    put(id, JSONObject().put("lazySounds", TypingSettings.lazySounds(activity, id)))
-                }
-                for (id in listOf("zh-cangjie", "zh-quick")) {
-                    put(id, JSONObject().put("radicalPreview", TypingSettings.radicalPreview(activity, id)))
+                val english = JSONObject().put("keyPreview", TypingSettings.keyPreview(activity, InputMethod.ENGLISH_ID, false))
+                put(InputMethod.ENGLISH_ID, english)
+                for (method in inputMethodIndex().entries) {
+                    val default = InputMethod.mappedPreview(method.guide?.get("keys") as? Map<*, *>, method.script)
+                    val options = JSONObject().put("keyPreview", TypingSettings.keyPreview(activity, method.id, default))
+                    if (method.id in setOf("yue-yale", "yue-jyutping"))
+                        options.put("lazySounds", TypingSettings.lazySounds(activity, method.id))
+                    put(method.id, options)
                 }
             })
             // Each input method with spelling variants, and the one it types (Portuguese's Brasil or Portugal; the first by default).
@@ -867,12 +870,10 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             "methodOptions" -> (value as JSONObject).let { methods ->
                 for (id in methods.keys()) {
                     val options = methods.getJSONObject(id)
-                    when (id) {
-                        "yue-yale", "yue-jyutping" -> if (options.has("lazySounds"))
-                            TypingSettings.lazySounds(activity, id, options.getBoolean("lazySounds"))
-                        "zh-cangjie", "zh-quick" -> if (options.has("radicalPreview"))
-                            TypingSettings.radicalPreview(activity, id, options.getBoolean("radicalPreview"))
-                    }
+                    if ((id == "yue-yale" || id == "yue-jyutping") && options.has("lazySounds"))
+                        TypingSettings.lazySounds(activity, id, options.getBoolean("lazySounds"))
+                    if (options.has("keyPreview") && (id == InputMethod.ENGLISH_ID || inputMethodIndex().entries.any { it.id == id }))
+                        TypingSettings.setKeyPreview(activity, id, options.getBoolean("keyPreview"))
                 }
             }
             // A language's page: its own values only, as {"fr": {"autoCapitalise": false}} (TypingSettings.PER_LANGUAGE).

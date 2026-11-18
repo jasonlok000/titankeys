@@ -45,11 +45,8 @@ def guide(step):
 
 
 def shot(name):
-    """A screenshot of the screen as it is, without the status bar (touchlib.sh's tk_touch_shot)."""
-    os.system(f"bash -c '. {checks.HERE}/../env.sh; . {checks.HERE}/touchlib.sh; "
-              f"tk_adb exec-out screencap -p > $TK_OUT/touch/shots/raw-{name}.png; "
-              f"tk_touch_shot $TK_OUT/touch/shots/raw-{name}.png' > /dev/null")
-    return name
+    """A screenshot for an explicit visual check or comparison."""
+    return checks.capture(name)
 
 
 def said(lines, *wanted):
@@ -79,8 +76,8 @@ def check_66_steer():
             time.sleep(1)
             lines = texts()
             if said(lines, "Cursor moved", "No screen harmed"):
-                return record("66-steer", True, f"landed after a slide of {abs(keys)} keys; the target's distance is in the shots",
-                              f"66-steer-{abs(keys)}")
+                record("66-steer", True, f"landed after a slide of {abs(keys)} keys")
+                return record("66-steer-distance", None, "Target distance compared with the pre-slide frame", f"66-steer-{abs(keys)}")
         record("66-steer", False, f"no landing in 1.5 to 4.5 keys; the guide says: {' | '.join(lines[:6])}", before)
     finally:
         leave_guide()
@@ -97,7 +94,8 @@ def check_67_selectmore():
         time.sleep(1)
         lines = texts()
         record("67-grab", said(lines, "Grabbed", "heart") is not None and "Tap Space three times" not in " ".join(lines),
-               f"after three taps and a slide: {' | '.join(lines[:6])}", "67-grab")
+               f"after three taps and a slide: {' | '.join(lines[:6])}")
+        record("67-grab-highlight", None, "The words highlighted during the slide", "67-grab")
     finally:
         leave_guide()
 
@@ -142,7 +140,7 @@ def check_69_clip():
             lines = texts()
             seen.append(" | ".join(lines[:3]))
             if said(lines, "No, seriously. I mean it."):
-                return record("69-clip", True, f"the guide says \"No, seriously. I mean it.\" after {len(seen)} steps", shot("69-clip"))
+                return record("69-clip", True, f"the guide says \"No, seriously. I mean it.\" after {len(seen)} steps")
             if said(lines, "Press Sym."):
                 play("key:sym")
             elif said(lines, "Press A for the clipboard"):
@@ -152,7 +150,7 @@ def check_69_clip():
             else:
                 play("key:sym")
             time.sleep(.8)
-        record("69-clip", False, "no nice paste: " + " / ".join(seen[-4:]), shot("69-clip"))
+        record("69-clip", False, "no nice paste: " + " / ".join(seen[-4:]))
     finally:
         leave_guide()
 
@@ -161,10 +159,10 @@ def check_69_paste():
     """#69: the paste slide. fn held and V pressed on the real keyboard: the guide's verdict."""
     guide("paste")
     try:
-        play("chord:fn+v:120", shot="69-paste", at=300)
+        play("chord:fn+v:120")
         time.sleep(1)
         lines = texts()
-        record("69-paste", said(lines, "Pasted") is not None, f"the guide says: {' | '.join(lines[:6])}", "69-paste")
+        record("69-paste", said(lines, "Pasted") is not None, f"the guide says: {' | '.join(lines[:6])}")
     finally:
         leave_guide()
 

@@ -22,6 +22,7 @@ internal object PhoneChecks {
     /** Setup's list of apps outside Sliding Mode 1, and the suspects, by package ([SlidingModeList]). */
     private const val OUTSIDE_SLIDING = "outside_sliding_mode"
     private const val SUSPECT_SLIDING = "suspect_sliding_mode"
+    private const val SLIDING_EVIDENCE = "sliding_evidence_version"
     /**
      * The first list, which one early reading could fill with apps that were on Sliding Mode 1 (Chrome and Settings on the
      * owner's phone). It's never read, and goes at the next change.
@@ -85,15 +86,25 @@ internal object PhoneChecks {
         val list = slidingList(context)
         val before = list.outside to list.suspects
         change(list)
-        if (before == list.outside to list.suspects && !preferences.contains(OLD_OUTSIDE_SLIDING)) return
+        if (before == list.outside to list.suspects) return
         preferences.edit().putStringSet(OUTSIDE_SLIDING, list.outside).putStringSet(SUSPECT_SLIDING, list.suspects)
             .remove(OLD_OUTSIDE_SLIDING).apply()
     }
 
     private fun slidingList(context: Context): SlidingModeList {
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-        return SlidingModeList(preferences.getStringSet(OUTSIDE_SLIDING, emptySet()).orEmpty().toSet(),
-            preferences.getStringSet(SUSPECT_SLIDING, emptySet()).orEmpty().toSet())
+        val outside = preferences.getStringSet(OUTSIDE_SLIDING, emptySet()).orEmpty().toSet()
+        val suspects = preferences.getStringSet(SUSPECT_SLIDING, emptySet()).orEmpty().toSet()
+        val version = preferences.getInt(SLIDING_EVIDENCE, 0)
+        val list = SlidingModeList.restored(outside, suspects, version)
+        // Older records could count repeated starts of one field or unknown property values.
+        // They need fresh evidence. Persist filtering too, so Android Settings cannot return.
+        if (version != SlidingModeList.EVIDENCE_VERSION || outside != list.outside || suspects != list.suspects ||
+            preferences.contains(OLD_OUTSIDE_SLIDING)) {
+            preferences.edit().putStringSet(OUTSIDE_SLIDING, list.outside).putStringSet(SUSPECT_SLIDING, list.suspects)
+                .putInt(SLIDING_EVIDENCE, SlidingModeList.EVIDENCE_VERSION).remove(OLD_OUTSIDE_SLIDING).apply()
+        }
+        return list
     }
 
     /** The names of the apps on Setup's list that are still on the phone, for Settings > Setup. */

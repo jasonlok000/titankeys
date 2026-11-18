@@ -796,11 +796,8 @@ def build_hebrew(data, ident):
     write_notice(folder, [CLDR_NOTICE, HEBREW_NOTICE, "Words: " + FREQUENCY_WORDS_OWN.format(file="he_full.txt")] + ranking)
 
 
-# Starter words (owner, 2026-11-16: "each language should have a list of starting words, I dont like the bar being empty"):
-# each input method's commonest words, for the bar at a sentence's start and after a word, until the user's own words take
-# over. From its own word list, or for the ones without (an engine's): Korean from FrequencyWords, Chinese from Rime's
-# essays (rime-essay LGPL-3.0, rime-cantonese CC BY 4.0), Japanese by hand (JAPANESE_STARTERS). Chinese's
-# also come in Simplified, through OpenCC's character table (Apache 2.0).
+# The bar offers starters at the beginning of a sentence and as a fallback after a word.
+# Chinese starters come from Rime's essays, with a Simplified form from OpenCC.
 STARTERS = 12
 STARTER_SOURCES = {
     "yue-yale": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
@@ -810,21 +807,16 @@ STARTER_SOURCES = {
     "zh-cangjie": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-quick": ("../src/rime-cantonese/essay-cantonese.txt", "essay"),
     "zh-zhuyin": ("../src/rime-essay/essay.txt", "essay"),
-    "ja": ("", "fixed"),
-    "th": ("", "fixed"),
 }
-# The rest start sentences the way their writers do (Orchestrator, 2026-11-17: the commonest words made odd starters, Korean's
-# particles, Bulgarian's tie of 4,500 words at the top, Russian's "года"): the words that most often begin a sentence in the
-# Leipzig Corpora Collection's sentences for the language (CC BY 4.0), in the input method's own list, in lower case. A list's
-# commonest words stay the fallback for a language without a corpus here (Thai, whose sentences have no spaces).
+# Sentence-initial words from the Leipzig Corpora Collection (CC BY 4.0), restricted to the input method's own list.
 STARTER_CORPORA = {
     "af": "afr_mixed_2019_1M", "az": "aze_wikipedia_2021_1M", "be": "bel_newscrawl_2015_1M", "bg": "bul_news_2022_1M",
     "bs": "bos_wikipedia_2021_300K", "ca": "cat_wikipedia_2021_1M", "cs": "ces_news_2024_1M", "da": "dan_newscrawl_2023_1M",
     "de": "deu_news_2024_1M", "el": "ell_news_2024_1M", "eo": "epo_newscrawl_2017_1M", "es": "spa_news_2024_1M",
     "et": "est_newscrawl_2017_1M", "eu": "eus_wikipedia_2021_300K", "fi": "fin_news_2022_1M", "fr": "fra_news_2024_1M",
-    "ga": "gle_newscrawl_2014_300K", "gl": "glg_wikipedia_2021_300K", "he": "heb_wikipedia_2021_1M", "hi": "hin_news_2022_1M",
-    "hr": "hrv_wikipedia_2021_1M", "hu": "hun_news_2024_1M", "id": "ind_news_2024_1M", "is": "isl_newscrawl_2011_1M",
-    "it": "ita_news_2024_1M", "ka": "kat_newscrawl_2016_1M", "kk": "kaz_newscrawl_2016_1M", "ko": "kor_news_2022_1M",
+    "ga": "gle_newscrawl_2014_300K", "gl": "glg_wikipedia_2021_300K",
+    "hr": "hrv_wikipedia_2021_1M", "hu": "hun_news_2024_1M", "is": "isl_newscrawl_2011_1M",
+    "it": "ita_news_2024_1M", "kk": "kaz_newscrawl_2016_1M",
     "lt": "lit_news_2020_1M", "lv": "lav_newscrawl_2016_1M", "mk": "mkd_wikipedia_2021_300K", "nb": "nob_newscrawl_2019_1M",
     "nl": "nld_news_2024_1M", "nn": "nno_wikipedia_2021_300K", "pl": "pol_news_2024_1M", "pt": "por-br_newscrawl_2011_1M",
     "ro": "ron_news_2024_1M", "ru": "rus_news_2024_1M", "sk": "slk_newscrawl_2016_1M", "sl": "slv_wikipedia_2021_1M",
@@ -833,13 +825,17 @@ STARTER_CORPORA = {
 }
 STARTER_CREDIT = ("Starters: the words that most often begin a sentence in the Leipzig Corpora Collection's {corpus} "
                   "(https://wortschatz.uni-leipzig.de/en/download), CC BY 4.0.")
-# Japanese has no frequency list split into words that we ship, and Mozc's costs rank homophones, not common words, so its
-# starters are picked by hand: common ways to start a sentence, for the owner to confirm.
-JAPANESE_STARTERS = ["私", "今日", "はい", "これ", "それ", "何", "今", "また", "でも", "ありがとう", "そう", "明日"]
-# Thai's the same way (C, 2026-11-17, for the owner to confirm): its list's commonest words are particles and prefixes (ที่,
-# การ), and its corpus's sentences start with news datelines (วัน, วันอาทิตย์). Common ways to start a message instead.
-THAI_STARTERS = ["สวัสดี", "ขอบคุณ", "ฉัน", "ผม", "เรา", "คุณ", "วันนี้", "พรุ่งนี้", "ตอนนี้", "ไม่", "ใช่", "แล้ว"]
-FIXED_STARTERS = {"ja": JAPANESE_STARTERS, "th": THAI_STARTERS}
+# Greetings, replies and other common message openers. The reviewed corpora favour news or encyclopaedia prose.
+# Thai's two polite replies can stand alone. Japanese dictionary costs rank readings rather than sentence openers.
+FIXED_STARTERS = {
+    "he": ["שלום", "תודה", "אני", "כן", "לא", "מה", "יש", "אפשר", "היום", "מחר", "עכשיו", "בטח"],
+    "hi": ["नमस्ते", "हाँ", "मैं", "नहीं", "आप", "हम", "क्या", "आज", "कल", "अभी", "ठीक", "धन्यवाद"],
+    "id": ["halo", "iya", "aku", "saya", "kamu", "kita", "apa", "boleh", "sudah", "belum", "besok", "makasih"],
+    "ja": ["私", "今日", "はい", "これ", "それ", "何", "今", "また", "でも", "ありがとう", "そう", "明日"],
+    "ka": ["გამარჯობა", "კი", "მადლობა", "არა", "მე", "შენ", "როგორ", "რა", "ახლა", "დღეს", "ხვალ", "კარგი"],
+    "ko": ["안녕하세요", "네", "알겠습니다", "감사합니다", "아니요", "좋아요", "괜찮아요", "지금", "오늘", "내일", "혹시", "저는"],
+    "th": ["สวัสดี", "ครับ", "ค่ะ", "ขอบคุณ", "ได้", "ใช่", "ผม", "เรา", "คุณ", "วันนี้", "พรุ่งนี้", "ตอนนี้"],
+}
 
 
 def is_word(word):
@@ -873,8 +869,6 @@ def top_words(path, kind):
             if freq.isdigit():
                 pairs.append((word, int(freq)))
         return [w for w, _ in sorted(pairs, key=lambda w: -w[1])]
-    if kind == "fixed":
-        return FIXED_STARTERS[path]
     if kind == "mozc":
         # Mozc's dictionary: reading, left id, right id, cost, word; a lower cost is commoner. Only words that start a sentence
         # well, by their part of speech in id.def: pronouns, interjections, adverbs and common nouns, not verb forms or particles.
@@ -1002,7 +996,9 @@ def write_starters(data, only=None):
         im["rules"]["openingMarks"] = opening_marks(im)
         corpus = STARTER_CORPORA.get(ident)
         credit = None
-        if ident in STARTER_SOURCES:
+        if ident in FIXED_STARTERS:
+            ranked = FIXED_STARTERS[ident]
+        elif ident in STARTER_SOURCES:
             file, kind = STARTER_SOURCES[ident]
             source = os.path.normpath(os.path.join(data, file)) if file else ident
             ranked = top_words(source, kind)

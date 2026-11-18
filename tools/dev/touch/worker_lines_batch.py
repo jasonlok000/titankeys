@@ -44,16 +44,17 @@ def choices():
 
 def check_enter_with_code():
     yale()
-    play(*ib.keys("neihou"), "+500", "key:enter", "+700", shot="enter-code", at=1400)
+    play(*ib.keys("neihou"), "+500", "key:enter", "+700")
     text = read()
-    record("enter-with-code", text == "neihou", f"neihou then Enter: the field {text!r} (wanted 'neihou', nothing sent)", "enter-code")
+    record("enter-with-code", text == "neihou", f"neihou then Enter: the field {text!r} (wanted 'neihou', nothing sent)")
 
 
 def check_enter_menu_open():
     yale()
     play(*ib.keys("neihou"), "+500", "swipeup:b", "+700", "key:enter", "+700", shot="enter-menu", at=2300)
     text = read()
-    record("enter-menu-open", text == "", f"the bigger menu open, Enter: the field {text!r} (wanted empty: the page turns)", "enter-menu")
+    record("enter-menu-open", text == "", f"the bigger menu open, Enter: the field {text!r} (wanted empty)")
+    record("enter-menu-page", None, "Enter while the bigger menu is open turns its page", "enter-menu")
     play("key:sym", "+400", *[g for _ in range(10) for g in ("key:del", "+60")])
 
 
@@ -61,7 +62,8 @@ def check_sym_with_code():
     yale()
     play(*ib.keys("neihou"), "+500", "key:sym", "+700", shot="sym-code", at=1300)
     text = read()
-    record("sym-with-code", text == "", f"neihou then Sym: the field {text!r}; the shot: no panel, no code", "sym-code")
+    record("sym-with-code", text == "", f"neihou then Sym: the field {text!r}")
+    record("sym-cleared-code", None, "The first Sym clears the code and leaves the panel closed", "sym-code")
     play("key:sym", "+700", shot="sym-again", at=500)
     record("sym-again", None, "the next Sym: the Sym panel opens", "sym-again")
     checks.guarded("keyevent", "4")
@@ -81,7 +83,8 @@ def check_held_backspace():
     play(*ib.keys("neihou"), "+500", "key:del:2000:none", "+500", shot="held-backspace-yale", at=1500)
     after = read() or ""
     record("held-backspace-yale", not any("a" <= ch <= "z" for ch in after),
-           f"{kept!r} then neihou, Backspace held 2 s: the field {after!r} (the code gone first)", "held-backspace-yale")
+           f"{kept!r} then neihou, Backspace held 2 s: the field {after!r} (the code gone first)")
+    record("held-backspace-yale-code", None, "Where Backspace stopped while held across the code", "held-backspace-yale")
 
 
 def check_word_units():

@@ -96,15 +96,16 @@ def check_row():
     P's ⋯ in orange."""
     fresh()
     text = shot_then("zh-row", code("+400"), [])
-    record("zh-row", text == "", f"field {text!r} while the code is pending (empty is right); the bar is the shot: the code"
-           " bar-sized with an orange glow, 耶 at Q, ⋯ orange", "zh-row")
+    record("zh-row", text == "", f"field {text!r} while the code is pending (empty is right)")
+    record("zh-row-style", None, "Bar-sized code with an orange glow, 耶 at Q, ⋯ orange", "zh-row")
 
 
 def check_space():
     """Space types the first choice."""
     fresh()
     text = shot_then("zh-space", code(), ["key:space", "+300"])
-    record("zh-space", cjk(text), f"typed {text!r}; the row it picked from is the shot", "zh-space")
+    record("zh-space", cjk(text), f"typed {text!r}")
+    record("zh-space-first-choice", None, f"Space picked {text!r} from the first place on this bar", "zh-space")
 
 
 def check_tap():
@@ -186,8 +187,8 @@ def check_yale_codes():
     # The last is B's Cantonese grammar model (main 38069d17): a whole sentence from one code.
     for typed, want in (("lei", "你"), ("zungman", "中文"), ("neisikjofaanmei", "你食咗飯未")):
         fresh()
-        text = shot_then(f"yale-{typed}", [f"key:{k}" for k in typed] + ["+500"], ["key:space", "+400"])
-        record(f"yale-{typed}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}", f"yale-{typed}")
+        text = shot_then(None, [f"key:{k}" for k in typed] + ["+500"], ["key:space", "+400"])
+        record(f"yale-{typed}", (text or "").strip() == want, f"{typed} + Space typed {text!r}, wanted {want!r}")
 
 
 def check_next_words():
@@ -216,8 +217,8 @@ def check_phrases():
             record(f"phrase-{im}", False, f"the field didn't start with {im}")
             continue
         fresh()
-        text = shot_then(f"phrase-{im}", [f"key:{k}" for k in typed] + ["+600"], ["key:space", "+500"])
-        record(f"phrase-{im}", (text or "").strip() in wants, f"{typed} + Space typed {text!r}, wanted {want}", f"phrase-{im}")
+        text = shot_then(None, [f"key:{k}" for k in typed] + ["+600"], ["key:space", "+500"])
+        record(f"phrase-{im}", (text or "").strip() in wants, f"{typed} + Space typed {text!r}, wanted {want}")
     language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
 
 
@@ -233,9 +234,9 @@ def check_shape_codes():
         fresh()
         play("+800", shot=f"starters-{im}", at=500)
         record(f"starters-{im}", None, f"{im}, empty field: starters on the bar", f"starters-{im}")
-        text = shot_then(f"code-{im}", [f"key:{k}" for k in typed] + ["+500"], ["key:space", "+400"])
+        text = shot_then(None, [f"key:{k}" for k in typed] + ["+500"], ["key:space", "+400"])
         ok = (text or "").strip() == want if want else (cjk(text) and len((text or "").strip()) == 1)
-        record(f"code-{im}", ok, f"{typed} + Space typed {text!r}, wanted {want or 'one character'!r}", f"code-{im}")
+        record(f"code-{im}", ok, f"{typed} + Space typed {text!r}, wanted {want or 'one character'!r}")
     language_checks.turn_on(["en", YALE, "yue-jyutping"], YALE)
 
 
@@ -259,11 +260,11 @@ def suggestions(name, method, keys):
     if first is None:
         raise Stop("the Debug field lost focus after the code pick")
     record(f"{name}-row", None, f"next words offered after picking {first!r}", f"{name}-after")
-    second = shot_then(f"{name}-next", ["key:space", "+800"], [])
+    second = shot_then(None, ["key:space", "+800"], [])
     if second is None:
         raise Stop("the Debug field lost focus after Space")
     record(name, cjk(first) and second == first + " ",
-           f"picked {first!r}; Space left {second!r}, wanted the picked text plus one space", f"{name}-next")
+           f"picked {first!r}; Space left {second!r}, wanted the picked text plus one space")
 
 
 def check_suggestions():
@@ -277,8 +278,8 @@ def check_suggestions():
 def check_enter():
     """Enter types the code as letters."""
     fresh()
-    text = shot_then("zh-enter", code(), ["key:enter", "+400"])
-    record("zh-enter", text == CODE, f"typed {text!r}, wanted {CODE!r}", "zh-enter")
+    text = shot_then(None, code(), ["key:enter", "+400"])
+    record("zh-enter", text == CODE, f"typed {text!r}, wanted {CODE!r}")
 
 
 def check_comma():
@@ -286,7 +287,8 @@ def check_comma():
     fresh()
     text = shot_then("zh-comma", code(), ["chord:alt+n", "+400"])
     ok = bool(text) and text.endswith("，") and cjk(text[:-1])
-    record("zh-comma", ok, f"typed {text!r}: the shot's first choice, then ，", "zh-comma")
+    record("zh-comma", ok, f"typed {text!r}, wanted Chinese text followed by ，")
+    record("zh-comma-first-choice", None, f"The part before ， in {text!r} is this bar's first choice", "zh-comma")
 
 
 def check_english():

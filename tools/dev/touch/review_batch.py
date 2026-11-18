@@ -89,7 +89,7 @@ def settings_fix_typos():
             adb("shell", "input", "swipe", "540", "950", "540", "450", "400")
             time.sleep(1.2)
         found = switcher_checks.row_switch(xml, FIX_TYPOS) if FIX_TYPOS in xml else None
-        shot = guide_checks.shot("english-fix-typos")
+        shot = None if found and found[2] else guide_checks.shot("english-fix-typos")
         return (found[2] if found else None), shot
     finally:
         for _ in range(4):

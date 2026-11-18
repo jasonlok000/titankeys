@@ -25,18 +25,18 @@
     "words": "hi_full.txt"
   },
   "starters": [
-    "इस",
-    "इसके",
-    "उन्होंने",
-    "लेकिन",
-    "वहीं",
-    "यह",
-    "हालांकि",
-    "ये",
-    "अब",
-    "ऐसे",
-    "एक",
-    "इससे"
+    "नमस्ते",
+    "हाँ",
+    "मैं",
+    "नहीं",
+    "आप",
+    "हम",
+    "क्या",
+    "आज",
+    "कल",
+    "अभी",
+    "ठीक",
+    "धन्यवाद"
   ],
   "howTo": [
     "Type Hindi by how it sounds, in English letters: namaste becomes नमस्ते. Capitals are sounds of their own (namaH, maChiyoM), so Shift changes the letter. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more. Double Space types \"। \", and a word ending in ~ keeps its last virama (agar~)."

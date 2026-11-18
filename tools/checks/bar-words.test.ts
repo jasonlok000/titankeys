@@ -28,3 +28,20 @@ test("what other input methods learn is backed up, kept by Reset most things, cl
   expect(read("android/kotlin/com/titankeys/keyboard/FreshStart.kt")).toContain('"language_learning"');
   expect(read("android/kotlin/com/titankeys/keyboard/SettingsReset.kt")).not.toContain("language_learning");
 });
+
+test("a fresh field offers everyday greetings and replies in the reviewed languages", () => {
+  const openers = {
+    he: ["שלום", "תודה", "אני"],
+    hi: ["नमस्ते", "हाँ", "मैं"],
+    id: ["halo", "iya", "aku"],
+    ka: ["გამარჯობა", "კი", "მადლობა"],
+    ko: ["안녕하세요", "네", "알겠습니다"],
+    th: ["สวัสดี", "ครับ", "ค่ะ"],
+  };
+  for (const [id, words] of Object.entries(openers)) {
+    const { starters } = JSON.parse(read(`android/assets/im/${id}/im.json`)) as { starters: string[] };
+    for (const word of words) expect(starters.slice(0, 3)).toContain(word);
+    expect(new Set(starters).size).toBe(12);
+    expect(read(`android/assets/im/${id}/NOTICE`)).not.toContain("Starters: the words that most often begin a sentence");
+  }
+});

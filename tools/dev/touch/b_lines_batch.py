@@ -15,7 +15,6 @@ import time
 
 import checks
 import chinese_checks
-import guide_checks
 import interactions_batch as ib
 import language_checks
 import languages
@@ -71,8 +70,8 @@ def check_radical_hover():
         ib.start(["en", im], im)
         adb("logcat", "-c")
         play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot=f"radical-{name}-alone", at=900)
-        record(f"radical-{name}-alone", True if radical_shown() else None,
-               "nothing typed, resting on N: a grey dotted 弓 alone in the tab, no glow", f"radical-{name}-alone")
+        record(f"radical-{name}-alone", True if radical_shown() else None, "the log for a rest on N before typing")
+        record(f"radical-{name}-style", None, "A grey dotted 弓 alone in the tab, no glow", f"radical-{name}-alone")
         # 2. 竹 typed (H), resting on Q: 竹, a gap, then a grey 手.
         play("key:h", "+300", "touch:0.05,0.125:1500", "+300", shot=f"radical-{name}-after-code", at=1100)
         record(f"radical-{name}-after-code", None, "竹 typed, resting on Q: 竹, a gap, a grey dotted 手", f"radical-{name}-after-code")
@@ -100,9 +99,8 @@ def check_playground_switch():
     time.sleep(3)
     before = read()
     if before is None:
-        return record("playground-switch", None, "the playground's field wasn't focused on the front page",
-                      guide_checks.shot("playground-switch"))
-    play(*switcher_checks.HOLD_SYM, "key:q", "+500", shot="playground-switch", at=1600)
+        return record("playground-switch", None, "the playground's field wasn't focused on the front page")
+    play(*switcher_checks.HOLD_SYM, "key:q", "+500")
     after = read()
     # An empty field may read back as its hint, which typing replaces: then all of it is what this check typed.
     typed = after[len(before):] if after and after.startswith(before) else after
@@ -111,7 +109,7 @@ def check_playground_switch():
         play(*[g for _ in typed for g in ("key:del", "+90")])  # only what this check typed
     left = read()
     record("playground-switch", (typed or "").lower() == "й", f"a held Sym in the playground, then Q: typed {typed!r} (wanted й); "
-           f"the field {'as it was' if left in (before, "") else 'NOT as it was'} after", "playground-switch")
+           f"the field {'as it was' if left in (before, "") else 'NOT as it was'} after")
     play(*switcher_checks.HOLD_SYM)  # back to English
     languages.in_field()
 

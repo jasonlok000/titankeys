@@ -96,8 +96,8 @@ def check_thai_phrase():
     play(*moves[:half])
     play(*moves[half:], "key:space:60:none", "+700", shot="shift-thai-phrase", at=len(moves[half:]) * 90 + 500)
     text = checks.field()
-    record("shift-thai-phrase", text == "ฉันไปโรงเรียน ", f"typed {text!r}, wanted 'ฉันไปโรงเรียน '; the bar after it: next "
-           "words after โรงเรียน (บ้าน ที่ ใน), not starters (สวัสดี ขอบคุณ ฉัน)", "shift-thai-phrase")
+    record("shift-thai-phrase", text == "ฉันไปโรงเรียน ", f"typed {text!r}, wanted 'ฉันไปโรงเรียน '")
+    record("shift-thai-next", None, "Next words after โรงเรียน include บ้าน ที่ ใน", "shift-thai-phrase")
 
 
 def check_georgian_shift():
@@ -120,7 +120,8 @@ def menu_by_shift(im, code, name):
     play("chord:shift", "+400")
     lines = choices_lines()
     record(f"shift-{name}-menu", any("opens" in l for l in opened) and any("closes" in l for l in lines[len(opened):]),
-           f"Shift: {' | '.join(l.split(':', 1)[-1].strip() for l in lines) or 'no menu lines'}", f"shift-{name}-open")
+           f"Shift: {' | '.join(l.split(':', 1)[-1].strip() for l in lines) or 'no menu lines'}")
+    record(f"shift-{name}-open", None, "The expanded menu while Shift has opened it", f"shift-{name}-open")
     play(*[g for _ in range(len(code) + 2) for g in ("key:del", "+60")])
 
 

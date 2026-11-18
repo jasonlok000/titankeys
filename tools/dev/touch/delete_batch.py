@@ -57,6 +57,8 @@ def long_text(name):
 def play_now(*gestures, shot=None, at=0, script_ms=0):
     """checks.play without its pause after, for a streak that spans calls. Returns the ms the call took past its script."""
     env = dict(os.environ)
+    env.pop("TK_TOUCH_SHOT", None)
+    env.pop("TK_TOUCH_SHOT_AT", None)
     if shot:
         env.update(TK_TOUCH_SHOT=shot, TK_TOUCH_SHOT_AT=str(at))
     started = time.monotonic()
@@ -77,9 +79,9 @@ def check_flick_dots():
     """1. A flick at the end of 2,000 characters: dots N, N at most 60."""
     if long_text("delete-flick-dots") is None:
         return
-    checks.play("flick", "+800", shot="delete-flick-dots", at=300)
+    checks.play("flick", "+800")
     found = dots(delete_lines())
-    record("delete-flick-dots", bool(found) and max(found) <= 60, f"dots {found or 'none logged'} (60 at most)", "delete-flick-dots")
+    record("delete-flick-dots", bool(found) and max(found) <= 60, f"dots {found or 'none logged'} (60 at most)")
 
 
 def check_full_hold():

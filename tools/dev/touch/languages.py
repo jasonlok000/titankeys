@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """The input methods on the phone (#56), typed with the phone's own keys through the touch simulator, each read back.
 
-For each input method asked for, which must already be on in TitanKeys Debug's Settings > Input methods:
-1. TitanKeys Debug becomes the keyboard, in its Space gestures field, after the gate (touchlib.sh).
+Each input method asked for must already be on in TitanKeys Debug's Settings > Input methods.
+1. TitanKeys Debug becomes the keyboard once, in its Space gestures field, after the gate (touchlib.sh).
 2. Alt+Sym, pressed on the real keyboard, steps through Android's keyboard list until its entry for that input method is the
    current one (`selected_input_method_subtype`, read back after each step; TitanKeys lists one entry per input method that is
    on). Since main 4658247, a pick there is what types.
 3. The input method's test is typed, key by key, and the text it put in the field is read back.
-4. Release TitanKeys goes back as the keyboard, read back.
+4. At the end of the run, release TitanKeys goes back as the keyboard, read back.
 The expected text comes from the input method's own keys in android/assets/im/<id>/im.json, or, for an engine, from the phone
 checks list (docs: m3-phone-checks.md, section 2). Every key and every switch goes through touch.sh or guarded.sh and their gate.
 
 Usage: languages.py [--list] [ID...]   (default: the ids in TESTS)
        languages.py --expect ID        prints the test's keys and expected text, without the phone
-A screenshot of the bar after each test goes to $TK_OUT/touch/shots/lang-ID.png.
+Failures can leave a screenshot of the verified Debug field in $TK_OUT/touch/shots.
 """
 import json
 import os
@@ -230,28 +230,22 @@ def logs_on(on):
 def run(name, ids):
     im = TESTS[name].get("im", name)
     want = expected(name)
-    checks.keyboard("debug")
-    os.environ["TK_IME_HELD"] = "1"
     seen = len(log_lines())
-    try:
-        if not in_field():
-            return checks.record(f"lang-{name}", None, f"not in the Space gestures field: front is {front().strip()}")
-        if not switch_to(im, ids):
-            now = ids.get(current_subtype(), current_subtype())
-            return checks.record(f"lang-{name}", None, f"Alt+Sym didn't reach {im} (Android's entry: {now}): is it on?")
-        if not in_field():
-            return checks.record(f"lang-{name}", None, f"left the Space gestures field while switching: {front().strip()}")
-        before = checks.field()
-        checks.play(*gestures(name), shot=f"lang-{name}", at=len(gestures(name)) * 75)
-        time.sleep(.8)
-        got = inserted(before, checks.field())
-        note = f" ({TESTS[name]['note']})" if "note" in TESTS[name] else ""
-        said = [line.split(":", 1)[-1].strip() for line in log_lines()[seen:] if "TitanKeysIM" in line][-3:]
-        log = "; the log: " + " | ".join(said) if said else "; the log said nothing about input methods"
-        checks.record(f"lang-{name}", got == want, f"typed {got!r}, wanted {want!r}{note}{log}", f"lang-{name}")
-    finally:
-        os.environ.pop("TK_IME_HELD", None)
-        checks.keyboard("release")
+    if not in_field():
+        return checks.record(f"lang-{name}", None, "the Debug test field isn't in front")
+    if not switch_to(im, ids):
+        now = ids.get(current_subtype(), current_subtype())
+        return checks.record(f"lang-{name}", None, f"Alt+Sym didn't reach {im} (Android's entry: {now}): is it on?")
+    if not in_field():
+        return checks.record(f"lang-{name}", None, "left the Debug test field while switching")
+    before = checks.field()
+    checks.play(*gestures(name))
+    time.sleep(.8)
+    got = inserted(before, checks.field())
+    note = f" ({TESTS[name]['note']})" if "note" in TESTS[name] else ""
+    said = [line.split(":", 1)[-1].strip() for line in log_lines()[seen:] if "TitanKeysIM" in line][-3:]
+    log = "; the log: " + " | ".join(said) if said else "; the log said nothing about input methods"
+    checks.record(f"lang-{name}", got == want, f"typed {got!r}, wanted {want!r}{note}{log}")
 
 
 def main():
@@ -270,13 +264,19 @@ def main():
     if not logs_on(True):
         print("note: the shell couldn't let TitanKeysIM and TitanKeysSym through the log; the lines will say nothing", flush=True)
     try:
+        checks.keyboard("debug")
+        os.environ["TK_IME_HELD"] = "1"
         for name in args or TESTS:
             run(name, ids)
     except checks.Stop as stop:
         print(f"STOP: the run ended: {stop}", flush=True)
         sys.exit(1)
     finally:
-        logs_on(False)
+        os.environ.pop("TK_IME_HELD", None)
+        try:
+            checks.keyboard("release")
+        finally:
+            logs_on(False)
     verdicts = [v for _, v in checks.results]
     print(f"{verdicts.count('YES')} YES, {verdicts.count('NO')} NO, {verdicts.count('LOOK')} UNSURE")
     sys.exit(1 if "NO" in verdicts else 0)

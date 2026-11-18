@@ -11,6 +11,8 @@ package com.titankeys.keyboard
 import android.content.Context
 import android.view.View
 class Strip(context: Context) : View(context)
+class GuideKeyboardView(context: Context) : View(context)
+object GuideHooks { const val FIELD = "com.titankeys.guide" }
 EOF
 "$kotlin/bin/kotlinc" -nowarn -classpath "$android" android/debug/recorder/OwnCapturePolicy.kt \
   android/debug/recorder/OwnSurfaceCapture.kt android/debug/recorder/FeedFocusGuard.kt \

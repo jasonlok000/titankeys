@@ -12,26 +12,53 @@ def block(marker):
     return source[start:end]
 valid=source[source.index('fun valid(): Boolean'):source.index('fun watch(')]
 limited=block('private class LimitedOutput(').replace('private class','class',1)
+native='\n'.join(block(marker) for marker in (
+    'private fun ownedContent(', 'private fun spaceEditor(', 'private fun guideKeys(', 'private fun descendants(',
+))
 fixture=r'''
 package com.titankeys.keyboard
 import java.lang.ref.WeakReference
 import java.io.*
 const val APP="com.titankeys.debug"
-class Context(var packageName:String=APP, var selected:Boolean=true)
+open class Context(var packageName:String=APP, var selected:Boolean=true)
+open class Activity:Context() { val window=Window() }
+class SpaceGestureActivity:Activity()
+class GuideActivity:Activity()
+class Window { var decorView:View?=null }
+object android { object R { object id { const val content=1 } } }
+object EditorInfo { const val IME_FLAG_NO_PERSONALIZED_LEARNING=1 }
+object GuideHooks { const val FIELD="com.titankeys.guide" }
 class Display(val displayId:Int)
 open class View(val context:Context=Context()) {
  var focus=true; var isAttachedToWindow=true; var isShown=true
  var width=100; var height=100; var windowToken=Any(); var rootView:View=this
  var imeWindow=true; var display:Display?=Display(0); var settings:View?=null
+ var content:ViewGroup?=null; var focused:View?=null
  var x=0; var y=0
  fun hasWindowFocus()=focus
+ fun findFocus()=focused
+ inline fun <reified V:View> findViewById(id:Int)=content as? V
  fun getLocationOnScreen(at:IntArray) { at[0]=x; at[1]=y }
 }
+open class ViewGroup(context:Context=Context()):View(context) {
+ val children=mutableListOf<View>()
+ val childCount get()=children.size
+ fun getChildAt(index:Int)=children[index]
+}
+class ScrollView(context:Context):ViewGroup(context)
+class FrameLayout(context:Context):ViewGroup(context)
+class EditText(context:Context):View(context) {
+ var imeOptions=EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+ var privateImeOptions:String?=null
+}
+class GuideKeyboardView(context:Context):View(context)
 class Surface { var isValid=true }
 class Holder { var surface=Surface() }
 class SurfaceView:View() { val holder=Holder() }
 class FeedEditor { var good=true; fun valid()=good }
-class Lease(val context:Context, window:View, target:View, val editor:FeedEditor?) {
+fun activity(context:Context)=context as? Activity
+NATIVE
+class Lease(val context:Context, window:View, target:View, val kind:String, val editor:FeedEditor?) {
  val root=WeakReference(window); val view=WeakReference(target)
  val token=WeakReference(window.windowToken); val targetRoot=WeakReference(target.rootView)
  val targetToken=WeakReference(target.windowToken)
@@ -46,8 +73,22 @@ class Lease(val context:Context, window:View, target:View, val editor:FeedEditor
 }
 LIMITED
 fun main(args: Array<String>) {
+ fun window(owner:Activity, body:ViewGroup):View = View(owner).apply {
+  owner.window.decorView=this
+  content=ViewGroup(owner).apply { children.add(body) }
+ }
+ fun fixture():Pair<View,EditText> {
+  val owner=SpaceGestureActivity()
+  val body=ScrollView(owner)
+  val field=EditText(owner)
+  body.children.add(field)
+  val root=window(owner,body)
+  root.focused=field
+  field.rootView=root
+  return root to field
+ }
  fun trial(change:(Context,View,View,FeedEditor,Lease)->Unit) {
-  val c=Context(); val w=View(); val v=View(); val e=FeedEditor(); val l=Lease(c,w,v,e)
+  val c=Context(); val (w,_)=fixture(); val v=View(); val e=FeedEditor(); val l=Lease(c,w,v,"strip",e)
   check(l.valid()); change(c,w,v,e,l); check(!l.valid())
  }
  trial { c,_,_,_,_->c.selected=false }
@@ -64,16 +105,42 @@ fun main(args: Array<String>) {
  trial { _,_,v,_,_->v.display=Display(1) }
  trial { _,_,_,e,_->e.good=false }
  trial { _,w,_,_,l->w.focus=false; l.lost=true; w.focus=true }
- val v=SurfaceView(); val w=View(); v.rootView=w; w.settings=v; val l=Lease(Context(),w,v,null)
+ val v=SurfaceView(); val w=View(); v.rootView=w; w.settings=v; val l=Lease(Context(),w,v,"settings",null)
  check(l.valid()); v.holder.surface=Surface(); check(!l.valid())
+ val (editorWindow,field)=fixture()
+ val editor=FeedEditor()
+ val editorLease=Lease(Context(),editorWindow,field,"editor",editor)
+ check(editorLease.valid() && !Lease(Context(),editorWindow,field,"editor",null).valid())
+ editorWindow.focused=View()
+ check(!editorLease.valid())
+ editorWindow.focused=field; field.imeOptions=0
+ check(!editorLease.valid())
+ field.imeOptions=EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+ editor.good=false; check(!editorLease.valid())
+ val guide=GuideActivity()
+ val guideContent=FrameLayout(guide)
+ val guideWindow=window(guide,guideContent)
+ val guideField=EditText(guide).apply { privateImeOptions=GuideHooks.FIELD }
+ val keys=GuideKeyboardView(guide).apply { rootView=guideWindow }
+ guideContent.children.addAll(listOf(guideField,keys))
+ val guideLease=Lease(Context(),guideWindow,keys,"guide",null)
+ check(guideLease.valid())
+ check(!Lease(Context(),guideWindow,guideField,"guide",null).valid())
+ guideField.privateImeOptions="com.titankeys.playground"
+ check(!guideLease.valid())
+ guideField.privateImeOptions=GuideHooks.FIELD
+ guideContent.children.add(GuideKeyboardView(guide)); check(!guideLease.valid())
+ guideContent.children.removeAt(guideContent.children.lastIndex)
+ guide.window.decorView=View(); check(!guideLease.valid())
+ guide.window.decorView=guideWindow; guide.packageName="com.titankeys"; check(!guideLease.valid())
  val bytes=ByteArrayOutputStream(); val capped=LimitedOutput(bytes)
  capped.write(ByteArray(OwnCapturePolicy.MAX_BYTES))
  try { capped.write(1); error("Limit not enforced") } catch (_:IOException) {}
  check(bytes.size()==OwnCapturePolicy.MAX_BYTES)
- println("PASS capture owner and window identity, selected IME, editor, focus, layout, surface identity and exact PNG output limit")
+ println("PASS capture owner and window identity, fixture-only editor, guide key scope, selected IME, focus and exact PNG limit")
  com.titankeys.keyboard.lifecycle.lifecycle(File(args.single()))
 }
-'''.replace('VALID',valid).replace('LIMITED',limited)
+'''.replace('VALID',valid).replace('LIMITED',limited).replace('NATIVE',native)
 def line(marker):
     return next(line.strip() for line in source.splitlines() if marker in line)
 lifecycle = (root/'tests/own-surface/LifecycleChecks.kt').read_text().replace('// RECEIVER', '\n'.join([

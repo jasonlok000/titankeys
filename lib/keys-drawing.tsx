@@ -32,7 +32,7 @@ function roleText(role: KeyRole) {
  * Shift's in orange in the corner, a dot where holding gives more, and the special keys with a role ringed and numbered, which
  * the list under it explains. For a single input method's guide; nothing where it has no keys to show.
  */
-export function KeysDrawing({ im }: { im: InputMethodEntry }) {
+export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?: boolean }) {
   const accent = useAccent();
   const keys = im.guide?.keys;
   if (!keys) return null;
@@ -66,10 +66,11 @@ export function KeysDrawing({ im }: { im: InputMethodEntry }) {
       x += width;
     }
   }
-  // F: draft title.
-  return <Section title="The keys">
+  const body = <>
     <Canvas width={WIDTH + 2} height={ROW * 4 + 2}>{parts}</Canvas>
     {keys.legend ? <Note>{keys.legend}</Note> : null}
     {roles.map((role, index) => <Note key={role.key}>{`${index + 1}  ${ROLE_NAMES[role.key]}: ${roleText(role)}`}</Note>)}
-  </Section>;
+  </>;
+  // F: draft title. Bare inside an input method's card, which is already a section.
+  return bare ? body : <Section title="The keys">{body}</Section>;
 }

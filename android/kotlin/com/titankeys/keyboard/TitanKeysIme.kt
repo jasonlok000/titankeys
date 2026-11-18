@@ -546,12 +546,12 @@ class TitanKeysIme : InputMethodService() {
         val word = heldWords.next()
         enqueue {
             if (altOrPanel || !contact.deleteFlicks) return@enqueue
-            // A code still being built goes first, as a flick takes it: the pending code, then what was picked, typed less its last
-            // character (owner, 2026-11-17: "the same shd work for holding for delete too").
-            val engine = languages.engine
-            if (engine != null && (openPicker() as? LanguagePicker.Choices)?.state?.composing == true) {
+            // A hold clears a composition in the same steps as repeated flicks before it touches the editor.
+            val choices = openPicker() as? LanguagePicker.Choices
+            val state = languages.engine?.flickComposition(choices?.state)
+            if (state != null) {
                 haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
-                engineState(engine.flick())
+                engineState(state)
                 strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), 1)
                 KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
                 return@enqueue
@@ -3619,15 +3619,13 @@ class TitanKeysIme : InputMethodService() {
                 // A guide slide that doesn't teach this yet: the swipe or the flick does nothing, and the slide says so, once.
                 if (refuse(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
-                    // A code being built (Chinese, Japanese, Korean's syllable, Telex's word) goes, and the field stays as it is
-                    // (owner: "a flick should also delete the entire key code too"); in Rime only what's pending goes, then a picked
-                    // word a flick. Once nothing is built, a flick deletes from the field.
-                    // Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
+                    // A flick clears pending code before deleting from the field. With a partial Rime pick, it takes the
+                    // unpicked code first, then cancels the remaining composition on the next flick.
                     val choices = openPicker() as? LanguagePicker.Choices
                     if (choices != null) {
-                        // A code with part of it picked loses only what's pending; each flick after takes a picked word.
                         val engine = languages.engine
-                        if (choices.state.composing && engine != null) engineState(engine.flick()) else {
+                        val state = engine?.flickComposition(choices.state)
+                        if (state != null) engineState(state) else {
                             engine?.reset()
                             closePicker()
                         }

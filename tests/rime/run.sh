@@ -10,7 +10,10 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 rime=android/kotlin/com/titankeys/rime
 keyboard=android/kotlin/com/titankeys/keyboard
+engine=android/kotlin/com/titankeys/engine
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
+  "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
+  "$keyboard/Contact.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/WordBreaks.kt" "$keyboard/ChineseWords.kt" "$keyboard/Touchpad.kt" \
   "$rime/RimeCalls.kt" "$rime/ChineseVariant.kt" "$rime/RimeEngine.kt" "$rime/RimeData.kt" "$rime/RimeNative.kt" \
   "$rime/RimeAssets.kt" "$rime/RimeBackup.kt" "$keyboard/InputEngine.kt" "$keyboard/InputMethod.kt" "$keyboard/ChineseSetup.kt" "$keyboard/Chinese.kt" "$keyboard/BarLog.kt" "$keyboard/Layout.kt" "$keyboard/InputMethods.kt" android/kotlin/com/titankeys/connected/Json.kt \
   tests/rime/RimeChecks.kt

@@ -219,8 +219,11 @@ test("a Space touch never picks a code: only a press does, so a steer or a selec
   for (const name of ["startWordDrag", "registerGesture"]) expect(body(ime, name)).not.toContain("engine");
 });
 
-test("a flick with a code takes only what's pending, through the engine (owner, 2026-11-17)", () => {
-  expect(ime).toContain("if (choices.state.composing && engine != null) engineState(engine.flick()) else {");
+test("a flick with a code goes through the engine before deleting from the editor", () => {
+  const flick = body(ime, "outcome");
+  const hold = body(ime, "deleteHeldWord");
+  expect(flick).toContain("engine?.flickComposition(choices.state)");
+  expect(hold).toContain("languages.engine?.flickComposition(choices?.state)");
 });
 
 test("the mark over Q takes a tap over the choices row too, not only on the idle bar (owner, 2026-11-17: 耶 did nothing)", () => {

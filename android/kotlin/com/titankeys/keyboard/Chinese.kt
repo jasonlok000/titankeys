@@ -212,10 +212,6 @@ object ChineseKeys {
         return if (index in RADICALS.indices) RADICALS[index].toString() else null
     }
 
-    /** [text] less its last character, a whole code point (an emoji or a rare character is two chars). */
-    fun dropLastCharacter(text: String): String =
-        if (text.isEmpty()) "" else text.substring(0, text.offsetByCodePoints(text.length, -1))
-
     /** Rime's option for plain (ASCII) punctuation, the setting's. */
     const val PLAIN_PUNCTUATION = "ascii_punct"
 

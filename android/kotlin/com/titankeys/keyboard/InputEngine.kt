@@ -56,8 +56,8 @@ interface InputEngine {
     fun offer(words: List<String>): EngineState = EngineState.UNHANDLED
 
     /**
-     * A flick while text is being built (owner, 2026-11-17): the code still pending goes, and what was picked of it stays; the
-     * next flick takes the last picked word. An engine without picks in part drops everything, as [reset].
+     * A flick while text is being built. Rime drops a partial pick's unpicked code first, then cancels the rest on a second
+     * flick. An engine without partial picks drops everything, as [reset].
      */
     fun flick(): EngineState = reset()
 
@@ -88,6 +88,10 @@ interface InputEngine {
 /** Picks the displayed word only while it still occupies this engine index. */
 internal fun InputEngine.pickDisplayed(index: Int, word: String): EngineState? =
     if (choices(index, 1).singleOrNull() == word) pickAt(index) else null
+
+/** A pending composition takes the flick ahead of the editor. */
+internal fun InputEngine.flickComposition(state: EngineState?): EngineState? =
+    if (state?.composing == true) flick() else null
 
 /**
  * What an engine returns after each call.

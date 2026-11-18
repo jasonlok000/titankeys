@@ -1,13 +1,17 @@
 package com.titankeys.rime
 
-import com.titankeys.keyboard.ChineseKeys
 import com.titankeys.keyboard.ChineseOffers
 import com.titankeys.keyboard.ChineseRow
 import com.titankeys.keyboard.ChineseSetup
 import com.titankeys.keyboard.BarLog
+import com.titankeys.keyboard.Contact
 import com.titankeys.keyboard.EngineState
 import com.titankeys.keyboard.InputMethod
+import com.titankeys.keyboard.PickedWords
+import com.titankeys.keyboard.Sample
+import com.titankeys.keyboard.flickComposition
 import com.titankeys.keyboard.pickDisplayed
+import com.titankeys.keyboard.wordDeleteLength
 import java.io.File
 import java.security.MessageDigest
 
@@ -55,7 +59,7 @@ fun main(args: Array<String>) {
     aPickedBarWordBringsItsNextWords()
     theBarsWordsNeverCoverACode()
     chinesePicksReplaceTheVisibleRow()
-    aFlickKeepsWhatWasPicked()
+    deleteFlicksDrainTheCompositionBeforeTheField()
     lazySoundsOffSelectsTheStrictTwin()
     println("Rime checks passed")
 }
@@ -960,24 +964,54 @@ fun chinesePicksReplaceTheVisibleRow() {
     check(offers.allows(false), "a field or input-method change clears the gate")
 }
 
-/**
- * A flick with part of a code picked (頂你個 picked, "fai" pending) takes only the pending code. The next types what was
- * picked less its last character, so one flick is one character (owner, 2026-11-17), cleared rather than committed in Rime, so
- * it learns nothing. With nothing picked, the code goes whole.
- */
-fun aFlickKeepsWhatWasPicked() {
+/** Real contact decisions go through the same engine dispatch as the IME before deleting from the editor. */
+fun deleteFlicksDrainTheCompositionBeforeTheField() {
+    for ((schema, keys, picked) in listOf(
+        Triple(RimeEngine.Schema.Yale, "dingneigofai", "頂你個"),
+        Triple(RimeEngine.Schema.Pinyin, "nihaoniu", "你好"),
+    )) {
+        val (engine, rime) = started(schema)
+        type(engine, keys)
+        rime.selectPrefix = (keys.length - 3) to picked
+        var state = checkNotNull(engine.pickDisplayed(0, engine.choices(0, 1).single()))
+        val contact = Contact().apply { swipes = Contact.Swipes.DeletesOnly }
+        val original = "唔該晒"
+        var editor = original
+        var edits = 0
+        fun flick(time: Long) {
+            contact.paging = if (state.composing) Contact.Paging.Choices else Contact.Paging.None
+            contact.down(Sample(.95f, .35f, time))
+            contact.move(listOf(Sample(.7f, .35f, time + 120)))
+            val settle = checkNotNull(contact.up(emptyList(), time + 120))
+            val outcome = contact.settle(settle, settle.deadline) as Contact.Outcome.Swipe
+            check(outcome.deletesWord && !outcome.forPaging, "$schema contact dispatches a delete flick")
+            val result = engine.flickComposition(state)
+            if (result != null) {
+                state = result
+                if (result.commit.isNotEmpty()) {
+                    editor += result.commit
+                    edits++
+                }
+            } else {
+                editor = editor.dropLast(wordDeleteLength(editor, null, PickedWords.CHARACTERS))
+                edits++
+            }
+        }
+
+        flick(1_000)
+        same(picked, state.code, "$schema first flick removes only the unpicked code")
+        same(original, editor, "$schema first flick leaves the editor intact")
+        flick(2_000)
+        same("", state.code, "$schema second flick cancels the remaining composition")
+        same("", state.commit, "$schema second flick cancels without committing")
+        same(0, edits, "$schema neither composition flick edits the field")
+        same(original, editor, "$schema existing text stays untouched until the third flick")
+        flick(3_000)
+        same("唔該", editor, "$schema third flick deletes one character from the existing editor text")
+        same(1, edits, "$schema only the third flick edits the field")
+    }
+
     val (engine, rime) = started()
-    type(engine, "fai")
-    rime.pickedCode = "dingneigo"
-    rime.pickedText = "頂你個"
-    val first = engine.flick()
-    same("", first.commit, "the first flick types nothing")
-    same("頂你個", first.code, "and the picked part stays on the bar")
-    val second = engine.flick()
-    same("頂你", second.commit, "the next types what was picked, less its last character")
-    same("", second.code, "and nothing is left being built")
-    check("reset" in rime.calls, "cleared, never committed: Rime learns nothing from it")
-    rime.calls.clear()
     // Enter with part picked types the picked words, then the letters still pending (owner, 2026-11-17).
     type(engine, "fai")
     rime.pickedCode = "dingneigo"
@@ -997,7 +1031,6 @@ fun aFlickKeepsWhatWasPicked() {
         same("", removed.commit, "a flick clearing $display must not insert any unselected preview")
         same("", removed.code, "the entire unselected code clears")
     }
-    same("𠮩", ChineseKeys.dropLastCharacter("𠮩𠮩"), "a character outside the BMP counts as one")
 }
 
 /** Lazy sounds off (a setting, on by default): Rime selects Yale's strict twin, and back again when they're on. */

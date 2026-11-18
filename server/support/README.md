@@ -34,7 +34,7 @@ Send JSON over HTTPS. The app only reads the board while the support page is ope
 
 Send one to ten receipts per request. Use `tip` for the one-time products and `subscription` for monthly products. The name and message are optional and each accepts up to 80 Unicode code points. Anonymous clears the name and lets the supporter still choose to share a message. The renderer should treat both fields as plain text.
 
-Malformed inputs return `400`. Pending purchases or refunds return `409`, receipts Play cannot verify return `422`, and transient failures return `503`. Failures have an `error` code and contain no purchase or provider details. All receipts in a submission must verify before it writes.
+Malformed inputs return `400`. Pending purchases or refunds return `409`, receipts Play cannot verify return `422`, and transient failures return `503`. Failures have an `error` code and contain no purchase or provider details. When Play explicitly reports that a subscription expired too long ago to query, its old proof earns no new credit and can be skipped in a batch that has a verified receipt. A batch containing only such proofs returns `422 purchase_expired`. All other failures reject the batch before writing.
 
 ## How cups are calculated
 

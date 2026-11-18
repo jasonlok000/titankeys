@@ -127,6 +127,12 @@ function rejected() {
     return new SupportError(422, "purchase_unverified");
 }
 
+export class ExpiredSubscription extends SupportError {
+    constructor() {
+        super(422, "purchase_expired");
+    }
+}
+
 export function playVerifier(fetcher = fetch) {
     let token;
     let signing;
@@ -142,6 +148,15 @@ export function playVerifier(fetcher = fetch) {
             const response = await fetcher(url, {
                 headers: { Authorization: `Bearer ${token.value}` }, redirect: "error", signal: AbortSignal.timeout(8000),
             });
+            // Other 410 reasons include deleted accounts. Accept only Google's specific expiry signal for this lookup.
+            if (response.status === 410 && path.startsWith("/purchases/subscriptionsv2/tokens/")) {
+                const details = await response.json().catch(() => null);
+                const errors = details?.error?.errors;
+                if (Array.isArray(errors) && errors.length > 0 &&
+                    errors.every(error => error?.reason === "subscriptionNoLongerAvailable")) {
+                    throw new ExpiredSubscription();
+                }
+            }
             if (response.status === 404 || response.status === 410 || response.status === 400) throw rejected();
             if (response.status === 401) token = undefined;
             if (!response.ok) throw new Error();

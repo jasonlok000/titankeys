@@ -1,4 +1,4 @@
-import { hash, knownProduct, playVerifier, SupportError } from "./play.js";
+import { ExpiredSubscription, hash, knownProduct, playVerifier, SupportError } from "./play.js";
 
 const BODY_LIMIT = 32_768;
 const ACCOUNT_KEY = /^[0-9a-f]{64}$/;
@@ -95,8 +95,14 @@ async function publish(request, env, verifier) {
         unique.set(`${purchase.productId}:${purchase.purchaseToken}`, purchase);
     }
     const accountId = await hash(body.accountKey);
-    // Play must verify the entire submission before any account or public text is written.
-    const receipts = await Promise.all(Array.from(unique.values(), purchase => verifier.verify(env, accountId, purchase)));
+    const verified = await Promise.allSettled(Array.from(unique.values(), purchase => verifier.verify(env, accountId, purchase)));
+    const receipts = [];
+    for (const result of verified) {
+        if (result.status === "fulfilled") receipts.push(result.value);
+        else if (!(result.reason instanceof ExpiredSubscription)) throw result.reason;
+    }
+    // Old, expired proofs cannot authorize a profile or grant new credit.
+    if (receipts.length === 0) throw new ExpiredSubscription();
     const db = env.DB;
     const statements = [db.prepare(`
         INSERT INTO supporters (account_id, public_id, name, message)

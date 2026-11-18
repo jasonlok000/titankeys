@@ -10,6 +10,7 @@ const TIP = "support_tip_unit";
 const MONTHLY = "support_monthly_full";
 const TOKENS = new Map();
 const ORDERS = new Map();
+const PROVIDER_ERRORS = new Map();
 const outgoing = [];
 let voided = [];
 let failAt;
@@ -65,6 +66,11 @@ async function fakeGoogle(url, options) {
     const fields = url.searchParams.get("fields");
     expect(fields).not.toContain("buyerAddress");
     expect(fields).not.toContain("subscribeWithGoogleInfo");
+    const rejected = PROVIDER_ERRORS.get(path);
+    if (rejected) {
+        return Response.json({ error: { errors: [{ reason: rejected.reason }], message: "private provider error" } },
+            { status: rejected.status });
+    }
     if (path === "purchases/voidedpurchases") {
         expect(url.searchParams.get("includeQuantityBasedPartialRefund")).toBe("true");
         return Response.json({ voidedPurchases: voided });
@@ -82,6 +88,7 @@ beforeEach(() => {
         TIP_SIP_CENTS: "49", MONTHLY_SIP_CENTS: "69", ADMIN_TOKEN: OWNER_SECRET };
     TOKENS.clear();
     ORDERS.clear();
+    PROVIDER_ERRORS.clear();
     outgoing.length = 0;
     voided = [];
     failAt = undefined;
@@ -188,6 +195,31 @@ test("a rejected receipt rolls back the entire submission and provider errors st
     expect(offline.status).toBe(503);
     expect(await offline.json()).toEqual({ error: "play_unavailable" });
     expect(await entries()).toEqual([]);
+});
+
+test("only a documented expired subscription can be skipped alongside a fresh verified receipt", async () => {
+    const old = await paid({ kind: "subscription", productId: MONTHLY, label: "expired", cents: 200 });
+    expect(await (await publish([old])).json()).toEqual({ cups: .4 });
+    const active = await paid({ label: "active" });
+    const path = "purchases/subscriptionsv2/tokens/" + old.purchaseToken;
+    PROVIDER_ERRORS.set(path, { status: 410, reason: "subscriptionNoLongerAvailable" });
+    const onlyExpired = await publish([old], { name: "Unverified edit" });
+    expect(onlyExpired.status).toBe(422);
+    expect(await onlyExpired.json()).toEqual({ error: "purchase_expired" });
+    expect((await entries())[0].name).toBe("Sunny");
+    expect(await (await publish([old, active], { name: "Verified edit" })).json()).toEqual({ cups: .6 });
+    expect((await entries())[0].name).toBe("Verified edit");
+
+    for (const error of [
+        { status: 410, reason: "purchaseTokenNoLongerValid" },
+        { status: 404, reason: "subscriptionNoLongerAvailable" },
+    ]) {
+        PROVIDER_ERRORS.set(path, error);
+        const rejected = await publish([old, active], { name: "Unverified edit" });
+        expect(rejected.status).toBe(422);
+        expect(await rejected.json()).toEqual({ error: "purchase_unverified" });
+        expect((await entries())[0].name).toBe("Verified edit");
+    }
 });
 
 test("anonymity and user or owner removal clear public data", async () => {

@@ -902,3 +902,8 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Rebuilt the Mandarin and Cantonese prediction tables from the unfiltered word lists for the owner's 17 November suggestion decision. Both packaged tables match the Rime checksum list. Korean endings and Thai word fragments still use the existing word-quality rules.
 - For field regressions, the checks use the input type and editor action Android reports. To check a Chrome suggestion pick on the phone, use a fresh address-bar tab, leave the entry unsubmitted, and record the selection after the pick together with the next state of the bar. These are the test conditions for the owner's field decisions above.
 - Check a cold Korean switch by pressing R, K, then Space and comparing the committed syllable. A field restart may carry the waiting letters only across the same editor and selection. Check leaving the guide after setup with Android Accessibility Settings still underneath it in the task stack.
+
+## Codex (2026-11-18, search suggestions)
+
+- Owner: In Chrome's address bar, "the middle word shd stay whats supposed to be typedout after pressing space." Keep a correction available as a side choice when appropriate. Check the middle against the exact text committed by Space.
+- In Maps, the owner tapped the first suggestion after typing "testing" and saw an unrelated suggestion briefly. Check both the left slot and the top-ranked middle slot because "first" can refer to either. Capture each row through the tap in the Debug test field with Maps' editor flags. Keep the existing recording exclusions for the owner's Maps searches.

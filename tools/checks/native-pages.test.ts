@@ -32,3 +32,25 @@ test("every localized page is free of unresolved draft markers", () => {
     for (const result of Object.values(strings)) expect(result).not.toMatch(/^\s*F:/);
   }
 });
+
+test("each method has local copy for its actual key legend, role descriptions and instructions", () => {
+  const dictionaries: Record<string, Record<string, string>> = data;
+  const roles: Record<string, Record<string, string>> = sources.roles;
+  const points: Record<string, string[]> = sources.points;
+  for (const method of methods) {
+    const language = method.language.id;
+    if (language === "en") continue;
+    const base = dictionaries[language];
+    const overrides = dictionaries[method.id] ?? {};
+    const guide = method.guide;
+    const visible = [
+      ...guide.points.length ? guide.points : (points[guide.family] ?? []),
+      ...guide.keys.roles.map(role => roles[role.key][role.role]),
+      guide.keys.legend,
+    ].filter(Boolean);
+    for (const source of visible) {
+      expect({ id: method.id, source, translated: !!(overrides[source] ?? base[source]) })
+        .toEqual({ id: method.id, source, translated: true });
+    }
+  }
+});

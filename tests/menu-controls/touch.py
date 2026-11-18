@@ -14,8 +14,9 @@ methods = method("cellAt") + "\n" + method("onTouchEvent")
 if "fun targetAt(" in source: methods += "\n" + method("targetAt")
 if "fun observe(" in source: methods += "\n" + method("observe")
 fixture = r'''
-class ApplicationInfo(var flags: Int = 2) { companion object { const val FLAG_DEBUGGABLE=2 } }
-class Context(var packageName: String = "com.titankeys.debug", val applicationInfo: ApplicationInfo = ApplicationInfo())
+class ApplicationInfo(var flags: Int = 0) { companion object { const val FLAG_DEBUGGABLE=2 } }
+class Context(var packageName: String = "com.titankeys.debug", val applicationInfo: ApplicationInfo = ApplicationInfo(), var buildKind: String = "debug")
+object AppBuild { fun kind(context: Context) = context.buildKind }
 object Log { val lines=mutableListOf<String>(); fun i(tag: String, value: String) { lines += value } }
 object ChineseMenu { fun starts(choices: List<String>) = listOf(0) }
 object KeyEvent { const val KEYCODE_DEL = 67; const val KEYCODE_ENTER = 66; const val KEYCODE_SYM = 63 }
@@ -65,8 +66,10 @@ fun main() {
     check("controls=950,869,950,915,850,915" in Log.lines.last())
     val logged=Log.lines.size
     m.context.packageName="com.titankeys"; m.tap(850f,115f); check(Log.lines.size==logged)
-    m.context.packageName="com.titankeys.debug"; m.context.applicationInfo.flags=0
+    m.context.packageName="com.titankeys.debug"; m.context.buildKind="release"; m.context.applicationInfo.flags=2
     m.tap(850f,115f); check(Log.lines.size==logged)
+    m.context.buildKind="debug"; m.context.applicationInfo.flags=0
+    m.tap(850f,115f); check(Log.lines.size==logged+1) { "Debug build metadata must work without android:debuggable" }
     println("PASS menu touch candidate, three controls, edge, slide, cancel, bounds and Debug-only numeric evidence checks")
 }
 '''.replace("__TOUCHED__", re.search(r"    private var touched = [^\n]+", source).group()).replace("__METHODS__", methods)

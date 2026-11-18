@@ -2,7 +2,6 @@ package com.titankeys.keyboard
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.ApplicationInfo
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
@@ -227,7 +226,7 @@ class ChoicesMenu(
     /** Debug-only numeric evidence: no code, candidates, editor text or app names. */
     private fun observe() {
         if (!context.packageName.endsWith(".debug") ||
-            context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE == 0 || starts.isEmpty() || width <= 0 || height <= 0) return
+            AppBuild.kind(context) != "debug" || starts.isEmpty() || width <= 0 || height <= 0) return
         val at = IntArray(2)
         getLocationOnScreen(at)
         fun centre(col: Int, row: Int): String {

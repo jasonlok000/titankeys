@@ -20,6 +20,8 @@ class InputMethodIndex(entries: List<Entry>) {
         val engine: String? = null,
         /** Its how-to's lines for Settings, from the index ([InputMethod.howTo]); empty where it has none. */
         val howTo: List<String> = emptyList(),
+        /** Its language page's guide, as the index has it (C's data: status, family, keys, roles), passed to Settings as is. */
+        val guide: Map<*, *>? = null,
         /** Its spelling variants, the default first (Portuguese's pt-BR Brasil, pt-PT Portugal); empty where it has none. */
         val variants: List<VariantName> = emptyList(),
         /** The language it types: Serbian's Cyrillic and Latin, Chinese's Yale, Jyutping and Pinyin share one. */
@@ -91,17 +93,18 @@ class InputMethodIndex(entries: List<Entry>) {
                 val language = entry["language"] as? Map<*, *>
                 val id = text("id")
                 val howTo = (entry["howTo"] as? List<*>)?.map { it as? String ?: throw Json.Error("howTo must list text") }.orEmpty()
+                val guide = entry["guide"]?.let { it as? Map<*, *> ?: throw Json.Error("guide must be an object") }
                 val variants = (entry["variants"] as? List<*>)?.map {
                     val variant = it as? Map<*, *> ?: throw Json.Error("each variant must be an object")
                     VariantName(variant["id"] as? String ?: throw Json.Error("each variant must have an id"),
                         variant["name"] as? String ?: throw Json.Error("each variant must have a name"))
                 }.orEmpty()
                 if (language == null) Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"),
-                    entry["engine"] as? String, howTo = howTo, variants = variants)
+                    entry["engine"] as? String, howTo = howTo, guide = guide, variants = variants)
                 else {
                     fun of(key: String) = language[key] as? String ?: throw Json.Error("language.$key must be text")
                     Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String,
-                        howTo = howTo, variants = variants,
+                        howTo = howTo, guide = guide, variants = variants,
                         language = Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
                 }
             })

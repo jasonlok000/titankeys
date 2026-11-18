@@ -1122,6 +1122,8 @@ def write_index_and_list():
                         "locale": im["locale"], "script": im["script"],
                         "engine": (next(iter(engine)) if isinstance(engine, dict) else engine), "language": language_of(im),
                         **({"howTo": im["howTo"]} if im.get("howTo") else {}),
+                        # Its language page's guide (C's data, owner-approved flow, 2026-11-17): points, keys, practice.
+                        **({"guide": im["guide"]} if im.get("guide") else {}),
                         # Its spelling variants (Portuguese's Brasil and Portugal), for Settings' choice: the first is the default.
                         **({"variants": [{"id": v["id"], "name": v["name"]} for v in im["variants"]]}
                            if im.get("variants") else {})})

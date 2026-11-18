@@ -180,8 +180,27 @@ export type InputMethodEntry = {
   id: string; name: string; nameEnglish: string; label: string; script: string; engine: string | null; language: Language;
   /** A few lines on what's special to typing it, for its language's page (tools/im/howto.json); empty where it has none. */
   howTo: string[];
+  /** Its language page's guide (C's data in its im.json), or null where it has none yet. */
+  guide: Guide | null;
   /** Its spelling variants, the default first (Portuguese's Brasil and Portugal); empty where it has none. */
   variants: { id: string; name: string }[];
+};
+
+/** A special key's role on a language page's drawing of the keys: one of the shared role ids (C's, im.json), and F's words. */
+export type KeyRole = { key: "space" | "shift" | "sym" | "enter" | "backspace"; role: string };
+
+/**
+ * An input method's guide for its language page (owner-approved flow, 2026-11-17): a line for its card, How it works, what its
+ * keys type where that isn't the letter (map, and Shift's), the special keys' roles, and a sample for Try it. F: drafts.
+ */
+export type Guide = {
+  status?: "ready" | "experimental";
+  /** Its points' family in F's tools/im/page-text.json (points.<family>); role texts are page-text roles.<key>.<role>. */
+  family?: string;
+  line?: string;
+  points?: string[];
+  keys?: { legend?: string; map?: Record<string, string>; shift?: Record<string, string>; held?: Record<string, string>; roles?: KeyRole[] };
+  practice?: string;
 };
 
 /**

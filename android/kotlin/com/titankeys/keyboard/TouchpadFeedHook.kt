@@ -11,4 +11,7 @@ import android.view.MotionEvent
 internal object TouchpadFeedHook {
     @Volatile
     var dispatch: ((MotionEvent) -> Boolean)? = null
+
+    /** Clear an unfinished feed contact, identified by original down time. */
+    var cancelContact: ((Long) -> Unit)? = null
 }

@@ -63,7 +63,7 @@ class Contact {
 
     private var state: State = State.Idle
     private val pending = ArrayDeque<Settlement>()
-    private val heldKeys = HashSet<Int>()
+    private val heldKeys = HashMap<Int, Long>()
     private var blockedUntil = Long.MIN_VALUE
     private var lastKeyCode = 0
     private var doubleSpace = false
@@ -214,9 +214,9 @@ class Contact {
         return contact.outcome.takeUnless { contact.cancelled }
     }
 
-    fun key(code: Int, down: Boolean, time: Long) {
+    fun key(code: Int, down: Boolean, time: Long, downTime: Long = time) {
         if (down) {
-            heldKeys += code
+            heldKeys[code] = downTime
             for (contact in pending) if (time in contact.startedAt..contact.endedAt + SETTLE_MILLIS) contact.cancelled = true
             (state as? State.Touching)?.let {
                 judge(it, time)
@@ -229,10 +229,14 @@ class Contact {
             lastKeyCode = code
             typing = time - lastKeyDown in 0..TYPING_GAP_MILLIS
             lastKeyDown = time
-        } else heldKeys -= code
+        } else heldKeys.remove(code)
         // A second Space press in a row adds no pause.
         if (doubleSpace && code == KeyEvent.KEYCODE_SPACE) return
         blockedUntil = max(blockedUntil, time + if (typing) TYPING_COOLDOWN_MILLIS else KEY_COOLDOWN_MILLIS)
+    }
+
+    internal fun cancelFeedKey(code: Int, downTime: Long, now: Long) {
+        if (heldKeys[code] == downTime) key(code, false, now)
     }
 
     fun releaseKeys() {

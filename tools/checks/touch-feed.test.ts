@@ -71,3 +71,65 @@ test("only TitanKeys Debug opens the guide at a slide from adb; TitanKeys always
   expect(guide.match(/DEBUG_START_STEP/g)?.length).toBe(2);
   expect(guide).toContain("flow.start(debugStartStep())");
 });
+
+test("Debug queues input only after it verifies the owned editor and hook", () => {
+  for (const [name, hook] of [["KeyFeed", "KeyFeedHook"], ["TouchFeed", "TouchpadFeedHook"]]) {
+    const source = read(`android/debug/recorder/${name}.kt`);
+    expect(source).toContain(`val dispatch = ${hook}.dispatch`);
+    expect(source).toContain("dispatch?.let { FeedEditor.capture(context.packageName) }");
+    expect(source).toMatch(/if \(intent.getBooleanExtra\(FeedBurst.VERIFY_ONLY, false\)\)\s*return answer\(FeedBurst.probeAtUptime\(editor != null\)\)[\s\S]*burst.post\(/);
+    expect(source).toMatch(/if \(!burst.begin\(\)\) return answer\([^)]+\)[\s\S]*burst.post\(/);
+    expect(source).toContain(`{ ${hook}.dispatch }`);
+    expect(source).toContain("{ send ->");
+    expect(source).toContain("send(event)");
+    expect(source).not.toContain("dispatch(event)");
+    expect(source).toContain("${FeedBurst.READY}");
+  }
+});
+
+test("the focus guard checks the same owned editor, window and hook before every dispatch", () => {
+  const guard = read("android/debug/recorder/FeedFocusGuard.kt");
+  expect(guard).toContain("WindowInspector.getGlobalWindowViews()");
+  expect(guard).toContain("window.findFocus() === editor");
+  expect(guard).toContain("window.windowToken === token && editor.windowToken === token");
+  expect(guard).toContain("window.viewTreeObserver === observer.get()");
+  expect(guard).toContain("window.context.packageName != packageName || editor.context.packageName != packageName");
+  expect(guard).toContain("window.hasWindowFocus() || !editor.isFocused");
+  expect(guard).toContain("!editor.onCheckIsTextEditor()");
+  expect(guard).toContain("ime.currentInputMethodInfo?.packageName == packageName && ime.isActive(editor) && ime.isAcceptingText");
+  expect(guard).toContain("WeakReference(editor)");
+  const lease = read("android/debug/recorder/FeedFocusLease.kt");
+  expect(lease).toContain("WeakReference(dispatch)");
+  expect(lease).toContain("currentDispatch()?.takeIf { it === expectedDispatch.get() }");
+  expect(guard).toMatch(/main\.postAtTime\(\{\s*if \(lease.closed\) return@postAtTime\s*val dispatch = lease.checkedDispatch\(\)/);
+});
+
+test("transient focus loss, detach and event failure cancel the whole queued burst", () => {
+  const guard = read("android/debug/recorder/FeedFocusGuard.kt");
+  expect(guard).toContain("if (next !== editorRef.get()) lost()");
+  expect(guard).toContain("if (!focused) lost()");
+  expect(guard).toContain("onViewDetachedFromWindow(view: View) = lost()");
+  expect(guard).toContain("unwatch = editor.watch { finish(cancelled = true) }");
+  expect(guard).toMatch(/catch \(error: RuntimeException\) \{[^}]+finish\(cancelled = true\)/);
+  expect(guard).toContain("main.removeCallbacksAndMessages(this)");
+  expect(guard).toContain("if (lease.sameDispatch() != null)");
+  expect(guard).toContain("runCatching(clearHeldState)");
+  expect(guard).toContain("if (last) finish(cancelled = false)");
+  expect(guard).toContain("it.removeOnGlobalFocusChangeListener(focus)");
+  expect(guard).toContain("it.removeOnWindowFocusChangeListener(window)");
+  expect(guard).toContain("removeOnAttachStateChangeListener(attachment)");
+});
+
+test("feeds report Android uptime for a shared start and reject unbalanced contacts", () => {
+  const guard = read("android/debug/recorder/FeedFocusGuard.kt");
+  const touch = read("android/debug/recorder/TouchFeed.kt");
+  expect(guard).toContain('const val VERIFY_ONLY = "verify_focus_guard"');
+  expect(guard).toContain('const val READY = "focus-guard-v1 ready"');
+  expect(guard).toContain('if (ready) READY else "focus-guard-v1 available"');
+  expect(guard).toContain('uptime=${SystemClock.uptimeMillis()}');
+  expect(guard).toContain('intent.getLongExtra("start_uptime", -1).takeIf { it in now..now + maxDelay }');
+  expect(touch).toContain("require(frame.millis in previous..MAX_MILLIS.toDouble())");
+  expect(touch).toContain("require(!down)");
+  expect(touch).toContain("TouchpadFeedHook.cancelContact?.invoke(it)");
+  expect(read("android/debug/recorder/KeyFeed.kt")).toContain("KeyFeedHook.cancelHeld?.invoke(downTimes)");
+});

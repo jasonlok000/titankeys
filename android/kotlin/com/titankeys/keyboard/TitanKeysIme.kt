@@ -946,13 +946,89 @@ class TitanKeysIme : InputMethodService() {
             registerReceiver(panelTrigger, IntentFilter(PANEL_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
             // The touch simulator's events enter where the firmware's do: this window's touchpad path (TouchpadFeedHook).
-            TouchpadFeedHook.dispatch = { event -> window.callback?.dispatchGenericMotionEvent(event) == true }
+            var feedContact: Pair<Long, EditorInfo>? = null
+            var feeding = false
+            window.callback = TouchpadWindowCallback(window.callback) { event ->
+                if (!feeding && touchpad.accepts(event)) feedContact = null
+                false
+            }
+            TouchpadFeedHook.dispatch = { event ->
+                val info = checkNotNull(currentInputEditorInfo?.takeIf { editing && it.packageName == packageName })
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) feedContact = event.downTime to info
+                feeding = true
+                try {
+                    window.callback?.dispatchGenericMotionEvent(event) == true
+                } finally {
+                    feeding = false
+                    if (event.actionMasked == MotionEvent.ACTION_UP) feedContact = null
+                }
+            }
+            TouchpadFeedHook.cancelContact = { downTime ->
+                val original = feedContact
+                if (original?.first == downTime) {
+                    feedContact = null
+                    if (currentInputEditorInfo === original.second) {
+                        endDeleteHold()
+                        contact.cancelActive()
+                        stopCursor()
+                        main.removeCallbacks(confirmDoubleTap)
+                        main.removeCallbacks(confirmTriple)
+                        main.removeCallbacks(confirmTwoAbove)
+                        main.removeCallbacks(registerGestureLater)
+                        cursorGesture.cancel(SystemClock.uptimeMillis())
+                    }
+                }
+            }
             // Its keys enter where Android's do for the keyboard: onKeyDown and onKeyUp. One the keyboard doesn't take goes on
             // to the app, as Android would send it (KeyFeedHook).
+            val feedKeys = HashMap<Int, Pair<Long, EditorInfo>>()
             KeyFeedHook.dispatch = { event ->
-                val taken = if (event.action == KeyEvent.ACTION_DOWN) onKeyDown(event.keyCode, event) else onKeyUp(event.keyCode, event)
-                if (!taken) currentInputConnection?.sendKeyEvent(event)
+                val code = event.keyCode
+                val info = checkNotNull(currentInputEditorInfo?.takeIf { editing && it.packageName == packageName })
+                val connection = checkNotNull(currentInputConnection)
+                val down = event.action == KeyEvent.ACTION_DOWN
+                if (down && event.repeatCount == 0) feedKeys[code] = event.downTime to info
+                val taken = if (down) onKeyDown(code, event) else onKeyUp(code, event)
+                // If handling the key ended input, it must never fall through to a replacement connection.
+                if (!taken && currentInputEditorInfo === info && currentInputConnection === connection) connection?.sendKeyEvent(event)
+                if (!down) feedKeys.remove(code)
                 taken
+            }
+            KeyFeedHook.cancelHeld = { downTimes ->
+                val current = currentInputEditorInfo
+                val held = downTimes.filter { (code, time) ->
+                    val original = feedKeys[code]
+                    if (original?.first != time) false else {
+                        feedKeys.remove(code)
+                        current === original.second
+                    }
+                }
+                if (held.isNotEmpty()) {
+                    fun owns(event: KeyEvent?) = event?.let { held[it.keyCode] == it.downTime } == true
+                    if (owns(heldBackspace)) {
+                        backspaceRepeat.up()
+                        main.removeCallbacks(repeatBackspace)
+                        modifiers.backspaceReleased()
+                        heldBackspace = null
+                    }
+                    if (owns(heldLetter)) {
+                        holdEngine.cancel()
+                        heldLetter = null
+                    }
+                    if (owns(symDown)) {
+                        main.removeCallbacks(symHeld)
+                        symDown = null
+                        symPress.reset()
+                    }
+                    pendingInput.removeAll { owns(it.event) }
+                    modifiers.cancelFeedKeys(held)
+                    val now = SystemClock.uptimeMillis()
+                    for ((code, downTime) in held) {
+                        // A real press of this key may have superseded the feed's down.
+                        contact.cancelFeedKey(code, downTime, now)
+                    }
+                    showModifiers()
+                }
             }
         }
         updateOverlay()
@@ -4550,7 +4626,7 @@ class TitanKeysIme : InputMethodService() {
             dismissClipOffer()
         }
         // The touchpad hears the physical press now, before the key is typed.
-        contact.key(keyCode, true, event.eventTime)
+        contact.key(keyCode, true, event.eventTime, event.downTime)
         val carried = carryCtrl(event)
         val repeatOfHold = trackHold(carried)
         // A key press means the finger was pressing, not resting on the touchpad.
@@ -5066,7 +5142,9 @@ class TitanKeysIme : InputMethodService() {
         editing = false
         // It holds this keyboard, which must go with it (#85).
         TouchpadFeedHook.dispatch = null
+        TouchpadFeedHook.cancelContact = null
         KeyFeedHook.dispatch = null
+        KeyFeedHook.cancelHeld = null
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null

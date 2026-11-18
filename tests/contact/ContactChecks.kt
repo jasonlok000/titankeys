@@ -10,6 +10,7 @@ private const val ROW_HEIGHT = .25f
 
 fun main() {
     typingBlocksATouch()
+    cancellingAFeedKeyKeepsTheNewerPress()
     panelTakesATouchDuringAKey()
     panelTakesATouchAfterAKey()
     panelSwipe()
@@ -67,6 +68,21 @@ private fun typingBlocksATouch() {
     contact.key(KEY, true, 1_000)
     contact.down(at(.25f, .4f, 1_010))
     same(contact.travel, null, "A touch must be ignored while a key is held for typing")
+}
+
+private fun cancellingAFeedKeyKeepsTheNewerPress() {
+    val contact = Contact()
+    contact.key(KEY, true, 1_000L)
+    contact.key(KEY, true, 1_200L, downTime = 1_000L)
+    contact.cancelFeedKey(KEY, 1_000L, 1_500L)
+    contact.down(at(.25f, .4f, 2_000L))
+    same(contact.travel, 0f, "Cancelling a held feed key also clears its repeats")
+
+    contact.key(KEY, true, 2_100L)
+    contact.key(KEY, true, 2_300L)
+    contact.cancelFeedKey(KEY, 2_100L, 2_500L)
+    contact.down(at(.25f, .4f, 3_000L))
+    same(contact.travel, null, "Cancelling an older feed key must leave a newer press held")
 }
 
 private fun panelTakesATouchDuringAKey() {

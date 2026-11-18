@@ -22,6 +22,7 @@ private const val GAP = 100L
 private const val WORD = 900L
 
 fun main() {
+    aCancelledFeedKeepsNewerModifierPresses()
     heldBackspaceRepeats()
     shiftShowsOnlyWhereItMatters()
     aLostFirstBackspaceDecidesAfresh()
@@ -172,6 +173,20 @@ private fun cornersKeepContentClear() {
     same(corners.inset(50f), 14, "Halfway up the corner content must keep the width of the curve there")
     same(corners.inset(100f), 0, "Above the corner nothing must move")
     same(Corners.None.inset(0f), 0, "With square corners nothing must move")
+}
+
+private fun aCancelledFeedKeepsNewerModifierPresses() {
+    for (code in listOf(SHIFT, ALT, CTRL, SYM, FN)) {
+        val modifiers = Modifiers().apply { fnIsCtrl = true }
+        fun isHeld() = if (modifiers.isCtrl(code)) modifiers.ctrlHeld else modifiers.isHeld(code)
+        modifiers.down(code, 100L)
+        // A physical down can arrive before the synthetic up.
+        modifiers.down(code, 200L)
+        modifiers.cancelFeedKeys(mapOf(code to 100L))
+        same(isHeld(), true, "A stale feed cancellation must keep the newer press of $code")
+        modifiers.cancelFeedKeys(mapOf(code to 200L))
+        same(isHeld(), false, "Cancelling the current feed press must clear $code")
+    }
 }
 
 private fun same(actual: Any?, expected: Any?, message: String) {

@@ -269,12 +269,47 @@ object EnglishOffer {
 
 /**
  * Cangjie's and Quick's next-key preview (owner, 2026-11-17): a finger resting still on a letter shows that key's radical,
- * faded, at the end of the code's tab, after the code typed so far, or alone with nothing typed. Only after [REST_MILLIS]
- * still, so quick typing never flashes it; a lift or another key changes it, and a press types as usual.
+ * faded at the end of the code's tab. The first radical waits for [REST_MILLIS] so quick typing never flashes it.
+ * Once the preview is up, it follows the finger from key to key until the touch ends.
  */
-object RadicalPreview {
-    const val REST_MILLIS = 180L
+class RadicalPreview {
+    private var key = ""
+    private var ready = false
+    private var consumed = false
+    var shown = ""
+        private set
 
-    /** The radical to preview for a finger on [key] in [method], or null where there's none. */
-    fun of(method: InputMethod, key: String): String? = ChineseKeys.radical(method, key)
+    /** Follows a key change. Returns true when this radical still needs the initial dwell. */
+    fun follow(key: String, radical: String): Boolean {
+        if (key != this.key) {
+            this.key = key
+            consumed = false
+        }
+        shown = if (ready && !consumed) radical else ""
+        return !ready && !consumed && radical.isNotEmpty()
+    }
+
+    fun rest(radical: String) {
+        if (consumed) return
+        ready = radical.isNotEmpty()
+        shown = radical
+    }
+
+    /** Typing the hovered key takes its preview until the finger changes keys or lifts. */
+    fun consume(pressed: String): Boolean {
+        if (pressed != key) return false
+        consumed = true
+        shown = ""
+        return true
+    }
+
+    fun clear() {
+        key = ""
+        consumed = false
+        rest("")
+    }
+
+    companion object {
+        const val REST_MILLIS = 180L
+    }
 }

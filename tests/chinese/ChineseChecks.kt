@@ -6,6 +6,7 @@ package com.titankeys.keyboard
  */
 fun main() {
     radicalsOnlyInCangjieAndQuick()
+    radicalPreviewFollowsTheFingerAfterTheFirstRest()
     theMenuOpensOnlyWithMore()
     aChoiceIsAsWideAsItNeeds()
     theRowFillsWToOInOrder()
@@ -196,13 +197,64 @@ fun englishAlternativesUseTheirShownIndex() {
 
 /** Cangjie's and Quick's keys are radicals, N 弓, as their codes show; other input methods have none. */
 fun radicalsOnlyInCangjieAndQuick() {
-    fun method(schema: String) = InputMethod.parse("""{ "id": "zh-test", "name": "t", "nameEnglish": "t", "label": "t", "locale": "zh",
-        "script": "Hani", "keys": "qwerty", "engine": { "rime": "$schema" } }""")
     same("弓", ChineseKeys.radical(method("tk_quick"), "N"), "Quick's N")
     same("日", ChineseKeys.radical(method("tk_cangjie"), "A"), "Cangjie's A")
     same("難", ChineseKeys.radical(method("tk_cangjie"), "X"), "Cangjie's X")
     same(null, ChineseKeys.radical(method("tk_yale"), "N"), "Yale types letters")
-    // No key yet: the preview needs only the input method and the rested key, no engine state, so it shows from the first rest.
-    same("弓", RadicalPreview.of(method("tk_quick"), "N"), "the first rest after a switch previews 弓")
-    same(180L, RadicalPreview.REST_MILLIS, "only after a still rest, so quick typing never flashes it")
+}
+
+private fun method(schema: String) = InputMethod.parse("""{ "id": "zh-test", "name": "t", "nameEnglish": "t", "label": "t", "locale": "zh",
+    "script": "Hani", "keys": "qwerty", "engine": { "rime": "$schema" } }""")
+
+private fun radicalPreviewFollowsTheFingerAfterTheFirstRest() {
+    for (schema in listOf("tk_quick", "tk_cangjie")) {
+        val method = method(schema)
+        val hover = SteadyKey(Layout::keyAt)
+        val preview = RadicalPreview()
+        fun radical() = ChineseKeys.radical(method, hover.key).orEmpty()
+        fun follow() = preview.follow(hover.key, radical())
+        fun landOn(letter: Char) {
+            val (x, y) = Layout.centre(letter)
+            hover.touch(x, y)
+        }
+
+        landOn('N')
+        same(true, follow(), "$schema waits to show the first key")
+        same("", preview.shown, "$schema does not flash during a short touch")
+        preview.rest(radical())
+        same("弓", preview.shown, "$schema previews the first rested radical")
+        landOn('M')
+        same(false, follow(), "$schema does not wait again when the finger slides")
+        same("一", preview.shown, "$schema replaces the old radical on the same update")
+
+        hover.lift(200)
+        same(false, hover.expire(240), "$schema keeps the hover during a brief lift")
+        same("一", preview.shown, "$schema keeps the last radical during the brief lift")
+        landOn('M')
+        same(false, follow(), "$schema resumes on the same key with no delay")
+        same("一", preview.shown, "$schema still previews M")
+
+        landOn('H')
+        follow()
+        same("竹", preview.shown, "$schema can keep hovering while preparing to press")
+        same(false, preview.consume("N"), "$schema does not consume H when typing a different key")
+        same("竹", preview.shown, "$schema keeps H while a different radical is typed")
+        same(true, preview.consume("H"), "$schema consumes H as the typed code is updated")
+        same("", preview.shown, "$schema never shows a second 竹 alongside the typed 竹")
+        same(false, follow(), "$schema does not schedule another preview on the pressed key")
+        same("", preview.shown, "$schema keeps the pressed preview hidden during the same contact")
+        landOn('M')
+        follow()
+        same("一", preview.shown, "$schema resumes previewing on the next key")
+        landOn('H')
+        follow()
+        same("竹", preview.shown, "$schema previews H again after moving away and back")
+
+        hover.lift(400)
+        if (hover.expire(400 + SteadyKey.LIFT_MILLIS)) preview.clear()
+        same("", preview.shown, "$schema clears the radical after a real lift")
+        landOn('M')
+        same(true, follow(), "$schema waits for a rest on the next touch")
+        same("", preview.shown, "$schema does not bring back the old preview on landing")
+    }
 }

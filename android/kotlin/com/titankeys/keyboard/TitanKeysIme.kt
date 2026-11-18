@@ -143,6 +143,7 @@ class TitanKeysIme : InputMethodService() {
         if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(x, y) else Layout.keyAt(x, y)
     }
     private val barHover = SteadyKey(Layout::keyAt)
+    private val radicalPreview = RadicalPreview()
     private var field = Field.None
     /** The user chose to hide the bar in this app. The window stays, one pixel high. See [showSuggestions]. */
     private var barHidden = false
@@ -1554,6 +1555,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        clearRadicalPreview()
         main.post { showGuideExtras() }
         val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
         val nextEditor = EngineEditor(info.packageName, info.fieldId, info.inputType, info.imeOptions,
@@ -1891,6 +1893,7 @@ class TitanKeysIme : InputMethodService() {
         panelHover.keysReleased()
         panelPress = -1
         barHover.keysReleased()
+        clearRadicalPreview()
         super.onWindowHidden()
         sleepIdleBar()
         if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
@@ -2559,6 +2562,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onFinishInput() {
         engineEditor = null
+        clearRadicalPreview()
         // A held Backspace stops with its field.
         backspaceRepeat.up()
         main.removeCallbacks(repeatBackspace)
@@ -3050,6 +3054,7 @@ class TitanKeysIme : InputMethodService() {
             restingKey = ""
             markMenu("")
             showModifierBar()
+            clearRadicalPreview()
         }
     }
 
@@ -3060,24 +3065,46 @@ class TitanKeysIme : InputMethodService() {
             barHover.lift(event.eventTime)
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
             main.removeCallbacks(showRadical)
-            strip?.nextKey = ""
             return
         }
-        if (last == null || !barHover.touch(last.x, last.y)) return
-        restingKey = barHover.key
-        markMenu(restingKey)
-        showModifierBar()
-        // Cangjie and Quick: a finger that stays still on a key previews its radical in the code's tab, faded ([RadicalPreview]).
-        strip?.nextKey = ""
+        if (last == null) return
+        val moved = barHover.touch(last.x, last.y)
+        if (moved) {
+            restingKey = barHover.key
+            markMenu(restingKey)
+            showModifierBar()
+        }
+        // A brief lift cancels the initial dwell. The touchpad can then report a new down on the same key.
+        if (!moved && event.actionMasked != MotionEvent.ACTION_DOWN) return
         main.removeCallbacks(showRadical)
-        if (RadicalPreview.of(languages.current, restingKey) != null && TypingSettings.radicalPreview(this, languages.current.id))
+        if (radicalPreview.follow(barHover.key, radicalUnderFinger()))
             main.postDelayed(showRadical, RadicalPreview.REST_MILLIS)
+        strip?.nextKey = radicalPreview.shown
     }
 
-    /** The rested key's radical, faded at the end of the code's tab, once the finger has stayed [RadicalPreview.REST_MILLIS]. */
+    private fun radicalUnderFinger(): String {
+        if (!editing || field.exact || altOrPanel) return ""
+        val method = languages.current
+        val radical = ChineseKeys.radical(method, barHover.key) ?: return ""
+        return radical.takeIf { TypingSettings.radicalPreview(this, method.id) }.orEmpty()
+    }
+
+    /** Opens the preview on the first rested key. After that, touch moves update it directly. */
     private val showRadical = Runnable {
-        strip?.nextKey = if (editing && !field.exact && modifiers.alt == Modifiers.Level.Off)
-            RadicalPreview.of(languages.current, restingKey).orEmpty() else ""
+        radicalPreview.rest(radicalUnderFinger())
+        strip?.nextKey = radicalPreview.shown
+    }
+
+    private fun clearRadicalPreview() {
+        main.removeCallbacks(showRadical)
+        radicalPreview.clear()
+        strip?.nextKey = ""
+    }
+
+    private fun consumeRadicalPreview(key: String) {
+        if (!radicalPreview.consume(key)) return
+        main.removeCallbacks(showRadical)
+        strip?.nextKey = ""
     }
 
     private val endSlippedCursor = Runnable { stopCursor() }
@@ -3672,6 +3699,7 @@ class TitanKeysIme : InputMethodService() {
                     val shifted = modifiers.shift != Modifiers.Level.Off && !ChineseKeys.usesBar(languages.current)
                     val state = if (key == " ") engine.space() else engine.key(languages.current.letter(key[0], shifted)?.first() ?: if (shifted) key[0] else key[0].lowercaseChar())
                     if (state.handled) {
+                        if (Layout.isLetter(key)) consumeRadicalPreview(key)
                         engineState(state)
                         modifiers.consume()
                         showModifiers()
@@ -4075,6 +4103,8 @@ class TitanKeysIme : InputMethodService() {
             return false
         }
         if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.useHeld() else modifiers.consume()
+        // Replace the hovered glyph as the same key's typed radical reaches the tab.
+        if (chinese && letter && !alt) consumeRadicalPreview(printedLetter(event.keyCode).uppercase())
         engineState(state)
         return true
     }
@@ -4447,6 +4477,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun inputMethodChanged(method: InputMethod) {
+        clearRadicalPreview()
         rawLog?.inputMethod(loggedInputMethod, method.id)
         loggedInputMethod = method.id
         showInputMark()
@@ -5090,6 +5121,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun showModifiers() {
+        if (altOrPanel) clearRadicalPreview()
         showGuideExtras()
         updateAutoShift()
         // Locked plays its feel, and so does unlocking, as a press alone doesn't tell you which it did. Once and off are key

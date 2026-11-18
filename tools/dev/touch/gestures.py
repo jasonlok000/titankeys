@@ -482,7 +482,7 @@ class Script:
 
     def replay_rawlog(self, path, start=None, end=None):
         """A raw log export's touches ('m' lines, through their calibrated samples) and keys ('key' lines, by Android code)."""
-        android_to_linux = {v: self.keymap[k] for k, v in ANDROID_CODES.items() if k in self.keymap}
+        android_to_name = {v: k for k, v in ANDROID_CODES.items() if k in self.keymap}
         base, first = self.t, None
         for raw in open(path, encoding="utf-8", errors="replace"):
             # Only touch and key lines are read; the rest, which can hold typed text, is skipped unread.
@@ -506,13 +506,11 @@ class Script:
                     self.t = max(self.t, base + t - first)
                     self.lift()
             elif kind == "key" and not line.get("g"):
-                code = android_to_linux.get(line.get("c"))
-                if code is None:
+                name = android_to_name.get(line.get("c"))
+                if name is None:
                     continue
                 self.t = max(self.t, base + t - first)
-                self.uses_keys = True
-                self._event(KEYBOARD, EV_KEY, code, 1 if line.get("d") else 0)
-                self._event(KEYBOARD, EV_SYN, SYN_REPORT, 0)
+                self.key(name, line.get("d"))
         self.lift()
 
 

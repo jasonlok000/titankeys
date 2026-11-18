@@ -230,6 +230,7 @@ def main():
     check(touch[0][3] == 3, f"rawlog size: touch major 19 should be sensor step 3, not {touch[0][3]}")
     keys = [(round(t), c, v) for t, d, ty, c, v in script.lines if d == g.KEYBOARD and ty == g.EV_KEY]
     check(keys == [(100, 57, 1), (160, 57, 0)], f"rawlog keys: {keys}")
+    check(script.keyfeed_text() == "D 100 SPACE;U 160 SPACE", f"rawlog key feed: {script.keyfeed_text()}")
 
     # The injector reads what the generator writes, and refuses what it must.
     def inject(text):

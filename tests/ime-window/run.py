@@ -32,6 +32,34 @@ def state():
     )
 
 
+def prepare_debug(package):
+    """Use the launcher playground before measuring its return, not the synthetic test editor."""
+    if package != "com.titankeys.debug":
+        return
+    focus = shell("dumpsys", "window")
+    current = next((line for line in focus.splitlines() if "mCurrentFocus" in line), "")
+    assert f" {package}/" in current, "STOP: Debug must be in front before opening its playground"
+    shell("am", "start", "-W", "-n", f"{package}/com.vandam.ink.MainActivity",
+          "--es", "com.vandam.ink.notification.HREF", "/")
+    for _ in range(12):
+        focus = shell("dumpsys", "window")
+        current = next((line for line in focus.splitlines() if "mCurrentFocus" in line), "")
+        assert f" {package}/" in current, "STOP: Debug lost the foreground during playground setup"
+        if "/com.titankeys.keyboard.GuideActivity" in current:
+            editor, input_type, _ = state()
+            if editor == package and input_type & 0xF == 1:
+                return
+        time.sleep(.5)
+    raise AssertionError("Debug playground did not obtain a focused text editor")
+
+
+def same_editor(package, actual_type, expected_package, expected_type):
+    assert (package, actual_type) == (expected_package, expected_type), (
+        "The focused field changed during the check: "
+        f"expected {expected_package} type=0x{expected_type:x}, "
+        f"got {package} type=0x{actual_type:x}")
+
+
 def main():
     # The maintainer's phone lock, if there is one (tools/phone_lock.py).
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../tools"))
@@ -44,6 +72,7 @@ def main():
     assert args.cycles > 0, "cycles must be positive"
     selected = shell("settings", "get", "secure", "default_input_method").strip()
     assert selected.startswith("com.titankeys") and selected.endswith("TitanKeysIme"), "Select TitanKeys before running"
+    prepare_debug(args.package)
     package, input_type, _ = state()
     assert package == args.package and input_type & 0xF == 1, "Focus a text field in the specified app first"
     # A Debug build also has an icon for the recorder, so one match can't be asked for. The app's main screen is first.
@@ -69,11 +98,11 @@ def main():
             if (package, actual_type) == (args.package, input_type):
                 break
             time.sleep(.5)
-        assert (package, actual_type) == (args.package, input_type), "The focused field changed during the check"
+        same_editor(package, actual_type, args.package, input_type)
         if not visible:
             time.sleep(2)
             package, actual_type, visible = state()
-            assert (package, actual_type) == (args.package, input_type), "The focused field changed during the check"
+            same_editor(package, actual_type, args.package, input_type)
         assert visible, f"TitanKeys window stayed hidden after return {cycle + 1} (home delay {delay}s)"
         print(f"PASS return {cycle + 1}: TitanKeys visible after {delay}s home delay", flush=True)
 

@@ -16,7 +16,7 @@
     "learn": "Learn my words",
     "corrections": "Fix slips as I type",
     "layout": "Layout",
-    "lazySounds": "Lazy sounds (n or l, z or j, ng or none, gw or g)",
+    "lazySounds": "Lazy sounds",
     "radicals": "Show the radicals as I type",
     "alphabets": "Alphabets",
     "fixes": "Fix slips as I type",
@@ -51,6 +51,7 @@
   "roles": {
     "shift": {
       "letters": "Capitals.",
+      "sameLetter": "Types the same letter.",
       "accents": "The capital accent.",
       "secondLetter": "The second letter in the corner.",
       "choices": "More choices: the bigger menu."
@@ -87,7 +88,7 @@
       "Rest a finger on the key under it, then press it."
     ],
     "greek": [
-      "Every key types a Greek letter. The page shows which is which.",
+      "Q types the Greek question mark (;). Shift and Q type a colon (:).",
       "Hold a vowel for its accent. Rest a finger on the key under the one you want, then press it."
     ],
     "korean": [
@@ -101,7 +102,7 @@
       "Enter types the code as letters.",
       "Shift or a swipe up shows more. A swipe down on page 1 closes them.",
       "Sym steps back: the menu, then the code. Hold it for languages.",
-      "One character is one word here: a flick, double Space or a triple tap takes one. Double Space types 。."
+      "A delete flick takes one character. Triple-tap Space to select one. After committing your text, press Space twice for 。."
     ],
     "japanese": [
       "Type in romaji. The kana build above the bar, and the choices sit over the top row.",
@@ -132,7 +133,7 @@
     ],
     "georgian": [
       "Every key types a Georgian letter. The page shows which is which.",
-      "Georgian has no capitals, so Shift gives a second letter on seven keys.",
+      "Shift gives a second Mkhedruli letter on seven keys.",
       "No accents here, so holding a key still gives its symbol."
     ],
     "plain": [

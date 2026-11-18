@@ -64,12 +64,12 @@
     "მისივე"
   ],
   "howTo": [
-    "Each key types the Georgian letter that sounds like it: A is ა, B is ბ. Georgian has no capitals, so Shift types a second letter on seven keys: ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C. No accents here, so holding a key still gives its symbol."
+    "Each key types the Georgian letter that sounds like it: A is ა, B is ბ. This layout uses Mkhedruli. Shift types a second letter on seven keys: ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C. No accents here, so holding a key still gives its symbol."
   ],
   "guide": {
     "status": "experimental",
     "family": "georgian",
-    "line": "Georgian by sound, no capitals.",
+    "line": "Type Mkhedruli using the printed letter keys.",
     "points": [
       "Shift gives ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C."
     ],

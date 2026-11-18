@@ -59,7 +59,7 @@
     "family": "chinese",
     "line": "Cantonese by its sounds, as Jyutping spells them.",
     "points": [
-      "Tones are never typed.",
+      "Tones are optional. After a syllable, type v, x or q for tones 1, 2 or 3. Double the letter for tones 4, 5 or 6.",
       "A whole phrase goes in one run, no spaces."
     ],
     "practice": "neihou",

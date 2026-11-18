@@ -565,7 +565,7 @@ def build_national(data, ident):
     for k in KEYS:
         base, shift = kcm[k]
         # Shift's own letter only where it's a letter and not the capital: Greek's W gives a dead key with Shift, which isn't kept.
-        own = shift and shift != base.upper() and shift.isalpha()
+        own = shift and shift != base.upper() and (shift.isalpha() or (ident, k, shift) == ("el", "q", ":"))
         keys[k] = "%s/%s" % (base, shift) if own else base
     typed = {kcm[k][0] for k in KEYS}
     accents = {k: list(v) for k, v in holds.items()}
@@ -1076,14 +1076,15 @@ ENGINE_MAPS = {
            {"q": "ㅃ", "w": "ㅉ", "e": "ㄸ", "r": "ㄲ", "t": "ㅆ", "o": "ㅒ", "p": "ㅖ"}),
 }
 CANGJIE = {"q": "手", "w": "田", "e": "水", "r": "口", "t": "廿", "y": "卜", "u": "山", "i": "戈", "o": "人", "p": "心", "a": "日",
-           "s": "尸", "d": "木", "f": "火", "g": "土", "h": "竹", "j": "十", "k": "大", "l": "中", "z": "重", "x": "難", "c": "金",
+           "s": "尸", "d": "木", "f": "火", "g": "土", "h": "竹", "j": "十", "k": "大", "l": "中", "z": "符", "x": "難", "c": "金",
            "v": "女", "b": "月", "n": "弓", "m": "一"}
 ENGINE_MAPS["zh-cangjie"] = (CANGJIE, {})
 ENGINE_MAPS["zh-quick"] = (CANGJIE, {})
-# Zhuyin's Hsu layout (tk_zhuyin): the symbol each letter key types first.
-ENGINE_MAPS["zh-zhuyin"] = ({"q": "ㄑ", "w": "ㄨ", "e": "ㄜ", "r": "ㄖ", "t": "ㄊ", "y": "ㄩ", "u": "ㄧ", "i": "ㄞ", "o": "ㄛ",
-                             "p": "ㄆ", "a": "ㄚ", "s": "ㄙ", "d": "ㄉ", "f": "ㄈ", "g": "ㄍ", "h": "ㄏ", "j": "ㄐ", "k": "ㄎ",
-                             "l": "ㄌ", "z": "ㄗ", "x": "ㄒ", "c": "ㄘ", "v": "ㄔ", "b": "ㄅ", "n": "ㄋ", "m": "ㄇ"}, {})
+# Hsu shares keys between initials, finals and tones; the syllable determines their reading.
+ENGINE_MAPS["zh-zhuyin"] = ({"w": "ㄠ", "e": "ㄧㄝ", "r": "ㄖ", "t": "ㄊ", "y": "ㄚ", "u": "ㄩ", "i": "ㄞ", "o": "ㄡ",
+                             "p": "ㄆ", "a": "ㄘㄟ", "s": "ㄙ˙", "d": "ㄉˊ", "f": "ㄈˇ", "g": "ㄍㄜ", "h": "ㄏㄛ", "j": "ㄐㄓˋ",
+                             "k": "ㄎㄤ", "l": "ㄌㄥㄦ", "z": "ㄗ", "x": "ㄨ", "c": "ㄒㄕ", "v": "ㄑㄔ", "b": "ㄅ",
+                             "n": "ㄋㄣ", "m": "ㄇㄢ"}, {})
 LANGUAGE_GROUPS = {
     "zh": [{"title": "Cantonese", "methods": ["yue-yale", "yue-jyutping"]}, {"title": "Mandarin", "methods": ["zh-pinyin", "zh-zhuyin"]},
            {"title": "By shape", "methods": ["zh-cangjie", "zh-quick"]}],
@@ -1174,7 +1175,7 @@ def guide_of(im, experimental):
         roles = {"shift": "letters" if im["rules"].get("capitalise") else "secondLetter", "space": "default", "enter": "default",
                  "backspace": "code", "sym": "default"}
     else:
-        shift = "secondLetter" if shifted else ("accents" if im.get("accents") else "letters")
+        shift = "sameLetter" if ident == "he" else "secondLetter" if shifted else ("accents" if im.get("accents") else "letters")
         roles = {"shift": shift, "space": "default", "enter": "default", "backspace": "default", "sym": "default"}
     return {"status": "experimental" if experimental else "ready", "family": family_of(im), "line": "", "points": [],
             "practice": "",

@@ -59,7 +59,7 @@
     "family": "chinese",
     "line": "Cangjie's first and last parts only.",
     "points": [
-      "Two letters a character, so you'll pick from the bar more often."
+      "Use one or two letters per character. When several characters share a code, pick yours from the bar."
     ],
     "practice": "我",
     "keys": {
@@ -84,7 +84,7 @@
         "j": "十",
         "k": "大",
         "l": "中",
-        "z": "重",
+        "z": "符",
         "x": "難",
         "c": "金",
         "v": "女",

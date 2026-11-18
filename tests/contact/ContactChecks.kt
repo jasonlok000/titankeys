@@ -100,7 +100,7 @@ private fun panelSwipe() {
 
 private fun pagingAllowsHeldDeleteFlick() {
     val contact = Contact()
-    contact.paging = true
+    contact.paging = Contact.Paging.Choices
     contact.down(at(.95f, .4f, 1_000))
     contact.move(listOf(at(.75f, .4f, 1_100)))
     val held = contact.holdDelete(1_500)
@@ -115,7 +115,7 @@ private fun pagingAllowsHeldDeleteFlick() {
 private fun pagingRejectsHeldPageSwipe() {
     for ((x, y) in listOf(.5f to .5f, .3f to .2f)) {
         val contact = Contact()
-        contact.paging = true
+        contact.paging = Contact.Paging.Choices
         contact.down(at(.5f, .2f, 1_000))
         contact.move(listOf(at(x, y, 1_100)))
         same(contact.holdDelete(1_500), null, "A page swipe must not become held deletion")

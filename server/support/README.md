@@ -13,6 +13,8 @@ Send JSON over HTTPS. The app only reads the board while the support page is ope
 | `POST /v1/remove` | `{"accountKey":"…"}` | `204` |
 | `POST /v1/admin/delete` | `{"id":"…"}` with the owner's bearer token | `204` |
 
+The leaderboard response includes `X-TitanKeys-Posting: ready` when the Play package, usable service-account key, admin token and both sip prices are configured. An unconfigured Worker still returns the same leaderboard JSON. The header reflects local configuration without contacting Play.
+
 `accountKey` is a random 32-byte value generated and kept by the app, encoded as 64 lowercase hex characters. Before starting the Play purchase, set the Play obfuscated account ID to the lowercase hexadecimal SHA-256 of the **UTF-8 hex string**. The Worker verifies that purchase account ID against the same hash. Losing the local key means the supporter needs the owner to remove their entry.
 
 ```json

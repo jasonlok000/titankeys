@@ -21,6 +21,7 @@
     <!-- When Restore takes an Export words file from before 3.0, the favourites from the word menu come back with the words. -->
     <string name="favourites_not_imported">The words are imported, but the favourites couldn\'t be kept. Try again.</string>
     <string name="strip_back">Back</string>
+    <item type="id" name="strip_picker_back" />
     <!-- Shows on the strip for a second after TitanKeys has hidden and shown itself to work around Microsoft Teams. The owner's wish. -->
     <string name="strip_teams_egg">FUCK MICROSOFT!!</string>
     <!-- Exact typing's bar, for terminals and remote computers. -->

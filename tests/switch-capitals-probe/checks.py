@@ -15,7 +15,31 @@ for text, method, want in (("Й", "ru", True), ("й", "ru", False), ("Й", "en",
         assert record.call_args.args[1] is want
 print("Exact case, destination and single-key controls passed")
 
+import search_row
 from search_row import transient_starters, words_rows
+
+for sentence, title, flags in ((True, "SENTENCE", "24001"), (False, "PLAIN", "20001")):
+    with patch.object(probe.checks, "keyboard"), patch.object(probe.checks, "adb", side_effect=(
+        "Starting", f"mCurrentFocus=Window{{abc u0 {probe.ACTIVITY}}}",
+        f"mCurrentEditorInfo:\n  inputType=0x{flags} imeOptions=0x51000006",
+    )) as launch:
+        probe.editor(sentence)
+        assert launch.call_args_list[0].args == (
+            "shell", "am", "start", "-W", "-a", f"{probe.checks.APP}.{title}_EDITOR_FIXTURE", "-n",
+            probe.ACTIVITY, "--ez", "sentence_capitals", str(sentence).lower(),
+        )
+with patch.object(search_row, "select"), patch.object(search_row.checks, "adb", return_value="") as launch:
+    try:
+        search_row.trial(0)
+    except search_row.checks.Stop as error:
+        assert "Maps search field flags unconfirmed" in str(error)
+    else:
+        raise AssertionError("The Maps fixture must confirm editor flags before typing")
+    assert launch.call_args_list[0].args == (
+        "shell", "am", "start", "-W", "-a", f"{probe.checks.APP}.MAPS_EDITOR_FIXTURE", "-n",
+        probe.ACTIVITY, "--ez", "maps_search", "true",
+    )
+print("Distinct task identities for the three editor fixtures passed")
 
 starter = ("the", "I", "you")
 next_row = ("a", "new", "one")

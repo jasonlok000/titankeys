@@ -7,7 +7,9 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/dev/touch'))
-from bar_observations import Unobservable, attempt_lines, middle, observed_bar, own_field, pick_verdict, space_verdict, suffix_verdict
+from bar_observations import (
+    Unobservable, attempt_lines, mark_attempt, middle, observed_bar, own_field, pick_verdict, read_attempt, space_verdict, suffix_verdict,
+)
 
 
 class Observations(unittest.TestCase):
@@ -25,6 +27,26 @@ class Observations(unittest.TestCase):
             attempt_lines('D/TitanKeysBar(10): bar: el - | καλημέρα | -', 'missing')
         with self.assertRaises(Unobservable):
             attempt_lines('I/Other(10): charter-current', 'charter-current')
+
+    def test_log_window_starts_at_phone_time_and_still_requires_exact_marker(self):
+        calls = []
+
+        def adb(*args):
+            calls.append(args)
+            if args == ('shell', 'date', '+%s'):
+                return '1795025000'
+            if 'window' in args:
+                return 'mCurrentFocus=Window{u0 com.titankeys.debug/com.titankeys.keyboard.SpaceGestureActivity}'
+            return ''
+
+        checks = SimpleNamespace(APP='com.titankeys.debug', Stop=RuntimeError, adb=adb, field=lambda: '')
+        with patch.dict(sys.modules, {'checks': checks}):
+            attempt = mark_attempt()
+            with self.assertRaises(Unobservable):
+                read_attempt(attempt)
+        self.assertEqual(attempt[1], '1795025000.000')
+        self.assertIn(('logcat', '-d', '-v', 'brief', '-T', '1795025000.000', '-s',
+                       'TitanKeysCodex:I', 'TitanKeysBar:D', '*:S'), calls)
 
     def test_marker_without_new_bar_or_with_new_notice_never_reuses_old_row(self):
         head = 'D/TitanKeysBar(10): bar: ja - | old | -\nI/TitanKeysCodex(20): charter-current\n'
@@ -95,6 +117,8 @@ class Observations(unittest.TestCase):
                 return 'mCurrentFocus=Window{u0 com.titankeys.debug/com.titankeys.keyboard.SpaceGestureActivity}'
             if 'getprop' in args:
                 return 'I'
+            if 'date' in args:
+                return '1795025000'
             return ''
         checks = SimpleNamespace(APP='com.titankeys.debug', Stop=RuntimeError, adb=adb, field=lambda: '')
         with patch.dict(sys.modules, {'checks': checks, 'interactions_batch': SimpleNamespace(TAG='TitanKeysBar')}):
@@ -110,6 +134,8 @@ class Observations(unittest.TestCase):
         calls = []
         def adb(*args):
             calls.append(args)
+            if 'date' in args:
+                return '1795025000'
             return 'mCurrentFocus=Window{u0 com.titankeys.debug/com.titankeys.keyboard.SpaceGestureActivity}' if 'window' in args else ''
         checks = SimpleNamespace(APP='com.titankeys.debug', Stop=RuntimeError, adb=adb, field=lambda: '')
         with patch.dict(sys.modules, {'checks': checks}):

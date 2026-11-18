@@ -260,8 +260,68 @@ def check_q_mark():
                    "Q compared with the fresh-field reference after changing methods in place", name)
 
 
+def switcher_events():
+    lines = adb("logcat", "-d", "-s", "TitanKeysSym").splitlines()
+    return [line.split("TitanKeysSym:", 1)[1].split(" (app ", 1)[0].strip()
+            for line in lines if "TitanKeysSym: Switcher " in line]
+
+
+def check_switcher_back():
+    """Both Back inputs navigate without changing the active method or the field, with all three Chinese methods showing."""
+    methods = ["zh-pinyin", "yue-jyutping", "yue-yale"]
+    on = ["en", *methods, "af"]
+    setup(on, "en")
+    before = checks.field()
+    offset = len(switcher_events())
+    play(*HOLD_SYM, "key:t", "+400", shot="switcher-chinese-back", at=1650)
+    play("key:p", "+400")  # Chinese methods back to languages.
+    play("key:t", "+400", "key:del", "+400")  # The physical key below P does the same.
+    checks.guarded("tap", str(column_x(9)), str(BAR_Y))  # At the root, the screen arrow dismisses.
+    time.sleep(.4)
+    events = switcher_events()[offset:]
+    root = "Switcher row: languages en,zh,af"
+    row = "Switcher row: methods " + ",".join(methods)
+    current = language_checks.saved_methods()
+    record("switcher-back", events == [root, row, root, row, root, "Switcher dismissed"]
+           and current == (on, "en") and checks.field() == before,
+           f"Both method row returns and screen dismissal: {events}; current {current[1]}", "switcher-chinese-back")
+
+
+def check_chinese_method_row():
+    """With English and Chinese on, held Sym opens all three Chinese methods before anyone types in Chinese."""
+    methods = ["zh-pinyin", "yue-jyutping", "yue-yale"]
+    on = ["en", *methods]
+    setup(on, "en")
+    ids = language_checks.languages.subtype_ids()
+    offset = len(switcher_events())
+    play(*HOLD_SYM)
+    events = switcher_events()[offset:]
+    row = "Switcher row: methods " + ",".join(methods)
+    before = language_checks.active_method(on, ids)
+    record("sym-chinese-methods", events == [row] and before == "en",
+           f"Held Sym from English opened {events}; active before a pick was {before}")
+    if events != [row] or before != "en":
+        return
+    play("key:t", "+700")
+    selected = language_checks.active_method(on, ids)
+    record("sym-chinese-choice", selected == "yue-jyutping", f"T in the method row picked {selected}")
+    if selected != "yue-jyutping":
+        return
+    offset = len(switcher_events())
+    checks.guarded("tap", str(column_x(0)), str(BAR_Y))
+    time.sleep(.4)
+    events = switcher_events()[offset:]
+    record("q-chinese-methods", events == [row],
+           f"The Q mark in {selected} opened {events}")
+    if events == [row]:
+        play("key:p", "+300", "key:p", "+300")
+    play(*HOLD_SYM)
+    back = language_checks.active_method(on, ids)
+    record("sym-chinese-back-to-english", back == "en", f"Held Sym from Chinese switched directly to {back}")
+
+
 BATCH = [check_centred, check_one_mark_per_tile, check_screen_taps, check_fifth_language, check_fifth_language_refused,
-         check_two_toggle, check_q_mark]
+         check_two_toggle, check_q_mark, check_switcher_back, check_chinese_method_row]
 HANDS = ["A tap on a clipboard item (a clip saved first): one screen_tap",
          "A tap on a cell in Chinese's bigger menu picks it and logs (after B's merge)"]
 

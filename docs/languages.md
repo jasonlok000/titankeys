@@ -369,58 +369,44 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
   - **A tap on the mark switches input method within the language,** never the language: with two on, to the other; with
     three or more, the language's row in the switcher; with one, nothing (`SwitchOverlay.markTap`). Only the mark drawn over
     Q takes a touch. No hover effect.
-- **Two languages on:** a held Sym switches to the other one at once, with no switcher, to the input method last used in
-  it (or its first), as `SwitchOverlay.toggle` decides (owner, 2026-11-16). Three or more open the switcher. The input
-  methods last used are remembered while the keyboard runs.
+- **Two languages on:** hold Sym to go straight to the other language. If it has several methods on, its method row opens
+  so you can pick one. If it has one, that method starts typing immediately. Three or more languages open the language row.
 - After a switch, the bar says nothing (owner, 2026-11-16: "I don't like the XX it is wording"): the language mark at Q
   shows which types. A screen reader hears "Typing in Spanish" (F: draft).
 - Alt + Sym keeps going to Android's next keyboard, as today.
 
 ## Settings > Languages
 
-Languages, then input methods, the Gboard way (owner, 2026-11-16). Settings' Languages section, first in Settings, has one row, Languages,
-with the names of the ones that are on.
+The first row in Settings opens **Languages**. **On** lists enabled languages in the switcher's order and shows how many
+methods are on for languages with several. **All languages** lists the rest and shows their Ready or Experimental status.
 
-**Languages** (`app/settings/languages/index.tsx`):
-- Every language, grouped by script; the ones that are on sit at the top in the switcher's order. Each row shows its
-  English name, with "· experimental" for every language but English and Chinese (F: draft), or the input methods that
-  are on when it has several.
-- **A language's page** (`app/settings/languages/language.tsx`, the route's `language` parameter): its input methods, each with a
-  switch, and its own options: English's Spelling, Chinese's Characters. An experimental language says once, under its
-  name, what that means (F: draft).
-- **How to type** (owner, 2026-11-17: "we shd have basic instructions in text in each language specifically"): a language's page
-  shows, between its input methods and its options, what's special to typing each one, under its name where the language has
-  several (`lib/how-to.tsx`). The lines are F's, kept in `tools/im/howto.json` (input method id: lines);
-  `tools/im/make.py --howto` writes them into each `im.json` as `"howTo"` and into the index, which Settings reads.
-  `tools/checks/im.test.ts` checks that the three agree. An input method with none shows nothing.
-- English can't be turned off while it's the only one.
-- **Names:** each row shows the input method's own name, which is CLDR's name for its language in that language,
-  capitalised (Français, Русский, Indonesia); `tools/im/make.py` stops if one differs, and `tests/languages` checks the
-  files. Chinese input methods are named for their spelling (漢語拼音, 粵拼, 耶魯拼音). Ink draws the page with the app's
-  text fonts (`assets/fonts`, built by `tools/im/fonts.py`): Inter with Latin and its extensions, Greek and Cyrillic, and
-  Noto Sans Georgian's letters, and the few Hangul and Chinese characters the app's text uses, from Noto Sans CJK (Ink's
-  fallback to Android's CJK font didn't reach the Titan 2 Elite, so 한국어 and the Chinese names were blank). A letter
-  none of them has is left blank, which is why Русский was blank while the fonts were Latin-1 only; `tests/languages`
-  fails on a name with a letter the fonts lack, and `tools/im/fonts.py` adds it.
-- **Headers:** each script has a header (Latin letters, Cyrillic, Greek, Georgian, Korean, Chinese); `tools/checks/im.test.ts`
-  fails on a script without one, which would show its four-letter code.
-- At most 8 on, the overlay's places. The 9th switch says why it won't turn on: "Eight at a time. Turn one off first."
-- Each input method's page shows its name, its source and licence, its variants when it has them (Portuguese), and
-  "Fix typos as you type" for it, off by default.
+Pick a language to turn its input methods on or off and choose options such as English spelling, Chinese characters,
+or a Portuguese spelling variant. Expand an input method to see its key map and options. You can turn on up to four
+languages and up to four methods in each language. Keep at least one method on.
+
+**Guide & practice** opens the language's instructions and key map. The guide shows what the physical keys type, including
+the supported Shift and held layers. Where a language has several methods, the guide explains their shared keys and each
+method's map stays on its card. **Try it** lets you type with an enabled method from that language. Your choice applies only
+to the practice field.
 
 **Chinese characters** (`app/settings/chinese.tsx`), a ChoicePage like English spelling:
-- Traditional (Hong Kong), Traditional (Taiwan), Simplified (mainland China).
+- 正體中文（香港）, 正體中文（臺灣）, 简体中文（中国大陆）.
 - One setting for every Chinese input method.
 - **Traditional is 正體 (owner, 2026-11-16: "For traditional chinese, call it 正體中文 instead of 繁體中文").** Wherever
-  TitanKeys names Traditional characters in Chinese, it's 正體中文 (香港正體, 臺灣正體 on Rime's variant switch), never
-  繁體中文. The Settings page's English labels stay.
+  TitanKeys names Traditional characters in Chinese, it's 正體中文 (香港正體 and 臺灣正體 on Rime's variant switch).
 - **No default (owner, 2026-11-16): you choose.** The first time the keyboard switches to a Chinese input method with no
   variant picked, it opens this page, once (`ChineseSetup`; Reset most things clears the once with the variant). Until a
-  variant is picked, the bar's only choice says to pick one. Nothing is guessed from the phone's region.
-  The page's subtitle: "Pick how your characters come out. You can change it any time."
+  variant is picked, the bar's only choice says to pick one.
 
-The settings live in `typing_settings` with the others: `inputMethods` (the ordered list of ids that are on),
-`imVariant.<id>`, `imAutocorrect.<id>` and `chineseVariant` (`zh_hk`, `zh_tw`, `zh_hans`).
+## Settings > Typing
+
+Open **Typing** to change typo fixes, capitals, spacing and symbol holds where your language supports them. With more than
+one language on, **Editing** lets you pick which enabled language to change. With one on, its controls open directly.
+English also has swipe typing and shorthand. **Learn my words** applies across languages. The hold time is shared by
+languages that use it.
+
+Typing uses each language's saved values or the shared defaults if it has none. Editing English while it is the only
+language on updates both English's own values and the defaults.
 
 ## How Rime plugs in
 

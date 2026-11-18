@@ -14,6 +14,6 @@ export function HowTo({ methods, language }: { methods: InputMethodEntry[]; lang
     ? families[guide.family] : undefined;
   const lines = methods.length === 1 && guide?.points?.length ? guide.points : shared;
   return lines?.length ? <Section title={pageText.page.how}>
-    {lines.map((line, index) => <Note key={index}>{t(line)}</Note>)}
+    {lines.map((line, index) => <Note key={index} accessible>{t(line)}</Note>)}
   </Section> : null;
 }

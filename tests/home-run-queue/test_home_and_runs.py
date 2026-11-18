@@ -189,11 +189,18 @@ class LiveSwitchTest(unittest.TestCase):
             self.assertTrue(language_checks.switch_live(methods, "sr-latn"))
         play.assert_called_once_with("key:sym:900:none", "+500", "key:u", "+500", "key:y", "+500")
 
-    def test_toggle_then_mark_can_select_the_nondefault_method(self):
-        with patch.object(language_checks, "active_method", side_effect=["en", "yue-yale", "yue-jyutping"]), \
+    def test_two_languages_open_the_destination_method_row_directly(self):
+        with patch.object(language_checks, "active_method", side_effect=["en", "yue-jyutping"]), \
              patch.object(language_checks, "play") as play, patch.object(checks, "guarded") as guarded:
             self.assertTrue(language_checks.switch_live(["en", "yue-yale", "yue-jyutping"], "yue-jyutping"))
-        play.assert_called_once_with("key:sym:900:none", "+500")
+        play.assert_called_once_with("key:sym:900:none", "+500", "key:y", "+500")
+        guarded.assert_not_called()
+
+    def test_q_changes_methods_within_the_current_language(self):
+        with patch.object(language_checks, "active_method", side_effect=["yue-yale", "yue-jyutping"]), \
+             patch.object(language_checks, "play") as play, patch.object(checks, "guarded") as guarded:
+            self.assertTrue(language_checks.switch_live(["en", "yue-yale", "yue-jyutping"], "yue-jyutping"))
+        play.assert_not_called()
         guarded.assert_called_once_with("tap", "54", "1170")
 
     def test_fallback_only_when_live_readback_fails(self):

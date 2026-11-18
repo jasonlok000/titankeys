@@ -215,13 +215,15 @@ def check_yale_warm():
     start(["en", "yue-yale", "zh-pinyin"], "zh-pinyin")
     play(*keys("nihao"), "+500", "key:space", "+800")
     mark()
-    play(*HOLD_SYM, f"key:{TILE_KEYS[1]}", "+500", *keys("nei"), "+800")
+    # Two Chinese methods are on, so Q picks the other one within Chinese.
+    checks.guarded("tap", str(switcher_checks.column_x(0)), str(switcher_checks.BAR_Y))
+    play(*keys("nei"), "+800")
     lines = bar_lines()
     warming = [l[1] for l in lines if l[0] == "notice" and "Warming up" in l[1]]
-    bars = [l for l in lines if l[0] == "bar"]
-    record("yale-warm", (not warming) if lines else None,
+    verdict = switch_verdict(lines, "yue-yale")
+    record("yale-warm", verdict and not warming if verdict is not None else None,
            f"Rime warm from Pinyin, then Yale: notices {warming or 'none'}; the bar {shown(lines)}"
-           + ("" if bars else f" ({TAG} missing?)"))
+           + ("" if verdict is not None else " (Yale bar not observed)"))
 
 
 BATCH = [check_korean_startup, check_toggle, check_switcher, check_alt_sym, check_98, check_mixed, check_yale_warm]

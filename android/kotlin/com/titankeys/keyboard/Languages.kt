@@ -190,9 +190,6 @@ internal class Languages(
         if (id != target) use(id)
     }
 
-    /** Each language's input method last typed with, by language id, for the two-language toggle ([SwitchOverlay.toggle]). */
-    val lastUsed = HashMap<String, String>()
-
     /**
      * As the keyboard's service is made (boot, or the keyboard restarted), before any field: every engine of an input method
      * that's on warms then, once a process, so nobody waits for one (owner, 2026-11-17: "best if we could make it so that
@@ -242,7 +239,6 @@ internal class Languages(
 
     private fun use(id: String) {
         target = id
-        if (!practising) on.firstOrNull { it.id == id }?.let { lastUsed[it.language.id] = id }
         val ticket = ++loading
         val listTicket = slot.begin(id)
         // The last input method's next-word table goes with its list.
@@ -491,7 +487,8 @@ internal sealed interface LanguagePicker {
         LanguagePicker {
         private val labels = opened?.methods?.map { it.label } ?: languages.map { it.language.label }
         override val notice = Strip.Notice.Picker(labels, SwitchOverlay.columns(labels.size),
-            opened?.methods?.indexOfFirst { it.id == current } ?: languages.indexOfFirst { on -> on.methods.any { it.id == current } })
+            opened?.methods?.indexOfFirst { it.id == current } ?: languages.indexOfFirst { on -> on.methods.any { it.id == current } },
+            back = true)
         fun choice(key: String) = SwitchOverlay.choice(key, labels.size)
     }
 }

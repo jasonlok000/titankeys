@@ -243,11 +243,13 @@ test("a flick with a code goes through the engine before deleting from the edito
 });
 
 test("the mark over Q takes a tap over the choices row too, not only on the idle bar (owner, 2026-11-17: 耶 did nothing)", () => {
-  const right = body(strip, "markTouchRight");
-  expect(right).toContain("markRight > 0 -> markRight");
-  expect(right).toContain("(notice as? Notice.Picker)?.mark?.isNotEmpty() == true -> menuColumn(ChineseRow.MARK).second");
+  const hit = body(strip, "hitsMark");
+  expect(hit).toContain("x <= markRight + slop && y < markBottom");
+  expect(hit).toContain("val shown = notice as? Notice.Picker ?: return false");
+  expect(hit).toContain("shown.mark.isNotEmpty() && inputMark.isNotEmpty()");
   // The tap is tested before the row's own items, so the mark never falls through to a choice or to nothing.
   const touch = body(strip, "onTouchEvent");
-  expect(touch.indexOf("markTouchRight()")).toBeGreaterThan(-1);
-  expect(touch.indexOf("markTouchRight()")).toBeLessThan(touch.indexOf("notice is Notice.Picker && pickerTap != null"));
+  const tap = touch.indexOf("hitsMark(event.x, event.y)");
+  expect(tap).toBeGreaterThan(-1);
+  expect(tap).toBeLessThan(touch.indexOf("notice is Notice.Picker && pickerTap != null"));
 });

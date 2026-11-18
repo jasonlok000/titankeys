@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import methods from "../../android/assets/im/index.json";
 import languages from "../../android/assets/im/languages.json";
 import text from "../../tools/im/page-text.json";
-import { availableSettings, globalSettings, languagePage, practiceMethod, practicePrompt, unavailableNotes } from "../../lib/language-page";
+import { availableSettings, globalSettings, languagePage, listMethodCount, practiceMethod, practicePrompt, sharedKeyRoles, unavailableNotes } from "../../lib/language-page";
 import type { InputMethodEntry } from "../../lib/titankeys";
 
 test("every key role on the language diagrams has an explanation", () => {
@@ -12,6 +12,21 @@ test("every key role on the language diagrams has an explanation", () => {
       expect(roles[entry.key]?.[entry.role]).toBeTruthy();
     }
   }
+});
+
+test("enabled language rows show how many of their methods are on", () => {
+  expect(listMethodCount(6, 1)).toBe("1 of 6 on");
+  expect(listMethodCount(6, 4)).toBe("4 of 6 on");
+  expect(listMethodCount(6, 0)).toBeUndefined();
+  expect(listMethodCount(1, 1)).toBeUndefined();
+});
+
+test("multi-method diagrams only show roles the methods agree on", () => {
+  const chinese = methods.filter(method => method.language.id === "zh") as InputMethodEntry[];
+  expect(sharedKeyRoles(chinese).map(role => role.key).sort()).toEqual(["backspace", "enter", "shift", "space", "sym"]);
+  const english = { id: "en", guide: null } as InputMethodEntry;
+  expect(sharedKeyRoles([...chinese, english])).toEqual([]);
+  expect(sharedKeyRoles([])).toEqual([]);
 });
 
 test("language pages explain every unavailable language setting", () => {

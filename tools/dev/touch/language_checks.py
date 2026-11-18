@@ -153,21 +153,14 @@ def switch_live(on, target):
         return None
 
     held = ["key:sym:900:none", "+500"]
-    if len(groups) == 2:
-        # Held Sym toggles to the other language's last-used method, not necessarily the target.
-        if current not in wanted:
-            play(*held)
-            current = observe(lambda method: method in wanted)
-            if current is None:
-                return False
-        if current != target:
-            # Q's language mark picks the other method, or opens this language's row when there are three or more.
-            checks.guarded("tap", "54", "1170")
-            if len(wanted) > 2:
-                play(f"key:{pick_key(wanted.index(target), len(wanted))}", "+500")
+    if len(groups) == 2 and current in wanted:
+        # Q changes methods within the current language. Held Sym goes to the other language.
+        checks.guarded("tap", "54", "1170")
+        if len(wanted) > 2:
+            play(f"key:{pick_key(wanted.index(target), len(wanted))}", "+500")
     else:
         moves = held
-        if len(groups) > 1:
+        if len(groups) > 2:
             moves += [f"key:{pick_key(groups.index(wanted), len(groups))}", "+500"]
         if len(wanted) > 1:
             moves += [f"key:{pick_key(wanted.index(target), len(wanted))}", "+500"]

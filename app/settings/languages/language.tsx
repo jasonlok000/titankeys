@@ -1,21 +1,13 @@
-import { useEffect, useState } from "react";
 import { Field, Screen, Section, navigate, useAction, useRouteParams, useSnapshot } from "ink";
-import { type InputMethodEntry, type LanguageValues, markLanguageNoteSeen, state, update } from "../../../lib/titankeys";
+import { type InputMethodEntry, state, update } from "../../../lib/titankeys";
 import { Toggle } from "../../../lib/app-haptics";
 import { Note } from "../../../lib/note";
-import { MAX_LANGUAGES, MAX_PER_LANGUAGE, languageValues, languagesOf, languagesOn, typingPerLanguage } from "./index";
+import { MAX_LANGUAGES, MAX_PER_LANGUAGE } from "./index";
 import { spellingLabel } from "../spelling";
 import { chineseLabel } from "../chinese";
-import { fixesLabel } from "../fixes";
-import { holdLabel } from "../hold";
-import { sentenceSpacesLabel } from "../sentence-spaces";
-import { shorthandLabel } from "../shorthand/index";
-import { HowTo } from "../../../lib/how-to";
-import { TryIt } from "../../../lib/try-it";
-import { KeysDrawing } from "../../../lib/keys-drawing";
 import { MethodCard, MethodControls, MethodGroups } from "../../../lib/method-card";
-import { availableSettings, languagePage, unavailableNotes, type PageSetting } from "../../../lib/language-page";
-import { textFor, translator } from "../../../lib/language-copy";
+import { availableSettings, languagePage, languagesOf, languagesOn } from "../../../lib/language-page";
+import { guidePracticeLabel, textFor } from "../../../lib/language-copy";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
@@ -25,18 +17,8 @@ export default function LanguagePage() {
   const { language: routeLanguage } = useRouteParams();
   const id = typeof routeLanguage === "string" ? routeLanguage : undefined;
   const pageText = textFor(id);
-  const t = translator(id);
   const result = useSnapshot(state);
   const save = useAction(update);
-  // The first time anything but English alone is on, the typing settings move here: a line says so, once, and stays for this
-  // visit (owner, 2026-11-17).
-  const [moved, setMoved] = useState(false);
-  const firstMove = result.status === "ready" && typingPerLanguage(result.data) && !result.data.languageNoteSeen;
-  useEffect(() => {
-    if (!firstMove) return;
-    setMoved(true);
-    void markLanguageNoteSeen();
-  }, [firstMove]);
   if (result.status !== "ready") return <Screen title={pageText.page.language} />;
   const row = languagesOf(result.data).find(each => each.language.id === id);
   if (!row) return <Screen title={pageText.page.language} />;
@@ -51,56 +33,35 @@ export default function LanguagePage() {
     if (next.length === 0) return;
     void save.run({ inputMethods: next });
   };
-  const subtitle = language.experimental ? pageText.status.experimentalNote : undefined;
+  const status = language.experimental ? pageText.status.Experimental : pageText.status.Ready;
   const settings = result.data;
   const page = languagePage(language.id);
-  const own = languageValues(settings, language.id);
-  const write = (values: Partial<LanguageValues>) => void save.run({ languageSettings: { [language.id]: values } });
-  const open = (path: string) => navigate({ path, params: { language: language.id } });
   const pageRows = page?.settings ?? [];
-  const perLanguage = typingPerLanguage(settings);
-  const languageRows = availableSettings(pageRows, "language")
-    .filter(row => perLanguage || row.id === "spelling" || row.id === "chineseCharacters");
-  const has = (id: PageSetting["id"]) => languageRows.some(row => row.id === id);
-  const notes = unavailableNotes(pageRows, language.name, pageText);
+  const languageRows = availableSettings(pageRows, "language");
+  const hasSpelling = languageRows.some(row => row.id === "spelling");
+  const hasCharacters = languageRows.some(row => row.id === "chineseCharacters");
   const wording = pageText.settings;
-  const doubleSpace = language.stop === "." ? wording.doubleSpace : pageText.page.languageFullStop.replace("{stop}", language.stop);
   const single = methods.length === 1 ? methods[0] : undefined;
-  const options = languageRows.length > 0 || (single ? availableSettings(pageRows, "input-method", single.id).length > 0 : false);
-  return <Screen title={language.name} subtitle={subtitle}>
-    {moved && <Note>{pageText.page.moved}</Note>}
+  const options = hasSpelling || hasCharacters || (single && availableSettings(pageRows, "input-method", single.id).length > 0);
+  return <Screen title={language.name} subtitle={status}>
+    {language.experimental && <Note accessible>{pageText.status.experimentalNote}</Note>}
     {single && <Section title={pageText.page.method}>
       <Toggle label={single.name}
         value={inputMethods.includes(single.id)} onChange={value => set(single, value)} />
     </Section>}
     {options && <Section title={pageText.page.options}>
-      {has("spelling") && <Field label={wording.spelling} href="/settings/spelling">{spellingLabel(settings)}</Field>}
-      {has("chineseCharacters") && <Field label={wording.chineseCharacters} href="/settings/chinese">{chineseLabel(settings)}</Field>}
-      {has("fixes") && <Toggle label={wording.fixes} value={own.autocorrect} onChange={autocorrect => write({ autocorrect })} />}
-      {has("fixes") && language.id === "en" && own.autocorrect && <Field label={pageText.page.fixes} href="/settings/fixes">{fixesLabel(settings)}</Field>}
-      {has("capitals") && <Toggle label={wording.capitals} value={own.autoCapitalise}
-        onChange={autoCapitalise => write({ autoCapitalise })} />}
-      {has("sentenceSpaces") && <Field label={wording.sentenceSpaces} onPress={() => open("/settings/sentence-spaces")}>
-        {sentenceSpacesLabel(settings, language.id)}</Field>}
-      {has("commaSpace") && <Toggle label={wording.commaSpace} value={own.commaSpace} onChange={commaSpace => write({ commaSpace })} />}
-      {has("doubleSpace") && <Toggle label={doubleSpace} value={own.autoPunctuation}
-        onChange={autoPunctuation => write({ autoPunctuation })} />}
-      {has("hold") && <Field label={wording.hold} onPress={() => open("/settings/hold")}>{holdLabel(settings, language.id)}</Field>}
-      {has("swipe") && <Toggle label={wording.swipe} value={settings.swipeTyping}
-        onChange={swipeTyping => void save.run({ swipeTyping })} />}
-      {has("shorthand") && <Field label={wording.shorthand} href="/settings/shorthand">{t(shorthandLabel(settings))}</Field>}
+      {hasSpelling && <Field label={wording.spelling} href="/settings/spelling">{spellingLabel(settings)}</Field>}
+      {hasCharacters && <Field label={wording.chineseCharacters} href="/settings/chinese">{chineseLabel(settings)}</Field>}
       {single && <MethodControls im={single} rows={pageRows} settings={settings} />}
     </Section>}
-    {notes.length > 0 && <Section title={pageText.page.unavailable}>{notes.map(line => <Note key={line}>{line}</Note>)}</Section>}
     {!single && <MethodGroups language={language.id} page={page} methods={methods} card={im => <MethodCard key={im.id} im={im}
-      name={im.name}
       value={inputMethods.includes(im.id)} onChange={value => set(im, value)}>
       <MethodControls im={im} rows={pageRows} settings={settings} />
     </MethodCard>} />}
-    {languagesFull && <Note>{pageText.page.languagesFull}</Note>}
-    {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note>{pageText.page.methodsFull}</Note>}
-    <HowTo language={language.id} methods={methods} />
-    {single && <KeysDrawing im={single} />}
-    <TryIt language={language.id} key={language.id} methods={on} />
+    {!single && <Note accessible>{pageText.list.count.replace("{n}", String(on.length)).replace("{max}", String(methods.length))}</Note>}
+    {languagesFull && <Note accessible>{pageText.page.languagesFull}</Note>}
+    {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note accessible>{pageText.page.methodsFull}</Note>}
+    <Field label={guidePracticeLabel(language.id)}
+      onPress={() => navigate({ path: "/settings/languages/guide", params: { language: language.id } })} />
   </Screen>;
 }

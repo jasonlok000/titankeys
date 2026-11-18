@@ -51,8 +51,10 @@ test("deep links land under the right parents", () => {
   expect(parentOf("/settings/snippets/edit")).toBe("/settings/snippets");
   // A language's page, and its options, go back to the Languages list, not to the top of Settings.
   expect(parentOf("/settings/languages/language")).toBe("/settings/languages");
+  expect(parentOf("/settings/languages/guide")).toBe("/settings/languages/language");
   expect(parentOf("/settings/spelling")).toBe("/settings/languages");
   expect(parentOf("/settings/chinese")).toBe("/settings/languages");
+  for (const page of ["fixes", "hold", "sentence-spaces", "shorthand"]) expect(parentOf(`/settings/${page}`)).toBe("/settings/typing");
 });
 
 test("only the top of Settings has ×; every other page gets Ink's ← alone", () => {

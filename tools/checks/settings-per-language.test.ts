@@ -1,30 +1,68 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import indexed from "../../android/assets/im/index.json";
+import { languageValues } from "../../lib/language-page";
+import type { InputMethodEntry, LanguageValues } from "../../lib/titankeys";
+import { typingLanguages, typingRows, typingUpdate } from "../../lib/typing-settings";
 
-// Language-dependent settings live in the language (owner, 2026-11-17). With English alone, Settings looks as it did. With more,
-// Typing is a door to the languages, and each language's page shows the rows that work in it (LanguageSettings.kt, checked in
-// tests/languages), with its own values (TypingSettings.PER_LANGUAGE).
+// Typing uses the same preferences as the keyboard and shows each enabled language's supported controls.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const main = read("app/settings/index.tsx");
 const page = read("app/settings/languages/language.tsx");
+const typingPage = read("app/settings/typing.tsx");
 const adapters = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
 const typing = read("android/kotlin/com/titankeys/engine/TypingSettings.java");
 
-test("with English alone nothing moves; with more, Typing is a door that names the languages on", () => {
-  expect(read("app/settings/languages/index.tsx")).toContain('return !(on.length === 1 && on[0].language.id === "en");');
-  expect(main).toContain('<Field label="Typing in each language" href="/settings/languages">{languagesLabel(settings)}</Field>');
-  expect(main).toContain("{!perLanguage && <Field label=\"Spell out shorthand\"");
-  expect(main).toContain("{!perLanguage && <Toggle label=\"Swipe to type words\"");
+const availableInputMethods = [
+  { id: "en", language: { id: "en" } },
+  ...indexed,
+] as InputMethodEntry[];
+const methods = (...inputMethods: string[]) => ({ inputMethods, availableInputMethods });
+
+test("Typing is always a destination; the picker lists enabled languages once each when several are on", () => {
+  expect(main).toContain('<Field label="Typing" href="/settings/typing" />');
+  expect(typingPage).toContain("enabled.length > 1");
+  const english = typingLanguages(methods("en"));
+  expect(english.enabled.map(row => row.id)).toEqual(["en"]);
+  expect(english.editing?.id).toBe("en");
+  const multilingual = methods("zh-pinyin", "en", "yue-yale");
+  expect(typingLanguages(multilingual, "en").enabled.map(row => row.id)).toEqual(["zh", "en"]);
+  expect(typingLanguages(multilingual, "en").editing?.id).toBe("en");
+  expect(typingLanguages(multilingual, "fr").editing?.id).toBe("zh");
+  expect(typingLanguages(methods("zh-pinyin", "yue-yale"), "en").enabled.map(row => row.id)).toEqual(["zh"]);
 });
 
-test("a language's page shows only its own rows, writes only its own values, and says once that they moved", () => {
-  for (const row of ["fixes", "capitals", "sentenceSpaces", "commaSpace", "doubleSpace", "hold", "swipe", "shorthand"])
-    expect(page).toContain(`has("${row}")`);
-  expect(page).toContain("save.run({ languageSettings: { [language.id]: values } })");
-  expect(page).toContain("pageText.page.moved");
-  expect(page).toContain("void markLanguageNoteSeen();");
+test("Typing shows supported controls while Languages retains spelling, characters, and guide entry", () => {
+  expect(typingRows("en")).toEqual(["fixes", "capitals", "sentenceSpaces", "commaSpace", "doubleSpace", "hold", "swipe", "shorthand"]);
+  expect(typingRows("zh")).toEqual(["doubleSpace", "hold"]);
+  expect(typingRows("fr")).toEqual(["fixes", "capitals", "sentenceSpaces", "commaSpace", "doubleSpace"]);
+  expect(typingRows("th")).toEqual(["fixes", "commaSpace"]);
+  expect(page).toContain('href="/settings/spelling"');
+  expect(page).toContain('href="/settings/chinese"');
+  expect(page).toContain('path: "/settings/languages/guide"');
+  expect(page).not.toContain("typingUpdate");
+  expect(typingPage).toContain("<Section title={pageText.list.all}>");
+  expect(typingPage).toContain("value={settings.learning}");
+});
+
+test("Settings uses the same enabled methods as the keyboard, including after a restore", () => {
+  expect(adapters).toContain('.put("inputMethods", JSONArray(inputMethodIndex().on(TypingSettings.inputMethods(activity)).map { it.id }))');
+});
+
+test("English-only writes still update the legacy defaults, while multilingual writes stay in the chosen language", () => {
+  const values = { autoCapitalise: false, sentenceSpaces: "two", holdSymbols: true } as const;
+  expect(typingUpdate(methods("en"), "en", values)).toEqual(values);
+  expect(typingUpdate(methods("en", "zh-pinyin"), "en", values)).toEqual({ languageSettings: { en: values } });
+  expect(typingUpdate(methods("zh-pinyin", "yue-yale"), "zh", values)).toEqual({ languageSettings: { zh: values } });
+  const fallback: LanguageValues = { autocorrect: true, autoCapitalise: true, autoPunctuation: true,
+    sentenceSpaces: "one", commaSpace: true, holdSymbols: false };
+  const own = { ...fallback, ...values };
+  expect(languageValues({ ...fallback, languageSettings: { en: own } }, "en")).toEqual(own);
+  expect(languageValues({ ...fallback, languageSettings: {} }, "fr").sentenceSpaces).toBe("one");
+  for (const route of ["typing", "hold", "sentence-spaces"])
+    expect(read(`app/settings/${route}.tsx`)).toContain("typingUpdate(");
 });
 
 test("Fix typos shows where a language corrects, by the same rule the keyboard corrects by", () => {
@@ -47,11 +85,10 @@ test("a language reads its own value, or today's single one; the main page's wri
   expect(ime).toContain("composer.commaSpace = { TypingSettings.commaSpaceIn(this, languages.languageId) }");
 });
 
-test("a quick setting writes the plain value only while English alone is on, as Settings' main page does", () => {
+test("a quick setting writes the plain value only while English alone is on, as Typing does", () => {
   const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   expect(ime).toContain("if (languages.on.all { it.language.id == InputMethod.ENGLISH_ID }) plain()");
   expect(ime).not.toContain("distinct().size <= 1) plain()");
-  expect(read("app/settings/languages/index.tsx")).toContain('return !(on.length === 1 && on[0].language.id === "en");');
 });
 
 test("the quick settings panel leaves out what can't work in the typing language, and the raw log records its own values", () => {

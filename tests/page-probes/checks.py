@@ -23,21 +23,38 @@ class ProbeTests(unittest.TestCase):
         ui.tap = Mock()
         ui.snapshot = Mock(return_value=[])
         def find(label, kind=None):
-            if label == 'Try it':
+            if label == 'Guide & practice':
                 raise Missing('Still on list')
             return node(label)
         ui.find = Mock(side_effect=find)
-        with patch('page_probe.assets', return_value=({'page': {'tryIt': 'Try it', 'moved': 'Moved'}}, {}, None)):
+        with patch('page_probe.assets', return_value=({'page': {'guidePractice': 'Guide & practice'}}, {}, None)):
             with self.assertRaises(Missing):
                 ui.open_language('Português')
         ui.tap.assert_called_once()
 
-    def test_open_language_uses_the_localized_practice_heading(self):
+    def test_open_language_and_guide_use_localized_labels(self):
         ui = PageUI(Mock(), sleep=lambda _: None)
         ui.open_list, ui.tap, ui.find = Mock(), Mock(), Mock()
         ui.snapshot = Mock(return_value=[])
         ui.open_language('Português', 'pt')
-        self.assertEqual([call.args[0] for call in ui.find.call_args_list], ['Português', 'Português', 'Experimente'])
+        ui.open_guide('pt')
+        self.assertEqual([call.args[0] for call in ui.find.call_args_list],
+                         ['Português', 'Como funciona · Experimente', 'Como funciona · Experimente', 'Experimente'])
+
+    def test_typing_requires_its_global_toggle_after_opening_from_settings(self):
+        ui = PageUI(Mock())
+        ui.open_screen, ui.tap = Mock(), Mock()
+        ui.find = Mock(side_effect=[node('Typing'), Missing('Still on Settings')])
+        with self.assertRaises(Missing):
+            ui.open_typing()
+        ui.open_screen.assert_called_once_with('/settings')
+        self.assertEqual([call.args for call in ui.find.call_args_list], [('Typing', 'action'), ('Learn my words', 'toggle')])
+
+    def test_typing_absence_does_not_hide_a_lost_hierarchy(self):
+        ui = PageUI(Mock())
+        ui.find = Mock(side_effect=Unobservable('Lost focus'))
+        with self.assertRaises(Unobservable):
+            ui.expect_absent('Editing', 'action')
 
     def test_variant_requires_persisted_selection(self):
         ui = PageUI(Mock())
@@ -70,10 +87,12 @@ class ProbeTests(unittest.TestCase):
     def test_howto_uses_current_generated_points(self):
         ui = PageUI(Mock())
         ui.open_language = Mock()
+        ui.open_guide = Mock()
         ui.find = Mock()
         im = {'name': 'Español', 'script': 'Latn', 'guide': {'family': 'latin', 'points': ['Current one', 'Current two']}}
         with patch('page_probe.assets', return_value=({'page': {'how': 'How it works'}, 'points': {}}, {}, lambda _: im)):
             self.assertEqual(ui.howto('es'), im['guide']['points'])
+        ui.open_guide.assert_called_once_with('es')
         self.assertEqual([c.args[0] for c in ui.find.call_args_list], ['Cómo funciona', *im['guide']['points']])
 
     def test_scroll_uses_owned_container_bounds(self):

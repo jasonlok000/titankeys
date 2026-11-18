@@ -13,8 +13,9 @@ import { RoundedOutline } from "./rounded";
 export const NOTE_SIZE = 26;
 
 /** An explanation, a step or fine print: smaller than a row and muted, so it never looks like something to press. */
-export function Note({ children, align }: { children: string; align?: "start" | "center" }) {
-  return <Text size={NOTE_SIZE} tone="muted" align={align}>{children}</Text>;
+export function Note({ children, align, accessible }: { children: string; align?: "start" | "center"; accessible?: boolean }) {
+  const text = <Text size={NOTE_SIZE} tone="muted" align={align}>{children}</Text>;
+  return accessible ? <Stack accessibilityLabel={children}>{text}</Stack> : text;
 }
 
 /** Bulleted notes, such as steps or what's sent. */

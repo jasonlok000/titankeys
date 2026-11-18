@@ -171,6 +171,7 @@ private fun englishIsAlwaysThereAndFirst() {
     same("nothing on means English", INDEX.on("").map { it.id }, listOf("en"))
     same("unknown ids drop", INDEX.on("es,xx,en").map { it.id }, listOf("es", "en"))
     same("repeats drop", INDEX.on("en,es,en").map { it.id }, listOf("en", "es"))
+    same("spaces around restored ids don't change the enabled list", INDEX.on(" es , , xx, es , en ").map { it.id }, listOf("es", "en"))
     same("the current one when it's on", INDEX.current("en,es", "es").id, "es")
     same("the first one when it's off", INDEX.current("en,es", "fr").id, "en")
 }
@@ -266,14 +267,17 @@ private fun languagesGroupTheirInputMethods() {
     same("its row picks an input method", SwitchOverlay.pick(on, on[1], 1), SwitchPick.To("sr-latn"))
     same("an empty place picks nothing", SwitchOverlay.pick(on, null, 5), null)
     same("several languages: the switcher opens on them", SwitchOverlay.opening(on), null)
-    // Two languages on: a held Sym goes straight to the other, to its input method last used.
+    check("Back on the method row returns to languages", SwitchOverlay.backToLanguages(on, on[1]))
+    check("Back on the language row dismisses the picker", !SwitchOverlay.backToLanguages(on, null))
+    check("P is reserved for Back even with four choices", SwitchOverlay.choice("P", 4) == -1)
+    // Two languages on: held Sym goes straight to the other language's method or its method row.
     val two = index.languagesOn("es,yue-yale,zh-pinyin")
-    same("two languages: Spanish to Chinese, its first", SwitchOverlay.toggle(two, "es", emptyMap()), "yue-yale")
-    same("to the one last used there", SwitchOverlay.toggle(two, "es", mapOf("zh" to "zh-pinyin")), "zh-pinyin")
-    same("from Chinese back to Spanish", SwitchOverlay.toggle(two, "zh-pinyin", mapOf("es" to "es")), "es")
-    same("a last used that's off now: the first", SwitchOverlay.toggle(two, "es", mapOf("zh" to "yue-jyutping")), "yue-yale")
-    same("three languages: the switcher", SwitchOverlay.toggle(on, "es", emptyMap()), null)
-    same("one language with two: the switcher's row", SwitchOverlay.toggle(index.languagesOn("sr,sr-latn"), "sr", emptyMap()), null)
+    same("two languages: Spanish opens the Chinese methods directly", SwitchOverlay.shortcut(two, "es"), SwitchPick.Row(two[1]))
+    same("from Chinese back to a single-method language", SwitchOverlay.shortcut(two, "zh-pinyin"), SwitchPick.To("es"))
+    same("one Chinese method: held Sym switches immediately",
+        SwitchOverlay.shortcut(index.languagesOn("en,zh-pinyin"), "en"), SwitchPick.To("zh-pinyin"))
+    same("several languages: the switcher", SwitchOverlay.shortcut(on, "es"), null)
+    same("one language with two: the switcher's row", SwitchOverlay.shortcut(index.languagesOn("sr,sr-latn"), "sr"), null)
     // A tap on the mark: another input method of the language typing, never another language.
     same("a tap on Serbian's mark: its other input method", SwitchOverlay.markTap(on, "sr"), SwitchPick.To("sr-latn"))
     same("and back", SwitchOverlay.markTap(on, "sr-latn"), SwitchPick.To("sr"))
@@ -281,6 +285,11 @@ private fun languagesGroupTheirInputMethods() {
     val threeChinese = InputMethodIndex.parse("[" + listOf(entry("yue-yale", "zh"), entry("yue-jyutping", "zh"),
         entry("zh-pinyin", "zh")).joinToString(",") + "]").languagesOn("en,yue-yale,yue-jyutping,zh-pinyin")
     same("three: the language's row in the switcher", SwitchOverlay.markTap(threeChinese, "yue-yale"), SwitchPick.Row(threeChinese[1]))
+    same("three Chinese methods remain available under one language", SwitchOverlay.shown(threeChinese)[1].methods.map { it.id },
+        listOf("yue-yale", "yue-jyutping", "zh-pinyin"))
+    same("English and Chinese: held Sym opens all three Chinese methods",
+        SwitchOverlay.shortcut(threeChinese, "en"), SwitchPick.Row(threeChinese[1]))
+    check("Back from the Q method row can return to the two languages", SwitchOverlay.backToLanguages(threeChinese, threeChinese[1]))
     val oldChineseRow = index.languagesOn("en,yue-yale,zh-pinyin")[1]
     same("an open Chinese row gains Jyutping in place", SwitchOverlay.refreshedRow(threeChinese, oldChineseRow),
         threeChinese[1])
@@ -302,6 +311,7 @@ private fun languagesGroupTheirInputMethods() {
     same("Serbian in Cyrillic alone: the language's СР", SwitchOverlay.markLabel(serbianIndex.on("en,sr"), "sr", "СР"), "СР")
     val serbianOnly = index.languagesOn("sr,sr-latn")
     same("one language with two: straight to its row", SwitchOverlay.opening(serbianOnly), serbianOnly[0])
+    check("Back from the only language's method row dismisses", !SwitchOverlay.backToLanguages(serbianOnly, serbianOnly[0]))
     same("an index without languages: each its own", InputMethodIndex.parse(SPANISH_INDEX).languages.map { it.id }, listOf("en", "es"))
 }
 

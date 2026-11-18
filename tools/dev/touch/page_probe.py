@@ -73,7 +73,6 @@ def method_state(reply):
 class PageUI:
     def __init__(self, checks, sleep=time.sleep):
         self.c, self.sleep = checks, sleep
-        self.navigation_notes = []
 
     def own(self):
         window = self.c.adb('shell', 'dumpsys', 'window')
@@ -106,13 +105,32 @@ class PageUI:
         self.c.adb('shell', 'input', 'keyevent', 'BACK')
         self.sleep(.5)
 
-    def open_list(self):
+    def open_screen(self, path):
         self.own()
         self.c.adb('shell', 'am', 'start', '-W', '-n', APP + '/com.vandam.ink.MainActivity',
-                   '--es', 'com.vandam.ink.notification.HREF', '/settings/languages')
+                   '--es', 'com.vandam.ink.notification.HREF', path)
         self.sleep(1)
+
+    def open_list(self):
+        self.open_screen('/settings/languages')
         wording = assets()[0]
         self.find(wording['list']['limit'].replace('{max}', '4'))
+
+    def open_typing(self):
+        wording = assets()[0]
+        self.open_screen('/settings')
+        self.tap(self.find(wording['typing']['title'], 'action'))
+        self.find(wording['settings']['learn'], 'toggle')
+
+    def expect_absent(self, label, kind=None):
+        try:
+            self.find(label, kind)
+        except Missing:
+            return
+        raise Missing(f'Unexpected Settings control: {label}')
+
+    def open_typing_picker(self):
+        self.tap(self.find(assets()[0]['typing']['editing'], 'action'))
 
     def scroll(self, nodes, down):
         scrolls = [n for n in nodes if n.get('scrollable') == 'true']
@@ -160,23 +178,20 @@ class PageUI:
             self.set_methods(*before)
 
     def open_language(self, label, language=None):
-        page = assets()[0]['page']
-        translate = translator(language)
         self.open_list()
         self.tap(self.find(label, 'action'))
-        self.find(label)
-        self.find(translate(page['tryIt']))
-        # The page itself acknowledges its one-time onboarding note on entry.
-        # Record ordinary navigation behavior; do not edit that preference.
-        moved = translate(page['moved'])
-        if any(matches(n, moved) for n in self.snapshot()):
-            self.navigation_notes.append('one-time typing-settings note displayed and acknowledged by the page')
+        self.find(guide_practice_label(language), 'action')
+
+    def open_guide(self, language=None):
+        self.tap(self.find(guide_practice_label(language), 'action'))
+        self.find(translator(language)(assets()[0]['page']['tryIt']))
 
     def howto(self, method_id):
         wording, _, method = assets()
         im = method(method_id)
         language = method_languages()[method_id]
         self.open_language(shown_name(im), language)
+        self.open_guide(language)
         self.find(translator(language)(wording['page']['how']))
         guide = im.get('guide', {})
         lines = guide.get('points') or wording['points'].get(guide.get('family'), [])
@@ -288,6 +303,14 @@ def translator(identifier):
     return lambda source: labels.get(source, source)
 
 
+def guide_practice_label(language):
+    page = assets()[0]['page']
+    if language in (None, 'en'):
+        return page['guidePractice']
+    translate = translator(language)
+    return translate(page['how']) + ' · ' + translate(page['tryIt'])
+
+
 def shown_name(method):
     """Same script fallback as app/settings/languages/index.tsx shownName."""
     return method['nameEnglish'] if method.get('script') == 'Deva' else method['name']
@@ -297,8 +320,7 @@ def practice(ui, method_id, key, choose=False):
     text, _, method = assets()
     placeholder = translator(method_languages()[method_id])(text['page']['typeHere'])
     if choose:
-        # TryIt supplies Button.selected even when false: T5 exposes both the
-        # selected and unselected practice buttons as checkable RadioButtons.
+        # TryIt exposes selected and unselected chips as checkable RadioButtons.
         ui.tap(ui.find(shown_name(method(method_id)), 'choice'))
     editor = ui.find(kind='editor')
     if editor.get('text', '') not in ('', placeholder):

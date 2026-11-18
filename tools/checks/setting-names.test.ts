@@ -2,13 +2,19 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { altBackspaceLabel, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
+import pageText from "../im/page-text.json";
 
 // A setting has one name everywhere: Settings, the keyboard's quick settings and the fun guide's "Turn on" steps.
 const root = join(import.meta.dir, "../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const settings = read("app/settings/index.tsx");
+const typing = read("app/settings/typing.tsx");
 const labels = new Set([...settings.matchAll(/label="([^"]+)"/g)].map(match => match[1]));
 labels.add(barLabel).add(cursorLabel).add(scrollLabel);
+for (const [id, label] of Object.entries(pageText.settings)) {
+  if (new RegExp(`\\bwording\\.${id}\\b`).test(typing)) labels.add(label);
+}
+if (typing.includes("typing.fixes")) labels.add(pageText.typing.fixes);
 
 test("each quick setting has its name in Settings", () => {
   const quick = [...read("android/kotlin/com/titankeys/keyboard/QuickSetting.kt").matchAll(/^\s+(\w+)\("\w", "[^"]+", "([^"]+)"\)/gm)];

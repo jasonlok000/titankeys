@@ -38,12 +38,11 @@ test("each input method's file has every field, and its folder is its id", () =>
 type Lang = { id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean };
 const indexed: { id: string; name: string; language: Lang }[] = JSON.parse(read(`${folder}/index.json`));
 
-test("every language's script has a header in Settings > Languages, not its four-letter code", () => {
-  const scripts = JSON.parse(read("tools/im/page-text.json")).scripts as Record<string, string>;
-  const headers = new Set(Object.keys(scripts).filter(id => scripts[id].trim()));
-  expect(read("app/settings/languages/index.tsx")).toContain("= pageText.scripts;");
-  for (const { language } of indexed) expect({ id: language.id, script: language.script, header: headers.has(language.script) })
-    .toEqual({ id: language.id, script: language.script, header: true });
+test("Languages shows enabled languages before a single section for the rest", () => {
+  const page = read("app/settings/languages/index.tsx");
+  const { list } = JSON.parse(read("tools/im/page-text.json"));
+  expect(list.all).toBe("All languages");
+  expect(page).toMatch(/<Section title=\{list\.on\}>\s*\{on\.map\(row\)\}[\s\S]+<Section title=\{list\.all\}>\{rows\.filter\(each => each\.on\.length === 0\)\.map\(row\)\}/);
 });
 
 test("each input method has a language: one per language, Serbian and Chinese grouping theirs, all but Chinese experimental", () => {

@@ -19,7 +19,7 @@ export type SupportState = {
   purchaseResult?: "launched" | "pending" | "cancelled" | "unavailable" | null;
 };
 export type BoardEntry = { id: string; name?: string; message?: string; cups: number };
-export type Board = { available: boolean; entries?: BoardEntry[]; joined?: boolean };
+export type Board = { available: boolean; postingReady?: boolean; entries?: BoardEntry[]; joined?: boolean };
 
 const invoke = (operation: string, payload: object = {}) => callNative("titankeys", operation, payload);
 async function read<T>(operation: string, payload?: object): Promise<T> {

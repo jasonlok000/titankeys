@@ -753,7 +753,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("hapticToggles", JSONObject(Haptics.toggles(activity)))
             .put("hapticsLab", if (HapticsLab.available(activity)) hapticsLab.value.state() else JSONObject.NULL)
             .put("spelling", TypingSettings.spelling(activity).value())
-            .put("inputMethods", JSONArray(TypingSettings.inputMethods(activity).split(',').filter { it.isNotBlank() }))
+            .put("inputMethods", JSONArray(inputMethodIndex().on(TypingSettings.inputMethods(activity)).map { it.id }))
             .put("availableInputMethods", JSONArray(inputMethodIndex().entries.map {
                 JSONObject().put("id", it.id).put("name", it.name).put("nameEnglish", it.nameEnglish).put("label", it.label)
                     .put("script", it.script).put("engine", it.engine ?: JSONObject.NULL)

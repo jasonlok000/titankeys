@@ -1506,6 +1506,11 @@ class TitanKeysIme : InputMethodService() {
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
         words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }
+        words.pickerBackTap = back@{
+            if (strip !== words) return@back
+            val open = openPicker() as? LanguagePicker.Switch ?: return@back
+            enqueue { if (strip === words && openPicker() === open) switcherBack(open) }
+        }
         words.markTap = { enqueue { tapMark() } }
         words.pickerTap = tap@{ index ->
             if (strip !== words) return@tap
@@ -4012,6 +4017,11 @@ class TitanKeysIme : InputMethodService() {
         if (open !is LanguagePicker.Choices || !open.state.composing || open.state.commit.isNotEmpty()) replayedCode = false
         closeMenu()
         picker = open
+        if (open is LanguagePicker.Switch) {
+            val row = open.opened?.methods?.joinToString(",") { it.id }
+                ?: open.languages.joinToString(",") { it.language.id }
+            symLog("Switcher row: ${if (open.opened == null) "languages" else "methods"} $row")
+        }
         strip?.pickerMark = -1
         strip?.notice = open.notice
         updateKeyWatch()
@@ -4089,7 +4099,8 @@ class TitanKeysIme : InputMethodService() {
      * A key while the picker is open, or a Sym that may become a hold. True when the key is taken: it picked, or closed the
      * picker, or is a Sym held back to see if it's held.
      * - A letter in the top two rows under a choice picks it.
-     * - Backspace closes the picker. Any other key closes the accents and types as usual; the overlay takes it and closes.
+     * - P and Backspace go back in the switcher. Backspace closes the accents. Any other key closes the accents and types as
+     *   usual; the switcher takes it and closes.
      * - Sym, with two or more input methods on, waits: let go before the hold time it's Sym as always, held it opens the
      *   overlay. Sym with the overlay open closes it.
      */
@@ -4130,6 +4141,11 @@ class TitanKeysIme : InputMethodService() {
         // An engine's choices stay while its text is built: its keys go to the engine, in [engineKey].
         if (open is LanguagePicker.Choices) return false
         val letter = if (keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) ('A' + (keyCode - KeyEvent.KEYCODE_A)).toString() else null
+        if (open is LanguagePicker.Switch && (keyCode == KeyEvent.KEYCODE_DEL || letter == "P")) {
+            pickerKey = keyCode
+            switcherBack(open)
+            return true
+        }
         val choice = when (open) {
             is LanguagePicker.Accents -> letter?.let(open::choice)
             is LanguagePicker.Switch -> letter?.let(open::choice)
@@ -4147,6 +4163,16 @@ class TitanKeysIme : InputMethodService() {
         }
         closePicker()
         return false
+    }
+
+    private fun switcherBack(open: LanguagePicker.Switch) {
+        haptics.play(Haptic.MenuPress)
+        if (SwitchOverlay.backToLanguages(open.languages, open.opened))
+            showPicker(LanguagePicker.Switch(open.languages, null, languages.current.id))
+        else {
+            closePicker()
+            symLog("Switcher dismissed")
+        }
     }
 
     private fun pick(open: LanguagePicker, choice: Int) {
@@ -4522,14 +4548,18 @@ class TitanKeysIme : InputMethodService() {
         if (panelOpen) closePanel()
         haptics.play(Haptic.HeldSymbol)
         val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
-        // Two languages: the other one at once, no switcher.
-        SwitchOverlay.toggle(on, languages.current.id, languages.lastUsed)?.let { id ->
-            symLog("Sym held: two languages, so $id types now")
-            languages.on.firstOrNull { it.id == id }?.let(::switchLanguage)
-            return
+        val current = languages.current.id
+        when (val destination = SwitchOverlay.shortcut(on, current)) {
+            is SwitchPick.To -> {
+                symLog("Sym held: two languages, so ${destination.id} types now")
+                languages.on.firstOrNull { it.id == destination.id }?.let(::switchLanguage)
+            }
+            is SwitchPick.Row -> showPicker(LanguagePicker.Switch(on, destination.language, current))
+            null -> {
+                symLog("Sym held: the input method overlay opens")
+                showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), current))
+            }
         }
-        symLog("Sym held: the input method overlay opens")
-        showPicker(LanguagePicker.Switch(on, SwitchOverlay.opening(on), languages.current.id))
     }
 
     /**

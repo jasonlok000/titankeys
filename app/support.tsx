@@ -71,6 +71,7 @@ export default function SupportPage() {
     done={() => void seeSupportReceipt(receipt.id).then(supportState).then(setState)} />;
 
   const hasSupport = !!state?.totalCents;
+  const canJoinBoard = hasSupport && board.available && board.postingReady === true;
   const billingStatus = state?.purchaseResult === "unavailable" ? supportUnavailable :
     state?.purchaseResult === "pending" ? supportPending : "";
   return <Screen title={supportTitle}>
@@ -92,14 +93,14 @@ export default function SupportPage() {
     {(status || billingStatus) && <Note>{status || billingStatus}</Note>}
     <Section title={hasSupport ? "The orange juice fund" : "The coffee fund"}>
       <Note>{hasSupport ? "Our top 10 supporters, in cups of coffee I didn't drink." : "Our top 10 supporters, in cups of coffee."}</Note>
-      {(board.entries?.length ?? 0) === 0 && <Note>Nobody here yet. The top spot is wide open.</Note>}
+      {board.available && (board.entries?.length ?? 0) === 0 && <Note>Nobody here yet. The top spot is wide open.</Note>}
       {board.entries?.slice(0, 10).map(entry => <Row key={entry.id}
         title={`${entry.name || "Anonymous"}, ${entry.cups.toFixed(1)} cups`} subtitle={entry.message} />)}
-      {hasSupport && board.available && <Note>Only what you type here is shown, never what you paid. Remove yourself any time.</Note>}
-      {hasSupport && board.available && !offerBoard && <Button onPress={() => setOfferBoard(true)}>Join the supporters?</Button>}
-      {hasSupport && board.available && (board.joined ?? state?.boardJoined) &&
+      {canJoinBoard && <Note>Only what you type here is shown, never what you paid. Remove yourself any time.</Note>}
+      {canJoinBoard && !offerBoard && <Button onPress={() => setOfferBoard(true)}>Join the supporters?</Button>}
+      {board.available && (board.joined ?? state?.boardJoined) &&
         <Button onPress={() => void updateBoard(removeBoard)}>Remove me</Button>}
-      {hasSupport && board.available && offerBoard &&
+      {canJoinBoard && offerBoard &&
         <JoinSupporters join={(anonymous, name, message) => updateBoard(() => joinBoard(anonymous, name, message))} />}
     </Section>
   </Screen>;

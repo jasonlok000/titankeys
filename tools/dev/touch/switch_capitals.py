@@ -9,6 +9,12 @@ ACTIVITY = checks.APP + "/com.titankeys.keyboard.SpaceGestureActivity"
 METHODS = checks.APP + "/com.titankeys.keyboard.InputMethodsSet"
 
 
+def launch_editor(action, flag, enabled):
+    # Android compares action and component when reusing tasks. Extras alone leave a different fixture in front.
+    checks.adb("shell", "am", "start", "-W", "-a", f"{checks.APP}.{action}", "-n", ACTIVITY,
+               "--ez", flag, str(enabled).lower())
+
+
 def select(on, current):
     answer = checks.adb("shell", "am", "broadcast", "-n", METHODS, "--es", "on", ",".join(on),
                         "--es", "current", current)
@@ -20,7 +26,7 @@ def select(on, current):
 
 def editor(sentence):
     # A fresh activity holds only its own synthetic sample. Ordinary gesture fixtures keep their original input type.
-    checks.adb("shell", "am", "start", "-W", "-n", ACTIVITY, "--ez", "sentence_capitals", str(sentence).lower())
+    launch_editor("SENTENCE_EDITOR_FIXTURE" if sentence else "PLAIN_EDITOR_FIXTURE", "sentence_capitals", sentence)
     checks.keyboard("debug")
     if "SpaceGestureActivity" not in next((line for line in checks.adb("shell", "dumpsys", "window").splitlines()
                                            if "mCurrentFocus=" in line), ""):
@@ -49,7 +55,11 @@ def trial(name, on, source, destination, prefix, expected, *, return_from_keyboa
         if gesture:
             checks.play(*gesture, "+500")
         time.sleep(.3)
-        shot = guide_checks.shot(name + "-before-q")
+        try:
+            shot = guide_checks.shot(name + "-before-q")
+        except checks.Stop:
+            shot = None
+            checks.record(name + "-indicator", None, "The Shift indicator frame could not be captured")
         checks.play("key:q", "+400")
     after = checks.field()
     saved = checks.adb("shell", "am", "broadcast", "-n", METHODS, "--ez", "read", "true")

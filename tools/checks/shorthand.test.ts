@@ -5,7 +5,7 @@ const root = new URL("../../", import.meta.url);
 const read = (path: string) => Bun.file(new URL(path, root)).text();
 
 test("Settings opens the shorthand page, and it can add its own", async () => {
-  expect(await read("app/settings/index.tsx")).toContain('href="/settings/shorthand"');
+  expect(await read("app/settings/typing.tsx")).toContain('href="/settings/shorthand"');
   const page = await read("app/settings/shorthand/index.tsx");
   expect(page).toContain('href="/settings/shorthand/edit"');
   expect(page).toContain("shorthandToggles");

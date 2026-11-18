@@ -7,7 +7,7 @@ import { Note } from "./note";
 import { guideFor } from "./language-page";
 import { RADIUS } from "./radii";
 import { RoundedOutline } from "./rounded";
-import type { InputMethodEntry, KeyRole } from "./titankeys";
+import type { Guide, InputMethodEntry, KeyRole } from "./titankeys";
 
 type Cap = { letter?: string; label?: string; role?: KeyRole["key"]; span: number };
 
@@ -33,13 +33,15 @@ function roleText(role: KeyRole, pageText: ReturnType<typeof textFor>) {
 /**
  * A language page's drawing of the keys (owner-approved flow, language-flow.html): what each key types where it isn't its letter,
  * Shift's in orange in the corner, a dot where holding gives more, and the special keys with a role ringed and numbered, which
- * the list under it explains. For a single input method's guide; nothing where it has no keys to show.
+ * the list under it explains. The shared drawing shows the physical letters and the common roles on a multi-method page.
  */
-export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?: boolean }) {
+export function KeysDrawing(props: { im: InputMethodEntry; bare?: boolean } | { language: string; roles: KeyRole[] }) {
+  const im = "im" in props ? props.im : undefined;
+  const id = "im" in props ? props.im.id : props.language;
   const accent = useAccent();
-  const pageText = textFor(im.id);
-  const t = translator(im.id);
-  const keys = guideFor(im)?.keys;
+  const pageText = textFor(id);
+  const t = translator(id);
+  const keys: Guide["keys"] = "im" in props ? guideFor(props.im)?.keys : { roles: props.roles };
   const [selected, setLayer] = useState<KeyLayer>("base");
   if (!keys) return null;
   const map = keys.map ?? {};
@@ -57,13 +59,13 @@ export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?:
       parts.push(<RoundedOutline key={`k${id}`} x={x + 2} y={y + 2} width={width - 4} height={ROW - 4} radius={RADIUS.small}
         stroke={at ? accent : MUTED} strokeWidth={at ? 2.5 : 1} />);
       if (cap.letter) {
-        const glyph = keyFace(keys, layer, cap.letter, im.id, im.id === "zh-zhuyin");
+        const glyph = im ? keyFace(keys, layer, cap.letter, im.id, im.id === "zh-zhuyin") : cap.letter.toUpperCase();
         // Keep every physical legend present, even for a layer that leaves that key unused.
         const count = Array.from(glyph).length;
         parts.push(<CanvasText key={`t${id}`} x={x + 2} y={y + 3} width={width - 4} height={ROW - 11}
           size={Math.min(24, (width - 8) / Math.max(count, 1))} colour={layer === "base" ? CREAM : accent} align="center">
           {glyph}</CanvasText>);
-        parts.push(<CanvasText key={`l${id}`} x={x + 5} y={y + ROW - 20} width={24} height={18} size={16} colour={MUTED}>
+        if (im) parts.push(<CanvasText key={`l${id}`} x={x + 5} y={y + ROW - 20} width={24} height={18} size={16} colour={MUTED}>
           {cap.letter.toUpperCase()}</CanvasText>);
         if (layer === "base") {
           const shifted = keys.shift?.[cap.letter];
@@ -85,17 +87,17 @@ export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?:
     {layers.length > 1 && layers.map(value => <Button key={value} selected={value === layer} onPress={() => setLayer(value)}>
       {pageText.page.keyLayers[value]}</Button>)}
     <Canvas width={WIDTH + 2} height={ROW * 4 + 2}>{parts}</Canvas>
-    {ROWS.map((row, index) => {
+    {im && ROWS.map((row, index) => {
       const entries = row.flatMap(cap => {
         if (!cap.letter) return [];
         const glyph = keyFace(keys, layer, cap.letter, im.id, im.id === "zh-zhuyin");
         return glyph ? [cap.letter.toUpperCase() + " → " + glyph] : [];
       });
-      return entries.length ? <Note key={index}>{entries.join("   ·   ")}</Note> : null;
+      return entries.length ? <Note key={index} accessible>{entries.join("   ·   ")}</Note> : null;
     })}
-    {keys.legend ? <Note>{t(keys.legend)}</Note> : null}
-    {roles.map((role, index) => <Note key={role.key}>{`${index + 1}  ${t(ROLE_NAMES[role.key])}: ${roleText(role, pageText)}`}</Note>)}
+    {keys.legend ? <Note accessible>{t(keys.legend)}</Note> : null}
+    {roles.map((role, index) => <Note key={role.key} accessible>{`${index + 1}  ${t(ROLE_NAMES[role.key])}: ${roleText(role, pageText)}`}</Note>)}
   </>;
   // A card already has a section of its own.
-  return bare ? body : <Section title={pageText.page.keys}>{body}</Section>;
+  return "im" in props && props.bare ? body : <Section title={pageText.page.keys}>{body}</Section>;
 }

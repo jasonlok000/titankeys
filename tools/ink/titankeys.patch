@@ -1,5 +1,5 @@
 diff --git a/crates/ink-compiler/src/theme-evaluate.js b/crates/ink-compiler/src/theme-evaluate.js
-index e5e9c50..c26b1ee 100644
+index e5e9c5040068898ec04e93337c8e7f1ec0c390ee..c26b1eee60aa457afe63b6b3cdf50b5f8aa0c0cb 100644
 --- a/crates/ink-compiler/src/theme-evaluate.js
 +++ b/crates/ink-compiler/src/theme-evaluate.js
 @@ -27,7 +27,7 @@ const inputStyle = Object.fromEntries([
@@ -24,7 +24,7 @@ index e5e9c50..c26b1ee 100644
  async function describe(theme) {
 diff --git a/crates/ink-core/src/accessibility.rs b/crates/ink-core/src/accessibility.rs
 new file mode 100644
-index 0000000..3857c7f
+index 0000000000000000000000000000000000000000..3857c7f7f5ea31a74bb3d1adf98f8f0411ee579a
 --- /dev/null
 +++ b/crates/ink-core/src/accessibility.rs
 @@ -0,0 +1,161 @@
@@ -189,8 +189,237 @@ index 0000000..3857c7f
 +#[cfg(test)]
 +#[path = "../../../test/unit/core-accessibility.rs"]
 +mod tests;
+diff --git a/crates/ink-core/src/fonts.rs b/crates/ink-core/src/fonts.rs
+index 2febad0163f44de4b2fec91e2ff20d4ace0f82b9..efd57e750ca02d04935973cc098d0318cb996e09 100644
+--- a/crates/ink-core/src/fonts.rs
++++ b/crates/ink-core/src/fonts.rs
+@@ -8,6 +8,10 @@ use unicode_segmentation::UnicodeSegmentation;
+ 
+ use crate::{PUBLIC_SANS, is_emoji_grapheme};
+ 
++mod complex;
++pub(crate) use complex::has_complex_text;
++pub use complex::{ComplexScript, PlatformGlyph, PlatformTextShape, set_platform_text_shaper, shape_text_span, text_spans};
++
+ pub fn text_graphemes(text: &str) -> impl Iterator<Item = &str> {
+     enum Graphemes<'a> {
+         Ascii(&'a str),
+@@ -271,7 +275,12 @@ impl TextWidth {
+                 self.push_character(character as char);
+             }
+         } else {
+-            for grapheme in text_graphemes(text) {
++            for (grapheme, script) in text_spans(text) {
++                if let Some(shape) = script.and_then(|script| shape_text_span(grapheme, script, self.size, self.role)) {
++                    self.previous = None;
++                    self.width += shape.shape.advance * shape.em_size;
++                    continue;
++                }
+                 if is_emoji_grapheme(grapheme) {
+                     self.previous = None;
+                     self.width += self.size;
+diff --git a/crates/ink-core/src/fonts/complex.rs b/crates/ink-core/src/fonts/complex.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..e89da02e7b4aef0c1a3fe421ab0f06c505574682
+--- /dev/null
++++ b/crates/ink-core/src/fonts/complex.rs
+@@ -0,0 +1,194 @@
++//! Script runs that require OpenType substitution and positioning. The Android host supplies
++//! shaping for these two scripts, with the same system font used for glyph outlines.
++use std::collections::HashMap;
++use std::sync::{Arc, Mutex, OnceLock};
++
++use ab_glyph::{Font, FontArc};
++
++use super::{FontRole, primary_font, text_graphemes};
++
++#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
++pub enum ComplexScript {
++    Devanagari,
++    Thai,
++}
++
++fn script(character: char) -> Option<ComplexScript> {
++    match character {
++        '\u{0900}'..='\u{097f}' | '\u{a8e0}'..='\u{a8ff}' => Some(ComplexScript::Devanagari),
++        '\u{0e00}'..='\u{0e7f}' => Some(ComplexScript::Thai),
++        _ => None,
++    }
++}
++
++pub(crate) fn has_complex_text(text: &str) -> bool {
++    !text.is_ascii() && text.chars().any(|character| script(character).is_some())
++}
++
++pub fn text_spans(text: &str) -> impl Iterator<Item = (&str, Option<ComplexScript>)> {
++    let script_in = |grapheme: &str| grapheme.chars().next().and_then(script);
++    let mut graphemes = text_graphemes(text).peekable();
++    let mut start = 0;
++    std::iter::from_fn(move || {
++        let first = graphemes.next()?;
++        let script = script_in(first);
++        let mut end = start + first.len();
++        if script.is_some() {
++            while let Some(next) = graphemes.next_if(|grapheme| script_in(grapheme) == script) {
++                end += next.len();
++            }
++        }
++        let span = &text[start..end];
++        start = end;
++        Some((span, script))
++    })
++}
++
++/// A glyph's ID and baseline-relative position, in em units.
++pub struct PlatformGlyph {
++    pub id: u16,
++    pub x: f32,
++    pub y: f32,
++}
++
++pub struct PlatformTextShape {
++    pub advance: f32,
++    pub glyphs: Vec<PlatformGlyph>,
++}
++
++type PlatformShaper = fn(path: &str, text: &str) -> Option<PlatformTextShape>;
++static SHAPER: OnceLock<PlatformShaper> = OnceLock::new();
++
++pub fn set_platform_text_shaper(shaper: PlatformShaper) {
++    let _ = SHAPER.set(shaper);
++}
++
++struct ShapeFont {
++    path: &'static str,
++    font: FontArc,
++    raster_scale: f32,
++}
++
++fn shape_font(script: ComplexScript) -> Option<&'static ShapeFont> {
++    static DEVANAGARI: OnceLock<Option<ShapeFont>> = OnceLock::new();
++    static THAI: OnceLock<Option<ShapeFont>> = OnceLock::new();
++    let (font, paths): (&OnceLock<_>, &[&str]) = match script {
++        ComplexScript::Devanagari => (
++            &DEVANAGARI,
++            &[
++                "/system/fonts/NotoSansDevanagari-VF.ttf",
++                "/system/fonts/NotoSansDevanagari-Regular.ttf",
++                "/system/fonts/NotoSansDevanagariUI-VF.ttf",
++                "/system/fonts/NotoSansDevanagariUI-Regular.ttf",
++            ],
++        ),
++        ComplexScript::Thai => (
++            &THAI,
++            &[
++                "/system/fonts/NotoSansThai-Regular.ttf",
++                "/system/fonts/NotoSansThaiUI-Regular.ttf",
++            ],
++        ),
++    };
++    font.get_or_init(|| {
++        paths.iter().find_map(|&path| {
++            let font = FontArc::try_from_vec(std::fs::read(path).ok()?).ok()?;
++            let raster_scale = font.height_unscaled() / font.units_per_em()?;
++            Some(ShapeFont {
++                path,
++                font,
++                raster_scale,
++            })
++        })
++    })
++    .as_ref()
++}
++
++pub struct ShapedTextSpan {
++    pub font: &'static FontArc,
++    pub font_index: usize,
++    pub raster_size: u16,
++    pub em_size: f32,
++    pub shape: Arc<PlatformTextShape>,
++}
++
++pub fn shape_text_span(
++    text: &str,
++    script: ComplexScript,
++    size: f32,
++    role: FontRole,
++) -> Option<ShapedTextSpan> {
++    let shaper = SHAPER.get()?;
++    let font = shape_font(script)?;
++    let primary = primary_font(role);
++    // Ink's size uses the primary face's height. Use the same em size for advances and outlines.
++    let target_em = size * primary.units_per_em()? / primary.height_unscaled();
++    let raster_size = (target_em * font.raster_scale)
++        .round()
++        .clamp(1.0, u16::MAX as f32) as u16;
++    let em_size = f32::from(raster_size) / font.raster_scale;
++    let shape = if text.len() <= 512 {
++        type ShapesByFont = HashMap<&'static str, HashMap<String, Arc<PlatformTextShape>>>;
++        static CACHE: OnceLock<Mutex<ShapesByFont>> = OnceLock::new();
++        let mut cache = CACHE.get_or_init(Mutex::default).lock().ok()?;
++        let shapes = cache.entry(font.path).or_default();
++        if let Some(shape) = shapes.get(text) {
++            Arc::clone(shape)
++        } else {
++            let shape = Arc::new(shaper(font.path, text)?);
++            if shapes.len() >= 512 {
++                shapes.clear();
++            }
++            shapes.insert(text.to_owned(), Arc::clone(&shape));
++            shape
++        }
++    } else {
++        Arc::new(shaper(font.path, text)?)
++    };
++    // Built-in fallback faces occupy 1–6 and theme faces start at 64.
++    let font_index = 48 + script as usize;
++    Some(ShapedTextSpan {
++        font: &font.font,
++        font_index,
++        raster_size,
++        em_size,
++        shape,
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::{ComplexScript, has_complex_text, text_spans};
++
++    #[test]
++    fn isolates_complex_scripts_from_latin_emoji_and_rtl_text() {
++        use ComplexScript::{Devanagari, Thai};
++        let spans: Vec<_> = text_spans("Aहिन्दी ไทย🇨🇦א").collect();
++        assert_eq!(
++            spans,
++            vec![
++                ("A", None),
++                ("हिन्दी", Some(Devanagari)),
++                (" ", None),
++                ("ไทย", Some(Thai)),
++                ("🇨🇦", None),
++                ("א", None),
++            ]
++        );
++        assert!(!has_complex_text("ASCII א لع 🇨🇦"));
++        assert!(has_complex_text("Aตั้งค่า"));
++    }
++
++    #[test]
++    fn supplies_join_controls_and_marks_in_a_single_span() {
++        use ComplexScript::{Devanagari, Thai};
++        for (word, script) in [
++            ("क्\u{200d}ष", Devanagari),
++            ("क्\u{200c}ष", Devanagari),
++            ("कि", Devanagari),
++            ("น้ำ", Thai),
++        ] {
++            assert!(text_spans(word).eq([(word, Some(script))]));
++        }
++    }
++}
 diff --git a/crates/ink-core/src/input.rs b/crates/ink-core/src/input.rs
-index 668ee33..ff93c48 100644
+index 668ee3327d8cf605146ea9c52a51ba4d725c4ca5..ff93c48c7823be522d0ce86a8ec7239cd3f2c5fd 100644
 --- a/crates/ink-core/src/input.rs
 +++ b/crates/ink-core/src/input.rs
 @@ -163,13 +163,16 @@ pub(super) struct InputOptions {
@@ -212,10 +441,10 @@ index 668ee33..ff93c48 100644
  }
  
 diff --git a/crates/ink-core/src/lib.rs b/crates/ink-core/src/lib.rs
-index 3999e45..54d6623 100644
+index 3999e452d6064d1fa0ea4514160ba8d9048ca3ce..322ea58293c467459265996274a1c8b53f44346c 100644
 --- a/crates/ink-core/src/lib.rs
 +++ b/crates/ink-core/src/lib.rs
-@@ -16,6 +16,7 @@ use unicode_segmentation::UnicodeSegmentation;
+@@ -16,11 +16,12 @@ use unicode_segmentation::UnicodeSegmentation;
  
  pub use ink_protocol::SmolStr;
  
@@ -223,6 +452,12 @@ index 3999e45..54d6623 100644
  mod fonts;
  mod canvas;
  mod capture;
+ pub use capture::CaptureKind;
+-pub use fonts::{FontRole, MAX_THEME_FONTS, font_bytes, font_for_character_in, primary_font, set_theme_fonts, tabular_digit_width_in, text_graphemes, text_width_in, visual_text, visual_text_width_in};
++pub use fonts::{ComplexScript, PlatformGlyph, PlatformTextShape, set_platform_text_shaper, shape_text_span, text_spans, FontRole, MAX_THEME_FONTS, font_bytes, font_for_character_in, primary_font, set_theme_fonts, tabular_digit_width_in, text_graphemes, text_width_in, visual_text, visual_text_width_in};
+ 
+ mod theme;
+ mod input;
 @@ -102,6 +103,37 @@ const DEFAULT_ICON_SIZE: f32 = 28.0;
  const BUTTON_HEIGHT: f32 = 40.0;
  const BUTTON_ICON_SIZE: f32 = 30.0;
@@ -869,7 +1104,55 @@ index 3999e45..54d6623 100644
                  Rect { y: text_y + text_height, height: subtitle_height, ..label_rect });
          }
          for run in &mut self.scene.text[start..] {
-@@ -6052,7 +6224,7 @@ fn invert_colour(colour: Colour) -> Colour {
+@@ -5661,7 +5833,7 @@ impl Engine {
+                 continue;
+             }
+ 
+-            let rtl = fonts::has_rtl(paragraph);
++            let needs_full_measure = fonts::has_rtl(paragraph) || fonts::has_complex_text(paragraph);
+             let protected = unbroken_links.iter().copied().filter(|range| {
+                 range.start >= offset && range.end <= offset + paragraph.len()
+             }).collect::<Vec<_>>();
+@@ -5684,7 +5856,7 @@ impl Engine {
+                 let mut measure = fonts::TextWidth::new_in(font_size, tabular_numbers, role);
+                 for end in breakpoints.iter().copied().filter(|end| *end > start) {
+                     let display_end = trim_whitespace_end(paragraph, start, end);
+-                    let width = if rtl {
++                    let width = if needs_full_measure {
+                         text_width_in(&paragraph[start..display_end], font_size, tabular_numbers, role)
+                     } else { measure.push(&paragraph[measured_end..display_end]) };
+                     measured_end = display_end;
+@@ -5729,11 +5901,11 @@ impl Engine {
+         role: FontRole,
+     ) -> usize {
+         let mut best = start;
+-        let rtl = fonts::has_rtl(text);
++        let needs_full_measure = fonts::has_rtl(text) || fonts::has_complex_text(text);
+         let mut measure = fonts::TextWidth::new_in(font_size, tabular_numbers, role);
+         for (offset, grapheme) in text[start..].grapheme_indices(true) {
+             let end = start + offset + grapheme.len();
+-            let width = if rtl {
++            let width = if needs_full_measure {
+                 text_width_in(&text[start..end], font_size, tabular_numbers, role)
+             } else { measure.push(grapheme) };
+             if best > start && width > available_width {
+@@ -5757,6 +5929,15 @@ impl Engine {
+     }
+ 
+     fn text_cursor_for_offset(&self, text: &str, font_size: f32, offset: f32, role: FontRole) -> usize {
++        if fonts::has_complex_text(text) {
++            let mut start = 0.0;
++            for (index, grapheme) in text.grapheme_indices(true) {
++                let end = text_width_in(&text[..index + grapheme.len()], font_size, false, role);
++                if offset < (start + end) / 2.0 { return index; }
++                start = end;
++            }
++            return text.len();
++        }
+         let mut previous = None;
+         let mut width = 0.0;
+         for (index, grapheme) in text.grapheme_indices(true) {
+@@ -6052,7 +6233,7 @@ fn invert_colour(colour: Colour) -> Colour {
  
  fn tone_colour(tone: Tone) -> Colour {
      match tone {
@@ -879,7 +1162,7 @@ index 3999e45..54d6623 100644
      }
  }
 diff --git a/crates/ink-core/src/native_editor.rs b/crates/ink-core/src/native_editor.rs
-index 813bb54..cb48603 100644
+index 813bb54bd7c5e6c0e8c37605160f6cb3d9766e26..cb48603f96004e2738ccc3f379b5906ec2fc99b2 100644
 --- a/crates/ink-core/src/native_editor.rs
 +++ b/crates/ink-core/src/native_editor.rs
 @@ -28,6 +28,9 @@ impl Engine {
@@ -911,7 +1194,7 @@ index 813bb54..cb48603 100644
          }).to_string()
      }
 diff --git a/crates/ink-core/src/react.rs b/crates/ink-core/src/react.rs
-index ea746fc..732c07f 100644
+index ea746fcdb7a5c39f222ed540765d7cd9514c5ce2..732c07f0157e47a40831a922fd9d1fef8e29068b 100644
 --- a/crates/ink-core/src/react.rs
 +++ b/crates/ink-core/src/react.rs
 @@ -56,6 +56,7 @@ enum HostProps {
@@ -1021,7 +1304,7 @@ index ea746fc..732c07f 100644
              if !links.is_empty() || *align == TextAlign::Justify || previous.width != *width || previous.font_size != *font_size
                  || previous.align != *align || previous.tabular_numbers != *tabular_numbers { return None; }
 diff --git a/crates/ink-core/src/react/row.rs b/crates/ink-core/src/react/row.rs
-index 30adcfd..a228115 100644
+index 30adcfd334405086f53f677b2ca4314818435b3e..a228115e7938a49b41ecf3031c3b0d7cc9652ad2 100644
 --- a/crates/ink-core/src/react/row.rs
 +++ b/crates/ink-core/src/react/row.rs
 @@ -15,7 +15,8 @@ impl ReactTree {
@@ -1043,7 +1326,7 @@ index 30adcfd..a228115 100644
              long_action: (props.get("onLongPress") == Some(&Json::Bool(true))).then(|| event(id, "onLongPress", vec![])),
          } })
 diff --git a/crates/ink-core/src/theme.rs b/crates/ink-core/src/theme.rs
-index e13751e..300025d 100644
+index e13751e845b47ea86d1a3b26f6ddd8598a726b1e..300025d9f9f16ea9611801c9f2f5115cbb931b4d 100644
 --- a/crates/ink-core/src/theme.rs
 +++ b/crates/ink-core/src/theme.rs
 @@ -22,12 +22,15 @@ pub struct Roles {
@@ -1089,9 +1372,18 @@ index e13751e..300025d 100644
      })
  }
 diff --git a/crates/ink-renderer-vulkan/src/compact.rs b/crates/ink-renderer-vulkan/src/compact.rs
-index 7a02cfd..5b2b2e1 100644
+index 7a02cfda0b412bd6341cb14dab78f6dcd11174ca..342e9f11a82fb1b4caccfcd1c0b9cbf69dbb7bd2 100644
 --- a/crates/ink-renderer-vulkan/src/compact.rs
 +++ b/crates/ink-renderer-vulkan/src/compact.rs
+@@ -14,7 +14,7 @@ use bytemuck::{Pod, Zeroable};
+ use ink_core::{
+     Colour, ImageAssetEncoding, ImageData, ImageFit, ImageRun, Mask, Rect, Scene, SmolStr,
+     FontRole, TextAlign, TextRun, font_for_character_in, is_emoji_grapheme, primary_font, tabular_digit_width_in,
+-    visual_text_width_in,
++    shape_text_span, text_spans, visual_text_width_in,
+ };
+ #[cfg(feature = "perf")]
+ use ink_core::{PerfTraceSection, perf_trace_counter};
 @@ -968,6 +968,7 @@ impl Renderer {
              }),
          );
@@ -1100,7 +1392,39 @@ index 7a02cfd..5b2b2e1 100644
          push_scrollbar_instances(scene, &mut self.overlay_instances);
          push_hitbox_instances(scene, &mut self.overlay_instances);
          let overlay_end = self.overlay_instances.len() as u32;
-@@ -1797,10 +1798,35 @@ fn push_scrollbar_instances(scene: &Scene, instances: &mut Vec<QuadInstance>) {
+@@ -1560,7 +1561,30 @@ impl Renderer {
+             };
+             let baseline = run.rect.y + (run.rect.height - scaled.height()) / 2.0 + scaled.ascent();
+             let mut previous = None;
+-            for grapheme in ink_core::text_graphemes(&visual_text) {
++            for (grapheme, script) in text_spans(&visual_text) {
++                if let Some(span) = script.and_then(|script| shape_text_span(grapheme, script, size as f32, run.font)) {
++                    for positioned in &span.shape.glyphs {
++                        if let Some(glyph) = self.glyph_atlas.glyph(&self.queue, span.font_index, span.font, GlyphId(positioned.id), span.raster_size)? {
++                            push_text_quad(
++                                &mut instances,
++                                scene,
++                                clip,
++                                Rect {
++                                    x: pen_x + positioned.x * span.em_size + glyph.offset_x,
++                                    y: baseline + positioned.y * span.em_size + glyph.offset_y,
++                                    width: glyph.width as f32,
++                                    height: glyph.height as f32,
++                                },
++                                glyph,
++                                run.colour,
++                                self.glyph_atlas.size,
++                            );
++                        }
++                    }
++                    pen_x += span.shape.advance * span.em_size;
++                    previous = None;
++                    continue;
++                }
+                 if is_emoji_grapheme(grapheme) {
+                     if let Some(glyph) = self.system_glyph_atlas.glyph(grapheme, size) {
+                         let glyph_size = size as f32 * 0.9;
+@@ -1797,10 +1821,35 @@ fn push_scrollbar_instances(scene: &Scene, instances: &mut Vec<QuadInstance>) {
      }
  }
  
@@ -1138,7 +1462,7 @@ index 7a02cfd..5b2b2e1 100644
      let y = clip.y.max(0.0).floor() as u32;
      let right = (clip.x + clip.width)
 diff --git a/packages/ink/src/index.ts b/packages/ink/src/index.ts
-index 1ceb202..891d5bc 100644
+index 1ceb202d667ff442649a28c0ca0662b5e1e4ea80..891d5bc5329c5781ba6f52c02b344389a2ba3e62 100644
 --- a/packages/ink/src/index.ts
 +++ b/packages/ink/src/index.ts
 @@ -13,7 +13,7 @@ export { useSnapshot, type Snapshot, type SnapshotSource } from "./snapshot";
@@ -1172,7 +1496,7 @@ index 1ceb202..891d5bc 100644
  
  // Keep text as a host element while checking literal route parameters in JSX.
 diff --git a/packages/ink/src/input.ts b/packages/ink/src/input.ts
-index 75f3a64..652ea41 100644
+index 75f3a64c717498033ce031377accde9c3800eaed..652ea41433872fe35e3a200f1c7ed5c3e074462d 100644
 --- a/packages/ink/src/input.ts
 +++ b/packages/ink/src/input.ts
 @@ -19,6 +19,10 @@ export function TextInput(props: HitAreaProps & {
@@ -1187,7 +1511,7 @@ index 75f3a64..652ea41 100644
    leadingIcon?: IconAsset;
    minLines?: number;
 diff --git a/packages/ink/src/navigation.ts b/packages/ink/src/navigation.ts
-index 6bfbfc8..6ce9836 100644
+index 6bfbfc8c5c9edaf038e29dff78cfc2f354467606..6ce983659f86b287c74d7826f0d57f8112961dd1 100644
 --- a/packages/ink/src/navigation.ts
 +++ b/packages/ink/src/navigation.ts
 @@ -42,6 +42,24 @@ export function back() { send({ type: "back" }); }
@@ -1245,7 +1569,7 @@ index 6bfbfc8..6ce9836 100644
          return action.type === "replace" ? [...current.slice(0, -1), next] : [...current, next];
        });
 diff --git a/packages/ink/src/row.ts b/packages/ink/src/row.ts
-index 34c93cf..435c532 100644
+index 34c93cf873299dcf5fddf68b2c79d05ea0d616cb..435c53291c3fe8c80c156ccfc42b517968ac60a7 100644
 --- a/packages/ink/src/row.ts
 +++ b/packages/ink/src/row.ts
 @@ -3,12 +3,14 @@ import { createElement, memo } from "./react";
@@ -1274,7 +1598,7 @@ index 34c93cf..435c532 100644
      onEndPress: endAction?.onPress,
      onPress: pressHandler({ href, url, onPress }) ?? (onLongPress ? () => {} : undefined),
 diff --git a/packages/ink/src/theme.ts b/packages/ink/src/theme.ts
-index 5093d42..fc7df53 100644
+index 5093d425dd3c28e0576d2a4745109d1d7bf15a2e..fc7df53e47c250ac249563457b087c110f7aa827 100644
 --- a/packages/ink/src/theme.ts
 +++ b/packages/ink/src/theme.ts
 @@ -59,6 +59,8 @@ export interface Colours {
@@ -1286,8 +1610,24 @@ index 5093d42..fc7df53 100644
  }
  
  export interface ThemeColours extends Colours {
+diff --git a/platform/android/app/proguard-rules.pro b/platform/android/app/proguard-rules.pro
+index 214bab1a79b903f42138de270100b5ed61d798fe..841f0fcf8a63a599bc0199a5e3f1de08d079ca76 100644
+--- a/platform/android/app/proguard-rules.pro
++++ b/platform/android/app/proguard-rules.pro
+@@ -2,6 +2,11 @@
+     native <methods>;
+ }
+ 
++# Called from Rust to shape Devanagari and Thai text with public Android font APIs.
++-keepclassmembers class com.vandam.ink.InkNative {
++    private static float[] shapeSystemText(java.lang.String, java.lang.String);
++}
++
+ # Called from Rust through JNI when JavaScript has queued work.
+ -keepclassmembers class com.vandam.ink.MainActivity {
+     public void onJavaScriptReady();
 diff --git a/platform/android/app/src/main/AndroidManifest.xml b/platform/android/app/src/main/AndroidManifest.xml
-index 9f7305d..8d9d6b9 100644
+index 9f7305d84df053c9bd606e4aed90db74ff5502ac..8d9d6b94fdd74226152d2ee6acec0c44f64ac56c 100644
 --- a/platform/android/app/src/main/AndroidManifest.xml
 +++ b/platform/android/app/src/main/AndroidManifest.xml
 @@ -24,17 +24,6 @@
@@ -1310,7 +1650,7 @@ index 9f7305d..8d9d6b9 100644
          <package android:name="${inkLightServerPackage}" />
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkAccessibility.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkAccessibility.kt
 new file mode 100644
-index 0000000..14ae999
+index 0000000000000000000000000000000000000000..14ae999de2d12654295f4cd039f1a28546f42da0
 --- /dev/null
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkAccessibility.kt
 @@ -0,0 +1,214 @@
@@ -1529,7 +1869,7 @@ index 0000000..14ae999
 +    }
 +}
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
-index 76930fe..958585e 100644
+index 76930fe6a8936f3b63038a8a4ea08a1f1f30d3f9..958585e0b9b7b0eeda4aaa218072b8ec57a7424b 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkHost.kt
 @@ -70,6 +70,7 @@ internal class InkHost(context: Context, private val callbacks: Callbacks, priva
@@ -1584,10 +1924,18 @@ index 76930fe..958585e 100644
              removeCallbacks(commitFrame)
              commitFramePosted = false
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
-index aa4bc3b..4e6a0b9 100644
+index aa4bc3b3d4cea8c33e90bbd2f80f5d49f886be92..23bfc4bea5cc781f744cfb3fc38a070ddd11612a 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/InkNative.kt
-@@ -17,6 +17,10 @@ internal object InkNative {
+@@ -12,11 +12,18 @@ internal object InkNative {
+         System.loadLibrary("ink_android")
+     }
+ 
++    @JvmStatic
++    private fun shapeSystemText(fontPath: String, text: String): FloatArray? = SystemTextShaper.shape(fontPath, text)
++
+     @JvmStatic
+     external fun nativeCreate(cacheDirectory: String): Long
  
      @JvmStatic
      external fun nativeSetViewportScale(handle: Long, scale: Float)
@@ -1598,7 +1946,7 @@ index aa4bc3b..4e6a0b9 100644
  
      @JvmStatic
      external fun nativeTakeJavaScriptError(handle: Long): String?
-@@ -124,6 +128,12 @@ internal object InkNative {
+@@ -124,6 +131,12 @@ internal object InkNative {
          y: Float,
      ): Int
  
@@ -1612,7 +1960,7 @@ index aa4bc3b..4e6a0b9 100644
      external fun nativeScrollBy(handle: Long, delta: Float): Boolean
  
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
-index 46ad203..0688f9a 100644
+index 46ad2035a65f96b61f88e626b4af84ae3037af3e..0688f9a210bb520bc34259c203887bf3c20631b7 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 @@ -1,6 +1,7 @@
@@ -1681,8 +2029,63 @@ index 46ad203..0688f9a 100644
          overlaysAdapter.resume()
          externalAdapter.onResume()
          connectivityAdapter.start()
+diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/SystemTextShaper.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/SystemTextShaper.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..a419266cda8f5928fe96f8e9366d16cfa58684f6
+--- /dev/null
++++ b/platform/android/app/src/main/kotlin/com/vandam/ink/SystemTextShaper.kt
+@@ -0,0 +1,49 @@
++package com.vandam.ink
++
++import android.graphics.Paint
++import android.graphics.Typeface
++import android.graphics.fonts.Font
++import android.graphics.fonts.FontFamily
++import android.graphics.text.TextRunShaper
++import java.io.File
++import java.io.IOException
++import java.util.Locale
++import java.util.concurrent.ConcurrentHashMap
++
++internal object SystemTextShaper {
++    private const val EM_SIZE = 1000f
++    private val faces = ConcurrentHashMap<String, Typeface>()
++
++    // Advance, then glyph ID and baseline-relative x/y for each glyph, all positions in em units.
++    fun shape(path: String, text: String): FloatArray? {
++        return try {
++            val typeface = faces.computeIfAbsent(path) {
++                val font = Font.Builder(File(it)).build()
++                val family = FontFamily.Builder(font).build()
++                Typeface.CustomFallbackBuilder(family).build()
++            }
++            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
++                this.typeface = typeface
++                textSize = EM_SIZE
++                textLocale = Locale.forLanguageTag(if (path.contains("Devanagari")) "hi" else "th")
++            }
++            val run = TextRunShaper.shapeTextRun(text, 0, text.length, 0, text.length, 0f, 0f, false, paint)
++            FloatArray(1 + run.glyphCount() * 3).apply {
++                this[0] = run.advance / EM_SIZE
++                for (index in 0 until run.glyphCount()) {
++                    val font = run.getFont(index)
++                    // Rust can only use glyph IDs from the exact face it loaded, at face index zero.
++                    if (font.file?.absolutePath != path || font.ttcIndex != 0 || run.getGlyphId(index) == 0) return null
++                    val at = 1 + index * 3
++                    this[at] = run.getGlyphId(index).toFloat()
++                    this[at + 1] = run.getGlyphX(index) / EM_SIZE
++                    this[at + 2] = run.getGlyphY(index) / EM_SIZE
++                }
++            }
++        } catch (_: IOException) {
++            null
++        } catch (_: IllegalArgumentException) {
++            null
++        }
++    }
++}
 diff --git a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
-index c882a51..0b92d3b 100644
+index c882a51c100cb72226c30f2188a32ee7c184d1b1..0b92d3be7719a748e32df17c1abf928700f75fb0 100644
 --- a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
 +++ b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
 @@ -1,3 +1,16 @@
@@ -1703,7 +2106,7 @@ index c882a51..0b92d3b 100644
 +
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> = emptyMap()
 diff --git a/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt b/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
-index eb0a9b2..7837908 100644
+index eb0a9b272f8ff6d8d131b9341e2ee200cfa77245..78379082f8bfc88f6d627d405ac42689231f59e3 100644
 --- a/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
 +++ b/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt
 @@ -46,6 +46,7 @@ private class SystemKeyboardAdapter(
@@ -1794,10 +2197,19 @@ index eb0a9b2..7837908 100644
      override fun dismiss(): Boolean {
          if (!active) return false
 diff --git a/platform/android/native/src/android.rs b/platform/android/native/src/android.rs
-index 0c6ae7c..e0ba543 100644
+index 0c6ae7c7f8374ae9074a33d87309b833be66352c..5c0cd284d6019d1d753bc2405f4eddef77b3ceb7 100644
 --- a/platform/android/native/src/android.rs
 +++ b/platform/android/native/src/android.rs
-@@ -239,16 +239,7 @@ impl AndroidEngine {
+@@ -26,6 +26,8 @@ mod assets;
+ mod data;
+ #[path = "javascript.rs"]
+ mod javascript;
++#[path = "text_shaping.rs"]
++mod text_shaping;
+ 
+ #[cfg(feature = "background")]
+ #[path = "worker.rs"]
+@@ -239,16 +241,7 @@ impl AndroidEngine {
              3 => self.engine.pointer_cancel(),
              _ => PointerOutcome::default(),
          };
@@ -1815,7 +2227,7 @@ index 0c6ae7c..e0ba543 100644
          #[cfg(feature = "benchmark")]
          if action == 1 && outcome.changed {
              self.update_ns = elapsed_ns(started);
-@@ -258,6 +249,16 @@ impl AndroidEngine {
+@@ -258,6 +251,16 @@ impl AndroidEngine {
          pointer_result(outcome)
      }
  
@@ -1832,7 +2244,24 @@ index 0c6ae7c..e0ba543 100644
      fn image_pinch_begin(&mut self, x: f32, y: f32) -> jint {
          if self.engine.image_pinch_begin(x, y) {
              POINTER_CAPTURED
-@@ -761,6 +762,41 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeResize(
+@@ -516,11 +519,14 @@ impl AndroidEngine {
+ #[unsafe(no_mangle)]
+ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeCreate(
+     mut env: EnvUnowned<'_>,
+-    _class: JClass<'_>,
++    class: JClass<'_>,
+     cache_directory: JString<'_>,
+ ) -> jlong {
+     let cache = env
+-        .with_env(|env| cache_directory.try_to_string(env))
++        .with_env(|env| {
++            text_shaping::install(env, &class)?;
++            cache_directory.try_to_string(env)
++        })
+         .resolve::<jni::errors::LogErrorAndDefault>();
+     let cache = (!cache.is_empty()).then(|| std::path::Path::new(&cache).join("ink-vulkan-pipelines.bin"));
+     PANIC_HOOK.call_once(|| {
+@@ -761,6 +767,41 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeResize(
      engine.resize(dimension(width), dimension(height));
  }
  
@@ -1874,7 +2303,7 @@ index 0c6ae7c..e0ba543 100644
  #[unsafe(no_mangle)]
  pub extern "system" fn Java_com_vandam_ink_InkNative_nativeSetViewportScale(
      _env: EnvUnowned<'_>,
-@@ -920,6 +956,31 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeImageDoubleTap(
+@@ -920,6 +961,31 @@ pub extern "system" fn Java_com_vandam_ink_InkNative_nativeImageDoubleTap(
          .map_or(0, |mut engine| engine.image_double_tap(x, y))
  }
  
@@ -1906,8 +2335,95 @@ index 0c6ae7c..e0ba543 100644
  #[unsafe(no_mangle)]
  pub extern "system" fn Java_com_vandam_ink_InkNative_nativeScrollBy(
      _env: EnvUnowned<'_>,
+diff --git a/platform/android/native/src/text_shaping.rs b/platform/android/native/src/text_shaping.rs
+new file mode 100644
+index 0000000000000000000000000000000000000000..b3c3779653fca7e98a729830e95fb046ca8463be
+--- /dev/null
++++ b/platform/android/native/src/text_shaping.rs
+@@ -0,0 +1,81 @@
++use std::sync::OnceLock;
++
++use ink_core::{PlatformGlyph, PlatformTextShape};
++use jni::{
++    Env, JavaVM, jni_sig, jni_str,
++    objects::{JClass, JFloatArray, JString, JValue},
++    refs::Global,
++};
++
++struct AndroidShaper {
++    vm: JavaVM,
++    class: Global<JClass<'static>>,
++}
++
++static SHAPER: OnceLock<AndroidShaper> = OnceLock::new();
++
++pub(super) fn install(env: &mut Env<'_>, class: &JClass<'_>) -> jni::errors::Result<()> {
++    if SHAPER.get().is_none() {
++        let _ = SHAPER.set(AndroidShaper {
++            vm: env.get_java_vm()?,
++            class: env.new_global_ref(class)?,
++        });
++    }
++    ink_core::set_platform_text_shaper(shape);
++    Ok(())
++}
++
++fn shape(path: &str, text: &str) -> Option<PlatformTextShape> {
++    let shaper = SHAPER.get()?;
++    shaper
++        .vm
++        .attach_current_thread(|env| {
++            env.with_local_frame(8, |env| -> jni::errors::Result<Option<PlatformTextShape>> {
++                let path = JString::from_str(env, path)?;
++                let text = JString::from_str(env, text)?;
++                let result = env
++                    .call_static_method(
++                        &shaper.class,
++                        jni_str!("shapeSystemText"),
++                        jni_sig!("(Ljava/lang/String;Ljava/lang/String;)[F"),
++                        &[JValue::Object(&path), JValue::Object(&text)],
++                    )?
++                    .l()?;
++                if result.is_null() {
++                    return Ok(None);
++                }
++                let result = JFloatArray::cast_local(env, result)?;
++                let mut values = vec![0.0; result.len(env)?];
++                result.get_region(env, 0, &mut values)?;
++                Ok(decode(&values))
++            })
++        })
++        .ok()
++        .flatten()
++}
++
++fn decode(values: &[f32]) -> Option<PlatformTextShape> {
++    let (&advance, glyphs) = values.split_first()?;
++    if !advance.is_finite() || advance < 0.0 || glyphs.len() % 3 != 0 {
++        return None;
++    }
++    let glyphs = glyphs
++        .chunks_exact(3)
++        .map(|g| {
++            let [id, x, y] = [g[0], g[1], g[2]];
++            if !(1.0..=f32::from(u16::MAX)).contains(&id)
++                || id.fract() != 0.0
++                || !x.is_finite()
++                || !y.is_finite()
++            {
++                return None;
++            }
++            Some(PlatformGlyph {
++                id: id as u16,
++                x,
++                y,
++            })
++        })
++        .collect::<Option<Vec<_>>>()?;
++    Some(PlatformTextShape { advance, glyphs })
++}
 diff --git a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
-index 2b6b330..9435f8c 100644
+index 2b6b3304278ad97a8b9c042581300f4b45f970cc..9435f8ca140d1be9cb30dd824a65a4a4e13de7ce 100644
 --- a/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 +++ b/test/fixtures/performance/device/android/kotlin/com/vandam/ink/DeviceBenchmark.kt
 @@ -1,5 +1,6 @@
@@ -1937,7 +2453,7 @@ index 2b6b330..9435f8c 100644
  
 diff --git a/test/unit/core-accessibility.rs b/test/unit/core-accessibility.rs
 new file mode 100644
-index 0000000..7bb3969
+index 0000000000000000000000000000000000000000..7bb3969cb5f45a91e2251df50d5f458f22b3ac24
 --- /dev/null
 +++ b/test/unit/core-accessibility.rs
 @@ -0,0 +1,134 @@

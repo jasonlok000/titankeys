@@ -163,8 +163,6 @@ export type State = {
   inputMethodVariants: Record<string, string>;
   /** Per-method controls keyed by the input method id. */
   methodOptions: Record<string, MethodOptions>;
-  /** The line saying the typing settings moved into each language has shown, the first time a second language was on. */
-  languageNoteSeen: boolean;
   /** Records touches, keys and typed text in a log on this phone. */
   /** This build has the full typing log: only TitanKeys Debug does. */
   rawLogAvailable: boolean;
@@ -209,7 +207,7 @@ export type Guide = {
 
 /**
  * A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16).
- * [settings] are the typing settings its page shows once a second language is on, and [stop] is what Double Space types in it
+ * [settings] are the controls it supports in Settings > Typing, and [stop] is what Double Space types in it
  * (LanguageSettings.kt).
  */
 export type Language = {
@@ -217,7 +215,7 @@ export type Language = {
   settings: LanguageSetting[]; stop: string;
 };
 
-/** The typing settings that can live on a language's page (LanguageSettings.kt). */
+/** The typing settings that can vary by language (LanguageSettings.kt). */
 export type LanguageSetting = "fixes" | "capitals" | "doubleSpace" | "sentenceSpaces" | "commaSpace" | "hold" | "swipe" | "shorthand";
 
 /** A language's own values for them: today's single value until the language sets its own (TypingSettings.PER_LANGUAGE). */
@@ -514,12 +512,6 @@ export async function setSetupContacts(on: boolean) {
 /** The other-phone warning's button: it never shows again. */
 export async function markPhoneWarningSeen() {
   await titankeys("phoneWarningSeen");
-  await state.refresh();
-}
-
-/** The line saying the typing settings moved into each language: it shows once. */
-export async function markLanguageNoteSeen() {
-  await titankeys("languageNoteSeen");
   await state.refresh();
 }
 

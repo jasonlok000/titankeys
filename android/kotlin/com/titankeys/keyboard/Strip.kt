@@ -7,12 +7,15 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
 import android.os.SystemClock
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.View
 import android.view.WindowInsets
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -75,7 +78,8 @@ class Strip(
                           /** The input method's mark over Q (耶, 粵, 拼), in the accent, as Shift's arrow shows. */
                           val mark: String = "",
                           /** The engine has more choices than the row shows: P shows the cue ([ChineseRow.MORE_CUE]). */
-                          val more: Boolean = false) : Notice {
+                          val more: Boolean = false,
+                          val back: Boolean = false) : Notice {
             override val word get() = ""
         }
     }
@@ -99,6 +103,23 @@ class Strip(
         setPadding(dp(8), 0, dp(8), 0)
         // A touch beside the buttons is a way out of the menu.
         setOnClickListener { if (notice is Notice.Menu) act(Action.Close) }
+        accessibilityDelegate = object : View.AccessibilityDelegate() {
+            override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                if ((notice as? Notice.Picker)?.back == true) {
+                    info.addAction(AccessibilityNodeInfo.AccessibilityAction(R.id.strip_picker_back,
+                        host.context.getString(R.string.strip_back)))
+                }
+            }
+
+            override fun performAccessibilityAction(host: View, action: Int, args: Bundle?): Boolean {
+                if (action == R.id.strip_picker_back && (notice as? Notice.Picker)?.back == true) {
+                    pickerBackTap?.invoke()
+                    return true
+                }
+                return super.performAccessibilityAction(host, action, args)
+            }
+        }
     }
     private val noticeButtons = List(MAX_BUTTONS) {
         TextView(context).apply {
@@ -1011,6 +1032,13 @@ class Strip(
             pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted
             drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)
         }
+        if (picker.back) {
+            val iconSize = dp(MENU_ICON_DP)
+            val (left, right) = menuColumn(MenuKeys.BACK)
+            val centre = (left + right) / 2
+            val top = minOf(line - iconSize / 2f, height - inside - iconSize)
+            drawIcon(canvas, icon(Action.Close), centre, backIconTop(centre, top, iconSize), iconSize, 1f, 0f, 255, look.ink, 1f)
+        }
         for ((index, item) in picker.items.withIndex()) {
             val columns = picker.columns.getOrNull(index) ?: continue
             val left = menuColumn(columns.first).first
@@ -1051,13 +1079,18 @@ class Strip(
     /** A touch on the more cue at P: the keyboard opens the bigger menu of choices. */
     var moreTap: (() -> Unit)? = null
 
-    /** Where a touch went down for the more cue, in [pickerTouched]. */
-    private val moreTouched = -2
+    /** A touch on the switcher's Back arrow at P. */
+    var pickerBackTap: (() -> Unit)? = null
 
-    /** True when [x] is on the more cue, while it shows. */
-    private fun onMore(x: Float): Boolean {
-        val picker = notice as? Notice.Picker ?: return false
-        return picker.more && x >= menuColumn(ChineseRow.MORE).first
+    /** The controls drawn over P, kept distinct so a changed row cannot turn a pending tap into another action. */
+    private val moreTouched = -2
+    private val backTouched = -3
+
+    private fun pickerTargetAt(x: Float): Int {
+        val picker = notice as? Notice.Picker ?: return -1
+        if (picker.back && x >= menuColumn(MenuKeys.BACK).first) return backTouched
+        if (picker.more && x >= menuColumn(ChineseRow.MORE).first) return moreTouched
+        return pickerItemAt(x)
     }
 
     /**
@@ -1077,6 +1110,7 @@ class Strip(
      */
     private fun drawInputMark(canvas: Canvas) {
         markRight = -1f
+        markBottom = Float.POSITIVE_INFINITY
         if (!markShows()) return
         pickerText.typeface = typeface
         pickerText.textSize = wordPixels()
@@ -1088,11 +1122,13 @@ class Strip(
             canvas.scale(INPUT_MARK_SMALL, INPUT_MARK_SMALL, x, y)
             canvas.drawText(inputMark, x, y - pickerText.ascent(), pickerText)
             canvas.restore()
+            // The corner mark can still switch methods. Keep its target above the word's line.
+            markRight = minOf(menuColumn(ChineseRow.MARK).second, x + pickerText.measureText(inputMark) * INPUT_MARK_SMALL + dp(5))
+            markBottom = minOf(line, dp(9) + (pickerText.descent() - pickerText.ascent()) * INPUT_MARK_SMALL)
             return
         }
         val baseline = StripFit.baseline(line, pickerText.textSize, floor) + StripFit.markOffset(width)
         drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)
-        // Only the mark drawn over Q is touched: small in the corner, a touch there is the left word's.
         markRight = menuColumn(ChineseRow.MARK).second
     }
 
@@ -1115,15 +1151,13 @@ class Strip(
 
     /** The right edge of the mark drawn over Q, while it is; -1 when it isn't. */
     private var markRight = -1f
+    private var markBottom = Float.POSITIVE_INFINITY
 
-    /**
-     * Where a tap on the mark over Q ends, or -1 where there's none: the idle bar's, or the choices row's own mark (耶, 粵), which
-     * Chinese now shows with nothing typed too (owner, 2026-11-17: "pressing the word like 耶 did nothing").
-     */
-    private fun markTouchRight(): Float = when {
-        markRight > 0 -> markRight
-        (notice as? Notice.Picker)?.mark?.isNotEmpty() == true -> menuColumn(ChineseRow.MARK).second
-        else -> -1f
+    /** The mark over Q remains tappable when a long word pushes it into the corner. */
+    private fun hitsMark(x: Float, y: Float, slop: Int = 0): Boolean {
+        if (notice == null) return markShows() && markRight > 0 && x <= markRight + slop && y < markBottom
+        val shown = notice as? Notice.Picker ?: return false
+        return shown.mark.isNotEmpty() && inputMark.isNotEmpty() && x <= menuColumn(ChineseRow.MARK).second + slop
     }
     private var markTouched = false
 
@@ -1484,8 +1518,7 @@ class Strip(
             // rounded corner sideways. On the bar's line its arrow would reach into the curve at Bigger, so it rises just enough
             // to keep clear of it. Back has no pill, and I's and O's pills end well clear of it.
             val centre = (left + end) / 2 + slide
-            val top = if (column != MenuKeys.BACK) iconTop else iconTop - MenuKeys.rise(MenuKeys.BACK_ARROW, icon.toFloat(), (left + end) / 2,
-                iconTop) { x, y -> corners.clear(x, navigationInset + height - y, width.toFloat(), edge) }
+            val top = if (column == MenuKeys.BACK) backIconTop((left + end) / 2, iconTop, icon) else iconTop
             val inPill = pill != null && column == pillShown
             // The pill covers the buttons to its left while it shows: hovering Unsave covers Favourite (owner, 2026-11-13).
             if (pill != null && !inPill && centre in pill.first..pill.second) continue
@@ -1542,6 +1575,11 @@ class Strip(
     private fun palette() = MenuScene.Palette.DARK.copy(accent = look.accent and 0xFFFFFF)
 
     /** One of a button's icons at [centre], scaled, [fill]ed from the bottom when less than 1, as [MenuMotion.icon] has it. */
+    private fun backIconTop(centre: Float, top: Float, size: Int): Float =
+        top - MenuKeys.rise(MenuKeys.BACK_ARROW, size.toFloat(), centre, top) { x, y ->
+            corners.clear(x, navigationInset + height - y, width.toFloat(), edge)
+        }
+
     private fun drawIcon(canvas: Canvas, id: Int, centre: Float, top: Float, size: Int, scale: Float, turn: Float, alpha: Int,
                          tint: Int, fill: Float) {
         val drawable = context.getDrawable(id)?.mutate() ?: return
@@ -1579,12 +1617,12 @@ class Strip(
     private var menuTouched: Action? = null
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (markTouched || event.actionMasked == MotionEvent.ACTION_DOWN && markTouchRight() > 0 && event.x <= markTouchRight()) {
+        if (markTouched || event.actionMasked == MotionEvent.ACTION_DOWN && hitsMark(event.x, event.y)) {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> markTouched = true
                 MotionEvent.ACTION_UP -> {
                     markTouched = false
-                    if (markTouchRight() > 0 && event.x <= markTouchRight() + dp(8)) markTap?.invoke()
+                    if (hitsMark(event.x, event.y, dp(8))) markTap?.invoke()
                 }
                 MotionEvent.ACTION_CANCEL -> markTouched = false
             }
@@ -1592,12 +1630,15 @@ class Strip(
         }
         if (notice is Notice.Picker && pickerTap != null) {
             when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> pickerTouched = if (onMore(event.x)) moreTouched else pickerItemAt(event.x)
+                MotionEvent.ACTION_DOWN -> pickerTouched = pickerTargetAt(event.x)
                 MotionEvent.ACTION_UP -> {
                     val item = pickerTouched
                     pickerTouched = -1
-                    if (item == moreTouched && onMore(event.x)) moreTap?.invoke()
-                    else if (item >= 0 && pickerItemAt(event.x) == item) pickerTap?.invoke(item)
+                    if (pickerTargetAt(event.x) == item) when (item) {
+                        moreTouched -> moreTap?.invoke()
+                        backTouched -> pickerBackTap?.invoke()
+                        else -> if (item >= 0) pickerTap?.invoke(item) else Unit
+                    }
                 }
                 MotionEvent.ACTION_CANCEL -> pickerTouched = -1
             }
@@ -1647,9 +1688,9 @@ class Strip(
         // A touch on one of the menu's buttons is the bar's, which draws them. Beside them it closes the menu, as before.
         if (event.actionMasked == MotionEvent.ACTION_DOWN && menuActionAt(event.x) != null) return true
         // A touch on the language mark over Q is the bar's: it switches input method ([markTap]).
-        if (event.actionMasked == MotionEvent.ACTION_DOWN && markTap != null && markTouchRight() > 0 && event.x <= markTouchRight()) return true
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && markTap != null && hitsMark(event.x, event.y)) return true
         // A touch on the picker's items is the bar's, which draws them over the keys.
-        if (event.actionMasked == MotionEvent.ACTION_DOWN && pickerTap != null && (pickerItemAt(event.x) >= 0 || onMore(event.x))) return true
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && pickerTap != null && pickerTargetAt(event.x) != -1) return true
         return gesture.showing || super.onInterceptTouchEvent(event)
     }
 

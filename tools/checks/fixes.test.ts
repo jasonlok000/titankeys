@@ -17,7 +17,7 @@ test("the page lists every kind of fix in FixKind.kt, in its order", async () =>
 });
 
 test("Settings opens the page, and its switches are ones the bridge handles", async () => {
-  expect(await read("app/settings/index.tsx")).toContain('href="/settings/fixes"');
+  expect(await read("app/settings/typing.tsx")).toContain('href="/settings/fixes"');
   const page = await read("app/settings/fixes.tsx");
   expect(page).toContain('href="/settings/shorthand"');
   const bridge = await read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");

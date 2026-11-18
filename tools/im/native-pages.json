@@ -2337,6 +2337,8 @@
     "Steps back: the menu, then the code. Hold for languages.": "關閉選單，再清除輸入碼。長按切換語言。"
   },
   "zh": {
+    "Ready": "可用",
+    "{n} of {max} on.": "共 {max} 種輸入法，已啟用 {n} 種。",
     "Options": "選項",
     "Characters": "中文字體",
     "Double Space types {stop}": "連按兩下空白鍵輸入 {stop}",

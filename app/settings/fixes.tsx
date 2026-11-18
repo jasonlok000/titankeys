@@ -3,7 +3,7 @@ import { Toggle } from "../../lib/app-haptics";
 import { type State, state, update } from "../../lib/titankeys";
 import { fixKinds } from "../../lib/fixes";
 import { shorthandLabel } from "./shorthand/index";
-import { languageValues } from "./languages/index";
+import { languageValues } from "../../lib/language-page";
 
 export const fixesLabel = ({ fixToggles }: State) => {
   const on = fixKinds.filter(({ id }) => fixToggles[id] ?? true).length;

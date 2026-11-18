@@ -1,5 +1,7 @@
 import { type ReactElement, useState } from "react";
-import { Field, Section, navigate, useAction } from "ink";
+import { Canvas, Field, Icon, Rectangle, Section, Stack, navigate, useAction } from "ink";
+import { expandMore, expandLess } from "ink/icons";
+import { DIVIDER } from "./brand";
 import { textFor, translator } from "./language-copy";
 import { variantLabel } from "../app/settings/variant";
 import { Toggle } from "./app-haptics";
@@ -26,10 +28,8 @@ export function MethodControls({ im, rows, settings }: {
 }
 
 /** The switch and details for one method on a page that offers several. */
-export function MethodCard({ im, name, subtitle, value, onChange, children }: {
+export function MethodCard({ im, value, onChange, children }: {
   im: InputMethodEntry;
-  name: string;
-  subtitle?: string;
   value: boolean;
   onChange: (value: boolean) => void;
   children: ReactElement;
@@ -38,15 +38,24 @@ export function MethodCard({ im, name, subtitle, value, onChange, children }: {
   const t = translator(im.id);
   const [open, setOpen] = useState(false);
   const guide = im.guide;
-  return <>
-    <Toggle label={name} subtitle={guide?.line ? t(guide.line) : subtitle} value={value} onChange={onChange} />
-    <Field label={open ? pageText.page.hideHow : pageText.page.how} onPress={() => setOpen(!open)} />
+  const subtitle = guide?.line ? t(guide.line) : undefined;
+  const disclosure = open ? pageText.page.hideHow : pageText.page.how;
+  return <Stack gap={16}>
+    <Stack axis="horizontal" gap={12} align="center">
+      <Stack>
+        <Toggle label={im.name} subtitle={subtitle} value={value} onChange={onChange} />
+      </Stack>
+      <Stack accessibilityLabel={`${im.name} · ${disclosure}`} onPress={() => setOpen(!open)}>
+        <Icon size={46} name={open ? expandLess : expandMore} tone="muted" />
+      </Stack>
+    </Stack>
     {open && <>
-      {guide?.points?.map((line, index) => <Note key={index}>{t(line)}</Note>)}
       <KeysDrawing im={im} bare />
+      {guide?.points?.map((line, index) => <Note key={index} accessible>{t(line)}</Note>)}
       {children}
     </>}
-  </>;
+    <Canvas width={596} height={2}><Rectangle x={0} y={0} width={596} height={2} fill={DIVIDER} /></Canvas>
+  </Stack>;
 }
 
 /** The generated groups, with any ungrouped methods last. */
@@ -61,13 +70,14 @@ export function MethodGroups({ page, methods, card, language }: {
   const groups = page?.groups ?? [];
   const grouped = new Set(groups.flatMap(group => group.methods));
   const rest = methods.filter(im => !grouped.has(im.id));
-  return <>
+  const content = <>
     {groups.map(group => <Section key={group.title} title={t(group.title)}>
       {group.methods.flatMap(id => {
         const method = methods.find(im => im.id === id);
         return method ? [card(method)] : [];
       })}
     </Section>)}
-    {rest.length > 0 && <Section title={groups.length ? pageText.page.otherMethods : pageText.page.methods}>{rest.map(card)}</Section>}
+    {rest.length > 0 && (groups.length ? <Section title={pageText.page.otherMethods}>{rest.map(card)}</Section> : rest.map(card))}
   </>;
+  return <Section title={pageText.page.methods}>{content}</Section>;
 }

@@ -30,7 +30,7 @@ test("each feature's own row says what's off, and there is no banner", () => {
   expect(settings.indexOf("needs.fnAsCtrl")).toBeGreaterThan(settings.indexOf('label="Use fn as Ctrl"'));
   expect(settings.indexOf("needs.scrollBlock")).toBeGreaterThan(settings.indexOf("label={scrollLabel}"));
   // No list of everything off at the top.
-  const top = settings.slice(settings.indexOf("<Screen title=\"Settings\" rightAction={closeAction}>"), settings.indexOf('<Section title="Languages">'));
+  const top = settings.slice(settings.indexOf("<Screen title=\"Settings\" rightAction={closeAction}>"), settings.indexOf('<Section title="Shortcuts">'));
   expect(top).not.toContain("Needs");
 });
 

@@ -21,3 +21,9 @@ export function textFor(id?: string): typeof originals {
   cache.set(id, result);
   return result;
 }
+
+export function guidePracticeLabel(id?: string) {
+  if (!id || id === "en") return originals.page.guidePractice;
+  const { how, tryIt } = textFor(id).page;
+  return `${how} · ${tryIt}`;
+}

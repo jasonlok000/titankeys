@@ -255,40 +255,30 @@ def check_accents():
 
 
 def check_language_settings():
-    """H's per-language settings: with a second language on, Settings > Typing reads "Typing in each language: English, …"
-    (J), and French's page shows the one-time line and its rows: Fix typos, Capital letter, Space after a sentence, Space after
-    , ; :, Double Space (J). The languages go on through InputMethodsSet; Settings is only looked at and tapped through."""
-    import retest_batch
+    """French controls appear in Typing when French is picked in the enabled-language selector."""
     import guide_checks
+    from page_probe import Missing, PageUI, Unobservable, assets, translator
     language_checks.fresh()
-    language_checks.turn_on(["en", "fr"], "en")
-    retest_batch.own_screen()
-    adb = language_checks.adb
-    adb("shell", "am", "start", "-n", f"{language_checks.checks.APP}/com.vandam.ink.MainActivity")
-    import time
-    time.sleep(3)
-    retest_batch.open_settings(lambda *c: (adb("shell", "input", *c), time.sleep(1.5)))
-    time.sleep(2)
-    record("settings-typing", None, 'Settings: the Typing row reads "Typing in each language: English, …"',
-           guide_checks.shot("settings-typing"))
-    row = retest_batch.row_at("Français") or retest_batch.row_at("French")
-    if row is None:
-        typing = retest_batch.row_at("Typing in each language")
-        if typing:
-            adb("shell", "input", "tap", str(typing[0]), str(typing[1]))
-            time.sleep(2)
-            row = retest_batch.row_at("Français") or retest_batch.row_at("French")
-    if row:
-        adb("shell", "input", "tap", str(row[0]), str(row[1]))
-        time.sleep(2)
-        record("settings-french", None, "French's page: the one-time line, then Fix typos, Capital letter, Space after a"
-               " sentence, Space after , ; :, Double Space", guide_checks.shot("settings-french"))
-    else:
-        record("settings-french", None, "French's page wasn't found by its name on screen: for the owner's hands")
-    for _ in range(4):
-        if f" {language_checks.checks.APP}/" in language_checks.languages.front():
-            adb("shell", "input", "keyevent", "4")
-            time.sleep(1)
+    ui = PageUI(language_checks.checks)
+    text = assets()[0]
+    translate = translator('fr')
+    try:
+        with ui.methods(['en', 'fr'], 'en'):
+            ui.open_typing()
+            ui.open_typing_picker()
+            ui.find('English', 'choice')
+            ui.tap(ui.find('Français', 'choice'))
+            record("settings-typing", True, 'Typing offers English and French for editing')
+            for key in ('fixes', 'capitals', 'commaSpace', 'doubleSpace'):
+                ui.find(translate(text['settings'][key]), 'toggle')
+            ui.find(translate(text['settings']['sentenceSpaces']), 'action')
+            ui.expect_absent(translate(text['settings']['hold']), 'action')
+            record("settings-french", True, "French's typing controls are localized and omit Hold for symbols",
+                   guide_checks.shot("settings-french"))
+    except Missing as error:
+        record("settings-french", False, str(error))
+    except Unobservable as error:
+        record("settings-french", None, str(error))
 
 
 BATCH += [check_accents, check_language_settings]

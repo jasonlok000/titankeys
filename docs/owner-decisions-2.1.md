@@ -940,3 +940,17 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 ## Codex cursor lessons, November 18
 
 - Both cursor lessons give numbered taps and the held tap the same full highlight. The previous taps go dark when their timing expires or when the mode starts. After activation, the thumb slides toward the lesson's marked word or range. The cursor lesson usually points left, and selection follows the range, matching the on-screen instruction.
+
+## Codex (2026-11-18, switcher and language settings)
+
+- Owner: "we should also add p as a back button, similar to the word menu one, with same most things, to be added to the input method selection and the language selection menu." Use the same arrow at P, and the physical Backspace below it. With more than one language, Back from the method row opens the language row. At the root, Back closes the picker. It leaves the active input method and field text as they were.
+- Owner saw enabled Chinese methods missing from the switcher. The language mark stays tappable when it moves into the corner. With two languages enabled, held Sym keeps the direct language switch, as previously requested. Tap Q in Chinese to see the method row when three or four are on. Check that Pinyin, Jyutping and Yale all appear under Chinese from both entry points.
+
+## Codex (2026-11-18, two-language Sym shortcut)
+
+- Owner: "if theres only two languages, eng and chi, it shd show the input methods staright after long pressing sym". When the other language has several enabled methods, held Sym opens that language's method row directly. Switch immediately when the other language has one enabled method. Test English to three Chinese methods and the direct return to English.
+
+## Codex (2026-11-18, live supporters board)
+
+- Owner in the follow-up chat: "make deploying it live your step." The TitanKeys task owns the Cloudflare Worker, its D1 database and connecting the app. The owner still signs and publishes the APK.
+- Read the board from its verified HTTPS address when opening Support. Show posting only after the Worker reports configured receipt verification. Keep removal available to people who already opted in.

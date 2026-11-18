@@ -176,15 +176,11 @@ object SwitchOverlay {
     fun shown(languages: List<InputMethodIndex.LanguageOn>) = languages.take(InputMethod.MAX_LANGUAGES)
         .map { it.copy(methods = it.methods.take(InputMethod.MAX_PER_LANGUAGE)) }
 
-    /**
-     * With exactly two languages on, a held Sym switches to the other at once, with no switcher (owner, 2026-11-16: "if
-     * there's only two languages, holding sym shd switch between them by itself"): to its input method last used ([lastUsed],
-     * by language), or else its first. Null with any other number, where the switcher opens.
-     */
-    fun toggle(languages: List<InputMethodIndex.LanguageOn>, current: String, lastUsed: Map<String, String>): String? {
+    /** With two languages, held Sym goes straight to the destination method or its method row. */
+    fun shortcut(languages: List<InputMethodIndex.LanguageOn>, current: String): SwitchPick? {
         if (languages.size != 2) return null
         val other = languages.firstOrNull { on -> on.methods.none { it.id == current } } ?: languages[1]
-        return lastUsed[other.language.id]?.takeIf { id -> other.methods.any { it.id == id } } ?: other.methods.first().id
+        return pickLanguage(other)
     }
 
     /**
@@ -221,12 +217,18 @@ object SwitchOverlay {
     fun refreshedRow(languages: List<InputMethodIndex.LanguageOn>, previous: InputMethodIndex.LanguageOn?) =
         languages.firstOrNull { it.language.id == previous?.language?.id && it.methods.size > 1 } ?: opening(languages)
 
+    /** Back goes from a method row to the languages above it, or dismisses the switcher at its root. */
+    fun backToLanguages(languages: List<InputMethodIndex.LanguageOn>, opened: InputMethodIndex.LanguageOn?) =
+        opened != null && languages.size > 1
+
     /** What picking place [choice] does, in the languages' row or, with [opened], that language's row. */
     fun pick(languages: List<InputMethodIndex.LanguageOn>, opened: InputMethodIndex.LanguageOn?, choice: Int): SwitchPick? {
         if (opened != null) return opened.methods.getOrNull(choice)?.let { SwitchPick.To(it.id) }
-        val language = languages.getOrNull(choice) ?: return null
-        return if (language.methods.size > 1) SwitchPick.Row(language) else SwitchPick.To(language.methods.first().id)
+        return languages.getOrNull(choice)?.let(::pickLanguage)
     }
+
+    private fun pickLanguage(language: InputMethodIndex.LanguageOn) =
+        if (language.methods.size > 1) SwitchPick.Row(language) else SwitchPick.To(language.methods.first().id)
 
     /** Which of [count] input methods the key [key] (A to Z) picks, or -1. */
     fun choice(key: String, count: Int): Int {

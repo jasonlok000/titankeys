@@ -903,3 +903,4 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - In Cangjie and Quick, typing the hovered key replaces its faded radical with the committed radical in one update. While a finger stays on the touchpad, the preview follows the hovered key and returns to its earlier radical if the finger moves back.
 - Apply the same handoff to any other input method with an untyped-key preview. Cangjie and Quick are the two methods that preview the untyped letter in the code tab. Japanese conversion and Korean composition begin after the key is pressed.
 - Chinese first-word suggestions should use the wide row on all field paths. Japanese shares this row and uses its capacity too.
+- The owner chose −3 px in the alignment mockup. The regular and picker marks use that offset from the mockup's shared text baseline at the Titan's 1,076 px width. The mark also rises by the same amount when it occupies the small corner position.

@@ -1445,7 +1445,10 @@ class TitanKeysIme : InputMethodService() {
         words.showSuggestions = showSuggestions()
         showModifiers()
         // Chinese's bigger menu, that holding P opens, in the Sym panel's place (docs/languages.md, "Chinese on the bar").
-        val choices = ChoicesMenu(ui) { index -> enqueue { pickFromMenu(index) } }.apply { visibility = View.GONE }
+        val choices = ChoicesMenu(ui) { index -> enqueue { pickFromMenu(index) } }.apply {
+            control = { key -> enqueue { choicesMenuControl(key) } }
+            visibility = View.GONE
+        }
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
         words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }
@@ -4178,6 +4181,17 @@ class TitanKeysIme : InputMethodService() {
         languages.engine?.let { engineState(it.pickAt(index)) }
     }
 
+    /** Screen buttons and real keys share actions, but only real keys own their key-up. */
+    private fun choicesMenuControl(keyCode: Int) {
+        if (!choicesMenuOpen) return
+        val menu = choicesMenu ?: return
+        when (keyCode) {
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (menu.next()) haptics.play(Haptic.PanelPage)
+            KeyEvent.KEYCODE_DEL -> if (menu.previous()) haptics.play(Haptic.PanelPage)
+            KeyEvent.KEYCODE_SYM -> closeChoicesMenu()
+        }
+    }
+
     /**
      * A key with the bigger menu open: the letter under a choice picks it, Enter and Backspace turn the pages, Sym is the ✕,
      * Space picks the row's first choice. Every other key does nothing while it's open. Its release is the menu's too.
@@ -4198,9 +4212,7 @@ class TitanKeysIme : InputMethodService() {
                 val index = menu.choice(('A' + (keyCode - KeyEvent.KEYCODE_A)).toString())
                 if (index >= 0) pickFromMenu(index)
             }
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (menu.next()) haptics.play(Haptic.PanelPage)
-            KeyEvent.KEYCODE_DEL -> if (menu.previous()) haptics.play(Haptic.PanelPage)
-            KeyEvent.KEYCODE_SYM -> closeChoicesMenu()
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_SYM -> choicesMenuControl(keyCode)
             KeyEvent.KEYCODE_SPACE -> {
                 closeChoicesMenu()
                 tallyChoices("pick.space")

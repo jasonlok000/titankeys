@@ -1,0 +1,118 @@
+{
+  "_about": "F's shared text for the per-language pages (mockup: tools/dev/preview/pages/language-flow.html). One copy per family; each input method's own lines stay in howto.json. {X} is the language's English name, {n} and {max} numbers.",
+  "list": {
+    "limit": "Up to {max} languages at once. Hold Sym to switch.",
+    "count": "{n} of {max} on.",
+    "full": "That's {max}. Turn one off first."
+  },
+  "status": {
+    "Ready": "Ready",
+    "Experimental": "Experimental",
+    "experimentalNote": "Experimental: it types, but nobody who speaks it has checked it yet. Tell us what's off."
+  },
+  "settings": {
+    "characters": "Characters",
+    "suggestions": "Suggestions",
+    "learn": "Learn my words",
+    "corrections": "Fix slips as I type",
+    "layout": "Layout",
+    "lazySounds": "Lazy sounds (n for l, z for j)",
+    "radicals": "Show the radicals as I type",
+    "alphabets": "Alphabets"
+  },
+  "notAvailable": {
+    "corrections": "Corrections: not in {X}. Pick the word you mean from the bar instead.",
+    "correctionsChinese": "Corrections: not in {X}. Pick the character you mean from the choices instead.",
+    "swiping": "Swipe typing: English only, for now.",
+    "suggestions": "Suggestions: not in {X} yet. No word list with a licence we can use."
+  },
+  "roles": {
+    "shift": {
+      "letters": "Capitals.",
+      "accents": "The capital accent.",
+      "secondLetter": "The second letter in the corner.",
+      "choices": "More choices: the bigger menu."
+    },
+    "sym": {
+      "default": "Symbols. Hold for languages.",
+      "choices": "Steps back: the menu, then the code. Hold for languages."
+    },
+    "space": {
+      "default": "A space, and the bar's middle word.",
+      "choices": "Picks the first choice, only while you're typing.",
+      "syllable": "Finishes the syllable."
+    },
+    "enter": {
+      "default": "A new line.",
+      "code": "Types the code as letters."
+    },
+    "backspace": {
+      "default": "Deletes. Flick it for a word.",
+      "code": "Takes the code's last letter.",
+      "syllable": "Takes the syllable's last letter.",
+      "chinese": "Deletes. A flick takes one character."
+    }
+  },
+  "points": {
+    "latin": [
+      "Hold a letter for its accents. They show on the bar over the keys.",
+      "Rest a finger on the key under the one you want, then press it.",
+      "Shift gives the capital one. Symbols are on Alt and Sym."
+    ],
+    "cyrillic": [
+      "Every key types a letter of its own. The keys are printed in Latin, so the page shows which is which.",
+      "Missing a letter? Hold a key to find it. It shows on the bar over the keys.",
+      "Rest a finger on the key under it, then press it."
+    ],
+    "greek": [
+      "Every key types a Greek letter. The page shows which is which.",
+      "Hold a vowel for its accent. Rest a finger on the key under the one you want, then press it."
+    ],
+    "korean": [
+      "Type the letters. The syllable builds above the bar and goes in when the next letter can't join it.",
+      "Space finishes the syllable and types the bar's first word.",
+      "Swipe up on the keys for more words. Swipe down on page 1 to close them."
+    ],
+    "chinese": [
+      "Type the code. The choices sit over the top row.",
+      "Space picks the first choice, only while you're typing a code. A tap picks any.",
+      "Enter types the code as letters.",
+      "Shift or a swipe up shows more. A swipe down on page 1 closes them.",
+      "Sym steps back: the menu, then the code. Hold it for languages.",
+      "One character is one word here: a flick, double Space or a triple tap takes one. Double Space types 。."
+    ],
+    "japanese": [
+      "Type in romaji. The kana build above the bar, and the choices sit over the top row.",
+      "Space picks the first choice, only while you're typing. A tap picks any.",
+      "Enter types the romaji as letters.",
+      "Shift or a swipe up shows more. A swipe down on page 1 closes them.",
+      "Sym steps back: the menu, then the text. Hold it for languages. Double Space types 。."
+    ],
+    "thai": [
+      "Shift gives each key's second letter. Hold a key for its third, Shift + hold for its fourth.",
+      "Thai has no spaces between words, so the bar finds the word you're typing.",
+      "Double Space types two spaces. Thai has no full stop."
+    ],
+    "hindi": [
+      "Type by sound in English letters: namaste gives नमस्ते. Shift letters are sounds of their own.",
+      "The bar starts with what Space will type. Tap another to pick it, or swipe up for more.",
+      "Double Space types ।."
+    ],
+    "hebrew": [
+      "It writes right to left. Hebrew has no capitals, so Shift types the same letter.",
+      "Hold P for ף and M for ץ.",
+      "The bar reads right to left too: the next best word sits on the right."
+    ],
+    "vietnamese": [
+      "Type in Telex: aa gives â, dd gives đ, and s f r x j add the tones.",
+      "Press the same key again to undo its mark.",
+      "The bar starts with what Space will type. Tap another to pick it, or swipe up for more."
+    ]
+  },
+  "legend": {
+    "accents": "Hold a dotted key for its accents.",
+    "shiftLetters": "Small orange letters are Shift's.",
+    "held": "Dotted keys hold more letters.",
+    "radicals": "Each letter is a radical."
+  }
+}

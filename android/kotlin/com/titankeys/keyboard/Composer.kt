@@ -2086,8 +2086,8 @@ class Composer(
             guided -> null
             // A word Backspace put back: Space keeps it as it stands.
             restoredWord?.let { prefix.equals(it, ignoreCase = true) } == true -> prefix
-            // Nothing may change the word, so Space keeps it as typed.
-            else -> typedWordAt(anchor, anyway = true)
+            // Space keeps the text at the cursor even when we did not track the whole word.
+            else -> typedWordAt(anchor, anyway = true) ?: prefix.takeIf { it.isNotEmpty() }
         }
     }
 

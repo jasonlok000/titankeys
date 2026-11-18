@@ -104,12 +104,14 @@ def check_playground_switch():
                       guide_checks.shot("playground-switch"))
     play(*switcher_checks.HOLD_SYM, "key:q", "+500", shot="playground-switch", at=1600)
     after = read()
-    typed = after[len(before):] if after and after.startswith(before) else None
+    # An empty field may read back as its hint, which typing replaces: then all of it is what this check typed.
+    typed = after[len(before):] if after and after.startswith(before) else after
+    # The field starts a sentence, so й comes out capital: Й (night run 2026-11-17's shot).
     if typed:
         play(*[g for _ in typed for g in ("key:del", "+90")])  # only what this check typed
     left = read()
-    record("playground-switch", typed == "й", f"a held Sym in the playground, then Q: typed {typed!r} (wanted й); "
-           f"the field {'as it was' if left == before else 'NOT as it was'} after", "playground-switch")
+    record("playground-switch", (typed or "").lower() == "й", f"a held Sym in the playground, then Q: typed {typed!r} (wanted й); "
+           f"the field {'as it was' if left in (before, "") else 'NOT as it was'} after", "playground-switch")
     play(*switcher_checks.HOLD_SYM)  # back to English
     languages.in_field()
 

@@ -2915,6 +2915,7 @@ fun main() {
     singleLetters(world)
     spaceTypesTheMiddleWord(world)
     spaceNeverTypesAPrediction(world)
+    startsUseTheActiveRowWidth(world)
     heldBackspaceRepeats(world)
     capitalI(world)
     apostrophes(world)
@@ -3046,4 +3047,23 @@ private fun spaceNeverTypesAPrediction(world: Realistic) {
     }
     val typist = Typist(world, autocorrect = null, composerWords = spanish).type("pero hola ")
     same(typist.type(" ").text, "pero hola  ", "Spanish: Space after a word types a space, never a next word (bar ${typist.bar})")
+}
+
+private fun startsUseTheActiveRowWidth(world: Realistic) {
+    val methods = listOf("zh-pinyin", "yue-yale", "ja", "es")
+    for (id in methods) {
+        val method = com.titankeys.keyboard.InputMethod.parse(File("android/assets/im/$id/im.json").readText())
+        val width = if (id == "es") 3 else 8
+        val words = com.titankeys.keyboard.LanguageWords(FakeWords(Lists(world.words))) { null }.also {
+            it.other = true
+            it.starters = method.starters
+            it.shown = { width }
+        }
+        same(words.sentenceStarts(), method.starters.take(width), "$id fallback starters fill the active row")
+        val typist = Typist(world, autocorrect = null, composerWords = words)
+        typist.editor.unreadable = true
+        typist.composer.start(typist.field, -1, -1)
+        typist.settle()
+        same(typist.bar, method.starters.take(width), "$id uses the active row in a field that hides its text")
+    }
 }

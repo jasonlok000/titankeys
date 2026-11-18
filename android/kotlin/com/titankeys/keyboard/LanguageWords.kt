@@ -126,7 +126,7 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         if (other) list()?.contains(word) == true || word in starters || learning?.knows(word) == true else english.known(word)
     override fun sentenceStarts(): List<String> =
         if (other) BarWords.next(null, learning, starters, capitals = false, table = nextWords, rules = offered,
-            spelling = { word -> list()?.spelling(word) ?: word }) else english.sentenceStarts()
+            spelling = { word -> list()?.spelling(word) ?: word }, shown = shown()) else english.sentenceStarts()
     override fun typed(word: String, rememberCase: Boolean) { if (!other) english.typed(word, rememberCase) }
     override fun untyped(word: String) {
         if (!other) return english.untyped(word)

@@ -895,3 +895,7 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - The handover leaves signing to the owner. The existing Debug and Reference scripts use the release key, so verification uses a private build copy with a disposable Android Debug key and an explicit tool environment. It runs the same offline suites and builds without reading the owner's signing files. The app source and release signing configuration stay unchanged.
 - Pending work is integrated on task branches. Existing phone and build jobs finish first; new builds share the full-build lock. No phone job runs alongside the existing night runner.
 - Reported night failures are reproduced before app changes. A missing field read or an incorrect expected result is a test-tool failure, not proof of an app failure.
+
+## Codex (2026-11-18, language settings)
+
+- Owner: "basically within that language settings everything shd be in their native language. and for chinese specifically, call traditional chinese 正體中文." This applies to the settings, input-method cards, typing instructions, key tables and practice prompts now. The Characters screen names Hong Kong and Taiwan separately.

@@ -66,10 +66,10 @@ def check_one_mark_per_tile():
     setup(["en", "ru", "sr", "sr-latn"], "en")
     play(*HOLD_SYM, "key:u", "+600")  # SR is over U-I with three languages: a press there opens its second row
     since = now()
-    play("rest:0.15,0.125,0.85,0.125:1800", "+400", shot="switcher-marks", at=1200)
+    play("rest:0.15,0.125,0.85,0.125:1800", "+400")
     played, _ = haptics_since(since)
     marks = [name for name, result in played if name == "menu_mark"]
-    record("switcher-marks", len(marks) == 2, f"{len(marks)} menu_mark across two four-key tiles: {played}", "switcher-marks")
+    record("switcher-marks", len(marks) == 2, f"{len(marks)} menu_mark across two four-key tiles: {played}")
     play("key:sym", "+500")
 
 
@@ -222,10 +222,9 @@ def check_fifth_language_refused():
         step("tap", str(x), str(y))
         after = screen_dump()
         still = [each for each in [row_switch(after, "Afrikaans")] if each]
-        shot = guide_checks.shot("fifth-language-refused")
         record("fifth-language-refused", REFUSAL in before and not was_on and bool(still) and not still[0][2] and REFUSAL in after,
                f"the note {'shown' if REFUSAL in before else 'missing'}; the switch {'on' if was_on else 'off'} before the tap, "
-               f"{'on' if still and still[0][2] else 'off'} after it", shot)
+               f"{'on' if still and still[0][2] else 'off'} after it")
     finally:
         for _ in range(4):
             if f" {APP}/" in languages.front() and not languages.in_field():

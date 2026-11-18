@@ -173,17 +173,17 @@
   },
   "starters": [
     "สวัสดี",
+    "ครับ",
+    "ค่ะ",
     "ขอบคุณ",
-    "ฉัน",
+    "ได้",
+    "ใช่",
     "ผม",
     "เรา",
     "คุณ",
     "วันนี้",
     "พรุ่งนี้",
-    "ตอนนี้",
-    "ไม่",
-    "ใช่",
-    "แล้ว"
+    "ตอนนี้"
   ],
   "howTo": [
     "The keys follow Thai's Kedmanee layout, and Shift gives each key's second letter. The keys a PC has and the Titan doesn't are held: hold a key for its third letter, and Shift + hold for its fourth. Thai digits: ๐ is Shift + Q, and ๑ to ๙ are Shift + hold on W E R T I O P S D.",
@@ -279,6 +279,30 @@
         "y": "ุ",
         "z": "_"
       },
+      "heldShift": {
+        "a": "ฅ",
+        "b": "ฒ",
+        "d": "๙",
+        "e": "๒",
+        "f": "ฐ",
+        "g": ",",
+        "h": "ซ",
+        "i": "๕",
+        "j": ".",
+        "m": "ฦ",
+        "n": "ฬ",
+        "o": "๖",
+        "p": "๗",
+        "q": "+",
+        "r": "๓",
+        "s": "๘",
+        "t": "๔",
+        "u": "฿",
+        "w": "๑",
+        "y": "ู",
+        "z": "%"
+      },
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

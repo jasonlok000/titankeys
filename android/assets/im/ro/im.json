@@ -53,6 +53,13 @@
     "practice": "Mulțumesc frumos",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "ăâ",
+        "i": "î",
+        "s": "ș",
+        "t": "ț"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

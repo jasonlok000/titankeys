@@ -56,6 +56,16 @@
     "practice": "Ačiū, gerai",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "ą",
+        "c": "č",
+        "e": "ęė",
+        "i": "į",
+        "s": "š",
+        "u": "ųū",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

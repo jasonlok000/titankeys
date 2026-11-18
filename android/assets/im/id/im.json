@@ -22,18 +22,18 @@
     "words": "main_id__experimental.combined"
   },
   "starters": [
-    "namun",
-    "selain",
-    "ia",
-    "kami",
-    "dia",
-    "dalam",
-    "di",
-    "hal",
-    "sementara",
+    "halo",
+    "iya",
+    "aku",
     "saya",
-    "dengan",
-    "pada"
+    "kamu",
+    "kita",
+    "apa",
+    "boleh",
+    "sudah",
+    "belum",
+    "besok",
+    "makasih"
   ],
   "howTo": [
     "Types the way English does: no accents, and nothing to hold for them. Hold a letter for its symbol, as in English."
@@ -46,6 +46,7 @@
     "practice": "Apa kabar?",
     "keys": {
       "legend": "",
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

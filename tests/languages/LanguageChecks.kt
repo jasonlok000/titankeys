@@ -83,6 +83,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (args.isNotEmpty()) holdHints(File(args[0]))
     if (args.isNotEmpty()) everyGuideIsComplete(File(args[0]))
+    if (args.isNotEmpty()) practiceOnlyUsesEnabledMethods(File(args[0]))
     if (args.isNotEmpty()) noFragmentIsOffered(File(args[0]))
     if (args.isNotEmpty()) onlyTheOnesOnStayWarm(File(args[0]))
     if (args.isNotEmpty()) variantsArePicked(File(args[0]))
@@ -1789,6 +1790,18 @@ private fun onlyTheOnesOnStayWarm(folder: File) {
     same("English and Yale on: Rime alone is warm", WarmEngines.wanted(index.on("en,yue-yale")).keys, setOf("rime"))
     same("English alone: no engine", WarmEngines.wanted(index.on("en")).keys, emptySet<String>())
     same("Japanese and Korean on: Mozc and Hangul", WarmEngines.wanted(index.on("en,ja,ko")).keys, setOf("mozc", "hangul"))
+}
+
+private fun practiceOnlyUsesEnabledMethods(folder: File) {
+    val index = InputMethodIndex.parse(File(folder, "index.json").readText())
+    val options = "com.titankeys.practiceMethod=zh-pinyin"
+    same("the app's sample asks for Pinyin", PracticeInputMethod.requested("own", "own", options), "zh-pinyin")
+    same("another app can't choose the method", PracticeInputMethod.requested("other", "own", options), null)
+    same("an ordinary app editor has no practice method", PracticeInputMethod.requested("own", "own", null), null)
+    same("a disabled method can't be used for practice", PracticeInputMethod.enabled("zh-pinyin", index.on("en,ko")), null)
+    same("an enabled method can be used for practice", PracticeInputMethod.enabled("zh-pinyin", index.on("en,zh-pinyin"))?.id, "zh-pinyin")
+    same("normal field uses the saved method after practice",
+        InputMethodChoice.atFieldStart(index, "en,zh-pinyin", "en", null).id, "en")
 }
 
 /**

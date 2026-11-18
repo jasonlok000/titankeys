@@ -159,6 +159,8 @@ export type State = {
   languageSettings: Record<string, LanguageValues>;
   /** The spelling variant each input method with variants types, by its id: {"pt": "pt-BR"}. */
   inputMethodVariants: Record<string, string>;
+  /** Per-method controls keyed by the input method id. */
+  methodOptions: Record<string, MethodOptions>;
   /** The line saying the typing settings moved into each language has shown, the first time a second language was on. */
   languageNoteSeen: boolean;
   /** Records touches, keys and typed text in a log on this phone. */
@@ -199,7 +201,7 @@ export type Guide = {
   family?: string;
   line?: string;
   points?: string[];
-  keys?: { legend?: string; map?: Record<string, string>; shift?: Record<string, string>; held?: Record<string, string>; roles?: KeyRole[] };
+  keys?: { legend?: string; map?: Record<string, string>; shift?: Record<string, string>; held?: Record<string, string>; heldShift?: Record<string, string>; accents?: Record<string, string>; capitals?: boolean; roles?: KeyRole[] };
   practice?: string;
 };
 
@@ -218,6 +220,8 @@ export type LanguageSetting = "fixes" | "capitals" | "doubleSpace" | "sentenceSp
 
 /** A language's own values for them: today's single value until the language sets its own (TypingSettings.PER_LANGUAGE). */
 export type LanguageValues = Pick<State, "autocorrect" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "holdSymbols">;
+
+export type MethodOptions = { lazySounds?: boolean; radicalPreview?: boolean };
 
 export type ChineseVariant = "zh_hk" | "zh_tw" | "zh_hans";
 
@@ -246,6 +250,7 @@ export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "ho
   shorthandToggles: Record<string, boolean>;
   /** A language's page: its own values, by language id. A write sends only the ones that changed. */
   languageSettings: Record<string, Partial<LanguageValues>>;
+  methodOptions: State["methodOptions"];
 };
 
 /**

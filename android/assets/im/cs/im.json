@@ -62,6 +62,22 @@
     "practice": "Děkuji, dobře",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "á",
+        "c": "č",
+        "d": "ď",
+        "e": "éě",
+        "i": "í",
+        "n": "ň",
+        "o": "ó",
+        "r": "ř",
+        "s": "š",
+        "t": "ť",
+        "u": "úů",
+        "y": "ý",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

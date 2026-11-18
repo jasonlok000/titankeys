@@ -30,6 +30,15 @@
    "practice": "¿Qué tal, señor?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "á",
+     "e": "é",
+     "i": "í",
+     "n": "ñ",
+     "o": "ó",
+     "u": "úü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -84,6 +93,16 @@
    "practice": "Ça va très bien",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "àâæ",
+     "c": "ç",
+     "e": "éèêë",
+     "i": "îï",
+     "o": "ôœ",
+     "u": "ùûü",
+     "y": "ÿ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -138,6 +157,14 @@
    "practice": "Schöne Grüße",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "ä",
+     "e": "é",
+     "o": "ö",
+     "s": "ß",
+     "u": "ü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -194,6 +221,15 @@
    "practice": "Não é fácil",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "áàâã",
+     "c": "ç",
+     "e": "éê",
+     "i": "í",
+     "o": "óôõ",
+     "u": "ú"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -258,6 +294,14 @@
    "practice": "Perché è così",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "à",
+     "e": "éè",
+     "i": "ì",
+     "o": "ò",
+     "u": "ù"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -312,6 +356,14 @@
    "practice": "Één café",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "áä",
+     "e": "éëè",
+     "i": "íï",
+     "o": "óö",
+     "u": "úü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -366,6 +418,17 @@
    "practice": "Dzień dobry, Łukasz",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "ą",
+     "c": "ć",
+     "e": "ę",
+     "l": "ł",
+     "n": "ń",
+     "o": "ó",
+     "s": "ś",
+     "z": "źż"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -422,6 +485,16 @@
    "practice": "Günaydın, nasılsın?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "â",
+     "c": "ç",
+     "g": "ğ",
+     "i": "ıî",
+     "o": "ö",
+     "s": "ş",
+     "u": "ü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -476,6 +549,13 @@
    "practice": "Hej, hur mår du?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "àåä",
+     "e": "é",
+     "o": "ö",
+     "u": "ü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -530,6 +610,13 @@
    "practice": "Hvordan går det?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "æå",
+     "e": "é",
+     "o": "øö",
+     "u": "ü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -584,6 +671,12 @@
    "practice": "Hei, hvordan går det?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "àæå",
+     "e": "é",
+     "o": "óòôø"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -638,6 +731,13 @@
    "practice": "Hyvää päivää",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "åä",
+     "o": "ö",
+     "s": "š",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -692,6 +792,22 @@
    "practice": "Děkuji, dobře",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "á",
+     "c": "č",
+     "d": "ď",
+     "e": "éě",
+     "i": "í",
+     "n": "ň",
+     "o": "ó",
+     "r": "ř",
+     "s": "š",
+     "t": "ť",
+     "u": "úů",
+     "y": "ý",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -746,6 +862,13 @@
    "practice": "Mulțumesc frumos",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "ăâ",
+     "i": "î",
+     "s": "ș",
+     "t": "ț"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -800,6 +923,14 @@
    "practice": "Köszönöm szépen",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "á",
+     "e": "é",
+     "i": "í",
+     "o": "óöő",
+     "u": "úüű"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -852,6 +983,7 @@
    "practice": "Apa kabar?",
    "keys": {
     "legend": "",
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -906,6 +1038,14 @@
    "practice": "Hvala, dobro sam",
    "keys": {
     "legend": "",
+    "accents": {
+     "c": "čć",
+     "d": "đ",
+     "e": "é",
+     "s": "š",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -960,6 +1100,12 @@
    "practice": "Hvala, dobro",
    "keys": {
     "legend": "",
+    "accents": {
+     "c": "č",
+     "s": "š",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1014,6 +1160,20 @@
    "practice": "Labdien, kā iet?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "ā",
+     "c": "č",
+     "e": "ē",
+     "g": "ģ",
+     "i": "ī",
+     "k": "ķ",
+     "l": "ļ",
+     "n": "ņ",
+     "s": "š",
+     "u": "ū",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1068,6 +1228,16 @@
    "practice": "Ačiū, gerai",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "ą",
+     "c": "č",
+     "e": "ęė",
+     "i": "į",
+     "s": "š",
+     "u": "ųū",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1122,6 +1292,15 @@
    "practice": "Què tal, com va?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "àá",
+     "c": "ç",
+     "e": "éè",
+     "i": "íï",
+     "o": "óò",
+     "u": "úü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1176,6 +1355,15 @@
    "practice": "Bo día, que tal?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "á",
+     "e": "é",
+     "i": "íï",
+     "n": "ñ",
+     "o": "ó",
+     "u": "úü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1230,6 +1418,14 @@
    "practice": "Tänan, hästi",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "ä",
+     "o": "õö",
+     "s": "š",
+     "u": "ü",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1284,6 +1480,17 @@
    "practice": "Góðan daginn",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "áæ",
+     "d": "ð",
+     "e": "é",
+     "i": "í",
+     "o": "óö",
+     "t": "þ",
+     "u": "ú",
+     "y": "ý"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1338,6 +1545,13 @@
    "practice": "Hoe gaan dit?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "á",
+     "e": "éêë",
+     "i": "ï",
+     "o": "óö"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1392,6 +1606,15 @@
    "practice": "Ĉu vi parolas Esperanton?",
    "keys": {
     "legend": "",
+    "accents": {
+     "c": "ĉ",
+     "g": "ĝ",
+     "h": "ĥ",
+     "j": "ĵ",
+     "s": "ŝ",
+     "u": "ŭ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1446,6 +1669,23 @@
    "practice": "Ďakujem, dobre",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "áä",
+     "c": "č",
+     "d": "ď",
+     "e": "é",
+     "i": "í",
+     "l": "ĺľ",
+     "n": "ň",
+     "o": "óô",
+     "r": "ŕ",
+     "s": "š",
+     "t": "ť",
+     "u": "ú",
+     "y": "ý",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1500,6 +1740,16 @@
    "practice": "Necəsən, dostum?",
    "keys": {
     "legend": "",
+    "accents": {
+     "c": "ç",
+     "e": "ə",
+     "g": "ğ",
+     "i": "ı",
+     "o": "ö",
+     "s": "ş",
+     "u": "ü"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1554,6 +1804,14 @@
    "practice": "Dia duit, conas atá tú?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "á",
+     "e": "é",
+     "i": "í",
+     "o": "ó",
+     "u": "ú"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1608,6 +1866,11 @@
    "practice": "Kaixo, zer moduz?",
    "keys": {
     "legend": "",
+    "accents": {
+     "c": "ç",
+     "n": "ñ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1662,6 +1925,12 @@
    "practice": "Korleis går det?",
    "keys": {
     "legend": "",
+    "accents": {
+     "a": "àåæ",
+     "e": "éèê",
+     "o": "óòôø"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1716,6 +1985,13 @@
    "practice": "Hvala, dobro sam",
    "keys": {
     "legend": "",
+    "accents": {
+     "c": "čć",
+     "d": "đ",
+     "s": "š",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1770,6 +2046,13 @@
    "practice": "Hvala, dobro sam",
    "keys": {
     "legend": "",
+    "accents": {
+     "c": "čć",
+     "d": "đ",
+     "s": "š",
+     "z": "ž"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1853,6 +2136,13 @@
      "y": "н",
      "z": "я"
     },
+    "accents": {
+     "l": "жэ",
+     "m": "бю",
+     "p": "хъ",
+     "t": "ё"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -1936,6 +2226,13 @@
      "y": "н",
      "z": "я"
     },
+    "accents": {
+     "l": "жє",
+     "m": "бю",
+     "p": "хї'",
+     "u": "ґ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -2019,6 +2316,13 @@
      "y": "н",
      "z": "я"
     },
+    "accents": {
+     "l": "эж",
+     "m": "бю",
+     "p": "х'",
+     "t": "ё"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -2103,6 +2407,11 @@
      "y": "ъ",
      "z": "з"
     },
+    "accents": {
+     "m": "юь",
+     "p": "ящ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -2186,6 +2495,16 @@
      "y": "υ",
      "z": "ζ"
     },
+    "accents": {
+     "a": "ά",
+     "e": "έ",
+     "h": "ή",
+     "i": "ίϊΐ",
+     "o": "ό",
+     "v": "ώ",
+     "y": "ύϋΰ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -2270,6 +2589,11 @@
      "y": "з",
      "z": "ж"
     },
+    "accents": {
+     "l": "чћ",
+     "p": "шђ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -2354,6 +2678,11 @@
      "y": "з",
      "z": "ѕ"
     },
+    "accents": {
+     "l": "чќ",
+     "p": "шжѓ"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -2437,6 +2766,21 @@
      "y": "н",
      "z": "я"
     },
+    "accents": {
+     "e": "ұү",
+     "f": "ә",
+     "h": "һ",
+     "j": "ө",
+     "l": "жэ",
+     "m": "бю",
+     "p": "хъ",
+     "r": "қ",
+     "s": "і",
+     "t": "ё",
+     "u": "ғ",
+     "y": "ң"
+    },
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -2528,6 +2872,7 @@
      "w": "ჭ",
      "z": "ძ"
     },
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -2663,6 +3008,30 @@
      "y": "ุ",
      "z": "_"
     },
+    "heldShift": {
+     "a": "ฅ",
+     "b": "ฒ",
+     "d": "๙",
+     "e": "๒",
+     "f": "ฐ",
+     "g": ",",
+     "h": "ซ",
+     "i": "๕",
+     "j": ".",
+     "m": "ฦ",
+     "n": "ฬ",
+     "o": "๖",
+     "p": "๗",
+     "q": "+",
+     "r": "๓",
+     "s": "๘",
+     "t": "๔",
+     "u": "฿",
+     "w": "๑",
+     "y": "ู",
+     "z": "%"
+    },
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -2718,6 +3087,7 @@
    "practice": "namaste",
    "keys": {
     "legend": "",
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -2806,6 +3176,12 @@
      "p": "ף",
      "q": "/"
     },
+    "heldShift": {
+     "m": "ץ",
+     "p": "ף",
+     "q": "/"
+    },
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -2897,6 +3273,7 @@
      "o": "ㅒ",
      "p": "ㅖ"
     },
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -2952,6 +3329,7 @@
    "practice": "Xin chào",
    "keys": {
     "legend": "",
+    "capitals": true,
     "roles": [
      {
       "key": "shift",
@@ -3009,6 +3387,7 @@
    "practice": "neihou",
    "keys": {
     "legend": "",
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -3065,6 +3444,7 @@
    "practice": "neihou",
    "keys": {
     "legend": "",
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -3121,6 +3501,7 @@
    "practice": "nihao",
    "keys": {
     "legend": "",
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -3205,6 +3586,7 @@
      "n": "弓",
      "m": "一"
     },
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -3288,6 +3670,7 @@
      "n": "弓",
      "m": "一"
     },
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -3372,6 +3755,7 @@
      "n": "ㄋ",
      "m": "ㄇ"
     },
+    "capitals": false,
     "roles": [
      {
       "key": "shift",
@@ -3427,6 +3811,7 @@
    "practice": "konnichiha",
    "keys": {
     "legend": "",
+    "capitals": false,
     "roles": [
      {
       "key": "shift",

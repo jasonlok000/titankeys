@@ -66,6 +66,7 @@
     "practice": "neihou",
     "keys": {
       "legend": "",
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

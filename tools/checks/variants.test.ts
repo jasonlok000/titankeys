@@ -13,7 +13,8 @@ test("the index lists Portuguese's variants, Brasil first", () => {
 });
 
 test("the language's page opens the variant page, which saves the pick, and the app keeps it", () => {
-  expect(read("app/settings/languages/language.tsx")).toContain('path: "/settings/variant", params: { inputMethod: im.id }');
+  expect(read("app/settings/languages/language.tsx")).toContain("<MethodControls");
+  expect(read("lib/method-card.tsx")).toContain('path: "/settings/variant", params: { inputMethod: im.id }');
   const page = read("app/settings/variant.tsx");
   expect(page).toContain("useRouteParams().inputMethod");
   expect(page).toContain("write={variant => ({ inputMethodVariants: { [im.id]: variant } })}");

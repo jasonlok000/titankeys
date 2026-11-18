@@ -114,6 +114,20 @@ release app is never a target: `TK_APP` must end in `.debug`. If the injector st
 the finger. TitanKeys Debug is the keyboard only while a check types in its field: release TitanKeys goes back right after,
 read back each time, and at once whenever the front stops being Debug. Every tool holds the phone lock for its whole run, so no other phone run overlaps (see Locks).
 
+To queue a guarded job in WSL, source the usual phone environment and run
+`python3 tools/dev/phone/home_queue.py -- <guarded job and arguments>`. It samples the resolved Home activity every 20 s.
+Home must stay awake and unlocked for 120 s of good samples. Another window, a lost connection or a missed sample starts the
+wait again. The watcher takes the same phone lock as the job, checks Home again and gives the job the lock until it exits.
+The job keeps its ordinary input guards and restores the keyboard. The watcher never wakes or unlocks the phone.
+
+For reruns, `python3 tools/dev/touch/checks.py --plan rerun --previous RUN_DIR --unchanged BATCH BATCHES...` prints the
+batches still needed. Repeat `--unchanged` only for a batch whose relevant build inputs, harness and prerequisites you
+verified unchanged. The newest report must show a complete pass. Missing, incomplete, failed and unresolved batches run
+again. Use `--plan t7` and `--plan t8` with the full lists for the initial and final runs. Repeated slots stay in the list.
+
+The checks save shots for safe-to-capture failures and visual comparisons. A timed animation or a candidate row that
+needs visual comparison still has its reference shot. Comparisons already decided by the field or logs skip routine shots.
+
 | Tool | Does | Needs |
 |---|---|---|
 | `test/run.sh` | The offline checks: the calibration against the app's own `TouchAlignment.java`, every key read back on itself, each gesture against the rules in `DeleteSwipe.kt` and `CursorGesture.kt`, and the injector's script format. | a JDK, a C compiler |

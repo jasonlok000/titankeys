@@ -33,10 +33,12 @@ test("Setup shows each phone setting as a step that opens its page", () => {
 test("the keyboard notes each app's Sliding Mode, and the app can see the Shortcut keys page", () => {
   const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   // Two readings per field, early and late, and a Sliding Mode 1 touch from the touchpad (tests/sliding-mode has the rules).
-  expect(ime).toContain("main.postDelayed({ readSlidingMode(field, late = false) }, SLIDING_CHECK_MILLIS)");
-  expect(ime).toContain("main.postDelayed({ readSlidingMode(field, late = true) }, SLIDING_CONFIRM_MILLIS)");
+  expect(ime).toContain("main.postDelayed({ readSlidingMode(sample, late = false) }, SLIDING_CHECK_MILLIS)");
+  expect(ime).toContain("main.postDelayed({ readSlidingMode(sample, late = true) }, SLIDING_CONFIRM_MILLIS)");
   expect(ime).toContain("private const val SLIDING_CONFIRM_MILLIS = 3000L");
-  expect(ime).toContain("SlidingModeList.trustworthy(field.early, reading, sameField, field.mode1Touch)");
+  expect(ime).toContain("field.negative(sample, reading, sameField)");
+  expect(ime).toContain("it.resume(app, info.fieldId, currentInputConnection, restarting)");
+  expect(ime).toContain("noteSlidingInteraction()");
   expect(ime).toMatch(/private fun motion\(event: MotionEvent\) \{\s+noteSlidingTouch\(event\)/);
   expect(read("android/kotlin/com/titankeys/keyboard/Touchpad.kt")).toContain("fun sentAsScreenTouch(event: MotionEvent)");
   expect(read("android/src/main/AndroidManifest.xml")).toContain('<package android:name="com.agui.shortcutsettings" />');
@@ -45,7 +47,9 @@ test("the keyboard notes each app's Sliding Mode, and the app can see the Shortc
 test("the first list, which misread Chrome and Settings, is never read again", () => {
   expect(checks).toContain('private const val OLD_OUTSIDE_SLIDING = "outside_sliding_mode_1"');
   expect(checks).toContain('private const val OUTSIDE_SLIDING = "outside_sliding_mode"');
-  expect(checks.match(/OLD_OUTSIDE_SLIDING/g)?.length).toBe(3); // its name, the check that it's still there, and its removal
+  expect(checks).not.toContain("getStringSet(OLD_OUTSIDE_SLIDING");
+  expect(checks).toContain("SlidingModeList.restored(outside, suspects, version)");
+  expect(checks).toContain(".putInt(SLIDING_EVIDENCE, SlidingModeList.EVIDENCE_VERSION)");
   expect(checks).toContain(".remove(OLD_OUTSIDE_SLIDING)");
 });
 
@@ -68,7 +72,8 @@ test("Display over other apps and Accessibility try TitanKeys' own page first, t
 
 test("Setup names Sliding Mode 1, and says what to find when Android shows its whole list", () => {
   const page = read("app/settings/setup.tsx");
-  expect(page).toContain('export const scrollAssistantStep = "Turn on Scroll assistant, Sliding Mode 1";');
+  expect(page).toContain('!settings.scrollAssistant ? "Turn on Scroll assistant, Sliding Mode 1"');
+  expect(page).toContain('outside.length ? `Put ${names(outside)} on Sliding Mode 1` : "Scroll assistant, Sliding Mode 1"');
   expect(page).toContain("<Field label={scrollAssistantStep} onPress={openScrollAssistant}>");
   expect(page).toContain("{!settings.overlay && settings.overlayOnList && <Note>{overlayListNote}</Note>}");
   expect(page).toContain("{!settings.backService && settings.backOnList && <Note>{backListNote}</Note>}");
@@ -77,5 +82,5 @@ test("Setup names Sliding Mode 1, and says what to find when Android shows its w
   const adapter = read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
   expect(adapter).toContain('.put("overlayOnList", PhoneSetup.onList(activity, SetupPart.Overlay))');
   expect(adapter).toContain('.put("backOnList", PhoneSetup.onList(activity, SetupPart.Back))');
-  expect(read("app/settings/guide-boring.tsx")).toContain("Turn on Scroll assistant, Sliding Mode 1 opens Scroll assistant");
+  expect(read("app/settings/guide-boring.tsx")).toContain("Tap the row naming the app to open Scroll assistant");
 });

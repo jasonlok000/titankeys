@@ -1583,6 +1583,10 @@ class TitanKeysIme : InputMethodService() {
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
+        slidingField = info.packageName?.let { app ->
+            slidingField?.takeIf { it.resume(app, info.fieldId, currentInputConnection, restarting) }
+                ?: SlidingModeField(app, info.fieldId, currentInputConnection)
+        }
         if (exact || info.inputType == EditorInfo.TYPE_NULL) logExact("start ${info.packageName} type 0x${Integer.toHexString(info.inputType)}" +
             " options 0x${Integer.toHexString(info.imeOptions)} restarting $restarting exact $exact")
         editing = info.inputType != EditorInfo.TYPE_NULL || exact
@@ -1666,7 +1670,9 @@ class TitanKeysIme : InputMethodService() {
         // types in the input methods that are on, and a held Sym opens the switcher there (owner, 2026-11-17: "long press for
         // sym doesn't trigger the language selection in the playground").
         languages.englishOnly = inGuide
-        languages.refresh()
+        val info = currentInputEditorInfo
+        val sample = if (editing) PracticeInputMethod.requested(info?.packageName, packageName, info?.privateImeOptions) else null
+        languages.refresh(sample)
         // Which input methods are on may have changed, and with them the mark at Q.
         if (::languages.isInitialized) showInputMark()
         languages.variant()
@@ -1843,12 +1849,7 @@ class TitanKeysIme : InputMethodService() {
         // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
         // for the app in front as it comes in, so this reads it a moment later and again seconds later, if the keyboard is
         // still in that field. SlidingModeList decides what to trust.
-        slidingField = info.packageName?.let { app ->
-            SlidingField(app).also { field ->
-                main.postDelayed({ readSlidingMode(field, late = false) }, SLIDING_CHECK_MILLIS)
-                main.postDelayed({ readSlidingMode(field, late = true) }, SLIDING_CONFIRM_MILLIS)
-            }
-        }
+        slidingField?.let(::scheduleSlidingReading)
         // Back belongs to the app, even though it also hides the strip on the way.
         backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
     }
@@ -2664,30 +2665,39 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** While the strip is hidden, the touchpad reaches the keyboard through the focused app. */
-    /** The field the Sliding Mode readings are for, with what they've seen so far. A new field starts a new one. */
-    private class SlidingField(val app: String) {
-        var early: String? = null
-        var mode1Touch = false
+    private var slidingField: SlidingModeField? = null
+
+    private fun scheduleSlidingReading(field: SlidingModeField) {
+        val sample = field.begin()
+        main.postDelayed({ readSlidingMode(sample, late = false) }, SLIDING_CHECK_MILLIS)
+        main.postDelayed({ readSlidingMode(sample, late = true) }, SLIDING_CONFIRM_MILLIS)
     }
 
-    private var slidingField: SlidingField? = null
+    private fun noteSlidingInteraction() {
+        val field = slidingField ?: return
+        if (field.interacted || !editing) return
+        field.interacted = true
+        scheduleSlidingReading(field)
+    }
 
-    private fun readSlidingMode(field: SlidingField, late: Boolean) {
-        val sameField = slidingField === field && currentInputEditorInfo?.packageName == field.app && isInputViewShown
+    private fun readSlidingMode(sample: SlidingModeField.Sample, late: Boolean) {
+        val field = sample.field
+        val sameField = slidingField === field && field.current(sample) &&
+            field.owns(currentInputEditorInfo?.packageName, currentInputEditorInfo?.fieldId, currentInputConnection) && isInputViewShown
         val reading = if (sameField) PhoneChecks.slidingReading(this, field.app) else null
         if (AppBuild.kind(this) == "debug")
             Log.i("TitanKeysSliding", "${field.app} ${if (late) "late" else "early"}: $reading (same field $sameField, mode 1 touch ${field.mode1Touch})")
         if (!sameField) return
         if (reading == SlidingModeList.MODE_1) PhoneChecks.mode1(this, field.app)
-        if (!late) field.early = reading
-        else if (SlidingModeList.trustworthy(field.early, reading, sameField, field.mode1Touch)) PhoneChecks.outsideReading(this, field.app)
+        if (!late) sample.early = reading
+        else if (field.negative(sample, reading, sameField)) PhoneChecks.outsideReading(this, field.app)
     }
 
     /** A touchpad touch only Sliding Mode 1 sends takes the app off Setup's list at once, once per field. */
     private fun noteSlidingTouch(event: MotionEvent) {
         val field = slidingField ?: return
         if (field.mode1Touch || event.actionMasked != MotionEvent.ACTION_DOWN || !touchpad.sentAsScreenTouch(event)) return
-        if (currentInputEditorInfo?.packageName != field.app) return
+        if (!field.owns(currentInputEditorInfo?.packageName, currentInputEditorInfo?.fieldId, currentInputConnection)) return
         field.mode1Touch = true
         PhoneChecks.mode1(this, field.app)
     }
@@ -2706,6 +2716,7 @@ class TitanKeysIme : InputMethodService() {
 
     private fun motion(event: MotionEvent) {
         noteSlidingTouch(event)
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) noteSlidingInteraction()
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             clearTeamsEgg()
             // A flourish is only a picture, so the next touch ends it. A delete's dots wait for what the touch turns out to be: another
@@ -4348,7 +4359,7 @@ class TitanKeysIme : InputMethodService() {
      * ([SwitchOverlay.markTap]). One input method: nothing, no haptic.
      */
     private fun tapMark() {
-        if (!editing || !::languages.isInitialized) return
+        if (!editing || !::languages.isInitialized || languages.practising) return
         val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
         when (val pick = SwitchOverlay.markTap(on, languages.current.id)) {
             is SwitchPick.To -> {
@@ -4378,8 +4389,8 @@ class TitanKeysIme : InputMethodService() {
      * sooner, its press now goes on as Sym always does, and then its release.
      */
     /** Why a Sym press won't wait for a hold to open the switcher, or null when it will ([SymHold]). */
-    private fun symWhyNot() = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
-        inGuide, field.exact, pendingInput.size)
+    private fun symWhyNot() = SymHold.whyNot(if (languages.practising) 1 else languages.on.size, languages.englishOnly,
+        panelOpen, modifiers.alt != Modifiers.Level.Off, inGuide, field.exact, pendingInput.size)
 
     /** An engine's code is being built on the bar. */
     private fun codePending() = (openPicker() as? LanguagePicker.Choices)?.state?.composing == true
@@ -4460,6 +4471,7 @@ class TitanKeysIme : InputMethodService() {
         // new one's come (Composer.wordsChanged). Before the keys that waited for the load go on, so theirs are the new one's.
         if (editing) composer.wordsChanged()
         loadEnded()
+        if (languages.practising) return
         if (editing) showHoldHint()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return
@@ -4519,6 +4531,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun keyDown(keyCode: Int, event: KeyEvent): Boolean {
+        noteSlidingInteraction()
         if (keyCode == KeyEvent.KEYCODE_DEL && event.repeatCount == 0 && !backspaceRepeat.sending) heldBackspace = KeyEvent(event)
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym down, repeat ${event.repeatCount}: shown $isInputViewShown, " +
             "panel ${modifiers.panel}, guide $inGuide, menu $menuOpen, waiting ${pendingInput.size}")

@@ -11,16 +11,16 @@ package com.titankeys.keyboard
  *
  * Now an app leaves the list at the first sign of Sliding Mode 1 ([mode1]): a reading of yes, or a touchpad touch that arrives
  * the way only Sliding Mode 1 sends it, as a screen touch ([Touchpad.sentAsScreenTouch]). It joins only on trustworthy
- * readings ([trustworthy]), from two separate fields, with no sign of Sliding Mode 1 in between: the first makes it a suspect,
+ * readings ([trustworthy]), from two separate fields the user interacted with, with no sign of Sliding Mode 1 in between: the first makes it a suspect,
  * which Setup doesn't show.
  */
 internal class SlidingModeList(outside: Set<String>, suspects: Set<String>) {
     /** The apps Setup lists. */
-    var outside = outside
+    var outside = outside - ANDROID_SETTINGS
         private set
 
     /** Apps with one trustworthy reading outside Sliding Mode 1, not shown yet. */
-    var suspects = suspects
+    var suspects = suspects - ANDROID_SETTINGS
         private set
 
     /** [app] is on Sliding Mode 1: it leaves the list and its doubt at once. */
@@ -31,7 +31,7 @@ internal class SlidingModeList(outside: Set<String>, suspects: Set<String>) {
 
     /** A field in [app] gave a trustworthy reading outside Sliding Mode 1. The second in a row puts it on the list. */
     fun outsideReading(app: String) {
-        if (app in outside) return
+        if (app == ANDROID_SETTINGS || app in outside) return
         if (app in suspects) {
             suspects = suspects - app
             outside = outside + app
@@ -39,6 +39,11 @@ internal class SlidingModeList(outside: Set<String>, suspects: Set<String>) {
     }
 
     companion object {
+        const val EVIDENCE_VERSION = 2
+        fun restored(outside: Set<String>, suspects: Set<String>, version: Int) =
+            if (version == EVIDENCE_VERSION) SlidingModeList(outside, suspects) else SlidingModeList(emptySet(), emptySet())
+        // The Titan's Scroll assistant picker has no entry for the Android Settings app.
+        private const val ANDROID_SETTINGS = "com.android.settings"
         /**
          * One field's readings of the mode, [early] and [late], are trustworthy when the keyboard was still in that app's field
          * for both ([sameField]), both were read (a phone that can't be read says nothing), they agree, neither is Sliding Mode 1,
@@ -46,9 +51,38 @@ internal class SlidingModeList(outside: Set<String>, suspects: Set<String>) {
          * field started, when any screen opening has long finished and the phone has set the mode for the app in front.
          */
         fun trustworthy(early: String?, late: String?, sameField: Boolean, mode1Touch: Boolean) =
-            sameField && !mode1Touch && !early.isNullOrEmpty() && early == late && early != MODE_1
+            sameField && !mode1Touch && early == "no" && late == "no"
 
         /** persist.sys.touchpad_forcescroll in Sliding Mode 1. */
         const val MODE_1 = "yes"
+    }
+}
+
+/** One actual field session. Input-view restarts are not independent negative evidence. */
+internal class SlidingModeField(val app: String, val fieldId: Int, connection: Any?) {
+    private var connection = connection?.let { java.lang.ref.WeakReference(it) }
+    var interacted = false
+    var mode1Touch = false
+    private var reported = false
+    class Sample(val field: SlidingModeField) { var early: String? = null }
+    private var sample: Sample? = null
+
+    fun resume(app: String, fieldId: Int, next: Any?, restarting: Boolean): Boolean {
+        if (this.app != app || this.fieldId != fieldId ||
+            !(restarting || next != null && connection?.get() === next)) return false
+        connection = next?.let { java.lang.ref.WeakReference(it) }
+        return true
+    }
+
+    fun owns(app: String?, fieldId: Int?, current: Any?) =
+        this.app == app && this.fieldId == fieldId && current != null && connection?.get() === current
+
+    fun begin() = Sample(this).also { sample = it }
+    fun current(reading: Sample) = sample === reading
+    fun negative(reading: Sample, late: String?, sameField: Boolean): Boolean {
+        if (reported || !interacted || connection?.get() == null || !current(reading) ||
+            !SlidingModeList.trustworthy(reading.early, late, sameField, mode1Touch)) return false
+        reported = true
+        return true
     }
 }

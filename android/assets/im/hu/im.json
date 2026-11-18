@@ -54,6 +54,14 @@
     "practice": "Köszönöm szépen",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "á",
+        "e": "é",
+        "i": "í",
+        "o": "óöő",
+        "u": "úüű"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

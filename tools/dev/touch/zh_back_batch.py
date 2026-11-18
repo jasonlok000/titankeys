@@ -6,6 +6,7 @@ import re
 import shlex
 import time
 
+import bar_observations as observed
 import checks
 import chinese_checks
 import language_checks
@@ -17,9 +18,33 @@ METHODS = ["en", YALE]
 TAGS = ("TitanKeysSym", "TitanKeysIM")
 
 
-def lines():
-    return [line for line in adb("logcat", "-d", "-v", "time", "-s", *TAGS).splitlines()
-            if any(tag + ":" in line for tag in TAGS)]
+def debug_pid():
+    pid = adb("shell", "pidof", checks.APP).strip()
+    return pid if re.fullmatch(r"[1-9][0-9]*", pid) else None
+
+
+def trace_lines(raw, marker, pid):
+    """Recognize the Android time header and keep only this attempt's Debug messages."""
+    tags = "|".join((*TAGS, observed.MARK_TAG))
+    header = re.compile(rf"\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}}\.\d+ [VDIWEFAS]/({tags})\s*\(\s*(\d+)\s*\):\s*(.*)")
+    fresh = False
+    events = []
+    for line in raw.splitlines():
+        match = header.fullmatch(line)
+        if not match:
+            continue
+        tag, source, message = match.groups()
+        if tag == observed.MARK_TAG and message == marker:
+            fresh = True
+        elif fresh and source == pid and tag in TAGS:
+            events.append((tag, message))
+    return events
+
+
+def lines(attempt, pid):
+    marker, since = attempt
+    raw = adb("logcat", "-d", "-v", "time", "-T", since, "-s", observed.MARK_TAG + ":I", *TAGS, "*:S")
+    return trace_lines(raw, marker, pid) if debug_pid() == pid else []
 
 
 def window_at(step, expected=None):
@@ -65,14 +90,21 @@ def check_back_then_enter():
             return
 
         window = window_at("before Sym")
-        before_sym = set(lines())
+        pid = debug_pid()
+        if pid is None:
+            return record("zh-back-setup", None, "Debug's process could not be verified")
+        try:
+            attempt = observed.mark_attempt()
+        except observed.Unobservable as error:
+            return record("zh-back-setup", None, str(error))
         chinese_checks.play("key:sym", "+700")
         if field_at("after opening Sym", window) != "":
             record("zh-back-setup", None, "Sym changed the sample text before Back")
             return
-        sym_lines = [line for line in lines() if line not in before_sym and "TitanKeysSym:" in line]
-        handled = [line for line in sym_lines if "Sym handled: panel now " in line]
-        if not handled or "panel now Symbols, shown true" not in handled[-1]:
+        sym_lines = [message for tag, message in lines(attempt, pid) if tag == "TitanKeysSym"]
+        handled = [message for message in sym_lines if message.startswith("Sym handled: panel now ")]
+        opened = f"Sym handled: panel now Symbols, shown true (app {checks.APP}, editing true)"
+        if not handled or handled[-1] != opened:
             record("zh-back-setup", None, f"Yale is active, but the visible Symbols panel could not be verified: {sym_lines}")
             return
         record("zh-back-setup", True, f"Yale is active, the field is empty, and Sym opened Symbols: {handled[-1]}")
@@ -86,7 +118,6 @@ def check_back_then_enter():
             record("zh-back-window", None, str(error))
             raise
         shown = input_shown()
-        after_back_log = lines()
         record("zh-back-window", shown if shown_before is True else None,
                f"Android Back left the same Debug field focused. IME shown before: {shown_before}, after: {shown}")
         method = language_checks.active_method(METHODS, ids)
@@ -95,6 +126,8 @@ def check_back_then_enter():
             return
         record("zh-back-field", after_back == "", "the field is empty after Back" if not after_back else "Back changed the empty field")
 
+        if debug_pid() != pid:
+            return record("zh-back-method", None, "Debug's process changed before typing the Yale code")
         window_at("before the Yale code", window)
         chinese_checks.play(*chinese_checks.code())
         before_enter = field_at("after the Yale code, before Enter", window)
@@ -102,10 +135,8 @@ def check_back_then_enter():
         chinese_checks.play("key:enter", "+400")
         text = field_at("after Enter", window)
         record("zh-enter", text == chinese_checks.CODE, f"typed {text!r}, wanted {chinese_checks.CODE!r}")
-        known_by_back = set(after_back_log)
-        later = [line for line in lines() if line not in known_by_back]
-        after_sym = [line for line in after_back_log if line not in before_sym]
-        record("zh-back-trace", None, f"through Android Back: {after_sym}. Through Enter: {later}")
+        trace = [f"{tag}: {message}" for tag, message in lines(attempt, pid)]
+        record("zh-back-trace", None, f"from Sym through Enter: {trace}")
         if text == chinese_checks.CODE:
             checks.set_text("")
     finally:

@@ -41,6 +41,8 @@ class ChoicesMenu(
     private val starts = ArrayList<Int>()
     /** The code being typed, in the band. */
     private var code = ""
+    var revision = 0
+        private set
 
     /** The key under a resting finger, or empty: its choice is highlighted. */
     var hover = ""
@@ -52,6 +54,7 @@ class ChoicesMenu(
 
     /** Opens on the first page of a new list of choices. */
     fun open(code: String, source: (Int, Int) -> List<String>) {
+        changedPage()
         this.code = code
         this.source = source
         choices.clear()
@@ -86,6 +89,7 @@ class ChoicesMenu(
     /** Turns to the next page. False on the last. */
     fun next(): Boolean {
         if (!hasNext) return false
+        changedPage()
         starts += page.end
         fill()
         invalidate()
@@ -98,6 +102,7 @@ class ChoicesMenu(
 
     fun previous(): Boolean {
         if (!hasPrevious) return false
+        changedPage()
         starts.removeAt(starts.size - 1)
         invalidate()
         return true
@@ -105,6 +110,9 @@ class ChoicesMenu(
 
     /** The place in the whole list of the choice that key [key] picks on the open page, or -1. */
     fun choice(key: String) = ChineseMenu.choice(page, key)
+
+    /** The word actually drawn for a cell, to verify it still belongs to the engine before picking. */
+    fun wordAt(index: Int) = choices.getOrNull(index)
 
     /** P's text: the page, and how many, or "›" while more may follow. */
     private fun position(): String {
@@ -177,6 +185,11 @@ class ChoicesMenu(
 
     /** The choice under a touch, which it picks if it lifts there too. */
     private var touched = -1
+
+    private fun changedPage() {
+        revision++
+        touched = -1
+    }
 
     private fun cellAt(x: Float, y: Float): Int {
         val row = (y / dp(ROW_HEIGHT)).toInt()

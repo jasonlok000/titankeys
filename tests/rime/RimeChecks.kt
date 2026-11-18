@@ -1,9 +1,13 @@
 package com.titankeys.rime
 
 import com.titankeys.keyboard.ChineseKeys
+import com.titankeys.keyboard.ChineseOffers
+import com.titankeys.keyboard.ChineseRow
 import com.titankeys.keyboard.ChineseSetup
+import com.titankeys.keyboard.BarLog
 import com.titankeys.keyboard.EngineState
 import com.titankeys.keyboard.InputMethod
+import com.titankeys.keyboard.pickDisplayed
 import java.io.File
 import java.security.MessageDigest
 
@@ -50,6 +54,7 @@ fun main(args: Array<String>) {
     theBarsWordsShowAsChoices()
     aPickedBarWordBringsItsNextWords()
     theBarsWordsNeverCoverACode()
+    chinesePicksReplaceTheVisibleRow()
     aFlickKeepsWhatWasPicked()
     lazySoundsOffSelectsTheStrictTwin()
     println("Rime checks passed")
@@ -83,10 +88,13 @@ private class FakeRime : RimeCalls {
      * offers them again.
      */
     var suggestions = emptyList<String>()
+    var predict = true
+    /** A fixture can ask a pick to select a prefix of the code, leaving the rest pending. */
+    var selectPrefix: Pair<Int, String>? = null
 
     private fun committed(text: String) {
         commit = text
-        suggestions = (0 until 3).map { "$text+$it" }
+        suggestions = if (predict) (0 until 3).map { "$text+$it" } else emptyList()
     }
 
     fun choices() = if (code.isEmpty()) suggestions else (0 until 8).map { "${code.uppercase()}${page * 8 + it}" }
@@ -139,8 +147,17 @@ private class FakeRime : RimeCalls {
     override fun selectAt(index: Int): Boolean {
         val c = all()
         if (index !in c.indices) return false
-        committed(c[index])
+        selectPrefix?.let { (count, word) ->
+            selectPrefix = null
+            pickedCode = code.take(count)
+            pickedText = word
+            code = code.drop(count)
+            return true
+        }
+        committed(pickedText + c[index])
         code = ""
+        pickedCode = ""
+        pickedText = ""
         page = 0
         return true
     }
@@ -887,6 +904,60 @@ fun theBarsWordsNeverCoverACode() {
     same(EngineState.UNHANDLED, started().first.let { e -> e.offer(listOf("w")); e.enter() }, "Enter with an offer is the keyboard's")
     val space = started().first.let { e -> e.offer(listOf("w")); e.space() }
     check(!space.handled && space.commit.isEmpty(), "Space with the bar's words is a plain space, picking none")
+}
+
+/** The engine dispatch and fitted row handle both a pick that finishes typing and one that leaves a code. */
+fun chinesePicksReplaceTheVisibleRow() {
+    for ((schema, keys, prefix) in listOf(
+        Triple(RimeEngine.Schema.Yale, "neihou", "你"),
+        Triple(RimeEngine.Schema.Pinyin, "nihao", "你"),
+    )) {
+        val (engine, rime) = started(schema)
+        type(engine, keys)
+        val row = ChineseRow.Choices(engine.choices(0, ChineseRow.ASK + 1))
+        val selected = row.shown[1]
+        val word = row.items[selected]
+        val index = row.engineIndex(selected)
+        rime.selectPrefix = (keys.indexOf('h')) to prefix
+
+        val partial = checkNotNull(engine.pickDisplayed(index, word))
+        same("", partial.commit, "$schema partial pick does not edit the field")
+        check(partial.composing && partial.code.startsWith(prefix), "$schema draws the picked prefix with the pending code")
+        val next = ChineseRow.Choices(engine.choices(0, ChineseRow.ASK + 1))
+        val leading = next.shown.first()
+        check(word !in next.items, "$schema replaces the old row with choices for the remaining code")
+        same(null, engine.pickDisplayed(index, word), "$schema delayed tap cannot pick a replacement at the same index")
+        same(partial.code, engine.state().code, "$schema delayed tap leaves the partial code intact")
+
+        val completed = checkNotNull(engine.pickDisplayed(next.engineIndex(leading), next.items[leading]))
+        val text = prefix + next.items[leading]
+        same(text, completed.commit, "$schema final pick commits the whole choice with no added space")
+        same("", completed.code, "$schema final pick has no remaining code")
+        same((0 until 3).map { "$text+$it" }, completed.choices, "$schema final pick immediately offers next words")
+        val predictions = ChineseRow.Choices(completed.choices)
+        val log = BarLog.choiceRow(completed.composing, predictions.items, predictions.shown.map { predictions.columns[it]!! })
+        check(log.startsWith("predictions ") && log.contains("=$text+0"), "$schema trace shows the next words with no code")
+
+        rime.predict = false
+        type(engine, keys)
+        val noPrediction = checkNotNull(engine.pickDisplayed(0, engine.choices(0, 1).single()))
+        check(noPrediction.commit.isNotEmpty() && noPrediction.choices.isEmpty(), "$schema can commit without native predictions")
+        same(listOf("嗎"), engine.offer(listOf("嗎")).choices, "$schema fresh editor offer can fill that row")
+    }
+
+    val offers = ChineseOffers()
+    val first = offers.begin()
+    check(!offers.allows(false), "old editor words are blocked while the picked text is still being sent")
+    val second = offers.begin()
+    offers.submitted(first)
+    check(!offers.allows(false), "submission for an obsolete pick cannot reopen the row")
+    offers.submitted(second)
+    check(!offers.allows(true), "while paste waits in the composer queue its pre-pick words are still blocked")
+    check(offers.allows(false), "editor predictions can fill the row once the composer drains")
+    val oldField = offers.begin()
+    offers.clear()
+    offers.submitted(oldField)
+    check(offers.allows(false), "a field or input-method change clears the gate")
 }
 
 /**

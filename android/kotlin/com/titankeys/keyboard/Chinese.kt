@@ -92,6 +92,33 @@ object ChineseRow {
     fun column(key: String) = Picker.column(key, ROWS)
 }
 
+/** Keep editor predictions from the previous context out of a Rime row while the pick reaches the editor. */
+internal class ChineseOffers {
+    private var pending: Any? = null
+    private var sent = false
+
+    fun begin(): Any = Any().also {
+        pending = it
+        sent = false
+    }
+
+    fun submitted(pick: Any) {
+        if (pending === pick) sent = true
+    }
+
+    fun allows(composerBusy: Boolean): Boolean {
+        if (pending == null) return true
+        if (!sent || composerBusy) return false
+        clear()
+        return true
+    }
+
+    fun clear() {
+        pending = null
+        sent = false
+    }
+}
+
 /**
  * The bigger menu that holding P opens: the choices over the three letter rows, W to O, S to L and Z to M, each as wide as it
  * needs, a page at a time. P shows the page; Enter and Backspace turn the pages, as on the Sym panel.

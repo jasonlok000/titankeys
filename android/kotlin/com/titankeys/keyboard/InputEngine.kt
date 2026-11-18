@@ -85,6 +85,10 @@ interface InputEngine {
     val timing: String get() = ""
 }
 
+/** Picks the displayed word only while it still occupies this engine index. */
+internal fun InputEngine.pickDisplayed(index: Int, word: String): EngineState? =
+    if (choices(index, 1).singleOrNull() == word) pickAt(index) else null
+
 /**
  * What an engine returns after each call.
  *

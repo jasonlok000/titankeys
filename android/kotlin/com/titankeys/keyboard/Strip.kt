@@ -339,9 +339,13 @@ class Strip(
             effects?.invalidate()
         }
 
+    /** The picker item a touch went down on, which it picks if it lifts there too. */
+    private var pickerTouched = -1
+
     /** A word's menu or a notice about a word, in the place of everything else. */
     var notice: Notice? = null
         set(value) {
+            pickerTouched = -1
             if (field == value) return
             field = value
             logBar()
@@ -357,6 +361,8 @@ class Strip(
      * first choice; left and right are the second and third. It may get the same line again: the keyboard logs a change only.
      */
     var log: ((String) -> Unit)? = null
+    /** Debug-only trace of the wide row, including its predictions with no code and any ordinary fallback. */
+    var choiceRowLog: ((String) -> Unit)? = null
 
     private fun logBar() {
         val log = log ?: return
@@ -948,6 +954,14 @@ class Strip(
         drawMenuWord(canvas)
         drawMenu(canvas)
         drawPicker(canvas)
+        choiceRowLog?.let { log ->
+            val shown = (notice as? Notice.Picker)?.takeIf { noticeRow.visibility == VISIBLE && it.mark.isNotEmpty() }
+            val row = if (shown != null) BarLog.choiceRow(shown.lead.isNotEmpty(), shown.items, shown.columns)
+            else "plain " + wordViews.joinToString(" | ") { view ->
+                if (view.visibility == VISIBLE) view.text.ifEmpty { "-" } else "-"
+            }
+            log(row)
+        }
         drawAutoCapital(canvas)
         drawInputMark(canvas)
         idle?.let { drawIdle(canvas, it) }
@@ -1119,8 +1133,6 @@ class Strip(
         else -> -1f
     }
     private var markTouched = false
-    /** The picker item a touch went down on, which it picks if it lifts there too. */
-    private var pickerTouched = -1
 
     /** The picker's item under [x], or -1. */
     private fun pickerItemAt(x: Float): Int {

@@ -20,5 +20,13 @@ object BarLog {
     fun line(id: String, shown: String): String =
         if (shown.startsWith(NOTICE)) "bar notice: ${shown.removePrefix(NOTICE)}" else "bar: $id $shown"
 
+    /** The actual wide row, in key columns rather than the ordinary bar's three ranks. */
+    fun choiceRow(pending: Boolean, choices: List<String>, columns: List<IntRange>): String =
+        choices.zip(columns).joinToString(" | ", if (pending) "pending " else "predictions ") { (word, keys) ->
+            "${keys.first}-${keys.last}=$word"
+        }
+
+    fun choiceLine(id: String, row: String) = "choice row: $id $row"
+
     private const val NOTICE = "notice: "
 }

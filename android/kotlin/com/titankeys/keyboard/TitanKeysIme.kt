@@ -124,6 +124,8 @@ class TitanKeysIme : InputMethodService() {
     private var barWords = emptyList<String>()
     /** TitanKeys Debug's last bar log line ([BarLog]), so only a change is logged. */
     private var barLogged: String? = null
+    private var choiceRowLogged: String? = null
+    private val chineseOffers = ChineseOffers()
     /** The units picked in this field, Chinese's and Japanese's words for the gestures and the bar ([PickedWords]). */
     private val pickedWords = PickedWords()
     /** A held Backspace's repeats, where Android sends none ([BackspaceRepeat]), and its first press, which they copy. */
@@ -835,7 +837,7 @@ class TitanKeysIme : InputMethodService() {
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
-            { modifiers.autoShifted }) { barWords = it; strip?.words = it; rawLog?.bar(it); offerBarWords(it) }
+            { modifiers.autoShifted }, ::showComposerWords)
         languages.words.shown = { if (ChineseKeys.usesBar(languages.current)) ChineseRow.ASK else BarWords.SHOWN }
         composer.autoPunctuation = { TypingSettings.autoPunctuationIn(this, languages.languageId) }
         composer.sentenceSpaces = {
@@ -1431,6 +1433,14 @@ class TitanKeysIme : InputMethodService() {
                 barLogged = line
             }
         }
+        if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) words.choiceRowLog = { shown ->
+            if (::languages.isInitialized && ChineseKeys.isChinese(languages.current) &&
+                android.util.Log.isLoggable(BarLog.TAG, android.util.Log.DEBUG)) {
+                val line = BarLog.choiceLine(languages.current.id, shown)
+                if (line != choiceRowLogged) android.util.Log.d(BarLog.TAG, line)
+                choiceRowLogged = line
+            }
+        }
         if (::languages.isInitialized) showInputMark()
         if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys
@@ -1445,19 +1455,27 @@ class TitanKeysIme : InputMethodService() {
         words.showSuggestions = showSuggestions()
         showModifiers()
         // Chinese's bigger menu, that holding P opens, in the Sym panel's place (docs/languages.md, "Chinese on the bar").
-        val choices = ChoicesMenu(ui) { index -> enqueue { pickFromMenu(index) } }.apply { visibility = View.GONE }
+        val choices = ChoicesMenu(ui) tap@{ index ->
+            val menu = choicesMenu ?: return@tap
+            val revision = menu.revision
+            val open = openPicker() ?: return@tap
+            enqueue {
+                if (choicesMenu === menu && menu.revision == revision && openPicker() === open) pickFromMenu(index)
+            }
+        }.apply { visibility = View.GONE }
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
         words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }
         words.markTap = { enqueue { tapMark() } }
-        words.pickerTap = { index ->
+        words.pickerTap = tap@{ index ->
+            if (strip !== words) return@tap
+            val open = openPicker() ?: return@tap
             enqueue {
-                openPicker()?.let { open ->
-                    // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
-                    val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
-                    if (choice >= 0 && open is LanguagePicker.Choices) tallyChoices("pick.tap")
-                    if (choice >= 0) pick(open, choice)
-                }
+                if (strip !== words || openPicker() !== open) return@enqueue
+                // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
+                val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
+                if (choice >= 0 && open is LanguagePicker.Choices) tallyChoices("pick.tap")
+                if (choice >= 0) pick(open, choice)
             }
         }
         val keyboard = LinearLayout(ui).apply {
@@ -3432,6 +3450,7 @@ class TitanKeysIme : InputMethodService() {
     private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
 
     private fun clearSettlements() {
+        chineseOffers.clear()
         replayedCode = false
         inputGeneration++
         loadGate.clear()
@@ -4012,7 +4031,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun pick(open: LanguagePicker, choice: Int) {
-        closePicker()
+        if (open !is LanguagePicker.Choices || !ChineseKeys.isChinese(languages.current)) closePicker()
         haptics.play(Haptic.MenuPress)
         when (open) {
             is LanguagePicker.Accents -> {
@@ -4088,7 +4107,16 @@ class TitanKeysIme : InputMethodService() {
         if (state.commit.isNotEmpty()) {
             val text = state.commit
             rawLog?.committed(languages.current.engine, text)
-            if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
+            val pick = if (ChineseKeys.isChinese(languages.current)) chineseOffers.begin() else null
+            if (pick != null) {
+                // Clear the row underneath while the old picker still covers it.
+                barWords = emptyList()
+                strip?.words = emptyList()
+            }
+            if (pick != null) {
+                composer.paste(text)
+                chineseOffers.submitted(pick)
+            } else if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
             // What was picked stays one word for every gesture and the bar ([PickedWords]).
             pickedWords.picked(text)
         }
@@ -4098,12 +4126,20 @@ class TitanKeysIme : InputMethodService() {
         } else closePicker()
     }
 
+    private fun showComposerWords(words: List<String>) {
+        if (ChineseKeys.isChinese(languages.current) && !chineseOffers.allows(composer.hasPendingInput)) return
+        barWords = words
+        strip?.words = words
+        rawLog?.bar(words)
+        offerBarWords(words)
+    }
+
     /**
      * Chinese and Japanese: the bar's words go to the engine's wide row, as many as fit, and a pick types no space and brings
      * the engine's next words ([InputEngine.offer]). Never over a code or the engine's own suggestions.
      */
     private fun offerBarWords(words: List<String>) {
-        if (!ChineseKeys.usesBar(languages.current) || field.exact) return
+        if (!ChineseKeys.usesBar(languages.current) || field.exact || choicesMenuOpen) return
         val engine = languages.engine ?: return
         val open = openPicker()
         if (open != null && (open !is LanguagePicker.Choices || open.state.composing)) return
@@ -4127,7 +4163,10 @@ class TitanKeysIme : InputMethodService() {
             engineState(EngineState(commit = open.english.orEmpty()))
             return
         }
-        engineState(engine.pickAt(open.engineIndex(item)))
+        val index = open.engineIndex(item)
+        val state = if (ChineseKeys.isChinese(languages.current)) engine.pickDisplayed(index, open.items[item])
+        else engine.pickAt(index)
+        state?.let(::engineState)
     }
 
     /**
@@ -4172,10 +4211,18 @@ class TitanKeysIme : InputMethodService() {
     /** A pick from the bigger menu: its place in the engine's whole list. The menu closes. */
     private fun pickFromMenu(index: Int) {
         if (!choicesMenuOpen) return
-        closeChoicesMenu()
+        val engine = languages.engine ?: return
+        val state = if (ChineseKeys.isChinese(languages.current)) {
+            val word = choicesMenu?.wordAt(index) ?: return
+            engine.pickDisplayed(index, word) ?: return
+        } else {
+            closeChoicesMenu()
+            engine.pickAt(index)
+        }
         haptics.play(Haptic.MenuPress)
         tallyChoices("pick.menu")
-        languages.engine?.let { engineState(it.pickAt(index)) }
+        engineState(state)
+        closeChoicesMenu()
     }
 
     /**
@@ -4202,9 +4249,10 @@ class TitanKeysIme : InputMethodService() {
             KeyEvent.KEYCODE_DEL -> if (menu.previous()) haptics.play(Haptic.PanelPage)
             KeyEvent.KEYCODE_SYM -> closeChoicesMenu()
             KeyEvent.KEYCODE_SPACE -> {
-                closeChoicesMenu()
+                if (!ChineseKeys.isChinese(languages.current)) closeChoicesMenu()
                 tallyChoices("pick.space")
                 languages.engine?.let { engineState(it.space()) }
+                closeChoicesMenu()
             }
         }
         return true
@@ -4447,6 +4495,8 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun inputMethodChanged(method: InputMethod) {
+        chineseOffers.clear()
+        choiceRowLogged = null
         rawLog?.inputMethod(loggedInputMethod, method.id)
         loggedInputMethod = method.id
         showInputMark()

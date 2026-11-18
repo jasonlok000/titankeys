@@ -2705,6 +2705,24 @@ private fun bugHunt(world: Realistic) {
     }
     must(Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS, 0).suggestions,
         "#10: an address bar that asks for no suggestions still gets the bar")
+    // An app's own search field that asks for no suggestions (Google Maps' search): the bar, but no fixes and nothing learned (owner,
+    // 2026-11-17). Its Enter searches, or it completes as typed.
+    val noSuggestions = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+    for ((name, field) in listOf("a search action" to Field.of(noSuggestions, EditorInfo.IME_ACTION_SEARCH),
+            "auto-complete" to Field.of(noSuggestions or InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE, 0))) {
+        must(field.suggestions && field.starters && !field.autocorrect && !field.learning,
+            "An app's search field with $name gets the bar and starters, no fixes and no learning")
+        Typist(world, field = field).type("teh zorblat ").also {
+            same(it.text, "teh zorblat ", "Nothing is fixed in an app's search field with $name")
+            same(it.words.typed.toList(), emptyList<String>(), "Nothing is learned in an app's search field with $name")
+        }
+        must(Typist(world, field = field, words = FakeWords(Lists(world.words)).also { it.completions = listOf("hello") }).type("hel").bar
+            .isNotEmpty(), "An app's search field with $name shows words on the bar")
+    }
+    // Usernames and codes ask for no suggestions with no search: still no bar. Passwords and email stay as they were.
+    must(!Field.of(noSuggestions, EditorInfo.IME_ACTION_DONE).suggestions, "A username or code field still gets no bar")
+    must(!Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
+        EditorInfo.IME_ACTION_SEARCH).suggestions, "A password field with a search action still gets no bar")
 
     // #29: Sym's "&" and "=" got spaces around them in an address bar.
     fun symbols(field: Field) = Typist(world, field = field, autoCapitalise = false).type("a").also { it.composer.symbol("="); it.settle() }

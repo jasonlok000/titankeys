@@ -14,7 +14,7 @@ data class Field(
     val learning: Boolean,
     /** Two quick spaces after a word become a full stop. */
     val fullStops: Boolean,
-    /** A search bar that is empty or fully selected shows starter words. */
+    /** A search bar that is empty or fully selected shows starter words: a browser's, or an app's own search field. */
     val starters: Boolean,
     /** Sentences may start with a capital letter. */
     val sentenceCapitalisation: Boolean,
@@ -52,14 +52,21 @@ data class Field(
             val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
                 || variation == InputType.TYPE_TEXT_VARIATION_FILTER
-            // A text field that asks for no suggestions, as a username or a code field does, gets none: no bar, no fixes, and nothing
-            // learned from it (bug hunt #10). An address bar that asks the same still gets the bar: browsers search from it too.
-            val unsuggested = inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0 && !url
+            val noSuggestions = inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0
+            // A search field that asks for no suggestions, because the app shows its own list (Google Maps' search), still gets the
+            // bar, as a search bar does: its Enter searches, or it completes as typed. Nothing is fixed or learned there (owner,
+            // 2026-11-17: "we are too strict on some input fields to not show suggestions, such as a googlemaps search field").
+            val appSearch = noSuggestions && !url && !password && !email && (imeOptions and EditorInfo.IME_MASK_ACTION ==
+                EditorInfo.IME_ACTION_SEARCH || inputType and InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE != 0)
+            // Any other text field that asks for no suggestions, as a username or a code field does, gets none: no bar, no fixes,
+            // and nothing learned from it (bug hunt #10). An address bar that asks the same still gets the bar: browsers search
+            // from it too.
+            val unsuggested = noSuggestions && !url && !appSearch
             // A field with no suggestions types no words either: an address or a password is typed key by key.
-            return Field(words = !password && !email, learning = !password && !address && !private && !unsuggested,
-                fullStops = !password && !address, starters = search,
+            return Field(words = !password && !email, learning = !password && !address && !private && !unsuggested && !appSearch,
+                fullStops = !password && !address, starters = search || appSearch,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
-                autocorrect = !password && !address && !exact && !unsuggested,
+                autocorrect = !password && !address && !exact && !unsuggested && !appSearch,
                 suggestions = !password && !email && !unsuggested, secret = password)
         }
 

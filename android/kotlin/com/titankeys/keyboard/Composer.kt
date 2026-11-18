@@ -316,6 +316,29 @@ class Composer(
      */
     private var lowercaseI: String? = null
 
+    /** A browser may remove a picked word's separator and select an inline suffix. That occurrence is already settled. */
+    private data class PickedAddress(val owner: Editor.Identity, val before: String, val after: String,
+                                     val start: Int, val end: Int)
+    private var pickedAddress: PickedAddress? = null
+
+    private fun settledAddress(anchor: Snapshot): Boolean {
+        val picked = pickedAddress ?: return false
+        val before = anchor.before
+        val start = minOf(anchor.selection.start, anchor.selection.end)
+        val end = maxOf(anchor.selection.start, anchor.selection.end)
+        if (sameIdentity(picked.owner, editor.identity()) && anchor.after == picked.after && before != null) {
+            // The separator is still present: normal next-word prediction may proceed.
+            if (!anchor.selected && start == picked.end + 1 && before == (picked.before + " ").takeLast(Editor.CONTEXT_LENGTH)) return false
+            // A late selection report may still count the separator Chrome just removed.
+            if (!anchor.selected && start in picked.end..picked.end + 1 && before == picked.before) return true
+            // Keep the settled occurrence while Chromium highlights its suffix or its appended inline completion.
+            if (anchor.selected && start > picked.start && start <= picked.end && end >= picked.end &&
+                before.endsWith(picked.before.dropLast(picked.end - start))) return true
+        }
+        pickedAddress = null
+        return false
+    }
+
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
     val canContinueSwipe get() = liftOffMillis > 0 && (hasPendingInput || (composition as? Composition.Swiped)?.continuable == true)
@@ -326,6 +349,7 @@ class Composer(
     fun start(field: Field, selectionStart: Int, selectionEnd: Int) {
         keptWords.settle()
         val next = editor.identity()
+        if (!sameIdentity(pickedAddress?.owner, next) || !field.words || !field.suggestions || field.fullStops) pickedAddress = null
         val transition = barrier
         val carries = transition?.navigation == true && next != null
             && !next.packageName.isNullOrEmpty() && next.packageName == transition.identity.packageName
@@ -357,6 +381,7 @@ class Composer(
     }
 
     fun stop(terminal: Boolean = false) {
+        pickedAddress = null
         keptWords.settle()
         if (terminal && sameIdentity(identity, editor.identity())) {
             val swiped = composition as? Composition.Swiped
@@ -913,6 +938,7 @@ class Composer(
     }
 
     fun backspace(word: Boolean) {
+        pickedAddress = null
         if (defer { backspace(word) }) return
         if (!sameIdentity(identity, editor.identity())) {
             reset()
@@ -1382,7 +1408,17 @@ class Composer(
         val anchor = snapshot()
         val current = epoch
         val owner = identity
+        // Address-like fields do not learn or add sentence punctuation. Remember only an explicit bar pick here,
+        // before commitText: an editor filter can synchronously report its normalized text from that call.
+        pickedAddress = if (cause == EditCause.Choose && field.words && field.suggestions && !field.fullStops &&
+            owner != null && anchor.available && anchor.knownSelection && text.endsWith(" ")) {
+            val start = minOf(anchor.selection.start, anchor.selection.end) - count
+            PickedAddress(owner, (anchor.before!!.dropLast(count) + text.dropLast(1)).takeLast(Editor.CONTEXT_LENGTH),
+                anchor.after!!.drop(after), start, start + text.length - 1)
+        } else null
         val accepted = editor.replace(count, text, after)
+        if (accepted && pickedAddress != null) show(emptyList())
+        if (!accepted) pickedAddress = null
         log?.edited(cause, count, text, after, accepted)
         if (current != epoch || !sameIdentity(owner, editor.identity())) return false
         if (!accepted) {
@@ -2020,7 +2056,12 @@ class Composer(
         // Predictions must belong to the last verified owned edit.
         if (editSnapshot != null && anchor != editSnapshot) return
         if (!anchor.available || !anchor.knownSelection) {
-            offerStarts(anchor)
+            if (pickedAddress != null) show(emptyList()) else offerStarts(anchor)
+            return
+        }
+        if (settledAddress(anchor)) {
+            composition = Composition.None
+            show(emptyList())
             return
         }
         val before = anchor.before ?: return

@@ -52,6 +52,7 @@
     "practice": "namaste",
     "keys": {
       "legend": "",
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

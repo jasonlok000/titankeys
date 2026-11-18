@@ -1,4 +1,6 @@
-import { Canvas, CanvasText, Section } from "ink";
+import { useState } from "react";
+import { keyFace, keyLayers, type KeyLayer } from "./key-layers";
+import { Button, Canvas, CanvasText, Section } from "ink";
 import pageText from "../tools/im/page-text.json";
 import { CREAM, MUTED, useAccent } from "./brand";
 import { Note } from "./note";
@@ -36,8 +38,11 @@ function roleText(role: KeyRole) {
 export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?: boolean }) {
   const accent = useAccent();
   const keys = guideFor(im)?.keys;
+  const [selected, setLayer] = useState<KeyLayer>("base");
   if (!keys) return null;
-  const map = keys.map ?? {}, shift = keys.shift ?? {}, held = keys.held ?? {};
+  const map = keys.map ?? {};
+  const layers = keyLayers(keys);
+  const layer = layers.includes(selected) ? selected : "base";
   const roles = (keys.roles ?? []).filter(role => role.key in ROLE_NAMES && roleText(role));
   if (!Object.keys(map).length && !roles.length) return null;
   const number = (key?: string) => roles.findIndex(role => role.key === key) + 1;
@@ -50,15 +55,14 @@ export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?:
       parts.push(<RoundedOutline key={`k${id}`} x={x + 2} y={y + 2} width={width - 4} height={ROW - 4} radius={RADIUS.small}
         stroke={at ? accent : MUTED} strokeWidth={at ? 2.5 : 1} />);
       if (cap.letter) {
-        const typed = map[cap.letter];
-        parts.push(<CanvasText key={`t${id}`} x={x} y={y} width={width} height={ROW} size={24} colour={CREAM} align="center">
-          {typed ?? cap.letter.toUpperCase()}</CanvasText>);
-        if (typed) parts.push(<CanvasText key={`l${id}`} x={x + 6} y={y + ROW - 24} width={22} height={20} size={18} colour={MUTED}>
-          {cap.letter}</CanvasText>);
-        if (shift[cap.letter]) parts.push(<CanvasText key={`s${id}`} x={x + width - 26} y={y + 5} width={22} height={20} size={18}
-          colour={accent} align="end">{shift[cap.letter]}</CanvasText>);
-        else if (held[cap.letter]) parts.push(<CanvasText key={`h${id}`} x={x + width - 20} y={y + 2} width={16} height={20} size={18}
-          colour={accent} align="end">•</CanvasText>);
+        const glyph = keyFace(keys, layer, cap.letter, im.id, im.id === "zh-zhuyin");
+        // Keep every physical legend present, even for a layer that leaves that key unused.
+        const count = Array.from(glyph).length;
+        parts.push(<CanvasText key={`t${id}`} x={x + 2} y={y + 3} width={width - 4} height={ROW - 11}
+          size={Math.min(24, (width - 8) / Math.max(count, 1))} colour={layer === "base" ? CREAM : accent} align="center">
+          {glyph}</CanvasText>);
+        parts.push(<CanvasText key={`l${id}`} x={x + 5} y={y + ROW - 17} width={24} height={15} size={13} colour={MUTED}>
+          {cap.letter.toUpperCase()}</CanvasText>);
       } else {
         parts.push(<CanvasText key={`t${id}`} x={x} y={y} width={width} height={ROW} size={18} colour={at ? CREAM : MUTED} align="center">
           {cap.label ?? ""}</CanvasText>);
@@ -68,7 +72,17 @@ export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?:
     }
   }
   const body = <>
+    {layers.length > 1 && layers.map(value => <Button key={value} selected={value === layer} onPress={() => setLayer(value)}>
+      {pageText.page.keyLayers[value]}</Button>)}
     <Canvas width={WIDTH + 2} height={ROW * 4 + 2}>{parts}</Canvas>
+    {ROWS.map((row, index) => {
+      const entries = row.flatMap(cap => {
+        if (!cap.letter) return [];
+        const glyph = keyFace(keys, layer, cap.letter, im.id, im.id === "zh-zhuyin");
+        return glyph ? [cap.letter.toUpperCase() + " → " + glyph] : [];
+      });
+      return entries.length ? <Note key={index}>{entries.join("   ·   ")}</Note> : null;
+    })}
     {keys.legend ? <Note>{keys.legend}</Note> : null}
     {roles.map((role, index) => <Note key={role.key}>{`${index + 1}  ${ROLE_NAMES[role.key]}: ${roleText(role)}`}</Note>)}
   </>;

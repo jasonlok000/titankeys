@@ -51,6 +51,11 @@
     "practice": "Kaixo, zer moduz?",
     "keys": {
       "legend": "",
+      "accents": {
+        "c": "ç",
+        "n": "ñ"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

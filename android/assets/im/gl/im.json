@@ -55,6 +55,15 @@
     "practice": "Bo día, que tal?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "á",
+        "e": "é",
+        "i": "íï",
+        "n": "ñ",
+        "o": "ó",
+        "u": "úü"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

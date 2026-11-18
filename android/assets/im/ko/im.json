@@ -85,6 +85,7 @@
         "o": "ㅒ",
         "p": "ㅖ"
       },
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

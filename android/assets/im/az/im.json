@@ -56,6 +56,16 @@
     "practice": "Necəsən, dostum?",
     "keys": {
       "legend": "",
+      "accents": {
+        "c": "ç",
+        "e": "ə",
+        "g": "ğ",
+        "i": "ı",
+        "o": "ö",
+        "s": "ş",
+        "u": "ü"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

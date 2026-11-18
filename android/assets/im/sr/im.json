@@ -109,6 +109,11 @@
         "y": "з",
         "z": "ж"
       },
+      "accents": {
+        "l": "чћ",
+        "p": "шђ"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

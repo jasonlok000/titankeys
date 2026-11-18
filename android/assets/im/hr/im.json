@@ -54,6 +54,14 @@
     "practice": "Hvala, dobro sam",
     "keys": {
       "legend": "",
+      "accents": {
+        "c": "čć",
+        "d": "đ",
+        "e": "é",
+        "s": "š",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

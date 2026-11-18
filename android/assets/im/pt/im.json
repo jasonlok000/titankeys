@@ -68,6 +68,15 @@
     "practice": "Não é fácil",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "áàâã",
+        "c": "ç",
+        "e": "éê",
+        "i": "í",
+        "o": "óôõ",
+        "u": "ú"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

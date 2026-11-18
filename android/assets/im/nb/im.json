@@ -52,6 +52,12 @@
     "practice": "Hei, hvordan går det?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "àæå",
+        "e": "é",
+        "o": "óòôø"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

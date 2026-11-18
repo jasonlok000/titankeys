@@ -201,7 +201,7 @@ export type Guide = {
   family?: string;
   line?: string;
   points?: string[];
-  keys?: { legend?: string; map?: Record<string, string>; shift?: Record<string, string>; held?: Record<string, string>; roles?: KeyRole[] };
+  keys?: { legend?: string; map?: Record<string, string>; shift?: Record<string, string>; held?: Record<string, string>; heldShift?: Record<string, string>; accents?: Record<string, string>; capitals?: boolean; roles?: KeyRole[] };
   practice?: string;
 };
 

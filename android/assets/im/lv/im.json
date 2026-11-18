@@ -60,6 +60,20 @@
     "practice": "Labdien, kā iet?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "ā",
+        "c": "č",
+        "e": "ē",
+        "g": "ģ",
+        "i": "ī",
+        "k": "ķ",
+        "l": "ļ",
+        "n": "ņ",
+        "s": "š",
+        "u": "ū",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

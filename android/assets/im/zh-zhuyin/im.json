@@ -93,6 +93,7 @@
         "n": "ㄋ",
         "m": "ㄇ"
       },
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

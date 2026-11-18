@@ -57,6 +57,17 @@
     "practice": "Dzień dobry, Łukasz",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "ą",
+        "c": "ć",
+        "e": "ę",
+        "l": "ł",
+        "n": "ń",
+        "o": "ó",
+        "s": "ś",
+        "z": "źż"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

@@ -43,7 +43,7 @@ export function unavailableNotes(settings: PageSetting[], language: string) {
 
 const englishGuide: Guide = {
   family: "english",
-  keys: { roles: [
+  keys: { capitals: true, roles: [
     { key: "shift", role: "letters" },
     { key: "sym", role: "default" },
     { key: "space", role: "default" },

@@ -65,6 +65,7 @@
     "practice": "nihao",
     "keys": {
       "legend": "",
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

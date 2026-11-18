@@ -169,6 +169,7 @@
     "how": "How it works",
     "hideHow": "Hide how it works",
     "keys": "The keys",
+    "keyLayers": { "base": "Letters", "shift": "Shift", "held": "Hold", "heldShift": "Shift + hold" },
     "otherMethods": "Other input methods",
     "method": "Input method",
     "methods": "Input methods",

@@ -53,6 +53,13 @@
     "practice": "Hvordan går det?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "æå",
+        "e": "é",
+        "o": "øö",
+        "u": "ü"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

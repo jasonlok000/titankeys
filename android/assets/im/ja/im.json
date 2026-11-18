@@ -51,6 +51,7 @@
     "practice": "konnichiha",
     "keys": {
       "legend": "",
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

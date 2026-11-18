@@ -55,6 +55,15 @@
     "practice": "Ĉu vi parolas Esperanton?",
     "keys": {
       "legend": "",
+      "accents": {
+        "c": "ĉ",
+        "g": "ĝ",
+        "h": "ĥ",
+        "j": "ĵ",
+        "s": "ŝ",
+        "u": "ŭ"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

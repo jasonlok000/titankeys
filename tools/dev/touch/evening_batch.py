@@ -65,33 +65,17 @@ def check_enter_picked_code():
 
 
 def check_korean_howto():
-    def step(*command):
-        if f" {APP}/" not in languages.front():
-            raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
-        adb("shell", "input", *command)
-        time.sleep(1.5)
+    from page_probe import Missing, PageUI, Unobservable
     retest_batch.own_screen()
-    adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
-    time.sleep(3)
     try:
-        retest_batch.open_settings(step)
-        x, y = retest_batch.row_at("Languages") or (540, 452)
-        step("tap", str(x), str(y))
-        row = None
-        for _ in range(12):
-            row = retest_batch.row_at("한국어")
-            if row:
-                break
-            step("swipe", "540", "950", "540", "350", "400")
-        if not row:
-            return record("korean-howto", None, "no 한국어 row found", guide_checks.shot("korean-howto"))
-        step("tap", str(row[0]), str(row[1]))
-        record("korean-howto", None, "Korean's how-to: every jamo drawn, no blank boxes", guide_checks.shot("korean-howto"))
-    finally:
-        for _ in range(5):
-            if f" {APP}/" in languages.front() and not languages.in_field():
-                adb("shell", "input", "keyevent", "4")
-                time.sleep(1)
+        lines = PageUI(checks).howto('ko')
+        record('korean-howto-text', True, f'{len(lines)} current Korean how-to points found')
+        record('korean-howto', None, 'Korean page confirmed; visually review drawn jamo for missing glyphs',
+               guide_checks.shot('korean-howto'))
+    except Missing as error:
+        record('korean-howto', False, str(error))
+    except Unobservable as error:
+        record('korean-howto', None, str(error))
 
 
 def check_mark():

@@ -4,7 +4,7 @@
 2. A resting finger slid across the switcher: one menu_mark per tile it enters, not one per key (Debug's HapticsDump).
 3. A tap on the screen on a Sym panel item and on a switcher tile picks it, logs "tap at … on …" and a haptic line
    (TitanKeysTap). A panel item plays screen_tap, a switcher tile menu_press, and a bar word bar_word.
-4. Five languages through InputMethodsSet all stay on; the switcher shows the first four (Settings' own refusal is for hands).
+4. Five languages through InputMethodsSet all stay on; the switcher shows the first four (the Settings refusal has its own check).
 5. Two languages on: a held Sym switches straight to the other, and back.
 6. The mark at Q: Chinese with only Yale on shows 中; with Pinyin on too, 耶.
 
@@ -16,7 +16,6 @@ import time
 import checks
 import guide_checks
 import language_checks
-import languages
 from checks import APP, Stop, adb, play, record
 
 HOLD_SYM = ["key:sym:900:none", "+500"]
@@ -153,9 +152,6 @@ def check_fifth_language():
     play("key:sym", "+500")
 
 
-REFUSAL = "Four languages at a time, tops. Turn one off first."
-
-
 def screen_dump():
     """The screen's accessibility tree, as uiautomator dumps it (the dump is deleted at once)."""
     path = "/data/local/tmp/tk-touch-ui.xml"
@@ -190,46 +186,31 @@ def row_switch(xml, label):
 
 
 def check_fifth_language_refused():
-    """Settings > Languages, with four languages on (English, Russian, Greek, German): a fifth one's page (Afrikaans, the first
-    by script, so no scroll) says "Four languages at a time, tops. Turn one off first.", and a tap on its input method's switch
-    leaves it off. Taps only while TitanKeys Debug is in front, as the languages-page check does."""
+    """Four enabled languages: a fifth toggle stays off in UI and saved state."""
     import retest_batch
-
-    def step(*command):
-        if f" {APP}/" not in languages.front():
-            raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
-        adb("shell", "input", *command)
-        time.sleep(1.5)
-    language_checks.fresh()
-    if not language_checks.turn_on(["en", "ru", "el", "de"], "en"):
-        return record("fifth-language-refused", False, "the four languages didn't go on")
+    from page_probe import Missing, PageUI, Unobservable, assets, shown_name
     retest_batch.own_screen()
-    adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
-    time.sleep(3)
+    ui = PageUI(checks)
+    wanted = ['en', 'ru', 'el', 'de']
     try:
-        retest_batch.open_settings(step)
-        x, y = retest_batch.row_at("Languages") or (540, 452)
-        step("tap", str(x), str(y))
-        row = retest_batch.row_at("Afrikaans")
-        if not row:
-            return record("fifth-language-refused", False, "no Afrikaans row on Settings > Languages")
-        step("tap", str(row[0]), str(row[1]))
-        before = screen_dump()
-        found = row_switch(before, "Afrikaans")
-        if not found:
-            return record("fifth-language-refused", False, "no switch on Afrikaans' input method row")
-        x, y, was_on = found
-        step("tap", str(x), str(y))
-        after = screen_dump()
-        still = [each for each in [row_switch(after, "Afrikaans")] if each]
-        record("fifth-language-refused", REFUSAL in before and not was_on and bool(still) and not still[0][2] and REFUSAL in after,
-               f"the note {'shown' if REFUSAL in before else 'missing'}; the switch {'on' if was_on else 'off'} before the tap, "
-               f"{'on' if still and still[0][2] else 'off'} after it")
-    finally:
-        for _ in range(4):
-            if f" {APP}/" in languages.front() and not languages.in_field():
-                adb("shell", "input", "keyevent", "4")
-                time.sleep(1)
+        with ui.methods(wanted, 'en'):
+            wording, _, method = assets()
+            label = shown_name(method('af'))
+            ui.open_language(label)
+            ui.find(wording['page']['languagesFull'])
+            toggle = ui.find(label, 'toggle')
+            if toggle.get('checked') != 'false':
+                raise Missing('Fifth language toggle already appears enabled')
+            if toggle.get('enabled', 'true') == 'true':
+                ui.tap(toggle)
+            if ui.find(label, 'toggle').get('checked') != 'false' or ui.state() != (wanted, 'en'):
+                raise Missing('Fifth language changed the four-language selection')
+            ui.find(wording['page']['languagesFull'])
+            record('fifth-language-refused', True, 'Limit note visible; fifth stays off in UI and saved state')
+    except Missing as error:
+        record('fifth-language-refused', False, str(error))
+    except Unobservable as error:
+        record('fifth-language-refused', None, str(error))
 
 
 def check_two_toggle():

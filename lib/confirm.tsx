@@ -21,11 +21,13 @@ export function ConfirmPage({ title, body, action, cancel, run }: {
   const go = useAction(run);
   return <Screen title={title} subtitle={body}>
     <Stack gap={24}>
-      <Canvas width={WIDTH} height={HEIGHT}>
-        <RoundedFill x={0} y={0} width={WIDTH} height={HEIGHT} radius={RADIUS.large} fill={accent}
-          onPress={() => { if (go.status !== "pending") void go.run(); }} />
-        <CanvasText x={0} y={0} width={WIDTH} height={HEIGHT} size={32} colour={INK} align="center">{action}</CanvasText>
-      </Canvas>
+      <Stack accessibilityLabel={action} disabled={go.status === "pending"}
+        onPress={() => { if (go.status !== "pending") void go.run(); }}>
+        <Canvas width={WIDTH} height={HEIGHT}>
+          <RoundedFill x={0} y={0} width={WIDTH} height={HEIGHT} radius={RADIUS.large} fill={accent} />
+          <CanvasText x={0} y={0} width={WIDTH} height={HEIGHT} size={32} colour={INK} align="center">{action}</CanvasText>
+        </Canvas>
+      </Stack>
       <Field label={cancel} onPress={back} />
     </Stack>
   </Screen>;

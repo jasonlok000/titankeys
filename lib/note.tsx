@@ -37,7 +37,7 @@ export function KeyCapField({ label, value, onPress }: { label: string; value: s
   const capX = WIDTH - CHEVRON - 16 - CAP;
   const top = (ROW_HEIGHT - CAP) / 2;
   const centre = ROW_HEIGHT / 2;
-  return <Stack onPress={onPress}>
+  return <Stack accessibilityLabel={label} accessibilityValue={value} onPress={onPress}>
     <Canvas width={WIDTH} height={ROW_HEIGHT}>
       <CanvasText x={0} y={0} width={capX - 16} height={ROW_HEIGHT} size={30} align="start">{label}</CanvasText>
       <RoundedOutline x={capX} y={top} width={CAP} height={CAP} radius={RADIUS.small} stroke={MUTED} strokeWidth={1.5} />

@@ -37,10 +37,12 @@ export default function SnippetStart() {
 
 function Choice({ start, letter, selected, onPress }: { start: string; letter?: string; selected: boolean; onPress: () => void }) {
   const accent = useAccent();
-  return <Canvas width={WIDTH} height={HEIGHT}>
-    <Rectangle x={0} y={0} width={WIDTH} height={HEIGHT} fill={INK} onPress={onPress} />
-    <CanvasText x={0} y={0} width={SYMBOL} height={HEIGHT} size={40} colour={selected ? accent : CREAM} align="start">{start}</CanvasText>
-    {KeyCaps({ keys: letter ? ["Alt", letter] : ["Sym"], x: SYMBOL, y: 0, height: HEIGHT, keyPrefix: `cap-${start}` })}
-    {selected && <CanvasIcon x={WIDTH - TICK} y={(HEIGHT - TICK) / 2} size={TICK} name={check} colour={accent} />}
-  </Canvas>;
+  return <Stack accessibilityLabel={start} accessibilitySelected={selected} onPress={onPress}>
+    <Canvas width={WIDTH} height={HEIGHT}>
+      <Rectangle x={0} y={0} width={WIDTH} height={HEIGHT} fill={INK} />
+      <CanvasText x={0} y={0} width={SYMBOL} height={HEIGHT} size={40} colour={selected ? accent : CREAM} align="start">{start}</CanvasText>
+      {KeyCaps({ keys: letter ? ["Alt", letter] : ["Sym"], x: SYMBOL, y: 0, height: HEIGHT, keyPrefix: `cap-${start}` })}
+      {selected && <CanvasIcon x={WIDTH - TICK} y={(HEIGHT - TICK) / 2} size={TICK} name={check} colour={accent} />}
+    </Canvas>
+  </Stack>;
 }

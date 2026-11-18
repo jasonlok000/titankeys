@@ -1,4 +1,4 @@
-import { Canvas, CanvasText, Field, Row, Screen, Section, openURL } from "ink";
+import { Canvas, CanvasText, Field, Row, Screen, Section, Stack, openURL } from "ink";
 import { arrowOutward } from "ink/icons";
 import { contributeText as text, sharePolicyText as policy } from "./connected-text";
 import { PRIVACY_URL } from "./connected";
@@ -45,8 +45,10 @@ function Points({ title, points }: { title: string; points: readonly string[] })
 /** One line of the swipes' status: a label at the start and its value at the end, both in one colour. */
 export function StatusLine({ label, value, colour }: { label: string; value: string; colour: string }) {
   const height = 48;
-  return <Canvas width={WIDTH} height={height}>
-    <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={colour} align="start">{label}</CanvasText>
-    <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={colour} align="end" tabularNumbers>{value}</CanvasText>
-  </Canvas>;
+  return <Stack accessibilityLabel={label} accessibilityValue={value}>
+    <Canvas width={WIDTH} height={height}>
+      <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={colour} align="start">{label}</CanvasText>
+      <CanvasText x={0} y={0} width={WIDTH} height={height} size={32} colour={colour} align="end" tabularNumbers>{value}</CanvasText>
+    </Canvas>
+  </Stack>;
 }

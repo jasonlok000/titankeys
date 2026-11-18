@@ -99,25 +99,19 @@ def open_settings(step):
 
 
 def check_languages_page():
-    """Settings > Languages as a screenshot: the languages on at the top, then by script. Taps only while Debug is in front."""
-    def step(*command):
-        if f" {APP}/" not in languages.front():
-            raise Stop(f"TitanKeys Debug left the front: {languages.front().strip()}")
-        adb("shell", "input", *command)
-        time.sleep(1.5)
+    """Confirm the current accessible Languages page, then keep its visual check."""
+    from page_probe import Missing, PageUI, Unobservable
     own_screen()
-    adb("shell", "am", "start", "-n", f"{APP}/com.vandam.ink.MainActivity")
-    time.sleep(3)
-    # SETTINGS at the top right of the 1076 x 1200 display; then the Languages row, by its text where the screen shows it,
-    # or where it sits since Languages came first in Settings (main 99fb0dcd): the first row, under its heading.
-    open_settings(step)
-    x, y = row_at("Languages") or (540, 452)
-    step("tap", str(x), str(y))
-    record("settings-languages", None, "Settings > Languages: the ones on at the top, then by script", guide_checks.shot("settings-languages"))
-    for _ in range(3):
-        if f" {APP}/" in languages.front():
-            adb("shell", "input", "keyevent", "4")
-            time.sleep(1)
+    try:
+        ui = PageUI(checks)
+        ui.open_list()
+        record('settings-languages-open', True, 'Languages page limit text found after navigation')
+        record('settings-languages', None, 'Languages: enabled first, then script; review layout',
+               guide_checks.shot('settings-languages'))
+    except Missing as error:
+        record('settings-languages', False, str(error))
+    except Unobservable as error:
+        record('settings-languages', None, str(error))
 
 
 BATCH = [check_phone, check_ime_window, check_rawlog, check_85_leaks, check_languages_page]

@@ -947,11 +947,26 @@ class GuideActivity : Activity() {
     private var setupChanging = false
     private var visible = false
     private val settingUp get() = setupPart != null
+    private val repairing get() = intent.hasExtra(REPAIR)
+    private val repairFixture get() = AppBuild.kind(this) == "debug" && intent.getBooleanExtra(REPAIR_FIXTURE, false)
+    private var repairs = 0
+
+    private fun repairMissing() = SetupPart.entries.filterNot(::setupDone)
+    private fun setupDone(part: SetupPart) =
+        when {
+            repairFixture -> PhoneSetup.mask(part) and repairs == 0
+            repairing -> !PhoneSetup.needsRepair(this, part, repairs)
+            else -> PhoneSetup.done(this, part)
+        }
+
+    private fun dismissRepair(part: SetupPart) {
+        repairs = repairs and PhoneSetup.mask(part).inv()
+    }
 
     private val watchSetup = object : Runnable {
         override fun run() {
             val part = openedPart ?: return
-            if (!PhoneSetup.done(this@GuideActivity, part)) {
+            if (!setupDone(part)) {
                 main.postDelayed(this, SETUP_POLL_MILLIS)
                 return
             }
@@ -1023,6 +1038,7 @@ class GuideActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        repairs = savedInstanceState?.getInt(REPAIR) ?: intent.getIntExtra(REPAIR, 0)
         opened(this)
         GuideFonts.load(this)
         overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
@@ -1037,7 +1053,7 @@ class GuideActivity : Activity() {
             playgroundStarting = -PLAYGROUND_QUIET_MILLIS
         } else guidesOpen++
         // During setup another keyboard may still be the phone's keyboard, and it would cover the slide.
-        if (PhoneSetup.missing(this, guide = !playground).isEmpty()) field.requestFocus() else keyboardShown(false)
+        if (!repairing && PhoneSetup.missing(this, guide = !playground).isEmpty()) field.requestFocus() else keyboardShown(false)
         field.changed = ::fieldChanged
         field.touched = ::fieldTouched
         field.addTextChangedListener(object : TextWatcher {
@@ -1063,7 +1079,7 @@ class GuideActivity : Activity() {
         openedPart?.let { part ->
             openedPart = null
             main.removeCallbacks(watchSetup)
-            if (!PhoneSetup.done(this, part)) {
+            if (!setupDone(part)) {
                 // A part that can be passed over keeps its Not now in the hint line, so its help takes the body's place.
                 if (part.skip != null) {
                     part.help?.let { swapIn(body, it, 0) }
@@ -1200,6 +1216,7 @@ class GuideActivity : Activity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus) return
+        if (!repairFixture) PhoneSetup.observe(this)
         // Really back in the guide, it waits for Accessibility no more: an abandoned step must never bring a guide back later, when
         // TitanKeys is turned on from Settings (bug hunt 2.1, #20). Not onResume, which also runs for a moment as the disclosure's
         // answer opens the Accessibility page; the window only gets focus once you're here.
@@ -3090,7 +3107,7 @@ class GuideActivity : Activity() {
     private fun checkKeyboard() {
         if (setupChanging) return
         // The playground asks only what the front page does, so ✕ or Back from it never loops back to it (review, M2).
-        val missing = PhoneSetup.missing(this, guide = !playground)
+        val missing = if (repairing) repairMissing() else PhoneSetup.missing(this, guide = !playground)
         val shown = setupPart
         if (shown != null && shown !in missing) {
             // The part on the screen is done, by the guide's page or by hand.
@@ -3099,6 +3116,10 @@ class GuideActivity : Activity() {
         }
         if (missing.isNotEmpty() && (!started || shown != null || SetupPart.Enable in missing || SetupPart.Choose in missing)) {
             if (missing.first() != shown) setUp(missing.first(), auto = false)
+            return
+        }
+        if (repairing) {
+            finish()
             return
         }
         if (keyboardChecked && ready) return
@@ -3140,12 +3161,17 @@ class GuideActivity : Activity() {
         if (auto && visible) main.postDelayed(openAuto, SETUP_AUTO_MILLIS)
     }
 
-    private fun openPart(part: SetupPart) {
+    private fun openPart(part: SetupPart, disclosed: Boolean = false) {
         main.removeCallbacks(openAuto)
         autoPart = null
         hideHint()
+        if (repairFixture) {
+            dismissRepair(part)
+            checkKeyboard()
+            return
+        }
         // Google Play asks for its own disclosure before Accessibility opens. "Not now" lets setup go on without it.
-        if (part == SetupPart.Back && !BackDisclosureActivity.agreed(this)) {
+        if (part == SetupPart.Back && (!BackDisclosureActivity.agreed(this) || repairing && !disclosed)) {
             @Suppress("DEPRECATION")
             startActivityForResult(BackDisclosureActivity.forGuide(this), DISCLOSURE_REQUEST)
             return
@@ -3197,6 +3223,7 @@ class GuideActivity : Activity() {
             main.removeCallbacks(watchSetup)
             openedPart = null
             PhoneSetup.skip(this, part)
+            dismissRepair(part)
             checkKeyboard()
         }
     }
@@ -3237,6 +3264,7 @@ class GuideActivity : Activity() {
         // Android has answered about the contacts, yes or no: the guide doesn't ask again, and setup moves on (owner, #87).
         if (requestCode == CONTACTS_REQUEST) {
             PhoneSetup.skip(this, SetupPart.Contacts)
+            dismissRepair(SetupPart.Contacts)
             if (TypingSettings.contactNames(this)) checkKeyboard() else {
                 // Android said no: the part says so, and where to turn it on later, then setup moves on.
                 hideHint()
@@ -3249,11 +3277,18 @@ class GuideActivity : Activity() {
         }
         if (requestCode != DISCLOSURE_REQUEST) return
         // After "Agree" Accessibility opens as before. After "Not now" the part is no longer missing, and setup moves on.
-        if (resultCode == RESULT_OK && setupPart == SetupPart.Back) openPart(SetupPart.Back) else checkKeyboard()
+        if (resultCode == RESULT_OK && setupPart == SetupPart.Back) openPart(SetupPart.Back, disclosed = true) else {
+            if (setupPart == SetupPart.Back) dismissRepair(SetupPart.Back)
+            checkKeyboard()
+        }
     }
 
     private fun setupFinished() {
         setupPart = null
+        if (repairing) {
+            finish()
+            return
+        }
         title.animate().cancel()
         title.scaleX = 1f
         title.scaleY = 1f
@@ -3263,6 +3298,11 @@ class GuideActivity : Activity() {
         ready = true
         keyboardShown(true)
         if (!started) begin() else reveal(flow.step)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(REPAIR, repairs)
     }
 
     /** The keyboard stays up for the story and the playground, and stays down during setup. */
@@ -5284,12 +5324,24 @@ class GuideActivity : Activity() {
         /** The guide opens at its end screen, as it was left, and the end opened this playground. */
         private const val AT_END = "atEnd"
         private const val FROM_END = "fromEnd"
+        private const val REPAIR = "repairSetup"
+        private const val REPAIR_FIXTURE = "repairFixture"
         /**
          * The app's pages that the end opens, each with the app's /end page under it, which brings the end back: the boring guide,
          * and the front page, the playground, for Go type something. See [openFromEnd] and lib/settings-tree.ts.
          */
         internal const val END_BORING_GUIDE = "/end/guide-boring"
         internal const val END_PLAY = "/end/play"
+
+        /** A loss opens the same setup slides once, returning to the app when the repairs are done. */
+        fun startRepair(activity: Activity, fixture: Boolean = false): Boolean {
+            val repairs = if (fixture) SetupHistory(confirmed = SetupSetting.Accessibility.bit)
+                .observed(SetupSetting.Accessibility, on = false, edited = false).due else PhoneSetup.repairDue(activity)
+            if (repairs == 0 || guidesOpen > 0 || !fixture && due(activity)) return false
+            activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(REPAIR, repairs).putExtra(REPAIR_FIXTURE, fixture))
+            if (!fixture) PhoneSetup.repairShown(activity, repairs)
+            return true
+        }
         /** Told where to go when the playground closes. Only one playground is open at a time. */
         private var playgroundExit: ((String) -> Unit)? = null
 

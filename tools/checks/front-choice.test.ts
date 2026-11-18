@@ -40,7 +40,7 @@ test("the front page and the playground decide setup by one definition, so they 
     expect({ part, guideOnly: steps.slice(at, steps.indexOf("),\n", at)).includes("guideOnly = true") }).toEqual({ part, guideOnly: true });
   }
   const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
-  expect(guide).toContain("val missing = PhoneSetup.missing(this, guide = !playground)");
+  expect(guide).toContain("if (repairing) repairMissing() else PhoneSetup.missing(this, guide = !playground)");
   expect(guide).not.toMatch(/PhoneSetup\.missing\(this\)/);
   // The front page has no list of its own any more.
   expect(read("lib/front.ts")).not.toContain("!enabled || !selected");

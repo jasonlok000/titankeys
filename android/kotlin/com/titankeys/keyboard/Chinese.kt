@@ -92,6 +92,33 @@ object ChineseRow {
     fun column(key: String) = Picker.column(key, ROWS)
 }
 
+/** Keep editor predictions from the previous context out of a Rime row while the pick reaches the editor. */
+internal class ChineseOffers {
+    private var pending: Any? = null
+    private var sent = false
+
+    fun begin(): Any = Any().also {
+        pending = it
+        sent = false
+    }
+
+    fun submitted(pick: Any) {
+        if (pending === pick) sent = true
+    }
+
+    fun allows(composerBusy: Boolean): Boolean {
+        if (pending == null) return true
+        if (!sent || composerBusy) return false
+        clear()
+        return true
+    }
+
+    fun clear() {
+        pending = null
+        sent = false
+    }
+}
+
 /**
  * The bigger menu that holding P opens: the choices over the three letter rows, W to O, S to L and Z to M, each as wide as it
  * needs, a page at a time. P shows the page; Enter and Backspace turn the pages, as on the Sym panel.
@@ -185,10 +212,6 @@ object ChineseKeys {
         return if (index in RADICALS.indices) RADICALS[index].toString() else null
     }
 
-    /** [text] less its last character, a whole code point (an emoji or a rare character is two chars). */
-    fun dropLastCharacter(text: String): String =
-        if (text.isEmpty()) "" else text.substring(0, text.offsetByCodePoints(text.length, -1))
-
     /** Rime's option for plain (ASCII) punctuation, the setting's. */
     const val PLAIN_PUNCTUATION = "ascii_punct"
 
@@ -269,12 +292,47 @@ object EnglishOffer {
 
 /**
  * Cangjie's and Quick's next-key preview (owner, 2026-11-17): a finger resting still on a letter shows that key's radical,
- * faded, at the end of the code's tab, after the code typed so far, or alone with nothing typed. Only after [REST_MILLIS]
- * still, so quick typing never flashes it; a lift or another key changes it, and a press types as usual.
+ * faded at the end of the code's tab. The first radical waits for [REST_MILLIS] so quick typing never flashes it.
+ * Once the preview is up, it follows the finger from key to key until the touch ends.
  */
-object RadicalPreview {
-    const val REST_MILLIS = 180L
+class RadicalPreview {
+    private var key = ""
+    private var ready = false
+    private var consumed = false
+    var shown = ""
+        private set
 
-    /** The radical to preview for a finger on [key] in [method], or null where there's none. */
-    fun of(method: InputMethod, key: String): String? = ChineseKeys.radical(method, key)
+    /** Follows a key change. Returns true when this radical still needs the initial dwell. */
+    fun follow(key: String, radical: String): Boolean {
+        if (key != this.key) {
+            this.key = key
+            consumed = false
+        }
+        shown = if (ready && !consumed) radical else ""
+        return !ready && !consumed && radical.isNotEmpty()
+    }
+
+    fun rest(radical: String) {
+        if (consumed) return
+        ready = radical.isNotEmpty()
+        shown = radical
+    }
+
+    /** Typing the hovered key takes its preview until the finger changes keys or lifts. */
+    fun consume(pressed: String): Boolean {
+        if (pressed != key) return false
+        consumed = true
+        shown = ""
+        return true
+    }
+
+    fun clear() {
+        key = ""
+        consumed = false
+        rest("")
+    }
+
+    companion object {
+        const val REST_MILLIS = 180L
+    }
 }

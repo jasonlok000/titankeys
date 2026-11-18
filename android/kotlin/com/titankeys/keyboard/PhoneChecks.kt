@@ -32,14 +32,21 @@ internal object PhoneChecks {
     enum class Key(val id: String) { Sym("sym"), Fn("fn") }
 
     /** Phones without the Titan's programmable keys have nothing to set, so there the step counts as done. */
-    fun programmable(context: Context, key: Key): Boolean {
-        if (property("ro.agui.symkey_fnkey_default").isNullOrEmpty()) return true
+    fun programmable(context: Context, key: Key) = programmableReading(context, key) ?: true
+
+    /** Null when the key's setting can't be confirmed. */
+    fun programmableReading(context: Context, key: Key): Boolean? {
+        if (property("ro.agui.symkey_fnkey_default").isNullOrEmpty()) return null
         val mode = property("persist.sys.agui_smart_${key.id}_key")
         if (!mode.isNullOrEmpty()) return mode == "programmable_key_enable"
         return try {
-            Settings.System.getInt(context.contentResolver, "${key.id}_programmable_key_enable", 0) == 1
+            when (Settings.System.getInt(context.contentResolver, "${key.id}_programmable_key_enable", -1)) {
+                0 -> false
+                1 -> true
+                else -> null
+            }
         } catch (error: SecurityException) {
-            true
+            null
         }
     }
 
@@ -121,7 +128,7 @@ internal object PhoneChecks {
             .sorted()
     }
 
-    private fun property(name: String): String? = try {
+    internal fun property(name: String): String? = try {
         Class.forName("android.os.SystemProperties").getMethod("get", String::class.java).invoke(null, name) as String
     } catch (error: ReflectiveOperationException) {
         null

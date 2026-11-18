@@ -9,6 +9,6 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 keyboard=android/kotlin/com/titankeys/keyboard
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib" -d "$work" \
-  "$keyboard/Chinese.kt" "$keyboard/Layout.kt" "$keyboard/InputMethods.kt" "$keyboard/InputMethod.kt" \
+  "$keyboard/Chinese.kt" "$keyboard/Layout.kt" "$keyboard/SteadyKey.kt" "$keyboard/InputMethods.kt" "$keyboard/InputMethod.kt" \
   android/kotlin/com/titankeys/connected/Json.kt tests/chinese/ChineseChecks.kt
 java -cp "$work:$stdlib" com.titankeys.keyboard.ChineseChecksKt

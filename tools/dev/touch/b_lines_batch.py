@@ -5,12 +5,15 @@
 2. A Space touch with a code pending picks nothing: neihou pending, a tap in Space's touch zone leaves the field empty (O);
    Space then picks (O, Chinese characters). B, 981a474e.
 3. 速成 and 倉頡, B's radical preview in the code's tab (7f5a5a10): a grey dotted 弓 alone on N with nothing typed; 竹, a gap
-   and a grey 手; no flash in fast typing; gone on lift (J, shots; YES where TitanKeysBar logs 弓).
+   and a grey 手; the pressed preview becomes the typed radical; slides update the preview; no flash in fast typing; gone on lift
+   (J, shots; YES where TitanKeysBar logs 弓).
 4. Quick (速成): hqi and Space type 我 (O).
 5. The playground (the app's front page) types in the input methods that are on, and a held Sym switches there: English and
    Russian on, a held Sym, Q types й (O). Only what the check typed is deleted, never a select-all: the field is the owner's.
    E, de807439.
 """
+import json
+import tempfile
 import time
 
 import checks
@@ -20,9 +23,9 @@ import language_checks
 import languages
 import switcher_checks
 from checks import APP, Stop, adb, play, record
+from gestures import ANDROID_CODES, key_centre
 
-# Key N on the touchpad: column 5 of 10 (z x c v b n m starts at 0), the third of four rows.
-N_KEY = (0.55, 0.625)
+N_KEY = key_centre("n")
 
 
 def read():
@@ -62,6 +65,18 @@ def radical_shown():
     return any("弓" in (" ".join(line[2]) if line[0] == "bar" else line[1]) for line in ib.bar_lines())
 
 
+def radical_press_trace(out):
+    """Rest on H, press and release H, slide to J and back to H within one touch, then lift."""
+    for t, letter, action in ((0, "h", 0), (300, "h", 2), (400, "h", None), (590, "h", None),
+                              (720, "j", 2), (1050, "h", 2), (1450, "h", 1)):
+        if action is None:
+            event = {"k": "key", "c": ANDROID_CODES[letter], "d": t == 400, "t": t}
+        else:
+            x, y = key_centre(letter)
+            event = {"k": "m", "a": action, "t": t, "s": [[x, y, t]], "sz": [2]}
+        out.write(json.dumps(event, separators=(",", ":")) + "\n")
+
+
 def check_radical_hover():
     """B's radical preview in the code's tab, in 速成 and 倉頡 (7f5a5a10): after a still rest of 180 ms the rested key's radical
     shows in grey with a dotted underline. Shots judge what the log can't show."""
@@ -72,6 +87,20 @@ def check_radical_hover():
         play(f"touch:{N_KEY[0]},{N_KEY[1]}:1500", "+300", shot=f"radical-{name}-alone", at=900)
         record(f"radical-{name}-alone", True if radical_shown() else None, "the log for a rest on N before typing")
         record(f"radical-{name}-style", None, "A grey dotted 弓 alone in the tab, no glow", f"radical-{name}-alone")
+        # Replay the same continuous contact for each screenshot, with fresh code each time.
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8") as trace:
+            radical_press_trace(trace)
+            trace.flush()
+            for step, at, want in (
+                ("before-press", 240, "only grey dotted 竹 from resting on H"),
+                ("pressed", 430, "only typed 竹, with the key still down and no grey dotted twin"),
+                ("slide", 745, "typed 竹 followed by grey dotted 十, as soon as the finger is on J"),
+                ("slide-back", 1075, "typed 竹 followed by grey dotted 竹 after sliding back to H"),
+            ):
+                shot = f"radical-{name}-{step}"
+                play(f"replay-rawlog:{trace.name}", shot=shot, at=at)
+                record(shot, None, want, shot)
+                play("key:del:60:none", "+400")
         # 2. 竹 typed (H), resting on Q: 竹, a gap, then a grey 手.
         play("key:h", "+300", "touch:0.05,0.125:1500", "+300", shot=f"radical-{name}-after-code", at=1100)
         record(f"radical-{name}-after-code", None, "竹 typed, resting on Q: 竹, a gap, a grey dotted 手", f"radical-{name}-after-code")

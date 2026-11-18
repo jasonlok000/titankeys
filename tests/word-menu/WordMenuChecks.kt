@@ -106,7 +106,7 @@ private fun theMenuKeepsToItsKeys() {
     val ime = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
     val branch = ime.substringAfter("// Backspace, under P, goes back.").substringBefore("val action = menuAction(pressed)")
     check("MenuKeys.takesKeys(menuOpen, altOrPanel)" in branch) { "#3: the menu's key branch asks whether a panel or Alt has the keys" }
-    val modifiers = ime.substringAfter("private fun showModifiers() {").substringBefore("\n    }\n")
+    val modifiers = ime.substringAfter("private fun showModifiers(", "").substringBefore("\n    }\n")
     check("if (menuOpen && MenuKeys.closes(altOrPanel, hidden = false" in modifiers && "closeMenu()" in modifiers) {
         "#3: a panel opening or Alt coming on closes the menu"
     }
@@ -851,7 +851,6 @@ private fun theKeyboardMakesTheseCalls() {
         "if (panelLast || barLast) {",
         "if (barHover.expire(now)) {",
         "barHover.lift(event.eventTime)",
-        "if (last == null || !barHover.touch(last.x, last.y)) return",
         "if (column == MenuKeys.UP || column == MenuKeys.DOWN) column else -1",
         "val next = MenuKeys.press(menu.step, button)",
         // The quick settings page, as [QuickSettingsPage] copies it.
@@ -888,6 +887,19 @@ private fun theKeyboardMakesTheseCalls() {
         "if (inGuide && held != null && action in MENU_CHOICES) {",
         "MenuKeys.Button.Unblock -> Haptic.WordUnblocked",
     )) check(line in ime) { "TitanKeysIme no longer has: $line" }
+    val followRestingKey = ime.substringAfter("private fun followRestingKey(", "").substringBefore("\n    }")
+    val moveAndRedraw = """
+        if (last == null) return
+        val moved = barHover.touch(last.x, last.y)
+        if (moved) {
+            restingKey = barHover.key
+            markMenu(restingKey)
+            showModifierBar()
+        }
+    """.trimIndent().prependIndent("        ")
+    val redraw = followRestingKey.indexOf(moveAndRedraw)
+    val idle = followRestingKey.indexOf("if (!moved && event.actionMasked != MotionEvent.ACTION_DOWN) return")
+    check(redraw >= 0 && idle > redraw) { "Only movement redraws the mark, and a same-key down still reaches the preview" }
     val typing = File("android/kotlin/com/titankeys/engine/SwipeTyping.java").readText()
     for (line in listOf(
         "learnedEntries = dictionary.learnedWords(day);",

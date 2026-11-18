@@ -56,8 +56,8 @@ interface InputEngine {
     fun offer(words: List<String>): EngineState = EngineState.UNHANDLED
 
     /**
-     * A flick while text is being built (owner, 2026-11-17): the code still pending goes, and what was picked of it stays; the
-     * next flick takes the last picked word. An engine without picks in part drops everything, as [reset].
+     * A flick while text is being built. Rime drops a partial pick's unpicked code first, then cancels the rest on a second
+     * flick. An engine without partial picks drops everything, as [reset].
      */
     fun flick(): EngineState = reset()
 
@@ -83,6 +83,22 @@ interface InputEngine {
 
     /** What the last [start] or [warm] took, part by part, for the keyboard's log ("Input method … loaded in"); "" if it says nothing. */
     val timing: String get() = ""
+}
+
+/** Picks the displayed word only while it still occupies this engine index. */
+internal fun InputEngine.pickDisplayed(index: Int, word: String): EngineState? =
+    if (choices(index, 1).singleOrNull() == word) pickAt(index) else null
+
+/** A pending composition takes the flick ahead of the editor. */
+internal fun InputEngine.flickComposition(state: EngineState?): EngineState? =
+    if (state?.composing == true) flick() else null
+
+/** When an engine drops its code without editing the field, let it show the editor's current words again. */
+internal fun InputEngine.restoreOffersAfterCode(before: EngineState?, after: EngineState, words: List<String>): EngineState {
+    if (before?.composing != true || !after.handled || after.composing || after.commit.isNotEmpty() ||
+        after.choices.isNotEmpty() || words.isEmpty()) return after
+    val restored = offer(words)
+    return if (restored.handled && !restored.composing && restored.commit.isEmpty() && restored.choices.isNotEmpty()) restored else after
 }
 
 /**

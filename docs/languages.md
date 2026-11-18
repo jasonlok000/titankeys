@@ -644,9 +644,9 @@ Double Space, three Space taps and the delete flick work in every language (owne
   run can be a whole message, so ICU's word breaks for the input method's language pick the last word, with any marks after
   it (`WordBreaks`, `IcuWords`). Java's own word breaks have no Chinese dictionary, so the JVM checks use a stand-in, and ICU's
   real words are checked on the phone.
-- **A flick with a code being built** (Chinese, Japanese, Korean's syllable, Telex's word) clears the whole code and leaves
-  the field alone (owner: "a flick should also delete the entire key code too"); a second flick deletes from the field.
-  Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
+- **A flick with a code being built** clears the code and leaves the field alone. If you've picked part of a Chinese code,
+  the first flick clears the unpicked code and the second cancels the picked part. The next flick deletes from the field.
+  If the bar shows next words, the flick clears them and deletes from the field as usual.
 - **Three Space taps** pick the word in front of the cursor with the same breaks. Thai's tone marks and Hindi's vowel signs
   count as part of their words.
 

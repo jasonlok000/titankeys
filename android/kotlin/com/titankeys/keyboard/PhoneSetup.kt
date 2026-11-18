@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import com.titankeys.engine.TypingSettings
@@ -49,10 +50,104 @@ internal object PhoneSetup {
     /** Setup still has a part that the front page and the playground need: the one answer both read (lib/front.ts). */
     fun toDo(context: Context) = missing(context).isNotEmpty()
 
+    private const val CONFIRMED = "setup_confirmed"
+    private const val REPAIR_DUE = "setup_repair_due"
+    private const val EDITING = "setup_editing"
+    private const val EDIT_STARTED = "setup_edit_started"
+    private const val EDIT_WINDOW_MILLIS = 15 * 60_000L
+
+    private fun history(context: Context): SetupHistory {
+        val prefs = preferences(context)
+        return SetupHistory(prefs.getInt(CONFIRMED, 0) and SetupSetting.mask, prefs.getInt(REPAIR_DUE, 0) and SetupSetting.mask)
+    }
+
+    /** Observes the phone when an app window returns. Setup's own settings visit accounts for only the parts it opened. */
+    fun observe(context: Context, returned: Boolean = true) {
+        val prefs = preferences(context)
+        val before = history(context)
+        val oldEdit = prefs.getInt(EDITING, 0)
+        val edit = oldEdit.takeIf { SystemClock.elapsedRealtime() - prefs.getLong(EDIT_STARTED, 0) in 0L until EDIT_WINDOW_MILLIS } ?: 0
+        var unreadEdits = 0
+        val after = SetupSetting.entries.fold(before) { tracked, setting ->
+            val on = reading(context, setting)
+            val edited = edit and setting.bit != 0
+            if (edited && on == null) unreadEdits = unreadEdits or setting.bit
+            tracked.observed(setting, on, edited)
+        }
+        if (after != before || returned && oldEdit != unreadEdits) prefs.edit()
+            .putInt(CONFIRMED, after.confirmed).putInt(REPAIR_DUE, after.due)
+            .apply {
+                if (returned && unreadEdits == 0) remove(EDITING).remove(EDIT_STARTED)
+                else if (returned) putInt(EDITING, unreadEdits)
+            }.apply()
+    }
+
+    private fun reading(context: Context, setting: SetupSetting): Boolean? = try {
+        when (setting) {
+            SetupSetting.Keyboard -> context.getSystemService(InputMethodManager::class.java)?.enabledInputMethodList
+                ?.takeIf { it.isNotEmpty() }?.any { it.component == keyboard(context) }
+            SetupSetting.DefaultKeyboard -> Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+                ?.let(ComponentName::unflattenFromString)?.let { it == keyboard(context) }
+            SetupSetting.Overlay -> overlay(context)
+            SetupSetting.ScrollAssistant -> if (PhoneChecks.property("ro.agui.touchpad_function") == "yes")
+                when (PhoneChecks.property("persist.sys.scroll_assistant")) {
+                    "1" -> true
+                    "0" -> false
+                    else -> null
+                } else null
+            SetupSetting.Accessibility -> BackService.enabled(context)
+            SetupSetting.Sym -> PhoneChecks.programmableReading(context, PhoneChecks.Key.Sym)
+            SetupSetting.Fn -> PhoneChecks.programmableReading(context, PhoneChecks.Key.Fn)
+            SetupSetting.Contacts -> PhoneNameSource.contactsAllowed(context)
+        }
+    } catch (_: SecurityException) {
+        null
+    }
+
+    fun repairDue(context: Context): Int {
+        val due = history(context).due
+        return SetupSetting.entries.fold(0) { bits, setting ->
+            if (due and setting.bit != 0 && reading(context, setting) == false) bits or setting.bit else bits
+        }
+    }
+
+    fun repairShown(context: Context, repairs: Int) = preferences(context).edit()
+        .putInt(REPAIR_DUE, history(context).due and repairs.inv()).apply()
+
+    fun mask(part: SetupPart) = when (part) {
+        SetupPart.Enable -> SetupSetting.Keyboard.bit
+        SetupPart.Choose -> SetupSetting.DefaultKeyboard.bit
+        SetupPart.Overlay -> SetupSetting.Overlay.bit
+        SetupPart.ScrollAssistant -> SetupSetting.ScrollAssistant.bit
+        SetupPart.Back -> SetupSetting.Accessibility.bit
+        SetupPart.Keys -> SetupSetting.Sym.bit or SetupSetting.Fn.bit
+        SetupPart.Contacts -> SetupSetting.Contacts.bit
+    }
+
+    fun needsRepair(context: Context, part: SetupPart, repairs: Int): Boolean {
+        val parts = mask(part) and repairs
+        return SetupSetting.entries.any { parts and it.bit != 0 && reading(context, it) == false }
+    }
+
+    private fun editing(context: Context, part: SetupPart) {
+        // Disabling the keyboard here can also make Android choose another default.
+        val related = if (part == SetupPart.Enable) SetupSetting.DefaultKeyboard.bit else 0
+        preferences(context).edit().putInt(EDITING, mask(part) or related)
+            .putLong(EDIT_STARTED, SystemClock.elapsedRealtime()).apply()
+    }
+
+    fun declined(context: Context, part: SetupPart) {
+        val kept = history(context).forget(mask(part))
+        preferences(context).edit().putInt(CONFIRMED, kept.confirmed).putInt(REPAIR_DUE, kept.due).apply()
+    }
+
     /** [part] was skipped in the guide's setup, or for contact names, answered: the guide doesn't ask again. */
     fun skipped(context: Context, part: SetupPart) = preferences(context).getBoolean(skipKey(part), false)
 
-    fun skip(context: Context, part: SetupPart) = preferences(context).edit().putBoolean(skipKey(part), true).apply()
+    fun skip(context: Context, part: SetupPart) {
+        declined(context, part)
+        preferences(context).edit().putBoolean(skipKey(part), true).apply()
+    }
 
     private fun skipKey(part: SetupPart) = "skipped_${part.name.lowercase()}"
 
@@ -89,7 +184,7 @@ internal object PhoneSetup {
      * Opens the best page for [part] that Android allows, through [start], and notes whether it had to fall back to the whole
      * list, so that Settings > Setup can say what to find there ([onList]). Throws when no page opens at all.
      */
-    fun open(context: Context, part: SetupPart, start: (Intent) -> Unit) {
+    fun open(context: Context, part: SetupPart, fromSetup: Boolean = true, start: (Intent) -> Unit) {
         val pages = pages(context, part)
         var refusal: RuntimeException? = null
         for ((index, page) in pages.withIndex()) {
@@ -102,6 +197,7 @@ internal object PhoneSetup {
                 refusal = error
                 continue
             }
+            if (fromSetup) editing(context, part)
             if (part in LISTED) preferences(context).edit().putBoolean(onListKey(part), pages.size > 1 && index == pages.lastIndex).apply()
             return
         }
@@ -125,7 +221,10 @@ internal object PhoneSetup {
     /** Kept with the phone checks, so Reset literally everything clears it with them. */
     private fun preferences(context: Context) = context.getSharedPreferences("phone_checks", Context.MODE_PRIVATE)
 
-    fun chooseKeyboard(context: Context) = context.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
+    fun chooseKeyboard(context: Context, fromSetup: Boolean = true) {
+        context.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
+        if (fromSetup) editing(context, SetupPart.Choose)
+    }
 
     private fun keyboard(context: Context) = ComponentName(context, TitanKeysIme::class.java)
 }

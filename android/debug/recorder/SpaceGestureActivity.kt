@@ -107,7 +107,16 @@ class SpaceGestureActivity : Activity(), Recording.Sink {
             }
         }.apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            // Most gesture fixtures need exact lowercase input. The capitalisation check requests a sentence field.
+            if (intent.getBooleanExtra("sentence_capitals", false)) {
+                inputType = inputType or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            }
             imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_EXTRACT_UI
+            // Match the editor flags observed in the Maps search box for the bar transition test.
+            if (intent.getBooleanExtra("maps_search", false)) {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_ACTION_SEARCH
+            }
             textSize = 16f
             minLines = 4
             setTextColor(Color.WHITE)

@@ -115,10 +115,21 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         activity.assets.open("autocorrect/en_shorthand.txt").bufferedReader().useLines(Shorthand::parse)
             .mapNotNull { (shorthand, full) -> full?.let { shorthand to it } }
     }
+    private fun setupLossFixture() = AppBuild.kind(activity) == "debug" &&
+        activity.intent.getBooleanExtra(SETUP_LOSS_FIXTURE, false)
+
     private val windowFocus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         if (hasFocus) activity.window.decorView.post {
             // The front page opens the playground whenever the app's own window is in front, as when the playground was closed.
-            if (visible && activity.hasWindowFocus()) activity.emit(JSONObject().put("type", "titankeys-window").toString())
+            if (visible && activity.hasWindowFocus()) {
+                val fixture = setupLossFixture()
+                if (!fixture) PhoneSetup.observe(activity)
+                if (GuideActivity.startRepair(activity, fixture)) {
+                    if (fixture) activity.intent.removeExtra(SETUP_LOSS_FIXTURE)
+                    return@post
+                }
+                activity.emit(JSONObject().put("type", "titankeys-window").toString())
+            }
             if (visible && watchingRequested && activity.hasWindowFocus()) {
                 // Ink may have blurred the field while the window was away; ask the page to autofocus again.
                 activity.emit(JSONObject().put("type", "titankeys-focus").toString())
@@ -230,6 +241,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         if (crashOffer != null) showCrashOffer(target)
         if (target !== activity) return
         visible = true
+        if (!setupLossFixture()) PhoneSetup.observe(activity, returned = false)
         syncPreview()
         publishState()
     }
@@ -450,7 +462,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                     "null"
                 }
                 "guide" -> {
-                    GuideActivity.start(activity)
+                    if (!setupLossFixture()) GuideActivity.start(activity)
                     "null"
                 }
                 // Back from a page that the guide's end opened: the end again, as it was left.
@@ -460,8 +472,10 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 }
                 "playground", "playgroundFromEnd" -> {
                     // The answer comes as a message when the playground closes. A request held open that long would time out.
-                    GuideActivity.playground(activity, fromEnd = operation == "playgroundFromEnd") { action ->
-                        activity.emit(JSONObject().put("type", "titankeys-playground").put("action", action).toString())
+                    if (!setupLossFixture() && (GuideActivity.due(activity) || PhoneSetup.repairDue(activity) == 0)) {
+                        GuideActivity.playground(activity, fromEnd = operation == "playgroundFromEnd") { action ->
+                            activity.emit(JSONObject().put("type", "titankeys-playground").put("action", action).toString())
+                        }
                     }
                     "null"
                 }
@@ -477,17 +491,24 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                         else -> SetupPart.Back
                     }
                     // Accessibility opens only after its own disclosure, as Google Play asks.
-                    if (part == SetupPart.Back) activity.startActivity(BackDisclosureActivity.forSettings(activity))
-                    else PhoneSetup.open(activity, part, activity::startActivity)
+                    val fromSetup = data.optBoolean("fromSetup")
+                    if (part == SetupPart.Back) activity.startActivity(BackDisclosureActivity.forSettings(activity, fromSetup))
+                    else PhoneSetup.open(activity, part, fromSetup, activity::startActivity)
                     "null"
                 }
                 "choose" -> {
-                    PhoneSetup.chooseKeyboard(activity)
+                    PhoneSetup.chooseKeyboard(activity, data.optBoolean("fromSetup"))
                     "null"
                 }
                 // Opens the phone's own page. TitanKeys never changes these settings itself.
                 "shortcutKeys" -> {
-                    activity.startActivity(PhoneChecks.shortcutKeysPage(activity))
+                    PhoneSetup.open(activity, SetupPart.Keys, data.optBoolean("fromSetup"), activity::startActivity)
+                    "null"
+                }
+                "setupContacts" -> {
+                    val on = data.getBoolean("on")
+                    if (!on) PhoneSetup.declined(activity, SetupPart.Contacts)
+                    set("contactNames", on)
                     "null"
                 }
                 "watch" -> {
@@ -597,6 +618,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("backDeclined", BackDisclosureActivity.declined(activity))
             // The front page's setup decision is the playground's own, from one definition (PhoneSetup.toDo, lib/front.ts).
             .put("setupToDo", PhoneSetup.toDo(activity))
+            .put("setupRepairDue", setupLossFixture() || PhoneSetup.repairDue(activity) != 0)
             // The front page decides from these whether this is a Titan 2 Elite (lib/front.ts).
             .put("touchpadFunction", systemProperty("ro.agui.touchpad_function"))
             .put("device", Build.DEVICE ?: "")
@@ -935,6 +957,9 @@ private const val REPORT_PAGE = "/settings/report"
 internal object CrashOfferHosts {
     fun shows(host: Activity) = host is MainActivity || host is com.titankeys.keyboard.GuideActivity
 }
+
+/** A Debug launch can open the repair slides using an in-memory loss and a simulated repair. */
+private const val SETUP_LOSS_FIXTURE = "com.titankeys.debug.setupLoss"
 
 /** The other-phone warning has shown once (#75). */
 private const val PHONE_WARNING_SEEN = "phone_warning_seen"

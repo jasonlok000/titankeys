@@ -312,15 +312,9 @@ class RimeEngine(
     }
 
     override fun flick(): EngineState {
-        offered = emptyList()
-        if (!composing()) return reset()
-        if (rime.dropLast()) return read(handled = true)
-        // Nothing pending: what was picked goes to the field less its last character, one flick one character (owner,
-        // 2026-11-17: "shd treat one character or even one punctuation in chinese ... as one word"). Cleared, not committed,
-        // so Rime learns nothing from it. With nothing picked, the code goes whole.
-        val picked = rime.picked().first
-        rime.reset()
-        return read(handled = true).copy(commit = ChineseKeys.dropLastCharacter(picked))
+        if (composing() && rime.dropLast()) return read(handled = true)
+        // The picked prefix is still part of the composition. Cancel it without sending anything to the field.
+        return reset()
     }
 
     override fun reset(): EngineState {

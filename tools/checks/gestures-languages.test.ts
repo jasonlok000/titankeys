@@ -12,8 +12,8 @@ test("a flick with a code pending clears the code and leaves the field alone", (
   const start = ime.indexOf("if (outcome.deletesWord) {");
   const flick = ime.slice(start, ime.indexOf("val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)", start));
   expect(flick).toContain("val choices = openPicker() as? LanguagePicker.Choices");
-  // A code goes through the engine's flick (only what's pending, owner 2026-11-17); suggestions alone just go.
-  expect(flick).toMatch(/engineState\(engine\.flick\(\)\) else \{\s*engine\?\.reset\(\)\s*closePicker\(\)\s*\}\s*if \(choices\.state\.composing\) \{[\s\S]*?return\s*\}/);
+  expect(flick).toContain("val state = engine?.flickComposition(choices.state)");
+  expect(flick).toMatch(/if \(state != null\) engineState\(state\) else \{\s*engine\?\.reset\(\)\s*closePicker\(\)\s*\}\s*if \(choices\.state\.composing\) \{[\s\S]*?return\s*\}/);
 });
 
 test("double space types the language's own full stop, and the words come from the language's breaks", () => {
@@ -30,14 +30,15 @@ test("double space types the language's own full stop, and the words come from t
   expect(ime).toContain("WordSelection.atOrBefore(text, start, end, breaks)");
   expect(ime).toContain("val breaks = wordBreaker()");
   // A slide starts from the same word and steps by the same words.
-  expect(ime).toContain("WordSelection.at(text, start, end, wordBreaker())");
-  expect(ime).toContain("direction, wordBreaker())");
+  expect(ime).toContain("WordSelection.at(text, start, end, breaks)");
+  expect(ime).toContain("direction, breaks)");
 });
 
-test("a held delete takes a code being built as flicks do, one step a word, before the field (owner, 2026-11-17)", () => {
+test("a held delete takes the same composition steps as flicks before editing the field", () => {
   const start = ime.indexOf("val word = heldWords.next()");
   const step = ime.slice(start, ime.indexOf("val selected = selectionToDelete()", start));
-  expect(step).toContain("engineState(engine.flick())");
+  expect(step).toContain("val state = languages.engine?.flickComposition(choices?.state)");
+  expect(step).toContain("engineState(state)");
   expect(step).toContain("strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), 1)");
   expect(step).toContain("return@enqueue");
 });

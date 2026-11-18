@@ -910,3 +910,21 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Orange animation (owner): the glass fills to the supporter's cumulative cups (coffee and juice cost the same, about $5 a cup) and overfills with a spill past one cup.
 - Custom support amount (owner): the one-time row gets "Custom", a $1 Play product bought in any quantity (Play multi-quantity) through an in-app slider in dollars and cups; fallback, a ladder of fixed tips the slider snaps to. Subscriptions stay at three tiers.
 - Key preview for every input method (owner): the resting-finger preview from Cangjie/Quick generalised through the guide key maps (Korean ㅂ on Q, Russian й…), one code path; the "Key preview" setting is on by default where keys differ from their printed letters (Codex T3e).
+
+## Codex (2026-11-18, search suggestions)
+
+- Owner: In Chrome's address bar, "the middle word shd stay whats supposed to be typedout after pressing space." Keep a correction available as a side choice when appropriate. Check the middle against the exact text committed by Space.
+- In Maps, the owner tapped the first suggestion after typing "testing" and saw an unrelated suggestion briefly. Check both the left slot and the top-ranked middle slot because "first" can refer to either. Capture each row through the tap in the Debug test field with Maps' editor flags. Keep the existing recording exclusions for the owner's Maps searches.
+
+## Codex (2026-11-18, partial Chinese code and mark alignment)
+
+- Owner: "first flick it should remove the not typed out words" in a partially picked composition. The second delete flick clears the remaining keycode and picked portion without committing either to the field. The third flick works on the existing text in the field. Check the editor text after each flick, including with text already there.
+- Owner: "the input method e.g. 耶 isn't centered vertically against the upper case of the other words." Use the visible capitals as the alignment reference. The owner will choose an offset on a phone mockup. No final offset has been chosen.
+- The suggestion flash can occur with Chinese in ChatGPT as well as in Maps. Cover a Chinese candidate pick in an ordinary chat field.
+
+## Codex (2026-11-18, language guides and setup recovery)
+
+- Owner: "the F: is a placeholder, which should be re-written by the subagents initiated with that particular language in the correct languge." Replace language-specific draft text with instructions written for speakers of that language.
+- Owner: "it's not a sample it's a table." A language guide shows every mapped physical key, including all Cangjie radicals, and shows supported modifier outputs on the keyboard drawing.
+- Owner: If previously granted Accessibility or another verified Setup setting is lost outside TitanKeys Setup, show the setup sequence again on the next app launch. Remember confirmed setup settings and distinguish a change the user made through Setup. Preserve explicit choices to skip optional settings.
+- The owner chose −3 px in the alignment mockup. The regular and picker marks use that offset from the mockup's shared text baseline at the Titan's 1,076 px width. The mark also rises by the same amount when it occupies the small corner position.

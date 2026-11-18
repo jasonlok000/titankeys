@@ -64,8 +64,8 @@ inline bool PredictAfter(RimeSessionId id, const std::string& text) {
 }
 
 // A flick with a code being built (owner, 2026-11-17): the code still pending goes, and what was picked of it stays (頂你個
-// picked, "fai" pending: "fai" goes). True if anything went: false with nothing pending, and the keyboard then types what was
-// picked, less its last character (RimeEngine.flick), without Rime committing it, so it learns nothing from it.
+// picked, "fai" pending: "fai" goes). True if anything went. With nothing pending, the keyboard cancels the remaining
+// composition (RimeEngine.flick).
 inline bool DropLast(RimeSessionId id) {
   auto session = rime::Service::instance().GetSession(id);
   if (!session) return false;

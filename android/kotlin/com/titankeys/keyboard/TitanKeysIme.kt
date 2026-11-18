@@ -124,6 +124,8 @@ class TitanKeysIme : InputMethodService() {
     private var barWords = emptyList<String>()
     /** TitanKeys Debug's last bar log line ([BarLog]), so only a change is logged. */
     private var barLogged: String? = null
+    private var choiceRowLogged: String? = null
+    private val chineseOffers = ChineseOffers()
     /** The units picked in this field, Chinese's and Japanese's words for the gestures and the bar ([PickedWords]). */
     private val pickedWords = PickedWords()
     /** A held Backspace's repeats, where Android sends none ([BackspaceRepeat]), and its first press, which they copy. */
@@ -143,7 +145,10 @@ class TitanKeysIme : InputMethodService() {
         if (modifiers.panel == Modifiers.Panel.Settings) Layout.restingKeyAt(x, y) else Layout.keyAt(x, y)
     }
     private val barHover = SteadyKey(Layout::keyAt)
+    private val radicalPreview = RadicalPreview()
     private var field = Field.None
+    /** A settings refresh can finish switching to English synchronously, before the field's composer has started. */
+    private var startingInput = false
     /** The user chose to hide the bar in this app. The window stays, one pixel high. See [showSuggestions]. */
     private var barHidden = false
     /** Each emoji by its shortcode name, once the list has loaded. */
@@ -196,7 +201,8 @@ class TitanKeysIme : InputMethodService() {
     /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
     private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
-                               val settlement: Contact.Settlement? = null, val heldFor: String? = null)
+                               val settlement: Contact.Settlement? = null, val heldFor: String? = null,
+                               var refreshesShift: Boolean = false)
     private val pendingInput = ArrayDeque<PendingInput>()
     private var engineEditor: EngineEditor? = null
     private var replayedCode = false
@@ -530,7 +536,7 @@ class TitanKeysIme : InputMethodService() {
                 val selected = selectionToDelete()
                 if (!GestureDisplay.nothingToDelete(before, selected)) {
                     strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,
-                        GestureDisplay.deleteLine(before, selected))
+                        before, selected, wordBreaker())
                     // The dots at the lift keep clear of this hold's ticks.
                     haptics.holdStarted()
                     // The guide wants to know that this delete stays down, before its first word goes.
@@ -544,12 +550,12 @@ class TitanKeysIme : InputMethodService() {
         val word = heldWords.next()
         enqueue {
             if (altOrPanel || !contact.deleteFlicks) return@enqueue
-            // A code still being built goes first, as a flick takes it: the pending code, then what was picked, typed less its last
-            // character (owner, 2026-11-17: "the same shd work for holding for delete too").
-            val engine = languages.engine
-            if (engine != null && (openPicker() as? LanguagePicker.Choices)?.state?.composing == true) {
+            // A hold clears a composition in the same steps as repeated flicks before it touches the editor.
+            val choices = openPicker() as? LanguagePicker.Choices
+            val state = languages.engine?.flickComposition(choices?.state)
+            if (state != null) {
                 haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
-                engineState(engine.flick())
+                engineState(state)
                 strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), 1)
                 KeyboardEvents.publish { KeyboardEvent.DeletedWord(held = true) }
                 return@enqueue
@@ -566,7 +572,7 @@ class TitanKeysIme : InputMethodService() {
             haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
             // A dot for each character of the word, for the dots that play when the hold lifts, and the real words for the bar.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
-            GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
+            strip?.gesture?.deleteText(before, selected, wordBreaker())
             val deletes = editor.deletes
             composer.backspace(true)
             strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
@@ -663,9 +669,12 @@ class TitanKeysIme : InputMethodService() {
         val connection = currentInputConnection ?: return
         val before = connection.getTextBeforeCursor(GestureDisplay.LINE_REACH, 0) ?: return
         val after = connection.getTextAfterCursor(GestureDisplay.LINE_REACH, 0) ?: return
-        val head = before.takeLastWhile { !it.isWhitespace() }
-        val tail = after.takeWhile { !it.isWhitespace() }
-        strip?.gesture?.wordText(before.dropLast(head.length), head.length + tail.length, after.drop(tail.length))
+        val text = before.toString() + after
+        val caret = before.length
+        val breaks = wordBreaker()
+        val word = WordSelection.at(text, caret, caret, breaks) ?: (caret to caret)
+        strip?.gesture?.wordText(text, word, breaks,
+            moreBefore = caret >= GestureDisplay.LINE_REACH, moreAfter = after.length >= GestureDisplay.LINE_REACH)
     }
 
     /**
@@ -835,7 +844,7 @@ class TitanKeysIme : InputMethodService() {
         composer = Composer(editor, languages.words,
             { delay, action -> main.postDelayed(action, delay) }, ::clearSettlements,
             // The automatic Shift decides a sentence's capital, so the composer adds none of its own on top. See [updateAutoShift].
-            { modifiers.autoShifted }) { barWords = it; strip?.words = it; rawLog?.bar(it); offerBarWords(it) }
+            { modifiers.autoShifted }, ::showComposerWords)
         languages.words.shown = { if (ChineseKeys.usesBar(languages.current)) ChineseRow.ASK else BarWords.SHOWN }
         composer.autoPunctuation = { TypingSettings.autoPunctuationIn(this, languages.languageId) }
         composer.sentenceSpaces = {
@@ -1062,9 +1071,26 @@ class TitanKeysIme : InputMethodService() {
 
     /** The settings screen is open when this changes, so the keyboard is idle and no field start would apply it. */
     private val overlaySetting = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key != TypingSettings.TOUCHPAD_ONLY_IN_FIELDS) return@OnSharedPreferenceChangeListener
-        updateOverlay()
-        updateHold()
+        when (key) {
+            TypingSettings.TOUCHPAD_ONLY_IN_FIELDS -> {
+                updateOverlay()
+                updateHold()
+            }
+            TypingSettings.INPUT_METHODS -> {
+                // Settings and restore write the enabled list and current choice together.
+                main.removeCallbacks(methodsChanged)
+                main.post(methodsChanged)
+            }
+        }
+    }
+
+    private val methodsChanged = Runnable {
+        if (!editing) return@Runnable
+        refreshFieldMethods()
+        val open = openPicker() as? LanguagePicker.Switch ?: return@Runnable
+        val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
+        if (!languages.switching) closePicker()
+        else showPicker(LanguagePicker.Switch(on, SwitchOverlay.refreshedRow(on, open.opened), languages.current.id))
     }
 
     // The idle games on the bar (an Easter egg, see IdlePlayer): an idle period starts with each key, touch or swipe, a new field or
@@ -1431,6 +1457,14 @@ class TitanKeysIme : InputMethodService() {
                 barLogged = line
             }
         }
+        if (packageName.endsWith(DEBUG_PACKAGE_SUFFIX)) words.choiceRowLog = { shown ->
+            if (::languages.isInitialized && ChineseKeys.isChinese(languages.current) &&
+                android.util.Log.isLoggable(BarLog.TAG, android.util.Log.DEBUG)) {
+                val line = BarLog.choiceLine(languages.current.id, shown)
+                if (line != choiceRowLogged) android.util.Log.d(BarLog.TAG, line)
+                choiceRowLogged = line
+            }
+        }
         if (::languages.isInitialized) showInputMark()
         if (::languages.isInitialized) words.rightToLeft = languages.current.rightToLeft
         panel = keys
@@ -1445,19 +1479,35 @@ class TitanKeysIme : InputMethodService() {
         words.showSuggestions = showSuggestions()
         showModifiers()
         // Chinese's bigger menu, that holding P opens, in the Sym panel's place (docs/languages.md, "Chinese on the bar").
-        val choices = ChoicesMenu(ui) { index -> enqueue { pickFromMenu(index) } }.apply { visibility = View.GONE }
+        val choices = ChoicesMenu(ui) tap@{ index ->
+            val menu = choicesMenu ?: return@tap
+            val revision = menu.revision
+            val open = openPicker() ?: return@tap
+            enqueue {
+                if (choicesMenu === menu && menu.revision == revision && openPicker() === open) pickFromMenu(index)
+            }
+        }.apply {
+            control = { key ->
+                val revision = this.revision
+                enqueue {
+                    if (choicesMenu === this && this.revision == revision && choicesMenuOpen) choicesMenuControl(key)
+                }
+            }
+            visibility = View.GONE
+        }
         choicesMenu = choices
         // A tap on the screen on one of the picker's items picks it, as its key would.
         words.moreTap = { enqueue { if (openPicker() is LanguagePicker.Choices && !choicesMenuOpen) openChoicesMenu() } }
         words.markTap = { enqueue { tapMark() } }
-        words.pickerTap = { index ->
+        words.pickerTap = tap@{ index ->
+            if (strip !== words) return@tap
+            val open = openPicker() ?: return@tap
             enqueue {
-                openPicker()?.let { open ->
-                    // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
-                    val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
-                    if (choice >= 0 && open is LanguagePicker.Choices) tallyChoices("pick.tap")
-                    if (choice >= 0) pick(open, choice)
-                }
+                if (strip !== words || openPicker() !== open) return@enqueue
+                // The row skips a choice too wide for the room left: the tap's place is the item's place in the row.
+                val choice = if (open is LanguagePicker.Choices) open.itemAt(index) else index
+                if (choice >= 0 && open is LanguagePicker.Choices) tallyChoices("pick.tap")
+                if (choice >= 0) pick(open, choice)
             }
         }
         val keyboard = LinearLayout(ui).apply {
@@ -1554,17 +1604,24 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        startingInput = true
+        clearRadicalPreview()
         main.post { showGuideExtras() }
         val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
         val nextEditor = EngineEditor(info.packageName, info.fieldId, info.inputType, info.imeOptions,
             info.privateImeOptions, currentInputConnection)
-        val samePlace = nextEditor.continues(engineEditor, restarting, lastSelectionStart, lastSelectionEnd,
-            info.initialSelStart, info.initialSelEnd) && editing && !exact && !field.exact && !field.secret && field != Field.None &&
+        val samePosition = nextEditor.continues(engineEditor, restarting, lastSelectionStart, lastSelectionEnd,
+            info.initialSelStart, info.initialSelEnd) && editing && !exact && !field.exact && !field.secret && field != Field.None
+        val samePlace = samePosition &&
             !composer.mayLeaveField && !deadKeyPending && !panelOpen && modifiers.alt == Modifiers.Level.Off &&
             (modifiers.shift == Modifiers.Level.Off || modifiers.autoShifted)
         engineEditor = nextEditor
         val target = languages.target
-        val held = if (samePlace) loadGate.takeKeys(pendingInput) { it.heldFor == target } else emptyList()
+        val held = if (samePlace) {
+            // A subtype restart resamples Shift here. The old queue stop must not prevent its waiting keys from following.
+            while (pendingInput.firstOrNull()?.refreshesShift == true) pendingInput.removeFirst()
+            loadGate.takeKeys(pendingInput) { it.heldFor == target }
+        } else emptyList()
         val code = (picker as? LanguagePicker.Choices)?.takeIf {
             samePlace && replayedCode && it.state.composing && !languages.loadingNow
         }
@@ -1613,9 +1670,8 @@ class TitanKeysIme : InputMethodService() {
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()
-        modifiers.fieldStarted(restarting, editing)
+        modifiers.fieldStarted(restarting, editing, samePosition)
         deadKeyPending = false
-        showModifiers()
         readSettings()
         if (editing && !restarting) rememberEnterApp(info)
         if (!restarting) rememberApp(info)
@@ -1633,6 +1689,8 @@ class TitanKeysIme : InputMethodService() {
         if (editing && field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd) else strip?.selected = null
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
+            startingInput = false
+            refreshAutoShiftBeforeKeys()
             if (code != null && !languages.loadingNow && languages.current.id == target) {
                 showPicker(code)
                 replayedCode = true
@@ -1646,6 +1704,8 @@ class TitanKeysIme : InputMethodService() {
             main.post(showStrip)
         } else {
             composer.stop()
+            startingInput = false
+            showModifiers()
             // A returning window starts with no field just before its own field takes focus. A strip that
             // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
@@ -1664,8 +1724,7 @@ class TitanKeysIme : InputMethodService() {
         updateHold()
     }
 
-    /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
-    private fun readSettings() {
+    private fun refreshFieldMethods() {
         // The guide's lessons teach English, so they type it whatever input method is on. The playground is free practice: it
         // types in the input methods that are on, and a held Sym opens the switcher there (owner, 2026-11-17: "long press for
         // sym doesn't trigger the language selection in the playground").
@@ -1675,6 +1734,11 @@ class TitanKeysIme : InputMethodService() {
         languages.refresh(sample)
         // Which input methods are on may have changed, and with them the mark at Q.
         if (::languages.isInitialized) showInputMark()
+    }
+
+    /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
+    private fun readSettings() {
+        refreshFieldMethods()
         languages.variant()
         val english = languages.current.isEnglish
         // Each input method's own sentence ends and opening marks, for capitals and spaces (Greek's ;, Hindi's ।, Spanish's ¿¡).
@@ -1892,6 +1956,7 @@ class TitanKeysIme : InputMethodService() {
         panelHover.keysReleased()
         panelPress = -1
         barHover.keysReleased()
+        clearRadicalPreview()
         super.onWindowHidden()
         sleepIdleBar()
         if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
@@ -2560,6 +2625,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onFinishInput() {
         engineEditor = null
+        clearRadicalPreview()
         // A held Backspace stops with its field.
         backspaceRepeat.up()
         main.removeCallbacks(repeatBackspace)
@@ -3061,6 +3127,7 @@ class TitanKeysIme : InputMethodService() {
             restingKey = ""
             markMenu("")
             showModifierBar()
+            clearRadicalPreview()
         }
     }
 
@@ -3071,24 +3138,46 @@ class TitanKeysIme : InputMethodService() {
             barHover.lift(event.eventTime)
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
             main.removeCallbacks(showRadical)
-            strip?.nextKey = ""
             return
         }
-        if (last == null || !barHover.touch(last.x, last.y)) return
-        restingKey = barHover.key
-        markMenu(restingKey)
-        showModifierBar()
-        // Cangjie and Quick: a finger that stays still on a key previews its radical in the code's tab, faded ([RadicalPreview]).
-        strip?.nextKey = ""
+        if (last == null) return
+        val moved = barHover.touch(last.x, last.y)
+        if (moved) {
+            restingKey = barHover.key
+            markMenu(restingKey)
+            showModifierBar()
+        }
+        // A brief lift cancels the initial dwell. The touchpad can then report a new down on the same key.
+        if (!moved && event.actionMasked != MotionEvent.ACTION_DOWN) return
         main.removeCallbacks(showRadical)
-        if (RadicalPreview.of(languages.current, restingKey) != null && TypingSettings.radicalPreview(this, languages.current.id))
+        if (radicalPreview.follow(barHover.key, radicalUnderFinger()))
             main.postDelayed(showRadical, RadicalPreview.REST_MILLIS)
+        strip?.nextKey = radicalPreview.shown
     }
 
-    /** The rested key's radical, faded at the end of the code's tab, once the finger has stayed [RadicalPreview.REST_MILLIS]. */
+    private fun radicalUnderFinger(): String {
+        if (!editing || field.exact || altOrPanel) return ""
+        val method = languages.current
+        val radical = ChineseKeys.radical(method, barHover.key) ?: return ""
+        return radical.takeIf { TypingSettings.radicalPreview(this, method.id) }.orEmpty()
+    }
+
+    /** Opens the preview on the first rested key. After that, touch moves update it directly. */
     private val showRadical = Runnable {
-        strip?.nextKey = if (editing && !field.exact && modifiers.alt == Modifiers.Level.Off)
-            RadicalPreview.of(languages.current, restingKey).orEmpty() else ""
+        radicalPreview.rest(radicalUnderFinger())
+        strip?.nextKey = radicalPreview.shown
+    }
+
+    private fun clearRadicalPreview() {
+        main.removeCallbacks(showRadical)
+        radicalPreview.clear()
+        strip?.nextKey = ""
+    }
+
+    private fun consumeRadicalPreview(key: String) {
+        if (!radicalPreview.consume(key)) return
+        main.removeCallbacks(showRadical)
+        strip?.nextKey = ""
     }
 
     private val endSlippedCursor = Runnable { stopCursor() }
@@ -3166,7 +3255,7 @@ class TitanKeysIme : InputMethodService() {
             nothing()
             return@changeSelection null
         }
-        showWordText(text, start, end, word)
+        showWordText(text, start, end, word, breaks)
         strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
         word
     }
@@ -3193,9 +3282,10 @@ class TitanKeysIme : InputMethodService() {
         rememberCursor()
         changeSelection { text, start, end, offset ->
             // The same word three taps take ([wordBreaker]): in Chinese a unit, not the whole run.
-            val word = WordSelection.at(text, start, end, wordBreaker()) ?: (start to end)
+            val breaks = wordBreaker()
+            val word = WordSelection.at(text, start, end, breaks) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
-            showWordText(text, start, end, word)
+            showWordText(text, start, end, word, breaks)
             word
         }
     }
@@ -3204,7 +3294,8 @@ class TitanKeysIme : InputMethodService() {
     private fun extendWords(direction: Int) = enqueue {
         changeSelection { text, start, end, offset ->
             val anchor = wordAnchor ?: return@changeSelection null
-            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction, wordBreaker())
+            val breaks = wordBreaker()
+            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction, breaks)
             if (range == start to end) {
                 // Nothing more that way: the selection reached an end of the text. It plays once, until it moves away.
                 if (selectionWall.reached()) haptics.play(Haptic.SelectionEnd)
@@ -3216,7 +3307,7 @@ class TitanKeysIme : InputMethodService() {
                 else text.subSequence(minOf(start, range.first), maxOf(start, range.first))
             haptics.play(Haptic.SelectionWord)
             // The words around the anchor are read again from here, so on long text the pills never run out.
-            showWordText(text, start, end, anchor.first - offset to anchor.second - offset)
+            showWordText(text, start, end, anchor.first - offset to anchor.second - offset, breaks)
             strip?.gesture?.wordStep(direction)
             range
         }
@@ -3226,10 +3317,9 @@ class TitanKeysIme : InputMethodService() {
      * Shows the words around [anchor] on the bar, from [text], the text read around the selection from [start] to [end]. Where
      * that text is cut off at its reach, more lies beyond it.
      */
-    private fun showWordText(text: CharSequence, start: Int, end: Int, anchor: Pair<Int, Int>) {
+    private fun showWordText(text: CharSequence, start: Int, end: Int, anchor: Pair<Int, Int>, breaker: WordBreaker) {
         if (anchor.first !in 0..text.length || anchor.second !in anchor.first..text.length) return
-        strip?.gesture?.wordText(text.subSequence(0, anchor.first), anchor.second - anchor.first,
-            text.subSequence(anchor.second, text.length), moreBefore = start >= WORD_REACH, moreAfter = text.length - end >= WORD_REACH)
+        strip?.gesture?.wordText(text, anchor, breaker, moreBefore = start >= WORD_REACH, moreAfter = text.length - end >= WORD_REACH)
     }
 
     /** What a Ctrl shortcut plays, as [ShortcutFeel] has it: only Ctrl + C with nothing selected, a no. A key held down plays once. */
@@ -3242,11 +3332,12 @@ class TitanKeysIme : InputMethodService() {
 
     /**
      * Whether a stroke from [first] may have something to delete: always, unless it starts where a delete flick does and the
-     * field has nothing before the cursor. Typing still on its way, or a field that doesn't answer, counts as something.
+     * field has nothing before the cursor, no selection and no code being built. Typing still on its way, or a field that
+     * doesn't answer, counts as something.
      */
     private fun somethingToDelete(first: Sample): Boolean {
         if (!startsDeleteFlick(first.x, first.y) || pendingInput.isNotEmpty() || composer.hasPendingInput) return true
-        return !GestureDisplay.nothingToDelete(currentInputConnection?.getTextBeforeCursor(1, 0), selectionToDelete())
+        return !GestureDisplay.nothingToDelete(currentInputConnection?.getTextBeforeCursor(1, 0), selectionToDelete(), codePending = codePending())
     }
 
     /**
@@ -3443,6 +3534,7 @@ class TitanKeysIme : InputMethodService() {
     private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
 
     private fun clearSettlements() {
+        chineseOffers.clear()
         replayedCode = false
         inputGeneration++
         loadGate.clear()
@@ -3516,10 +3608,34 @@ class TitanKeysIme : InputMethodService() {
         preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
         preparingNotice = null
         rawLog?.engine(languages.current.id, "loaded")
-        val stop = loadGate.open(languages.loadingNow, pendingInput) ?: return
+        if (languages.loadingNow) return
+        val stop = loadGate.open(false, pendingInput) ?: run {
+            if (startingInput || !editing) return
+            // English can switch at once, without a load stop. Already accepted input still comes first.
+            if (pendingInput.isEmpty()) return refreshAutoShiftBeforeKeys()
+            PendingInput(false, null).also(pendingInput::addLast)
+        }
         Log.i(LOG_TAG, "What waited goes to ${languages.current.id}")
+        stop.refreshesShift = true
+        stop.action = ::refreshAutoShiftBeforeKeys
         stop.ready = true
         drainInput()
+    }
+
+    /** Reads the new method's sentence state once earlier edits have reached the current field, ahead of the waiting keys. */
+    private fun refreshAutoShiftBeforeKeys() {
+        if (startingInput || !editing) return
+        if (languages.loadingNow || !composer.hasPendingInput) {
+            showModifiers(beforeQueuedInput = true)
+            return
+        }
+        val stop = PendingInput(false, ::refreshAutoShiftBeforeKeys, refreshesShift = true)
+        pendingInput.addFirst(stop)
+        composer.whenInputIdle {
+            if (pendingInput.firstOrNull() !== stop) return@whenInputIdle
+            stop.ready = true
+            drainInput()
+        }
     }
 
     private fun makeRoom(): Boolean {
@@ -3611,15 +3727,13 @@ class TitanKeysIme : InputMethodService() {
                 // A guide slide that doesn't teach this yet: the swipe or the flick does nothing, and the slide says so, once.
                 if (refuse(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
-                    // A code being built (Chinese, Japanese, Korean's syllable, Telex's word) goes, and the field stays as it is
-                    // (owner: "a flick should also delete the entire key code too"); in Rime only what's pending goes, then a picked
-                    // word a flick. Once nothing is built, a flick deletes from the field.
-                    // Next-word suggestions, with nothing typed, just go, and the flick deletes as usual.
+                    // A flick clears pending code before deleting from the field. With a partial Rime pick, it takes the
+                    // unpicked code first, then cancels the remaining composition on the next flick.
                     val choices = openPicker() as? LanguagePicker.Choices
                     if (choices != null) {
-                        // A code with part of it picked loses only what's pending; each flick after takes a picked word.
                         val engine = languages.engine
-                        if (choices.state.composing && engine != null) engineState(engine.flick()) else {
+                        val state = engine?.flickComposition(choices.state)
+                        if (state != null) engineState(state) else {
                             engine?.reset()
                             closePicker()
                         }
@@ -3637,7 +3751,7 @@ class TitanKeysIme : InputMethodService() {
                     // and plays just this; its steps after stay quiet, as the stroke has had its say (see [deleteWall]).
                     if (nothingLeft && deleteWall.reached()) haptics.play(Haptic.deleteFoundNothing(tookAny = false))
                     // A hold's first word: the bar's words are the real ones before it goes.
-                    GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
+                    strip?.gesture?.deleteText(before, selected, wordBreaker())
                     val deletes = editor.deletes
                     composer.backspace(true)
                     if (!nothingLeft) {
@@ -3683,6 +3797,7 @@ class TitanKeysIme : InputMethodService() {
                     val shifted = modifiers.shift != Modifiers.Level.Off && !ChineseKeys.usesBar(languages.current)
                     val state = if (key == " ") engine.space() else engine.key(languages.current.letter(key[0], shifted)?.first() ?: if (shifted) key[0] else key[0].lowercaseChar())
                     if (state.handled) {
+                        if (Layout.isLetter(key)) consumeRadicalPreview(key)
                         engineState(state)
                         modifiers.consume()
                         showModifiers()
@@ -4023,7 +4138,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun pick(open: LanguagePicker, choice: Int) {
-        closePicker()
+        if (open !is LanguagePicker.Choices || !ChineseKeys.isChinese(languages.current)) closePicker()
         haptics.play(Haptic.MenuPress)
         when (open) {
             is LanguagePicker.Accents -> {
@@ -4086,6 +4201,8 @@ class TitanKeysIme : InputMethodService() {
             return false
         }
         if (event.keyCode == KeyEvent.KEYCODE_SPACE) modifiers.useHeld() else modifiers.consume()
+        // Replace the hovered glyph as the same key's typed radical reaches the tab.
+        if (chinese && letter && !alt) consumeRadicalPreview(printedLetter(event.keyCode).uppercase())
         engineState(state)
         return true
     }
@@ -4095,11 +4212,25 @@ class TitanKeysIme : InputMethodService() {
      * read across the engine's pages, the letters as an English word when [EnglishOffer] says so, and the input method's mark
      * over Q (docs/languages.md, "Chinese on the bar").
      */
-    private fun engineState(state: EngineState) {
+    private fun engineState(result: EngineState) {
+        val state = if (result.handled && !result.composing && result.commit.isEmpty() && result.choices.isEmpty() &&
+            !field.exact && !choicesMenuOpen && !composer.hasPendingInput && ChineseKeys.isChinese(languages.current)) {
+            val before = (openPicker() as? LanguagePicker.Choices)?.state
+            languages.engine?.restoreOffersAfterCode(before, result, barWords) ?: result
+        } else result
         if (state.commit.isNotEmpty()) {
             val text = state.commit
             rawLog?.committed(languages.current.engine, text)
-            if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
+            val pick = if (ChineseKeys.isChinese(languages.current)) chineseOffers.begin() else null
+            if (pick != null) {
+                // Clear the row underneath while the old picker still covers it.
+                barWords = emptyList()
+                strip?.words = emptyList()
+            }
+            if (pick != null) {
+                composer.paste(text)
+                chineseOffers.submitted(pick)
+            } else if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
             // What was picked stays one word for every gesture and the bar ([PickedWords]).
             pickedWords.picked(text)
         }
@@ -4109,12 +4240,20 @@ class TitanKeysIme : InputMethodService() {
         } else closePicker()
     }
 
+    private fun showComposerWords(words: List<String>) {
+        if (ChineseKeys.isChinese(languages.current) && !chineseOffers.allows(composer.hasPendingInput)) return
+        barWords = words
+        strip?.words = words
+        rawLog?.bar(words)
+        offerBarWords(words)
+    }
+
     /**
      * Chinese and Japanese: the bar's words go to the engine's wide row, as many as fit, and a pick types no space and brings
      * the engine's next words ([InputEngine.offer]). Never over a code or the engine's own suggestions.
      */
     private fun offerBarWords(words: List<String>) {
-        if (!ChineseKeys.usesBar(languages.current) || field.exact) return
+        if (!ChineseKeys.usesBar(languages.current) || field.exact || choicesMenuOpen) return
         val engine = languages.engine ?: return
         val open = openPicker()
         if (open != null && (open !is LanguagePicker.Choices || open.state.composing)) return
@@ -4138,7 +4277,10 @@ class TitanKeysIme : InputMethodService() {
             engineState(EngineState(commit = open.english.orEmpty()))
             return
         }
-        engineState(engine.pickAt(open.engineIndex(item)))
+        val index = open.engineIndex(item)
+        val state = if (ChineseKeys.isChinese(languages.current)) engine.pickDisplayed(index, open.items[item])
+        else engine.pickAt(index)
+        state?.let(::engineState)
     }
 
     /**
@@ -4183,10 +4325,29 @@ class TitanKeysIme : InputMethodService() {
     /** A pick from the bigger menu: its place in the engine's whole list. The menu closes. */
     private fun pickFromMenu(index: Int) {
         if (!choicesMenuOpen) return
-        closeChoicesMenu()
+        val engine = languages.engine ?: return
+        val state = if (ChineseKeys.isChinese(languages.current)) {
+            val word = choicesMenu?.wordAt(index) ?: return
+            engine.pickDisplayed(index, word) ?: return
+        } else {
+            closeChoicesMenu()
+            engine.pickAt(index)
+        }
         haptics.play(Haptic.MenuPress)
         tallyChoices("pick.menu")
-        languages.engine?.let { engineState(it.pickAt(index)) }
+        engineState(state)
+        closeChoicesMenu()
+    }
+
+    /** Screen buttons and real keys share actions, but only real keys own their key-up. */
+    private fun choicesMenuControl(keyCode: Int) {
+        if (!choicesMenuOpen) return
+        val menu = choicesMenu ?: return
+        when (keyCode) {
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (menu.next()) haptics.play(Haptic.PanelPage)
+            KeyEvent.KEYCODE_DEL -> if (menu.previous()) haptics.play(Haptic.PanelPage)
+            KeyEvent.KEYCODE_SYM -> closeChoicesMenu()
+        }
     }
 
     /**
@@ -4209,13 +4370,12 @@ class TitanKeysIme : InputMethodService() {
                 val index = menu.choice(('A' + (keyCode - KeyEvent.KEYCODE_A)).toString())
                 if (index >= 0) pickFromMenu(index)
             }
-            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (menu.next()) haptics.play(Haptic.PanelPage)
-            KeyEvent.KEYCODE_DEL -> if (menu.previous()) haptics.play(Haptic.PanelPage)
-            KeyEvent.KEYCODE_SYM -> closeChoicesMenu()
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_SYM -> choicesMenuControl(keyCode)
             KeyEvent.KEYCODE_SPACE -> {
-                closeChoicesMenu()
+                if (!ChineseKeys.isChinese(languages.current)) closeChoicesMenu()
                 tallyChoices("pick.space")
                 languages.engine?.let { engineState(it.space()) }
+                closeChoicesMenu()
             }
         }
         return true
@@ -4458,6 +4618,9 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun inputMethodChanged(method: InputMethod) {
+        clearRadicalPreview()
+        chineseOffers.clear()
+        choiceRowLogged = null
         rawLog?.inputMethod(loggedInputMethod, method.id)
         loggedInputMethod = method.id
         showInputMark()
@@ -5102,9 +5265,10 @@ class TitanKeysIme : InputMethodService() {
         showModifiers()
     }
 
-    private fun showModifiers() {
+    private fun showModifiers(beforeQueuedInput: Boolean = false) {
+        if (altOrPanel) clearRadicalPreview()
         showGuideExtras()
-        updateAutoShift()
+        updateAutoShift(beforeQueuedInput)
         // Locked plays its feel, and so does unlocking, as a press alone doesn't tell you which it did. Once and off are key
         // presses, which the keys already click.
         val locked = { now: Modifiers.Level, shown: Modifiers.Level -> now == Modifiers.Level.Locked && shown != Modifiers.Level.Locked }
@@ -5130,16 +5294,16 @@ class TitanKeysIme : InputMethodService() {
      * setting is on. It looks like one push of Shift on the bar, and the first letter typed or swiped uses it up. Returns true if
      * Shift changed. While input still waits to reach the field, the text is not final, so nothing changes until it has.
      */
-    private fun updateAutoShift(): Boolean {
-        if (composer.hasPendingInput || pendingInput.isNotEmpty()) return false
+    private fun updateAutoShift(beforeQueuedInput: Boolean = false): Boolean {
+        if (startingInput || languages.loadingNow || composer.hasPendingInput || !beforeQueuedInput && pendingInput.isNotEmpty()) return false
         val before = modifiers.shift
-        modifiers.autoShift(sentenceStartHere())
+        val allowed = !panelOpen && languages.current.rules.capitalise && TypingSettings.autoCapitaliseIn(this, languages.languageId)
+        modifiers.autoShift(allowed, ::sentenceStartHere)
         return modifiers.shift != before
     }
 
     private fun sentenceStartHere(): Boolean {
-        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitaliseIn(this, languages.languageId) ||
-            !languages.current.rules.capitalise) return false
+        if (!editing || field.exact || !field.sentenceCapitalisation) return false
         val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0) ?: return false
         return SwipeTyping.startsSentence(before)
     }
@@ -5194,6 +5358,7 @@ class TitanKeysIme : InputMethodService() {
         if (::languages.isInitialized) languages.stop()
         editor.cancelState()
         TypingSettings.stopListening(this, overlaySetting)
+        main.removeCallbacks(methodsChanged)
         barSize?.let { FixedScale.stopListening(this, it) }
         overlay.hide()
         BackService.releaseTouchpad(overlayEvent)

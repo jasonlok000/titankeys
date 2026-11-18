@@ -46,6 +46,8 @@ export type State = {
    * count here: Settings > Setup offers them.
    */
   setupToDo: boolean;
+  /** A previously confirmed setting was lost. Native Setup takes the next focused app window. */
+  setupRepairDue: boolean;
   /** The phone's ro.agui.touchpad_function, "yes" on a Titan with the touchpad, else empty. See lib/front.ts. */
   touchpadFunction: string;
   /** Build.DEVICE, "Titan_2" on the Titan 2 Elite. */
@@ -500,6 +502,14 @@ export const chooseKeyboard = () => titankeys("choose");
 export const allowOverlay = () => titankeys("overlay");
 export const openScrollAssistant = () => titankeys("scrollAssistant");
 export const allowBack = () => titankeys("backService");
+/** The same system screens, reached specifically from Settings > Setup. */
+export const openSetupStep = (step: "enable" | "choose" | "overlay" | "scrollAssistant" | "backService" | "shortcutKeys") =>
+  titankeys(step, { fromSetup: true });
+
+export async function setSetupContacts(on: boolean) {
+  await titankeys("setupContacts", { on });
+  await state.refresh();
+}
 
 /** The other-phone warning's button: it never shows again. */
 export async function markPhoneWarningSeen() {

@@ -217,6 +217,10 @@ object SwitchOverlay {
     /** The row the switcher opens on: with one language on, straight to its input methods. */
     fun opening(languages: List<InputMethodIndex.LanguageOn>) = languages.singleOrNull()?.takeIf { it.methods.size > 1 }
 
+    /** Rebuild the opened language's row from the enabled methods when Settings changes them. */
+    fun refreshedRow(languages: List<InputMethodIndex.LanguageOn>, previous: InputMethodIndex.LanguageOn?) =
+        languages.firstOrNull { it.language.id == previous?.language?.id && it.methods.size > 1 } ?: opening(languages)
+
     /** What picking place [choice] does, in the languages' row or, with [opened], that language's row. */
     fun pick(languages: List<InputMethodIndex.LanguageOn>, opened: InputMethodIndex.LanguageOn?, choice: Int): SwitchPick? {
         if (opened != null) return opened.methods.getOrNull(choice)?.let { SwitchPick.To(it.id) }

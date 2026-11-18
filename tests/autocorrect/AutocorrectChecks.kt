@@ -2905,6 +2905,7 @@ fun main() {
     markSpacing(world)
     eachLanguageEndsItsSentences(world)
     aSwitchRefreshesTheBar(world)
+    inputIdleReadsEarlierEdits(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)
     expansions(world)
@@ -2915,6 +2916,7 @@ fun main() {
     singleLetters(world)
     spaceTypesTheMiddleWord(world)
     spaceNeverTypesAPrediction(world)
+    startsUseTheActiveRowWidth(world)
     heldBackspaceRepeats(world)
     capitalI(world)
     apostrophes(world)
@@ -3007,6 +3009,27 @@ private fun aSwitchRefreshesTheBar(world: Realistic) {
     same(typist.bar.none { it in listOf("hello", "help", "here") }, true, "the old input method's late answer doesn't land: ${typist.bar}")
 }
 
+private fun inputIdleReadsEarlierEdits(world: Realistic) {
+    val typist = Typist(world, autocorrect = null)
+    typist.words.holdSwipes = true
+    typist.swipe("hello")
+    typist.composer.type("q")
+    val seen = mutableListOf<String>()
+    typist.composer.whenInputIdle { seen += typist.text }
+    same(seen, emptyList<String>(), "A language transition waits for already accepted input")
+    typist.words.unrecognised.removeFirst().invoke()
+    typist.settle()
+    same(seen, listOf("hello q"), "The transition reads the caret after both earlier edits")
+
+    typist.swipe("there")
+    typist.composer.whenInputIdle { seen += typist.text }
+    typist.select(0)
+    same(seen, listOf("hello q", "hello q"), "A reset with an abandoned swipe also releases the idle callback once")
+    typist.words.unrecognised.removeFirst().invoke()
+    typist.settle()
+    same(seen.size, 2, "The late swipe cannot run the callback again")
+}
+
 /**
  * Holding Backspace deletes on and on, as on a PC (owner, 2026-11-17: "long pressing backspace doesn't delete word repeately like
  * on a pc only one character"). Android sends the hold's repeats about every 50 ms, faster than the app reports each delete, so
@@ -3046,4 +3069,23 @@ private fun spaceNeverTypesAPrediction(world: Realistic) {
     }
     val typist = Typist(world, autocorrect = null, composerWords = spanish).type("pero hola ")
     same(typist.type(" ").text, "pero hola  ", "Spanish: Space after a word types a space, never a next word (bar ${typist.bar})")
+}
+
+private fun startsUseTheActiveRowWidth(world: Realistic) {
+    val methods = listOf("zh-pinyin", "yue-yale", "ja", "es")
+    for (id in methods) {
+        val method = com.titankeys.keyboard.InputMethod.parse(File("android/assets/im/$id/im.json").readText())
+        val width = if (id == "es") 3 else 8
+        val words = com.titankeys.keyboard.LanguageWords(FakeWords(Lists(world.words))) { null }.also {
+            it.other = true
+            it.starters = method.starters
+            it.shown = { width }
+        }
+        same(words.sentenceStarts(), method.starters.take(width), "$id fallback starters fill the active row")
+        val typist = Typist(world, autocorrect = null, composerWords = words)
+        typist.editor.unreadable = true
+        typist.composer.start(typist.field, -1, -1)
+        typist.settle()
+        same(typist.bar, method.starters.take(width), "$id uses the active row in a field that hides its text")
+    }
 }

@@ -1,9 +1,12 @@
 package com.titankeys.keyboard
 
+import android.text.InputType
 import android.view.KeyEvent
 import com.titankeys.engine.EmojiPages
+import com.titankeys.engine.SentenceCase
 import com.titankeys.keyboard.Modifiers.Level
 import com.titankeys.keyboard.Modifiers.Panel
+import java.io.File
 
 private const val SHIFT = KeyEvent.KEYCODE_SHIFT_LEFT
 private const val OTHER_SHIFT = KeyEvent.KEYCODE_SHIFT_RIGHT
@@ -101,6 +104,7 @@ fun main() {
     cornersKeepContentClear()
     theGuideCanOpenAPanel()
     autoShift()
+    automaticShiftFollowsMethodAndEditor()
     chipsBesideTheWords()
     println("Modifier checks passed")
 }
@@ -1519,6 +1523,128 @@ private fun autoShift() {
         modifiers.autoShift(sentenceStart = true)
         same(shift, Level.Once, "A new field that starts a sentence turns it on")
     }
+}
+
+private fun automaticShiftFollowsMethodAndEditor() {
+    val english = InputMethod.ENGLISH
+    fun method(id: String) = InputMethod.parse(File("android/assets/im/$id/im.json").readText())
+    val chinese = method("yue-yale")
+    val russian = method("ru")
+    val withSentences = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+    val sentences = Field.of(withSentences, 0)
+    Modifiers().autoShift(allowed = false) { error("A method without capitals does not need to read a fresh cursor") }
+
+    class Editor(var text: String = "", var field: Field = sentences) {
+        val keyboard = Keyboard()
+        val shift get() = keyboard.modifiers
+        var method = chinese
+        var preferCapitals = true
+        val arrow get() = keyboard.bar(shiftShows = method.shiftMatters)?.autoCapital == true
+
+        fun refresh() {
+            SentenceCase.ends(method.rules.sentenceEnd, method.rules.openingMarks)
+            shift.autoShift(preferCapitals && method.rules.capitalise) {
+                field.sentenceCapitalisation && SentenceCase.capitalise("q", text) == "Q"
+            }
+        }
+
+        fun switch(next: InputMethod) {
+            method = next
+            refresh()
+        }
+
+        fun q(): String {
+            val meta = shift.commandMeta(textKey = true)
+            val shifted = (meta and KeyEvent.META_SHIFT_MASK != 0) != (meta and KeyEvent.META_CAPS_LOCK_ON != 0)
+            val letter = method.letter('q', shifted) ?: if (shifted) "Q" else "q"
+            shift.consume()
+            text += letter
+            refresh()
+            return letter
+        }
+    }
+
+    for ((next, upper, lower) in listOf(Triple(english, "Q", "q"), Triple(russian, "Й", "й"))) {
+        for (initial in listOf("", "你好。", "hello ")) {
+            val editor = Editor(initial)
+            editor.switch(chinese)
+            same(editor.arrow, false, "The composing method has no automatic caps")
+            editor.switch(next)
+            val atStart = initial != "hello "
+            same(editor.arrow, atStart, "${next.id} shows automatic Shift immediately only at the sentence start")
+            same(editor.q(), if (atStart) upper else lower, "${next.id} types the correct case on the first physical key")
+            same(editor.arrow, false, "The first letter consumes automatic Shift")
+            same(editor.q(), lower, "The next letter remains lowercase")
+        }
+
+        val editor = Editor()
+        editor.switch(next)
+        same(editor.arrow, true, "The sentence starts with automatic Shift")
+        editor.switch(chinese)
+        same(editor.arrow, false, "Switching to Chinese removes the indicator")
+        same(editor.shift.shift, Level.Off, "The automatic Shift itself also ends")
+
+        val replay = Editor()
+        val queue = ArrayDeque<() -> Unit>()
+        val gate = LoadGate { { replay.refresh() } }
+        gate.before(true, queue)
+        queue.addLast {
+            same(replay.arrow, true, "The active method's indicator has changed before the first key leaves the queue")
+            same(replay.q(), upper, "The first of two waiting keys uses the new case policy")
+        }
+        queue.addLast { same(replay.q(), lower, "The second fast key uses up no extra automatic Shift") }
+        same(replay.arrow, false, "The loading method cannot prime Shift early")
+        replay.method = next
+        same(gate.open(false, queue), queue.first(), "The ready method's stop still comes before both keys")
+        while (queue.isNotEmpty()) queue.removeFirst()()
+
+        val returned = Editor("你好。")
+        returned.switch(chinese)
+        returned.shift.fieldStarted(restarting = false, editing = true)
+        returned.switch(next)
+        same(returned.arrow, true, "Returning to this field from another keyboard reads the current method and caret")
+        same(returned.q(), upper, "The first letter on return agrees with the indicator")
+    }
+
+    Editor().run {
+        switch(english)
+        keyboard.press()
+        switch(chinese)
+        shift.fieldStarted(restarting = true, editing = true, samePosition = true)
+        switch(russian)
+        same(arrow, false, "Switching methods and restarting the same editor preserve a declined automatic capital")
+        same(q(), "й", "Declining automatic Shift leaves the first letter lowercase")
+    }
+    Editor("hello ").run {
+        switch(english)
+        keyboard.press()
+        switch(chinese)
+        shift.fieldStarted(restarting = true, editing = true, samePosition = true)
+        switch(russian)
+        same(arrow, false, "A manual Shift remains the user's own")
+        same(keyboard.bar()?.chips, listOf(ModifierBar.SHIFT), "The full Shift chip remains")
+        same(q(), "Й", "The user's Shift still uppercases the next letter mid-sentence")
+    }
+
+    val plainFields = listOf(
+        Field.of(InputType.TYPE_CLASS_TEXT, 0),
+        Field.of(withSentences or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0),
+        Field.of(withSentences or InputType.TYPE_TEXT_VARIATION_URI, 0),
+        Field.of(withSentences or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, 0),
+        Field.Exact,
+    )
+    for (field in plainFields) Editor(field = field).run {
+        switch(russian)
+        same(arrow, false, "Fields without sentence capitals never show automatic Shift")
+        same(q(), "й", "Fields without sentence capitals leave the first key lowercase")
+    }
+    Editor().run {
+        preferCapitals = false
+        switch(russian)
+        same(arrow, false, "The active language's preference can disable automatic capitals")
+        same(q(), "й", "That preference keeps the first key lowercase")
+    }
+    SentenceCase.ends(english.rules.sentenceEnd, english.rules.openingMarks)
 }
 
 /**

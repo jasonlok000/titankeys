@@ -339,9 +339,13 @@ class Strip(
             effects?.invalidate()
         }
 
+    /** The picker item a touch went down on, which it picks if it lifts there too. */
+    private var pickerTouched = -1
+
     /** A word's menu or a notice about a word, in the place of everything else. */
     var notice: Notice? = null
         set(value) {
+            pickerTouched = -1
             if (field == value) return
             field = value
             logBar()
@@ -357,6 +361,8 @@ class Strip(
      * first choice; left and right are the second and third. It may get the same line again: the keyboard logs a change only.
      */
     var log: ((String) -> Unit)? = null
+    /** Debug-only trace of the wide row, including its predictions with no code and any ordinary fallback. */
+    var choiceRowLog: ((String) -> Unit)? = null
 
     private fun logBar() {
         val log = log ?: return
@@ -861,13 +867,6 @@ class Strip(
      * Where Shift's automatic arrow goes. [corner]: small in the corner whatever the words, as beside the language mark,
      * [after] px further right (past a mark that's small there too).
      */
-    /** The middle of English's auto-capital arrow, as [placeCapital] places it: the language mark over Q shares it (owner, 2026-11-17). */
-    private fun capitalCentre(): Float {
-        val height = capitalHeight()
-        val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
-        return minOf(line - wordPixels() * CAPITAL_LIFT, floor - arrow / 2 - dp(1))
-    }
-
     private fun placeCapital(corner: Boolean = false, after: Float = 0f): Pair<Float, Float> {
         val height = capitalHeight()
         val arrow = height - 2 * dp(CAPITAL_ARROW_IN)
@@ -948,6 +947,14 @@ class Strip(
         drawMenuWord(canvas)
         drawMenu(canvas)
         drawPicker(canvas)
+        choiceRowLog?.let { log ->
+            val shown = (notice as? Notice.Picker)?.takeIf { noticeRow.visibility == VISIBLE && it.mark.isNotEmpty() }
+            val row = if (shown != null) BarLog.choiceRow(shown.lead.isNotEmpty(), shown.items, shown.columns)
+            else "plain " + wordViews.joinToString(" | ") { view ->
+                if (view.visibility == VISIBLE) view.text.ifEmpty { "-" } else "-"
+            }
+            log(row)
+        }
         drawAutoCapital(canvas)
         drawInputMark(canvas)
         idle?.let { drawIdle(canvas, it) }
@@ -994,9 +1001,10 @@ class Strip(
         val baseline = StripFit.baseline(line, pickerText.textSize, floor)
         val pillHeight = minOf(dp(MENU_PILL_DP).toFloat(), StripFit.around(line, barHeight.toFloat(), inside))
         // The input method's mark over Q, in the accent, and P's cue when there are more choices: each kept to its key.
-        if (picker.mark.isNotEmpty()) {
+        if (picker.mark.isNotEmpty() && inputMark.isNotEmpty()) {
+            // The choices can outlive a method change. Q uses the same current label as the idle bar.
             pickerText.color = look.accent
-            drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)
+            drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline + StripFit.markOffset(width))
         }
         if (picker.more) {
             // Orange while a code is typed: Shift opens the bigger menu.
@@ -1073,17 +1081,16 @@ class Strip(
         pickerText.typeface = typeface
         pickerText.textSize = wordPixels()
         pickerText.color = look.accent
-        // Centred on the line English's auto-capital arrow is centred on (owner, 2026-11-17: "match the vertical positioning
-        // center with the auto cap in english"), not on the words' baseline.
-        val baseline = capitalCentre() - (pickerText.ascent() + pickerText.descent()) / 2
         if (markIsSmall()) {
             canvas.save()
             val x = side.toFloat() / 2 + dp(2)
-            canvas.scale(INPUT_MARK_SMALL, INPUT_MARK_SMALL, x, dp(4).toFloat())
-            canvas.drawText(inputMark, x, dp(4) - pickerText.ascent(), pickerText)
+            val y = dp(4) + StripFit.markOffset(width)
+            canvas.scale(INPUT_MARK_SMALL, INPUT_MARK_SMALL, x, y)
+            canvas.drawText(inputMark, x, y - pickerText.ascent(), pickerText)
             canvas.restore()
             return
         }
+        val baseline = StripFit.baseline(line, pickerText.textSize, floor) + StripFit.markOffset(width)
         drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)
         // Only the mark drawn over Q is touched: small in the corner, a touch there is the left word's.
         markRight = menuColumn(ChineseRow.MARK).second
@@ -1119,8 +1126,6 @@ class Strip(
         else -> -1f
     }
     private var markTouched = false
-    /** The picker item a touch went down on, which it picks if it lifts there too. */
-    private var pickerTouched = -1
 
     /** The picker's item under [x], or -1. */
     private fun pickerItemAt(x: Float): Int {

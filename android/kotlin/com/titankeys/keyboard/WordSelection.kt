@@ -115,10 +115,14 @@ object WordSelection {
     fun extend(text: CharSequence, start: Int, end: Int, anchorStart: Int, anchorEnd: Int, direction: Int,
                breaker: WordBreaker? = null): Pair<Int, Int> {
         // In a script without spaces, a step is one of [breaker]'s words, as three taps take them (Chinese's units).
-        val words = breaker?.takeIf { WordBreaks.anySpaceless(text) }?.pieces(text.toString())?.filter { it.word }
+        val words = gestureWords(text, breaker)
         return if (words != null) extendWords(words, start, end, anchorStart, anchorEnd, direction)
             else extendRuns(text, start, end, anchorStart, anchorEnd, direction)
     }
+
+    /** The segments used by a word drag in an unspaced script, also used to draw its pills. */
+    internal fun gestureWords(text: CharSequence, breaker: WordBreaker?) =
+        breaker?.takeIf { WordBreaks.anySpaceless(text) }?.pieces(text.toString())?.filter { it.word }
 
     /** [extend] over [words], [WordBreaker]'s words in order. */
     private fun extendWords(words: List<WordPiece>, start: Int, end: Int, anchorStart: Int, anchorEnd: Int, direction: Int) = when {

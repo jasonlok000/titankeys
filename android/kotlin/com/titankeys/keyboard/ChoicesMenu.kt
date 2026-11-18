@@ -7,6 +7,8 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.text.TextPaint
 import android.util.TypedValue
+import android.util.Log
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 
@@ -41,6 +43,8 @@ class ChoicesMenu(
     private val starts = ArrayList<Int>()
     /** The code being typed, in the band. */
     private var code = ""
+    var revision = 0
+        private set
 
     /** The key under a resting finger, or empty: its choice is highlighted. */
     var hover = ""
@@ -52,6 +56,7 @@ class ChoicesMenu(
 
     /** Opens on the first page of a new list of choices. */
     fun open(code: String, source: (Int, Int) -> List<String>) {
+        changedPage()
         this.code = code
         this.source = source
         choices.clear()
@@ -60,6 +65,7 @@ class ChoicesMenu(
         starts += 0
         fill()
         invalidate()
+        observe()
     }
 
     /** The open page: its cells, as many choices as fit from its start. */
@@ -85,10 +91,12 @@ class ChoicesMenu(
 
     /** Turns to the next page. False on the last. */
     fun next(): Boolean {
-        if (!hasNext) return false
+        if (!hasNext) { observe(); return false }
+        changedPage()
         starts += page.end
         fill()
         invalidate()
+        observe()
         return true
     }
 
@@ -97,14 +105,19 @@ class ChoicesMenu(
     val onFirstPage get() = !hasPrevious
 
     fun previous(): Boolean {
-        if (!hasPrevious) return false
+        if (!hasPrevious) { observe(); return false }
+        changedPage()
         starts.removeAt(starts.size - 1)
         invalidate()
+        observe()
         return true
     }
 
     /** The place in the whole list of the choice that key [key] picks on the open page, or -1. */
     fun choice(key: String) = ChineseMenu.choice(page, key)
+
+    /** The word actually drawn for a cell, to verify it still belongs to the engine before picking. */
+    fun wordAt(index: Int) = choices.getOrNull(index)
 
     /** P's text: the page, and how many, or "›" while more may follow. */
     private fun position(): String {
@@ -175,8 +188,16 @@ class ChoicesMenu(
         drawable.draw(canvas)
     }
 
-    /** The choice under a touch, which it picks if it lifts there too. */
-    private var touched = -1
+    /** Painted navigation buttons reuse the keyboard's actions, without physical key-up bookkeeping. */
+    var control: (Int) -> Unit = {}
+
+    /** The candidate or control pressed; it activates only if the finger lifts there too. */
+    private var touched = Int.MIN_VALUE
+
+    private fun changedPage() {
+        revision++
+        touched = Int.MIN_VALUE
+    }
 
     private fun cellAt(x: Float, y: Float): Int {
         val row = (y / dp(ROW_HEIGHT)).toInt()
@@ -185,18 +206,61 @@ class ChoicesMenu(
         }?.index ?: -1
     }
 
+    private fun targetAt(x: Float, y: Float): Int {
+        if (x < 0 || x >= width || y < 0 || y >= height) return Int.MIN_VALUE
+        val row = (y / dp(ROW_HEIGHT)).toInt()
+        val last = column(9)
+        val close = column(8)
+        if (x >= last.first && x <= last.second) {
+            if (row == 1 && hasPrevious) return -KeyEvent.KEYCODE_DEL
+            if (row == 2 && hasNext) return -KeyEvent.KEYCODE_ENTER
+        }
+        if (row == 2 && x >= close.first && x <= close.second) return -KeyEvent.KEYCODE_SYM
+        return cellAt(x, y).takeIf { it >= 0 } ?: Int.MIN_VALUE
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> touched = cellAt(event.x, event.y)
+            MotionEvent.ACTION_DOWN -> touched = targetAt(event.x, event.y)
             MotionEvent.ACTION_UP -> {
                 val cell = touched
-                touched = -1
-                if (cell >= 0 && cellAt(event.x, event.y) == cell) tapped(cell)
+                touched = Int.MIN_VALUE
+                if (cell != Int.MIN_VALUE && targetAt(event.x, event.y) == cell) {
+                    if (cell >= 0) tapped(cell) else control(-cell)
+                }
+                observe()
             }
-            MotionEvent.ACTION_CANCEL -> touched = -1
+            MotionEvent.ACTION_CANCEL -> touched = Int.MIN_VALUE
         }
         return true
+    }
+
+    /** Debug-only numeric evidence: no code, candidates, editor text or app names. */
+    private fun observe() {
+        if (!context.packageName.endsWith(".debug") ||
+            AppBuild.kind(context) != "debug" || starts.isEmpty() || width <= 0 || height <= 0) return
+        val at = IntArray(2)
+        getLocationOnScreen(at)
+        fun centre(col: Int, row: Int): String {
+            val cell = column(col)
+            return "${at[0] + Math.round((cell.first + cell.second) / 2)},${at[1] + row * dp(ROW_HEIGHT) + dp(ROW_HEIGHT) / 2}"
+        }
+        Log.i("TitanKeysMenu", "choices page=${starts.size} pages=${ChineseMenu.starts(choices).size}" +
+            " previous=${if (hasPrevious) 1 else 0} next=${if (hasNext) 1 else 0} visible=${if (isShown) 1 else 0}" +
+            " bounds=${at[0]},${at[1]},$width,$height row=${dp(ROW_HEIGHT)}" +
+            " controls=${centre(9, 1)},${centre(9, 2)},${centre(8, 2)}")
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        post { observe() }
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        // View construction can notify visibility before this class's fields are initialized.
+        post { observe() }
     }
 
     private fun dp(value: Int) = Math.round(value * resources.displayMetrics.density)

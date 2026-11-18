@@ -75,6 +75,9 @@ internal object StripFit {
      */
     fun baseline(line: Float, size: Float, floor: Float) = minOf(baseline(line, size), floor - size * DESCENT)
 
+    /** The owner picked an upward shift of 3 pixels on the Titan's 1,076-pixel display. */
+    fun markOffset(width: Int): Float = -3f * width / 1076f
+
     /**
      * Where a one-line text view starts its text, as its top padding with its gravity at the top, so that its baseline is the
      * line of words [lineSize] px big on the bar's [line] ([baseline], kept over [floor]), in whole pixels. Every word sits on

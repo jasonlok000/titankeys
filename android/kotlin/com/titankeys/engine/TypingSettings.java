@@ -15,6 +15,7 @@ import java.util.TreeMap;
 public final class TypingSettings {
     public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
     public static final String TOUCHPAD_ONLY_IN_FIELDS = "touchpad_only_in_fields";
+    public static final String INPUT_METHODS = "input_methods";
     private static final String DEFAULT_TAP_KEYS = "";
     // The defaults follow how the Titan 2 Elite is set up by the person who made TitanKeys: holding a letter for its symbol,
     // fn as Ctrl, suggestions in an empty home search, and American spelling. Scroll assistant and the typing log stay off.
@@ -595,11 +596,11 @@ public final class TypingSettings {
      * Languages"). English alone by default.
      */
     public static String inputMethods(Context context) {
-        return preferences(context).getString("input_methods", "en");
+        return preferences(context).getString(INPUT_METHODS, "en");
     }
 
     public static void inputMethods(Context context, String ids) {
-        preferences(context).edit().putString("input_methods", ids).apply();
+        preferences(context).edit().putString(INPUT_METHODS, ids).apply();
     }
 
     /** The input method the keyboard types with now, picked in the overlay on a held Sym. */

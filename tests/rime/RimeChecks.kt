@@ -1,9 +1,18 @@
 package com.titankeys.rime
 
-import com.titankeys.keyboard.ChineseKeys
+import com.titankeys.keyboard.ChineseOffers
+import com.titankeys.keyboard.ChineseRow
 import com.titankeys.keyboard.ChineseSetup
+import com.titankeys.keyboard.BarLog
+import com.titankeys.keyboard.Contact
 import com.titankeys.keyboard.EngineState
 import com.titankeys.keyboard.InputMethod
+import com.titankeys.keyboard.PickedWords
+import com.titankeys.keyboard.Sample
+import com.titankeys.keyboard.flickComposition
+import com.titankeys.keyboard.pickDisplayed
+import com.titankeys.keyboard.restoreOffersAfterCode
+import com.titankeys.keyboard.wordDeleteLength
 import java.io.File
 import java.security.MessageDigest
 
@@ -50,7 +59,9 @@ fun main(args: Array<String>) {
     theBarsWordsShowAsChoices()
     aPickedBarWordBringsItsNextWords()
     theBarsWordsNeverCoverACode()
-    aFlickKeepsWhatWasPicked()
+    chinesePicksReplaceTheVisibleRow()
+    cancelledCodeRestoresTheWideStarterRow()
+    deleteFlicksDrainTheCompositionBeforeTheField()
     lazySoundsOffSelectsTheStrictTwin()
     println("Rime checks passed")
 }
@@ -83,10 +94,13 @@ private class FakeRime : RimeCalls {
      * offers them again.
      */
     var suggestions = emptyList<String>()
+    var predict = true
+    /** A fixture can ask a pick to select a prefix of the code, leaving the rest pending. */
+    var selectPrefix: Pair<Int, String>? = null
 
     private fun committed(text: String) {
         commit = text
-        suggestions = (0 until 3).map { "$text+$it" }
+        suggestions = if (predict) (0 until 3).map { "$text+$it" } else emptyList()
     }
 
     fun choices() = if (code.isEmpty()) suggestions else (0 until 8).map { "${code.uppercase()}${page * 8 + it}" }
@@ -139,8 +153,17 @@ private class FakeRime : RimeCalls {
     override fun selectAt(index: Int): Boolean {
         val c = all()
         if (index !in c.indices) return false
-        committed(c[index])
+        selectPrefix?.let { (count, word) ->
+            selectPrefix = null
+            pickedCode = code.take(count)
+            pickedText = word
+            code = code.drop(count)
+            return true
+        }
+        committed(pickedText + c[index])
         code = ""
+        pickedCode = ""
+        pickedText = ""
         page = 0
         return true
     }
@@ -889,24 +912,140 @@ fun theBarsWordsNeverCoverACode() {
     check(!space.handled && space.commit.isEmpty(), "Space with the bar's words is a plain space, picking none")
 }
 
-/**
- * A flick with part of a code picked (頂你個 picked, "fai" pending) takes only the pending code. The next types what was
- * picked less its last character, so one flick is one character (owner, 2026-11-17), cleared rather than committed in Rime, so
- * it learns nothing. With nothing picked, the code goes whole.
- */
-fun aFlickKeepsWhatWasPicked() {
+/** The engine dispatch and fitted row handle both a pick that finishes typing and one that leaves a code. */
+fun chinesePicksReplaceTheVisibleRow() {
+    for ((schema, keys, prefix) in listOf(
+        Triple(RimeEngine.Schema.Yale, "neihou", "你"),
+        Triple(RimeEngine.Schema.Pinyin, "nihao", "你"),
+    )) {
+        val (engine, rime) = started(schema)
+        type(engine, keys)
+        val row = ChineseRow.Choices(engine.choices(0, ChineseRow.ASK + 1))
+        val selected = row.shown[1]
+        val word = row.items[selected]
+        val index = row.engineIndex(selected)
+        rime.selectPrefix = (keys.indexOf('h')) to prefix
+
+        val partial = checkNotNull(engine.pickDisplayed(index, word))
+        same("", partial.commit, "$schema partial pick does not edit the field")
+        check(partial.composing && partial.code.startsWith(prefix), "$schema draws the picked prefix with the pending code")
+        val next = ChineseRow.Choices(engine.choices(0, ChineseRow.ASK + 1))
+        val leading = next.shown.first()
+        check(word !in next.items, "$schema replaces the old row with choices for the remaining code")
+        same(null, engine.pickDisplayed(index, word), "$schema delayed tap cannot pick a replacement at the same index")
+        same(partial.code, engine.state().code, "$schema delayed tap leaves the partial code intact")
+
+        val completed = checkNotNull(engine.pickDisplayed(next.engineIndex(leading), next.items[leading]))
+        val text = prefix + next.items[leading]
+        same(text, completed.commit, "$schema final pick commits the whole choice with no added space")
+        same("", completed.code, "$schema final pick has no remaining code")
+        same((0 until 3).map { "$text+$it" }, completed.choices, "$schema final pick immediately offers next words")
+        val predictions = ChineseRow.Choices(completed.choices)
+        val log = BarLog.choiceRow(completed.composing, predictions.items, predictions.shown.map { predictions.columns[it]!! })
+        check(log.startsWith("predictions ") && log.contains("=$text+0"), "$schema trace shows the next words with no code")
+
+        rime.predict = false
+        type(engine, keys)
+        val noPrediction = checkNotNull(engine.pickDisplayed(0, engine.choices(0, 1).single()))
+        check(noPrediction.commit.isNotEmpty() && noPrediction.choices.isEmpty(), "$schema can commit without native predictions")
+        same(listOf("嗎"), engine.offer(listOf("嗎")).choices, "$schema fresh editor offer can fill that row")
+    }
+
+    val offers = ChineseOffers()
+    val first = offers.begin()
+    check(!offers.allows(false), "old editor words are blocked while the picked text is still being sent")
+    val second = offers.begin()
+    offers.submitted(first)
+    check(!offers.allows(false), "submission for an obsolete pick cannot reopen the row")
+    offers.submitted(second)
+    check(!offers.allows(true), "while paste waits in the composer queue its pre-pick words are still blocked")
+    check(offers.allows(false), "editor predictions can fill the row once the composer drains")
+    val oldField = offers.begin()
+    offers.clear()
+    offers.submitted(oldField)
+    check(offers.allows(false), "a field or input-method change clears the gate")
+}
+
+fun cancelledCodeRestoresTheWideStarterRow() {
+    for (schema in listOf(RimeEngine.Schema.Yale, RimeEngine.Schema.Pinyin)) {
+        val (engine, _) = started(schema)
+        val starters = listOf("我", "你", "今日", "唔該", "點解", "喺", "好", "咁")
+        val idle = engine.offer(starters)
+        same(8, ChineseRow.Choices(idle.choices).shown.size, "$schema starts with eight choices")
+
+        val code = engine.key('n')
+        val erased = engine.backspace()
+        check(erased.handled && !erased.composing && erased.choices.isEmpty(), "$schema clears the last composing letter")
+        val restored = engine.restoreOffersAfterCode(code, erased, starters)
+        same(starters, restored.choices, "$schema restores the same eight choices after the last code letter goes")
+        same(8, ChineseRow.Choices(restored.choices).shown.size, "$schema paints the wide row again")
+        same("", restored.commit, "$schema cancellation never types a starter")
+
+        val codeAgain = engine.key('n')
+        val reset = engine.restoreOffersAfterCode(codeAgain, engine.reset(), starters)
+        same(starters, reset.choices, "$schema Sym cancellation also restores the wide row")
+        val editorDelete = engine.backspace()
+        check(!editorDelete.handled, "$schema idle Backspace belongs to the editor")
+        same(editorDelete, engine.restoreOffersAfterCode(reset, editorDelete, starters),
+            "$schema does not restore the old offers over an editor deletion")
+        same(editorDelete, engine.restoreOffersAfterCode(code, editorDelete, starters),
+            "$schema an engine that didn't handle the key still leaves it to the editor")
+
+        val codeForPick = engine.key('n')
+        val picked = engine.space()
+        same(picked, engine.restoreOffersAfterCode(codeForPick, picked, starters),
+            "$schema a pick keeps its own next words")
+    }
+}
+
+/** Real contact decisions go through the same engine dispatch as the IME before deleting from the editor. */
+fun deleteFlicksDrainTheCompositionBeforeTheField() {
+    for ((schema, keys, picked) in listOf(
+        Triple(RimeEngine.Schema.Yale, "dingneigofai", "頂你個"),
+        Triple(RimeEngine.Schema.Pinyin, "nihaoniu", "你好"),
+    )) {
+        val (engine, rime) = started(schema)
+        type(engine, keys)
+        rime.selectPrefix = (keys.length - 3) to picked
+        var state = checkNotNull(engine.pickDisplayed(0, engine.choices(0, 1).single()))
+        val contact = Contact().apply { swipes = Contact.Swipes.DeletesOnly }
+        val original = "唔該晒"
+        var editor = original
+        var edits = 0
+        fun flick(time: Long) {
+            contact.paging = if (state.composing) Contact.Paging.Choices else Contact.Paging.None
+            contact.down(Sample(.95f, .35f, time))
+            contact.move(listOf(Sample(.7f, .35f, time + 120)))
+            val settle = checkNotNull(contact.up(emptyList(), time + 120))
+            val outcome = contact.settle(settle, settle.deadline) as Contact.Outcome.Swipe
+            check(outcome.deletesWord && !outcome.forPaging, "$schema contact dispatches a delete flick")
+            val result = engine.flickComposition(state)
+            if (result != null) {
+                state = result
+                if (result.commit.isNotEmpty()) {
+                    editor += result.commit
+                    edits++
+                }
+            } else {
+                editor = editor.dropLast(wordDeleteLength(editor, null, PickedWords.CHARACTERS))
+                edits++
+            }
+        }
+
+        flick(1_000)
+        same(picked, state.code, "$schema first flick removes only the unpicked code")
+        same(original, editor, "$schema first flick leaves the editor intact")
+        flick(2_000)
+        same("", state.code, "$schema second flick cancels the remaining composition")
+        same("", state.commit, "$schema second flick cancels without committing")
+        same(0, edits, "$schema neither composition flick edits the field")
+        same(original, editor, "$schema existing text stays untouched until the third flick")
+        flick(3_000)
+        same("唔該", editor, "$schema third flick deletes one character from the existing editor text")
+        same(1, edits, "$schema only the third flick edits the field")
+    }
+
     val (engine, rime) = started()
-    type(engine, "fai")
-    rime.pickedCode = "dingneigo"
-    rime.pickedText = "頂你個"
-    val first = engine.flick()
-    same("", first.commit, "the first flick types nothing")
-    same("頂你個", first.code, "and the picked part stays on the bar")
-    val second = engine.flick()
-    same("頂你", second.commit, "the next types what was picked, less its last character")
-    same("", second.code, "and nothing is left being built")
-    check("reset" in rime.calls, "cleared, never committed: Rime learns nothing from it")
-    rime.calls.clear()
     // Enter with part picked types the picked words, then the letters still pending (owner, 2026-11-17).
     type(engine, "fai")
     rime.pickedCode = "dingneigo"
@@ -926,7 +1065,6 @@ fun aFlickKeepsWhatWasPicked() {
         same("", removed.commit, "a flick clearing $display must not insert any unselected preview")
         same("", removed.code, "the entire unselected code clears")
     }
-    same("𠮩", ChineseKeys.dropLastCharacter("𠮩𠮩"), "a character outside the BMP counts as one")
 }
 
 /** Lazy sounds off (a setting, on by default): Rime selects Yale's strict twin, and back again when they're on. */

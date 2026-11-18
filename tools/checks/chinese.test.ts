@@ -36,7 +36,7 @@ test("the code floats over the app, above the bar's left edge, only while a code
 
 test("the mark sits over Q and the more cue over P", () => {
   const picker = body(strip, "drawPicker");
-  expect(picker).toContain("drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)");
+  expect(picker).toContain("drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline + StripFit.markOffset(width))");
   expect(picker).toContain("drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)");
   // Orange while a code is typed: Shift opens more, though Shift isn't under it.
   expect(picker).toContain("pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted");
@@ -123,7 +123,8 @@ test("either Shift, or a tap on the more cue, opens the bigger menu with choices
   expect(keys).not.toContain("KEYCODE_SYM");
   expect(ime).not.toContain("symOpensChoices");
   expect(ime).not.toContain("symCanWait");
-  expect(body(ime, "choicesMenuKey")).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
+  expect(body(ime, "choicesMenuKey")).toContain("KeyEvent.KEYCODE_SYM -> choicesMenuControl(keyCode)");
+  expect(body(ime, "choicesMenuControl")).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
   // A symbol picked from the panel types the code's first choice first; suggestions with no code are cleared.
   expect(body(ime, "typePanelItem")).toContain("engineState(if (choices.state.composing) it.space() else it.reset())");
   expect(keys).not.toContain("KEYCODE_P");
@@ -143,6 +144,19 @@ test("the mark shows whenever an input method that isn't English types, the idle
   expect(body(strip, "dispatchDraw")).toContain("drawInputMark(canvas)");
 });
 
+test("changing the enabled methods refreshes the mark and open picker in the current editor", () => {
+  const observer = ime.slice(ime.indexOf("private val overlaySetting"), ime.indexOf("private val methodsChanged"));
+  expect(observer).toContain("TypingSettings.INPUT_METHODS ->");
+  expect(observer).toContain("main.post(methodsChanged)");
+  const update = ime.slice(ime.indexOf("private val methodsChanged"), ime.indexOf("// The idle games", ime.indexOf("private val methodsChanged")));
+  expect(update).toContain("refreshFieldMethods()");
+  expect(update).not.toContain("LanguagePicker.Choices");
+  expect(update).toContain("SwitchOverlay.refreshedRow(on, open.opened)");
+  expect(body(ime, "refreshFieldMethods")).toContain("languages.refresh(sample)");
+  expect(body(ime, "refreshFieldMethods")).toContain("showInputMark()");
+  expect(body(ime, "onDestroy")).toContain("main.removeCallbacks(methodsChanged)");
+});
+
 
 test("engines get ready in the background, before the switch", () => {
   const languages = read("android/kotlin/com/titankeys/keyboard/Languages.kt");
@@ -158,9 +172,11 @@ test("engines get ready in the background, before the switch", () => {
 test("the menu: a press picks, Enter and Backspace turn pages, each key logged, Sym is the ✕, Back closes", () => {
   const keys = body(ime, "choicesMenuKey");
   expect(keys).toContain("choicesLog(\"menu key $keyCode");
-  expect(keys).toContain("KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (menu.next())");
-  expect(keys).toContain("KeyEvent.KEYCODE_DEL -> if (menu.previous())");
-  expect(keys).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
+  expect(keys).toContain("KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_DEL, KeyEvent.KEYCODE_SYM -> choicesMenuControl(keyCode)");
+  const controls = body(ime, "choicesMenuControl");
+  expect(controls).toContain("KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (menu.next())");
+  expect(controls).toContain("KeyEvent.KEYCODE_DEL -> if (menu.previous())");
+  expect(controls).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
   expect(keys).toContain("pickFromMenu(index)");
   expect(ime).toContain("if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen) {");
   // Swipes up and down turn its pages, the Sym panel's way (EmojiPages.forward: up goes forward).
@@ -219,8 +235,11 @@ test("a Space touch never picks a code: only a press does, so a steer or a selec
   for (const name of ["startWordDrag", "registerGesture"]) expect(body(ime, name)).not.toContain("engine");
 });
 
-test("a flick with a code takes only what's pending, through the engine (owner, 2026-11-17)", () => {
-  expect(ime).toContain("if (choices.state.composing && engine != null) engineState(engine.flick()) else {");
+test("a flick with a code goes through the engine before deleting from the editor", () => {
+  const flick = body(ime, "outcome");
+  const hold = body(ime, "deleteHeldWord");
+  expect(flick).toContain("engine?.flickComposition(choices.state)");
+  expect(hold).toContain("languages.engine?.flickComposition(choices?.state)");
 });
 
 test("the mark over Q takes a tap over the choices row too, not only on the idle bar (owner, 2026-11-17: 耶 did nothing)", () => {

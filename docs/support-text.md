@@ -20,13 +20,26 @@ placeholders for the prices. Nothing here guilt-trips, and nothing claims "best"
 - That means bugs fixed faster, more languages, and new tricks for the keys.
 - No ads and no paywall. Ever.
 
-**Monthly button:** {monthly} a month
+**Monthly** (three rows, each with its price, `{price} a month`):
+
+- A sip of coffee: about 1/10 of a cup
+- A small cup
+- A full cup
 
 **Its note:** Cancel any time in Google Play.
 
-**One-time button:** One tip of {tip}
+**One-time tip** (the same three rows, each with its price):
 
-**Thank-you, after paying:** Thank you. Seriously. You still get nothing, but the bugs are scared now.
+- A sip of coffee: about 1/10 of a cup
+- A small cup
+- A full cup
+
+**Thank-you, after paying** (`{drink}` follows the tier: "sip", "small cup" or "full cup"):
+
+> Thank you! Now, a confession: I don't drink coffee. It gives me insomnia and a headache. I do love orange juice, though.
+> So thank you for this {drink} of orange juice. Seriously, thank you.
+
+**The orange animation's alt text:** An orange bounces in, squeezes itself into a glass, and gives a little cheers.
 
 ## 3. The 2-week card
 
@@ -42,7 +55,7 @@ Shown once, in the app only, never on the keyboard. The counts are on-device onl
 
 **Link:** Support TitanKeys
 
-**Dismiss:** No thanks
+**Dismiss:** Nah
 
 ## 4. Settings > About
 

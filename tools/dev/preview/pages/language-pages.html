@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language pages</title>
+<!--
+  MOCKUP of the per-language guide pages (owner approved, 2026-11-17). Not app code. Open with ?lang=ko, ?lang=yue-yale or ?lang=es.
+  Every page is one template, filled from the JSON block below, which the real pages would generate from each im.json:
+  name, nameEnglish and the status from the index; options from variants; keys from the layout and accents; points from F's text.
+  Lines marked "F:" are placeholders for F to write.
+-->
+<style>
+  @font-face { font-family: Inter; src: url(inter_regular.otf); }
+  @font-face { font-family: Inter; font-weight: 700; src: url(inter_bold.otf); }
+  :root { --bg: #000; --surface: #161210; --divider: #2A2623; --ink: #FFF1E6; --muted: #99918A; --accent: #F07C4A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 Inter, system-ui, sans-serif; }
+  main { max-width: 430px; margin: 0 auto; padding: 18px 16px 40px; }
+  .back { color: var(--muted); font-size: 22px; }
+  header h1 { margin: 10px 0 2px; font-size: 32px; font-weight: 700; }
+  header .english { color: var(--muted); }
+  .pill { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; }
+  .pill.ready { background: var(--accent); color: #160A04; }
+  .pill.experimental { border: 1px solid var(--accent); color: var(--accent); }
+  h2 { margin: 26px 0 8px; color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--divider); }
+  .row .value { color: var(--accent); }
+  .switch { width: 42px; height: 24px; border-radius: 12px; background: var(--accent); position: relative; }
+  .switch::after { content: ""; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #160A04; }
+  .keys { background: var(--surface); border-radius: 12px; padding: 8px 4px; }
+  .krow { display: flex; gap: 4px; margin: 4px 0; justify-content: center; }
+  .key { position: relative; flex: 1; min-width: 0; height: 46px; border-radius: 7px; background: #241E1A; display: flex;
+    align-items: center; justify-content: center; font-size: 18px; }
+  .key .latin { position: absolute; left: 4px; bottom: 2px; font-size: 9px; color: var(--muted); }
+  .key .shift { position: absolute; right: 4px; top: 2px; font-size: 10px; color: var(--accent); }
+  .key .dot { position: absolute; right: 5px; top: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .key.wide { flex: 1.6; font-size: 11px; color: var(--muted); }
+  .key.space { flex: 3.2; }
+  .legend { color: var(--muted); font-size: 13px; margin-top: 8px; }
+  .legend b { color: var(--ink); font-weight: 400; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin: 6px 0; }
+  .f { color: var(--muted); font-size: 11px; }
+  .field { background: var(--surface); border-radius: 12px; padding: 14px; min-height: 64px; color: var(--muted); }
+  .field .caret { display: inline-block; width: 2px; height: 18px; background: var(--accent); vertical-align: -3px; }
+  nav { display: flex; gap: 8px; margin-bottom: 8px; }
+  nav a { color: var(--muted); font-size: 12px; text-decoration: none; border: 1px solid var(--divider); border-radius: 999px; padding: 3px 9px; }
+</style>
+</head>
+<body>
+<main id="page"></main>
+
+<!-- The data each page is made from: one block per language. The real pages would build these from im.json. -->
+<script type="application/json" id="pages">
+{
+  "ko": {
+    "name": "한국어", "nameEnglish": "Korean", "status": "Ready",
+    "options": [{ "label": "F: Layout", "value": "두벌식 (2-set)" }],
+    "keys": {
+      "kind": "letters",
+      "rows": [
+        [["q","ㅂ","ㅃ"],["w","ㅈ","ㅉ"],["e","ㄷ","ㄸ"],["r","ㄱ","ㄲ"],["t","ㅅ","ㅆ"],["y","ㅛ"],["u","ㅕ"],["i","ㅑ"],["o","ㅐ","ㅒ"],["p","ㅔ","ㅖ"]],
+        [["a","ㅁ"],["s","ㄴ"],["d","ㅇ"],["f","ㄹ"],["g","ㅎ"],["h","ㅗ"],["j","ㅓ"],["k","ㅏ"],["l","ㅣ"]],
+        [["z","ㅋ"],["x","ㅌ"],["c","ㅊ"],["v","ㅍ"],["b","ㅠ"],["n","ㅜ"],["m","ㅡ"]]
+      ],
+      "legend": "F: Small orange letters are Shift's."
+    },
+    "points": [
+      "F: Type the letters; the syllable builds above the bar and goes in when the next letter can't join it.",
+      "F: Space writes what the bar starts with. Tap another word to pick it.",
+      "F: Flick left from Backspace takes the last word. Double Space ends the sentence.",
+      "F: Swipe up on the keys for more words."
+    ],
+    "practice": "F: 안녕하세요"
+  },
+  "yue-yale": {
+    "name": "耶魯拼音", "nameEnglish": "Cantonese, Yale", "status": "Experimental",
+    "options": [{ "label": "F: Characters", "value": "Hong Kong" }],
+    "keys": {
+      "kind": "code",
+      "rows": [
+        [["q"],["w"],["e"],["r"],["t"],["y"],["u"],["i"],["o"],["p"]],
+        [["a"],["s"],["d"],["f"],["g"],["h"],["j"],["k"],["l"]],
+        [["z"],["x"],["c"],["v"],["b"],["n"],["m"]]
+      ],
+      "legend": "F: You type the sounds in Yale romanisation, no tones: neihou gives 你好. The code floats above the bar."
+    },
+    "points": [
+      "F: Type a code; the choices sit over the top row. Space types the first, a tap picks any.",
+      "F: Shift, a swipe up or ⋯ shows more. Enter or a swipe turns the page.",
+      "F: Enter types the code as letters. Double Space types 。",
+      "F: A whole phrase can go in one run, no spaces."
+    ],
+    "practice": "F: neihou"
+  },
+  "es": {
+    "name": "Español", "nameEnglish": "Spanish", "status": "Ready",
+    "options": [],
+    "keys": {
+      "kind": "accents",
+      "rows": [
+        [["q"],["w"],["e","","é"],["r"],["t"],["y"],["u","","ú ü"],["i","","í"],["o","","ó"],["p"]],
+        [["a","","á"],["s"],["d"],["f"],["g"],["h"],["j"],["k"],["l"]],
+        [["z"],["x"],["c"],["v"],["b"],["n","","ñ"],["m"]]
+      ],
+      "legend": "F: Hold a dotted key for its accents."
+    },
+    "points": [
+      "F: Hold a letter for its accent; the choices show on the bar over the keys.",
+      "F: Shift gives the capital one. Symbols are on Alt and Sym.",
+      "F: A sentence opening with ¿ or ¡ still gets its capital.",
+      "F: Flick left from Backspace takes the last word."
+    ],
+    "practice": "F: ¿Qué tal?"
+  }
+}
+</script>
+
+<script>
+const pages = JSON.parse(document.getElementById("pages").textContent);
+const id = new URLSearchParams(location.search).get("lang") || "ko";
+const data = pages[id] || pages.ko;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function key([latin, typed, extra]) {
+  if (data.keys.kind === "letters") {
+    return `<div class="key"><span class="latin">${esc(latin.toUpperCase())}</span>${esc(typed)}${extra ? `<span class="shift">${esc(extra)}</span>` : ""}</div>`;
+  }
+  return `<div class="key">${esc(latin.toUpperCase())}${extra ? '<span class="dot"></span>' : ""}</div>`;
+}
+
+function keyboard() {
+  const [top, home, bottom] = data.keys.rows;
+  const accents = data.keys.kind === "accents"
+    ? `<div class="legend">${data.keys.rows.flat().filter(k => k[2]).map(k => `<b>${esc(k[0].toUpperCase())}</b> ${esc(k[2])}`).join(" · ")}</div>` : "";
+  return `<div class="keys">
+    <div class="krow">${top.map(key).join("")}</div>
+    <div class="krow">${home.map(key).join("")}<div class="key wide">⌫</div></div>
+    <div class="krow"><div class="key wide">alt</div>${bottom.map(key).join("")}<div class="key wide">sym</div><div class="key wide">↵</div></div>
+    <div class="krow"><div class="key wide">⇧</div><div class="key wide">○</div><div class="key wide">◁</div><div class="key space"></div><div class="key wide">□</div><div class="key wide">fn</div><div class="key wide">⇧</div></div>
+  </div>
+  <div class="legend">${esc(data.keys.legend)}</div>${accents}`;
+}
+
+document.getElementById("page").innerHTML = `
+  <nav>${Object.keys(pages).map(k => `<a href="?lang=${k}">${esc(pages[k].name)}</a>`).join("")}</nav>
+  <div class="back">←</div>
+  <header>
+    <h1>${esc(data.name)}</h1>
+    <div class="english">${esc(data.nameEnglish)}</div>
+    <span class="pill ${data.status.toLowerCase()}">${esc(data.status)}</span>
+  </header>
+  <h2>Turn on</h2>
+  <div class="row"><span>${esc(data.name)}</span><span class="switch"></span></div>
+  ${data.options.map(o => `<div class="row"><span>${esc(o.label)}</span><span class="value">${esc(o.value)}</span></div>`).join("")}
+  <h2>The keys</h2>
+  ${keyboard()}
+  <h2>How it works</h2>
+  <ul>${data.points.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
+  <h2>Try it</h2>
+  <div class="field">${esc(data.practice)} <span class="caret"></span></div>
+  <p class="f">F: lines marked F: are placeholders.</p>`;
+</script>
+</body>
+</html>

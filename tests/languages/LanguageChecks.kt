@@ -69,6 +69,7 @@ fun main(args: Array<String>) {
     koreanChoices()
     if (args.isNotEmpty()) everyInputMethodHasStarters(File(args[0]))
     if (args.isNotEmpty()) everyInputMethodInTheFolder(File(args[0]))
+    if (args.isNotEmpty()) everyTextShows(File(args[0]))
     if (args.isNotEmpty()) shiftShowsWhereItMatters(File(args[0]))
     if (args.isNotEmpty()) tablesTakeTheListsSpelling(File(args[0]))
     if (args.isNotEmpty()) nextWordsCost(File(args[0]))
@@ -792,6 +793,34 @@ private val textFonts by lazy {
 private val UNSHAPED = setOf("Deva")
 
 private const val CLDR_NAME = "CLDR 49 localeDisplayNames: "
+
+/**
+ * Every character of every input method's own text shows: its how-to and every other text in its im.json, in the app's fonts,
+ * since Android's fonts don't reach Ink on the phone (owner, 2026-11-17: Korean's how-to had blanks for its letters). A character
+ * with no glyph fails here, with the input method and the character, so tools/im/fonts.py runs again.
+ */
+private fun everyTextShows(folder: File) {
+    fun walk(value: Any?, out: MutableList<String>) {
+        when (value) {
+            is String -> out += value
+            is List<*> -> for (item in value) walk(item, out)
+            is Map<*, *> -> for (item in value.values) walk(item, out)
+        }
+    }
+    for (dir in folder.listFiles().orEmpty().filter { File(it, "im.json").isFile }) {
+        val json = Json.parse(File(dir, "im.json").readText()) as Map<*, *>
+        val texts = ArrayList<String>()
+        walk(json["howTo"], texts)
+        // A Devanagari name shows in English in Settings (UNSHAPED), so only its how-to's letters need the fonts.
+        if (json["script"] !in UNSHAPED) for (key in listOf("name", "nameEnglish")) (json[key] as? String)?.let(texts::add)
+        val missing = texts.joinToString(" ").codePoints().toArray().filter { code ->
+            !Character.isWhitespace(code) && code > 0x7F && textFonts.any { !it.canDisplay(code) }
+        }.distinct()
+        check("${dir.name}: every character of its texts has a glyph in the app's fonts", missing.isEmpty()) {
+            missing.joinToString(" ") { "U+%04X %s".format(it, String(Character.toChars(it))) }
+        }
+    }
+}
 
 /**
  * An input method's own name, as Settings > Input methods shows it: there, the same in the index, CLDR's name for the

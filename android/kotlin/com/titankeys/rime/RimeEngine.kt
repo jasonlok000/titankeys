@@ -391,7 +391,7 @@ class RimeEngine(
         const val ENGINE = "rime"
         /**
          * The keyboard's option for Yale's and Jyutping's lazy sounds (Settings, on by default): n and l, j and z, ng and no
-         * initial, gw and kw as g and k. Off selects the schema's strict twin (data.sh's tk_*_strict), with its own spellings only.
+         * initial, gw as g. Off selects the schema's strict twin (data.sh's tk_*_strict), with its own spellings only.
          */
         const val LAZY_SOUNDS = "tk_lazy_sounds"
         /** The schemas with lazy sounds, and their strict twins' suffix. */

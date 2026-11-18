@@ -36,7 +36,7 @@ speller:
     # Interchangeable initials (owner, 2026-11-17: "For yale specifically, make j and z, n and l interchangeable"): z types
     # Yale's j, as Jyutping writes it; n and l type each other, as many speakers merge them. Initials only, and ng stays ng.
     # Lazy sounds, as many speakers say them (native review, 2026-11-17): ng and no initial for each other (o for 我, aam for
-    # 啱, ngoi for 愛), and gw, kw as g, k (gok for 國).
+    # 啱, ngoi for 愛), and gw as g (gok for 國). Not kw as k: it put 規 over 啟 for kai (Master, 2026-11-17).
     # Jyutping's spellings typed in Yale: c for ch (cing 情) and oe for eu (hoeng 香), so they find real syllables, not
     # letters taken one by one as abbreviations (native review: ci, cing, hoeng gave 出嚙我, 可誒五).
     - derive/^ch/c/

@@ -636,7 +636,7 @@ public final class TypingSettings {
     }
 
     /**
-     * Yale's and Jyutping's lazy sounds, per input method [id]: n and l, j and z, ng and no initial, gw and kw as g and k. On by
+     * Yale's and Jyutping's lazy sounds, per input method [id]: n and l, j and z, ng and no initial, gw as g. On by
      * default; off types the strict spelling only (RimeEngine.LAZY_SOUNDS).
      */
     public static boolean lazySounds(Context context, String id) {

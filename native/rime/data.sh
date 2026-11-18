@@ -240,6 +240,7 @@ check tk_yale zh_hk "cing" 情
 check tk_yale zh_hk "hoeng" 向
 check tk_yale zh_hk "di" 啲
 check tk_jyutping zh_hk "syut" 說
+
 check tk_jyutping zh_hk "kai" 啟
 check tk_yale zh_hans "hai" 係
 # Lazy sounds off: the strict twins keep their own initials, so lei isn't 你 in Jyutping, nor o 我 in Yale.

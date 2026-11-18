@@ -474,7 +474,6 @@ speller:
     - "derive/^ng([aeiou])/$1/"
     - "derive/^([aeiou])/ng$1/"
     - "derive/^gw/g/"
-    - "derive/^kw/k/"
     - "derive/^ch/c/"
     - "derive/eu/oe/"
     - "abbrev/^([a-z]).+$/$1/"

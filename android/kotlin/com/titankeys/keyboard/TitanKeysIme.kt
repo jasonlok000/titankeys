@@ -1506,7 +1506,8 @@ class TitanKeysIme : InputMethodService() {
         // Android only calls onFinishInput first when the input is not restarting.
         rawLog?.finish()
         // Exact typing is for commands and remote computers, which are no typing to learn from.
-        rawLog = if (editing && !exact && !ownSettings) RawLog.start(this, info, restarting) else null
+        // Every field gets a start line with its app; only ones whose typing may be recorded get a session (RawLog.start).
+        rawLog = if (editing) RawLog.start(this, info, restarting, textAllowed = !exact && !ownSettings) else null
         composer.log = rawLog
         inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
         barHidden = info.packageName in TypingSettings.hiddenBarApps(this)
@@ -4139,8 +4140,8 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun ownerMarked(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
-        val log = rawLog
-        if (log == null || !RawLog.available(this) || event.repeatCount > 0) return false
+        // In any field, recorded or not (Maps' search, Chrome's address bar): the mark needs only the log to be on.
+        if (!editing || !RawLog.on(this) || event.repeatCount > 0) return false
         if (keyCode != KeyEvent.KEYCODE_SHIFT_LEFT && keyCode != KeyEvent.KEYCODE_SHIFT_RIGHT) {
             ownerMark.other()
             return false
@@ -4158,7 +4159,9 @@ class TitanKeysIme : InputMethodService() {
         if (choicesMenuOpen && !markMenu) closeChoicesMenu() else if (!choicesMenuOpen && markMenu) openChoicesMenu()
         showModifiers()
         ownerMarkKey = keyCode
-        log.ownerMark(java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.ROOT).format(java.util.Date()))
+        val info = currentInputEditorInfo
+        RawLog.ownerMark(this, java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", java.util.Locale.ROOT).format(java.util.Date()),
+            info?.packageName, info?.inputType ?: 0)
         haptics.play(Haptic.PanelPage)
         Log.i(LOG_TAG, "Owner MARK written to the log")
         return true

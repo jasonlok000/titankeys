@@ -81,17 +81,24 @@ object RawLog {
 
     /** Starts recording the field that is starting, or returns null if neither the log nor a bug recording takes it. */
     @Synchronized
-    fun start(context: Context, info: EditorInfo, restarting: Boolean): Session? {
-        val debug = if (on(context)) debugField(context, info, restarting) else null
-        val bug = BugRecording.fieldStart(context, info, restarting)
+    /**
+     * A field started. Every field gets a start line in the full log, with its app; only one whose typing may be recorded
+     * ([textAllowed], and [Field.logged]) gets a session. TitanKeys' own settings fields and exact typing never do.
+     */
+    fun start(context: Context, info: EditorInfo, restarting: Boolean, textAllowed: Boolean = true): Session? {
+        val debug = if (on(context)) debugField(context, info, restarting, textAllowed) else null
+        val bug = if (textAllowed) BugRecording.fieldStart(context, info, restarting) else null
         return if (debug == null && bug == null) null else Session(debug, bug)
     }
 
-    private fun debugField(context: Context, info: EditorInfo, restarting: Boolean): RawLogWriter? {
+    private fun debugField(context: Context, info: EditorInfo, restarting: Boolean, textAllowed: Boolean): RawLogWriter? {
         val writer = writer(context)
-        if (!Field.logged(info.inputType, info.imeOptions, info.privateImeOptions)) {
+        if (!textAllowed || !Field.logged(info.inputType, info.imeOptions, info.privateImeOptions)) {
             if (!skipping) writer.add(RawLogLines.gap("field", 0, now()))
             skipping = true
+            // Which app and what kind of field, never its text.
+            writer.add(RawLogLines.fieldStart(info.packageName, info.inputType, info.imeOptions, false, restarting, -1, -1, null,
+                now(), recorded = false))
             return null
         }
         skipping = false
@@ -101,9 +108,20 @@ object RawLog {
             if (lastSettings != null) writer.add(header(context))
             lastSettings = settings
         }
-        writer.add(RawLogLines.fieldStart(info.inputType, info.imeOptions, !Field.of(info.inputType, info.imeOptions).learning,
+        writer.add(RawLogLines.fieldStart(info.packageName, info.inputType, info.imeOptions, !Field.of(info.inputType, info.imeOptions).learning,
             restarting, info.initialSelStart, info.initialSelEnd, info.getInitialTextBeforeCursor(BEFORE_LENGTH, 0)?.toString(), now()))
         return writer
+    }
+
+    /**
+     * The owner's MARK ([OwnerMark]) goes into the full log in any field, recorded or not, with the field's app and type and no
+     * text. False if the log is off.
+     */
+    @Synchronized
+    fun ownerMark(context: Context, wall: String, packageName: String?, inputType: Int): Boolean {
+        if (!on(context)) return false
+        writer(context).add(RawLogLines.ownerMark(wall, packageName, inputType, now()))
+        return true
     }
 
     private fun writer(context: Context): RawLogWriter = writer ?: store(context).let { store ->
@@ -228,7 +246,6 @@ object RawLog {
 
         /** Any app can send a mark, so only the debug log takes it, never a user's bug recording. */
         /** The owner's MARK ([OwnerMark]), in the full log and a running bug recording both, with the wall-clock time. */
-        fun ownerMark(wall: String) = write { RawLogLines.mark("MARK", wall, now()) }
 
         fun inputMethod(from: String?, to: String) = write { RawLogLines.inputMethod(from, to, now()) }
 

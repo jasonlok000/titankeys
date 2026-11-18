@@ -120,9 +120,15 @@ private fun lineFormat() {
         """{"k":"sel","t":7,"start":5,"end":6,"cs":-1,"ce":3,"before":"hello"}""", "A selection line must hold the text before the cursor")
     same(RawLogLines.selection(5, 5, -1, -1, null, 7),
         """{"k":"sel","t":7,"start":5,"end":5,"cs":-1,"ce":-1,"before":null}""", "Text that can't be read must be null")
-    same(RawLogLines.fieldStart(1, 2, true, false, 3, 4, "a", 7),
-        """{"k":"start","t":7,"inputType":1,"imeOptions":2,"reference":true,"restarting":false,"selStart":3,"selEnd":4,"before":"a"}""",
-        "A field start must hold the field type")
+    same(RawLogLines.fieldStart("com.google.android.apps.maps", 1, 2, true, false, 3, 4, "a", 7),
+        """{"k":"start","t":7,"package":"com.google.android.apps.maps","recorded":true,"inputType":1,"imeOptions":2,"reference":true,"restarting":false,"selStart":3,"selEnd":4,"before":"a"}""",
+        "A field start must hold its app and the field type")
+    same(RawLogLines.fieldStart("com.android.chrome", 0x91, 0, false, false, -1, -1, null, 8, recorded = false),
+        """{"k":"start","t":8,"package":"com.android.chrome","recorded":false,"inputType":145,"imeOptions":0,"reference":false,"restarting":false,"selStart":-1,"selEnd":-1,"before":null}""",
+        "A field that isn't recorded still starts, with its app and no text")
+    same(RawLogLines.ownerMark("2026-11-17 21:00:00.000", "com.google.android.apps.maps", 1, 9),
+        """{"k":"mark","t":9,"kind":"MARK","label":"2026-11-17 21:00:00.000","package":"com.google.android.apps.maps","inputType":1}""",
+        "The owner's MARK has the time, the app and the field type, no text")
     same(RawLogLines.fieldEnd(7), """{"k":"end","t":7}""", "A field end must hold its time")
     same(RawLogLines.gap("queue", 5, 7), """{"k":"gap","t":7,"why":"queue","n":5}""", "A gap must say why")
     same(RawLogLines.mark("step", "two", 7), """{"k":"mark","t":7,"kind":"step","label":"two"}""", "A mark must hold its kind and label")

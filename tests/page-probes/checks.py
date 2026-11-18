@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline fixtures for accessible page oracles; never imports a live adb client."""
 from contextlib import contextmanager
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -219,6 +220,29 @@ class ProbeTests(unittest.TestCase):
             with self.assertRaises(Unobservable):
                 practice(ui, 'pt', 'o')
         ui.c.play.assert_not_called()
+
+    def test_ordinary_field_checks_the_typed_letter_without_selecting_a_method(self):
+        field_activity = 'com.titankeys.keyboard.SpaceGestureActivity'
+        debug_ime = APP + '/com.titankeys.keyboard.TitanKeysIme'
+        languages = SimpleNamespace(FIELD_ACTIVITY=field_activity, in_field=Mock(return_value=True))
+        for new_text, succeeds in (('Sampleй', True), ('Sample', False), ('Sampleq', False)):
+            with self.subTest(new_text=new_text):
+                c = Mock()
+                c.adb.side_effect = lambda *args: (
+                    f'mCurrentFocus=Window{{a u0 {APP}/{field_activity}}}' if args[1] == 'dumpsys' else debug_ime
+                )
+                c.field.side_effect = ['Sample', 'Sample', new_text, 'Sample']
+                ui = PageUI(c)
+                with patch.dict(os.environ, TK_DEBUG_IME=debug_ime, TK_IME_HELD='1'), patch.dict(sys.modules, {'languages': languages}):
+                    if succeeds:
+                        ui.verify_ordinary_key('q', 'й')
+                    else:
+                        with self.assertRaisesRegex(Missing, 'restored method'):
+                            ui.verify_ordinary_key('q', 'й')
+                self.assertEqual([call.args[0] for call in c.play.call_args_list],
+                                 ['key:q', 'key:del'] if succeeds else ['key:q'])
+                c.keyboard.assert_not_called()
+                self.assertFalse(any('broadcast' in call.args for call in c.adb.call_args_list))
 
     def test_fifth_toggle_oracle_catches_saved_state_change(self):
         fake_checks = SimpleNamespace(record=Mock())

@@ -2214,8 +2214,8 @@ private fun theGuideForNewcomers() {
     meter.up(1_080, tap = true)
     same(meter.down(1_200), false, "The second, 120 ms on, is quick enough")
     same(meter.landed, 2, "and lights 2")
-    meter.hold()
-    same(listOf(0, 1).map(meter::lit), listOf(true, true), "Held: 1 and \"2 · HOLD\" lit")
+    meter.hold(1_270)
+    same(meter.visibleTaps(1_270), 0, "When the hold activates, the earlier steps turn off")
     meter.up(2_000, tap = false)
     same(meter.landed to meter.held, 0 to false, "A lift after the hold starts again")
     meter.down(3_000)
@@ -2243,15 +2243,15 @@ private fun theGuideForNewcomers() {
     // The drawing: the last tap and its hold are one box, "2 · HOLD" (owner, 2026-11-16).
     same(List(2) { GuideTapDrawing.label(it, 2) }, listOf("1", "2 · HOLD"), "The cursor slide's boxes")
     same(List(3) { GuideTapDrawing.label(it, 3) }, listOf("1", "2", "3 · HOLD"), "The select slide's")
-    same(GuideTapDrawing.Pose(2, 2).let { it.holding to it.lit(1) }, true to false, "The last tap down: its box half lights")
-    same(GuideTapDrawing.Pose(2, 2, held = true).let { it.holding to it.lit(1) }, false to true, "held, it fills")
+    same(GuideTapDrawing.Pose(2, 2).let { List(2, it::lit) }, listOf(true, true), "The last tap uses the same full colour")
+    same(GuideTapDrawing.Pose(2, 2, held = true).let { List(2, it::lit) }, listOf(false, true), "Held: only the fully lit hold cue remains")
     same(GuideTapDrawing.Pose(2, 1).let { listOf(it.lit(0), it.lit(1)) }, listOf(true, false), "Pose: 1 lit")
     // Its showing, at the keyboard's own speed: taps 90 ms down, 110 ms apart, inside the keyboard's 200 ms.
     same(GuideTapDrawing.DEMO_GAP_MILLIS < TapMeter.KEYBOARD_GAP_MILLIS && GuideTapDrawing.DEMO_TAP_MILLIS <= 130, true,
         "The showing's taps are as quick as the keyboard needs")
     same(GuideTapDrawing.demoAt(0, 2, drag = true).let { it.landed to it.press }, 1 to 1f, "The showing starts with 1 down")
     same(GuideTapDrawing.demoAt(150, 2, drag = true).let { it.landed to it.press }, 1 to 0f, "lifts")
-    same(GuideTapDrawing.demoAt(210, 2, drag = true).let { it.landed to it.holding }, 2 to true, "the second lands, its box half lit")
+    same(GuideTapDrawing.demoAt(210, 2, drag = true).let { it.landed to it.lit(1) }, 2 to true, "the second lands at full colour")
     same(GuideTapDrawing.demoAt(200 + 130, 2, drag = true).held, true, "and fills as the keyboard registers the hold")
     same(GuideTapDrawing.demoAt(200 + 120 + 500 + 450, 2, drag = true).slide > 0f, true, "then the slide to the left")
     same(GuideTapDrawing.demoAt(200 + 120 + 500 + 900 + 100, 2, drag = true).slide, 1f, "all the way")
@@ -2259,6 +2259,23 @@ private fun theGuideForNewcomers() {
     same(GuideTapDrawing.demoAt(410, 3, drag = true).let { it.landed to it.held }, 3 to false, "The select slide's third tap lands")
     same("GuideTapDrawing.demoAt(now - cueStart, taps.count, taps.drag)" in File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText(),
         true, "The keys show it at that speed, not slowed like the ghost finger")
+
+    for (count in 2..3) {
+        val cues = TapMeter(count)
+        cues.down(1000)
+        cues.up(1080, tap = true)
+        same(cues.visibleTaps(1280), 1, "A tap still counts at the last eligible instant")
+        same(GuideTapDrawing.liveAt(cues, 1281, true, true, true), null, "The pending cue expires without another touch")
+        same(cues.down(1350), true, "An expired cue still coaches a slow next tap")
+        cues.hold(1420)
+        val pose = GuideTapDrawing.liveAt(cues, 1720, drag = true, left = true, animate = true)!!
+        same(List(count, pose::lit), List(count) { it == count - 1 }, "Only HOLD is lit on each cursor lesson")
+        same(pose.slide in 0.1f..0.9f, true, "The live thumb is already sliding left during the hold")
+        same(GuideTapDrawing.liveAt(cues, 1720, true, false, true)?.slide, -pose.slide, "A rightward goal points right")
+        same(GuideTapDrawing.liveAt(cues, 1420, true, true, false)?.slide, 1f, "Reduce motion shows the final position immediately")
+        cues.up(1850, tap = false)
+        same(GuideTapDrawing.liveAt(cues, 1850, true, true, true), null, "Lift resets the live slide cue")
+    }
 
     // The mode started: which mode, and which way to slide, toward the marked words (owner, 2026-11-16).
     val grab = GuideFlow({ GuideSettings() })

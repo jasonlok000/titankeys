@@ -71,6 +71,10 @@ def check_66_steer():
     lines = guide("steer")
     before = shot("66-steer-before")
     try:
+        play("space:1", "+650", shot="66-steer-expired", at=420)
+        record("66-steer-expired", None, "The solitary tap has timed out and the 1 cue is dark", "66-steer-expired")
+        play("spacehold:2:-0.1:1000", shot="66-steer-held", at=650)
+        record("66-steer-held", None, "Only 2 · HOLD is bright and the cue thumb has begun sliding left", "66-steer-held")
         for keys in (-1.5, -3, -4.5):
             play(f"spacehold:2:{keys}:{int(abs(keys) * 200)}", shot=f"66-steer-{abs(keys)}", at=700)
             time.sleep(1)
@@ -87,9 +91,12 @@ def check_67_selectmore():
     """#67: the triple Space slide. Three taps, the third held: the key names it shows; then a slide right to grab the words."""
     guide("selectmore")
     try:
-        play("spacehold:3", shot="67-triple", at=500)
+        play("space:1", "+650", shot="67-triple-expired", at=420)
+        record("67-triple-expired", None, "The solitary tap has timed out and the 1 cue is dark", "67-triple-expired")
+        play("spacehold:3:0.1:1000", shot="67-triple", at=800)
         lines = texts()
-        record("67-key-names", None, f"after three taps the guide says: {' | '.join(lines[:6])}", "67-triple")
+        record("67-key-names", None, "Only 3 · HOLD is bright and the cue thumb moves toward the marked words. "
+               f"After three taps the guide says: {' | '.join(lines[:6])}", "67-triple")
         play("spacehold:3:3:600", shot="67-grab", at=900)
         time.sleep(1)
         lines = texts()

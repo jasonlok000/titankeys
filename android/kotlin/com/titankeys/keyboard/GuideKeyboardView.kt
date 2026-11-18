@@ -190,7 +190,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         }
 
     fun show(next: GuideCue) {
-        if (next != cue) liveTaps = null
+        if (next != cue) liveTapMeter = null
         cue = next
         cueStart = GuideMotion.now()
         ghost = ghostFor(next)
@@ -345,12 +345,16 @@ internal class GuideKeyboardView(context: Context) : View(context) {
     /** The thumb and its steps on the Space-tap slides (#90): see [GuideTapDrawing]. */
     private val tapDrawing = GuideTapDrawing(GuideFonts.heavy(context))
     /** The real taps as they land, from the guide's [TapMeter]: they light the steps in place of the slide's showing. */
-    private var liveTaps: GuideTapDrawing.Pose? = null
+    private var liveTapMeter: TapMeter? = null
+    private var liveTapLeft = true
 
-    /** The real taps: [landed] of the slide's taps, and [held] once the last stays down. Nothing landed hands back to the showing. */
-    fun taps(landed: Int, held: Boolean) {
-        val taps = (cue as? GuideCue.Taps)?.count ?: return
-        liveTaps = if (landed <= 0 && !held) null else GuideTapDrawing.Pose(taps, landed, held, press = if (held) 1f else 0f)
+    /** Updates the real cue and schedules a redraw when the previous tap expires. */
+    internal fun taps(meter: TapMeter?, left: Boolean? = null) {
+        liveTapMeter = meter
+        if (left != null) liveTapLeft = left
+        val expires = meter?.expiresAt ?: -1L
+        val now = GuideMotion.now()
+        if (expires > now) postInvalidateDelayed(expires - now)
         invalidate()
     }
 
@@ -360,7 +364,7 @@ internal class GuideKeyboardView(context: Context) : View(context) {
      */
     private fun drawTapSteps(canvas: Canvas, now: Long): Boolean {
         val taps = cue as? GuideCue.Taps ?: return false
-        val live = liveTaps
+        val live = liveTapMeter?.let { GuideTapDrawing.liveAt(it, now, taps.drag, liveTapLeft, GuideMotion.enabled) }
         val showing = live == null && demoing && !ghostWaits(now)
         val pose = when {
             live != null -> live
@@ -374,7 +378,8 @@ internal class GuideKeyboardView(context: Context) : View(context) {
         tapDrawing.draw(canvas, RectF(zone.left, zone.top, zone.right, zone.bottom), pose, dp(1f),
             if (onOrange) GuideColours.INK else Accent.colour, if (onOrange) Accent.colour else GuideColours.BLACK,
             GuideColours.CREAM, reach)
-        return showing && GuideMotion.enabled
+        val hold = liveTapMeter?.heldAt ?: -1L
+        return GuideMotion.enabled && (showing || taps.drag && hold >= 0 && now - hold < GuideTapDrawing.LIVE_SLIDE_MILLIS)
     }
 
     /** The ghost finger shows its gesture only during a demonstration, from the start of the gesture. */

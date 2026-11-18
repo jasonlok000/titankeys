@@ -936,3 +936,7 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - In Cangjie and Quick, typing the hovered key replaces its faded radical with the committed radical in one update. While a finger stays on the touchpad, the preview follows the hovered key and returns to its earlier radical if the finger moves back.
 - Apply the same handoff to any other input method with an untyped-key preview. Cangjie and Quick are the two methods that preview the untyped letter in the code tab. Japanese conversion and Korean composition begin after the key is pressed.
 - Chinese first-word suggestions should use the wide row on all field paths. Japanese shares this row and uses its capacity too.
+
+## Codex cursor lessons, November 18
+
+- Both cursor lessons give numbered taps and the held tap the same full highlight. The previous taps go dark when their timing expires or when the mode starts. After activation, the thumb slides toward the lesson's marked word or range. The cursor lesson usually points left, and selection follows the range, matching the on-screen instruction.

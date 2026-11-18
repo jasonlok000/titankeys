@@ -93,10 +93,22 @@ internal class TapMeter(val taps: Int) {
     /** Taps landed so far, the one down now included, from 0 to [taps]. */
     var landed = 0
         private set
-    /** The last tap stayed down and the cursor started: every step lights. */
-    var held = false
+    /** The last tap stayed down and the cursor started. */
+    var heldAt = -1L
+        private set
+    val held get() = heldAt >= 0
+    var downAt = -1L
         private set
     private var lastUp = -1L
+    /** Painting expires on time, while the old tap remains available to diagnose a slow attempt. */
+    val expiresAt: Long get() = when {
+        held || landed == 0 -> -1L
+        downAt >= 0 -> downAt + TAP_MILLIS
+        lastUp >= 0 -> lastUp + TAP_GAP_MILLIS + 1L
+        else -> -1L
+    }
+
+    fun visibleTaps(now: Long) = if (held || now >= expiresAt) 0 else landed
 
     /**
      * A finger came down at [time]: the next tap, if it follows a tap as soon as the keyboard needs, or the first. True when it was
@@ -104,7 +116,8 @@ internal class TapMeter(val taps: Int) {
      * shd tell me").
      */
     fun down(time: Long): Boolean {
-        held = false
+        heldAt = -1L
+        downAt = time
         val gap = if (lastUp >= 0) time - lastUp else -1L
         val counting = landed in 1 until taps
         val slow = counting && gap > TAP_GAP_MILLIS && gap <= SLOW_MILLIS
@@ -114,23 +127,24 @@ internal class TapMeter(val taps: Int) {
 
     /** The finger lifted at [time]. [tap] says whether the touch was a tap: short and still. Anything else starts again. */
     fun up(time: Long, tap: Boolean) {
-        if (!tap || held) reset() else lastUp = time
+        if (!tap || held) reset() else {
+            downAt = -1L
+            lastUp = time
+        }
     }
 
-    /** The cursor started: the last tap is held, so every step is lit. */
-    fun hold() {
-        held = true
+    /** The cursor started, so the earlier tap cues have served their purpose. */
+    fun hold(time: Long) {
+        if (!held) heldAt = time
         landed = taps
     }
 
     fun reset() {
         landed = 0
-        held = false
+        heldAt = -1L
+        downAt = -1L
         lastUp = -1L
     }
-
-    /** How the boxes show: each tap's light, then the last tap and its hold, one box, lit once held. */
-    fun lit(box: Int) = if (box < taps - 1) box < landed else held
 
     companion object {
         /**

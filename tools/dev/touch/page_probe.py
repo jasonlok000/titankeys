@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from functools import cache
 from pathlib import Path
 import json
+import os
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -79,6 +80,7 @@ class PageUI:
         front = next((line for line in window.splitlines() if 'mCurrentFocus' in line), '')
         if APP + '/' not in front or any(value in window for value in ('isKeyguardShowing=true', 'mShowingLockscreen=true')):
             raise Unobservable('Debug lost the front or the screen locked; no input sent')
+        return front
 
     def snapshot(self):
         self.own()
@@ -224,6 +226,39 @@ class PageUI:
             if any(matches(n, title) for n in nodes) and any(matches(n, label, 'action') for n in nodes):
                 return
         raise Missing('Back did not return from the language page to the accessible Languages list')
+
+    def verify_ordinary_key(self, key, expected):
+        """Check the already selected Debug IME in its own regular field after leaving practice."""
+        from languages import FIELD_ACTIVITY, in_field
+
+        def confirm_editor():
+            if f'{APP}/{FIELD_ACTIVITY}' not in self.own():
+                raise Unobservable('The ordinary Debug editor lost focus')
+            active = self.c.adb('shell', 'settings', 'get', 'secure', 'default_input_method').strip()
+            ime = os.environ.get('TK_DEBUG_IME', APP + '/com.titankeys.keyboard.TitanKeysIme')
+            if active != ime:
+                raise Unobservable('Debug stopped being the active keyboard before the typing check')
+
+        if os.environ.get('TK_IME_HELD') != '1':
+            raise Unobservable('The ordinary typing check needs the batch to keep Debug selected')
+        self.own()
+        if not in_field():
+            raise Unobservable('The ordinary Debug editor did not open')
+        confirm_editor()
+        before = self.c.field()
+        self.c.guarded('keyevent', '123')  # Move to the end without clearing the recorder's text.
+        confirm_editor()
+        if self.c.field() != before:
+            raise Unobservable('The ordinary editor changed before the typing check')
+        self.c.play('key:' + key)
+        confirm_editor()
+        after = self.c.field()
+        if not after.startswith(before) or after[len(before):].lower() != expected:
+            raise Missing('The ordinary editor did not type the restored method’s letter')
+        self.c.play('key:del')
+        confirm_editor()
+        if self.c.field() != before:
+            raise Missing('The typing check could not remove its test letter')
 
 
 def assets():

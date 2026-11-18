@@ -112,6 +112,7 @@ internal object BackupFile {
         // Whether TitanKeys asked Android for Contacts on this phone (#87): Android's answer stays with the phone too.
         "contacts_permission" to Store.Left("it follows what Android was asked on this phone"),
         "easter_egg" to Store.Left("it counts this phone's boots"),
+        "support_stats" to Store.Left("the two-week card and its typing counts belong to this phone"),
     )
 
     /** Data kept in files rather than SharedPreferences, by the start of their names: null if it's in the backup, or why not. */
@@ -129,6 +130,7 @@ internal object BackupFile {
         "crash-" to "a crash report belongs to this phone",
         "backup-words" to "the words on their way through a backup or restore, which are in the backup themselves",
         "report-outbox" to "a bug report waiting to be sent belongs to this phone",
+        "support-ledger.json" to "Play receipts and the device's private supporter key stay on this phone",
         // Rime's folder: its learned words go in through its own snapshots (RimeBackup); its data comes with the app.
         "engines" to null,
     )

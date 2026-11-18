@@ -48,6 +48,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.titankeys.support.SupportStats
 import com.titankeys.connected.Connected
 import com.titankeys.connected.Contributions
 import com.titankeys.engine.TypingSettings
@@ -773,6 +774,8 @@ class GuideActivity : Activity() {
     /** The playground's ways out, to the written guide and to Settings. */
     private lateinit var guideAction: TextView
     private lateinit var settingsAction: TextView
+    private lateinit var supportCard: LinearLayout
+    private var supportStatsShowing = false
     private lateinit var close: ImageView
     private lateinit var title: TextView
     private lateinit var body: TextView
@@ -1578,6 +1581,11 @@ class GuideActivity : Activity() {
                 addView(phantom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
             addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
+            if (playground) {
+                supportCard = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+                addView(supportCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
+            }
         }
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -2263,7 +2271,7 @@ class GuideActivity : Activity() {
         hideHint()
         // The Space-tap slides count their taps from nothing; the raw log notes the slide (#90).
         tapMeter = (step.cue as? GuideCue.Taps)?.let { TapMeter(it.count) }
-        keys.taps(0, false)
+        keys.taps(null)
         logMark(GuideLog.SLIDE, step.id)
         liveShown = null
         panelHintShown = null
@@ -3340,6 +3348,7 @@ class GuideActivity : Activity() {
         hideHint()
         guideAction.visibility = View.VISIBLE
         settingsAction.visibility = View.VISIBLE
+        paintSupport()
         // The header (design v2): the wordmark on the left, the words a minute in the middle once you type, Guide and Settings on
         // the right, and a fixed height, so it never jumps (owner: the name grew when a panel opened).
         paintChapter()
@@ -3359,6 +3368,61 @@ class GuideActivity : Activity() {
         showScript()
         field.requestFocus()
         focusPlaygroundField()
+    }
+
+    private fun paintSupport() {
+        val fixture = SupportStats.preview(this)
+        if (!supportStatsShowing && SupportStats.due(this, fixture)) {
+            supportStatsShowing = true
+            if (!fixture) SupportStats.seen(this)
+        }
+        val due = supportStatsShowing
+        val totals = if (due) SupportStats.totals(this, fixture) else null
+        supportCard.removeAllViews()
+        supportCard.setPadding(dp(14), dp(9), dp(14), dp(9))
+        supportCard.background = rounded(Accent.raised, Radii.MEDIUM)
+        val heading = if (due) "Two weeks with TitanKeys" else "Like TitanKeys? Keep it going."
+        val detail = if (totals == null) "Everything's free, and stays free. Chip in if you want more of it." else {
+            val words = totals.getLong("words")
+            val swipes = totals.getLong("swipes")
+            val corrections = totals.getLong("corrections")
+            val caps = totals.getLong("caps")
+            val gestures = totals.getLong("gestures")
+            "$words words typed. $swipes swipes. $corrections autocorrects. $caps auto-capitals. $gestures gestures.\n\n" +
+                "That's a lot of thumb work. If TitanKeys has earned a coffee, you can buy it one."
+        }
+        val open = {
+            if (due) SupportStats.dismiss(this)
+            leavePlayground(PLAYGROUND_SUPPORT)
+        }
+        val summary = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(context).apply {
+                text = heading
+                typeface = HEAVY
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+                setTextColor(Accent.colour)
+            })
+            addView(TextView(context).apply {
+                text = detail
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTextColor(GuideColours.CREAM)
+            })
+        }
+        supportCard.addView(summary)
+        if (due) {
+            supportCard.addView(LinearLayout(this).apply {
+                addView(topAction("Support TitanKeys", open).apply { setTextColor(Accent.colour) })
+                addView(topAction("Nah") {
+                    SupportStats.dismiss(this@GuideActivity)
+                    supportStatsShowing = false
+                    paintSupport()
+                }.apply { setTextColor(GuideColours.CREAM) })
+            })
+        } else {
+            summary.contentDescription = "$heading $detail"
+            summary.onPress(haptics, action = open)
+        }
     }
 
     /** Puts back what [kept] holds: the typed text, the cursor, and the line to type along to, where it was. */
@@ -3622,7 +3686,7 @@ class GuideActivity : Activity() {
             if (tap && first != null && !CursorGesture.inZone(first[0], first[1]) && flow.stage == 0 && !passed && !settingUp)
                 missed(GuideMiss.Beside, tapMissLine(GuideMiss.Beside, meter.taps))
         }
-        meter?.let { keys.taps(it.landed, it.held) }
+        if (meter != null && (reset || lifted)) keys.taps(meter)
     }
 
     /** Says what a miss was, as a chip, and notes it in the raw log. */
@@ -3917,10 +3981,12 @@ class GuideActivity : Activity() {
             }
             // The drawing of the keys doesn't copy the panel: the real panel is on the screen. See ModifierState above.
             is KeyboardEvent.PanelFace -> Unit
-            // The last tap stayed down: the drawing lights every step (#90).
+            // Show the slide cue only when the lesson's own mode has started.
             is KeyboardEvent.CursorStarted -> tapMeter?.let {
-                it.hold()
-                keys.taps(it.landed, it.held)
+                if (event.words == (it.taps >= 3)) {
+                    it.hold(SystemClock.uptimeMillis())
+                    keys.taps(it, flow.tapSlideLeft)
+                }
             }
             is KeyboardEvent.Recognised -> if (!playground && event.words.isNotEmpty()) coachSwipe()
             // On the slide about the bar, every swipe comes out wrong, so that there is always something to fix with one tap.
@@ -4204,7 +4270,7 @@ class GuideActivity : Activity() {
     /** The slide moved on, or back, to another instruction: only that one shows, and the ghost follows it. */
     private fun showStage() {
         tapMeter?.reset()
-        keys.taps(0, false)
+        keys.taps(null)
         startHunt()
         hideHint()
         hideChip(now = true)
@@ -5317,6 +5383,7 @@ class GuideActivity : Activity() {
 
         const val PLAYGROUND_GUIDE = "guide"
         const val PLAYGROUND_SETTINGS = "settings"
+        const val PLAYGROUND_SUPPORT = "support"
         const val PLAYGROUND_CLOSED = "closed"
         const val PLAYGROUND_SETUP = "setup"
         /** The end's playground went back: the app's page under it opens the end again. */

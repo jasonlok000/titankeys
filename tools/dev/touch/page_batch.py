@@ -75,7 +75,8 @@ def check_method_card_and_practice():
     def work(ui):
         wording, _, _ = assets()
         translate = translator('yue-yale')
-        with ui.methods(['en', 'zh-pinyin', 'zh-cangjie'], 'en'):
+        wanted = ['en', 'ru', 'zh-pinyin', 'zh-cangjie']
+        with ui.methods(wanted, 'ru'):
             ui.open_language('中文', 'zh')
             ui.tap(ui.find(translate(wording['page']['how']), 'action'))
             ui.find(translate(wording['page']['hideHow']), 'action')
@@ -86,10 +87,11 @@ def check_method_card_and_practice():
             ui.find(translate(wording['page']['how']), 'action')
             practice(ui, 'zh-pinyin', 'ni', choose=True)
             practice(ui, 'zh-cangjie', 'q', choose=True)
-            if ui.state() != (['en', 'zh-pinyin', 'zh-cangjie'], 'en'):
+            if ui.state() != (wanted, 'ru'):
                 raise Missing('Practice selection changed the global typing method')
             ui.back_to_list('中文')
-        return 'Card opens/closes; Pinyin and Cangjie practice bind their editors and type Han output; global typing stays en; methods restored'
+            ui.verify_ordinary_key('q', 'й')
+        return 'Pinyin and Cangjie practice type Han output; Q types й in a normal editor afterward; original methods restored'
     probe('pages-method-card-practice', work)
 
 

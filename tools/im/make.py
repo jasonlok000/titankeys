@@ -381,7 +381,7 @@ def notice(lines):
 
 # Paragraphs of a NOTICE that other steps write, kept when an input method is built again: J's next words
 # (tools/im/next_words.py) and the starters ([write_starters]).
-KEPT_NOTICES = ("Next words", "Starters: ")
+KEPT_NOTICES = ("Next words", "Starters: ", "Blocked words")
 
 
 def write_notice(folder, lines):
@@ -658,7 +658,7 @@ def build_thai(data, ident):
     os.makedirs(folder, exist_ok=True)
     head, words = read_words(data, "main_th")
     write_words(folder, head, words)
-    write_im(folder, {"id": ident, "name": cldr_name(data, "th"), "nameEnglish": "Thai", "label": "ไท", "locale": "th",
+    write_im(folder, {"id": ident, "name": cldr_name(data, "th"), "nameEnglish": "Thai", "label": "ไทย", "locale": "th",
                       "script": "Thai", "keys": thai_keys(data), "accents": {}, "words": "words.combined", "variants": None,
                       "rules": {"capitalise": False, "sentenceEnd": ".?!", "openingMarks": "", "apostrophes": False,
                                 "wordBreak": True, "fullStop": ""},

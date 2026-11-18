@@ -118,7 +118,8 @@ Each how-to ends with the same line: "Rest a finger on the key under the letter 
 ### `th` Thai
 
 > The keys follow Thai's Kedmanee layout, and Shift gives each key's second letter. The keys a PC has and the Titan
-> doesn't, digits included, are held: hold a key for its third letter, and Shift + hold for its fourth. Thai has no spaces
+> doesn't are held: hold a key for its third letter, and Shift + hold for its fourth. Thai digits: ๐ is Shift + Q, and ๑
+> to ๙ are Shift + hold on W E R T I O P S D. Thai has no spaces
 > between words, so the bar finds the word you're typing, and next words come after a space. Double Space types two
 > spaces, as Thai has no full stop.
 
@@ -145,7 +146,7 @@ Each how-to ends with the same line: "Rest a finger on the key under the letter 
 
 > The keys follow Korean's 2-set layout (두벌식): Q is ㅂ, A is ㅁ, K is ㅏ. Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on
 > O and P. The syllable builds above the bar and goes in once the next letter can't join it. The bar starts with what Space
-> will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more.
+> will write, then words that fit. Tap one to pick it, or swipe up for more.
 
 ## Vietnamese
 
@@ -161,8 +162,9 @@ The six share Chinese's bar. Each has its own first line, then the shared block.
 
 ### `yue-yale` Cantonese, Yale
 
-> Type Cantonese in Yale, no tones needed: neihou for 你好. Z works for j, and n and l stand in for each other. A whole phrase can go in one run,
-> no spaces: diuneiloumou.
+> Type Cantonese in Yale. Tones are never typed, and the low tone's h is optional: neihou or neihhou for 你好. Z works for
+> j, and n and l stand in for each other. A whole phrase can go in one run, no spaces: ngodeigamyatheuiyamcha for
+> 我哋今日去飲茶.
 
 ### `yue-jyutping` Cantonese, Jyutping
 
@@ -212,7 +214,7 @@ The six share Chinese's bar. Each has its own first line, then the shared block.
 
 **Checked (E, 2026-11-17)** with `rime_tool` on the shipped data, and in the code for Japanese. The Chinese and Japanese facts above are right as written:
 - **Typed examples:**
-  - Yale: neihou and leihou both give 你好, zungman gives 中文 (z for j, l for n, initials only), and diuneiloumou with one Space gives 屌你老母.
+  - Yale: neihou and leihou both give 你好, zungman gives 中文 (z for j, l for n, initials only), and a whole phrase with one Space comes out whole.
   - Jyutping neihou and Pinyin nihao give 你好, toneless.
   - Cangjie hqi gives 我.
   - Quick hi gives 的 first, then 我, the first and last keys of 我's hqi. Quick's codes are two keys, and more share one, as the draft says.

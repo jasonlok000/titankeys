@@ -4,6 +4,7 @@ import time
 
 import checks
 import guide_checks
+import own_editor
 
 ACTIVITY = checks.APP + "/com.titankeys.keyboard.SpaceGestureActivity"
 METHODS = checks.APP + "/com.titankeys.keyboard.InputMethodsSet"
@@ -15,13 +16,16 @@ def launch_editor(action, flag, enabled):
                "--ez", flag, str(enabled).lower())
 
 
-def select(on, current):
+def select(on, current, *, return_from_keyboard=False):
     answer = checks.adb("shell", "am", "broadcast", "-n", METHODS, "--es", "on", ",".join(on),
                         "--es", "current", current)
     if not re.search(r"typing " + re.escape(current) + r'"', answer):
         raise checks.Stop("The requested Debug input method was not saved")
-    checks.keyboard("release")
-    checks.keyboard("debug")
+    if return_from_keyboard:
+        checks.keyboard("release")
+        checks.keyboard("debug")
+    else:
+        own_editor.restart()
 
 
 def editor(sentence):
@@ -42,7 +46,7 @@ def trial(name, on, source, destination, prefix, expected, *, return_from_keyboa
     before = checks.set_text(prefix)
     if before.casefold() != prefix.casefold():
         raise checks.Stop("The synthetic sentence context could not be established")
-    select(on, source)
+    select(on, source, return_from_keyboard=return_from_keyboard)
     if return_from_keyboard:
         # The preceding select changed Android's keyboard back to Debug without sending a key to release.
         gesture = []

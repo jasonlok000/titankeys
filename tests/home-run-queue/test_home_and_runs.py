@@ -180,6 +180,17 @@ class RunPolicyTest(unittest.TestCase):
         self.assertIsNone(checks.capture_focus(window.replace("StatusBar", "NotificationShade")))
         self.assertIsNone(checks.capture_focus(window.replace("isOnScreen=true", "isOnScreen=false")))
 
+    def test_capture_visibility_belongs_to_one_window(self):
+        title = f"Window{{123 u0 {checks.APP}/.Space}}"
+        own = (f"  mCurrentFocus={title}\n  Window #0 {title}:\n"
+               f"    mOwnerUid=10000 package={checks.APP}\n    isOnScreen=true\n")
+        other = "  Window #1 Window{abc u0 Popup}:\n    mOwnerUid=10001 package=other.app\n"
+        unrelated = "    Animation:\n      isVisible=true\n  Display state:\n    isOnScreen=true\n"
+        self.assertEqual(checks.capture_focus(own + other + "    isOnScreen=false\n" + unrelated), title)
+        self.assertIsNone(checks.capture_focus(own + other + unrelated))
+        self.assertIsNone(checks.capture_focus(own + other + "    isOnScreen=true\n"))
+        self.assertIsNone(checks.capture_focus(own + other.replace("package=other.app", "") + "    isOnScreen=true\n"))
+
 
 class LiveSwitchTest(unittest.TestCase):
     def test_selects_language_then_method_without_an_ime_restart(self):

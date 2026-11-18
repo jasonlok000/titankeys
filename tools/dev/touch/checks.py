@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import textwrap
 import re
 import subprocess
 import sys
@@ -57,6 +58,19 @@ def play(*gestures, shot=None, at=0):
     time.sleep(.6)
 
 
+def window_states(window):
+    """Each numbered window's title, owner and visibility (None if the dump omitted it)."""
+    # WindowManager indents a window's attributes below its title. Nested records and the
+    # next section can have visibility flags of their own.
+    records = r"(?m)^( *)Window #\d+ ([^\n]+)((?:\n\1 [^\n]*|\n(?=\n))*)"
+    for record in re.finditer(records, window.expandtabs()):
+        lines = textwrap.dedent(record[3]).splitlines()
+        attrs = "\n".join(line for line in lines if line and not line[0].isspace())
+        owner = re.search(r"(?m)^mOwnerUid=[^\n]*?\bpackage=([\w.]+)(?=[ \t]|$)", attrs)
+        flags = re.findall(r"(?m)(?:^|[ \t])(?:isVisible|isOnScreen|isReadyForDisplay\(\))=(true|false)(?=[ \t]|$)", attrs)
+        yield record[2].strip().removesuffix(":"), owner[1] if owner else "", ("true" in flags if flags else None)
+
+
 def capture_focus(window):
     """A visible Debug window with at most the ordinary system bars over it."""
     if re.search(r"\b(?:mShowingLockscreen|mDreamingLockscreen|isKeyguardShowing|mKeyguardShowing)=true\b", window):
@@ -66,14 +80,12 @@ def capture_focus(window):
         return None
     focus = match[1]
     seen = False
-    for block in re.split(r"(?m)^[ \t]*Window #\d+ ", window)[1:]:
-        title, _, attrs = block.partition("\n")
-        if not re.search(r"\b(?:isVisible|isOnScreen|isReadyForDisplay\(\))=true\b", attrs):
+    for title, package, visible in window_states(window):
+        if visible is False:
             continue
-        package = re.search(r"(?m)^\s*mOwnerUid=[^\n]*?\bpackage=([\w.]+)", attrs)
-        if package and package[1] == APP:
-            seen |= title.strip().removesuffix(":") == focus
-        elif not (package and package[1] == "com.android.systemui" and re.search(r"\bu0 (?:StatusBar|NavigationBar\d*)\}:?$", title)):
+        if package == APP:
+            seen |= visible is True and title == focus
+        elif not (package == "com.android.systemui" and re.search(r"\bu0 (?:StatusBar|NavigationBar\d*)\}$", title)):
             return None
     return focus if seen else None
 

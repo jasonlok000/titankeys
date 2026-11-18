@@ -3,7 +3,10 @@ package com.titankeys.keyboard
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.provider.Settings
 import android.util.Log
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import com.titankeys.engine.TypingSettings
 
 /**
@@ -15,10 +18,17 @@ import com.titankeys.engine.TypingSettings
  *
  * Ids that aren't input methods are dropped, as Settings drops them; English comes back when nothing is left. The result says
  * what was set, or why not. With --ez read true, it only reports the two saved settings.
+ * With --ez restart true, it restarts the focused Space gestures field's input. Send --ez read true too so older builds
+ * only report their settings.
  */
 class InputMethodsSet : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!context.packageName.endsWith(".debug")) return
+        if (intent.getBooleanExtra("restart", false)) {
+            val restarted = runCatching { restartOwnedEditor(context) }.getOrDefault(false)
+            resultData = if (restarted) "editor-restart-v1 restarted" else "editor-restart-v1 refused"
+            return
+        }
         if (intent.getBooleanExtra("read", false)) {
             val on = TypingSettings.inputMethods(context)
             val current = TypingSettings.currentInputMethod(context)
@@ -39,5 +49,23 @@ class InputMethodsSet : BroadcastReceiver() {
         InputMethodList.enable(context, listOf(current))
         Log.d("TitanKeysDebug", "input methods set: $on, typing $current")
         resultData = "on ${on.joinToString(",")}; typing $current"
+    }
+
+    private fun restartOwnedEditor(context: Context): Boolean {
+        // The recorder is only the Space gestures activity while it is resumed.
+        val activity = Recording.sink as? SpaceGestureActivity ?: return false
+        if (activity.packageName != context.packageName || activity.isFinishing || activity.isDestroyed) return false
+        val window = activity.window.decorView
+        val editor = window.findFocus() as? EditText ?: return false
+        val token = window.windowToken ?: return false
+        if (!window.isAttachedToWindow || !window.hasWindowFocus() || !editor.isAttachedToWindow ||
+            editor.rootView !== window || editor.windowToken !== token || editor.context.packageName != context.packageName ||
+            !editor.isFocused || !editor.isShown || !editor.onCheckIsTextEditor()) return false
+        val debug = "${context.packageName}/${TitanKeysIme::class.java.name}"
+        if (Settings.Secure.getString(activity.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD) != debug) return false
+        val ime = activity.getSystemService(InputMethodManager::class.java) ?: return false
+        if (ime.currentInputMethodInfo?.id != debug || !ime.isActive(editor) || !ime.isAcceptingText) return false
+        ime.restartInput(editor)
+        return true
     }
 }

@@ -2782,6 +2782,23 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     // Short prefixes, where a slip's fix ("di" as "do") is offered but Space won't put it in: the word as typed stays in the middle.
     val short = listOf("do", "did", "different", "the", "they", "what", "you", "going")
     for (word in listOf("di", "th", "wh", "yo", "go", "teh", "dk", "ot")) check("the short prefix \"$word\"", typist(offered = short).type("so $word"))
+    val gesturesField = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+        EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_EXTRACT_UI)
+    val diOffers = listOf("do", "did", "different")
+    val restarted = typist(field = gesturesField, offered = diOffers).type("d")
+    // The editor can restart the same field without changing its existing text or cursor.
+    restarted.composer.start(gesturesField, 1, 1)
+    restarted.type("i")
+    same(restarted.text, "di", "#98 Debug field: the prefix survives the editor restart")
+    same(restarted.bar, listOf("di") + diOffers, "#98 Debug field: the literal takes the middle when the correction tracker lost the prefix")
+    same(restarted.type(" ").text, "di ", "#98 Debug field: Space preserves the untracked prefix")
+    same(restarted.words.typed, emptyList<String>(), "#98 Debug field: its private text is never learned")
+    val literal = typist(field = gesturesField, autocorrect = null, offered = diOffers).type("di")
+    same(literal.bar, listOf("di") + diOffers, "#98 Debug field without fixes: a settled completion cannot displace the literal")
+    same(literal.type(" ").text, "di ", "#98 Debug field without fixes: Space agrees with the middle")
+    val fixes = typist(field = gesturesField, offered = listOf("the", "this", "that")).type("th")
+    same(fixes.bar.firstOrNull(), "the", "#98 Debug field: an applied correction still takes the middle")
+    same(fixes.type(" ").text, "the ", "#98 Debug field: Space still applies the tracked correction")
     // The word data still loading: Space keeps the word as typed, so it's the middle word, not the first completion.
     check("\"di\" before the word data loads", typist(autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), offered = short).type("so di"))
     // The typed word blocked: Space still types it, so it still shows in the middle.

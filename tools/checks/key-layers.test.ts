@@ -10,7 +10,7 @@ test("both shape guides contain every physical key in keyboard order", () => {
   for (const method of [cangjie, quick]) {
     const { keys } = method.guide;
     expect(Array.from("qwertyuiopasdfghjklzxcvbnm", k => keyFace(keys, "base", k, method.id)).join(""))
-      .toBe("手田水口廿卜山戈人心日尸木火土竹十大中重難金女月弓一");
+      .toBe("手田水口廿卜山戈人心日尸木火土竹十大中符難金女月弓一");
     expect(keyLayers(keys)).toEqual(["base"]);
   }
 });

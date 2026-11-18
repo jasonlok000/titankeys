@@ -133,7 +133,7 @@
       "roles": [
         {
           "key": "shift",
-          "role": "letters"
+          "role": "sameLetter"
         },
         {
           "key": "space",

@@ -978,7 +978,7 @@
   "guide": {
    "status": "experimental",
    "family": "plain",
-   "line": "Indonesian on the printed letters. Nothing to hold.",
+   "line": "Type Indonesian on the printed keys. Hold a letter for its symbol.",
    "points": [],
    "practice": "Apa kabar?",
    "keys": {
@@ -1533,7 +1533,7 @@
    "experimental": true
   },
   "howTo": [
-   "Hold a letter for its accents: hold E for é, ê or ë, O for ó or ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+   "Hold a letter for its accents: hold E for é, ê, ë or è, O for ó, ö or ô, and U for û. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
   ],
   "guide": {
    "status": "experimental",
@@ -1547,9 +1547,10 @@
     "legend": "",
     "accents": {
      "a": "á",
-     "e": "éêë",
+     "e": "éêëè",
      "i": "ï",
-     "o": "óö"
+     "o": "óöô",
+     "u": "û"
     },
     "capitals": true,
     "roles": [
@@ -2408,6 +2409,7 @@
      "z": "з"
     },
     "accents": {
+     "i": "ѝ",
      "m": "юь",
      "p": "ящ"
     },
@@ -2495,6 +2497,9 @@
      "y": "υ",
      "z": "ζ"
     },
+    "shift": {
+     "q": ":"
+    },
     "accents": {
      "a": "ά",
      "e": "έ",
@@ -2508,7 +2513,7 @@
     "roles": [
      {
       "key": "shift",
-      "role": "accents"
+      "role": "secondLetter"
      },
      {
       "key": "space",
@@ -2547,13 +2552,13 @@
    "experimental": true
   },
   "howTo": [
-   "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
+   "Use the Serbian Cyrillic layout: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
    "Rest a finger on the key under the letter on the bar, then press it."
   ],
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "Serbian in Cyrillic, by sound.",
+   "line": "Type with the Serbian Cyrillic layout.",
    "points": [
     "Q is љ, W is њ, X is џ, Z is ж.",
     "Held: ч or ћ on L, ш or ђ on P."
@@ -2679,6 +2684,8 @@
      "z": "ѕ"
     },
     "accents": {
+     "e": "ѐ",
+     "i": "ѝ",
      "l": "чќ",
      "p": "шжѓ"
     },
@@ -2823,12 +2830,12 @@
    "experimental": true
   },
   "howTo": [
-   "Each key types the Georgian letter that sounds like it: A is ა, B is ბ. Georgian has no capitals, so Shift types a second letter on seven keys: ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C. No accents here, so holding a key still gives its symbol."
+   "Each key types the Georgian letter that sounds like it: A is ა, B is ბ. This layout uses Mkhedruli. Shift types a second letter on seven keys: ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C. No accents here, so holding a key still gives its symbol."
   ],
   "guide": {
    "status": "experimental",
    "family": "georgian",
-   "line": "Georgian by sound, no capitals.",
+   "line": "Type Mkhedruli using the printed letter keys.",
    "points": [
     "Shift gives ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C."
    ],
@@ -3185,7 +3192,7 @@
     "roles": [
      {
       "key": "shift",
-      "role": "letters"
+      "role": "sameLetter"
      },
      {
       "key": "space",
@@ -3438,7 +3445,7 @@
    "family": "chinese",
    "line": "Cantonese by its sounds, as Jyutping spells them.",
    "points": [
-    "Tones are never typed.",
+    "Tones are optional. After a syllable, type v, x or q for tones 1, 2 or 3. Double the letter for tones 4, 5 or 6.",
     "A whole phrase goes in one run, no spaces."
    ],
    "practice": "neihou",
@@ -3578,7 +3585,7 @@
      "j": "十",
      "k": "大",
      "l": "中",
-     "z": "重",
+     "z": "符",
      "x": "難",
      "c": "金",
      "v": "女",
@@ -3637,7 +3644,7 @@
    "family": "chinese",
    "line": "Cangjie's first and last parts only.",
    "points": [
-    "Two letters a character, so you'll pick from the bar more often."
+    "Use one or two letters per character. When several characters share a code, pick yours from the bar."
    ],
    "practice": "我",
    "keys": {
@@ -3662,7 +3669,7 @@
      "j": "十",
      "k": "大",
      "l": "中",
-     "z": "重",
+     "z": "符",
      "x": "難",
      "c": "金",
      "v": "女",
@@ -3728,32 +3735,32 @@
    "keys": {
     "legend": "",
     "map": {
-     "q": "ㄑ",
-     "w": "ㄨ",
-     "e": "ㄜ",
+     "q": "",
+     "w": "ㄠ",
+     "e": "ㄧㄝ",
      "r": "ㄖ",
      "t": "ㄊ",
-     "y": "ㄩ",
-     "u": "ㄧ",
+     "y": "ㄚ",
+     "u": "ㄩ",
      "i": "ㄞ",
-     "o": "ㄛ",
+     "o": "ㄡ",
      "p": "ㄆ",
-     "a": "ㄚ",
-     "s": "ㄙ",
-     "d": "ㄉ",
-     "f": "ㄈ",
-     "g": "ㄍ",
-     "h": "ㄏ",
-     "j": "ㄐ",
-     "k": "ㄎ",
-     "l": "ㄌ",
+     "a": "ㄘㄟ",
+     "s": "ㄙ˙",
+     "d": "ㄉˊ",
+     "f": "ㄈˇ",
+     "g": "ㄍㄜ",
+     "h": "ㄏㄛ",
+     "j": "ㄐㄓˋ",
+     "k": "ㄎㄤ",
+     "l": "ㄌㄥㄦ",
      "z": "ㄗ",
-     "x": "ㄒ",
-     "c": "ㄘ",
-     "v": "ㄔ",
+     "x": "ㄨ",
+     "c": "ㄒㄕ",
+     "v": "ㄑㄔ",
      "b": "ㄅ",
-     "n": "ㄋ",
-     "m": "ㄇ"
+     "n": "ㄋㄣ",
+     "m": "ㄇㄢ"
     },
     "capitals": false,
     "roles": [
@@ -3798,7 +3805,7 @@
    "experimental": true
   },
   "howTo": [
-   "Type Japanese in romaji: kyou becomes きょう, nn ん, and - ー. Choices sit over the top row, whole sentences first. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the romaji as letters, and double Space types 。."
+   "Type Japanese in romaji: kyou becomes きょう, nn ん, and - ー. Choices sit over the top row, whole sentences first. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. When next words appear, tap one to use it. Enter types the romaji as letters, and double Space types 。."
   ],
   "guide": {
    "status": "experimental",

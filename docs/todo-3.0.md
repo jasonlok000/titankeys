@@ -603,3 +603,26 @@ More calls get added here as the night goes.
 - **Next, cheap:** A's RunStatus notification, the home-screen autostart and the run speed-ups.
 - **Next week (budget):** the language menu rework, F's wording pass, the LOOK shots, the website, then the pre-release.
 - **How we work now:** workers on Opus 5.5 low. Batches: one merge, one offline run, one build, one night run. The Master reviews each diff.
+
+### Native review follow-ups (November 18)
+
+The review covered 51 input methods. It checked the physical layout, Shift and hold layers, punctuation, starters, next words, guide text and word boundaries. Korean, Thai and Yale had already been reviewed.
+
+| Reviewed input methods | Changes from this review |
+| --- | --- |
+| af, bg, mk | Add missing held letters. |
+| el, he, id, ja, ka, sr, yue-jyutping, zh-cangjie, zh-quick, zh-zhuyin | Correct the key map or guide text. |
+| az, be, bs, ca, cs, da, de, eo, es, et, eu, fi, fr, ga, gl, hi, hr, hu, is, it, kk, lt, lv, nb, nl, nn, pl, pt, ro, ru, sk, sl, sr-latn, sv, tr, uk, vi, zh-pinyin | Keep the current layout and text. Follow-ups are listed below. |
+
+These observations came from source and dictionary reviews. Phone results are still due.
+
+- Chinese: try selecting and deleting punctuation alone, a supplementary character (𠮩), and a character before a space. Compare selection, eligibility and flick deletion in WordSelection.kt, TitanKeysIme.kt and DeleteSwipe.kt. Try Space with only predictions in the expanded menu.
+- Chinese predictions: pick 简体 starters 一个, 这个 or 唔该. The prediction tables use traditional keys. Compare results with 一個, 這個 and 唔該. Also try a fallback choice alongside live engine predictions and inspect the next row after Escape.
+- Cangjie and Quick: check character coverage for 𠮩 and 𨋢. Quick's upstream tables and Cangjie's character-set setting have different coverage. Check short codes hi and or for membership of 我 and 倉. Preserve candidate order. For Zhuyin, compare the displayed preedit for mj, lj and mys with the selected syllable. Review Pinyin's apostrophe separator in xi'an against the keyboard's punctuation rule before changing it.
+- Japanese: try n', t'i and d'i through MozcEngine.key; punctuation interception may commit before Mozc can consume the apostrophe. Hindi: test // through RulesComposer.key for ऽ. Decide the handling of standalone digits separately from slash rules.
+- Turkish and Azerbaijani: compare physical Shift+I, automatic sentence capitals, and held dotless ı. The unmapped printed keys take the hardware uppercase path, while the dictionary already uses locale casing. Dutch: check suggestion casing for ijs and ijzer at sentence start (IJs and IJzer).
+- Compare word selection, correction context and next-word lookup for Catalan col·legi, Hebrew צה״ל, Swedish EU:s, Danish EU’s, Finnish vaa’an and Irish d'ár. Check Swedish automatic spacing before a suffix. Preserve ordinary punctuation boundaries.
+- Ukrainian and Belarusian: compare predictions after ім'я and сям'я with the same words using ’ and ʼ. The prediction generator normalizes the apostrophe. Macedonian: verify leading apostrophe handling with ’рбет and ’рѓа. Review Ukrainian basic-word omissions and Catalan geminated-L entries against the source corpus.
+- Check hyphenated words using Russian по-русски, Bulgarian по-добре, Estonian e-posti, Hungarian tudja-e, Polish e-mail and Indonesian anak-anak. Some whole words have shipped prediction keys although lookup takes only their suffix. Establish the intended selection unit per language.
+- Check sentence capitals after local abbreviations and dates (Polish np. książka, Lithuanian 9 val. ryto, Czech 5. května). Compare Polish suggestions for explicitly accented dziękuję with dziękuje. Review Latvian greeting coverage including labdien. Judge conversational starter quality separately from spelling correctness.
+- Portuguese: both regional tables are present. Compare corrections in complete sentences before changing frequencies. Nynorsk: check whether lower-ranked Bokmål entries affect actual suggestions. Other quality observations include formal starters in Hindi, Hebrew, Georgian and Indonesian.

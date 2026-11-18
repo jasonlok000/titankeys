@@ -81,7 +81,7 @@ LATIN = {
     "gl": ("Galego", "Galician", "GL", "gl", "main_gl__experimental", LEIPZIG, {"apostrophes": False}),
     "et": ("Eesti", "Estonian", "ET", "et", "main_et__experimental", LEIPZIG, {"apostrophes": False}),
     "is": ("Íslenska", "Icelandic", "IS", "is", "main_is__experimental", LEIPZIG, {"apostrophes": False}),
-    "af": ("Afrikaans", "Afrikaans", "AF", "af", "main_af__experimental", LEIPZIG, {}),
+    "af": ("Afrikaans", "Afrikaans", "AF", "af", "main_af__experimental", LEIPZIG, {"extra_accents": "èôû"}),
     "eo": ("Esperanto", "Esperanto", "EO", "eo", "main_eo__experimental", LEIPZIG, {"apostrophes": False}),
     "sk": ("Slovenčina", "Slovak", "SK", "sk", "main_sk__experimental", FREQUENCY_WORDS, {"apostrophes": False}),
     "az": ("Azərbaycan", "Azerbaijani", "AZ", "az", "main_az", AZERBAIJANI, {"apostrophes": False}),
@@ -107,12 +107,12 @@ NATIONAL = {
     # GrammarDB's 4 million forms have one frequency, so they're ranked by Leipzig's Belarusian news (J's find, 2026-11-17).
     "be": ("Беларуская", "Belarusian", "БЕ", "be", "main_be", None, "belarusian", {"p": "х'", "l": "эж", "m": "бю", "t": "ё"},
            {"rank_by": "leipzig/bel_newscrawl_2015_1M/bel_newscrawl_2015_1M-sentences.txt"}),
-    "bg": ("Български", "Bulgarian", "БГ", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "юь"}),
+    "bg": ("Български", "Bulgarian", "БГ", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "юь", "i": "ѝ"}),
     "el": ("Ελληνικά", "Greek", "ΕΛ", "el", "main_el__legacy", AOSP, "greek", {}),
     "sr": ("Српски", "Serbian, Cyrillic", "СР", "sr", "main_sr", AOSP, "serbian_and_montenegrin_cyrillic",
            {"p": "шђ", "l": "чћ"}, {"keys": {"z": "ж"}, "own_letters": True}),
     "mk": ("Македонски", "Macedonian", "МК", "mk", "frequencywords/mk_full.txt", FREQUENCY_WORDS_OWN,
-           "serbian_and_montenegrin_cyrillic", {"p": "шжѓ", "l": "чќ"}, {"counts": True}),
+           "serbian_and_montenegrin_cyrillic", {"p": "шжѓ", "l": "чќ", "i": "ѝ", "e": "ѐ"}, {"counts": True}),
     "kk": ("Қазақ тілі", "Kazakh", "ҚА", "kk", "main_kk__experimental", LEIPZIG, "russian",
            {"f": "ә", "u": "ғ", "r": "қ", "y": "ң", "j": "ө", "e": "ұү", "h": "һ", "s": "і", "p": "хъ", "l": "жэ", "m": "бю",
             "t": "ё"}, {"layout_note": "with Kazakh's letters held on the Russian letters nearest them"}),
@@ -415,7 +415,7 @@ def build_latin(data, ident):
     common = common_letters(own if ident in OWN_ACCENTS else words, lower(locale))
     # CLDR's letters first, in its order, then any other letter the word list uses often (é in Afrikaans).
     ordered = main + sorted(c for c in common if c not in main)
-    accents = latin_accents(ordered)
+    accents = latin_accents([*ordered, *extra.get("extra_accents", "")])
     variants = None
     notices = [CLDR_NOTICE]
     if "variants" in extra:
@@ -565,7 +565,7 @@ def build_national(data, ident):
     for k in KEYS:
         base, shift = kcm[k]
         # Shift's own letter only where it's a letter and not the capital: Greek's W gives a dead key with Shift, which isn't kept.
-        own = shift and shift != base.upper() and shift.isalpha()
+        own = shift and shift != base.upper() and (shift.isalpha() or (ident, k, shift) == ("el", "q", ":"))
         keys[k] = "%s/%s" % (base, shift) if own else base
     typed = {kcm[k][0] for k in KEYS}
     accents = {k: list(v) for k, v in holds.items()}
@@ -1072,14 +1072,15 @@ ENGINE_MAPS = {
            {"q": "ㅃ", "w": "ㅉ", "e": "ㄸ", "r": "ㄲ", "t": "ㅆ", "o": "ㅒ", "p": "ㅖ"}),
 }
 CANGJIE = {"q": "手", "w": "田", "e": "水", "r": "口", "t": "廿", "y": "卜", "u": "山", "i": "戈", "o": "人", "p": "心", "a": "日",
-           "s": "尸", "d": "木", "f": "火", "g": "土", "h": "竹", "j": "十", "k": "大", "l": "中", "z": "重", "x": "難", "c": "金",
+           "s": "尸", "d": "木", "f": "火", "g": "土", "h": "竹", "j": "十", "k": "大", "l": "中", "z": "符", "x": "難", "c": "金",
            "v": "女", "b": "月", "n": "弓", "m": "一"}
 ENGINE_MAPS["zh-cangjie"] = (CANGJIE, {})
 ENGINE_MAPS["zh-quick"] = (CANGJIE, {})
-# Zhuyin's Hsu layout (tk_zhuyin): the symbol each letter key types first.
-ENGINE_MAPS["zh-zhuyin"] = ({"q": "ㄑ", "w": "ㄨ", "e": "ㄜ", "r": "ㄖ", "t": "ㄊ", "y": "ㄩ", "u": "ㄧ", "i": "ㄞ", "o": "ㄛ",
-                             "p": "ㄆ", "a": "ㄚ", "s": "ㄙ", "d": "ㄉ", "f": "ㄈ", "g": "ㄍ", "h": "ㄏ", "j": "ㄐ", "k": "ㄎ",
-                             "l": "ㄌ", "z": "ㄗ", "x": "ㄒ", "c": "ㄘ", "v": "ㄔ", "b": "ㄅ", "n": "ㄋ", "m": "ㄇ"}, {})
+# Hsu shares keys between initials, finals and tones; the syllable determines their reading.
+ENGINE_MAPS["zh-zhuyin"] = ({"q": "", "w": "ㄠ", "e": "ㄧㄝ", "r": "ㄖ", "t": "ㄊ", "y": "ㄚ", "u": "ㄩ", "i": "ㄞ", "o": "ㄡ",
+                             "p": "ㄆ", "a": "ㄘㄟ", "s": "ㄙ˙", "d": "ㄉˊ", "f": "ㄈˇ", "g": "ㄍㄜ", "h": "ㄏㄛ", "j": "ㄐㄓˋ",
+                             "k": "ㄎㄤ", "l": "ㄌㄥㄦ", "z": "ㄗ", "x": "ㄨ", "c": "ㄒㄕ", "v": "ㄑㄔ", "b": "ㄅ",
+                             "n": "ㄋㄣ", "m": "ㄇㄢ"}, {})
 LANGUAGE_GROUPS = {
     "zh": [{"title": "Cantonese", "methods": ["yue-yale", "yue-jyutping"]}, {"title": "Mandarin", "methods": ["zh-pinyin", "zh-zhuyin"]},
            {"title": "By shape", "methods": ["zh-cangjie", "zh-quick"]}],
@@ -1172,7 +1173,7 @@ def guide_of(im, experimental):
         roles = {"shift": "letters" if im["rules"].get("capitalise") else "secondLetter", "space": "default", "enter": "default",
                  "backspace": "code", "sym": "default"}
     else:
-        shift = "secondLetter" if shifted else ("accents" if im.get("accents") else "letters")
+        shift = "sameLetter" if ident == "he" else "secondLetter" if shifted else ("accents" if im.get("accents") else "letters")
         roles = {"shift": shift, "space": "default", "enter": "default", "backspace": "default", "sym": "default"}
     return {"status": "experimental" if experimental else "ready", "family": family_of(im), "line": "", "points": [],
             "practice": "",

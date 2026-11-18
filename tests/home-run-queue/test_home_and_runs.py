@@ -219,12 +219,16 @@ class LiveSwitchTest(unittest.TestCase):
              patch.object(language_checks.languages, "logs_on"), patch.object(checks, "keyboard") as keyboard, \
              patch.object(language_checks, "switch_live", side_effect=[True, False]), \
              patch.object(language_checks, "adb", return_value='data="on en,ru; typing ru"') as adb, \
+             patch.object(language_checks.own_editor, "restart") as restart, \
              patch.object(language_checks.languages, "log_lines", return_value=["field start: ru (the saved setting)"]):
             self.assertTrue(language_checks.turn_on(["en", "ru"], "ru"))
-            keyboard.assert_not_called()
             adb.assert_not_called()
+            restart.assert_not_called()
             self.assertTrue(language_checks.turn_on(["en", "ru"], "ru"))
-            self.assertEqual(keyboard.call_args_list, [call("release"), call("debug")])
+            adb.assert_called_once_with("shell", "am", "broadcast", "-n", language_checks.RECEIVER,
+                                        "--es", "on", "en,ru", "--es", "current", "ru")
+            restart.assert_called_once_with()
+            keyboard.assert_not_called()
 
 
 if __name__ == "__main__":

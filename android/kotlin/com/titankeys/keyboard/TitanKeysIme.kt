@@ -3388,6 +3388,9 @@ class TitanKeysIme : InputMethodService() {
 
     /** The load ended, ready or not: what waited goes on, to the engine if it started. */
     private fun loadEnded() {
+        // The held keys' letters go with the wait, whichever way it ended: the keys themselves go on to the input method.
+        preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
+        preparingNotice = null
         rawLog?.engine(languages.current.id, "loaded")
         val stop = loadGate.open(languages.loadingNow, pendingInput) ?: return
         Log.i(LOG_TAG, "What waited goes to ${languages.current.id}")
@@ -3456,7 +3459,11 @@ class TitanKeysIme : InputMethodService() {
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 showStripAfterBack()
-                if (!altOrPanel && pageChoices(outcome.points)) return
+                // A delete flick stays a flick with choices on the bar: Chinese and Japanese keep a row up with nothing typed, and
+                // it took every flick as a page swipe (night run 2026-11-17: a flick on 我哋唔該晒 did nothing).
+                if (!altOrPanel && !outcome.deletesWord && openPicker() is LanguagePicker.Choices && !choicesMenuOpen &&
+                    isDeleteWordSwipe(outcome.points)) return outcome(outcome.copy(deletesWord = true))
+                if (!altOrPanel && !outcome.deletesWord && pageChoices(outcome.points)) return
                 // The switcher, the accents or the bigger menu is open: a swipe there types and deletes nothing.
                 if (Overlays.stopsSwipes(openOverlay)) return
                 if (altOrPanel) {

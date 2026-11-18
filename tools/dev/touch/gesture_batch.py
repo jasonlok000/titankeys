@@ -10,8 +10,7 @@ with English, through Debug's InputMethodsSet:
 - three Space taps pick one word (a screenshot: the field's text can't show a selection).
 
 Chinese, Japanese and Hindi type their first word from a code, picked with Space. With a code pending, a flick clears the whole
-code and leaves the field alone (CODE_FLICK, D's list as of main 3593072b). In Chinese, Japanese and Thai a flick and three taps go
-by ICU's word breaks: two known words with no space, and the flick leaves the first.
+code and leaves the field alone (CODE_FLICK, D's list as of main 3593072b). Chinese deletes one character per flick. Japanese and Thai use word breaks for adjacent words.
 """
 import os
 
@@ -25,7 +24,7 @@ STOPS = {"yue-yale": "。", "yue-jyutping": "。", "zh-pinyin": "。", "ja": "�
 PLAIN_STOP = ". "
 # The input methods whose words come from a code, picked with Space; "nihon" picks 日本 in Japanese.
 CODES = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "hi": "namaste"}
-# Two known words typed with no space between: ICU's dictionary breaks them apart, and a flick takes only the second.
+# Two known words typed with no space between. Chinese flicks remove a character; Japanese and Thai take a word.
 # In Chinese and Japanese the second comes after the first is picked, while next-word suggestions show (no code): a flick
 # then clears them and deletes a word as usual.
 JOINED = {"yue-yale": ("neihou", "ngodei"), "yue-jyutping": ("neihou", "ngodei"), "zh-pinyin": ("nihao", "women"),
@@ -62,8 +61,7 @@ def first_word(im):
 
 
 def flick(im):
-    """A flick at the end of a typed line takes the last word. In Chinese, Japanese and Thai by ICU's breaks: two words with no
-    space, and the flick leaves the first."""
+    """Check the deletion unit with adjacent words in Chinese, Japanese and Thai."""
     language_checks.fresh()
     if im in JOINED:
         first, second = JOINED[im]
@@ -80,8 +78,10 @@ def flick(im):
         name = f"flick-{im}"
     play(FLICK_AFTER_TYPING, "flick", "+500", shot=name, at=1000)
     after = checks.field()
-    record(name, bool(before) and typed != before and after == before,
-           f"{before!r} then {typed!r}; the flick left {after!r}", name)
+    # Chinese flicks take one character, even when a pick committed several.
+    expected = typed[:-1] if im in ("zh-pinyin", "yue-jyutping", "yue-yale") else before
+    record(name, bool(before) and typed != before and after == expected,
+           f"{before!r} then {typed!r}; the flick left {after!r}, wanted {expected!r}", name)
 
 
 def double_space(im):
@@ -92,7 +92,9 @@ def double_space(im):
     if im in CODES:
         before = first_word(im)
     else:
-        play(*keys(FIRST), "+300")
+        # Danish corrects the made-up qwe on the first Space. Use a dictionary word
+        # so this check measures punctuation and still verifies the committed prefix.
+        play(*keys("med" if im == "da" else FIRST), "+300")
         before = checks.field()
     play("key:space", "+90", "key:space", "+500")
     text = checks.field()

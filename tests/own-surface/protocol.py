@@ -15,6 +15,13 @@ assert 'WindowInspector.getGlobalWindowViews()' in source
 assert 'SpaceGestureActivity' in source and 'FeedEditor.capture(APP)' in source
 assert 'GuideActivity' in source and 'field.privateImeOptions != GuideHooks.FIELD' in source
 assert 'filterIsInstance<GuideKeyboardView>().singleOrNull()' in source
+panel = source[source.index('private fun panelState('):source.index('private fun descendants(')]
+assert 'is ChoicesMenu' in panel and 'view.page.cells.isNotEmpty()' in panel
+assert 'it.back && it.items.isNotEmpty()' in panel and 'getLocalVisibleRect' in panel
+assert all(token not in panel for token in ('javaClass', 'MenuEffects', 'SymPanel'))
+pickers = (root/'android/kotlin/com/titankeys/keyboard/Languages.kt').read_text().split('sealed interface LanguagePicker', 1)[1]
+assert 'back = true' not in pickers.split('class Switch(', 1)[0]
+assert 'back = true' in pickers.split('class Switch(', 1)[1]
 assert 'AppBuild.kind(context) != "debug"' in source
 assert 'Settings.Secure.put' not in source and 'screencap' not in source
 assert 'getExternalFilesDir' not in source and 'Log.' not in source

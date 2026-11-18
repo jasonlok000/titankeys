@@ -10,7 +10,15 @@ cat > "$work/Stubs.kt" <<'EOF'
 package com.titankeys.keyboard
 import android.content.Context
 import android.view.View
-class Strip(context: Context) : View(context)
+class Strip(context: Context) : View(context) {
+    sealed interface Notice { data class Picker(val items: List<String>, val back: Boolean) : Notice }
+    val notice: Notice? = null
+}
+class ChoicesMenu(context: Context) : View(context) {
+    class Page(val cells: List<Any>)
+    val page = Page(emptyList())
+    val revision = 0
+}
 class GuideKeyboardView(context: Context) : View(context)
 object GuideHooks { const val FIELD = "com.titankeys.guide" }
 EOF

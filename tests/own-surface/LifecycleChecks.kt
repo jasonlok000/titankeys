@@ -187,7 +187,7 @@ fun lifecycle(temp: File) {
     val expired = parse(result().resultData).getValue("id")
     main.advance(OwnCapturePolicy.TTL)
     check(!file.exists() && read(expired)["error"] == "absent")
-    for (target in listOf("editor", "guide")) {
+    for (target in listOf("editor", "guide", "panel")) {
         capture(target)
         val native = parse(result().resultData)
         check(native["target"] == target && native["kind"] == "view-draw" && file.exists())

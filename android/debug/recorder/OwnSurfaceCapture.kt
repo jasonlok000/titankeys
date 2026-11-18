@@ -8,6 +8,7 @@ import android.content.Intent
 import android.database.ContentObserver
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -182,6 +183,7 @@ class OwnSurfaceCapture : BroadcastReceiver() {
         private val height = target.height
         private val location = IntArray(2).also(target::getLocationOnScreen)
         private val surface = (target as? SurfaceView)?.holder?.surface?.let { WeakReference(it) }
+        private val panelAtCapture = if (kind == "panel") panelState(target) else null
         private var lost = false
         fun valid(): Boolean = runCatching {
             val window = root.get() ?: return false
@@ -199,6 +201,8 @@ class OwnSurfaceCapture : BroadcastReceiver() {
         private fun validTarget(window: View, target: View, targetRoot: View): Boolean = when (kind) {
             "settings" -> targetRoot === window && settingsSurface(window) === target
             "strip" -> isImeWindow(targetRoot) && spaceEditor(window) != null && editor?.valid() == true
+            "panel" -> isImeWindow(targetRoot) && spaceEditor(window) != null && editor?.valid() == true &&
+                panelAtCapture != null && panelView(targetRoot) === target && panelState(target) == panelAtCapture
             "editor" -> targetRoot === window && spaceEditor(window) === target && editor?.valid() == true
             "guide" -> targetRoot === window && guideKeys(window) === target
             else -> false
@@ -250,13 +254,17 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                 if (!selected(context)) return null
                 val roots = WindowInspector.getGlobalWindowViews().filter { it.context.packageName == APP && it.isAttachedToWindow }
                 val front = roots.singleOrNull { it.hasWindowFocus() } ?: return null
-                val editor = if (target == "strip" || target == "editor") FeedEditor.capture(APP) ?: return null else null
+                val editor = if (target == "strip" || target == "panel" || target == "editor") FeedEditor.capture(APP) ?: return null else null
                 val view = when (target) {
                     "settings" -> settingsSurface(front)
                     "strip" -> {
                         if (spaceEditor(front) == null) return null
                         roots.asSequence().filter(::isImeWindow).flatMap(::descendants)
                             .filterIsInstance<Strip>().singleOrNull { it.isShown }
+                    }
+                    "panel" -> {
+                        if (spaceEditor(front) == null) return null
+                        roots.asSequence().filter(::isImeWindow).flatMap(::descendants).singleOrNull { panelState(it) != null }
                     }
                     "editor" -> spaceEditor(front)
                     "guide" -> guideKeys(front)
@@ -335,6 +343,23 @@ class OwnSurfaceCapture : BroadcastReceiver() {
             if (field.privateImeOptions != GuideHooks.FIELD) return null
             return descendants(content).filterIsInstance<GuideKeyboardView>().singleOrNull()
         }
+
+        private fun panelView(window: View): View? = descendants(window).singleOrNull { panelState(it) != null }
+
+        // The expanded menu takes the strip's place. Only the Switcher uses a picker notice with a Back cue.
+        private fun panelState(view: View): Any? {
+            val state = when (view) {
+                is ChoicesMenu -> if (view.isShown && view.page.cells.isNotEmpty()) view.revision else return null
+                is Strip -> (view.notice as? Strip.Notice.Picker)?.takeIf { it.back && it.items.isNotEmpty() } ?: return null
+                else -> return null
+            }
+            val visible = Rect()
+            if (!view.isShown || !view.isAttachedToWindow || view.context.packageName != APP || view.alpha <= 0f ||
+                view.width <= 0 || view.height <= 0 || !view.getLocalVisibleRect(visible) ||
+                visible.left != 0 || visible.top != 0 || visible.right != view.width || visible.bottom != view.height) return null
+            return state
+        }
+
         private fun descendants(view: View): Sequence<View> = sequence {
             yield(view)
             if (view is ViewGroup) for (i in 0 until view.childCount) yieldAll(descendants(view.getChildAt(i)))

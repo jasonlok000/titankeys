@@ -50,6 +50,9 @@ def sets():
 PLAIN = "qwertyuiop"
 # Engines and the scripts whose keys aren't one letter each: their own keys and what they must type.
 OWN = {
+    "zh-cangjie": ("h q i space", "我"),
+    "zh-quick": ("h q i space", "我"),
+    "zh-zhuyin": ("n e enter", "ne"),  # Enter commits the pending Hsu code; chinese-ui checks its Space pick.
     "ko": ("g k s r n r d j space", "한국어 "),
     "vi": ("t i e e n g s space", "tiếng "),
     "sr": ("q y z space", "љзж "),

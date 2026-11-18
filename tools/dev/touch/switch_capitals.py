@@ -55,7 +55,11 @@ def trial(name, on, source, destination, prefix, expected, *, return_from_keyboa
         if gesture:
             checks.play(*gesture, "+500")
         time.sleep(.3)
-        shot = guide_checks.shot(name + "-before-q")
+        try:
+            shot = guide_checks.shot(name + "-before-q")
+        except checks.Stop:
+            shot = None
+            checks.record(name + "-indicator", None, "The Shift indicator frame could not be captured")
         checks.play("key:q", "+400")
     after = checks.field()
     saved = checks.adb("shell", "am", "broadcast", "-n", METHODS, "--ez", "read", "true")

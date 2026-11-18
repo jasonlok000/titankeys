@@ -1,10 +1,9 @@
 """Read every suggestion row around a tap in Debug's Maps-shaped search field."""
 import re
 import time
-import uuid
 
 import checks
-from bar_observations import MARK_TAG, BAR_TAG, attempt_lines, observed_bar, own_field
+from bar_observations import Unobservable, mark_attempt, observed_bar, own_field, read_attempt
 from switch_capitals import launch_editor, select
 
 
@@ -19,17 +18,12 @@ def transient_starters(rows, starters):
     return starters in rows[:-1]
 
 
-def mark():
-    marker = "charter-" + uuid.uuid4().hex
-    checks.adb("shell", "log", "-t", MARK_TAG, marker)
-    return marker
+def rows_since(attempt):
+    return words_rows(read_attempt(attempt))
 
 
-def rows_since(marker):
-    own_field()
-    log = checks.adb("logcat", "-d", "-v", "brief", "-t", "512", "-s", MARK_TAG + ":I", BAR_TAG + ":D", "*:S")
-    own_field()
-    return words_rows(attempt_lines(log, marker))
+def row_name(slot):
+    return "search-row-" + ("left" if slot == 0 else "center")
 
 
 def trial(slot):
@@ -38,20 +32,20 @@ def trial(slot):
     details = checks.adb("shell", "dumpsys", "input_method")
     if not re.search(r"mCurrentEditorInfo:\s*\n\s*inputType=0x80001 imeOptions=0x12000003\b", details):
         raise checks.Stop("Maps search field flags unconfirmed")
-    label = "search-row-" + ("left" if slot == 0 else "center")
+    label = row_name(slot)
     with observed_bar():
         checks.set_text("a")
-        empty = mark()
+        empty = mark_attempt()
         checks.set_text("")
         time.sleep(.6)
         empty_rows = rows_since(empty)
-        typed = mark()
+        typed = mark_attempt()
         checks.play(*[v for letter in "testing" for v in ("key:" + letter, "+90")], "+500")
         offers = rows_since(typed)
         if own_field() != "testing" or not empty_rows or not offers or offers[-1][slot] in ("", "-"):
             return checks.record(label, None, "Synthetic word, empty-field row or offered choice unavailable")
         picked = offers[-1][slot]
-        chosen = mark()
+        chosen = mark_attempt()
         own_field()
         checks.adb("shell", "input", "tap", "185" if slot == 0 else "538", "1170")
         time.sleep(.8)
@@ -65,7 +59,10 @@ def trial(slot):
 
 def check_search():
     for slot in (0, 1):
-        trial(slot)
+        try:
+            trial(slot)
+        except Unobservable as error:
+            checks.record(row_name(slot), None, str(error))
 
 
 BATCH = [check_search]

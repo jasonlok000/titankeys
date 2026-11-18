@@ -72,6 +72,26 @@ def own_field():
     return checks.field()
 
 
+def mark_attempt():
+    """Read the phone's clock so later log filtering starts before our marker."""
+    import checks
+    seconds = checks.adb('shell', 'date', '+%s').strip()
+    if not re.fullmatch(r'[1-9][0-9]{8,11}', seconds):
+        raise Unobservable('the phone did not return a test log start time')
+    marker = 'charter-' + uuid.uuid4().hex
+    checks.adb('shell', 'log', '-t', MARK_TAG, marker)
+    return marker, seconds + '.000'
+
+
+def read_attempt(attempt):
+    import checks
+    marker, since = attempt
+    own_field()
+    raw = checks.adb('logcat', '-d', '-v', 'brief', '-T', since, '-s', MARK_TAG + ':I', BAR_TAG + ':D', '*:S')
+    own_field()
+    return attempt_lines(raw, marker)
+
+
 @contextmanager
 def observed_bar():
     """Enable text-bearing bar logs only around this owned synthetic-field check."""
@@ -79,12 +99,10 @@ def observed_bar():
     own_field()
     prop = 'log.tag.' + BAR_TAG
     previous = checks.adb('shell', 'getprop', prop).strip()
-    # Same bounded marker shape as the private runner's existing custom-tag gate.
-    marker = 'charter-' + uuid.uuid4().hex
-    token = _attempt.set(marker)
+    token = None
     try:
         checks.adb('shell', 'setprop', prop, 'D')
-        checks.adb('shell', 'log', '-t', MARK_TAG, marker)
+        token = _attempt.set(mark_attempt())
         yield
     finally:
         try:
@@ -92,19 +110,17 @@ def observed_bar():
             # value. The safety proxy normalizes and requotes it as empty too.
             checks.adb('shell', 'setprop', prop, previous or "''")
         finally:
-            _attempt.reset(token)
+            if token is not None:
+                _attempt.reset(token)
 
 
 def observed_middle(method):
     import checks
-    marker = _attempt.get()
-    if marker is None:
+    attempt = _attempt.get()
+    if attempt is None:
         raise checks.Stop('bar observation has no active synthetic attempt')
-    own_field()
-    raw = checks.adb('logcat', '-d', '-v', 'brief', '-t', '512', '-s', MARK_TAG + ':I', BAR_TAG + ':D', '*:S')
-    own_field()
     try:
-        lines = attempt_lines(raw, marker)
+        lines = read_attempt(attempt)
     except Unobservable as error:
         checks.record('bar-observation', None, str(error))
         return None

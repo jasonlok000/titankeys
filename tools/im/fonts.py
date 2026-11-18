@@ -94,6 +94,9 @@ def howto_text():
     howto = os.path.join(ROOT, "tools", "im", "howto.json")
     if os.path.exists(howto):
         walk(json.load(open(howto, encoding="utf-8")))
+    native = os.path.join(ROOT, "tools", "im", "native-pages.json")
+    if os.path.exists(native):
+        walk(json.load(open(native, encoding="utf-8")))
     return out
 
 
@@ -211,7 +214,7 @@ def main():
         count_han = add_glyphs(font, os.path.join(cjk, "NotoSansHK-%s.otf" % weight), han)
         # The how-tos' other letters: kana, Hebrew, Devanagari, Bopomofo and the rest, from the first source that has each.
         count_howto = rest_of_howtos(font, [
-            georgian_path, os.path.join(georgian, "NotoSansThai-%s.ttf" % weight), os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight),
+            os.path.join(inter, "Inter-%s.otf" % weight), georgian_path, os.path.join(georgian, "NotoSansThai-%s.ttf" % weight), os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight),
             os.path.join(cjk, "NotoSansKR-%s.otf" % weight), os.path.join(cjk, "NotoSansHK-%s.otf" % weight),
             devanagari_font(devanagari, weight) if devanagari else None])
         out = os.path.join(ROOT, "assets", "fonts", "Inter-%s.otf" % weight)

@@ -31,12 +31,12 @@ export function availableSettings(settings: PageSetting[], level: PageSetting["l
     (level !== "input-method" || row.methods?.includes(method ?? "")));
 }
 
-export function unavailableNotes(settings: PageSetting[], language: string) {
+export function unavailableNotes(settings: PageSetting[], language: string, text = pageText) {
   const lines = settings.flatMap(row => {
     if (row.level !== "language" || row.available || !row.reason) return [];
     if (row.id === "spelling" || row.id === "chineseCharacters") return [];
-    const note = pageText.notAvailable[row.reason].replaceAll("{X}", language);
-    return [row.reason === "englishOnly" || row.reason === "chineseOnly" ? `${pageText.settings[row.id]}: ${note}` : note];
+    const note = text.notAvailable[row.reason].replaceAll("{X}", language);
+    return [row.reason === "englishOnly" || row.reason === "chineseOnly" ? `${text.settings[row.id]}: ${note}` : note];
   });
   return [...new Set(lines)];
 }
@@ -59,7 +59,7 @@ export function practiceMethod(methods: InputMethodEntry[], picked: string | nul
   return methods.find(method => method.id === picked) ?? methods[0];
 }
 
-export function practicePrompt(method: InputMethodEntry) {
+export function practicePrompt(method: InputMethodEntry, text = pageText) {
   const sample = guideFor(method)?.practice;
-  return sample ? pageText.page.trySample.replace("{sample}", sample) : undefined;
+  return sample ? text.page.trySample.replace("{sample}", sample) : undefined;
 }

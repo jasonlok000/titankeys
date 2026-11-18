@@ -1,6 +1,6 @@
 import { type ReactElement, useState } from "react";
 import { Field, Section, navigate, useAction } from "ink";
-import pageText from "../tools/im/page-text.json";
+import { textFor, translator } from "./language-copy";
 import { variantLabel } from "../app/settings/variant";
 import { Toggle } from "./app-haptics";
 import { KeysDrawing } from "./keys-drawing";
@@ -13,6 +13,7 @@ export function MethodControls({ im, rows, settings }: {
   rows: PageSetting[];
   settings: State;
 }) {
+  const pageText = textFor(im.id);
   const save = useAction(update);
   const options = settings.methodOptions?.[im.id];
   return availableSettings(rows, "input-method", im.id).map(({ id }) => {
@@ -33,13 +34,15 @@ export function MethodCard({ im, name, subtitle, value, onChange, children }: {
   onChange: (value: boolean) => void;
   children: ReactElement;
 }) {
+  const pageText = textFor(im.id);
+  const t = translator(im.id);
   const [open, setOpen] = useState(false);
   const guide = im.guide;
   return <>
-    <Toggle label={name} subtitle={guide?.line || subtitle} value={value} onChange={onChange} />
+    <Toggle label={name} subtitle={guide?.line ? t(guide.line) : subtitle} value={value} onChange={onChange} />
     <Field label={open ? pageText.page.hideHow : pageText.page.how} onPress={() => setOpen(!open)} />
     {open && <>
-      {guide?.points?.map((line, index) => <Note key={index}>{line}</Note>)}
+      {guide?.points?.map((line, index) => <Note key={index}>{t(line)}</Note>)}
       <KeysDrawing im={im} bare />
       {children}
     </>}
@@ -47,16 +50,19 @@ export function MethodCard({ im, name, subtitle, value, onChange, children }: {
 }
 
 /** The generated groups, with any ungrouped methods last. */
-export function MethodGroups({ page, methods, card }: {
+export function MethodGroups({ page, methods, card, language }: {
+  language: string;
   page: LanguagePage | undefined;
   methods: InputMethodEntry[];
   card: (im: InputMethodEntry) => ReactElement;
 }) {
+  const pageText = textFor(language);
+  const t = translator(language);
   const groups = page?.groups ?? [];
   const grouped = new Set(groups.flatMap(group => group.methods));
   const rest = methods.filter(im => !grouped.has(im.id));
   return <>
-    {groups.map(group => <Section key={group.title} title={group.title}>
+    {groups.map(group => <Section key={group.title} title={t(group.title)}>
       {group.methods.flatMap(id => {
         const method = methods.find(im => im.id === id);
         return method ? [card(method)] : [];

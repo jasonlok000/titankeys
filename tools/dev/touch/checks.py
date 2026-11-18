@@ -235,7 +235,7 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "switcher": "switcher_checks", "bar-words": "bar_checks",
            "settings-warnings": "settings_checks", "leak-85": "leak_batch",
            "gestures-fix": "gesture_fix_batch",
-           "first-use": "first_use_batch",
+           "first-use": "first_use_batch", "switch-capitals": "switch_capitals",
            "rime-files": "rime_batch",
            "key-feed": "keyfeed_batch",
            "shift": "shift_checks",

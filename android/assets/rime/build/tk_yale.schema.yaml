@@ -454,12 +454,15 @@ selector:
     linear: {bindings: {ISO_Left_Tab: previous_candidate, "Shift+Tab": previous_candidate, Tab: next_candidate}}
 speller:
   algebra:
+    - "derive/^([a-z]*?[aeiou]+)(ng|m|n|p|t|k)?([456])$/$1h$2$3/"
+    - "derive/^(m|ng)([456])$/$1h$2/"
     - "xform/\\d$//"
     - "xform/^jy/y/"
     - "xform/^j/y/"
     - "xform/^z/j/"
     - "xform/^c/ch/"
     - "xform/aa$/a/"
+    - "xform/aah$/ah/"
     - "xform/eu/iu/"
     - "xform/eo/eu/"
     - "xform/oe/eu/"
@@ -468,6 +471,12 @@ speller:
     - "derive/^j/z/"
     - "derive/^n(?!g)/l/"
     - "derive/^l/n/"
+    - "derive/^ng([aeiou])/$1/"
+    - "derive/^([aeiou])/ng$1/"
+    - "derive/^gw/g/"
+    - "derive/^kw/k/"
+    - "derive/^ch/c/"
+    - "derive/eu/oe/"
     - "abbrev/^([a-z]).+$/$1/"
     - "abbrev/^(ng).+$/$1/"
     - "abbrev/^(ch).+$/$1/"
@@ -492,7 +501,7 @@ translator:
   dictionary: jyut6ping3
   prism: tk_yale
 zh_hans:
-  opencc_config: t2s.json
+  opencc_config: tk_t2s_yue.json
   option_name: zh_hans
   tips: none
 zh_hk:

@@ -502,7 +502,7 @@ translator:
   prism: tk_jyutping
   spelling_hints: 0
 zh_hans:
-  opencc_config: t2s.json
+  opencc_config: tk_t2s_yue.json
   option_name: zh_hans
   tips: none
 zh_hk:

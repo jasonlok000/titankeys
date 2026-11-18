@@ -98,6 +98,11 @@ def main():
     def count(sentence):
         text = ''
         for word in sentence:
+            # Spoken Cantonese's "not have" is 冇; written text, Wikipedia's above all, says 無. As a word on its own, it
+            # counts as 冇, so a phrase typed at once says 你冇去, as mou alone does (native review, 2026-11-17). 無論 and
+            # the other words with it stay as they are.
+            if word == '無':
+                word = '冇'
             for k in range(1, min(3, len(text)) + 1):
                 counts[text[-k:] + word[:3]] += 1
             text += word

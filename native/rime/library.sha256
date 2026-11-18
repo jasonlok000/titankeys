@@ -1,3 +1,3 @@
 85deb339a8cb727e30f0a84e92f3220ad24e3eb3d73d694a47cd4154533473f7  native/rime/CMakeLists.txt
-6ea4e9219672f8740806c9222e39c466fc437f7bca936cd9176f61185822b4f3  native/rime/rime_jni.cc
-83a8a57cbf260220828fad93a561981b77b07e600e59d8a95c7a5f9dead49854  android/jniLibs/arm64-v8a/librime_tk.so
+b5a0626a0b6f0e15702d6edd795781f43f4ce896f9959f327bb675ec58eb6c50  native/rime/rime_jni.cc
+b797c7cc58991aa548b18ed7120c2c778a568d13b723ea3371aea32b24802ecb  android/jniLibs/arm64-v8a/librime_tk.so

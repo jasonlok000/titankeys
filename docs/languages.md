@@ -234,7 +234,7 @@ concept test" and "The rest of the Chinese proposal agreed"). It holds for every
 Pinyin); the code is `ChineseRow`, `ChineseMenu`, `ChineseKeys` and `EnglishOffer` in `keyboard/`.
 
 **With nothing typed** (owner, 2026-11-17), the bar's own words (starters, learned and listed next words) show in the
-choices row, as many as fit, not three (`InputEngine.offer`). A pick, by tap or Space, types the word with no space, and
+choices row, as many as fit, not three (`InputEngine.offer`). A pick, by a tap or its key, types the word with no space (Space never picks a next word: it types a space), and
 Rime's next words for it follow (`predictAfter`, `native/rime/tk_predict.h`). A letter, Enter or Backspace ends the offer.
 Shift and a swipe up open the bigger menu only when there are more choices than the row shows (`ChineseRow.more`). Sym with
 a code typed clears the code and opens nothing; the next Sym opens the panel.
@@ -326,7 +326,7 @@ suggestion when there's nothing typed"; #56, [the study](studies/56-chinese-pred
   its choices with nothing typed, through the same OpenCC filters, so they come in the variant.
 - **On the bar:** over W to O, as wide as they need, exactly as a code's choices; the bigger menu (Shift, a swipe up)
   reads them too.
-- **Picking:** Space picks the first, at the left; a tap or the bigger menu picks any. A picked suggestion is committed like
+- **Picking:** A tap, its key or the bigger menu picks one; Space never does, it types a space (owner, 2026-11-17). A picked suggestion is committed like
   any word, so the next ones follow it.
 - **Going away:** a letter starts a new code, and the code's choices take the bar. Any other key (Backspace, Enter, a digit,
   a capital, a mark) clears them and does what it does with nothing typed. A symbol from the panel clears them too.

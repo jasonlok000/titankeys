@@ -749,7 +749,8 @@ class GuideActivity : Activity() {
     private val flow by lazy { GuideFlow(::readSettings) }
     private val haptics by lazy { Haptics(this) }
     private val input by lazy { getSystemService(InputMethodManager::class.java) }
-    private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
+    // Android's clipboard callback can outlive this activity and retain the manager's context.
+    private val clipboard by lazy { applicationContext.getSystemService(ClipboardManager::class.java) }
     /** A copy, from the keyboard's fn and C or from anything else, as the copy slides wait for. */
     private val clipChanged = ClipboardManager.OnPrimaryClipChangedListener {
         val text = runCatching { clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() }.getOrNull().orEmpty()

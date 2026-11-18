@@ -1093,7 +1093,9 @@ LANGUAGE_GROUPS = {
 # decides (checked against it in tests/languages).
 GUIDE_SETTINGS = [("fixes", "language"), ("capitals", "language"), ("doubleSpace", "language"), ("sentenceSpaces", "language"),
                   ("commaSpace", "language"), ("hold", "language"), ("swipe", "language"), ("shorthand", "language"),
-                  ("spelling", "language"), ("chineseCharacters", "language"), ("variant", "input-method")]
+                  ("spelling", "language"), ("chineseCharacters", "language"), ("variant", "input-method"),
+                  # B's switches (claude/m3-chinese-enter, TypingSettings.lazySounds and radicalPreview, on by default).
+                  ("lazySounds", "input-method"), ("radicalPreview", "input-method")]
 GUIDE_OWN_MARKS = {"rime", "mozc"}
 
 
@@ -1134,6 +1136,8 @@ def setting_reason(row, im):
         "spelling": None if english else "englishOnly",
         "chineseCharacters": None if chinese else "chineseOnly",
         "variant": None if im.get("variants") else "noVariants",
+        "lazySounds": None if im["id"] in ("yue-yale", "yue-jyutping") else "notThisMethod",
+        "radicalPreview": None if im["id"] in ("zh-cangjie", "zh-quick") else "notThisMethod",
     }[row]
 
 
@@ -1201,7 +1205,10 @@ def write_guides():
             reasons = [setting_reason(row, im) for im in ims]
             # A language's row shows where any of its input methods has it, as its page does.
             available = any(reason is None for reason in reasons)
-            settings.append({"id": row, "level": level, "available": available, **({} if available else {"reason": reasons[0]})})
+            # An input method's own switch says which of the language's input methods have it.
+            methods = [im["id"] for im, reason in zip(ims, reasons) if reason is None] if level == "input-method" else None
+            settings.append({"id": row, "level": level, "available": available, **({"methods": methods} if methods else {}),
+                             **({} if available else {"reason": reasons[0]})})
         out[lang] = {"points": [], "roles": [], "groups": LANGUAGE_GROUPS.get(lang, []), "settings": settings}
     with open(os.path.join(ASSETS, "languages.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)

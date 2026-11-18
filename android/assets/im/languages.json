@@ -64,6 +64,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -132,6 +144,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -200,6 +224,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -268,6 +304,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -336,6 +384,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -404,6 +464,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -472,6 +544,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -540,6 +624,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -608,6 +704,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -676,6 +784,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -744,6 +864,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -812,6 +944,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -880,6 +1024,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -948,6 +1104,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1016,6 +1184,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1084,6 +1264,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1152,6 +1344,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1220,6 +1424,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1289,6 +1505,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1358,6 +1586,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1426,6 +1666,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1494,6 +1746,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1561,6 +1825,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1629,6 +1905,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1697,6 +1985,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1768,6 +2068,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1836,6 +2148,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1904,6 +2228,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1973,6 +2309,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2041,6 +2389,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2109,6 +2469,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2177,6 +2549,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2245,6 +2629,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2313,6 +2709,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2381,6 +2789,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2449,6 +2869,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2515,7 +2947,22 @@
    {
     "id": "variant",
     "level": "input-method",
-    "available": true
+    "available": true,
+    "methods": [
+     "pt"
+    ]
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2584,6 +3031,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2652,6 +3111,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2720,6 +3191,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2788,6 +3271,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2864,6 +3359,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2932,6 +3439,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3003,6 +3522,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3071,6 +3602,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3139,6 +3682,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3207,6 +3762,18 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3299,6 +3866,24 @@
     "level": "input-method",
     "available": false,
     "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": true,
+    "methods": [
+     "yue-jyutping",
+     "yue-yale"
+    ]
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": true,
+    "methods": [
+     "zh-cangjie",
+     "zh-quick"
+    ]
    }
   ]
  }

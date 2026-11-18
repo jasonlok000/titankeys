@@ -18,7 +18,7 @@ placeholders for the prices. Nothing here guilt-trips, and nothing claims "best"
 - Donating gets you nothing. No badge, no secret theme, no bonus features. It's all free already.
 - What it does get: one developer more time on TitanKeys.
 - That means bugs fixed faster, more languages, and new tricks for the keys.
-- No ads, no tracking, and no paywall coming. Ever.
+- No ads and no paywall. Ever.
 
 **Monthly button:** {monthly} a month
 
@@ -42,7 +42,7 @@ Shown once, in the app only, never on the keyboard. The counts are on-device onl
 
 **Link:** Support TitanKeys
 
-**Dismiss:** Not now
+**Dismiss:** No thanks
 
 ## 4. Settings > About
 

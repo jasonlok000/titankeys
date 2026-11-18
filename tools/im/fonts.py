@@ -8,8 +8,8 @@ method's own name shows in Settings > Input methods (docs/languages.md, "Names")
 (https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip, extras/otf). <Noto Sans Georgian dir> holds
 NotoSansGeorgian-Regular.ttf and NotoSansGeorgian-Medium.ttf from Google's official notofonts.github.io repository
 (fonts/NotoSansGeorgian/hinted/ttf), and beside them NotoSansThai-Regular.ttf and -Medium.ttf (fonts/NotoSansThai/hinted/ttf),
-for the Thai letters in names, and NotoSansHebrew-Regular.ttf and -Medium.ttf for Hebrew's. <Noto Sans CJK dir> holds NotoSansKR-{Regular,Medium}.otf and
-NotoSansHK-{Regular,Medium}.otf from the official https://github.com/notofonts/noto-cjk (Sans/SubsetOTF/KR and HK). All are
+for the Thai letters in names, and NotoSansHebrew-Regular.ttf and -Medium.ttf for Hebrew's. <Noto Sans CJK dir> holds
+NotoSans{KR,HK,JP,SC}-{Regular,Medium}.otf from https://github.com/notofonts/noto-cjk (Sans/SubsetOTF). All are
 under the SIL Open Font License 1.1 (licences/Inter-OFL.txt, licences/NotoSansGeorgian-OFL.txt,
 licences/NotoSansCJK-OFL.txt, licences/NotoSansThai-OFL.txt, licences/NotoSansHebrew-OFL.txt). Needs fontTools.
 
@@ -19,7 +19,8 @@ Vietnamese and others lost letters to Public Sans. Each is now Inter cut down to
 Cyrillic, with Noto Sans Georgian's letters added, drawn at Inter's size. Android's CJK font didn't reach Ink on the Titan
 2 Elite (한국어 and the Chinese names were blank), so the Hangul and Chinese characters the app's own text uses (input
 method names in android/assets/im/index.json, and the TypeScript in app/ and lib/) are added too, from Noto Sans CJK: Korean
-from its Korean cut, Chinese from its Hong Kong cut. Run this again when a new name or text brings a new one;
+from its Korean cut, Chinese from its Hong Kong cut, and characters missing there from the Japanese and Simplified Chinese
+cuts. Run this again when a new name or text brings a new one;
 tests/languages fails until then.
 
 Every input method's how-to is the app's own text too (owner, 2026-11-17: Korean's how-to showed blanks where its letters were):
@@ -31,6 +32,7 @@ import glob
 import json
 import os
 import sys
+import tempfile
 
 from fontTools import subset
 from fontTools.pens.t2CharStringPen import T2CharStringPen
@@ -152,7 +154,7 @@ def add_glyphs(font, source_path, codes):
         if name is None:
             sys.exit("U+%04X isn't in %s" % (code, source_path))
         width = round(glyphs[name].width * scale)
-        pen = T2CharStringPen(width, None)
+        pen = T2CharStringPen(width, glyphs)
         glyphs[name].draw(TransformPen(pen, (scale, 0, 0, scale, 0, 0)))
         charstring = pen.getCharString(private=top.Private, globalSubrs=cff.GlobalSubrs)
         new = "uni%04X" % code
@@ -174,28 +176,34 @@ def add_glyphs(font, source_path, codes):
     return len(added)
 
 
-def devanagari_font(path, weight):
+def devanagari_font(path, weight, folder):
     """Noto Sans Devanagari at [weight]: the variable font's default (400) for Regular, its weight 500 for Medium."""
     font = TTFont(path)
     if weight == "Medium" and "fvar" in font:
         from fontTools.varLib import instancer
         font = instancer.instantiateVariableFont(font, {"wght": 500})
-    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".devanagari-%s.ttf" % weight)
+    out = os.path.join(folder, "devanagari-%s.ttf" % weight)
     font.save(out)
     return out
 
 
-def rest_of_howtos(font, sources):
-    """Every how-to character [font] still lacks, from the first of [sources] that has it. Exits on one none has."""
-    have = set(font.getBestCmap())
-    wanted = sorted({ord(c) for chunk in howto_text() for c in chunk if ord(c) > 0x7F and not c.isspace()} - have)
-    groups = {}
-    for code in wanted:
-        source = next((path for path in sources if path and code in TTFont(path, lazy=True).getBestCmap()), None)
-        if source is None:
-            sys.exit("U+%04X in a how-to is in none of the sources: give Noto Sans Devanagari, or add a source" % code)
-        groups.setdefault(source, []).append(code)
-    return sum(add_glyphs(font, source, codes) for source, codes in groups.items())
+def add_missing(font, codes, sources):
+    """Use the first source with an outline for each missing character."""
+    wanted = set(codes).difference(font.getBestCmap())
+    count = 0
+    for path in sources:
+        if not wanted:
+            break
+        if not path:
+            continue
+        with TTFont(path, lazy=True) as source:
+            available = wanted.intersection(source.getBestCmap())
+        if available:
+            count += add_glyphs(font, path, sorted(available))
+            wanted.difference_update(available)
+    if wanted:
+        sys.exit("U+%04X in a how-to is in none of the sources: give Noto Sans Devanagari, or add a source" % min(wanted))
+    return count
 
 
 def main():
@@ -205,18 +213,22 @@ def main():
     for weight in ("Regular", "Medium"):
         font = cut(os.path.join(inter, "Inter-%s.otf" % weight))
         georgian_path = os.path.join(georgian, "NotoSansGeorgian-%s.ttf" % weight)
+        cjk_paths = [os.path.join(cjk, "NotoSans%s-%s.otf" % (region, weight)) for region in ("HK", "JP", "SC", "KR")]
         count = add_glyphs(font, georgian_path, [c for c in GEORGIAN if c in TTFont(georgian_path).getBestCmap()])
         # Thai's letters in names, from Noto Sans Thai beside Noto Sans Georgian (names only: Ink doesn't place Thai's marks).
         add_glyphs(font, os.path.join(georgian, "NotoSansThai-%s.ttf" % weight), names_in(is_thai))
         # Hebrew's, from Noto Sans Hebrew beside them; Ink orders right-to-left text itself.
         add_glyphs(font, os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight), names_in(is_hebrew))
         count_hangul = add_glyphs(font, os.path.join(cjk, "NotoSansKR-%s.otf" % weight), hangul)
-        count_han = add_glyphs(font, os.path.join(cjk, "NotoSansHK-%s.otf" % weight), han)
-        # The how-tos' other letters: kana, Hebrew, Devanagari, Bopomofo and the rest, from the first source that has each.
-        count_howto = rest_of_howtos(font, [
-            os.path.join(inter, "Inter-%s.otf" % weight), georgian_path, os.path.join(georgian, "NotoSansThai-%s.ttf" % weight), os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight),
-            os.path.join(cjk, "NotoSansKR-%s.otf" % weight), os.path.join(cjk, "NotoSansHK-%s.otf" % weight),
-            devanagari_font(devanagari, weight) if devanagari else None])
+        count_han = add_missing(font, han, cjk_paths)
+        # The remaining language copy needs kana, Hebrew, Devanagari, Bopomofo and other outlines.
+        howto_codes = {ord(c) for chunk in howto_text() for c in chunk if not c.isspace() and ord(c) > 0x7F}
+        with tempfile.TemporaryDirectory() as temp:
+            count_howto = add_missing(font, howto_codes, [
+                os.path.join(inter, "Inter-%s.otf" % weight), georgian_path,
+                os.path.join(georgian, "NotoSansThai-%s.ttf" % weight),
+                os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight), *cjk_paths,
+                devanagari_font(devanagari, weight, temp) if devanagari else None])
         out = os.path.join(ROOT, "assets", "fonts", "Inter-%s.otf" % weight)
         font.save(out)
         print("%s: %d glyphs, %d Georgian, %d Hangul, %d Chinese, %d more for the how-tos, %d bytes"

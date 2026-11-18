@@ -61,7 +61,7 @@ def check_swipe_slide():
     except Stop:
         after = None
     record("guide-swipe-keys", before is not None and after == before,
-           f"the slide's field before {before!r}, after A, S and Backspace {after!r}", guide_checks.shot("guide-swipe-keys"))
+           f"the slide's field before {before!r}, after A, S and Backspace {after!r}")
     guide_checks.leave_guide()
 
 

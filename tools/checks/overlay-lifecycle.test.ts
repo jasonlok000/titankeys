@@ -32,7 +32,7 @@ test("at each field start the keyboard's own overlay goes back on top of other a
   // The new window is added before the old one goes: never none, never two.
   expect(raise.indexOf("added()")).toBeLessThan(raise.indexOf("removeViewImmediate(old)"));
   expect(raise).toContain("view = fresh");
-  const start = ime.slice(ime.indexOf("override fun onStartInput("), ime.indexOf("override fun onStartInput(") + 6000);
+  const start = ime.match(/^    override fun onStartInput\([\s\S]*?^    }/m)?.[0];
   expect(start).toContain("updateOverlay(raise = editing)");
   expect(ime).toContain("if (wanted && raise) overlay.raise()");
   // The Back service's window isn't raised: Android stacks it by when the service connected, so adding it again does nothing.

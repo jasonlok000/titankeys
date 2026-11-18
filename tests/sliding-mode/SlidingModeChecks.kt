@@ -70,6 +70,46 @@ fun main() {
     check(!SlidingModeList.trustworthy("yes", "yes", sameField = true, mode1Touch = false), "Sliding Mode 1 is never outside it")
     check(SlidingModeList.trustworthy("no", "no", sameField = true, mode1Touch = false), "Two readings that agree, in the same field")
 
+    check(!SlidingModeList.trustworthy("unknown", "unknown", true, false), "Unknown matching values are not negative evidence")
+    val migrated = SlidingModeList.restored(setOf(CHROME, SETTINGS), setOf(NOTES), 0)
+    check(migrated.outside.isEmpty() && migrated.suspects.isEmpty(), "Old evidence is discarded once for fresh confirmation")
+    val current = SlidingModeList.restored(setOf(NOTES, SETTINGS), setOf(CHROME, SETTINGS), SlidingModeList.EVIDENCE_VERSION)
+    check(current.outside == setOf(NOTES) && current.suspects == setOf(CHROME), "Current evidence survives, Android Settings never does")
+    current.outsideReading(SETTINGS); current.outsideReading(SETTINGS)
+    check(SETTINGS !in current.outside && SETTINGS !in current.suspects, "Settings is absent from the vendor picker and never flagged")
+
+    val connection = Any()
+    val session = SlidingModeField(CHROME, 7, connection)
+    var sample = session.begin().also { it.early = "no" }
+    check(!session.negative(sample, "no", true), "Merely opening a focused field contributes no negative vote")
+    session.interacted = true
+    sample = session.begin().also { it.early = "no" }
+    check(session.negative(sample, "no", true), "An interacted field can contribute its first confirmed vote")
+    check(!session.negative(sample, "no", true), "A duplicate late callback cannot vote twice")
+    check(session.resume(CHROME, 7, connection, false), "Repeated view start on the same connection keeps the session")
+    sample = session.begin().also { it.early = "no" }
+    check(!session.negative(sample, "no", true), "Repeated view start does not become a second field")
+    val restarted = Any()
+    check(session.resume(CHROME, 7, restarted, true), "Restarting the same field may replace its input connection")
+    sample = session.begin().also { it.early = "no" }
+    check(!session.negative(sample, "no", true), "A restarted input connection preserves the consumed vote")
+    check(!session.owns(CHROME, 7, connection) && session.owns(CHROME, 7, restarted), "Only the live connection owns readings")
+    check(!session.resume(CHROME, 8, restarted, true), "A different field id is a different field even during restart")
+    check(!session.resume(NOTES, 7, restarted, true), "Another app cannot inherit a field session")
+    check(!session.resume(CHROME, 7, Any(), false), "A new non-restarting connection starts another session")
+
+    val delayed = SlidingModeField(NOTES, 2, connection).also { it.interacted = true }
+    val stale = delayed.begin().also { it.early = "no" }
+    val fresh = delayed.begin().also { it.early = "no" }
+    check(!delayed.negative(stale, "no", true), "A view restart invalidates older timed pairs")
+    check(!delayed.negative(fresh, null, true), "An unknown late reading does not consume the vote")
+    check(!delayed.negative(fresh, "no", false), "Losing the actual field invalidates the pair")
+    check(delayed.negative(fresh, "no", true), "A later valid pair still works after unknown evidence")
+    val touched = SlidingModeField(NOTES, 3, connection).also { it.interacted = true; it.mode1Touch = true }
+    check(!touched.negative(touched.begin().also { it.early = "no" }, "no", true), "Mode 1 touch wins over negative readings for the whole session")
+    val disconnected = SlidingModeField(NOTES, 4, null).also { it.interacted = true }
+    check(!disconnected.negative(disconnected.begin().also { it.early = "no" }, "no", true), "An unidentified connection cannot flag an app")
+
     if (failures > 0) {
         println("$failures Sliding Mode check(s) failed")
         kotlin.system.exitProcess(1)

@@ -6,6 +6,7 @@ export TK_APP=com.titankeys.debug TK_NO_PHONE=1 TK_OUT="${TMPDIR:-/tmp}"
 . tools/dev/touch/touchlib.sh
 unset TK_CUTOFF_EPOCH TK_RUN_STATUS_FILE TK_OWNER_POLL_S
 tk_front() { echo owner; }
+tk_home_package() { echo com.example.launcher; }
 polls=0
 tk_owner_app() { [ "$polls" -lt 95 ]; }
 sleep() {

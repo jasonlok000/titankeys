@@ -55,11 +55,11 @@ def check_spanish_howto():
             return record("howto-es", None, "no Español row found on Settings > Languages", guide_checks.shot("howto-es"))
         step("tap", str(row[0]), str(row[1]))
         xml = screen_dump()
-        shot = guide_checks.shot("howto-es")
         found = HOWTO in xml or HOWTO.replace("ñ", "&#241;") in xml
         # Ink may draw the page's text itself, out of the dump's reach: then the shot says.
         record("howto-es", True if found else None,
-               f"the how-to {'read from the dump' if found else 'not in the dump: see the shot'}", shot)
+               f"the how-to {'read from the dump' if found else 'not in the dump: read the page itself'}",
+               None if found else guide_checks.shot("howto-es"))
     finally:
         for _ in range(4):
             if f" {APP}/" in languages.front() and not languages.in_field():

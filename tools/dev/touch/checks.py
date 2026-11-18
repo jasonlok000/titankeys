@@ -8,17 +8,20 @@ shared phone lock from start to end.
 
 Usage: checks.py [NAME...]   (default: all; see --list)
        checks.py --batch NAME  (a whole batch unattended, Debug the keyboard throughout; see BATCHES)
-Screenshots go to $TK_OUT/touch/shots, without the status bar, for what only the eye can judge (the dots, the trail, the pill).
+       checks.py --plan {t7,rerun,t8} BATCH...  (plan offline; use --help after --plan for reuse options)
+Failure and visual-evidence screenshots go to $TK_OUT/touch/shots, without the status bar.
 """
 import importlib
 import json
 import os
+from pathlib import Path
 import tempfile
 import re
 import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ElementTree
+import batch_plan
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 APP = os.environ.get("TK_APP", "com.titankeys.debug")
@@ -41,6 +44,8 @@ def play(*gestures, shot=None, at=0):
     """Plays gestures through touch.sh; with shot, a screenshot at ms after the start goes to shots/NAME.png."""
     command = ["bash", os.path.join(HERE, "touch.sh"), *gestures]
     env = dict(os.environ)
+    env.pop("TK_TOUCH_SHOT", None)
+    env.pop("TK_TOUCH_SHOT_AT", None)
     if shot:
         env.update(TK_TOUCH_SHOT=shot, TK_TOUCH_SHOT_AT=str(at))
     result = subprocess.run(command, capture_output=True, text=True, env=env)
@@ -50,6 +55,56 @@ def play(*gestures, shot=None, at=0):
     if result.returncode != 0:
         raise RuntimeError(out)
     time.sleep(.6)
+
+
+def capture_focus(window):
+    """A visible Debug window with at most the ordinary system bars over it."""
+    if re.search(r"\b(?:mShowingLockscreen|mDreamingLockscreen|isKeyguardShowing|mKeyguardShowing)=true\b", window):
+        return None
+    match = re.search(rf"(?m)^[ \t]*mCurrentFocus=(Window\{{\S+ u0 {re.escape(APP)}/[^}}\n]+\}})[ \t]*$", window)
+    if not APP.endswith(".debug") or not match:
+        return None
+    focus = match[1]
+    seen = False
+    for block in re.split(r"(?m)^[ \t]*Window #\d+ ", window)[1:]:
+        title, _, attrs = block.partition("\n")
+        if not re.search(r"\b(?:isVisible|isOnScreen|isReadyForDisplay\(\))=true\b", attrs):
+            continue
+        package = re.search(r"(?m)^\s*mOwnerUid=[^\n]*?\bpackage=([\w.]+)", attrs)
+        if package and package[1] == APP:
+            seen |= title.strip().removesuffix(":") == focus
+        elif not (package and package[1] == "com.android.systemui" and re.search(r"\bu0 (?:StatusBar|NavigationBar\d*)\}:?$", title)):
+            return None
+    return focus if seen else None
+
+
+def capture(name):
+    """Take a settled failure or visual reference, without reclaiming focus or switching the keyboard."""
+    if os.environ.get("TK_NO_PHONE") == "1" or not re.fullmatch(r"[\w.-]+", name):
+        return None
+    try:
+        window = adb("shell", "dumpsys", "window", timeout=15)
+        focus = capture_focus(window)
+        if not focus:
+            return None
+        command = ["adb", *(["-s", SERIAL] if SERIAL else []), "exec-out", "screencap", "-p"]
+        shot = subprocess.run(command, capture_output=True, check=True, timeout=20).stdout
+        if capture_focus(adb("shell", "dumpsys", "window", timeout=15)) != focus or not shot.startswith(b"\x89PNG\r\n\x1a\n"):
+            return None
+        bar = re.search(r"statusBars[^\n]*?frame=\[\d+,\d+\]\[\d+,(\d+)\]", window)
+        folder = Path(os.environ.get("TK_OUT", "~/tk-out")).expanduser() / "touch" / "shots"
+        folder.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=folder) as tmp:
+            raw = Path(tmp, f"raw-{name}.png")
+            raw.write_bytes(shot)
+            command = [os.environ.get("TK_PIL_PYTHON", "python3"), os.path.join(HERE, "../phone/crop.py"),
+                       str(raw), bar[1] if bar else "40", "0", "mInputShown=false"]
+            subprocess.run(command, capture_output=True, check=True, timeout=20)
+            for suffix in (".png", "-half.png"):
+                Path(tmp, name + suffix).replace(folder / (name + suffix))
+        return name
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def guarded(*args):
@@ -111,6 +166,8 @@ def set_text(text):
 
 def record(name, ok, detail, shot=None):
     verdict = "YES" if ok is True else "NO" if ok is False else "LOOK"
+    if ok is False and not shot:
+        shot = capture(f"{name}-no")
     results.append((name, verdict))
     details.append((name, verdict, detail, shot))
     print(f"{verdict:4} {name}: {detail}" + (f" (shots/{shot}.png)" if shot else ""), flush=True)
@@ -126,7 +183,8 @@ def check_89_flick_end():
         return record("89-flick-end", None, f"setup typed {len(before)} characters, not {len(text)}: check autocorrect")
     play("flick", shot="89-flick-dots", at=60)
     after = field()
-    record("89-flick-end", after == text[:-len("dog")], f"{len(text)} -> {len(after)} characters", "89-flick-dots")
+    record("89-flick-end", after == text[:-len("dog")], f"{len(text)} -> {len(after)} characters")
+    record("89-flick-dots", None, "Dots during the delete flick", "89-flick-dots")
 
 
 def check_89_long_delete():
@@ -141,7 +199,8 @@ def check_89_long_delete():
     after = field()
     gone = len(before) - len(after)
     record("89-long-delete", 0 < gone < len(before) and before.startswith(after),
-           f"{gone} of {len(before)} characters deleted in a 14 s hold (stops at 10 s); the chomper is the shot", "89-chomper")
+           f"{gone} of {len(before)} characters deleted in a 14 s hold (stops at 10 s)")
+    record("89-chomper", None, "The delete animation while the finger is down", "89-chomper")
 
 
 def check_89_long_word():
@@ -160,7 +219,8 @@ def check_93_flick_then_swipe():
     set_text("we are going to the")
     play("flick", "+40", "swipe:it", shot="93-trail", at=230)
     after = field()
-    record("93-flick-then-swipe", after.rstrip() == "we are going to it", f"field ends with {after[-12:]!r}", "93-trail")
+    record("93-flick-then-swipe", after.rstrip() == "we are going to it", f"field ends with {after[-12:]!r}")
+    record("93-trail", None, "The whole swipe trail after a flick", "93-trail")
 
 
 def check_83_pairs():
@@ -253,13 +313,16 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "evening": "evening_batch"}
 
 
-def report(name, stamp, hands):
+def report(name, stamp, hands, finished=False):
     """One file with every result, its shot and what's left for hands: $TK_OUT/touch/report-NAME-STAMP.md."""
     out = os.path.join(os.environ.get("TK_OUT", os.path.expanduser("~/tk-out")), "touch")
     os.makedirs(out, exist_ok=True)
     path = os.path.join(out, f"report-{name}-{stamp}.md")
     counts = {v: sum(1 for _, each, _, _ in details if each == v) for v in ("YES", "NO", "LOOK")}
     lines = [f"# {name}, {stamp}", "", f"{counts['YES']} YES, {counts['NO']} NO, {counts['LOOK']} to look at", ""]
+    partial_languages = name in ("gestures", "languages") and os.environ.get("TK_LANG_FROM")
+    if finished and counts["YES"] and not counts["NO"] and not counts["LOOK"] and not hands and not partial_languages:
+        lines += [batch_plan.REUSABLE, ""]
     for check, verdict, detail, shot in details:
         lines.append(f"- **{verdict}** {check}: {detail}" + (f" (`shots/{shot}.png`)" if shot else ""))
     if hands:
@@ -416,6 +479,7 @@ def run_batch(name):
     module = importlib.import_module(BATCHES[name])
     stamp = time.strftime("%Y%m%d-%H%M%S")
     stopped = None
+    finished = False
     try:
         # Inside the try: a gate that fails here still gets its report and release back (2026-11-16, after a crash dialog).
         wait_cool()  # before the first gate, which would stop on the battery warning
@@ -440,6 +504,7 @@ def run_batch(name):
             run_status()
         if hasattr(module, "finish"):
             module.finish()
+        finished = True
     except Stop as stop:
         stopped = stop
         record("batch", None, f"STOP: {stop}" if str(stop).startswith("crash") else f"STOP, the run ended: {stop}")
@@ -449,7 +514,7 @@ def run_batch(name):
         if os.environ.get("TK_BATCH_KEEP_DEBUG") != "1":
             keyboard("release")
         run_status(final=True)  # this batch's results join the run's totals
-        path = report(name, stamp, getattr(module, "HANDS", []))
+        path = report(name, stamp, getattr(module, "HANDS", []), finished)
         print(f"report: {path}", flush=True)
     return stopped
 
@@ -462,11 +527,13 @@ def lock():
 
 
 def main():
+    names = sys.argv[1:]
+    if names[:1] == ["--plan"]:
+        return batch_plan.main(names[1:], BATCHES)
     # The guide's checks live in guide_checks.py, which uses this module's helpers: the same module, not a second copy of it.
     sys.modules.setdefault("checks", sys.modules[__name__])
     import guide_checks
     CHECKS.update(guide_checks.CHECKS)
-    names = sys.argv[1:]
     if names[:1] == ["--batch"]:
         if len(names) != 2 or names[1] not in BATCHES:
             sys.exit(f"--batch takes one of: {', '.join(BATCHES)}")

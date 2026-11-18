@@ -98,7 +98,7 @@ tk_owner_app() {
   local front home
   front=$(tk_front)
   grep -q " $TK_APP/" <<<"$front" && return 1
-  home=$(tk_home_package)
+  if [ "$#" = 0 ]; then home=$(tk_home_package); else home=$1; fi
   [ -n "$home" ] && grep -q " $home/" <<<"$front" && return 1
   return 0
 }
@@ -117,14 +117,10 @@ tk_debug_opened() {
 
 # Poll until the owner leaves the app or the overnight run reaches its overall cutoff.
 tk_wait_for_owner() {
-  local waited=0 step="${TK_OWNER_POLL_S:-20}"
-  echo "waiting: the owner's app is in front ($(tk_front | sed 's/.* u0 //; s/}.*//')); touching nothing"
-  # The run's notification says why it waits (checks.py's run_status left its last words beside its file). A broadcast, no touch.
-  if [ -n "${TK_RUN_STATUS_FILE:-}" ] && [ -s "$TK_RUN_STATUS_FILE.args" ]; then
-    # shellcheck disable=SC2046
-    tk_adb $(cat "$TK_RUN_STATUS_FILE.args") --es note "'waiting: another app in front'" --ez done false >/dev/null 2>&1
-  fi
-  while tk_owner_app; do
+  local waited=0 step="${TK_OWNER_POLL_S:-20}" home
+  home=$(tk_home_package)
+  echo "waiting: the owner's app is in front; touching nothing"
+  while tk_owner_app "$home"; do
     if [ -n "${TK_CUTOFF_EPOCH:-}" ] && [ "$(date +%s)" -ge "$TK_CUTOFF_EPOCH" ]; then
       echo "the overnight cutoff came while waiting for the owner"
       return 1

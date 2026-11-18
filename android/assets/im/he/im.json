@@ -64,18 +64,18 @@
     "words": "he_full.txt"
   },
   "starters": [
-    "הוא",
-    "לאחר",
-    "על",
-    "עם",
-    "בשנת",
-    "היא",
-    "של",
-    "את",
-    "בנוסף",
-    "במהלך",
-    "כמו",
-    "הם"
+    "שלום",
+    "תודה",
+    "אני",
+    "כן",
+    "לא",
+    "מה",
+    "יש",
+    "אפשר",
+    "היום",
+    "מחר",
+    "עכשיו",
+    "בטח"
   ],
   "howTo": [
     "Writes right to left, and the keys follow the Israeli PC layout: A is ש, E is ק. Q types ת, and W types ', for words like צ'יפס. Hold P for ף, M for ץ, and Q for /. Hebrew has no capitals, so Shift types the same letter. The bar reads right to left too: the best word stays in the middle, the next one on the right."

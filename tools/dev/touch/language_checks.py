@@ -11,6 +11,7 @@ can't be used on this phone.
 """
 import json
 import os
+import re
 import time
 
 import checks
@@ -93,11 +94,100 @@ def expected(im, keys):
     return out
 
 
+def saved_methods():
+    answer = adb("shell", "am", "broadcast", "-n", RECEIVER, "--ez", "read", "true")
+    match = re.search(r'data="on ([a-z0-9,-]+); typing ([a-z0-9-]+)"', answer)
+    return (match[1].split(","), match[2]) if match else ([], None)
+
+
+def field_in_front():
+    return languages.front().strip().endswith(f" u0 {checks.APP}/{languages.FIELD_ACTIVITY}}}")
+
+
+def active_method(on, ids):
+    """A live selection is only confirmed by both the saved method and Android's current Debug subtype."""
+    if not field_in_front():
+        return None
+    debug = os.environ.get("TK_DEBUG_IME", f"{checks.APP}/com.titankeys.keyboard.TitanKeysIme")
+    if adb("shell", "settings", "get", "secure", "default_input_method").strip() != debug:
+        return None
+    saved, current = saved_methods()
+    return current if saved == on and ids.get(languages.current_subtype()) == current else None
+
+
+def method_groups(on):
+    with open(os.path.join(languages.REPO, "android/assets/im/index.json"), encoding="utf-8") as file:
+        grouping = {entry["id"]: entry.get("language", {}).get("id", entry["id"]) for entry in json.load(file)}
+    groups = {}
+    for im in on:
+        groups.setdefault(grouping.get(im, im), []).append(im)
+    return [methods[:4] for methods in list(groups.values())[:4]]
+
+
+def pick_key(index, count):
+    """The first key over the tile, from SwitchOverlay.columns, counting W to O."""
+    width = 8 // count
+    return "qwertyuiop"[1 + (8 - width * count) // 2 + index * width]
+
+
+def switch_live(on, target):
+    """Use the guarded switcher within the existing set. Give up on any unverified transition."""
+    ids = languages.subtype_ids()
+    current = active_method(on, ids)
+    if current is None:
+        return False
+    if current == target:
+        return True
+    groups = method_groups(on)
+    wanted = next((group for group in groups if target in group), None)
+    if wanted is None or not any(current in group for group in groups):
+        return False
+
+    def observe(predicate):
+        for attempt in range(8):
+            method = active_method(on, ids)
+            if predicate(method):
+                return method
+            if attempt < 7:
+                time.sleep(.25)
+        return None
+
+    held = ["key:sym:900:none", "+500"]
+    if len(groups) == 2:
+        # Held Sym toggles to the other language's last-used method, not necessarily the target.
+        if current not in wanted:
+            play(*held)
+            current = observe(lambda method: method in wanted)
+            if current is None:
+                return False
+        if current != target:
+            # Q's language mark picks the other method, or opens this language's row when there are three or more.
+            checks.guarded("tap", "54", "1170")
+            if len(wanted) > 2:
+                play(f"key:{pick_key(wanted.index(target), len(wanted))}", "+500")
+    else:
+        moves = held
+        if len(groups) > 1:
+            moves += [f"key:{pick_key(groups.index(wanted), len(groups))}", "+500"]
+        if len(wanted) > 1:
+            moves += [f"key:{pick_key(wanted.index(target), len(wanted))}", "+500"]
+        play(*moves)
+    return observe(lambda method: method == target) == target
+
+
 def turn_on(on, current):
-    """Sets the input methods on and the one typing, then starts the field anew so the keyboard reads them: release TitanKeys,
-    then Debug again (Android's own entry doesn't move the keyboard; 2026-11-16's first run). The keyboard's own log line says
-    which input method the field started with."""
+    """Keep the live keyboard for confirmed switches within a set. Rebind for a changed set or unconfirmed switch."""
+    def regain_field():
+        if not field_in_front():
+            checks.keyboard("debug")  # The existing guard waits for the owner before restoring the test field.
+            if not field_in_front():
+                raise Stop("the Space gestures field could not be brought back")
+
+    regain_field()
     languages.logs_on(True)
+    if switch_live(on, current):
+        return True
+    regain_field()
     out = adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "on", ",".join(on), "--es", "current", current)
     if "typing " + current not in out:
         raise Stop(f"InputMethodsSet didn't take {current}: {out.strip()[-200:]}")
@@ -129,7 +219,9 @@ def fresh():
 
 
 def log_since(seen):
-    lines = languages.log_lines()[seen:]
+    lines = languages.log_lines()
+    if len(lines) > seen:
+        lines = lines[seen:]
     said = [line.split(":", 1)[-1].strip() for line in lines if "TitanKeysIM" in line][-2:]
     return " | ".join(said) or "nothing about input methods"
 
@@ -140,7 +232,6 @@ def one(im, on):
     if not languages.in_field():
         raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
     started = turn_on(on, im)
-    seen = 0  # turn_on cleared the log
     if not started:
         return record(f"lang-{im}", False, f"the field didn't start with {im}; the log: {log_since(seen)}")
     fresh()
@@ -157,9 +248,9 @@ def one(im, on):
     keys, want = OWN.get(im, (" ".join(PLAIN), None))
     keys = keys.split()
     want = want if want is not None else expected(im, keys)
-    play(*gestures(keys), "+400", shot=f"lang-{im}", at=len(keys) * 160 + 300)
+    play(*gestures(keys), "+400")
     text = checks.field()
-    record(f"lang-{im}", text == want, f"typed {text!r}, wanted {want!r}; the log: {log_since(seen)}", f"lang-{im}")
+    record(f"lang-{im}", text == want, f"typed {text!r}, wanted {want!r}; the log: {log_since(seen)}")
 
 
 def check_all():

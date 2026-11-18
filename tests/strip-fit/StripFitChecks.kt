@@ -11,9 +11,8 @@ fun main() {
     fun check(condition: Boolean, message: String) {
         if (!condition) failures += message
     }
-    same(StripFit.markBaseline(53f, -31, 4, 1f, 90f), 66.5f, "Visible mark shares the capitals' middle")
-    same(StripFit.markBaseline(53f, -31, 4, .5f, 90f), 59.75f, "A shrunken mark shares the same middle")
-    same(StripFit.markBaseline(53f, -31, 4, 1f, 62f), 58f, "Move the mark up if its ink would be cut off")
+    same(StripFit.markOffset(1076), -3f, "The mark uses the offset chosen on the Titan")
+    same(StripFit.markOffset(538), -1.5f, "The mark's offset scales with the bar width")
     // Every letter is 10 wide, and the ellipsis too.
     val measure: (String) -> Float = { it.length * 10f }
     fun fits(slots: List<StripFit.Slot>) = slots.all { measure(it.text) * it.scale <= it.width - 10f + .01f }

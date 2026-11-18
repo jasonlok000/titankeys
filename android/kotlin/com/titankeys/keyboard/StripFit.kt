@@ -75,9 +75,8 @@ internal object StripFit {
      */
     fun baseline(line: Float, size: Float, floor: Float) = minOf(baseline(line, size), floor - size * DESCENT)
 
-    /** Aligns the mark's painted bounds to the visible capitals and keeps it above the bottom edge. */
-    fun markBaseline(capitals: Float, top: Int, bottom: Int, scale: Float, floor: Float): Float =
-        minOf(capitals - (top + bottom) * scale / 2, floor - bottom * scale)
+    /** The owner picked an upward shift of 3 pixels on the Titan's 1,076-pixel display. */
+    fun markOffset(width: Int): Float = -3f * width / 1076f
 
     /**
      * Where a one-line text view starts its text, as its top padding with its gravity at the top, so that its baseline is the

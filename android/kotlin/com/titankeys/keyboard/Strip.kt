@@ -973,7 +973,6 @@ class Strip(
         }
 
     private val pickerText = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-    private val markInkBounds = android.graphics.Rect()
 
     /**
      * The picker (docs/languages.md, "Accents and the picker on the bar"): each item centred over its keys on the bar's line, in
@@ -990,7 +989,7 @@ class Strip(
         // The input method's mark over Q, in the accent, and P's cue when there are more choices: each kept to its key.
         if (picker.mark.isNotEmpty()) {
             pickerText.color = look.accent
-            drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline, alignMark = true)
+            drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline + StripFit.markOffset(width))
         }
         if (picker.more) {
             // Orange while a code is typed: Shift opens the bigger menu.
@@ -1020,21 +1019,15 @@ class Strip(
     }
 
     /** [text] centred over key [column] on the bar's line, shrunk to the key, in [pickerText]'s colour. */
-    private fun drawOnKey(canvas: Canvas, text: String, column: Int, baseline: Float, alignMark: Boolean = false) {
+    private fun drawOnKey(canvas: Canvas, text: String, column: Int, baseline: Float) {
         val left = maxOf(menuColumn(column).first, side.toFloat())
         val right = minOf(menuColumn(column).second, (width - side).toFloat())
         val room = right - left - dp(4)
         val textWidth = pickerText.measureText(text)
         val scale = if (textWidth > room && textWidth > 0f) room / textWidth else 1f
-        val y = if (alignMark) {
-            pickerText.getTextBounds("H", 0, 1, markInkBounds)
-            val capitals = baseline + markInkBounds.exactCenterY()
-            pickerText.getTextBounds(text, 0, text.length, markInkBounds)
-            StripFit.markBaseline(capitals, markInkBounds.top, markInkBounds.bottom, scale, floor)
-        } else baseline
         canvas.save()
-        canvas.scale(scale, scale, (left + right) / 2, y)
-        canvas.drawText(text, (left + right) / 2 - textWidth / 2, y, pickerText)
+        canvas.scale(scale, scale, (left + right) / 2, baseline)
+        canvas.drawText(text, (left + right) / 2 - textWidth / 2, baseline, pickerText)
         canvas.restore()
     }
 
@@ -1076,13 +1069,14 @@ class Strip(
         if (markIsSmall()) {
             canvas.save()
             val x = side.toFloat() / 2 + dp(2)
-            canvas.scale(INPUT_MARK_SMALL, INPUT_MARK_SMALL, x, dp(4).toFloat())
-            canvas.drawText(inputMark, x, dp(4) - pickerText.ascent(), pickerText)
+            val y = dp(4) + StripFit.markOffset(width)
+            canvas.scale(INPUT_MARK_SMALL, INPUT_MARK_SMALL, x, y)
+            canvas.drawText(inputMark, x, y - pickerText.ascent(), pickerText)
             canvas.restore()
             return
         }
-        val baseline = StripFit.baseline(line, pickerText.textSize, floor)
-        drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline, alignMark = true)
+        val baseline = StripFit.baseline(line, pickerText.textSize, floor) + StripFit.markOffset(width)
+        drawOnKey(canvas, inputMark, ChineseRow.MARK, baseline)
         // Only the mark drawn over Q is touched: small in the corner, a touch there is the left word's.
         markRight = menuColumn(ChineseRow.MARK).second
     }

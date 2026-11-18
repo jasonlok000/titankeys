@@ -1148,16 +1148,18 @@ def family_of(im):
 
 def guide_of(im, experimental):
     ident, engine, keys = im["id"], engine_name(im), im.get("keys")
-    shown, shifted, held = {}, {}, {}
+    shown, shifted, held, held_shift = {}, {}, {}, {}
     if isinstance(keys, dict):
         for key, value in keys.items():
-            base, shift, hold, _ = key_letters(value)
+            base, shift, hold, hold_shift = key_letters(value)
             if base and base != key:
                 shown[key] = base
             if shift and shift != (base or key).upper():
                 shifted[key] = shift
             if hold:
                 held[key] = hold
+            if hold_shift:
+                held_shift[key] = hold_shift
     if ident in ENGINE_MAPS:
         shown, shifted = dict(ENGINE_MAPS[ident][0]), dict(ENGINE_MAPS[ident][1])
     chinese = im.get("script") == "Hani"
@@ -1175,7 +1177,9 @@ def guide_of(im, experimental):
     return {"status": "experimental" if experimental else "ready", "family": family_of(im), "line": "", "points": [],
             "practice": "",
             "keys": {"legend": "", **({"map": shown} if shown else {}), **({"shift": shifted} if shifted else {}),
-                     **({"held": held} if held else {}),
+                     **({"held": held} if held else {}), **({"heldShift": held_shift} if held_shift else {}),
+                     **({"accents": im["accents"]} if im.get("accents") else {}),
+                     "capitals": bool(im["rules"].get("capitalise")),
                      "roles": [{"key": key, "role": role} for key, role in roles.items()]}}
 
 
@@ -1194,7 +1198,9 @@ def write_guides():
             json.dump(im, f, ensure_ascii=False, indent=2)
             f.write("\n")
         languages.setdefault(language["id"], []).append(im)
-    out = {}
+    # English is built in, so it has no im.json. Its page still uses the same setting metadata.
+    languages["en"] = [{"id": "en", "script": "Latn", "rules": {"capitalise": True}}]
+    out = {"$global": {"settings": [{"id": "learn", "level": "global", "available": True}]}}
     for lang, ims in sorted(languages.items()):
         settings = []
         for row, level in GUIDE_SETTINGS:

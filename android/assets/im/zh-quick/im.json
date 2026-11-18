@@ -92,6 +92,7 @@
         "n": "弓",
         "m": "一"
       },
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

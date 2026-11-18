@@ -113,6 +113,7 @@
         "w": "ჭ",
         "z": "ძ"
       },
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

@@ -54,6 +54,14 @@
     "practice": "Dia duit, conas atá tú?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "á",
+        "e": "é",
+        "i": "í",
+        "o": "ó",
+        "u": "ú"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

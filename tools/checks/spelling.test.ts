@@ -43,6 +43,6 @@ test("Settings' Languages comes first, and English spelling is on English's page
   expect(settings.indexOf('<Section title="Languages">')).toBe(firstSection);
   expect(languages).toBeLessThan(settings.indexOf('<Section title="Typing">'));
   const page = await read("app/settings/languages/language.tsx");
-  expect(page).toMatch(/language\.id === "en" && [^]*href="\/settings\/spelling"/);
-  expect(page).toMatch(/language\.id === "zh" && [^]*href="\/settings\/chinese"/);
+  expect(page).toMatch(/has\("spelling"\) && [^]*href="\/settings\/spelling"/);
+  expect(page).toMatch(/has\("chineseCharacters"\) && [^]*href="\/settings\/chinese"/);
 });

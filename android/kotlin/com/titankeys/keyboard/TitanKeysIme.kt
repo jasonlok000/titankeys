@@ -1670,7 +1670,9 @@ class TitanKeysIme : InputMethodService() {
         // types in the input methods that are on, and a held Sym opens the switcher there (owner, 2026-11-17: "long press for
         // sym doesn't trigger the language selection in the playground").
         languages.englishOnly = inGuide
-        languages.refresh()
+        val info = currentInputEditorInfo
+        val sample = if (editing) PracticeInputMethod.requested(info?.packageName, packageName, info?.privateImeOptions) else null
+        languages.refresh(sample)
         // Which input methods are on may have changed, and with them the mark at Q.
         if (::languages.isInitialized) showInputMark()
         languages.variant()
@@ -4357,7 +4359,7 @@ class TitanKeysIme : InputMethodService() {
      * ([SwitchOverlay.markTap]). One input method: nothing, no haptic.
      */
     private fun tapMark() {
-        if (!editing || !::languages.isInitialized) return
+        if (!editing || !::languages.isInitialized || languages.practising) return
         val on = SwitchOverlay.shown(InputMethodIndex.group(languages.on))
         when (val pick = SwitchOverlay.markTap(on, languages.current.id)) {
             is SwitchPick.To -> {
@@ -4387,8 +4389,8 @@ class TitanKeysIme : InputMethodService() {
      * sooner, its press now goes on as Sym always does, and then its release.
      */
     /** Why a Sym press won't wait for a hold to open the switcher, or null when it will ([SymHold]). */
-    private fun symWhyNot() = SymHold.whyNot(languages.on.size, languages.englishOnly, panelOpen, modifiers.alt != Modifiers.Level.Off,
-        inGuide, field.exact, pendingInput.size)
+    private fun symWhyNot() = SymHold.whyNot(if (languages.practising) 1 else languages.on.size, languages.englishOnly,
+        panelOpen, modifiers.alt != Modifiers.Level.Off, inGuide, field.exact, pendingInput.size)
 
     /** An engine's code is being built on the bar. */
     private fun codePending() = (openPicker() as? LanguagePicker.Choices)?.state?.composing == true
@@ -4469,6 +4471,7 @@ class TitanKeysIme : InputMethodService() {
         // new one's come (Composer.wordsChanged). Before the keys that waited for the load go on, so theirs are the new one's.
         if (editing) composer.wordsChanged()
         loadEnded()
+        if (languages.practising) return
         if (editing) showHoldHint()
         openChinesePage(method)
         val id = InputMethodList.ownId(this) ?: return

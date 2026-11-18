@@ -58,6 +58,16 @@
     "practice": "Günaydın, nasılsın?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "â",
+        "c": "ç",
+        "g": "ğ",
+        "i": "ıî",
+        "o": "ö",
+        "s": "ş",
+        "u": "ü"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

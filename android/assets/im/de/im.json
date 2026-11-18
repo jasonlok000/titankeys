@@ -54,6 +54,14 @@
     "practice": "Schöne Grüße",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "ä",
+        "e": "é",
+        "o": "ö",
+        "s": "ß",
+        "u": "ü"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

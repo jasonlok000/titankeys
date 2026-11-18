@@ -49,6 +49,7 @@
     "practice": "Xin chào",
     "keys": {
       "legend": "",
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

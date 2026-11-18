@@ -52,6 +52,12 @@
     "practice": "Hvala, dobro",
     "keys": {
       "legend": "",
+      "accents": {
+        "c": "č",
+        "s": "š",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

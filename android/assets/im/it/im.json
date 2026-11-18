@@ -54,6 +54,14 @@
     "practice": "Perché è così",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "à",
+        "e": "éè",
+        "i": "ì",
+        "o": "ò",
+        "u": "ù"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

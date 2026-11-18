@@ -124,6 +124,12 @@
         "p": "ף",
         "q": "/"
       },
+      "heldShift": {
+        "m": "ץ",
+        "p": "ף",
+        "q": "/"
+      },
+      "capitals": false,
       "roles": [
         {
           "key": "shift",

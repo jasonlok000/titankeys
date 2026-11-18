@@ -56,6 +56,16 @@
     "practice": "Ça va très bien",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "àâæ",
+        "c": "ç",
+        "e": "éèêë",
+        "i": "îï",
+        "o": "ôœ",
+        "u": "ùûü",
+        "y": "ÿ"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

@@ -54,6 +54,14 @@
     "practice": "Één café",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "áä",
+        "e": "éëè",
+        "i": "íï",
+        "o": "óö",
+        "u": "úü"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

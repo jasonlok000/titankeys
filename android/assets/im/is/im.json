@@ -57,6 +57,17 @@
     "practice": "Góðan daginn",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "áæ",
+        "d": "ð",
+        "e": "é",
+        "i": "í",
+        "o": "óö",
+        "t": "þ",
+        "u": "ú",
+        "y": "ý"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

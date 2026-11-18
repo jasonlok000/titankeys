@@ -54,6 +54,14 @@
     "practice": "Tänan, hästi",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "ä",
+        "o": "õö",
+        "s": "š",
+        "u": "ü",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

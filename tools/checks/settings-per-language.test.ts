@@ -23,7 +23,7 @@ test("a language's page shows only its own rows, writes only its own values, and
   for (const row of ["fixes", "capitals", "sentenceSpaces", "commaSpace", "doubleSpace", "hold", "swipe", "shorthand"])
     expect(page).toContain(`has("${row}")`);
   expect(page).toContain("save.run({ languageSettings: { [language.id]: values } })");
-  expect(page).toContain("Typing settings for each language now live on its page.");
+  expect(page).toContain("pageText.page.moved");
   expect(page).toContain("void markLanguageNoteSeen();");
 });
 

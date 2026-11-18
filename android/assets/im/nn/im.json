@@ -52,6 +52,12 @@
     "practice": "Korleis går det?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "àåæ",
+        "e": "éèê",
+        "o": "óòôø"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

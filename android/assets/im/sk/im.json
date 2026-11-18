@@ -63,6 +63,23 @@
     "practice": "Ďakujem, dobre",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "áä",
+        "c": "č",
+        "d": "ď",
+        "e": "é",
+        "i": "í",
+        "l": "ĺľ",
+        "n": "ň",
+        "o": "óô",
+        "r": "ŕ",
+        "s": "š",
+        "t": "ť",
+        "u": "ú",
+        "y": "ý",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

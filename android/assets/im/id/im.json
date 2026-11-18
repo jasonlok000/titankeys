@@ -46,6 +46,7 @@
     "practice": "Apa kabar?",
     "keys": {
       "legend": "",
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

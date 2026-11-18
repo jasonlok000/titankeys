@@ -53,6 +53,13 @@
     "practice": "Hyvää päivää",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "åä",
+        "o": "ö",
+        "s": "š",
+        "z": "ž"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

@@ -57,6 +57,15 @@
     "practice": "¿Qué tal, señor?",
     "keys": {
       "legend": "",
+      "accents": {
+        "a": "á",
+        "e": "é",
+        "i": "í",
+        "n": "ñ",
+        "o": "ó",
+        "u": "úü"
+      },
+      "capitals": true,
       "roles": [
         {
           "key": "shift",

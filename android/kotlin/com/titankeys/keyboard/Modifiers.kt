@@ -154,9 +154,13 @@ class Modifiers {
      * push would, unless the user pushed it off here, or Shift, Alt, Ctrl or the panel is already on. Away from a sentence start,
      * a Shift that came on by itself goes off, and one that the user pushed stays.
      */
-    fun autoShift(sentenceStart: Boolean) {
-        if (!sentenceStart) {
-            autoDeclined = false
+    fun autoShift(sentenceStart: Boolean) = autoShift(allowed = true) { sentenceStart }
+
+    /** Read the cursor when capitals are allowed, or to tell whether the user has left a declined capital behind. */
+    internal fun autoShift(allowed: Boolean, sentenceStart: () -> Boolean) {
+        val startsSentence = (allowed || autoDeclined) && sentenceStart()
+        if (!startsSentence) autoDeclined = false
+        if (!startsSentence || !allowed) {
             if (autoShifted) shift = Level.Off
             autoShifted = false
             return
@@ -368,8 +372,15 @@ class Modifiers {
     /**
      * A field has started. Ctrl stays down through a restart only when the field can still be typed in. The keyboard
      * does not follow Ctrl in a field that can't, so it would miss the release and leave Ctrl on for every later key.
+     * The same editor at the same position can keep the user's Shift choice. The field reads automatic Shift afresh.
      */
-    fun fieldStarted(restarting: Boolean, editing: Boolean) = clear(keepCtrl = restarting && editing)
+    fun fieldStarted(restarting: Boolean, editing: Boolean, samePosition: Boolean = false) {
+        val manual = shift.takeIf { samePosition && !autoShifted && !holding(Key.Shift) }
+        val declined = samePosition && autoDeclined
+        clear(keepCtrl = restarting && editing)
+        if (manual != null) shift = manual
+        autoDeclined = declined
+    }
 
     companion object {
         const val DOUBLE_PRESS_MILLIS = 300L

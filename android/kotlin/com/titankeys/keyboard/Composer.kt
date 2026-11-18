@@ -317,6 +317,19 @@ class Composer(
     private var lowercaseI: String? = null
 
     val hasPendingInput get() = recognising || barrier != null || drainScheduled || pendingInput.isNotEmpty()
+    private var afterInput: (() -> Unit)? = null
+
+    /** Let the IME read the resulting editor state before interpreting the next input it has queued. */
+    internal fun whenInputIdle(action: () -> Unit) {
+        if (hasPendingInput) afterInput = action else action()
+    }
+
+    private fun notifyInputIdle() {
+        if (hasPendingInput) return
+        val action = afterInput ?: return
+        afterInput = null
+        later(0, action)
+    }
     /** Whether a touch arriving now could still join the last swipe. A recognition in progress may yet allow it. */
     val canContinueSwipe get() = liftOffMillis > 0 && (hasPendingInput || (composition as? Composition.Swiped)?.continuable == true)
     val awaitingDestination get() = barrier?.navigation == true
@@ -433,6 +446,7 @@ class Composer(
         settleTypedWords()
         apostropheTargets.clear()
         if (predicts) predict()
+        notifyInputIdle()
     }
 
     private fun closesWord(next: Char?) = next != null && (next.isWhitespace() || next in WORD_CLOSERS)
@@ -556,6 +570,7 @@ class Composer(
             }
         } finally {
             draining = false
+            notifyInputIdle()
         }
         val pending = pendingInput.firstOrNull() as? PendingSwipe ?: return
         if (!selectionConfirmed) {

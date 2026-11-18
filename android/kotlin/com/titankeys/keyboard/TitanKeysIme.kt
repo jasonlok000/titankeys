@@ -144,6 +144,8 @@ class TitanKeysIme : InputMethodService() {
     }
     private val barHover = SteadyKey(Layout::keyAt)
     private var field = Field.None
+    /** A settings refresh can finish switching to English synchronously, before the field's composer has started. */
+    private var startingInput = false
     /** The user chose to hide the bar in this app. The window stays, one pixel high. See [showSuggestions]. */
     private var barHidden = false
     /** Each emoji by its shortcode name, once the list has loaded. */
@@ -196,7 +198,8 @@ class TitanKeysIme : InputMethodService() {
     /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
     private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
-                               val settlement: Contact.Settlement? = null, val heldFor: String? = null)
+                               val settlement: Contact.Settlement? = null, val heldFor: String? = null,
+                               var refreshesShift: Boolean = false)
     private val pendingInput = ArrayDeque<PendingInput>()
     private var engineEditor: EngineEditor? = null
     private var replayedCode = false
@@ -1554,17 +1557,23 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
+        startingInput = true
         main.post { showGuideExtras() }
         val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
         val nextEditor = EngineEditor(info.packageName, info.fieldId, info.inputType, info.imeOptions,
             info.privateImeOptions, currentInputConnection)
-        val samePlace = nextEditor.continues(engineEditor, restarting, lastSelectionStart, lastSelectionEnd,
-            info.initialSelStart, info.initialSelEnd) && editing && !exact && !field.exact && !field.secret && field != Field.None &&
+        val samePosition = nextEditor.continues(engineEditor, restarting, lastSelectionStart, lastSelectionEnd,
+            info.initialSelStart, info.initialSelEnd) && editing && !exact && !field.exact && !field.secret && field != Field.None
+        val samePlace = samePosition &&
             !composer.mayLeaveField && !deadKeyPending && !panelOpen && modifiers.alt == Modifiers.Level.Off &&
             (modifiers.shift == Modifiers.Level.Off || modifiers.autoShifted)
         engineEditor = nextEditor
         val target = languages.target
-        val held = if (samePlace) loadGate.takeKeys(pendingInput) { it.heldFor == target } else emptyList()
+        val held = if (samePlace) {
+            // A subtype restart resamples Shift here. The old queue stop must not prevent its waiting keys from following.
+            while (pendingInput.firstOrNull()?.refreshesShift == true) pendingInput.removeFirst()
+            loadGate.takeKeys(pendingInput) { it.heldFor == target }
+        } else emptyList()
         val code = (picker as? LanguagePicker.Choices)?.takeIf {
             samePlace && replayedCode && it.state.composing && !languages.loadingNow
         }
@@ -1609,9 +1618,8 @@ class TitanKeysIme : InputMethodService() {
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
         contact.releaseKeys()
         clearSettlements()
-        modifiers.fieldStarted(restarting, editing)
+        modifiers.fieldStarted(restarting, editing, samePosition)
         deadKeyPending = false
-        showModifiers()
         readSettings()
         if (editing && !restarting) rememberEnterApp(info)
         if (!restarting) rememberApp(info)
@@ -1629,6 +1637,8 @@ class TitanKeysIme : InputMethodService() {
         if (editing && field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd) else strip?.selected = null
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
+            startingInput = false
+            refreshAutoShiftBeforeKeys()
             if (code != null && !languages.loadingNow && languages.current.id == target) {
                 showPicker(code)
                 replayedCode = true
@@ -1642,6 +1652,8 @@ class TitanKeysIme : InputMethodService() {
             main.post(showStrip)
         } else {
             composer.stop()
+            startingInput = false
+            showModifiers()
             // A returning window starts with no field just before its own field takes focus. A strip that
             // hides for that moment tells the app the keyboard was closed, and the app then drops its field.
             main.postDelayed(hideStrip, NO_FIELD_HIDE_MILLIS)
@@ -3505,10 +3517,34 @@ class TitanKeysIme : InputMethodService() {
         preparingNotice?.let { if (strip?.notice == it) strip?.notice = null }
         preparingNotice = null
         rawLog?.engine(languages.current.id, "loaded")
-        val stop = loadGate.open(languages.loadingNow, pendingInput) ?: return
+        if (languages.loadingNow) return
+        val stop = loadGate.open(false, pendingInput) ?: run {
+            if (startingInput || !editing) return
+            // English can switch at once, without a load stop. Already accepted input still comes first.
+            if (pendingInput.isEmpty()) return refreshAutoShiftBeforeKeys()
+            PendingInput(false, null).also(pendingInput::addLast)
+        }
         Log.i(LOG_TAG, "What waited goes to ${languages.current.id}")
+        stop.refreshesShift = true
+        stop.action = ::refreshAutoShiftBeforeKeys
         stop.ready = true
         drainInput()
+    }
+
+    /** Reads the new method's sentence state once earlier edits have reached the current field, ahead of the waiting keys. */
+    private fun refreshAutoShiftBeforeKeys() {
+        if (startingInput || !editing) return
+        if (languages.loadingNow || !composer.hasPendingInput) {
+            showModifiers(beforeQueuedInput = true)
+            return
+        }
+        val stop = PendingInput(false, ::refreshAutoShiftBeforeKeys, refreshesShift = true)
+        pendingInput.addFirst(stop)
+        composer.whenInputIdle {
+            if (pendingInput.firstOrNull() !== stop) return@whenInputIdle
+            stop.ready = true
+            drainInput()
+        }
     }
 
     private fun makeRoom(): Boolean {
@@ -5089,9 +5125,9 @@ class TitanKeysIme : InputMethodService() {
         showModifiers()
     }
 
-    private fun showModifiers() {
+    private fun showModifiers(beforeQueuedInput: Boolean = false) {
         showGuideExtras()
-        updateAutoShift()
+        updateAutoShift(beforeQueuedInput)
         // Locked plays its feel, and so does unlocking, as a press alone doesn't tell you which it did. Once and off are key
         // presses, which the keys already click.
         val locked = { now: Modifiers.Level, shown: Modifiers.Level -> now == Modifiers.Level.Locked && shown != Modifiers.Level.Locked }
@@ -5117,16 +5153,16 @@ class TitanKeysIme : InputMethodService() {
      * setting is on. It looks like one push of Shift on the bar, and the first letter typed or swiped uses it up. Returns true if
      * Shift changed. While input still waits to reach the field, the text is not final, so nothing changes until it has.
      */
-    private fun updateAutoShift(): Boolean {
-        if (composer.hasPendingInput || pendingInput.isNotEmpty()) return false
+    private fun updateAutoShift(beforeQueuedInput: Boolean = false): Boolean {
+        if (startingInput || languages.loadingNow || composer.hasPendingInput || !beforeQueuedInput && pendingInput.isNotEmpty()) return false
         val before = modifiers.shift
-        modifiers.autoShift(sentenceStartHere())
+        val allowed = !panelOpen && languages.current.rules.capitalise && TypingSettings.autoCapitaliseIn(this, languages.languageId)
+        modifiers.autoShift(allowed, ::sentenceStartHere)
         return modifiers.shift != before
     }
 
     private fun sentenceStartHere(): Boolean {
-        if (!editing || field.exact || !field.sentenceCapitalisation || panelOpen || !TypingSettings.autoCapitaliseIn(this, languages.languageId) ||
-            !languages.current.rules.capitalise) return false
+        if (!editing || field.exact || !field.sentenceCapitalisation) return false
         val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0) ?: return false
         return SwipeTyping.startsSentence(before)
     }

@@ -2851,6 +2851,7 @@ fun main() {
     markSpacing(world)
     eachLanguageEndsItsSentences(world)
     aSwitchRefreshesTheBar(world)
+    inputIdleReadsEarlierEdits(world)
     suggestionBar(world)
     theGuideOffersItsWord(world)
     expansions(world)
@@ -2950,6 +2951,27 @@ private fun aSwitchRefreshesTheBar(world: Realistic) {
     late?.invoke(listOf("hello", "help", "here"))
     typist.settle()
     same(typist.bar.none { it in listOf("hello", "help", "here") }, true, "the old input method's late answer doesn't land: ${typist.bar}")
+}
+
+private fun inputIdleReadsEarlierEdits(world: Realistic) {
+    val typist = Typist(world, autocorrect = null)
+    typist.words.holdSwipes = true
+    typist.swipe("hello")
+    typist.composer.type("q")
+    val seen = mutableListOf<String>()
+    typist.composer.whenInputIdle { seen += typist.text }
+    same(seen, emptyList<String>(), "A language transition waits for already accepted input")
+    typist.words.unrecognised.removeFirst().invoke()
+    typist.settle()
+    same(seen, listOf("hello q"), "The transition reads the caret after both earlier edits")
+
+    typist.swipe("there")
+    typist.composer.whenInputIdle { seen += typist.text }
+    typist.select(0)
+    same(seen, listOf("hello q", "hello q"), "A reset with an abandoned swipe also releases the idle callback once")
+    typist.words.unrecognised.removeFirst().invoke()
+    typist.settle()
+    same(seen.size, 2, "The late swipe cannot run the callback again")
 }
 
 /**

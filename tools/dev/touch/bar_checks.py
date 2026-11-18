@@ -4,7 +4,7 @@ English through InputMethodsSet, in Debug's Space gestures field. A password fie
 Debug's own screens have no password field.
 """
 import language_checks
-from bar_observations import observed_bar, observed_middle, own_field, pick_verdict, space_verdict
+from bar_observations import observed_bar, observed_candidate_zero, observed_middle, own_field, pick_verdict, space_verdict, suffix_verdict
 from checks import Stop, play, record
 
 # A word in each, as its keys: Korean's 한국 is g k s r n r.
@@ -166,9 +166,9 @@ BATCH += [check_korean_polish, check_japanese_menu]
 
 
 def check_japanese_polish():
-    """B's Japanese polish: nihon's choices over W to O (J), Space types 日本, Enter types the romaji, Backspace leaves "niho"
-    (O); a flick with a code clears only the code (O); ohayou + Space types おはよう and ございます follows (J), Space types it
-    (O); a digit (Alt + W) clears the suggestions (J); "." and "," (Alt + M, Alt + N) type 。 and 、 (O); a swipe up opens the
+    """B's Japanese polish: nihon's choices over W to O (J), Space types candidate zero, Enter types the romaji, Backspace leaves "niho"
+    (O); a flick with a code clears only the code (O); ohayou + Space picks candidate zero, then Space adds a plain space
+    instead of taking a prediction (O); a digit (Alt + W) clears the suggestions (J); "." and "," type 。 and 、 (O); a swipe up opens the
     menu and a second turns its page (J)."""
     def fresh_ja():
         language_checks.fresh()
@@ -178,10 +178,14 @@ def check_japanese_polish():
     field = language_checks.checks.field
     fresh_ja()
     moves = keys("nihon") + ["+800"]
-    play(*moves, "key:space", "+500", shot="ja-nihon-row", at=len(moves) * 80 + 500)
-    text = field()
+    with observed_bar():
+        play(*moves, shot="ja-nihon-row", at=len(moves) * 80 + 500)
+        zero = observed_candidate_zero('ja')
+        play('key:space', '+500')
+        text = own_field()
     record("ja-nihon-row", None, "nihon typed: the choices over W to O", "ja-nihon-row")
-    record("ja-nihon-space", text == "日本", f"nihon + Space typed {text!r}, wanted '日本'")
+    record("ja-nihon-space", space_verdict(text, zero, ''),
+           f"nihon + Space committed {text!r}; observed candidate zero {zero!r}; other candidates do not count")
     fresh_ja()
     play(*keys("nihon"), "+400", "key:enter", "+500")
     text = field()
@@ -197,20 +201,29 @@ def check_japanese_polish():
     text = field()
     record("ja-code-flick", text == before, f"{before!r}, a code, then a flick left {text!r}: only the code goes")
     fresh_ja()
-    play(*keys("ohayou"), "+500", "key:space", "+900", shot="ja-ohayou-next", at=len(keys("ohayou")) * 80 + 1200)
-    first = field()
+    with observed_bar():
+        play(*keys('ohayou'), '+500')
+        zero = observed_candidate_zero('ja')
+        play('key:space', '+900')
+        first = own_field()
+    import guide_checks
+    guide_checks.shot('ja-ohayou-next')
     play("key:space", "+500")
-    second = field()
-    record("ja-ohayou", first == "おはよう", f"ohayou + Space typed {first!r}, wanted 'おはよう'", "ja-ohayou-next")
-    record("ja-ohayou-next", second.startswith("おはよう") and "ございます" in second,
-           f"the bar offered ございます (the shot); Space again typed {second!r}", "ja-ohayou-next")
+    second = own_field()
+    record('ja-ohayou', space_verdict(first, zero, ''),
+           f'ohayou + Space committed {first!r}; observed candidate zero {zero!r}', 'ja-ohayou-next')
+    record('ja-ohayou-next', suffix_verdict(first, second, ' '),
+           f'after committed {first!r}, Space produced {second!r}; expected exactly the same prefix plus a plain space', 'ja-ohayou-next')
     fresh_ja()
     play(*keys("ohayou"), "+500", "key:space", "+700", "chord:alt+w", "+600", shot="ja-digit", at=len(keys("ohayou")) * 80 + 1700)
     record("ja-digit", None, f"a digit after a pick (field {field()!r}): the suggestions are gone", "ja-digit")
     fresh_ja()
-    play(*keys("nihon"), "+400", "key:space", "+300", "chord:alt+m", "+300", "chord:alt+n", "+500")
-    text = field()
-    record("ja-marks", text == "日本。、", f"日本, then . and , typed {text!r}, wanted '日本。、'")
+    play(*keys('nihon'), '+400', 'key:space', '+300')
+    prefix = own_field()
+    play('chord:alt+m', '+300', 'chord:alt+n', '+500')
+    text = own_field()
+    record('ja-marks', suffix_verdict(prefix, text, '。、'),
+           f'committed prefix {prefix!r}, then . and , produced {text!r}; expected prefix plus 。、')
     fresh_ja()
     moves = keys("kyou") + ["+400", "swipeup:b", "+700"]
     play(*moves, "swipeup:b", "+700", "key:sym", "+400", shot="ja-menu-page2", at=len(moves) * 80 + 900)

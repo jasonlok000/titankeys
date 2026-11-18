@@ -21,6 +21,11 @@ def pick_verdict(actual, offered=None):
     return None if offered in (None, '') else actual == offered
 
 
+def suffix_verdict(before, actual, suffix):
+    """Check an action against its observed committed prefix, not a dictionary guess."""
+    return None if not before else actual == before + suffix
+
+
 def own_field():
     import checks
     front = next((s for s in checks.adb('shell', 'dumpsys', 'window').splitlines() if 'mCurrentFocus' in s), '')
@@ -52,3 +57,10 @@ def observed_middle(method):
     lines = ib.bar_lines()
     own_field()
     return middle(lines, method)
+
+
+def observed_candidate_zero(method):
+    """Strip.logBar's engine Picker calls BarLog.places: ranked[0] is the middle.
+    This is candidate zero specifically, never any matching item from the list.
+    """
+    return observed_middle(method)

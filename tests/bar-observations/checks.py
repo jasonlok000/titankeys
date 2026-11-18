@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/dev/touch'))
-from bar_observations import middle, observed_bar, own_field, pick_verdict, space_verdict
+from bar_observations import middle, observed_bar, own_field, pick_verdict, space_verdict, suffix_verdict
 
 
 class Observations(unittest.TestCase):
@@ -39,6 +39,26 @@ class Observations(unittest.TestCase):
     def test_unobserved_menu_tile_remains_look(self):
         for value in ('', '今日', '2026/11/18', 'unrelated'):
             self.assertIsNone(pick_verdict(value))
+
+    def test_nihon_must_commit_zero_not_any_offered_choice(self):
+        # Engine Picker uses BarLog.places: second at left, candidate zero at middle.
+        zero = middle([('bar', 'ja', ['日本', 'にほん', 'ニホン'])], 'ja')
+        self.assertTrue(space_verdict('にほん', zero, ''))
+        self.assertFalse(space_verdict('日本', zero, ''))
+        self.assertFalse(space_verdict('ニホン', zero, ''))
+
+    def test_prediction_space_does_not_pick_following_word(self):
+        self.assertTrue(suffix_verdict('おはよう', 'おはよう ', ' '))
+        self.assertFalse(suffix_verdict('おはよう', 'おはようございます', ' '))
+        self.assertFalse(suffix_verdict('おはよう', 'おはよう  ', ' '))
+        self.assertIsNone(suffix_verdict('', ' ', ' '))
+
+    def test_japanese_marks_preserve_the_observed_prefix(self):
+        for prefix in ('日本', 'にほん', 'ニホン', '123'):
+            self.assertTrue(suffix_verdict(prefix, prefix + '。、', '。、'))
+            self.assertFalse(suffix_verdict(prefix, prefix + '.,', '。、'))
+            self.assertFalse(suffix_verdict(prefix, 'changed。、', '。、'))
+        self.assertIsNone(suffix_verdict('', '。、', '。、'))
 
     def test_owned_field_required_before_reading_text(self):
         checks = SimpleNamespace(APP='com.titankeys.debug', Stop=RuntimeError, adb=Mock(return_value='mCurrentFocus=Window{u0 other/App}'), field=Mock())

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 checks = types.ModuleType("checks")
 checks.APP = "com.titankeys.debug"
 checks.Stop = type("Stop", (Exception,), {})
-for name in ("checks", "language_checks", "languages"):
+for name in ("checks", "language_checks", "languages", "own_editor"):
     sys.modules[name] = checks if name == "checks" else types.ModuleType(name)
 spec = importlib.util.spec_from_file_location("menu_controls", ROOT / "tools/dev/touch/menu_controls_checks.py")
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
@@ -64,6 +64,15 @@ class Checks(unittest.TestCase):
         with patch.object(m,"guard"), patch.object(checks,"adb",side_effect=['on en,af; typing af','on en,af; typing af','on en; typing en'],create=True):
             with self.assertRaises(checks.Stop):
                 with m.methods(): pass
+    def test_method_selection_restarts_the_owned_editor_before_readback(self):
+        reply = "on en,zh-pinyin,yue-jyutping; typing zh-pinyin"
+        with patch.object(m, "guard"), \
+             patch.object(checks, "adb", side_effect=[reply, reply], create=True) as adb, \
+             patch.object(m.own_editor, "restart", create=True) as restart:
+            restart.side_effect = lambda: self.assertEqual(adb.call_count, 1)
+            self.assertTrue(m.select_method("zh-pinyin"))
+        restart.assert_called_once_with()
+        self.assertEqual(adb.call_count, 2)
     def test_methods_readback(self):
         self.assertEqual(m.saved_methods('data="on en,zh-pinyin; typing en"'),(["en","zh-pinyin"],"en"))
         with self.assertRaises(checks.Stop): m.saved_methods("missing")

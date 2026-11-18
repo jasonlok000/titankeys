@@ -18,6 +18,7 @@ fun main() {
     aSwipeUpOpensTheMenu()
     anEnglishWordOnlyWhenRimeCantRead()
     theEnglishWordIsNeverFirst()
+    englishAlternativesUseTheirShownIndex()
     println("Chinese checks passed")
 }
 
@@ -165,13 +166,32 @@ fun theEnglishWordIsNeverFirst() {
     same(1, EnglishOffer.PLACE, "the second place")
 }
 
-/** Shift and a swipe up open the bigger menu only when the engine has more choices than the row shows. */
+/** Shift, a swipe up and the cue at P need something to add in the bigger menu. */
 fun theMenuOpensOnlyWithMore() {
-    check(!ChineseRow.more(listOf("你", "好")), "two choices fit the row: no menu")
-    check(!ChineseRow.more(emptyList()), "no choices: no menu")
-    check(ChineseRow.more((1..12).map { "字" }), "twelve one-character choices go past the row's eight")
-    check(ChineseRow.more((1..9).map { "字" }), "nine go past the row by one")
-    check(!ChineseRow.more((1..8).map { "字" }), "eight fill the row: no menu")
+    check(!ChineseRow.Choices(listOf("你", "好")).more, "two choices fit the row: no menu")
+    check(!ChineseRow.Choices(emptyList()).more, "no choices: no menu")
+    check(!ChineseRow.Choices(List(8) { "字" }).more, "eight fill the row: no menu")
+    check(ChineseRow.Choices(List(9) { "字" }).more, "nine go past the row by one")
+    check(ChineseRow.Choices(List(7) { "字" } + "一二三").more, "eight can still overflow by width")
+
+    val withEnglish = ChineseRow.Choices(List(8) { "字" }, "hello")
+    same((0..6).toList(), withEnglish.shown, "hello takes two columns, leaving room for six engine choices")
+    check(withEnglish.more, "the English word displaces two engine choices: the bigger menu adds them")
+    check(!ChineseRow.Choices(List(6) { "字" }, "hello").more, "all six engine choices and hello fit: no menu")
+    val wholeRow = "一二三四五六七八九十十一十二十三十四十五十六十七十八十九二十"
+    check(!ChineseRow.Choices(listOf(wholeRow), "hello").more, "a hidden English word alone does not open an engine menu")
+}
+
+fun englishAlternativesUseTheirShownIndex() {
+    val alone = ChineseRow.Choices(emptyList(), "hello")
+    same(listOf(0), alone.shown, "the English word is visible by itself")
+    check(alone.isEnglish(alone.shown.single()), "picking the sole English word types that word")
+    check(!alone.more, "the sole English word offers no engine choices to expand")
+
+    val second = ChineseRow.Choices(listOf("嚱嘍囉", "嚱"), "hello")
+    check(!second.isEnglish(0) && second.isEnglish(1) && !second.isEnglish(2), "the English word is second when Rime has choices")
+    same(0, second.engineIndex(0), "Rime's first choice keeps its index")
+    same(1, second.engineIndex(2), "Rime's second choice keeps its index after the inserted English word")
 }
 
 /** Cangjie's and Quick's keys are radicals, N 弓, as their codes show; other input methods have none. */

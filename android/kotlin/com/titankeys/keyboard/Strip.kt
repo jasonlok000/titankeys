@@ -998,9 +998,8 @@ class Strip(
             pickerText.color = look.accent
             drawOnKey(canvas, picker.mark, ChineseRow.MARK, baseline)
         }
-        if (picker.more || picker.lead.isNotEmpty()) {
-            // Orange while a code is typed: Sym opens the bigger menu, though Sym isn't under it (owner, 2026-11-17: "not like
-            // the hover type of highlight but maybe more like just make it orange").
+        if (picker.more) {
+            // Orange while a code is typed: Shift opens the bigger menu.
             pickerText.color = if (picker.lead.isNotEmpty()) look.accent else look.muted
             drawOnKey(canvas, ChineseRow.MORE_CUE, ChineseRow.MORE, baseline)
         }
@@ -1050,7 +1049,7 @@ class Strip(
     /** True when [x] is on the more cue, while it shows. */
     private fun onMore(x: Float): Boolean {
         val picker = notice as? Notice.Picker ?: return false
-        return (picker.more || picker.lead.isNotEmpty()) && x >= menuColumn(ChineseRow.MORE).first
+        return picker.more && x >= menuColumn(ChineseRow.MORE).first
     }
 
     /**

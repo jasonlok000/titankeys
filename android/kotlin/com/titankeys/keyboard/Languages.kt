@@ -459,25 +459,19 @@ internal sealed interface LanguagePicker {
      * ([EnglishOffer]), or null. Space picks the first; a tap, Shift + key, a hold or a flick picks the one over a key.
      */
     class Choices(val state: EngineState, listed: List<String>, val english: String? = null, mark: String = "") : LanguagePicker {
-        val items = EnglishOffer.withWord(listed.take(ChineseRow.ASK), english)
-        private val columns = ChineseRow.place(items)
-        /** The items in the row, in order: a choice too wide for the room left waits for the bigger menu. */
-        private val shown = items.indices.filter { columns[it] != null }
-        /**
-         * The engine has more choices than the row shows, so the bigger menu has something to add: only then do Shift and a
-         * swipe up open it (owner, 2026-11-17: "disable shift to expand the bar if there's nothing besides the main bar").
-         */
-        val more = ChineseRow.more(listed)
-        override val notice = Strip.Notice.Picker(shown.map { items[it] }, shown.map { columns[it]!! }, lead = state.code,
-            mark = mark, more = more)
+        private val row = ChineseRow.Choices(listed, english)
+        val items get() = row.items
+        val more get() = row.more
+        override val notice = Strip.Notice.Picker(row.shown.map { items[it] }, row.shown.map { row.columns[it]!! },
+            lead = state.code, mark = mark, more = more)
         /** The row's item over key [column], or -1. */
-        fun choiceAt(column: Int) = ChineseRow.choiceAt(column, columns)
+        fun choiceAt(column: Int) = ChineseRow.choiceAt(column, row.columns)
         /** The item at [position] in the row as drawn, as a tap on the screen finds it. */
-        fun itemAt(position: Int) = shown.getOrElse(position) { -1 }
+        fun itemAt(position: Int) = row.shown.getOrElse(position) { -1 }
         /** Whether row item [item] is the English word. */
-        fun isEnglish(item: Int) = english != null && item == EnglishOffer.PLACE && item < items.size
+        fun isEnglish(item: Int) = row.isEnglish(item)
         /** The engine's own place for row item [item], counted across its pages: the English word moves the rest one on. */
-        fun engineIndex(item: Int) = if (english != null && item > EnglishOffer.PLACE) item - 1 else item
+        fun engineIndex(item: Int) = row.engineIndex(item)
     }
 
     /**

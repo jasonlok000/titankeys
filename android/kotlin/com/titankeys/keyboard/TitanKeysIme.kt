@@ -4014,6 +4014,7 @@ class TitanKeysIme : InputMethodService() {
     /** Shift, a swipe up or a tap on the more cue, with choices on the bar: the bigger menu opens, on its first page. */
     private fun openChoicesMenu() {
         val open = openPicker() as? LanguagePicker.Choices ?: return
+        if (!open.more) return
         val engine = languages.engine ?: return
         val menu = choicesMenu ?: return
         haptics.play(Haptic.PanelPage)
@@ -4091,10 +4092,12 @@ class TitanKeysIme : InputMethodService() {
         val keyCode = event.keyCode
         if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
             if (event.repeatCount > 0) return menuShift == keyCode
+            val overflow = !choicesMenuOpen && (openPicker() as? LanguagePicker.Choices)?.more == true
+            if (!choicesMenuOpen) choicesLog("Shift row overflow=$overflow")
             when {
                 choicesMenuOpen -> closeChoicesMenu()
                 // Shift opens it only in Chinese and Japanese: elsewhere it types capitals, or Hindi's own sounds.
-                (openPicker() as? LanguagePicker.Choices)?.more == true && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
+                overflow && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
                 else -> return false
             }
             choicesLog("Shift ($keyCode): the bigger menu ${if (choicesMenuOpen) "opens" else "closes"}")

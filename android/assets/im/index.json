@@ -18,7 +18,39 @@
   "howTo": [
    "Hold a letter for its accents: hold N for ñ, A for á, U for ú or ü. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
    "A sentence that opens with ¿ or ¡ still gets its capital."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "fr",
@@ -38,7 +70,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold E for é, è, ê or ë, C for ç, O for ô or œ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "de",
@@ -58,7 +122,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold S for ß, A for ä, O for ö, U for ü. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "pt",
@@ -80,6 +176,38 @@
    "Hold a letter for its accents: hold A for á, à, â or ã, C for ç, O for õ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
    "Brasil or Portugal? Pick your spelling on this page."
   ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  },
   "variants": [
    {
     "id": "pt-BR",
@@ -109,7 +237,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold E for é or è, A for à, O for ò. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "nl",
@@ -129,7 +289,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold E for é or ë, I for ï, O for ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "pl",
@@ -149,7 +341,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for ą, L for ł, Z for ź or ż. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "tr",
@@ -170,7 +394,39 @@
   "howTo": [
    "Hold a letter for its accents: hold I for ı or î, G for ğ, S for ş. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
    "Shift + I gives İ, with its dot. For I without it, hold I with Shift on and pick it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "sv",
@@ -190,7 +446,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for å or ä, O for ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "da",
@@ -210,7 +498,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for æ or å, O for ø. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "nb",
@@ -230,7 +550,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for æ or å, O for ø. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "fi",
@@ -250,7 +602,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for ä or å, O for ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "cs",
@@ -270,7 +654,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold C for č, R for ř, U for ú or ů. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "ro",
@@ -290,7 +706,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for ă or â, S for ș, T for ț. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "hu",
@@ -310,7 +758,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold O for ó, ö or ő, U for ú, ü or ű. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "id",
@@ -330,7 +810,39 @@
   },
   "howTo": [
    "Types the way English does: no accents, and nothing to hold for them. Hold a letter for its symbol, as in English."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "plain",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "letters"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "hr",
@@ -350,7 +862,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "sl",
@@ -370,7 +914,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold C for č, S for š, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "lv",
@@ -390,7 +966,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for ā, E for ē, K for ķ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "lt",
@@ -410,7 +1018,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for ą, E for ę or ė, U for ų or ū. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "ca",
@@ -430,7 +1070,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for à or á, E for é or è, C for ç. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "gl",
@@ -450,7 +1122,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold N for ñ, A for á, O for ó. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "et",
@@ -470,7 +1174,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold O for õ or ö, A for ä, U for ü. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "is",
@@ -490,7 +1226,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold D for ð, T for þ, A for á or æ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "af",
@@ -510,7 +1278,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold E for é, ê or ë, O for ó or ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "eo",
@@ -530,7 +1330,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold C for ĉ, G for ĝ, U for ŭ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "sk",
@@ -550,7 +1382,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold C for č, L for ĺ or ľ, O for ó or ô. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "az",
@@ -570,7 +1434,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold E for ə, I for ı, G for ğ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "ga",
@@ -590,7 +1486,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for á, E for é, O for ó. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "eu",
@@ -610,7 +1538,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold N for ñ, C for ç. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "nn",
@@ -630,7 +1590,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold A for æ or å, O for ø. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "bs",
@@ -650,7 +1642,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "sr-latn",
@@ -670,7 +1694,39 @@
   },
   "howTo": [
    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "latin",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "ru",
@@ -691,7 +1747,67 @@
   "howTo": [
    "The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц, A is ф. The letters without a key of their own are held: ж or э on L, б or ю on M, х or ъ on P, ё on T.",
    "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "cyrillic",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "ф",
+     "b": "и",
+     "c": "с",
+     "d": "в",
+     "e": "у",
+     "f": "а",
+     "g": "п",
+     "h": "р",
+     "i": "ш",
+     "j": "о",
+     "k": "л",
+     "l": "д",
+     "m": "ь",
+     "n": "т",
+     "o": "щ",
+     "p": "з",
+     "q": "й",
+     "r": "к",
+     "s": "ы",
+     "t": "е",
+     "u": "г",
+     "v": "м",
+     "w": "ц",
+     "x": "ч",
+     "y": "н",
+     "z": "я"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "uk",
@@ -712,7 +1828,67 @@
   "howTo": [
    "The keys follow the Ukrainian PC layout (ЙЦУКЕН): Q is й, W is ц, S is і. The letters without a key of their own are held: ж or є on L, б or ю on M, х, ї or the apostrophe on P, ґ on U.",
    "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "cyrillic",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "ф",
+     "b": "и",
+     "c": "с",
+     "d": "в",
+     "e": "у",
+     "f": "а",
+     "g": "п",
+     "h": "р",
+     "i": "ш",
+     "j": "о",
+     "k": "л",
+     "l": "д",
+     "m": "ь",
+     "n": "т",
+     "o": "щ",
+     "p": "з",
+     "q": "й",
+     "r": "к",
+     "s": "і",
+     "t": "е",
+     "u": "г",
+     "v": "м",
+     "w": "ц",
+     "x": "ч",
+     "y": "н",
+     "z": "я"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "be",
@@ -733,7 +1909,67 @@
   "howTo": [
    "The keys follow the Belarusian PC layout (ЙЦУКЕН): Q is й, B is і, O is ў. The letters without a key of their own are held: э or ж on L, б or ю on M, х or the apostrophe on P, ё on T.",
    "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "cyrillic",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "ф",
+     "b": "і",
+     "c": "с",
+     "d": "в",
+     "e": "у",
+     "f": "а",
+     "g": "п",
+     "h": "р",
+     "i": "ш",
+     "j": "о",
+     "k": "л",
+     "l": "д",
+     "m": "ь",
+     "n": "т",
+     "o": "ў",
+     "p": "з",
+     "q": "й",
+     "r": "к",
+     "s": "ы",
+     "t": "е",
+     "u": "г",
+     "v": "м",
+     "w": "ц",
+     "x": "ч",
+     "y": "н",
+     "z": "я"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "bg",
@@ -754,7 +1990,67 @@
   "howTo": [
    "Each key types the letter that sounds like it: A is а, B is б, D is д. The odd ones: Q is ч, W is ш, X is ж, Y is ъ. Hold M for ю or ь, and P for я or щ.",
    "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "cyrillic",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "а",
+     "b": "б",
+     "c": "ц",
+     "d": "д",
+     "e": "е",
+     "f": "ф",
+     "g": "г",
+     "h": "х",
+     "i": "и",
+     "j": "й",
+     "k": "к",
+     "l": "л",
+     "m": "м",
+     "n": "н",
+     "o": "о",
+     "p": "п",
+     "q": "ч",
+     "r": "р",
+     "s": "с",
+     "t": "т",
+     "u": "у",
+     "v": "в",
+     "w": "ш",
+     "x": "ж",
+     "y": "ъ",
+     "z": "з"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "el",
@@ -774,7 +2070,67 @@
   },
   "howTo": [
    "The keys follow the Greek PC layout: A is α, V is ω, U is θ. W types ς, the final sigma, and Q types ;, Greek's question mark. Hold a vowel for its accent: ά, έ, ή, ί, ό, ύ, and ώ on V. Hold I or Y for ϊ or ϋ too."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "greek",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "α",
+     "b": "β",
+     "c": "ψ",
+     "d": "δ",
+     "e": "ε",
+     "f": "φ",
+     "g": "γ",
+     "h": "η",
+     "i": "ι",
+     "j": "ξ",
+     "k": "κ",
+     "l": "λ",
+     "m": "μ",
+     "n": "ν",
+     "o": "ο",
+     "p": "π",
+     "q": ";",
+     "r": "ρ",
+     "s": "σ",
+     "t": "τ",
+     "u": "θ",
+     "v": "ω",
+     "w": "ς",
+     "x": "χ",
+     "y": "υ",
+     "z": "ζ"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "sr",
@@ -795,7 +2151,67 @@
   "howTo": [
    "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
    "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "cyrillic",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "а",
+     "b": "б",
+     "c": "ц",
+     "d": "д",
+     "e": "е",
+     "f": "ф",
+     "g": "г",
+     "h": "х",
+     "i": "и",
+     "j": "ј",
+     "k": "к",
+     "l": "л",
+     "m": "м",
+     "n": "н",
+     "o": "о",
+     "p": "п",
+     "q": "љ",
+     "r": "р",
+     "s": "с",
+     "t": "т",
+     "u": "у",
+     "v": "в",
+     "w": "њ",
+     "x": "џ",
+     "y": "з",
+     "z": "ж"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "mk",
@@ -816,7 +2232,67 @@
   "howTo": [
    "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ѕ. Hold L for ч or ќ, and P for ш, ж or ѓ.",
    "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "cyrillic",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "а",
+     "b": "б",
+     "c": "ц",
+     "d": "д",
+     "e": "е",
+     "f": "ф",
+     "g": "г",
+     "h": "х",
+     "i": "и",
+     "j": "ј",
+     "k": "к",
+     "l": "л",
+     "m": "м",
+     "n": "н",
+     "o": "о",
+     "p": "п",
+     "q": "љ",
+     "r": "р",
+     "s": "с",
+     "t": "т",
+     "u": "у",
+     "v": "в",
+     "w": "њ",
+     "x": "џ",
+     "y": "з",
+     "z": "ѕ"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "kk",
@@ -837,7 +2313,67 @@
   "howTo": [
    "The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц. Kazakh's own letters are held: ә on F, і on S, ң on Y, ғ on U, ұ or ү on E, қ on R, ө on J, һ on H. So are ж or э on L, б or ю on M, х or ъ on P, ё on T.",
    "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "cyrillic",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "ф",
+     "b": "и",
+     "c": "с",
+     "d": "в",
+     "e": "у",
+     "f": "а",
+     "g": "п",
+     "h": "р",
+     "i": "ш",
+     "j": "о",
+     "k": "л",
+     "l": "д",
+     "m": "ь",
+     "n": "т",
+     "o": "щ",
+     "p": "з",
+     "q": "й",
+     "r": "к",
+     "s": "ы",
+     "t": "е",
+     "u": "г",
+     "v": "м",
+     "w": "ц",
+     "x": "ч",
+     "y": "н",
+     "z": "я"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "accents"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "ka",
@@ -857,7 +2393,76 @@
   },
   "howTo": [
    "Each key types the Georgian letter that sounds like it: A is ა, B is ბ. Georgian has no capitals, so Shift types a second letter on seven keys: ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C. No accents here, so holding a key still gives its symbol."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "georgian",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "ა",
+     "b": "ბ",
+     "c": "ც",
+     "d": "დ",
+     "e": "ე",
+     "f": "ფ",
+     "g": "გ",
+     "h": "ჰ",
+     "i": "ი",
+     "j": "ჯ",
+     "k": "კ",
+     "l": "ლ",
+     "m": "მ",
+     "n": "ნ",
+     "o": "ო",
+     "p": "პ",
+     "q": "ქ",
+     "r": "რ",
+     "s": "ს",
+     "t": "ტ",
+     "u": "უ",
+     "v": "ვ",
+     "w": "წ",
+     "x": "ხ",
+     "y": "ყ",
+     "z": "ზ"
+    },
+    "shift": {
+     "c": "ჩ",
+     "j": "ჟ",
+     "r": "ღ",
+     "s": "შ",
+     "t": "თ",
+     "w": "ჭ",
+     "z": "ძ"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "secondLetter"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "th",
@@ -878,7 +2483,118 @@
   "howTo": [
    "The keys follow Thai's Kedmanee layout, and Shift gives each key's second letter. The keys a PC has and the Titan doesn't are held: hold a key for its third letter, and Shift + hold for its fourth. Thai digits: ๐ is Shift + Q, and ๑ to ๙ are Shift + hold on W E R T I O P S D.",
    "Thai has no spaces between words, so the bar finds the word you're typing, and next words come after a space. Double Space types two spaces, as Thai has no full stop."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "thai",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "ฟ",
+     "b": "ิ",
+     "c": "แ",
+     "d": "ก",
+     "e": "ำ",
+     "f": "ด",
+     "g": "เ",
+     "h": "้",
+     "i": "ร",
+     "j": "่",
+     "k": "า",
+     "l": "ส",
+     "m": "ท",
+     "n": "ื",
+     "o": "น",
+     "p": "ย",
+     "q": "ๆ",
+     "r": "พ",
+     "s": "ห",
+     "t": "ะ",
+     "u": "ี",
+     "v": "อ",
+     "w": "ไ",
+     "x": "ป",
+     "y": "ั",
+     "z": "ผ"
+    },
+    "shift": {
+     "a": "ฤ",
+     "b": "ฺ",
+     "c": "ฉ",
+     "d": "ฏ",
+     "e": "ฎ",
+     "f": "โ",
+     "g": "ฌ",
+     "h": "็",
+     "i": "ณ",
+     "j": "๋",
+     "k": "ษ",
+     "l": "ศ",
+     "m": "?",
+     "n": "์",
+     "o": "ฯ",
+     "p": "ญ",
+     "q": "๐",
+     "r": "ฑ",
+     "s": "ฆ",
+     "t": "ธ",
+     "u": "๊",
+     "v": "ฮ",
+     "w": "\"",
+     "x": ")",
+     "y": "ํ",
+     "z": "("
+    },
+    "held": {
+     "a": "ฃ",
+     "b": "ม",
+     "d": "ช",
+     "e": "-",
+     "f": "บ",
+     "g": "ล",
+     "h": "ว",
+     "i": "ค",
+     "j": "ง",
+     "m": "ฝ",
+     "n": "ใ",
+     "o": "ต",
+     "p": "จ",
+     "q": "ๅ",
+     "r": "ภ",
+     "s": "ข",
+     "t": "ถ",
+     "u": "ึ",
+     "w": "/",
+     "y": "ุ",
+     "z": "_"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "secondLetter"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "hi",
@@ -898,7 +2614,39 @@
   },
   "howTo": [
    "Type Hindi by how it sounds, in English letters: namaste becomes नमस्ते. Capitals are sounds of their own (namaH, maChiyoM), so Shift changes the letter. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more. Double Space types \"। \", and a word ending in ~ keeps its last virama (agar~)."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "hindi",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "secondLetter"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "code"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "he",
@@ -918,7 +2666,72 @@
   },
   "howTo": [
    "Writes right to left, and the keys follow the Israeli PC layout: A is ש, E is ק. Q types ת, and W types ', for words like צ'יפס. Hold P for ף, M for ץ, and Q for /. Hebrew has no capitals, so Shift types the same letter. The bar reads right to left too: the best word stays in the middle, the next one on the right."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "hebrew",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "a": "ש",
+     "b": "נ",
+     "c": "ב",
+     "d": "ג",
+     "e": "ק",
+     "f": "כ",
+     "g": "ע",
+     "h": "י",
+     "i": "ן",
+     "j": "ח",
+     "k": "ל",
+     "l": "ך",
+     "m": "צ",
+     "n": "מ",
+     "o": "ם",
+     "p": "פ",
+     "q": "ת",
+     "r": "ר",
+     "s": "ד",
+     "t": "א",
+     "u": "ו",
+     "v": "ה",
+     "w": "'",
+     "x": "ס",
+     "y": "ט",
+     "z": "ז"
+    },
+    "held": {
+     "m": "ץ",
+     "p": "ף",
+     "q": "/"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "letters"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "default"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "ko",
@@ -938,7 +2751,76 @@
   },
   "howTo": [
    "The keys follow Korean's 2-set layout (두벌식): Q is ㅂ, A is ㅁ, K is ㅏ. Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on O and P. The syllable builds above the bar and goes in once the next letter can't join it. The bar starts with what Space will write, then words that fit. Tap one to pick it, or swipe up for more."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "korean",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "q": "ㅂ",
+     "w": "ㅈ",
+     "e": "ㄷ",
+     "r": "ㄱ",
+     "t": "ㅅ",
+     "y": "ㅛ",
+     "u": "ㅕ",
+     "i": "ㅑ",
+     "o": "ㅐ",
+     "p": "ㅔ",
+     "a": "ㅁ",
+     "s": "ㄴ",
+     "d": "ㅇ",
+     "f": "ㄹ",
+     "g": "ㅎ",
+     "h": "ㅗ",
+     "j": "ㅓ",
+     "k": "ㅏ",
+     "l": "ㅣ",
+     "z": "ㅋ",
+     "x": "ㅌ",
+     "c": "ㅊ",
+     "v": "ㅍ",
+     "b": "ㅠ",
+     "n": "ㅜ",
+     "m": "ㅡ"
+    },
+    "shift": {
+     "q": "ㅃ",
+     "w": "ㅉ",
+     "e": "ㄸ",
+     "r": "ㄲ",
+     "t": "ㅆ",
+     "o": "ㅒ",
+     "p": "ㅖ"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "secondLetter"
+     },
+     {
+      "key": "space",
+      "role": "syllable"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "syllable"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "vi",
@@ -958,7 +2840,39 @@
   },
   "howTo": [
    "Type in Telex. Letters: aa is â, aw ă, ee ê, oo ô, ow ơ, uw ư, dd đ. Tones go after the word's letters: s sắc, f huyền, r hỏi, x ngã, j nặng, and z takes the tone off. Press the same key again to undo its mark. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "vietnamese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "letters"
+     },
+     {
+      "key": "space",
+      "role": "default"
+     },
+     {
+      "key": "enter",
+      "role": "default"
+     },
+     {
+      "key": "backspace",
+      "role": "code"
+     },
+     {
+      "key": "sym",
+      "role": "default"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "yue-yale",
@@ -979,7 +2893,39 @@
   "howTo": [
    "Type Cantonese in Yale. Tones are never typed, and the low tone's h is optional: neihou or neihhou for 你好. Z works for j, and n and l stand in for each other. A whole phrase can go in one run, no spaces: ngodeigamyatheuiyamcha for 我哋今日去飲茶.",
    "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+   "status": "ready",
+   "family": "chinese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "choices"
+     },
+     {
+      "key": "space",
+      "role": "choices"
+     },
+     {
+      "key": "enter",
+      "role": "code"
+     },
+     {
+      "key": "backspace",
+      "role": "chinese"
+     },
+     {
+      "key": "sym",
+      "role": "choices"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "yue-jyutping",
@@ -1000,7 +2946,39 @@
   "howTo": [
    "Type Cantonese in Jyutping, no tones needed: neihou for 你好. A whole phrase can go in one run, no spaces.",
    "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+   "status": "ready",
+   "family": "chinese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "choices"
+     },
+     {
+      "key": "space",
+      "role": "choices"
+     },
+     {
+      "key": "enter",
+      "role": "code"
+     },
+     {
+      "key": "backspace",
+      "role": "chinese"
+     },
+     {
+      "key": "sym",
+      "role": "choices"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "zh-pinyin",
@@ -1021,7 +2999,39 @@
   "howTo": [
    "Type Mandarin in Pinyin, no tones needed: nihao for 你好. A whole phrase can go in one run, no spaces.",
    "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+   "status": "ready",
+   "family": "chinese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "choices"
+     },
+     {
+      "key": "space",
+      "role": "choices"
+     },
+     {
+      "key": "enter",
+      "role": "code"
+     },
+     {
+      "key": "backspace",
+      "role": "chinese"
+     },
+     {
+      "key": "sym",
+      "role": "choices"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "zh-cangjie",
@@ -1042,7 +3052,67 @@
   "howTo": [
    "Type each character's Cangjie code, up to five keys: the code shows as its radicals as you type (hqi is 竹手戈, for 我).",
    "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+   "status": "ready",
+   "family": "chinese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "q": "手",
+     "w": "田",
+     "e": "水",
+     "r": "口",
+     "t": "廿",
+     "y": "卜",
+     "u": "山",
+     "i": "戈",
+     "o": "人",
+     "p": "心",
+     "a": "日",
+     "s": "尸",
+     "d": "木",
+     "f": "火",
+     "g": "土",
+     "h": "竹",
+     "j": "十",
+     "k": "大",
+     "l": "中",
+     "z": "重",
+     "x": "難",
+     "c": "金",
+     "v": "女",
+     "b": "月",
+     "n": "弓",
+     "m": "一"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "choices"
+     },
+     {
+      "key": "space",
+      "role": "choices"
+     },
+     {
+      "key": "enter",
+      "role": "code"
+     },
+     {
+      "key": "backspace",
+      "role": "chinese"
+     },
+     {
+      "key": "sym",
+      "role": "choices"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "zh-quick",
@@ -1063,7 +3133,67 @@
   "howTo": [
    "Type Quick (速成): each character is the first and last keys of its Cangjie code, two at most. Many characters share a code, so you'll pick from the bar more often than in Cangjie.",
    "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+   "status": "ready",
+   "family": "chinese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "q": "手",
+     "w": "田",
+     "e": "水",
+     "r": "口",
+     "t": "廿",
+     "y": "卜",
+     "u": "山",
+     "i": "戈",
+     "o": "人",
+     "p": "心",
+     "a": "日",
+     "s": "尸",
+     "d": "木",
+     "f": "火",
+     "g": "土",
+     "h": "竹",
+     "j": "十",
+     "k": "大",
+     "l": "中",
+     "z": "重",
+     "x": "難",
+     "c": "金",
+     "v": "女",
+     "b": "月",
+     "n": "弓",
+     "m": "一"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "choices"
+     },
+     {
+      "key": "space",
+      "role": "choices"
+     },
+     {
+      "key": "enter",
+      "role": "code"
+     },
+     {
+      "key": "backspace",
+      "role": "chinese"
+     },
+     {
+      "key": "sym",
+      "role": "choices"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "zh-zhuyin",
@@ -1084,7 +3214,67 @@
   "howTo": [
    "Type Zhuyin on the Hsu (許氏) layout, not the Daqian one: each key types the symbol that sounds like it, and some keys have two. Tones are optional: D for ˊ, F for ˇ, J for ˋ, S for ˙. The code shows as Zhuyin as you type (ㄋㄧˇ ㄏㄠˇ).",
    "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+   "status": "ready",
+   "family": "chinese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "map": {
+     "q": "ㄑ",
+     "w": "ㄨ",
+     "e": "ㄜ",
+     "r": "ㄖ",
+     "t": "ㄊ",
+     "y": "ㄩ",
+     "u": "ㄧ",
+     "i": "ㄞ",
+     "o": "ㄛ",
+     "p": "ㄆ",
+     "a": "ㄚ",
+     "s": "ㄙ",
+     "d": "ㄉ",
+     "f": "ㄈ",
+     "g": "ㄍ",
+     "h": "ㄏ",
+     "j": "ㄐ",
+     "k": "ㄎ",
+     "l": "ㄌ",
+     "z": "ㄗ",
+     "x": "ㄒ",
+     "c": "ㄘ",
+     "v": "ㄔ",
+     "b": "ㄅ",
+     "n": "ㄋ",
+     "m": "ㄇ"
+    },
+    "roles": [
+     {
+      "key": "shift",
+      "role": "choices"
+     },
+     {
+      "key": "space",
+      "role": "choices"
+     },
+     {
+      "key": "enter",
+      "role": "code"
+     },
+     {
+      "key": "backspace",
+      "role": "chinese"
+     },
+     {
+      "key": "sym",
+      "role": "choices"
+     }
+    ]
+   }
+  }
  },
  {
   "id": "ja",
@@ -1104,6 +3294,38 @@
   },
   "howTo": [
    "Type Japanese in romaji: kyou becomes きょう, nn ん, and - ー. Choices sit over the top row, whole sentences first. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the romaji as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+   "status": "experimental",
+   "family": "japanese",
+   "line": "",
+   "points": [],
+   "practice": "",
+   "keys": {
+    "legend": "",
+    "roles": [
+     {
+      "key": "shift",
+      "role": "choices"
+     },
+     {
+      "key": "space",
+      "role": "choices"
+     },
+     {
+      "key": "enter",
+      "role": "code"
+     },
+     {
+      "key": "backspace",
+      "role": "code"
+     },
+     {
+      "key": "sym",
+      "role": "choices"
+     }
+    ]
+   }
+  }
  }
 ]

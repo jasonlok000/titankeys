@@ -40,5 +40,37 @@
   ],
   "howTo": [
     "Type Hindi by how it sounds, in English letters: namaste becomes नमस्ते. Capitals are sounds of their own (namaH, maChiyoM), so Shift changes the letter. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more. Double Space types \"। \", and a word ending in ~ keeps its last virama (agar~)."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "hindi",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "roles": [
+        {
+          "key": "shift",
+          "role": "secondLetter"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "code"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

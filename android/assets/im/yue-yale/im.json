@@ -53,5 +53,37 @@
   "howTo": [
     "Type Cantonese in Yale. Tones are never typed, and the low tone's h is optional: neihou or neihhou for 你好. Z works for j, and n and l stand in for each other. A whole phrase can go in one run, no spaces: ngodeigamyatheuiyamcha for 我哋今日去飲茶.",
     "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+    "status": "ready",
+    "family": "chinese",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "roles": [
+        {
+          "key": "shift",
+          "role": "choices"
+        },
+        {
+          "key": "space",
+          "role": "choices"
+        },
+        {
+          "key": "enter",
+          "role": "code"
+        },
+        {
+          "key": "backspace",
+          "role": "chinese"
+        },
+        {
+          "key": "sym",
+          "role": "choices"
+        }
+      ]
+    }
+  }
 }

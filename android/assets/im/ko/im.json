@@ -37,5 +37,74 @@
   ],
   "howTo": [
     "The keys follow Korean's 2-set layout (두벌식): Q is ㅂ, A is ㅁ, K is ㅏ. Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on O and P. The syllable builds above the bar and goes in once the next letter can't join it. The bar starts with what Space will write, then words that fit. Tap one to pick it, or swipe up for more."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "korean",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "q": "ㅂ",
+        "w": "ㅈ",
+        "e": "ㄷ",
+        "r": "ㄱ",
+        "t": "ㅅ",
+        "y": "ㅛ",
+        "u": "ㅕ",
+        "i": "ㅑ",
+        "o": "ㅐ",
+        "p": "ㅔ",
+        "a": "ㅁ",
+        "s": "ㄴ",
+        "d": "ㅇ",
+        "f": "ㄹ",
+        "g": "ㅎ",
+        "h": "ㅗ",
+        "j": "ㅓ",
+        "k": "ㅏ",
+        "l": "ㅣ",
+        "z": "ㅋ",
+        "x": "ㅌ",
+        "c": "ㅊ",
+        "v": "ㅍ",
+        "b": "ㅠ",
+        "n": "ㅜ",
+        "m": "ㅡ"
+      },
+      "shift": {
+        "q": "ㅃ",
+        "w": "ㅉ",
+        "e": "ㄸ",
+        "r": "ㄲ",
+        "t": "ㅆ",
+        "o": "ㅒ",
+        "p": "ㅖ"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "secondLetter"
+        },
+        {
+          "key": "space",
+          "role": "syllable"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "syllable"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

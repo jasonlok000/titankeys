@@ -73,5 +73,65 @@
   ],
   "howTo": [
     "The keys follow the Greek PC layout: A is α, V is ω, U is θ. W types ς, the final sigma, and Q types ;, Greek's question mark. Hold a vowel for its accent: ά, έ, ή, ί, ό, ύ, and ώ on V. Hold I or Y for ϊ or ϋ too."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "greek",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "a": "α",
+        "b": "β",
+        "c": "ψ",
+        "d": "δ",
+        "e": "ε",
+        "f": "φ",
+        "g": "γ",
+        "h": "η",
+        "i": "ι",
+        "j": "ξ",
+        "k": "κ",
+        "l": "λ",
+        "m": "μ",
+        "n": "ν",
+        "o": "ο",
+        "p": "π",
+        "q": ";",
+        "r": "ρ",
+        "s": "σ",
+        "t": "τ",
+        "u": "θ",
+        "v": "ω",
+        "w": "ς",
+        "x": "χ",
+        "y": "υ",
+        "z": "ζ"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "accents"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

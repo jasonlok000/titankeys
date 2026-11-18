@@ -1,0 +1,3890 @@
+{
+ "af": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "az": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "be": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "bg": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "bs": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "ca": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "cs": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "da": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "de": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "el": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "eo": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "es": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "et": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "eu": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "fi": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "fr": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "ga": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "gl": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "he": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": false,
+    "reason": "noCapitals"
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdLetters"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "hi": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": false,
+    "reason": "corrections"
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": false,
+    "reason": "noCapitals"
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "hr": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "hu": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "id": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "is": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "it": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "ja": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": false,
+    "reason": "corrections"
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": false,
+    "reason": "noCapitals"
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": false,
+    "reason": "noSpaceAfterFullStop"
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": false,
+    "reason": "engineMarks"
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "ka": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": false,
+    "reason": "noCapitals"
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "kk": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "ko": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": false,
+    "reason": "corrections"
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": false,
+    "reason": "noCapitals"
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "lt": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "lv": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "mk": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "nb": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "nl": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "nn": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "pl": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "pt": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": true,
+    "methods": [
+     "pt"
+    ]
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "ro": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "ru": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "sk": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "sl": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "sr": {
+  "points": [],
+  "roles": [],
+  "groups": [
+   {
+    "title": "Alphabets",
+    "methods": [
+     "sr",
+     "sr-latn"
+    ]
+   }
+  ],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "sv": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "th": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": false,
+    "reason": "noCapitals"
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": false,
+    "reason": "noFullStop"
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": false,
+    "reason": "noSpaceAfterFullStop"
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdLetters"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "tr": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "uk": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": false,
+    "reason": "holdAccents"
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "vi": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": false,
+    "reason": "corrections"
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "zh": {
+  "points": [],
+  "roles": [],
+  "groups": [
+   {
+    "title": "Cantonese",
+    "methods": [
+     "yue-yale",
+     "yue-jyutping"
+    ]
+   },
+   {
+    "title": "Mandarin",
+    "methods": [
+     "zh-pinyin",
+     "zh-zhuyin"
+    ]
+   },
+   {
+    "title": "By shape",
+    "methods": [
+     "zh-cangjie",
+     "zh-quick"
+    ]
+   }
+  ],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": false,
+    "reason": "correctionsChinese"
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": false,
+    "reason": "noCapitals"
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": false,
+    "reason": "noSpaceAfterFullStop"
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": false,
+    "reason": "engineMarks"
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": false,
+    "reason": "swiping"
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": false,
+    "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": true,
+    "methods": [
+     "yue-jyutping",
+     "yue-yale"
+    ]
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": true,
+    "methods": [
+     "zh-cangjie",
+     "zh-quick"
+    ]
+   }
+  ]
+ }
+}

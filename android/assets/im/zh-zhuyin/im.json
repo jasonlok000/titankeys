@@ -53,5 +53,65 @@
   "howTo": [
     "Type Zhuyin on the Hsu (許氏) layout, not the Daqian one: each key types the symbol that sounds like it, and some keys have two. Tones are optional: D for ˊ, F for ˇ, J for ˋ, S for ˙. The code shows as Zhuyin as you type (ㄋㄧˇ ㄏㄠˇ).",
     "First, pick your characters on this page: Simplified, Hong Kong or Taiwan. Your code floats above the bar and the choices sit over the top row. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. Next words follow each pick. Enter types the code as letters, and double Space types 。."
-  ]
+  ],
+  "guide": {
+    "status": "ready",
+    "family": "chinese",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "q": "ㄑ",
+        "w": "ㄨ",
+        "e": "ㄜ",
+        "r": "ㄖ",
+        "t": "ㄊ",
+        "y": "ㄩ",
+        "u": "ㄧ",
+        "i": "ㄞ",
+        "o": "ㄛ",
+        "p": "ㄆ",
+        "a": "ㄚ",
+        "s": "ㄙ",
+        "d": "ㄉ",
+        "f": "ㄈ",
+        "g": "ㄍ",
+        "h": "ㄏ",
+        "j": "ㄐ",
+        "k": "ㄎ",
+        "l": "ㄌ",
+        "z": "ㄗ",
+        "x": "ㄒ",
+        "c": "ㄘ",
+        "v": "ㄔ",
+        "b": "ㄅ",
+        "n": "ㄋ",
+        "m": "ㄇ"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "choices"
+        },
+        {
+          "key": "space",
+          "role": "choices"
+        },
+        {
+          "key": "enter",
+          "role": "code"
+        },
+        {
+          "key": "backspace",
+          "role": "chinese"
+        },
+        {
+          "key": "sym",
+          "role": "choices"
+        }
+      ]
+    }
+  }
 }

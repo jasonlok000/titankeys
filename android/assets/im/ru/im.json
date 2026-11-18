@@ -71,5 +71,65 @@
   "howTo": [
     "The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц, A is ф. The letters without a key of their own are held: ж or э on L, б or ю on M, х or ъ on P, ё on T.",
     "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "cyrillic",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "a": "ф",
+        "b": "и",
+        "c": "с",
+        "d": "в",
+        "e": "у",
+        "f": "а",
+        "g": "п",
+        "h": "р",
+        "i": "ш",
+        "j": "о",
+        "k": "л",
+        "l": "д",
+        "m": "ь",
+        "n": "т",
+        "o": "щ",
+        "p": "з",
+        "q": "й",
+        "r": "к",
+        "s": "ы",
+        "t": "е",
+        "u": "г",
+        "v": "м",
+        "w": "ц",
+        "x": "ч",
+        "y": "н",
+        "z": "я"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "accents"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

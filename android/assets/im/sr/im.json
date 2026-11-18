@@ -69,5 +69,65 @@
   "howTo": [
     "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
     "Rest a finger on the key under the letter on the bar, then press it."
-  ]
+  ],
+  "guide": {
+    "status": "experimental",
+    "family": "cyrillic",
+    "line": "",
+    "points": [],
+    "practice": "",
+    "keys": {
+      "legend": "",
+      "map": {
+        "a": "а",
+        "b": "б",
+        "c": "ц",
+        "d": "д",
+        "e": "е",
+        "f": "ф",
+        "g": "г",
+        "h": "х",
+        "i": "и",
+        "j": "ј",
+        "k": "к",
+        "l": "л",
+        "m": "м",
+        "n": "н",
+        "o": "о",
+        "p": "п",
+        "q": "љ",
+        "r": "р",
+        "s": "с",
+        "t": "т",
+        "u": "у",
+        "v": "в",
+        "w": "њ",
+        "x": "џ",
+        "y": "з",
+        "z": "ж"
+      },
+      "roles": [
+        {
+          "key": "shift",
+          "role": "accents"
+        },
+        {
+          "key": "space",
+          "role": "default"
+        },
+        {
+          "key": "enter",
+          "role": "default"
+        },
+        {
+          "key": "backspace",
+          "role": "default"
+        },
+        {
+          "key": "sym",
+          "role": "default"
+        }
+      ]
+    }
+  }
 }

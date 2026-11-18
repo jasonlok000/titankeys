@@ -1,5 +1,42 @@
 """Verdicts require the offered text; script or ASCII status is not a verdict."""
 from contextlib import contextmanager
+from contextvars import ContextVar
+import re
+import uuid
+
+MARK_TAG = 'TitanKeysCodex'
+BAR_TAG = 'TitanKeysBar'
+_attempt = ContextVar('bar_attempt', default=None)
+
+
+class Unobservable(Exception):
+    pass
+
+
+def attempt_lines(raw, marker):
+    """Decode candidates only after the exact marker in a bounded brief log dump."""
+    lines = raw.splitlines()
+    marker_line = re.compile(r'^I/' + MARK_TAG + r'\s*\(\s*\d+\s*\):\s*' + re.escape(marker) + r'\s*$')
+    start = next((i for i in range(len(lines) - 1, -1, -1) if marker_line.fullmatch(lines[i])), None)
+    if start is None:
+        raise Unobservable('attempt marker absent or rotated out of the bounded log window')
+    header = re.compile(r'^[VDIWEFAS]/' + BAR_TAG + r'\s*\(\s*\d+\s*\):\s*(.*)$')
+    bar = re.compile(r'bar: (\S+) (.*?) \| (.*?) \| (.*)$')
+    result = []
+    for line in lines[start + 1:]:
+        found = header.fullmatch(line)
+        if not found:
+            continue
+        text = found.group(1)
+        if match := bar.fullmatch(text):
+            result.append(('bar', match.group(1), [word.strip() for word in match.group(2, 3, 4)]))
+        elif text.startswith('bar notice: '):
+            result.append(('notice', text.removeprefix('bar notice: ')))
+        else:
+            # An unknown later bar format invalidates older rows rather than
+            # making them appear current.
+            result.append(('notice', 'unrecognised bar observation'))
+    return result
 
 
 def middle(lines, method):
@@ -39,23 +76,38 @@ def own_field():
 def observed_bar():
     """Enable text-bearing bar logs only around this owned synthetic-field check."""
     import checks
-    import interactions_batch as ib
     own_field()
-    prop = 'log.tag.' + ib.TAG
+    prop = 'log.tag.' + BAR_TAG
     previous = checks.adb('shell', 'getprop', prop).strip()
-    checks.adb('shell', 'setprop', prop, 'D')
+    # Same bounded marker shape as the private runner's existing custom-tag gate.
+    marker = 'charter-' + uuid.uuid4().hex
+    token = _attempt.set(marker)
     try:
-        checks.adb('logcat', '-c')
+        checks.adb('shell', 'setprop', prop, 'D')
+        checks.adb('shell', 'log', '-t', MARK_TAG, marker)
         yield
     finally:
-        checks.adb('shell', 'setprop', prop, previous or "''")
+        try:
+            # adb shell joins arguments: these shell quotes preserve an empty
+            # value. The safety proxy normalizes and requotes it as empty too.
+            checks.adb('shell', 'setprop', prop, previous or "''")
+        finally:
+            _attempt.reset(token)
 
 
 def observed_middle(method):
-    import interactions_batch as ib
+    import checks
+    marker = _attempt.get()
+    if marker is None:
+        raise checks.Stop('bar observation has no active synthetic attempt')
     own_field()
-    lines = ib.bar_lines()
+    raw = checks.adb('logcat', '-d', '-v', 'brief', '-t', '512', '-s', MARK_TAG + ':I', BAR_TAG + ':D', '*:S')
     own_field()
+    try:
+        lines = attempt_lines(raw, marker)
+    except Unobservable as error:
+        checks.record('bar-observation', None, str(error))
+        return None
     return middle(lines, method)
 
 

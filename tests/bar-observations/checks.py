@@ -7,10 +7,30 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools/dev/touch'))
-from bar_observations import middle, observed_bar, own_field, pick_verdict, space_verdict, suffix_verdict
+from bar_observations import Unobservable, attempt_lines, middle, observed_bar, own_field, pick_verdict, space_verdict, suffix_verdict
 
 
 class Observations(unittest.TestCase):
+    def test_marker_excludes_earlier_attempt_and_unrelated_tags(self):
+        raw = '\n'.join(['D/TitanKeysBar( 10): bar: el - | stale | -',
+                         'I/TitanKeysCodex( 20): charter-old',
+                         'D/TitanKeysBar( 10): bar: el - | also stale | -',
+                         'I/TitanKeysCodex( 20): charter-current',
+                         'I/Other( 10): bar: el - | unrelated | -',
+                         'D/TitanKeysBar( 10): bar: el - | καλημέρα | -'])
+        self.assertEqual(middle(attempt_lines(raw, 'charter-current'), 'el'), 'καλημέρα')
+
+    def test_rotated_marker_is_unobservable_not_stale_success(self):
+        with self.assertRaises(Unobservable):
+            attempt_lines('D/TitanKeysBar(10): bar: el - | καλημέρα | -', 'missing')
+        with self.assertRaises(Unobservable):
+            attempt_lines('I/Other(10): charter-current', 'charter-current')
+
+    def test_marker_without_new_bar_or_with_new_notice_never_reuses_old_row(self):
+        head = 'D/TitanKeysBar(10): bar: ja - | old | -\nI/TitanKeysCodex(20): charter-current\n'
+        self.assertIsNone(middle(attempt_lines(head, 'charter-current'), 'ja'))
+        for tail in ('D/TitanKeysBar(10): bar notice: loading', 'D/TitanKeysBar(10): unknown new format'):
+            self.assertIsNone(middle(attempt_lines(head + tail, 'charter-current'), 'ja'))
     def test_greek_correction_matches_observed_middle(self):
         offered = middle([('bar', 'el', ['κσλημερα', 'καλημέρα', '-'])], 'el')
         self.assertTrue(space_verdict('καλημέρα ', offered, ' '))
@@ -82,6 +102,26 @@ class Observations(unittest.TestCase):
                 with observed_bar():
                     raise ValueError('fixture')
         self.assertEqual(calls[-1], ('shell', 'setprop', 'log.tag.TitanKeysBar', 'I'))
+        self.assertFalse(any(call[:2] == ('logcat', '-c') for call in calls))
+        self.assertTrue(any(call[:4] == ('shell', 'log', '-t', 'TitanKeysCodex') for call in calls))
+
+    def test_empty_property_restores_empty_shell_argument_and_markers_are_unique(self):
+        import shlex
+        calls = []
+        def adb(*args):
+            calls.append(args)
+            return 'mCurrentFocus=Window{u0 com.titankeys.debug/com.titankeys.keyboard.SpaceGestureActivity}' if 'window' in args else ''
+        checks = SimpleNamespace(APP='com.titankeys.debug', Stop=RuntimeError, adb=adb, field=lambda: '')
+        with patch.dict(sys.modules, {'checks': checks}):
+            with observed_bar():
+                pass
+            with observed_bar():
+                pass
+        restores = [c for c in calls if c[:3] == ('shell', 'setprop', 'log.tag.TitanKeysBar') and c[-1] != 'D']
+        self.assertEqual(len(restores), 2)
+        self.assertEqual(shlex.split(' '.join(restores[-1][1:]))[-1], '')
+        markers = [c[-1] for c in calls if c[:4] == ('shell', 'log', '-t', 'TitanKeysCodex')]
+        self.assertEqual(len(set(markers)), 2)
 
 
 if __name__ == '__main__':

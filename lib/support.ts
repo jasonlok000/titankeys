@@ -2,6 +2,7 @@ import { callNative, onNativeMessage } from "ink/native";
 
 export const supportTitle = "Support TitanKeys";
 export const supportUnavailable = "Google Play support isn't ready yet.";
+export const supportPending = "Google Play is still processing this payment.";
 export const tipUnit = "support_tip_unit";
 export const customPrices = [3, 5, 10, 20, 50];
 export const cupCents = 500;
@@ -15,7 +16,7 @@ export type SupportState = {
   receipt: Receipt | null;
   reduceMotion?: boolean;
   boardJoined?: boolean;
-  purchaseResult?: "launched" | "pending" | "cancelled" | "unavailable";
+  purchaseResult?: "launched" | "pending" | "cancelled" | "unavailable" | null;
 };
 export type BoardEntry = { id: string; name?: string; message?: string; cups: number };
 export type Board = { available: boolean; entries?: BoardEntry[]; joined?: boolean };

@@ -4,7 +4,7 @@ import { Note } from "../lib/note";
 import { JuiceGlass } from "../lib/juice-glass";
 import {
   buySupport, cupQuantity, customPrices, drinkAmount, joinBoard, onSupportChanged, readBoard,
-  refreshSupport, removeBoard, seeSupportReceipt, supportState, supportTitle, supportUnavailable, tipUnit,
+  refreshSupport, removeBoard, seeSupportReceipt, supportPending, supportState, supportTitle, supportUnavailable, tipUnit,
   type Board, type Product, type Receipt, type SupportState,
 } from "../lib/support";
 
@@ -71,6 +71,8 @@ export default function SupportPage() {
     done={() => void seeSupportReceipt(receipt.id).then(supportState).then(setState)} />;
 
   const hasSupport = !!state?.totalCents;
+  const billingStatus = state?.purchaseResult === "unavailable" ? supportUnavailable :
+    state?.purchaseResult === "pending" ? supportPending : "";
   return <Screen title={supportTitle}>
     <Stack gap={12}>
       <Note>Donating gets you nothing. No badge, no secret theme, no bonus features. It's all free already.</Note>
@@ -87,7 +89,7 @@ export default function SupportPage() {
       <Row title="Pick your own" onPress={() => setCustom(!custom)} />
     </Section>
     {custom && <CustomTip products={state?.products ?? []} buy={buy} />}
-    {(status || state?.purchaseResult === "unavailable") && <Note>{status || supportUnavailable}</Note>}
+    {(status || billingStatus) && <Note>{status || billingStatus}</Note>}
     <Section title={hasSupport ? "The orange juice fund" : "The coffee fund"}>
       <Note>{hasSupport ? "Our top 10 supporters, in cups of coffee I didn't drink." : "Our top 10 supporters, in cups of coffee."}</Note>
       {(board.entries?.length ?? 0) === 0 && <Note>Nobody here yet. The top spot is wide open.</Note>}

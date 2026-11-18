@@ -54,12 +54,21 @@ object ChineseRow {
         return placed(choices, first, last)
     }
 
-    /**
-     * Whether the engine's [listed] choices go past the row as [place] fits them, so the bigger menu has more to show: Shift
-     * and a swipe up open it only then (owner, 2026-11-17: "disable shift to expand the bar if there's nothing besides the
-     * main bar").
-     */
-    fun more(listed: List<String>): Boolean = listed.size > place(listed.take(ASK)).count { it != null }
+    /** The choices fitted to the row, including any English word offered alongside the engine's choices. */
+    class Choices(listed: List<String>, english: String? = null) {
+        private val englishItem = english?.let { EnglishOffer.itemIndex(listed.size) }
+        val items = EnglishOffer.withWord(listed.take(ASK), english)
+        val columns = place(items)
+        val shown = items.indices.filter { columns[it] != null }
+
+        /** Only engine choices appear in the bigger menu, so count the engine choices the row has room for. */
+        val more = listed.size > shown.count { !isEnglish(it) }
+
+        fun isEnglish(item: Int) = item == englishItem
+
+        /** The engine's own index for an item, skipping the inserted English word. */
+        fun engineIndex(item: Int) = if (englishItem != null && item > englishItem) item - 1 else item
+    }
 
     private fun placed(choices: List<String>, first: Int, last: Int): List<IntRange?> {
         val placed = ArrayList<IntRange?>()
@@ -162,15 +171,6 @@ object ChineseKeys {
     /** Whether [method] types through the bar of choices: Chinese and Japanese. The English word is Chinese's alone. */
     fun usesBar(method: InputMethod) = method.engine in BAR_ENGINES
 
-    /**
-     * What was picked of a code, from Rime's [preedit] once nothing is pending: its text without spaces, or empty while any of
-     * it is still letters ([input]'s), as with nothing picked.
-     */
-    fun pickedText(preedit: String?, input: String): String {
-        val text = preedit.orEmpty().filterNot { it.isWhitespace() }
-        return if (text.isEmpty() || text.any { it in 'a'..'z' || it in 'A'..'Z' } || text == input) "" else text
-    }
-
     /** Cangjie's and Quick's radicals, A to Z, as their schemas show the code (preedit_format). */
     private const val RADICALS = "日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜符"
     private val RADICAL_SCHEMAS = setOf("tk_cangjie", "tk_quick")
@@ -262,7 +262,9 @@ object EnglishOffer {
 
     /** The row's choices with the word in [PLACE], or as they are. */
     fun withWord(choices: List<String>, word: String?): List<String> =
-        if (word == null) choices else choices.toMutableList().apply { add(minOf(PLACE, size), word) }
+        if (word == null) choices else choices.toMutableList().apply { add(itemIndex(size), word) }
+
+    fun itemIndex(engineChoices: Int) = minOf(PLACE, engineChoices)
 }
 
 /**

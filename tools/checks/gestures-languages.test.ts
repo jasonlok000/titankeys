@@ -42,9 +42,12 @@ test("a held delete takes a code being built as flicks do, one step a word, befo
   expect(step).toContain("return@enqueue");
 });
 
-test("a delete flick stays a flick with a choices row up, and holds (night run 2026-11-17: 我哋唔該晒 unchanged)", () => {
-  expect(ime).toContain("isDeleteWordSwipe(outcome.points)) return outcome(outcome.copy(deletesWord = true))");
+test("language and field changes select the touch gestures the keyboard can use", () => {
+  expect(ime).toContain("!field.words || !TypingSettings.swipeTyping(this) -> Contact.Swipes.Off");
+  expect(ime).toContain("english -> Contact.Swipes.WordsAndDeletes");
+  expect(ime).toContain("else -> Contact.Swipes.DeletesOnly");
+  expect(ime).toContain("!panelOpen && open == Overlays.Open.Choices -> Contact.Paging.Choices");
+  expect(ime).toContain("Overlays.paging(open, panelOpen) -> Contact.Paging.PagesOnly");
   expect(ime).toContain("if (!altOrPanel && !outcome.deletesWord && pageChoices(outcome.points)) return");
-  const contact = read("android/kotlin/com/titankeys/keyboard/Contact.kt");
-  expect(contact).toContain("paging && !isDeleteWordSwipe(touching.points)) return null");
+  expect(ime).toContain("val allowed = if (outcome.deletesWord) contact.deleteFlicks else contact.wordSwipes");
 });

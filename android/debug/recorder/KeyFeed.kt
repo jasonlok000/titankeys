@@ -4,8 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.hardware.input.InputManager
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.InputDevice
@@ -23,37 +21,43 @@ import android.view.ViewConfiguration
  *
  *   adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.KeyFeed --es keys "D 0 SHIFT_RIGHT;D 60 Q;U 140 Q;U 200 SHIFT_RIGHT"
  *
- * --el delay MS starts that much later. The answer says what was queued, and the log (TitanKeysDebug) what each key did.
+ * --el delay MS starts that much later. --el start_uptime MS sets a common start with TouchFeed. The reply says what was queued.
+ * --ez verify_focus_guard true checks the focused editor and hook without scheduling anything.
  */
 class KeyFeed : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!context.packageName.endsWith(".debug")) return
-        val dispatch = KeyFeedHook.dispatch ?: return answer("no keyboard: make TitanKeys Debug the keyboard, in a field")
+        val dispatch = KeyFeedHook.dispatch
+        val editor = dispatch?.let { FeedEditor.capture(context.packageName) }
+        if (intent.getBooleanExtra(FeedBurst.VERIFY_ONLY, false))
+            return answer(FeedBurst.probeAtUptime(editor != null))
+        if (dispatch == null) return answer("no Debug keyboard hook")
+        if (editor == null) return answer("no focused active Debug editor")
         val steps = KeyFeedPlan.read(intent.getStringExtra("keys").orEmpty(), ViewConfiguration.getKeyRepeatTimeout().toLong(),
             ViewConfiguration.getKeyRepeatDelay().toLong()) ?: return answer("bad keys")
         val codes = steps.map { it.name }.distinct().associateWith { KeyEvent.keyCodeFromString("KEYCODE_$it") }
         codes.entries.firstOrNull { it.value == KeyEvent.KEYCODE_UNKNOWN }?.let { return answer("no key called ${it.key}") }
         val device = keyboard(context)
-        val start = SystemClock.uptimeMillis() + intent.getLongExtra("delay", 0L).coerceIn(0L, KeyFeedPlan.MAX_MILLIS)
-        val main = Handler(Looper.getMainLooper())
-        val downTimes = HashMap<String, Long>()
-        for (step in steps) {
-            main.postAtTime({
-                val now = SystemClock.uptimeMillis()
-                if (step.down && step.repeat == 0) downTimes[step.name] = now
-                val event = KeyEvent(downTimes[step.name] ?: now, now, if (step.down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP,
-                    codes.getValue(step.name), step.repeat, step.meta, device?.id ?: KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
-                    KeyEvent.FLAG_FROM_SYSTEM, InputDevice.SOURCE_KEYBOARD)
-                val taken = try {
-                    dispatch(event)
-                } catch (error: RuntimeException) {
-                    Log.w(TAG, "key feed: the keyboard refused $step", error)
-                    false
-                }
-                Log.d(TAG, "key feed: $step ${if (taken) "taken by the keyboard" else "on to the app"}")
-            }, start + step.millis)
+        val start = FeedBurst.startTime(intent, KeyFeedPlan.MAX_MILLIS) ?: return answer("start_uptime out of range")
+        val downTimes = HashMap<Int, Long>()
+        val burst = FeedBurst("key", editor, dispatch, { KeyFeedHook.dispatch }) {
+            if (downTimes.isNotEmpty()) KeyFeedHook.cancelHeld?.invoke(downTimes)
         }
-        answer("queued ${steps.size} key events, ${steps.last().millis} ms, on device ${device?.id ?: "none (no $DEVICE)"}")
+        if (!burst.begin()) return answer("Debug editor changed before queueing")
+        for ((index, step) in steps.withIndex()) {
+            burst.post(start + step.millis, index == steps.lastIndex) { send ->
+                val now = SystemClock.uptimeMillis()
+                val code = codes.getValue(step.name)
+                if (step.down && step.repeat == 0) downTimes[code] = now
+                val event = KeyEvent(downTimes[code] ?: now, now, if (step.down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP,
+                    code, step.repeat, step.meta, device?.id ?: KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                    KeyEvent.FLAG_FROM_SYSTEM, InputDevice.SOURCE_KEYBOARD)
+                val taken = send(event)
+                if (!step.down) downTimes.remove(code)
+                Log.d(TAG, "key feed: $step ${if (taken) "taken by the keyboard" else "on to the app"}")
+            }
+        }
+        answer("queued ${steps.size} key events, ${steps.last().millis} ms, on device ${device?.id ?: "none (no $DEVICE)"}; ${FeedBurst.READY}")
     }
 
     private fun answer(text: String) {

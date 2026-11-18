@@ -193,8 +193,10 @@ private class FakeRime : RimeCalls {
         return true
     }
 
+    var displayCode: (String) -> String = { it.replace("ou", "o-u") }
+
     override fun read(): RimeCalls.Raw {
-        val preedit = if (code.isEmpty()) pickedText.ifEmpty { null } else pickedText + code.replace("ou", "o-u")
+        val preedit = if (code.isEmpty()) pickedText.ifEmpty { null } else pickedText + displayCode(code)
         val out = RimeCalls.Raw(commit, pickedCode + code, preedit, page, page >= 2, 0, choices(), choices().map { "" }, 8, if (code.isEmpty()) 0 else 24)
         commit = null
         return out
@@ -917,6 +919,13 @@ fun aFlickKeepsWhatWasPicked() {
     val whole = engine.flick()
     same("", whole.commit, "with nothing picked the code goes whole, typing nothing")
     same("", whole.code, "and leaves nothing")
+    for ((keys, display) in listOf("hqi" to "竹手戈", "hi" to "竹戈", "nefhwf" to "ㄋㄧˇㄏㄠˇ")) {
+        rime.displayCode = { display }
+        type(engine, keys)
+        val removed = engine.flick()
+        same("", removed.commit, "a flick clearing $display must not insert any unselected preview")
+        same("", removed.code, "the entire unselected code clears")
+    }
     same("𠮩", ChineseKeys.dropLastCharacter("𠮩𠮩"), "a character outside the BMP counts as one")
 }
 

@@ -52,6 +52,8 @@ fun main(args: Array<String>) {
     anEngineFitsTheInterface()
     hangulBuildsSyllables()
     keysWaitForALoadingEngine()
+    koreanReplaysKeysAfterLoad()
+    koreanRestartKeepsItsOwnKeys()
     aRestoredInputMethodTypes()
     thaiHoldsAndBreaks()
     hindiRulesType()
@@ -1249,6 +1251,134 @@ private fun keysWaitForALoadingEngine() {
     same("a fresh stop", queue.toList(), listOf("stop3"))
     queue.clear()
     same("a stop the queue dropped never opens", gate.open(false, queue), null)
+}
+
+/** A slow switch to Korean: the held keys build one syllable, whether Space comes before or after the load finishes. */
+private fun koreanReplaysKeysAfterLoad() {
+    class Queued(val key: Char? = null, val down: Boolean = false, var ready: Boolean = true)
+
+    for (spaceWaits in listOf(false, true)) {
+        val name = "Korean, Space ${if (spaceWaits) "before" else "after"} the load"
+        val wait = EngineWait()
+        val gate = LoadGate { Queued(ready = false) }
+        val queue = ArrayDeque<Queued>()
+        var engine: HangulComposer? = null
+        val preedits = mutableListOf<String>()
+        val writes = mutableListOf<String>()
+
+        fun drain() {
+            while (queue.firstOrNull()?.ready == true) {
+                val event = queue.removeFirst()
+                val key = event.key ?: continue
+                if (!event.down) continue
+                val active = engine
+                if (active == null) {
+                    writes += key.toString() // English still owns the field.
+                    continue
+                }
+                val state = if (key == ' ') active.space() else active.key(key)
+                if (key != ' ') preedits += state.code
+                if (state.commit.isNotEmpty()) writes += state.commit
+                if (!state.handled) writes += key.toString()
+            }
+        }
+
+        fun press(key: Char) {
+            gate.before(wait.waiting, queue)
+            queue += Queued(key, down = true)
+            queue += Queued(key, down = false)
+            drain()
+        }
+        fun loadFinished(ticket: Int) {
+            if (wait.loaded(ticket)) engine = HangulComposer()
+            gate.open(wait.waiting, queue)?.ready = true
+            drain()
+        }
+
+        wait.loading(1, "ja")
+        wait.loading(2, "ko")
+        press('r')
+        press('k')
+        if (spaceWaits) press(' ')
+        loadFinished(1)
+        same("$name: an older completion leaves the keys waiting", gate.closed(queue), true)
+        same("$name: no English letters reach the field", writes.toList(), emptyList())
+        loadFinished(2)
+        same("$name: the two presses replay once, in order", preedits, listOf("ㄱ", "가"))
+        if (!spaceWaits) {
+            same("$name: the syllable waits on the bar", writes.toList(), emptyList())
+            press(' ')
+        }
+        loadFinished(2)
+        same("$name: one syllable and one literal space reach the field", writes, listOf("가", " "))
+        same("$name: the queue is empty", queue.isEmpty(), true)
+    }
+}
+
+/** A field can restart on either side of the load. A true field change discards the old keyboard's pending input. */
+private fun koreanRestartKeepsItsOwnKeys() {
+    class Key(val char: Char? = null, var ready: Boolean = true, val held: Boolean = char != null)
+    val connection = Any()
+    fun field(id: Int = 7, app: String = "editor", type: Int = 1, link: Any = connection) =
+        EngineEditor(app, id, type, 0, null, link)
+
+    fun EngineEditor.continuesHere(previous: EngineEditor, restarting: Boolean, start: Int = 0, end: Int = 0) =
+        continues(previous, restarting, 0, 0, start, end)
+
+    same("a restart can give the same field a new connection", field(link = Any()).continuesHere(field(), true), true)
+    same("a new field with the same id starts empty", field().continuesHere(field(), false), false)
+    same("another app never inherits the keys", field(app = "other").continuesHere(field(), true), false)
+    same("another field never inherits the keys", field(id = 8).continuesHere(field(), true), false)
+    same("a moved cursor starts empty", field().continuesHere(field(), true, 2, 2), false)
+    same("a changed selection starts empty", field().continuesHere(field(), true, 0, 2), false)
+    same("an unknown cursor starts empty", field().continuesHere(field(), true, -1, -1), false)
+    same("a field whose type changed starts empty", field(type = 129).continuesHere(field(), true), false)
+    same("an unnamed field can keep its connection", field(id = 0).continuesHere(field(id = 0), true), true)
+    same("an unidentifiable replacement starts empty", field(id = 0, link = Any()).continuesHere(field(id = 0), true), false)
+
+    for (restarting in listOf(true, false)) for (replayed in 0..2) {
+        val name = "Korean after $replayed keys replayed, restarting $restarting"
+        val gate = LoadGate { Key(ready = false) }
+        val wait = EngineWait()
+        val queue = ArrayDeque<Key>()
+        val engine = HangulComposer()
+        wait.loading(1, "ko")
+        gate.before(wait.waiting, queue)
+        queue += Key('r')
+        queue += Key('k')
+        if (replayed > 0) {
+            wait.loaded(1)
+            gate.open(wait.waiting, queue)?.ready = true
+            queue.removeFirst()
+            repeat(replayed) { engine.key(queue.removeFirst().char!!) }
+        }
+
+        val continues = field(link = Any()).continuesHere(field(), restarting)
+        val keys = if (continues) gate.takeKeys(queue) { it.held } else emptyList()
+        if (!continues) engine.reset()
+        gate.clear()
+        queue.clear()
+        if (keys.isNotEmpty()) {
+            gate.before(wait.waiting, queue)
+            queue.addAll(keys)
+        }
+        wait.loaded(1)
+        gate.open(wait.waiting, queue)?.ready = true
+        while (queue.firstOrNull()?.ready == true) {
+            queue.removeFirst().char?.let(engine::key)
+        }
+        same("$name: Space commits the original syllable only to its own field", engine.space().commit, if (restarting) "가" else "")
+        same("$name: a second Space can't commit the syllable twice", engine.space().commit, "")
+    }
+
+    val gate = LoadGate { Key(ready = false) }
+    val queue = ArrayDeque<Key>()
+    gate.before(true, queue)
+    queue += Key('r')
+    queue += Key(held = false)
+    queue += Key('k')
+    same("a touch or command in the batch keeps the usual discard order", gate.takeKeys(queue) { it.held }.isEmpty(), true)
+    same("the mixed batch stays in place for cleanup", queue.size, 4)
 }
 
 /** The bar's words in another input method, and what it learns from the user. */

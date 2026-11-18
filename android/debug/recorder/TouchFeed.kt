@@ -6,8 +6,6 @@ import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.hardware.input.InputManager
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.Display
@@ -27,15 +25,20 @@ import kotlin.math.hypot
  *
  * events: one per frame, separated by ";": "D ms x y size" a finger lands, "M ms x y size" it moves, "U ms" it lifts. x and y are
  * the touchpad's own steps (0 to 1079 across, 0 to 599 down), size its contact size (1 to 255), ms the time from the start.
- * --el delay MS starts that much later, to line up with keys played meanwhile on the keyboard. The answer says what was queued.
+ * --el delay MS starts that much later. --el start_uptime MS sets a common start with KeyFeed. The reply says what was queued.
+ * --ez verify_focus_guard true checks the focused editor and hook without scheduling anything.
  */
 class TouchFeed : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!context.packageName.endsWith(".debug")) return
-        val dispatch = TouchpadFeedHook.dispatch ?: return answer("no keyboard: make TitanKeys Debug the keyboard, in a field")
+        val dispatch = TouchpadFeedHook.dispatch
+        val editor = dispatch?.let { FeedEditor.capture(context.packageName) }
+        if (intent.getBooleanExtra(FeedBurst.VERIFY_ONLY, false))
+            return answer(FeedBurst.probeAtUptime(editor != null))
+        if (dispatch == null) return answer("no Debug keyboard hook")
+        if (editor == null) return answer("no focused active Debug editor")
         val device = touchpad(context) ?: return answer("no device called $DEVICE")
         val frames = parse(intent.getStringExtra("events").orEmpty()) ?: return answer("bad events")
-        if (frames.isEmpty() || frames.last().millis > MAX_MILLIS) return answer("no events, or longer than ${MAX_MILLIS / 1000} s")
         val xRange = device.getMotionRange(MotionEvent.AXIS_X, InputDevice.SOURCE_TOUCHPAD)
         val yRange = device.getMotionRange(MotionEvent.AXIS_Y, InputDevice.SOURCE_TOUCHPAD)
         // The real device's positions are its steps scaled by its ranges (Y is 0 to 748.75 for 600 steps on the Titan 2).
@@ -44,12 +47,15 @@ class TouchFeed : BroadcastReceiver() {
         val diagonal = context.resources.displayMetrics.let { hypot(it.widthPixels.toFloat(), it.heightPixels.toFloat()) }
         // The firmware's own shift, which Touchpad.firmwareOffset takes off again: real events carry it, so these do too.
         val yOffset = firmwareOffset(context)
-        val start = SystemClock.uptimeMillis() + intent.getLongExtra("delay", 0L).coerceIn(0L, MAX_MILLIS)
-        val main = Handler(Looper.getMainLooper())
-        var downTime = 0L
+        val start = FeedBurst.startTime(intent, MAX_MILLIS) ?: return answer("start_uptime out of range")
+        var downTime: Long? = null
         var last: Frame? = null
-        for (frame in frames) {
-            main.postAtTime({
+        val burst = FeedBurst("touch", editor, dispatch, { TouchpadFeedHook.dispatch }) {
+            downTime?.let { TouchpadFeedHook.cancelContact?.invoke(it) }
+        }
+        if (!burst.begin()) return answer("Debug editor changed before queueing")
+        for ((index, frame) in frames.withIndex()) {
+            burst.post(start + frame.millis.toLong(), index == frames.lastIndex) { send ->
                 val now = SystemClock.uptimeMillis()
                 val action = when (frame.kind) {
                     'D' -> { downTime = now; MotionEvent.ACTION_DOWN }
@@ -67,18 +73,17 @@ class TouchFeed : BroadcastReceiver() {
                     touchMajor = at.size / 255f * diagonal
                     touchMinor = touchMajor
                 }
-                val event = MotionEvent.obtain(downTime, now, action, 1, arrayOf(properties), arrayOf(coords), 0, 0, 1f, 1f,
+                val event = MotionEvent.obtain(requireNotNull(downTime), now, action, 1, arrayOf(properties), arrayOf(coords), 0, 0, 1f, 1f,
                     device.id, 0, InputDevice.SOURCE_TOUCHPAD, 0)
                 try {
-                    dispatch(event)
-                } catch (error: RuntimeException) {
-                    Log.w(TAG, "touch feed: the keyboard refused an event", error)
+                    send(event)
+                    if (frame.kind == 'U') downTime = null
                 } finally {
                     event.recycle()
                 }
-            }, start + frame.millis.toLong())
+            }
         }
-        answer("queued ${frames.size} frames, ${frames.last().millis} ms, on device ${device.id}")
+        answer("queued ${frames.size} frames, ${frames.last().millis} ms, on device ${device.id}; ${FeedBurst.READY}")
     }
 
     private fun answer(text: String) {
@@ -97,7 +102,18 @@ class TouchFeed : BroadcastReceiver() {
                 "U" -> Frame('U', bits[1].toDouble(), 0f, 0f, 1)
                 else -> throw IllegalArgumentException(part)
             }
-        }.also { frames -> require(frames.zipWithNext().all { (a, b) -> b.millis >= a.millis }) }
+        }.also { frames ->
+            require(frames.isNotEmpty())
+            var down = false
+            var previous = 0.0
+            for (frame in frames) {
+                require(frame.millis in previous..MAX_MILLIS.toDouble())
+                require(frame.kind == 'D' && !down || frame.kind != 'D' && down)
+                down = frame.kind != 'U'
+                previous = frame.millis
+            }
+            require(!down)
+        }
     } catch (error: RuntimeException) {
         null
     }

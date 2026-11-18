@@ -749,7 +749,8 @@ class GuideActivity : Activity() {
     private val flow by lazy { GuideFlow(::readSettings) }
     private val haptics by lazy { Haptics(this) }
     private val input by lazy { getSystemService(InputMethodManager::class.java) }
-    private val clipboard by lazy { getSystemService(ClipboardManager::class.java) }
+    // Android's clipboard callback can outlive this activity and retain the manager's context.
+    private val clipboard by lazy { applicationContext.getSystemService(ClipboardManager::class.java) }
     /** A copy, from the keyboard's fn and C or from anything else, as the copy slides wait for. */
     private val clipChanged = ClipboardManager.OnPrimaryClipChangedListener {
         val text = runCatching { clipboard.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() }.getOrNull().orEmpty()
@@ -4853,6 +4854,10 @@ class GuideActivity : Activity() {
 
     /** Leaves at any time. The guide remembers where you stopped, and opens there from the guide page. */
     private fun leave() {
+        // Android's setup panels can remain under this activity after Accessibility brings the guide forward. Just finishing
+        // would uncover that system page. Return to our singleTask front page explicitly; it chooses the playground once
+        // setup is done, or the setup start otherwise. End-screen links use openFromEnd and keep their own Back destination.
+        if (!playground || settingUp) startActivity(Connected.pageIntent(this, "/"))
         // The playground's setup slide closes to the app's setup page, which waits for a touch to start again.
         if (playground && settingUp) leavePlayground(PLAYGROUND_SETUP) else finish()
     }

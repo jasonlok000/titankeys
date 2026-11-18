@@ -45,6 +45,7 @@ fun main() {
     aFingerThatTurnsBackIsNotAFlick()
     swipeTypingOffGivesNoHold()
     thePanelGivesNoHold()
+    nonEnglishFlickHoldsWithOrWithoutChoices()
     aFlickThatDoesNotCountGivesNoHold()
     aBusyEditDoesNotChangeTheWait()
     aStrokeJustAfterASwipeCannotDelete()
@@ -481,7 +482,7 @@ private fun aFingerThatTurnsBackIsNotAFlick() {
 
 private fun swipeTypingOffGivesNoHold() {
     val rig = Rig()
-    rig.contact.swipes = false
+    rig.contact.swipes = Contact.Swipes.Off
     rig.flick(1_000)
     same(rig.next, null, "With swipe typing off a flick must not wait for a hold")
     same(rig.lift(5_000), null, "With swipe typing off a flick must do nothing")
@@ -489,9 +490,34 @@ private fun swipeTypingOffGivesNoHold() {
 
 private fun thePanelGivesNoHold() {
     val rig = Rig()
-    rig.contact.paging = true
+    rig.contact.paging = Contact.Paging.PagesOnly
     rig.flick(1_000)
     same(rig.next, null, "A flick in the panel must not wait for a hold")
+}
+
+private fun nonEnglishFlickHoldsWithOrWithoutChoices() {
+    for (paging in listOf(Contact.Paging.None, Contact.Paging.Choices)) {
+        val rig = Rig()
+        rig.contact.swipes = Contact.Swipes.DeletesOnly
+        rig.contact.paging = paging
+        rig.flick(1_000)
+        rig.runTo(4_000)
+        same(rig.flicks.size, 1, "A non-English hold starts exactly once ($paging)")
+        same(rig.flicks.single().deletesWord, true, "Its first step deletes ($paging)")
+        isTrue(rig.words.size > 1, "A still finger keeps deleting ($paging)")
+        same(rig.lift(4_100), null, "Lifting a held flick does not delete again ($paging)")
+
+        rig.land(at(.15f, .4f, 5_000))
+        rig.move(at(.45f, .4f, 5_120))
+        same(rig.next, null, "An ordinary stroke cannot arm a hold ($paging)")
+    }
+    val blocked = Rig()
+    blocked.contact.swipes = Contact.Swipes.DeletesOnly
+    blocked.contact.paging = Contact.Paging.Choices
+    blocked.flick(1_000)
+    blocked.contact.paging = Contact.Paging.PagesOnly
+    blocked.runTo(4_000)
+    same(blocked.words.size, 0, "Opening a panel before the timer fires blocks the held delete")
 }
 
 private fun aFlickThatDoesNotCountGivesNoHold() {

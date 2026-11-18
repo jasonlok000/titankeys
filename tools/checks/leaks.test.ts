@@ -56,6 +56,12 @@ test("the open playgrounds' list holds them weakly and drops closed ones as it's
   expect(guide).not.toMatch(/playgrounds \+= this\b/);
 });
 
+test("the clipboard service uses the app context and releases the guide's listener", () => {
+  const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
+  expect(guide).toContain("applicationContext.getSystemService(ClipboardManager::class.java)");
+  expect(guide).toContain("clipboard.removePrimaryClipChangedListener(clipChanged)");
+});
+
 test("the front page's Settings and Guide buttons have their names for accessibility, which the phone checks find them by", () => {
   const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
   const action = guide.slice(guide.indexOf("private fun topAction("), guide.indexOf("onPress(haptics) { press() }", guide.indexOf("private fun topAction(")));

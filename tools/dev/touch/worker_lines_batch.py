@@ -9,7 +9,7 @@ Yale in Debug's Space gestures field; the bar from TitanKeysBar (D's BarLog), th
    goes first (O), the shot shows where it stopped (J).
 5. Chinese gestures on 我哋唔該晒, by one character since 50d59aa2: a flick takes 晒 (O); three Space taps select 唔該晒 (J); a slide selects one unit (J).
 6. No "Warming up" on the bar after a switch to Yale (O).
-7. Shift with nothing more (no code, then after a pick): the bigger menu doesn't open (O).
+7. Shift with no code and after a pick: report LOOK unless candidate overflow is measurable.
 8. The language mark over Q: a shot in English (with its auto-capital line) and in Yale (J).
 """
 import os
@@ -108,21 +108,42 @@ def check_no_warming():
     record("no-warming-up", not warming if lines else None, f"a switch to Yale: notices {warming or 'none'}; the bar {ib.shown(lines)}")
 
 
+def shift_verdict(lines, overflow=None):
+    """A menu is correct iff choices overflow. No overflow measurement means LOOK, even after a pick."""
+    responses = [line for line in lines if line.startswith("Shift (") and "the bigger menu " in line]
+    if overflow is None:
+        rows = [line for line in lines if line in ("Shift row overflow=true", "Shift row overflow=false")]
+        if not rows:
+            return None
+        overflow = rows[-1].endswith("=true")
+        if not responses:
+            return not overflow  # Shift passes through when the row fits.
+    if not responses:
+        return None
+    opened = responses[-1].endswith("opens")
+    closed = responses[-1].endswith("closes")
+    return opened == overflow if opened or closed else None
+
+
 def check_shift_nothing_more():
+    previous_feed = os.environ.get("TK_KEYFEED")
     os.environ["TK_KEYFEED"] = "1"  # the twin's Shift takes the field's focus on this phone
     try:
-        yale()
-        adb("logcat", "-c")
-        play("chord:shift", "+600")
-        empty = [line for line in choices() if "opens" in line]
-        play(*ib.keys("ngo"), "+500", "key:space", "+700")
-        adb("logcat", "-c")
-        play("chord:shift", "+600")
-        after_pick = [line for line in choices() if "opens" in line]
-        record("shift-nothing-more", not empty and not after_pick,
-               f"Shift with no code: {empty or 'no menu'}; after a pick: {after_pick or 'no menu'}")
+        for after_pick in (False, True):
+            yale()  # independent cases: an earlier Shift may legitimately have opened a menu
+            if after_pick:
+                play(*ib.keys("ngo"), "+500", "key:space", "+700")
+            adb("logcat", "-c")
+            play("chord:shift", "+600")
+            lines = choices()
+            verdict = shift_verdict(lines)
+            name = "shift-after-pick" if after_pick else "shift-no-code"
+            record(name, verdict, f"Shift with the menu initially closed: {lines or 'no instrumentation'}")
     finally:
-        os.environ.pop("TK_KEYFEED", None)
+        if previous_feed is None:
+            os.environ.pop("TK_KEYFEED", None)
+        else:
+            os.environ["TK_KEYFEED"] = previous_feed
 
 
 def check_language_mark():

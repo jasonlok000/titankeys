@@ -115,10 +115,9 @@ tk_debug_opened() {
     <<<"$acts" | grep -q "launchedFromPackage=$TK_APP "
 }
 
-# Waits while the owner's app stays in front: every TK_OWNER_POLL_S (20) s, for TK_OWNER_WAIT_S (1800) s at most. Sends nothing to
-# the phone but reads. False if the owner's app is still there at the end.
+# Poll until the owner leaves the app or the overnight run reaches its overall cutoff.
 tk_wait_for_owner() {
-  local waited=0 step="${TK_OWNER_POLL_S:-20}" most="${TK_OWNER_WAIT_S:-1800}"
+  local waited=0 step="${TK_OWNER_POLL_S:-20}"
   echo "waiting: the owner's app is in front ($(tk_front | sed 's/.* u0 //; s/}.*//')); touching nothing"
   # The run's notification says why it waits (checks.py's run_status left its last words beside its file). A broadcast, no touch.
   if [ -n "${TK_RUN_STATUS_FILE:-}" ] && [ -s "$TK_RUN_STATUS_FILE.args" ]; then
@@ -126,7 +125,10 @@ tk_wait_for_owner() {
     tk_adb $(cat "$TK_RUN_STATUS_FILE.args") --es note "'waiting: another app in front'" --ez done false >/dev/null 2>&1
   fi
   while tk_owner_app; do
-    [ "$waited" -ge "$most" ] && return 1
+    if [ -n "${TK_CUTOFF_EPOCH:-}" ] && [ "$(date +%s)" -ge "$TK_CUTOFF_EPOCH" ]; then
+      echo "the overnight cutoff came while waiting for the owner"
+      return 1
+    fi
     sleep "$step"
     waited=$((waited + step))
   done
@@ -160,7 +162,7 @@ tk_touch_check() {
       continue
     fi
     if [ $status = 3 ] && [ "${TK_WAIT_FOR_OWNER:-}" = 1 ] && tk_owner_app; then
-      tk_wait_for_owner || { echo "STOP: $why, and still after ${TK_OWNER_WAIT_S:-1800} s"; return 1; }
+      tk_wait_for_owner || return 1
       continue
     fi
     if [ $status = 3 ] && [ $starts -lt 2 ]; then

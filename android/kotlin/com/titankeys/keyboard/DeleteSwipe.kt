@@ -348,7 +348,7 @@ internal class DeleteHold(private val contact: Contact) {
     fun moved(allowed: Boolean): Long? {
         if (contact.deleting) return nextAt
         val points = contact.points
-        if (!allowed || !contact.swipes || contact.paging || contact.travel == null || !isDeleteWordSwipe(points)) {
+        if (!allowed || !contact.deleteFlicks || contact.travel == null || !isDeleteWordSwipe(points)) {
             still = null
             return null
         }
@@ -418,6 +418,7 @@ internal class DeleteHold(private val contact: Contact) {
      * edit is still going through, so that a lift never leaves words waiting to be deleted.
      */
     fun step(now: Long, free: Boolean, delete: (Contact.Outcome.Swipe?) -> Unit): Long? {
+        if (!contact.deleteFlicks) return null
         if (!contact.deleting) {
             if (started) return null
             val at = (still ?: return null).time + deleteHoldPauseMillis()

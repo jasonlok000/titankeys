@@ -40,9 +40,9 @@ class Modifiers {
     /** Each physical modifier that is down, with the time it was pressed. */
     private val held = HashMap<Int, Long>()
     private val usedWhileHeld = HashSet<Int>()
-    private var symHeld = false
+    private var symHeldAt: Long? = null
     /** Each key that counts as Ctrl and is down. Key Mapper's Ctrl and fn together are still one Ctrl. */
-    private val ctrlKeys = HashSet<Int>()
+    private val ctrlKeys = HashMap<Int, Long>()
 
     /** Shift is on for one key because a sentence starts here, not because of a push. */
     var autoShifted = false
@@ -272,17 +272,17 @@ class Modifiers {
      */
     fun down(code: Int, time: Long, meta: Int = 0) {
         if (isCtrl(code)) {
-            ctrlKeys += code
+            ctrlKeys[code] = time
             return
         }
         if (code == KeyEvent.KEYCODE_SYM) {
-            if (!symHeld) {
+            if (symHeldAt == null) {
                 if (panel == Panel.Closed && (holding(Key.Alt) || meta and KeyEvent.META_ALT_ON != 0) && altSymSwitches) {
                     useHeld()
                     keyboardSwitch = true
                 } else pressSym()
             }
-            symHeld = true
+            symHeldAt = time
             return
         }
         val key = keyOf(code) ?: return
@@ -300,7 +300,7 @@ class Modifiers {
             ctrlKeys.remove(code)
             return
         }
-        if (code == KeyEvent.KEYCODE_SYM) symHeld = false
+        if (code == KeyEvent.KEYCODE_SYM) symHeldAt = null
         val key = keyOf(code) ?: return
         held.remove(code) ?: return
         val used = usedWhileHeld.remove(code)
@@ -332,7 +332,22 @@ class Modifiers {
         usedWhileHeld += held.keys
     }
 
-    fun isHeld(code: Int) = code in held || code == KeyEvent.KEYCODE_SYM && symHeld
+    fun isHeld(code: Int) = code in held || code == KeyEvent.KEYCODE_SYM && symHeldAt != null
+
+    /** A Debug feed was interrupted. End only its own presses without treating them as taps. */
+    internal fun cancelFeedKeys(presses: Map<Int, Long>) {
+        for ((code, time) in presses) {
+            if (ctrlKeys[code] == time) ctrlKeys.remove(code)
+            if (code == KeyEvent.KEYCODE_SYM && symHeldAt == time) {
+                symHeldAt = null
+                keyboardSwitch = false
+            }
+            if (held[code] != time) continue
+            usedWhileHeld.add(code)
+            up(code, time)
+            keyOf(code)?.let { last[it.ordinal] = 0L }
+        }
+    }
 
     /** An app can restart its field after a shortcut. With [keepCtrl], Ctrl stays down through that so that another can follow. */
     fun clear(keepCtrl: Boolean = false) {
@@ -344,7 +359,7 @@ class Modifiers {
         held.clear()
         usedWhileHeld.clear()
         pressDoes = null
-        symHeld = false
+        symHeldAt = null
         keyboardSwitch = false
         if (keepCtrl) return
         ctrlKeys.clear()

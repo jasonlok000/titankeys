@@ -83,7 +83,8 @@ test("a swipe up opens the bigger menu, a page turn's length, each logged; no fl
   // The open menu takes keys in any of them, but Shift opens it only in Chinese and Japanese, where it types no capitals.
   const keys = body(ime, "chineseKey");
   expect(keys).toContain("if (!ChineseKeys.usesBar(languages.current) && !choicesMenuOpen) return false");
-  expect(keys).toContain("(openPicker() as? LanguagePicker.Choices)?.more == true && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()");
+  expect(keys).toContain("val overflow = !choicesMenuOpen && (openPicker() as? LanguagePicker.Choices)?.more == true");
+  expect(keys).toContain("overflow && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()");
   for (const f of ["Telex.kt", "Rules.kt"]) {
     const engine = read(`android/kotlin/com/titankeys/keyboard/${f}`);
     expect(engine).toContain("override fun choices(start: Int, count: Int): List<String> {");

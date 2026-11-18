@@ -4,6 +4,7 @@ English through InputMethodsSet, in Debug's Space gestures field. A password fie
 Debug's own screens have no password field.
 """
 import language_checks
+from bar_observations import observed_bar, observed_candidate_zero, observed_middle, own_field, pick_verdict, space_verdict, suffix_verdict
 from checks import Stop, play, record
 
 # A word in each, as its keys: Korean's 한국 is g k s r n r.
@@ -64,8 +65,8 @@ def check_korean_choices():
 
 def check_corrections():
     """D's corrections (main 070198f1): in Spanish, "cafe" + Space types "café " (O), and a neighbour-key slip, "hpla", shows
-    "hola" on the bar (J). In Greek, Space never fixes a slip: the field keeps what was typed (O), and the fix is only offered
-    on the bar (J)."""
+    "hola" on the bar (J). Greek's reranked list now permits conservative Space corrections: compare its actual middle
+    suggestion before Space with the committed text, rather than assuming Greek is bar-only."""
     language_checks.fresh()
     if not language_checks.turn_on(["en", "es", "el"], "es"):
         return record("fix-es", False, "the field didn't start with es")
@@ -84,11 +85,15 @@ def check_corrections():
     slip = "kslhmera"  # καλημέρα's keys (k a l h m e r a) with A slipped to its neighbour S
     typed = language_checks.expected("el", list(slip))
     moves = keys(slip) + ["+800"]
-    play(*moves, shot="fix-el-bar", at=len(moves) * 80 + 500)
-    play("key:space", "+600")
-    text = language_checks.checks.field()
-    record("fix-el-space", text == typed + " ", f"{slip} + Space typed {text!r}, wanted it as typed, {typed + ' '!r}")
-    record("fix-el-bar", None, f"{typed} typed: the bar offers the fix (καλημέρα), Space didn't take it", "fix-el-bar")
+    with observed_bar():
+        play(*moves, shot="fix-el-bar", at=len(moves) * 80 + 500)
+        offered = observed_middle('el')
+        play("key:space", "+600")
+        text = own_field()
+    record("fix-el-space", space_verdict(text, offered, ' '),
+           f"{slip} + Space typed {text!r}; observed middle {offered!r}" +
+           ("; no usable latest bar observation, review the shot" if offered is None else ""))
+    record("fix-el-bar", None, f"{typed} typed; middle observed as {offered!r}; Space produced {text!r}", "fix-el-bar")
 
 
 BATCH = [check_bar_words, check_learned_starter, check_korean_choices, check_corrections]
@@ -127,30 +132,43 @@ def check_korean_polish():
 
 
 def check_japanese_menu():
-    """Japanese: "kyou" and a swipe up open the menu with 今日 (J); a press picks one (O); Space types the first choice (O)."""
+    """Japanese: inspect kyou's menu and its S tile (J); Space must commit the observed first choice (O).
+    Mozc can offer ASCII dates for きょう, so character script cannot establish which candidate was picked."""
     language_checks.fresh()
     if not language_checks.turn_on(["en", "ko", "ja"], "ja"):
         return record("ja-menu", False, "the field didn't start with ja")
     language_checks.fresh()
     moves = keys("kyou") + ["+400", "swipeup:b", "+800"]
-    play(*moves, shot="ja-kyou-menu", at=len(moves) * 80 + 700)
-    record("ja-kyou-menu", None, "kyou then a swipe up: the menu, 今日 among its cells", "ja-kyou-menu")
+    own_field()
+    play(*moves)
+    import guide_checks
+    own_field()
+    guide_checks.shot('ja-kyou-menu')
+    record("ja-kyou-menu", None, "kyou then a swipe up: inspect the S tile before the pick; dates are valid candidates", "ja-kyou-menu")
     play("key:s", "+500")  # the cell over S
-    picked = language_checks.checks.field()
-    record("ja-kyou-pick", bool(picked) and not picked.isascii(), f"a press of S in the menu typed {picked!r}")
+    picked = own_field()
+    # Current Debug logs expose three bar choices, not the expanded menu's S
+    # tile. Keep this visual oracle LOOK rather than inventing a matching value.
+    record("ja-kyou-pick", pick_verdict(picked), f"S committed {picked!r}; compare exactly with the S tile in ja-kyou-menu; "
+           "ASCII dates are allowed, but nonempty text alone does not prove correct selection", 'ja-kyou-menu')
     language_checks.fresh()
-    play(*keys("kyou"), "+500", "key:space", "+600")
-    text = language_checks.checks.field()
-    record("ja-kyou-space", bool(text.strip()) and not text.isascii(), f"kyou + Space typed {text!r}: the first choice")
+    with observed_bar():
+        play(*keys("kyou"), "+500")
+        offered = observed_middle('ja')
+        play('key:space', '+600')
+        text = own_field()
+    record("ja-kyou-space", space_verdict(text, offered, ''),
+           f"kyou + Space committed {text!r}; observed first choice {offered!r}" +
+           ('; no usable latest bar observation' if offered is None else ''))
 
 
 BATCH += [check_korean_polish, check_japanese_menu]
 
 
 def check_japanese_polish():
-    """B's Japanese polish: nihon's choices over W to O (J), Space types 日本, Enter types the romaji, Backspace leaves "niho"
-    (O); a flick with a code clears only the code (O); ohayou + Space types おはよう and ございます follows (J), Space types it
-    (O); a digit (Alt + W) clears the suggestions (J); "." and "," (Alt + M, Alt + N) type 。 and 、 (O); a swipe up opens the
+    """B's Japanese polish: nihon's choices over W to O (J), Space types candidate zero, Enter types the romaji, Backspace leaves "niho"
+    (O); a flick with a code clears only the code (O); ohayou + Space picks candidate zero, then Space adds a plain space
+    instead of taking a prediction (O); a digit (Alt + W) clears the suggestions (J); "." and "," type 。 and 、 (O); a swipe up opens the
     menu and a second turns its page (J)."""
     def fresh_ja():
         language_checks.fresh()
@@ -160,10 +178,14 @@ def check_japanese_polish():
     field = language_checks.checks.field
     fresh_ja()
     moves = keys("nihon") + ["+800"]
-    play(*moves, "key:space", "+500", shot="ja-nihon-row", at=len(moves) * 80 + 500)
-    text = field()
+    with observed_bar():
+        play(*moves, shot="ja-nihon-row", at=len(moves) * 80 + 500)
+        zero = observed_candidate_zero('ja')
+        play('key:space', '+500')
+        text = own_field()
     record("ja-nihon-row", None, "nihon typed: the choices over W to O", "ja-nihon-row")
-    record("ja-nihon-space", text == "日本", f"nihon + Space typed {text!r}, wanted '日本'")
+    record("ja-nihon-space", space_verdict(text, zero, ''),
+           f"nihon + Space committed {text!r}; observed candidate zero {zero!r}; other candidates do not count")
     fresh_ja()
     play(*keys("nihon"), "+400", "key:enter", "+500")
     text = field()
@@ -179,20 +201,29 @@ def check_japanese_polish():
     text = field()
     record("ja-code-flick", text == before, f"{before!r}, a code, then a flick left {text!r}: only the code goes")
     fresh_ja()
-    play(*keys("ohayou"), "+500", "key:space", "+900", shot="ja-ohayou-next", at=len(keys("ohayou")) * 80 + 1200)
-    first = field()
+    with observed_bar():
+        play(*keys('ohayou'), '+500')
+        zero = observed_candidate_zero('ja')
+        play('key:space', '+900')
+        first = own_field()
+    import guide_checks
+    guide_checks.shot('ja-ohayou-next')
     play("key:space", "+500")
-    second = field()
-    record("ja-ohayou", first == "おはよう", f"ohayou + Space typed {first!r}, wanted 'おはよう'", "ja-ohayou-next")
-    record("ja-ohayou-next", second.startswith("おはよう") and "ございます" in second,
-           f"the bar offered ございます (the shot); Space again typed {second!r}", "ja-ohayou-next")
+    second = own_field()
+    record('ja-ohayou', space_verdict(first, zero, ''),
+           f'ohayou + Space committed {first!r}; observed candidate zero {zero!r}', 'ja-ohayou-next')
+    record('ja-ohayou-next', suffix_verdict(first, second, ' '),
+           f'after committed {first!r}, Space produced {second!r}; expected exactly the same prefix plus a plain space', 'ja-ohayou-next')
     fresh_ja()
     play(*keys("ohayou"), "+500", "key:space", "+700", "chord:alt+w", "+600", shot="ja-digit", at=len(keys("ohayou")) * 80 + 1700)
     record("ja-digit", None, f"a digit after a pick (field {field()!r}): the suggestions are gone", "ja-digit")
     fresh_ja()
-    play(*keys("nihon"), "+400", "key:space", "+300", "chord:alt+m", "+300", "chord:alt+n", "+500")
-    text = field()
-    record("ja-marks", text == "日本。、", f"日本, then . and , typed {text!r}, wanted '日本。、'")
+    play(*keys('nihon'), '+400', 'key:space', '+300')
+    prefix = own_field()
+    play('chord:alt+m', '+300', 'chord:alt+n', '+500')
+    text = own_field()
+    record('ja-marks', suffix_verdict(prefix, text, '。、'),
+           f'committed prefix {prefix!r}, then . and , produced {text!r}; expected prefix plus 。、')
     fresh_ja()
     moves = keys("kyou") + ["+400", "swipeup:b", "+700"]
     play(*moves, "swipeup:b", "+700", "key:sym", "+400", shot="ja-menu-page2", at=len(moves) * 80 + 900)

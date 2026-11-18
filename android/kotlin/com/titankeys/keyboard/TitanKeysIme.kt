@@ -196,8 +196,10 @@ class TitanKeysIme : InputMethodService() {
     /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
     private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
-                               val settlement: Contact.Settlement? = null)
+                               val settlement: Contact.Settlement? = null, val heldFor: String? = null)
     private val pendingInput = ArrayDeque<PendingInput>()
+    private var engineEditor: EngineEditor? = null
+    private var replayedCode = false
     private var inputGeneration = 0
     private var drainScheduled = false
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
@@ -478,10 +480,13 @@ class TitanKeysIme : InputMethodService() {
         main.postAtTime(stepDeleteHold, at)
     }
 
+    /** The short gap after a word swipe belongs to that word. In other languages every flick stands on its own. */
+    private fun canStartFlick(time: Long) = contact.deleteFlicks && (!contact.wordSwipes || pieces.canDelete(time))
+
     /** The finger moved, so the wait for a hold starts again, or ends if the finger is no longer on a delete flick. */
     private fun followDeleteHold() {
         val start = contact.points.firstOrNull()
-        val at = deleteHold.moved(!altOrPanel && start != null && pieces.canDelete(start.time))
+        val at = deleteHold.moved(!altOrPanel && start != null && canStartFlick(start.time))
         main.removeCallbacks(blockDeleteHold)
         when {
             at == null -> main.removeCallbacks(stepDeleteHold)
@@ -519,6 +524,7 @@ class TitanKeysIme : InputMethodService() {
             lastTouch = null
             Trace.touch(emptyList(), true)
             enqueue {
+                if (altOrPanel || !contact.deleteFlicks) return@enqueue
                 // With nothing to delete, no hold starts: no words on the bar, no dots, only the flick's wall (owner, 2026-11-12).
                 val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
                 val selected = selectionToDelete()
@@ -537,6 +543,7 @@ class TitanKeysIme : InputMethodService() {
         }
         val word = heldWords.next()
         enqueue {
+            if (altOrPanel || !contact.deleteFlicks) return@enqueue
             // A code still being built goes first, as a flick takes it: the pending code, then what was picked, typed less its last
             // character (owner, 2026-11-17: "the same shd work for holding for delete too").
             val engine = languages.engine
@@ -939,13 +946,89 @@ class TitanKeysIme : InputMethodService() {
             registerReceiver(panelTrigger, IntentFilter(PANEL_ACTION), RECEIVER_EXPORTED)
             idleBarTriggerRegistered = true
             // The touch simulator's events enter where the firmware's do: this window's touchpad path (TouchpadFeedHook).
-            TouchpadFeedHook.dispatch = { event -> window.callback?.dispatchGenericMotionEvent(event) == true }
+            var feedContact: Pair<Long, EditorInfo>? = null
+            var feeding = false
+            window.callback = TouchpadWindowCallback(window.callback) { event ->
+                if (!feeding && touchpad.accepts(event)) feedContact = null
+                false
+            }
+            TouchpadFeedHook.dispatch = { event ->
+                val info = checkNotNull(currentInputEditorInfo?.takeIf { editing && it.packageName == packageName })
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) feedContact = event.downTime to info
+                feeding = true
+                try {
+                    window.callback?.dispatchGenericMotionEvent(event) == true
+                } finally {
+                    feeding = false
+                    if (event.actionMasked == MotionEvent.ACTION_UP) feedContact = null
+                }
+            }
+            TouchpadFeedHook.cancelContact = { downTime ->
+                val original = feedContact
+                if (original?.first == downTime) {
+                    feedContact = null
+                    if (currentInputEditorInfo === original.second) {
+                        endDeleteHold()
+                        contact.cancelActive()
+                        stopCursor()
+                        main.removeCallbacks(confirmDoubleTap)
+                        main.removeCallbacks(confirmTriple)
+                        main.removeCallbacks(confirmTwoAbove)
+                        main.removeCallbacks(registerGestureLater)
+                        cursorGesture.cancel(SystemClock.uptimeMillis())
+                    }
+                }
+            }
             // Its keys enter where Android's do for the keyboard: onKeyDown and onKeyUp. One the keyboard doesn't take goes on
             // to the app, as Android would send it (KeyFeedHook).
+            val feedKeys = HashMap<Int, Pair<Long, EditorInfo>>()
             KeyFeedHook.dispatch = { event ->
-                val taken = if (event.action == KeyEvent.ACTION_DOWN) onKeyDown(event.keyCode, event) else onKeyUp(event.keyCode, event)
-                if (!taken) currentInputConnection?.sendKeyEvent(event)
+                val code = event.keyCode
+                val info = checkNotNull(currentInputEditorInfo?.takeIf { editing && it.packageName == packageName })
+                val connection = checkNotNull(currentInputConnection)
+                val down = event.action == KeyEvent.ACTION_DOWN
+                if (down && event.repeatCount == 0) feedKeys[code] = event.downTime to info
+                val taken = if (down) onKeyDown(code, event) else onKeyUp(code, event)
+                // If handling the key ended input, it must never fall through to a replacement connection.
+                if (!taken && currentInputEditorInfo === info && currentInputConnection === connection) connection?.sendKeyEvent(event)
+                if (!down) feedKeys.remove(code)
                 taken
+            }
+            KeyFeedHook.cancelHeld = { downTimes ->
+                val current = currentInputEditorInfo
+                val held = downTimes.filter { (code, time) ->
+                    val original = feedKeys[code]
+                    if (original?.first != time) false else {
+                        feedKeys.remove(code)
+                        current === original.second
+                    }
+                }
+                if (held.isNotEmpty()) {
+                    fun owns(event: KeyEvent?) = event?.let { held[it.keyCode] == it.downTime } == true
+                    if (owns(heldBackspace)) {
+                        backspaceRepeat.up()
+                        main.removeCallbacks(repeatBackspace)
+                        modifiers.backspaceReleased()
+                        heldBackspace = null
+                    }
+                    if (owns(heldLetter)) {
+                        holdEngine.cancel()
+                        heldLetter = null
+                    }
+                    if (owns(symDown)) {
+                        main.removeCallbacks(symHeld)
+                        symDown = null
+                        symPress.reset()
+                    }
+                    pendingInput.removeAll { owns(it.event) }
+                    modifiers.cancelFeedKeys(held)
+                    val now = SystemClock.uptimeMillis()
+                    for ((code, downTime) in held) {
+                        // A real press of this key may have superseded the feed's down.
+                        contact.cancelFeedKey(code, downTime, now)
+                    }
+                    showModifiers()
+                }
             }
         }
         updateOverlay()
@@ -1472,6 +1555,19 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
         main.post { showGuideExtras() }
+        val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
+        val nextEditor = EngineEditor(info.packageName, info.fieldId, info.inputType, info.imeOptions,
+            info.privateImeOptions, currentInputConnection)
+        val samePlace = nextEditor.continues(engineEditor, restarting, lastSelectionStart, lastSelectionEnd,
+            info.initialSelStart, info.initialSelEnd) && editing && !exact && !field.exact && !field.secret && field != Field.None &&
+            !composer.mayLeaveField && !deadKeyPending && !panelOpen && modifiers.alt == Modifiers.Level.Off &&
+            (modifiers.shift == Modifiers.Level.Off || modifiers.autoShifted)
+        engineEditor = nextEditor
+        val target = languages.target
+        val held = if (samePlace) loadGate.takeKeys(pendingInput) { it.heldFor == target } else emptyList()
+        val code = (picker as? LanguagePicker.Choices)?.takeIf {
+            samePlace && replayedCode && it.state.composing && !languages.loadingNow
+        }
         // Another field starts a new delete streak: words deleted somewhere else don't count here (#89).
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
@@ -1480,14 +1576,13 @@ class TitanKeysIme : InputMethodService() {
         symDown = null
         symPress.reset()
         closePicker()
-        // Text an engine was building belongs to the field before.
-        if (::languages.isInitialized) languages.engine?.reset()
+        // A subtype restart can follow replay before Space commits its syllable.
+        if (code == null) languages.engine?.reset()
         // The units picked belong to the field before ([PickedWords]), unless the same one restarts.
         if (!restarting) pickedWords.clear()
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
-        val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
         if (exact || info.inputType == EditorInfo.TYPE_NULL) logExact("start ${info.packageName} type 0x${Integer.toHexString(info.inputType)}" +
             " options 0x${Integer.toHexString(info.imeOptions)} restarting $restarting exact $exact")
         editing = info.inputType != EditorInfo.TYPE_NULL || exact
@@ -1534,6 +1629,16 @@ class TitanKeysIme : InputMethodService() {
         if (editing && field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd) else strip?.selected = null
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
+            if (code != null && !languages.loadingNow && languages.current.id == target) {
+                showPicker(code)
+                replayedCode = true
+            }
+            if (held.isNotEmpty() && languages.target == target && !languages.englishOnly) {
+                loadGate.before(languages.loadingNow, pendingInput)
+                pendingInput.addAll(held)
+                drainInput()
+                showHeldLetters()
+            }
             main.post(showStrip)
         } else {
             composer.stop()
@@ -1579,8 +1684,11 @@ class TitanKeysIme : InputMethodService() {
         cursorControl = TypingSettings.cursorControl(this)
         exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
-        // Other input methods have no swiping (docs/languages.md).
-        contact.swipes = TypingSettings.swipeTyping(this) && field.words && english
+        contact.swipes = when {
+            !field.words || !TypingSettings.swipeTyping(this) -> Contact.Swipes.Off
+            english -> Contact.Swipes.WordsAndDeletes
+            else -> Contact.Swipes.DeletesOnly
+        }
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         // English's autocorrect and shorthand are English's own. Other input methods with a word list fix slips on their keys,
         // conservatively, with the same corrector on their own list (LanguageCorrections; owner, 2026-11-17).
@@ -2450,6 +2558,7 @@ class TitanKeysIme : InputMethodService() {
     private var barSelected: String? = null
 
     override fun onFinishInput() {
+        engineEditor = null
         // A held Backspace stops with its field.
         backspaceRepeat.up()
         main.removeCallbacks(repeatBackspace)
@@ -2634,7 +2743,7 @@ class TitanKeysIme : InputMethodService() {
                 deleteWall.left()
                 // Only where a delete flick would count, and with something to delete, can the stroke crunch and glow.
                 // On a guide slide that doesn't teach the flick, it still glows, so it's seen to register before it's refused.
-                flickCrunch.begin(!altOrPanel && field.words && pieces.canDelete(first.time) && somethingToDelete(first))
+                flickCrunch.begin(!altOrPanel && canStartFlick(first.time) && somethingToDelete(first))
                 refused = false
                 endDeleteHold()
                 holdTrail.clear()
@@ -2675,7 +2784,7 @@ class TitanKeysIme : InputMethodService() {
                 }
                 settleHeldTaps()
                 // A touch that may be the last swipe carrying on keeps that swipe on the trail until it is settled.
-                val carries = contact.points.isNotEmpty() && lastTouch?.let {
+                val carries = contact.wordSwipes && contact.points.isNotEmpty() && lastTouch?.let {
                     it.isNotEmpty() && letterSpace(it).couldContinue(first.x, first.y * 4 / 3, first.time - it.last().time, composer.liftOffMillis.toLong())
                 } == true
                 // The bar's mini path joins it too, as one line.
@@ -2725,7 +2834,7 @@ class TitanKeysIme : InputMethodService() {
                 val travel = contact.travel
                 val first = contact.points.firstOrNull()
                 // Wait until a configured tap key's contact is a swipe, so short taps pulse only on acceptance.
-                if (contact.swipes && !altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
+                if (contact.deleteFlicks && !altOrPanel && travel != null && first != null && (travel >= Contact.SWIPE_KEYS
                     || !isTapKey(Layout.keyAt(first.x, first.y)))) {
                     // Clearly a delete flick, the keys it crosses crunch; once it stops being one, a break, then swiping's ticks.
                     // On a guide slide only what the slide teaches is felt: a locked one glows, and its feel is the no at the end.
@@ -2734,7 +2843,9 @@ class TitanKeysIme : InputMethodService() {
                         if (felt) haptics.play(Haptic.DeleteBreak)
                         strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
                     }
-                    if (guideAllows(if (flickCrunch.crunching) GuideLesson.Flick else GuideLesson.Swipe)) haptics.move(samples, flickCrunch.crunching)
+                    if ((contact.wordSwipes || flickCrunch.crunching) && guideAllows(if (flickCrunch.crunching) GuideLesson.Flick else GuideLesson.Swipe)) {
+                        haptics.move(samples, flickCrunch.crunching)
+                    }
                     // While it is clearly a flick, the delete glow reaches from the corner to the finger and follows it.
                     if (flickCrunch.crunching) samples.lastOrNull { it.valid }?.let { strip?.gesture?.flickGlow(it.x, it.time) }
                 }
@@ -2772,7 +2883,7 @@ class TitanKeysIme : InputMethodService() {
         val travel = contact.travel
         val first = points.firstOrNull()
         val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
-        if (inPractice || !contact.swipes || altOrPanel || Overlays.stopsSwipes(openOverlay) || travel == null || !far || first == null
+        if (inPractice || !contact.wordSwipes || altOrPanel || travel == null || !far || first == null
             || startsDeleteFlick(first.x, first.y) && (isDeleteWordSwipe(points) || flickCrunch.mayBeFlick)) {
             gesture.swipeCancelled()
             swipeShown = 0
@@ -2811,7 +2922,7 @@ class TitanKeysIme : InputMethodService() {
     private fun lift(event: MotionEvent, samples: List<Sample>, cancelled: Boolean) {
         // Every delete flick shows its glow, even one that lifted before it drew; a hold's glow fades with its dots.
         val stroke = (contact.points + samples).filter { it.valid }
-        val flicked = !cancelled && !contact.deleting && flickCrunch.lifted(stroke)
+        val flicked = !cancelled && !altOrPanel && contact.deleteFlicks && !contact.deleting && flickCrunch.lifted(stroke)
         endDeleteHold()
         if (flicked) strip?.gesture?.flickLifted(stroke.last().x, SystemClock.uptimeMillis())
         else strip?.gesture?.flickGlowEnded(SystemClock.uptimeMillis())
@@ -2855,7 +2966,8 @@ class TitanKeysIme : InputMethodService() {
             val settle = Runnable {
                 settlements.remove(pending)
                 val settled = contact.settle(pending, SystemClock.uptimeMillis())
-                val result = if (pending.cancelled || altOrPanel) settled else pieces.settle(pending, settled)
+                val page = settled is Contact.Outcome.Swipe && settled.forPaging
+                val result = if (pending.cancelled || altOrPanel || page || !contact.wordSwipes) settled else pieces.settle(pending, settled)
                 val finish = { type: Boolean ->
                     input.action = { if (type) result?.let(::outcome) }
                     input.ready = true
@@ -3320,6 +3432,7 @@ class TitanKeysIme : InputMethodService() {
     private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
 
     private fun clearSettlements() {
+        replayedCode = false
         inputGeneration++
         loadGate.clear()
         drainScheduled = false
@@ -3373,7 +3486,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** The queue's stop while an input method loads ([EngineWait]): the keys and touches typed meanwhile wait behind it. */
-    private val loadGate = LoadGate { PendingInput(false, null) }
+    private val loadGate = LoadGate { PendingInput(false, null, heldFor = languages.target) }
 
     /**
      * A key or a touch on the touchpad while the input method is still loading, as a field starts or after a switch: it and
@@ -3419,7 +3532,16 @@ class TitanKeysIme : InputMethodService() {
             // Reserve one ordered release for each physical Shift/Alt key, never ahead of its down.
             if (!held || pendingInput.size >= MAX_PENDING_INPUT + MODIFIER_RELEASE_SLOTS) return
         }
-        pendingInput.addLast(PendingInput(true, action, event))
+        // A same-field restart can carry a plain letter or Space that still waits for its language. Commands and touch actions
+        // depend on the old editor state. A burst containing one follows the usual discard path as a whole.
+        val plain = event != null && !event.isCtrlPressed && !event.isMetaPressed && !event.isAltPressed &&
+            (event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z || event.keyCode == KeyEvent.KEYCODE_SPACE)
+        val heldFor = when {
+            !plain -> null
+            loadGate.closed(pendingInput) -> languages.target
+            else -> pendingInput.lastOrNull()?.heldFor
+        }
+        pendingInput.addLast(PendingInput(true, action, event, heldFor = heldFor))
         drainInput()
         if (event != null && loadGate.closed(pendingInput)) showHeldLetters()
     }
@@ -3439,7 +3561,12 @@ class TitanKeysIme : InputMethodService() {
                 }
                 return
             }
-            pendingInput.removeFirst().action?.invoke()
+            val input = pendingInput.removeFirst()
+            input.action?.invoke()
+            if (input.heldFor != null && input.heldFor == languages.current.id && input.event?.action == KeyEvent.ACTION_DOWN &&
+                (picker as? LanguagePicker.Choices)?.state?.composing == true) {
+                replayedCode = true
+            }
         }
     }
 
@@ -3459,10 +3586,6 @@ class TitanKeysIme : InputMethodService() {
         when (outcome) {
             is Contact.Outcome.Swipe -> {
                 showStripAfterBack()
-                // A delete flick stays a flick with choices on the bar: Chinese and Japanese keep a row up with nothing typed, and
-                // it took every flick as a page swipe (night run 2026-11-17: a flick on 我哋唔該晒 did nothing).
-                if (!altOrPanel && !outcome.deletesWord && openPicker() is LanguagePicker.Choices && !choicesMenuOpen &&
-                    isDeleteWordSwipe(outcome.points)) return outcome(outcome.copy(deletesWord = true))
                 if (!altOrPanel && !outcome.deletesWord && pageChoices(outcome.points)) return
                 // The switcher, the accents or the bigger menu is open: a swipe there types and deletes nothing.
                 if (Overlays.stopsSwipes(openOverlay)) return
@@ -3470,7 +3593,10 @@ class TitanKeysIme : InputMethodService() {
                     if (panelOpen) swipePanel(outcome.points)
                     return
                 }
-                if (!field.words) return
+                // A page gesture can settle after its overlay closes. It still belongs to that overlay.
+                if (outcome.forPaging || !field.words) return
+                val allowed = if (outcome.deletesWord) contact.deleteFlicks else contact.wordSwipes
+                if (!allowed) return
                 // A guide slide that doesn't teach this yet: the swipe or the flick does nothing, and the slide says so, once.
                 if (refuse(if (outcome.deletesWord) GuideLesson.Flick else GuideLesson.Swipe)) return
                 if (outcome.deletesWord) {
@@ -3740,10 +3866,12 @@ class TitanKeysIme : InputMethodService() {
         // was (an engine state that didn't change) is still the one on the bar, and Enter still types its code.
         if (strip?.notice == open.notice) return open
         picker = null
+        setPaging()
         return null
     }
 
     private fun showPicker(open: LanguagePicker) {
+        if (open !is LanguagePicker.Choices || !open.state.composing || open.state.commit.isNotEmpty()) replayedCode = false
         closeMenu()
         picker = open
         strip?.pickerMark = -1
@@ -3754,11 +3882,17 @@ class TitanKeysIme : InputMethodService() {
 
     /** Swipes on the keys go to the panel or the bar's overlay while one is open, a page turn's length or more. */
     private fun setPaging() {
-        contact.paging = Overlays.paging(openOverlay, panelOpen)
+        val open = openOverlay
+        contact.paging = when {
+            !panelOpen && open == Overlays.Open.Choices -> Contact.Paging.Choices
+            Overlays.paging(open, panelOpen) -> Contact.Paging.PagesOnly
+            else -> Contact.Paging.None
+        }
         contact.pageLog = if (picker is LanguagePicker.Choices && AppBuild.kind(this) == "debug") { line -> choicesLog(line) } else null
     }
 
     private fun closePicker() {
+        replayedCode = false
         closeChoicesMenu()
         val open = picker ?: return
         picker = null
@@ -4014,6 +4148,7 @@ class TitanKeysIme : InputMethodService() {
     /** Shift, a swipe up or a tap on the more cue, with choices on the bar: the bigger menu opens, on its first page. */
     private fun openChoicesMenu() {
         val open = openPicker() as? LanguagePicker.Choices ?: return
+        if (!open.more) return
         val engine = languages.engine ?: return
         val menu = choicesMenu ?: return
         haptics.play(Haptic.PanelPage)
@@ -4091,10 +4226,12 @@ class TitanKeysIme : InputMethodService() {
         val keyCode = event.keyCode
         if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT || keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT) {
             if (event.repeatCount > 0) return menuShift == keyCode
+            val overflow = !choicesMenuOpen && (openPicker() as? LanguagePicker.Choices)?.more == true
+            if (!choicesMenuOpen) choicesLog("Shift row overflow=$overflow")
             when {
                 choicesMenuOpen -> closeChoicesMenu()
                 // Shift opens it only in Chinese and Japanese: elsewhere it types capitals, or Hindi's own sounds.
-                (openPicker() as? LanguagePicker.Choices)?.more == true && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
+                overflow && ChineseKeys.usesBar(languages.current) -> openChoicesMenu()
                 else -> return false
             }
             choicesLog("Shift ($keyCode): the bigger menu ${if (choicesMenuOpen) "opens" else "closes"}")
@@ -4489,7 +4626,7 @@ class TitanKeysIme : InputMethodService() {
             dismissClipOffer()
         }
         // The touchpad hears the physical press now, before the key is typed.
-        contact.key(keyCode, true, event.eventTime)
+        contact.key(keyCode, true, event.eventTime, event.downTime)
         val carried = carryCtrl(event)
         val repeatOfHold = trackHold(carried)
         // A key press means the finger was pressing, not resting on the touchpad.
@@ -5005,7 +5142,9 @@ class TitanKeysIme : InputMethodService() {
         editing = false
         // It holds this keyboard, which must go with it (#85).
         TouchpadFeedHook.dispatch = null
+        TouchpadFeedHook.cancelContact = null
         KeyFeedHook.dispatch = null
+        KeyFeedHook.cancelHeld = null
         GuideHooks.panelRequests = null
         GuideHooks.stripDemos = null
         GuideHooks.stripPoints = null

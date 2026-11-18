@@ -58,7 +58,11 @@ test("/end opens the guide at its end again only once Back uncovers it, as it wa
 });
 
 test("the end opens no other page of the app", () => {
-  const pages = [...guide.matchAll(/Connected\.pageIntent\(this, (\w+|"[^"]*")\)/g)].map(match => match[1]);
+  // Ordinary dismissal now brings our front page above any Android setup panels.
+  // It is not an end-screen link: /end child pages must still return to the end.
+  const leave = guide.slice(guide.indexOf("    private fun leave()"), guide.indexOf("    private fun keyName("));
+  expect(leave).toContain('Connected.pageIntent(this, "/")');
+  const pages = [...guide.replace(leave, "").matchAll(/Connected\.pageIntent\(this, (\w+|"[^"]*")\)/g)].map(match => match[1]);
   // The playground's own Guide button is the one other page link, and it's the playground's, not the end's.
   expect(pages.sort()).toEqual(["BORING_GUIDE", "page"].sort());
 });

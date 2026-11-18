@@ -4,7 +4,6 @@ checks, and Settings > Languages as a screenshot. Each tool runs as it does on i
 its exit code is the verdict and its last lines the detail."""
 import os
 import subprocess
-import re
 import time
 
 import checks
@@ -79,29 +78,24 @@ def row_at(text):
     return (x0 + x1) // 2, (y0 + y1) // 2
 
 
-def settings_button():
-    """TitanKeys' own SETTINGS on its main screen, found by its text (any case), or None. A tap by position hit another row on
-    561eb1de's screen and opened an Android Settings page (2026-11-17)."""
-    path = "/data/local/tmp/tk-touch-ui.xml"
-    adb("shell", "uiautomator", "dump", path)
-    xml = adb("shell", "cat", path)
-    adb("shell", "rm", "-f", path)
-    for node in re.findall(r"<node [^>]*>", xml):
-        if f'package="{APP}"' not in node:
-            continue
-        label = (re.search(r'text="([^"]*)"', node) or re.search(r'content-desc="([^"]*)"', node))
-        if label and label.group(1).strip().casefold() == "settings":
-            x0, y0, x1, y1 = (int(v) for v in re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node).groups())
-            return (x0 + x1) // 2, (y0 + y1) // 2
-    return None
-
-
 def open_settings(step):
-    """Taps TitanKeys' SETTINGS by its text through [step] (which checks Debug is in front); stops if it isn't there."""
-    found = settings_button()
-    if not found:
-        raise Stop("no SETTINGS on TitanKeys Debug's main screen to tap")
-    step("tap", str(found[0]), str(found[1]))
+    """Open Settings through the same app route as notification links.
+
+    Keep the callers' step parameter so existing batches can still pass their input guard.
+    Opening this route needs no tap or accessibility label.
+    """
+    if not APP.endswith(".debug"):
+        raise Stop("the Settings checks need TitanKeys Debug")
+    if f" {APP}/" not in languages.front():
+        raise Stop("TitanKeys Debug is not in front before opening Settings")
+    activity = f"{APP}/com.vandam.ink.MainActivity"
+    result = adb("shell", "am", "start", "-W", "-n", activity,
+                 "--es", "com.vandam.ink.notification.HREF", "/settings")
+    if "Status: ok" not in (line.strip() for line in result.splitlines()):
+        raise Stop("Android did not confirm the TitanKeys Debug Settings launch")
+    time.sleep(1.5)
+    if activity not in languages.front().replace("}", " ").split():
+        raise Stop("TitanKeys Debug's app window did not stay in front after opening Settings")
 
 
 def check_languages_page():

@@ -12,4 +12,7 @@ import android.view.KeyEvent
 internal object KeyFeedHook {
     @Volatile
     var dispatch: ((KeyEvent) -> Boolean)? = null
+
+    /** Clear only unfinished feed presses, identified by key code and original down time. */
+    var cancelHeld: ((Map<Int, Long>) -> Unit)? = null
 }

@@ -71,10 +71,27 @@ def keyboard(which):
 def field():
     """The focused text field of TK_APP, read from the window's hierarchy: its text. The dump is deleted at once."""
     path = "/data/local/tmp/tk-touch-ui.xml"
-    adb("shell", "uiautomator", "dump", path)
-    xml = adb("shell", "cat", path)
-    adb("shell", "rm", "-f", path)
-    root = ElementTree.fromstring(xml[xml.find("<"):])
+    def require_debug_window():
+        front = adb("shell", "dumpsys", "window")
+        if not any("mCurrentFocus=" in line and f" {APP}/" in line for line in front.splitlines()):
+            raise Stop("the Debug app lost focus before the field could be read")
+
+    for attempt in range(3):
+        require_debug_window()
+        try:
+            adb("shell", "rm", "-f", path)
+            adb("shell", "uiautomator", "dump", path)
+            require_debug_window()
+            xml = adb("shell", "cat", path)
+        finally:
+            adb("shell", "rm", "-f", path)
+        try:
+            root = ElementTree.fromstring(xml[xml.find("<"):])
+            break
+        except ElementTree.ParseError:
+            if attempt == 2:
+                raise Stop("the harness could not read a complete Debug hierarchy in three attempts") from None
+            time.sleep(.2)
     for node in root.iter("node"):
         a = node.attrib
         if a.get("package") == APP and a.get("focused") == "true" and "EditText" in a.get("class", ""):

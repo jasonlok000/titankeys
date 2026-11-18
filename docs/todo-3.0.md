@@ -606,6 +606,14 @@ More calls get added here as the night goes.
 
 ### Native review follow-ups (November 18)
 
+The review covered 51 input methods. It checked the physical layout, Shift and hold layers, punctuation, starters, next words, guide text and word boundaries. Korean, Thai and Yale had already been reviewed.
+
+| Reviewed input methods | Changes from this review |
+| --- | --- |
+| af, bg, mk | Add missing held letters. |
+| el, he, id, ja, ka, sr, yue-jyutping, zh-cangjie, zh-quick, zh-zhuyin | Correct the key map or guide text. |
+| az, be, bs, ca, cs, da, de, eo, es, et, eu, fi, fr, ga, gl, hi, hr, hu, is, it, kk, lt, lv, nb, nl, nn, pl, pt, ro, ru, sk, sl, sr-latn, sv, tr, uk, vi, zh-pinyin | Keep the current layout and text. Follow-ups are listed below. |
+
 These observations came from source and dictionary reviews. Phone results are still due.
 
 - Chinese: try selecting and deleting punctuation alone, a supplementary character (𠮩), and a character before a space. Compare selection, eligibility and flick deletion in WordSelection.kt, TitanKeysIme.kt and DeleteSwipe.kt. Try Space with only predictions in the expanded menu.

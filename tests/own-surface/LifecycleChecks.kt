@@ -187,6 +187,14 @@ fun lifecycle(temp: File) {
     val expired = parse(result().resultData).getValue("id")
     main.advance(OwnCapturePolicy.TTL)
     check(!file.exists() && read(expired)["error"] == "absent")
+    for (target in listOf("editor", "guide")) {
+        capture(target)
+        val native = parse(result().resultData)
+        check(native["target"] == target && native["kind"] == "view-draw" && file.exists())
+        check(PixelCopy.callback == null)
+        Lease.last!!.lose()
+        check(read(native.getValue("id"))["error"] == "absent" && !file.exists())
+    }
     println("PASS receiver lifecycle, timeout, late callback, ownership revocation, chunk transfer, delete and expiry")
 }
 

@@ -20,9 +20,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.view.inspector.WindowInspector
+import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ScrollView
 import org.json.JSONObject
 import java.io.File
 import java.io.FilterOutputStream
@@ -169,7 +172,7 @@ class OwnSurfaceCapture : BroadcastReceiver() {
 
     private fun answer(value: JSONObject) { resultData = value.toString() }
 
-    private class Lease(val context: Context, window: View, target: View, val editor: FeedEditor?) {
+    private class Lease(val context: Context, window: View, target: View, val kind: String, val editor: FeedEditor?) {
         val root = WeakReference(window)
         val view = WeakReference(target)
         private val token = WeakReference(window.windowToken)
@@ -189,10 +192,17 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                 window.isAttachedToWindow && window.windowToken === token.get() && target.context.packageName == APP &&
                 target.isAttachedToWindow && target.isShown && target.width == width && target.height == height &&
                 target.rootView === ownedTargetRoot && target.windowToken === targetToken.get() && target.display?.displayId == display.displayId &&
-                (if (editor == null) ownedTargetRoot === window && settingsSurface(window) === target else isImeWindow(ownedTargetRoot) && editor.valid()) &&
+                validTarget(window, target, ownedTargetRoot) &&
                 IntArray(2).also(target::getLocationOnScreen).contentEquals(location) &&
                 (surface == null || (target is SurfaceView && target.holder.surface.isValid && target.holder.surface === surface.get()))
         }.getOrDefault(false)
+        private fun validTarget(window: View, target: View, targetRoot: View): Boolean = when (kind) {
+            "settings" -> targetRoot === window && settingsSurface(window) === target
+            "strip" -> isImeWindow(targetRoot) && spaceEditor(window) != null && editor?.valid() == true
+            "editor" -> targetRoot === window && spaceEditor(window) === target && editor?.valid() == true
+            "guide" -> targetRoot === window && guideKeys(window) === target
+            else -> false
+        }
         fun watch(cancel: () -> Unit): (() -> Unit)? {
             val window = root.get() ?: return null
             val target = view.get() ?: return null
@@ -240,19 +250,19 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                 if (!selected(context)) return null
                 val roots = WindowInspector.getGlobalWindowViews().filter { it.context.packageName == APP && it.isAttachedToWindow }
                 val front = roots.singleOrNull { it.hasWindowFocus() } ?: return null
-                val view: View
-                val editor: FeedEditor?
-                if (target == "settings") {
-                    view = settingsSurface(front) ?: return null
-                    editor = null
-                } else {
-                    val activity = activity(front.findFocus()?.context ?: return null) ?: return null
-                    if (activity.javaClass.name != "com.titankeys.keyboard.SpaceGestureActivity" || activity.window.decorView !== front) return null
-                    editor = FeedEditor.capture(APP) ?: return null
-                    view = roots.filter(::isImeWindow)
-                        .flatMap { descendants(it).toList() }.filterIsInstance<Strip>().singleOrNull { it.isShown } ?: return null
-                }
-                Lease(context.applicationContext, front, view, editor).takeIf { it.valid() }
+                val editor = if (target == "strip" || target == "editor") FeedEditor.capture(APP) ?: return null else null
+                val view = when (target) {
+                    "settings" -> settingsSurface(front)
+                    "strip" -> {
+                        if (spaceEditor(front) == null) return null
+                        roots.asSequence().filter(::isImeWindow).flatMap(::descendants)
+                            .filterIsInstance<Strip>().singleOrNull { it.isShown }
+                    }
+                    "editor" -> spaceEditor(front)
+                    "guide" -> guideKeys(front)
+                    else -> null
+                } ?: return null
+                Lease(context.applicationContext, front, view, target, editor).takeIf { it.valid() }
             }.getOrNull()
         }
     }
@@ -291,19 +301,39 @@ class OwnSurfaceCapture : BroadcastReceiver() {
         private fun isImeWindow(root: View): Boolean = root.context.packageName == APP && root.isAttachedToWindow &&
             (root.layoutParams as? WindowManager.LayoutParams)?.type == WindowManager.LayoutParams.TYPE_INPUT_METHOD
 
+        private fun ownedContent(window: View, name: String): View? {
+            val content = window.findViewById<ViewGroup>(android.R.id.content) ?: return null
+            if (content.childCount != 1) return null
+            val view = content.getChildAt(0)
+            val owner = activity(view.context) ?: return null
+            if (owner.javaClass.name != name || owner.window.decorView !== window || owner.packageName != APP) return null
+            return view
+        }
+
         // MainActivity installs Ink's fill-parent render surface as the first child of its sole content frame.
         // The native renderer's View subclass is renamed in the minified Debug APK.
         private fun settingsSurface(window: View): SurfaceView? {
-            val content = window.findViewById<ViewGroup>(android.R.id.content) ?: return null
-            if (content.childCount != 1) return null
-            val frame = content.getChildAt(0) as? FrameLayout ?: return null
-            val activity = activity(frame.context) ?: return null
-            if (activity.javaClass.name != "com.vandam.ink.MainActivity" || activity.window.decorView !== window) return null
+            val frame = ownedContent(window, "com.vandam.ink.MainActivity") as? FrameLayout ?: return null
             val view = frame.getChildAt(0) as? SurfaceView ?: return null
             val layout = view.layoutParams ?: return null
             if (layout.width != ViewGroup.LayoutParams.MATCH_PARENT || layout.height != ViewGroup.LayoutParams.MATCH_PARENT ||
                 view.width != frame.width || view.height != frame.height || !view.holder.surface.isValid) return null
             return view
+        }
+
+        private fun spaceEditor(window: View): EditText? {
+            val content = ownedContent(window, "com.titankeys.keyboard.SpaceGestureActivity") as? ScrollView ?: return null
+            val field = descendants(content).filterIsInstance<EditText>().singleOrNull() ?: return null
+            if (window.findFocus() !== field || field.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING == 0) return null
+            return field
+        }
+
+        private fun guideKeys(window: View): GuideKeyboardView? {
+            val content = ownedContent(window, "com.titankeys.keyboard.GuideActivity") as? FrameLayout ?: return null
+            val field = descendants(content).filterIsInstance<EditText>().singleOrNull() ?: return null
+            // GuideActivity also hosts the Playground. The lesson marker identifies the guide without inspecting field text.
+            if (field.privateImeOptions != GuideHooks.FIELD) return null
+            return descendants(content).filterIsInstance<GuideKeyboardView>().singleOrNull()
         }
         private fun descendants(view: View): Sequence<View> = sequence {
             yield(view)

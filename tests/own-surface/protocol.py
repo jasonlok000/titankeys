@@ -9,10 +9,12 @@ receiver=next(n for n in xml.findall('receiver') if n.get(ns+'name')=='com.titan
 assert receiver.get(ns+'permission')=='android.permission.DUMP' and receiver.get(ns+'exported')=='true'
 source=(root/'android/debug/recorder/OwnSurfaceCapture.kt').read_text()
 assert 'PixelCopy.request(view as SurfaceView, bitmap' in source and 'view.draw(Canvas(bitmap))' in source
-assert 'android.R.id.content' in source and 'activity.window.decorView !== window' in source
+assert 'android.R.id.content' in source and 'owner.window.decorView !== window' in source
 assert 'isOrderedBroadcast' in source and 'intent.component?.packageName != APP' in source
 assert 'WindowInspector.getGlobalWindowViews()' in source
 assert 'SpaceGestureActivity' in source and 'FeedEditor.capture(APP)' in source
+assert 'GuideActivity' in source and 'field.privateImeOptions != GuideHooks.FIELD' in source
+assert 'filterIsInstance<GuideKeyboardView>().singleOrNull()' in source
 assert 'AppBuild.kind(context) != "debug"' in source
 assert 'Settings.Secure.put' not in source and 'screencap' not in source
 assert 'getExternalFilesDir' not in source and 'Log.' not in source

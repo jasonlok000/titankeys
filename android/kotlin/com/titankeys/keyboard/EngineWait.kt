@@ -67,9 +67,38 @@ class LoadGate<T : Any>(private val make: () -> T) {
         return stop.takeIf { it in queue }
     }
 
+    /**
+     * Take an uninterrupted batch of physical keys held for the load out of a restarting editor's queue. The stop may have
+     * opened already and part of the batch may have run. Touches, navigation and other pending edits keep their usual cleanup.
+     */
+    fun takeKeys(queue: MutableList<T>, heldKey: (T) -> Boolean): List<T> {
+        val first = if (gate != null && queue.firstOrNull() === gate) 1 else 0
+        val keys = queue.subList(first, queue.size)
+        if (keys.isEmpty() || !keys.all(heldKey)) return emptyList()
+        return keys.toList().also {
+            queue.clear()
+            clear()
+        }
+    }
+
     /** The queue was emptied, the stop with it. */
     fun clear() {
         gate = null
+    }
+}
+
+/** Which editor typed a batch held for a language load. Android can give the same named field a new connection on restart. */
+internal class EngineEditor(
+    private val app: String?, private val id: Int, private val type: Int, private val options: Int,
+    private val privateOptions: String?, connection: Any?,
+) {
+    private val connection = java.lang.ref.WeakReference(connection)
+
+    fun continues(previous: EngineEditor?, restarting: Boolean, previousStart: Int, previousEnd: Int, start: Int, end: Int): Boolean {
+        if (start < 0 || end < 0 || start != previousStart || end != previousEnd) return false
+        if (!restarting || previous == null || app.isNullOrEmpty() || app != previous.app || id != previous.id ||
+            type != previous.type || options != previous.options || privateOptions != previous.privateOptions) return false
+        return id > 0 || connection.get()?.let { it === previous.connection.get() } == true
     }
 }
 

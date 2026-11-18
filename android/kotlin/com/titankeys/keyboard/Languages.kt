@@ -88,7 +88,8 @@ internal class Languages(
     /** Counts loads, so a slow one that's been overtaken by another is dropped, or never starts. */
     @Volatile private var loading = 0
     /** The input method being switched to, which may still be loading. */
-    private var target = InputMethod.ENGLISH_ID
+    var target = InputMethod.ENGLISH_ID
+        private set
 
     /**
      * Called on the main thread when an engine's input method is still getting ready [PREPARING_MILLIS] after it was switched

@@ -196,8 +196,10 @@ class TitanKeysIme : InputMethodService() {
     /** The key under a finger on the touchpad, for the modifier bar, or an empty string. */
     private var restingKey = ""
     private class PendingInput(var ready: Boolean, var action: (() -> Unit)?, val event: KeyEvent? = null,
-                               val settlement: Contact.Settlement? = null)
+                               val settlement: Contact.Settlement? = null, val heldFor: String? = null)
     private val pendingInput = ArrayDeque<PendingInput>()
+    private var engineEditor: EngineEditor? = null
+    private var replayedCode = false
     private var inputGeneration = 0
     private var drainScheduled = false
     private val settlements = LinkedHashMap<Contact.Settlement, Runnable>()
@@ -1477,6 +1479,19 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
         main.post { showGuideExtras() }
+        val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
+        val nextEditor = EngineEditor(info.packageName, info.fieldId, info.inputType, info.imeOptions,
+            info.privateImeOptions, currentInputConnection)
+        val samePlace = nextEditor.continues(engineEditor, restarting, lastSelectionStart, lastSelectionEnd,
+            info.initialSelStart, info.initialSelEnd) && editing && !exact && !field.exact && !field.secret && field != Field.None &&
+            !composer.mayLeaveField && !deadKeyPending && !panelOpen && modifiers.alt == Modifiers.Level.Off &&
+            (modifiers.shift == Modifiers.Level.Off || modifiers.autoShifted)
+        engineEditor = nextEditor
+        val target = languages.target
+        val held = if (samePlace) loadGate.takeKeys(pendingInput) { it.heldFor == target } else emptyList()
+        val code = (picker as? LanguagePicker.Choices)?.takeIf {
+            samePlace && replayedCode && it.state.composing && !languages.loadingNow
+        }
         // Another field starts a new delete streak: words deleted somewhere else don't count here (#89).
         // A press from the field before must not change a letter here.
         holdEngine.cancel()
@@ -1485,14 +1500,13 @@ class TitanKeysIme : InputMethodService() {
         symDown = null
         symPress.reset()
         closePicker()
-        // Text an engine was building belongs to the field before.
-        if (::languages.isInitialized) languages.engine?.reset()
+        // A subtype restart can follow replay before Space commits its syllable.
+        if (code == null) languages.engine?.reset()
         // The units picked belong to the field before ([PickedWords]), unless the same one restarts.
         if (!restarting) pickedWords.clear()
         preserveDestinationInput()
         editor.cancelState()
         super.onStartInput(info, restarting)
-        val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
         if (exact || info.inputType == EditorInfo.TYPE_NULL) logExact("start ${info.packageName} type 0x${Integer.toHexString(info.inputType)}" +
             " options 0x${Integer.toHexString(info.imeOptions)} restarting $restarting exact $exact")
         editing = info.inputType != EditorInfo.TYPE_NULL || exact
@@ -1539,6 +1553,16 @@ class TitanKeysIme : InputMethodService() {
         if (editing && field.suggestions) showSelectedWord(info.initialSelStart, info.initialSelEnd) else strip?.selected = null
         if (editing) {
             composer.start(field, info.initialSelStart, info.initialSelEnd)
+            if (code != null && !languages.loadingNow && languages.current.id == target) {
+                showPicker(code)
+                replayedCode = true
+            }
+            if (held.isNotEmpty() && languages.target == target && !languages.englishOnly) {
+                loadGate.before(languages.loadingNow, pendingInput)
+                pendingInput.addAll(held)
+                drainInput()
+                showHeldLetters()
+            }
             main.post(showStrip)
         } else {
             composer.stop()
@@ -2458,6 +2482,7 @@ class TitanKeysIme : InputMethodService() {
     private var barSelected: String? = null
 
     override fun onFinishInput() {
+        engineEditor = null
         // A held Backspace stops with its field.
         backspaceRepeat.up()
         main.removeCallbacks(repeatBackspace)
@@ -3331,6 +3356,7 @@ class TitanKeysIme : InputMethodService() {
     private val altOrPanel get() = modifiers.alt != Modifiers.Level.Off || panelOpen
 
     private fun clearSettlements() {
+        replayedCode = false
         inputGeneration++
         loadGate.clear()
         drainScheduled = false
@@ -3384,7 +3410,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** The queue's stop while an input method loads ([EngineWait]): the keys and touches typed meanwhile wait behind it. */
-    private val loadGate = LoadGate { PendingInput(false, null) }
+    private val loadGate = LoadGate { PendingInput(false, null, heldFor = languages.target) }
 
     /**
      * A key or a touch on the touchpad while the input method is still loading, as a field starts or after a switch: it and
@@ -3430,7 +3456,16 @@ class TitanKeysIme : InputMethodService() {
             // Reserve one ordered release for each physical Shift/Alt key, never ahead of its down.
             if (!held || pendingInput.size >= MAX_PENDING_INPUT + MODIFIER_RELEASE_SLOTS) return
         }
-        pendingInput.addLast(PendingInput(true, action, event))
+        // A same-field restart can carry a plain letter or Space that still waits for its language. Commands and touch actions
+        // depend on the old editor state. A burst containing one follows the usual discard path as a whole.
+        val plain = event != null && !event.isCtrlPressed && !event.isMetaPressed && !event.isAltPressed &&
+            (event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z || event.keyCode == KeyEvent.KEYCODE_SPACE)
+        val heldFor = when {
+            !plain -> null
+            loadGate.closed(pendingInput) -> languages.target
+            else -> pendingInput.lastOrNull()?.heldFor
+        }
+        pendingInput.addLast(PendingInput(true, action, event, heldFor = heldFor))
         drainInput()
         if (event != null && loadGate.closed(pendingInput)) showHeldLetters()
     }
@@ -3450,7 +3485,12 @@ class TitanKeysIme : InputMethodService() {
                 }
                 return
             }
-            pendingInput.removeFirst().action?.invoke()
+            val input = pendingInput.removeFirst()
+            input.action?.invoke()
+            if (input.heldFor != null && input.heldFor == languages.current.id && input.event?.action == KeyEvent.ACTION_DOWN &&
+                (picker as? LanguagePicker.Choices)?.state?.composing == true) {
+                replayedCode = true
+            }
         }
     }
 
@@ -3755,6 +3795,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun showPicker(open: LanguagePicker) {
+        if (open !is LanguagePicker.Choices || !open.state.composing || open.state.commit.isNotEmpty()) replayedCode = false
         closeMenu()
         picker = open
         strip?.pickerMark = -1
@@ -3775,6 +3816,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun closePicker() {
+        replayedCode = false
         closeChoicesMenu()
         val open = picker ?: return
         picker = null

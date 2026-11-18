@@ -10,6 +10,7 @@ import uuid
 import checks
 import language_checks
 import languages
+import own_editor
 
 SEED = "alpha beta gamma delta"
 RECEIVER = checks.APP + "/com.titankeys.keyboard.InputMethodsSet"
@@ -129,10 +130,7 @@ def select_method(current):
     reply = checks.adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "on", ",".join(on), "--es", "current", current)
     if saved_methods(reply) != (on, current):
         return False
-    # Existing harness restart path, while the owned synthetic editor stays in
-    # front. No input is sent while release is selected and no log is cleared.
-    checks.keyboard("release")
-    checks.keyboard("debug")
+    own_editor.restart()
     guard()
     reply = checks.adb("shell", "am", "broadcast", "-n", RECEIVER, "--ez", "read", "true")
     return saved_methods(reply) == (on, current)

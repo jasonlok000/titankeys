@@ -17,6 +17,7 @@ import time
 import checks
 import guide_checks
 import languages
+import own_editor
 from checks import Stop, adb, play, record
 
 RECEIVER = f"{checks.APP}/com.titankeys.keyboard.InputMethodsSet"
@@ -169,7 +170,7 @@ def switch_live(on, target):
 
 
 def turn_on(on, current):
-    """Keep the live keyboard for confirmed switches within a set. Rebind for a changed set or unconfirmed switch."""
+    """Use the live switcher within a set. Restart input in the same field when the saved set changes."""
     def regain_field():
         if not field_in_front():
             checks.keyboard("debug")  # The existing guard waits for the owner before restoring the test field.
@@ -184,12 +185,11 @@ def turn_on(on, current):
     out = adb("shell", "am", "broadcast", "-n", RECEIVER, "--es", "on", ",".join(on), "--es", "current", current)
     if "typing " + current not in out:
         raise Stop(f"InputMethodsSet didn't take {current}: {out.strip()[-200:]}")
-    # The log from here on only: counting lines drifted as the buffer rolled (lt, nn and ja, 2026-11-16).
-    adb("logcat", "-c")
-    checks.keyboard("release")
-    checks.keyboard("debug")
+    own_editor.restart()
     for _ in range(10):
-        if any(f"field start: {current} (" in line for line in languages.log_lines()):
+        # A restart with the same method may keep the last field-start line: Languages logs changes only.
+        latest = next((line for line in reversed(languages.log_lines()) if "field start:" in line), "")
+        if f"field start: {current} (" in latest:
             return True
         time.sleep(.5)
     return False

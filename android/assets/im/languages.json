@@ -1,4 +1,13 @@
 {
+ "$global": {
+  "settings": [
+   {
+    "id": "learn",
+    "level": "global",
+    "available": true
+   }
+  ]
+ },
  "af": {
   "points": [],
   "roles": [],
@@ -772,6 +781,82 @@
     "level": "language",
     "available": false,
     "reason": "englishOnly"
+   },
+   {
+    "id": "chineseCharacters",
+    "level": "language",
+    "available": false,
+    "reason": "chineseOnly"
+   },
+   {
+    "id": "variant",
+    "level": "input-method",
+    "available": false,
+    "reason": "noVariants"
+   },
+   {
+    "id": "lazySounds",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   },
+   {
+    "id": "radicalPreview",
+    "level": "input-method",
+    "available": false,
+    "reason": "notThisMethod"
+   }
+  ]
+ },
+ "en": {
+  "points": [],
+  "roles": [],
+  "groups": [],
+  "settings": [
+   {
+    "id": "fixes",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "capitals",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "doubleSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "sentenceSpaces",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "commaSpace",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "hold",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "swipe",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "shorthand",
+    "level": "language",
+    "available": true
+   },
+   {
+    "id": "spelling",
+    "level": "language",
+    "available": true
    },
    {
     "id": "chineseCharacters",

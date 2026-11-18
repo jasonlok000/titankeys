@@ -1,9 +1,24 @@
 {
   "_about": "F's shared text for the per-language pages (mockup: tools/dev/preview/pages/language-flow.html). One copy per family; each input method's own lines stay in howto.json. {X} is the language's English name, {n} and {max} numbers.",
   "list": {
+    "title": "Languages",
+    "on": "On",
+    "onlyOne": "Turn on another input method to switch with Sym.",
     "limit": "Up to {max} languages at once. Hold Sym to switch.",
     "count": "{n} of {max} on.",
     "full": "That's {max}. Turn one off first."
+  },
+  "scripts": {
+    "Latn": "Latin letters",
+    "Cyrl": "Cyrillic",
+    "Grek": "Greek",
+    "Geor": "Georgian",
+    "Hebr": "Hebrew",
+    "Deva": "Devanagari",
+    "Thai": "Thai",
+    "Kore": "Korean",
+    "Hani": "Chinese",
+    "Jpan": "Japanese"
   },
   "status": {
     "Ready": "Ready",
@@ -60,7 +75,7 @@
       "choices": "Steps back: the menu, then the code. Hold for languages."
     },
     "space": {
-      "default": "A space, and the bar's middle word.",
+      "default": "Finishes the word you're typing. With only next words on the bar, it types a space.",
       "choices": "Picks the first choice, only while you're typing.",
       "syllable": "Finishes the syllable."
     },
@@ -76,6 +91,10 @@
     }
   },
   "points": {
+    "english": [
+      "Type on the printed letters, or swipe across a word’s letters.",
+      "Pick a word from the bar to put it in the field."
+    ],
     "latin": [
       "Hold a letter for its accents. They show on the bar over the keys.",
       "Rest a finger on the key under the one you want, then press it.",
@@ -92,7 +111,7 @@
     ],
     "korean": [
       "Type the letters. The syllable builds above the bar and goes in when the next letter can't join it.",
-      "Space finishes the syllable and types the bar's first word.",
+      "Space finishes the syllable.",
       "Swipe up on the keys for more words."
     ],
     "chinese": [
@@ -101,7 +120,7 @@
       "Enter types the code as letters.",
       "Shift or a swipe up shows more. A swipe down on page 1 closes them.",
       "Sym steps back: the menu, then the code. Hold it for languages.",
-      "One character is one word here: a flick, double Space or a triple tap takes one. Double Space types 。."
+      "A flick deletes one character or punctuation mark. Tap Space three times to select one. Press Space twice to type 。."
     ],
     "japanese": [
       "Type in romaji. The kana build above the bar, and the choices sit over the top row.",
@@ -145,5 +164,26 @@
     "shiftLetters": "Small orange letters are Shift's.",
     "held": "Dotted keys hold more letters.",
     "radicals": "Each letter is a radical."
+  },
+  "page": {
+    "how": "How it works",
+    "hideHow": "Hide how it works",
+    "keys": "The keys",
+    "otherMethods": "Other input methods",
+    "method": "Input method",
+    "methods": "Input methods",
+    "unavailable": "Not in this language",
+    "tryIt": "Try it",
+    "typeHere": "Type here",
+    "trySample": "Try {sample}",
+    "englishSample": "Hello, how are you?",
+    "turnOnToTry": "Turn on an input method here to try it.",
+    "language": "Language",
+    "options": "Options",
+    "moved": "Typing settings for each language now live on its page.",
+    "languagesFull": "Four languages at a time, tops. Turn one off first.",
+    "methodsFull": "Four at a time in one language, tops. Turn one off first.",
+    "fixes": "What gets fixed",
+    "languageFullStop": "Double Space types {stop}"
   }
 }

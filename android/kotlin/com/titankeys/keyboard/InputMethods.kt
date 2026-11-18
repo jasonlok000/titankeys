@@ -542,3 +542,15 @@ object WarmEngines {
     fun wanted(on: List<InputMethodIndex.Entry>): Map<String, InputMethodIndex.Entry> =
         on.filter { it.engine != null }.associateBy { it.engine!! }
 }
+
+/** The input method requested by one of the app's Try it editors. */
+internal object PracticeInputMethod {
+    private const val PREFIX = "com.titankeys.practiceMethod="
+
+    fun requested(editorPackage: String?, ownPackage: String, options: String?): String? =
+        options?.takeIf { editorPackage == ownPackage && it.startsWith(PREFIX) }
+            ?.removePrefix(PREFIX)?.takeIf { it.isNotEmpty() }
+
+    fun enabled(id: String?, methods: List<InputMethodIndex.Entry>): InputMethodIndex.Entry? =
+        methods.firstOrNull { it.id == id }
+}

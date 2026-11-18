@@ -39,8 +39,9 @@ type Lang = { id: string; name: string; nameEnglish: string; label: string; scri
 const indexed: { id: string; name: string; language: Lang }[] = JSON.parse(read(`${folder}/index.json`));
 
 test("every language's script has a header in Settings > Languages, not its four-letter code", () => {
-  const block = read("app/settings/languages/index.tsx").split("const SCRIPTS", 2)[1]!.split("};", 1)[0]!;
-  const headers = new Set([...block.matchAll(/(\w{4}): "[^"]+"/g)].map(m => m[1]));
+  const scripts = JSON.parse(read("tools/im/page-text.json")).scripts as Record<string, string>;
+  const headers = new Set(Object.keys(scripts).filter(id => scripts[id].trim()));
+  expect(read("app/settings/languages/index.tsx")).toContain("= pageText.scripts;");
   for (const { language } of indexed) expect({ id: language.id, script: language.script, header: headers.has(language.script) })
     .toEqual({ id: language.id, script: language.script, header: true });
 });

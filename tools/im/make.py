@@ -1198,7 +1198,9 @@ def write_guides():
             json.dump(im, f, ensure_ascii=False, indent=2)
             f.write("\n")
         languages.setdefault(language["id"], []).append(im)
-    out = {}
+    # English is built in, so it has no im.json. Its page still uses the same setting metadata.
+    languages["en"] = [{"id": "en", "script": "Latn", "rules": {"capitalise": True}}]
+    out = {"$global": {"settings": [{"id": "learn", "level": "global", "available": True}]}}
     for lang, ims in sorted(languages.items()):
         settings = []
         for row, level in GUIDE_SETTINGS:

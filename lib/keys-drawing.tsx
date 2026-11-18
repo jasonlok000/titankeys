@@ -2,6 +2,7 @@ import { Canvas, CanvasText, Section } from "ink";
 import pageText from "../tools/im/page-text.json";
 import { CREAM, MUTED, useAccent } from "./brand";
 import { Note } from "./note";
+import { guideFor } from "./language-page";
 import { RADIUS } from "./radii";
 import { RoundedOutline } from "./rounded";
 import type { InputMethodEntry, KeyRole } from "./titankeys";
@@ -24,7 +25,7 @@ const ROLE_NAMES: Record<KeyRole["key"], string> = { space: "Space", shift: "Shi
 
 function roleText(role: KeyRole) {
   const texts = (pageText as { roles?: Record<string, Record<string, string>> }).roles;
-  return texts?.[role.key]?.[role.role] ?? `F: ${role.key}.${role.role}`;
+  return texts?.[role.key]?.[role.role];
 }
 
 /**
@@ -34,10 +35,10 @@ function roleText(role: KeyRole) {
  */
 export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?: boolean }) {
   const accent = useAccent();
-  const keys = im.guide?.keys;
+  const keys = guideFor(im)?.keys;
   if (!keys) return null;
   const map = keys.map ?? {}, shift = keys.shift ?? {}, held = keys.held ?? {};
-  const roles = (keys.roles ?? []).filter(role => role.key in ROLE_NAMES);
+  const roles = (keys.roles ?? []).filter(role => role.key in ROLE_NAMES && roleText(role));
   if (!Object.keys(map).length && !roles.length) return null;
   const number = (key?: string) => roles.findIndex(role => role.key === key) + 1;
   const parts = [];
@@ -71,6 +72,6 @@ export function KeysDrawing({ im, bare = false }: { im: InputMethodEntry; bare?:
     {keys.legend ? <Note>{keys.legend}</Note> : null}
     {roles.map((role, index) => <Note key={role.key}>{`${index + 1}  ${ROLE_NAMES[role.key]}: ${roleText(role)}`}</Note>)}
   </>;
-  // F: draft title. Bare inside an input method's card, which is already a section.
-  return bare ? body : <Section title="The keys">{body}</Section>;
+  // A card already has a section of its own.
+  return bare ? body : <Section title={pageText.page.keys}>{body}</Section>;
 }

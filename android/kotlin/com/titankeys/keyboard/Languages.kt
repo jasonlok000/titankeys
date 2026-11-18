@@ -98,17 +98,28 @@ internal class Languages(
     var preparing: ((InputMethodIndex.Entry) -> Unit)? = null
 
     /** Whether holding Sym opens the overlay: only with two or more on. */
-    val switching get() = on.size > 1 && !englishOnly
+    val switching get() = on.size > 1 && !englishOnly && !practising
+
+    /** An enabled method selected for the current Try it editor instead of the saved method. */
+    var practising = false
+        private set
 
     /**
      * Reads which input methods are on and which types now, as a field starts: Settings or a restore may have changed them.
-     * The setting decides, unless Android's keyboard list picked another since the keyboard last set it ([KeyboardListSync]).
+     * An enabled sample method applies to its editor only. Otherwise the setting decides, unless Android's keyboard list
+     * picked another since the keyboard last set it ([KeyboardListSync]).
      */
-    fun refresh() {
+    fun refresh(sampleId: String? = null) {
         val index = InputMethodList.index(context)
         val setting = TypingSettings.inputMethods(context)
         on = index.on(setting)
         warmUp()
+        val sample = PracticeInputMethod.enabled(sampleId, on)
+        practising = sample != null
+        if (sample != null) {
+            if (sample.id != target || variantChanged(sample.id)) use(sample.id)
+            return
+        }
         val picked = sync.heard(android())
         saveSync()
         val choice = InputMethodChoice.atFieldStart(index, setting, TypingSettings.currentInputMethod(context), picked)
@@ -137,6 +148,7 @@ internal class Languages(
      * method that's on types from now on; Android's old entry, still there after a restore, changes nothing.
      */
     fun androidSays(id: String?) {
+        if (practising) return
         val picked = sync.heard(id)
         saveSync()
         if (picked == null) return
@@ -172,7 +184,7 @@ internal class Languages(
 
     /** Switches to input method [id], saved for next time. Its files load in the background; English is at once. */
     fun switchTo(id: String) {
-        if (on.none { it.id == id }) return
+        if (practising || on.none { it.id == id }) return
         TypingSettings.currentInputMethod(context, id)
         if (id != target) use(id)
     }
@@ -229,7 +241,7 @@ internal class Languages(
 
     private fun use(id: String) {
         target = id
-        InputMethodList.index(context)[id]?.let { lastUsed[it.language.id] = id }
+        if (!practising) on.firstOrNull { it.id == id }?.let { lastUsed[it.language.id] = id }
         val ticket = ++loading
         val listTicket = slot.begin(id)
         // The last input method's next-word table goes with its list.
@@ -319,7 +331,6 @@ internal class Languages(
         }
         if (loadedEngine !== engine) release(loadedEngine)
         loadedEngine = engine
-        variant()
         loaded = method
         loadedVariant = spelling
         slot.done(listTicket, words)
@@ -329,7 +340,7 @@ internal class Languages(
         this.words.other = !current.isEnglish
         this.words.wordBreak = current.rules.wordBreak
         this.words.apostrophes = current.rules.apostrophes
-        barWords()
+        variant()
         changed(method)
     }
 

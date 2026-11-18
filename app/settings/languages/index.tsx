@@ -2,6 +2,7 @@ import { Row, Screen, Section, navigate, useSnapshot } from "ink";
 import { chevronRight } from "ink/icons";
 import { type InputMethodEntry, type Language, type LanguageValues, type State, state } from "../../../lib/titankeys";
 import { Note } from "../../../lib/note";
+import pageText from "../../../tools/im/page-text.json";
 
 /**
  * The most languages on, and the most input methods on within one (owner, 2026-11-17: "Don't allow selecting more than 4"),
@@ -60,16 +61,12 @@ export const shownName = (name: string, nameEnglish: string, script: string) => 
 export const languagesLabel = (settings: State) =>
   languagesOn(settings).map(({ language }) => shownName(language.name, language.nameEnglish, language.script)).join(", ");
 
-/** Under a language's name: its English name, marked experimental where it is. F: draft. */
+/** Under a language's name, show its English name and experimental status where applicable. */
 export const languageSubtitle = (language: Language) =>
-  language.experimental ? `${language.nameEnglish} · experimental` : language.nameEnglish === language.name ? undefined : language.nameEnglish;
+  language.experimental ? `${language.nameEnglish} · ${pageText.status.Experimental}` :
+    language.nameEnglish === language.name ? undefined : language.nameEnglish;
 
-const SCRIPTS: Record<string, string> = {
-  Latn: "Latin letters", Cyrl: "Cyrillic", Grek: "Greek", Geor: "Georgian", Hebr: "Hebrew", Deva: "Devanagari", Thai: "Thai",
-  Kore: "Korean", Hani: "Chinese",
-  // F: draft.
-  Jpan: "Japanese",
-};
+const scripts: Record<string, string> = pageText.scripts;
 
 /**
  * Every language. The ones that are on come first, in the switcher's order. Each opens its own page, where its input methods
@@ -77,9 +74,8 @@ const SCRIPTS: Record<string, string> = {
  */
 export default function LanguagesPage() {
   const result = useSnapshot(state);
-  // F: draft.
-  const title = "Languages";
-  const subtitle = "Pick a language to turn on how you type it. Hold Sym to hop between them.";
+  const title = pageText.list.title;
+  const subtitle = pageText.list.limit.replace("{max}", String(MAX_LANGUAGES));
   if (result.status !== "ready") return <Screen title={title} subtitle={subtitle} />;
   const rows = languagesOf(result.data);
   const on = languagesOn(result.data);
@@ -92,10 +88,10 @@ export default function LanguagesPage() {
   for (const each of rows.filter(each => each.on.length === 0))
     groups.set(each.language.script, [...(groups.get(each.language.script) ?? []), each]);
   return <Screen title={title} subtitle={subtitle}>
-    <Section title="On">
+    <Section title={pageText.list.on}>
       {on.map(row)}
-      {result.data.inputMethods.length === 1 && <Note>Just one, so Sym has nothing to switch to. Turn on another.</Note>}
+      {result.data.inputMethods.length === 1 && <Note>{pageText.list.onlyOne}</Note>}
     </Section>
-    {[...groups].map(([script, each]) => <Section key={script} title={SCRIPTS[script] ?? script}>{each.map(row)}</Section>)}
+    {[...groups].map(([script, each]) => <Section key={script} title={scripts[script] ?? script}>{each.map(row)}</Section>)}
   </Screen>;
 }

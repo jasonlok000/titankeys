@@ -4854,6 +4854,10 @@ class GuideActivity : Activity() {
 
     /** Leaves at any time. The guide remembers where you stopped, and opens there from the guide page. */
     private fun leave() {
+        // Android's setup panels can remain under this activity after Accessibility brings the guide forward. Just finishing
+        // would uncover that system page. Return to our singleTask front page explicitly; it chooses the playground once
+        // setup is done, or the setup start otherwise. End-screen links use openFromEnd and keep their own Back destination.
+        if (!playground || settingUp) startActivity(Connected.pageIntent(this, "/"))
         // The playground's setup slide closes to the app's setup page, which waits for a touch to start again.
         if (playground && settingUp) leavePlayground(PLAYGROUND_SETUP) else finish()
     }

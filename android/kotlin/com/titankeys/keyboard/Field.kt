@@ -3,7 +3,10 @@ package com.titankeys.keyboard
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 
-/** What the focused text field allows. */
+/**
+ * What the focused text field allows. Ordinary text gets words even when the app supplies its own suggestions,
+ * as Google Maps does. Passwords, email and URI fields keep their own rules, and a private field does not teach the keyboard.
+ */
 data class Field(
     /**
      * Swipes, touchpad taps, the delete flick, snippets and shortcodes type here. Where this is false, as in password, email and
@@ -47,37 +50,29 @@ data class Field(
                 || variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
             val address = url || email
             val private = imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
-            // Browsers often give search bars the URL type.
-            val search = url && inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
+            // Browsers often give search bars the URL type. Keep their distinction between search and address bars.
+            val search = if (url) inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS == 0
+                else !password && !email && (imeOptions and EditorInfo.IME_MASK_ACTION == EditorInfo.IME_ACTION_SEARCH ||
+                    inputType and InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE != 0)
             val exact = variation == InputType.TYPE_TEXT_VARIATION_POSTAL_ADDRESS
                 || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
                 || variation == InputType.TYPE_TEXT_VARIATION_FILTER
-            val noSuggestions = inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0
-            // A search field that asks for no suggestions, because the app shows its own list (Google Maps' search), still gets the
-            // bar, as a search bar does: its Enter searches, or it completes as typed. Nothing is fixed or learned there (owner,
-            // 2026-11-17: "we are too strict on some input fields to not show suggestions, such as a googlemaps search field").
-            val appSearch = noSuggestions && !url && !password && !email && (imeOptions and EditorInfo.IME_MASK_ACTION ==
-                EditorInfo.IME_ACTION_SEARCH || inputType and InputType.TYPE_TEXT_FLAG_AUTO_COMPLETE != 0)
-            // Any other text field that asks for no suggestions, as a username or a code field does, gets none: no bar, no fixes,
-            // and nothing learned from it (bug hunt #10). An address bar that asks the same still gets the bar: browsers search
-            // from it too.
-            val unsuggested = noSuggestions && !url && !appSearch
-            // A field with no suggestions types no words either: an address or a password is typed key by key.
-            return Field(words = !password && !email, learning = !password && !address && !private && !unsuggested && !appSearch,
-                fullStops = !password && !address, starters = search || appSearch,
+            return Field(words = !password && !email, learning = !password && !address && !private,
+                fullStops = !password && !address, starters = search,
                 sentenceCapitalisation = !password && !address && inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
-                autocorrect = !password && !address && !exact && !unsuggested && !appSearch,
-                suggestions = !password && !email && !unsuggested, secret = password)
+                autocorrect = !password && !address && !exact,
+                suggestions = !password && !email, secret = password)
         }
 
         /**
-         * Whether the raw input log may record a field. Only fields that allow learning do, which leaves out passwords,
-         * addresses and private fields. A field marked as a reference is recorded even though it asks for no
-         * personalised learning. The mark overrides nothing else, so a marked password is still never recorded.
+         * Whether an input log may record a field. Passwords, addresses and fields asking for no suggestions stay out.
+         * A Debug reference mark only overrides a request for no personalised learning.
          */
-        fun logged(inputType: Int, imeOptions: Int, privateImeOptions: String?): Boolean =
-            of(inputType, imeOptions).learning || privateImeOptions?.contains(RAW_LOG_REFERENCE) == true
+        fun logged(inputType: Int, imeOptions: Int, privateImeOptions: String?): Boolean {
+            if (inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS != 0) return false
+            return of(inputType, imeOptions).learning || privateImeOptions?.contains(RAW_LOG_REFERENCE) == true
                 && of(inputType, imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING.inv()).learning
+        }
 
         private const val RAW_LOG_REFERENCE = "com.titankeys.rawlog.reference"
     }

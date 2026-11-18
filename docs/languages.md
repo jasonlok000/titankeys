@@ -585,6 +585,10 @@ unless it's like password or whatever. if not hard then it should be learning fr
   starters; while a word is typed, the user's words that start with it and then the list's. Nothing to offer leaves the bar
   empty; it never shows English. Passwords and the other fields without words keep an empty bar, as before. English is
   unchanged: its own engine answers.
+- **App search fields** such as Google Maps get the same suggestions, word gestures and typo fixes as ordinary text fields,
+  even when the app asks to show only its own suggestions. An app can still ask the keyboard to keep what you type out of
+  learned words. Your typing settings still apply. Browser address bars still get suggestions while keeping what you type
+  as-is. Password, email and number fields keep the bar clear. Fields that ask for no suggestions stay out of input recordings.
 - **Learning** (`LanguageLearning`): every word kept, with the one before it or a sentence start, per input method. A word
   the list lacks counts from its second use, so a typo typed once never shows. Bounded (2,000 words, 5,000 pairs, 200
   sentence starts; the least used go). Kept in the `language_learning` store, one key per input method, written every five

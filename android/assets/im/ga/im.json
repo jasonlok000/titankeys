@@ -47,9 +47,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Irish on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for á, E for é, O for ó."
+    ],
+    "practice": "Dia duit, conas atá tú?",
     "keys": {
       "legend": "",
       "roles": [

@@ -43,9 +43,12 @@
   "guide": {
     "status": "experimental",
     "family": "japanese",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Japanese in romaji.",
+    "points": [
+      "kyou gives きょう, nn ん, and - ー.",
+      "Whole sentences come first among the choices."
+    ],
+    "practice": "konnichiha",
     "keys": {
       "legend": "",
       "roles": [

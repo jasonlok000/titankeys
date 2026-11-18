@@ -60,9 +60,12 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Portuguese on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for á, à, â or ã, C for ç, O for õ.",
+      "Brasil or Portugal: pick your spelling below."
+    ],
+    "practice": "Não é fácil",
     "keys": {
       "legend": "",
       "roles": [

@@ -73,9 +73,12 @@
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Bulgarian by sound: each key types the letter it sounds like.",
+    "points": [
+      "Q is ч, W is ш, X is ж, Y is ъ.",
+      "Held: ю or ь on M, я or щ on P."
+    ],
+    "practice": "Здравей, как си?",
     "keys": {
       "legend": "",
       "map": {

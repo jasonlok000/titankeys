@@ -50,9 +50,12 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Turkish on the printed letters, with its accents held.",
+    "points": [
+      "Hold I for ı or î, G for ğ, S for ş.",
+      "Shift + I gives İ, with its dot."
+    ],
+    "practice": "Günaydın, nasılsın?",
     "keys": {
       "legend": "",
       "roles": [

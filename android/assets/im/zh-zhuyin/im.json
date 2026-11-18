@@ -57,9 +57,12 @@
   "guide": {
     "status": "ready",
     "family": "chinese",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Mandarin by Zhuyin's symbols, on the Hsu (許氏) layout.",
+    "points": [
+      "Each letter types a Zhuyin symbol, and some carry two.",
+      "Tones are optional: D ˊ, F ˇ, J ˋ, S ˙."
+    ],
+    "practice": "你好",
     "keys": {
       "legend": "",
       "map": {

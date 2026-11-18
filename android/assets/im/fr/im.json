@@ -49,9 +49,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "French on the printed letters, with its accents held.",
+    "points": [
+      "Hold E for é, è, ê or ë, C for ç, O for ô or œ."
+    ],
+    "practice": "Ça va très bien",
     "keys": {
       "legend": "",
       "roles": [

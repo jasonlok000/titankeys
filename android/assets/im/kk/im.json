@@ -83,9 +83,11 @@
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Kazakh on the Russian PC layout, its own letters held.",
+    "points": [
+      "Held: ә on F, і on S, ң on Y, ғ on U, ұ or ү on E, қ on R, ө on J, һ on H."
+    ],
+    "practice": "Сәлеметсіз бе?",
     "keys": {
       "legend": "",
       "map": {

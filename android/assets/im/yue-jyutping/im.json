@@ -57,9 +57,12 @@
   "guide": {
     "status": "ready",
     "family": "chinese",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Cantonese by its sounds, as Jyutping spells them.",
+    "points": [
+      "Tones are never typed.",
+      "A whole phrase goes in one run, no spaces."
+    ],
+    "practice": "neihou",
     "keys": {
       "legend": "",
       "roles": [

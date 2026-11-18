@@ -47,9 +47,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "German on the printed letters, with its accents held.",
+    "points": [
+      "Hold S for ß, A for ä, O for ö, U for ü."
+    ],
+    "practice": "Schöne Grüße",
     "keys": {
       "legend": "",
       "roles": [

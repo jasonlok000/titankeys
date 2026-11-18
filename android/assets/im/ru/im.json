@@ -75,9 +75,11 @@
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Russian on the PC layout (ЙЦУКЕН).",
+    "points": [
+      "Held: ж or э on L, б or ю on M, х or ъ on P, ё on T."
+    ],
+    "practice": "Привет, как дела?",
     "keys": {
       "legend": "",
       "map": {

@@ -22,9 +22,12 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Spanish on the printed letters, with its accents held.",
+   "points": [
+    "Hold N for ñ, A for á, U for ú or ü.",
+    "A sentence that opens with ¿ or ¡ still gets its capital."
+   ],
+   "practice": "¿Qué tal, señor?",
    "keys": {
     "legend": "",
     "roles": [
@@ -74,9 +77,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "French on the printed letters, with its accents held.",
+   "points": [
+    "Hold E for é, è, ê or ë, C for ç, O for ô or œ."
+   ],
+   "practice": "Ça va très bien",
    "keys": {
     "legend": "",
     "roles": [
@@ -126,9 +131,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "German on the printed letters, with its accents held.",
+   "points": [
+    "Hold S for ß, A for ä, O for ö, U for ü."
+   ],
+   "practice": "Schöne Grüße",
    "keys": {
     "legend": "",
     "roles": [
@@ -179,9 +186,12 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Portuguese on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for á, à, â or ã, C for ç, O for õ.",
+    "Brasil or Portugal: pick your spelling below."
+   ],
+   "practice": "Não é fácil",
    "keys": {
     "legend": "",
     "roles": [
@@ -241,9 +251,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Italian on the printed letters, with its accents held.",
+   "points": [
+    "Hold E for é or è, A for à, O for ò."
+   ],
+   "practice": "Perché è così",
    "keys": {
     "legend": "",
     "roles": [
@@ -293,9 +305,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Dutch on the printed letters, with its accents held.",
+   "points": [
+    "Hold E for é or ë, I for ï, O for ö."
+   ],
+   "practice": "Één café",
    "keys": {
     "legend": "",
     "roles": [
@@ -345,9 +359,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Polish on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for ą, L for ł, Z for ź or ż."
+   ],
+   "practice": "Dzień dobry, Łukasz",
    "keys": {
     "legend": "",
     "roles": [
@@ -398,9 +414,12 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Turkish on the printed letters, with its accents held.",
+   "points": [
+    "Hold I for ı or î, G for ğ, S for ş.",
+    "Shift + I gives İ, with its dot."
+   ],
+   "practice": "Günaydın, nasılsın?",
    "keys": {
     "legend": "",
     "roles": [
@@ -450,9 +469,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Swedish on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for å or ä, O for ö."
+   ],
+   "practice": "Hej, hur mår du?",
    "keys": {
     "legend": "",
     "roles": [
@@ -502,9 +523,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Danish on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for æ or å, O for ø."
+   ],
+   "practice": "Hvordan går det?",
    "keys": {
     "legend": "",
     "roles": [
@@ -554,9 +577,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Norwegian Bokmål on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for æ or å, O for ø."
+   ],
+   "practice": "Hei, hvordan går det?",
    "keys": {
     "legend": "",
     "roles": [
@@ -606,9 +631,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Finnish on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for ä or å, O for ö."
+   ],
+   "practice": "Hyvää päivää",
    "keys": {
     "legend": "",
     "roles": [
@@ -658,9 +685,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Czech on the printed letters, with its accents held.",
+   "points": [
+    "Hold C for č, R for ř, U for ú or ů."
+   ],
+   "practice": "Děkuji, dobře",
    "keys": {
     "legend": "",
     "roles": [
@@ -710,9 +739,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Romanian on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for ă or â, S for ș, T for ț."
+   ],
+   "practice": "Mulțumesc frumos",
    "keys": {
     "legend": "",
     "roles": [
@@ -762,9 +793,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Hungarian on the printed letters, with its accents held.",
+   "points": [
+    "Hold O for ó, ö or ő, U for ú, ü or ű."
+   ],
+   "practice": "Köszönöm szépen",
    "keys": {
     "legend": "",
     "roles": [
@@ -814,9 +847,9 @@
   "guide": {
    "status": "experimental",
    "family": "plain",
-   "line": "",
+   "line": "Indonesian on the printed letters. Nothing to hold.",
    "points": [],
-   "practice": "",
+   "practice": "Apa kabar?",
    "keys": {
     "legend": "",
     "roles": [
@@ -866,9 +899,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Croatian on the printed letters, with its accents held.",
+   "points": [
+    "Hold C for č or ć, D for đ, Z for ž."
+   ],
+   "practice": "Hvala, dobro sam",
    "keys": {
     "legend": "",
     "roles": [
@@ -918,9 +953,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Slovenian on the printed letters, with its accents held.",
+   "points": [
+    "Hold C for č, S for š, Z for ž."
+   ],
+   "practice": "Hvala, dobro",
    "keys": {
     "legend": "",
     "roles": [
@@ -970,9 +1007,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Latvian on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for ā, E for ē, K for ķ."
+   ],
+   "practice": "Labdien, kā iet?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1022,9 +1061,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Lithuanian on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for ą, E for ę or ė, U for ų or ū."
+   ],
+   "practice": "Ačiū, gerai",
    "keys": {
     "legend": "",
     "roles": [
@@ -1074,9 +1115,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Catalan on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for à or á, E for é or è, C for ç."
+   ],
+   "practice": "Què tal, com va?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1126,9 +1169,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Galician on the printed letters, with its accents held.",
+   "points": [
+    "Hold N for ñ, A for á, O for ó."
+   ],
+   "practice": "Bo día, que tal?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1178,9 +1223,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Estonian on the printed letters, with its accents held.",
+   "points": [
+    "Hold O for õ or ö, A for ä, U for ü."
+   ],
+   "practice": "Tänan, hästi",
    "keys": {
     "legend": "",
     "roles": [
@@ -1230,9 +1277,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Icelandic on the printed letters, with its accents held.",
+   "points": [
+    "Hold D for ð, T for þ, A for á or æ."
+   ],
+   "practice": "Góðan daginn",
    "keys": {
     "legend": "",
     "roles": [
@@ -1282,9 +1331,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Afrikaans on the printed letters, with its accents held.",
+   "points": [
+    "Hold E for é, ê or ë, O for ó or ö."
+   ],
+   "practice": "Hoe gaan dit?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1334,9 +1385,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Esperanto on the printed letters, with its accents held.",
+   "points": [
+    "Hold C for ĉ, G for ĝ, U for ŭ."
+   ],
+   "practice": "Ĉu vi parolas Esperanton?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1386,9 +1439,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Slovak on the printed letters, with its accents held.",
+   "points": [
+    "Hold C for č, L for ĺ or ľ, O for ó or ô."
+   ],
+   "practice": "Ďakujem, dobre",
    "keys": {
     "legend": "",
     "roles": [
@@ -1438,9 +1493,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Azerbaijani on the printed letters, with its accents held.",
+   "points": [
+    "Hold E for ə, I for ı, G for ğ."
+   ],
+   "practice": "Necəsən, dostum?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1490,9 +1547,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Irish on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for á, E for é, O for ó."
+   ],
+   "practice": "Dia duit, conas atá tú?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1542,9 +1601,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Basque on the printed letters, with its accents held.",
+   "points": [
+    "Hold N for ñ, C for ç."
+   ],
+   "practice": "Kaixo, zer moduz?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1594,9 +1655,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Norwegian Nynorsk on the printed letters, with its accents held.",
+   "points": [
+    "Hold A for æ or å, O for ø."
+   ],
+   "practice": "Korleis går det?",
    "keys": {
     "legend": "",
     "roles": [
@@ -1646,9 +1709,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Bosnian on the printed letters, with its accents held.",
+   "points": [
+    "Hold C for č or ć, D for đ, Z for ž."
+   ],
+   "practice": "Hvala, dobro sam",
    "keys": {
     "legend": "",
     "roles": [
@@ -1698,9 +1763,11 @@
   "guide": {
    "status": "experimental",
    "family": "latin",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Serbian, Latin on the printed letters, with its accents held.",
+   "points": [
+    "Hold C for č or ć, D for đ, Z for ž."
+   ],
+   "practice": "Hvala, dobro sam",
    "keys": {
     "legend": "",
     "roles": [
@@ -1751,9 +1818,11 @@
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Russian on the PC layout (ЙЦУКЕН).",
+   "points": [
+    "Held: ж or э on L, б or ю on M, х or ъ on P, ё on T."
+   ],
+   "practice": "Привет, как дела?",
    "keys": {
     "legend": "",
     "map": {
@@ -1832,9 +1901,11 @@
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Ukrainian on the PC layout (ЙЦУКЕН).",
+   "points": [
+    "Held: ж or є on L, б or ю on M, х, ї or the apostrophe on P, ґ on U."
+   ],
+   "practice": "Привіт, як справи?",
    "keys": {
     "legend": "",
     "map": {
@@ -1913,9 +1984,11 @@
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Belarusian on the PC layout (ЙЦУКЕН).",
+   "points": [
+    "Held: э or ж on L, б or ю on M, х or the apostrophe on P, ё on T."
+   ],
+   "practice": "Добры дзень",
    "keys": {
     "legend": "",
     "map": {
@@ -1994,9 +2067,12 @@
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Bulgarian by sound: each key types the letter it sounds like.",
+   "points": [
+    "Q is ч, W is ш, X is ж, Y is ъ.",
+    "Held: ю or ь on M, я or щ on P."
+   ],
+   "practice": "Здравей, как си?",
    "keys": {
     "legend": "",
     "map": {
@@ -2074,9 +2150,12 @@
   "guide": {
    "status": "experimental",
    "family": "greek",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Greek on the PC layout.",
+   "points": [
+    "W types ς, and Q types ;, Greek's question mark.",
+    "Hold a vowel for its accent, and V for ώ."
+   ],
+   "practice": "Καλημέρα, τι κάνεις;",
    "keys": {
     "legend": "",
     "map": {
@@ -2155,9 +2234,12 @@
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Serbian in Cyrillic, by sound.",
+   "points": [
+    "Q is љ, W is њ, X is џ, Z is ж.",
+    "Held: ч or ћ on L, ш or ђ on P."
+   ],
+   "practice": "Здраво, како си?",
    "keys": {
     "legend": "",
     "map": {
@@ -2236,9 +2318,12 @@
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Macedonian by sound.",
+   "points": [
+    "Q is љ, W is њ, X is џ, Z is ѕ.",
+    "Held: ч or ќ on L, ш, ж or ѓ on P."
+   ],
+   "practice": "Здраво, како си?",
    "keys": {
     "legend": "",
     "map": {
@@ -2317,9 +2402,11 @@
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Kazakh on the Russian PC layout, its own letters held.",
+   "points": [
+    "Held: ә on F, і on S, ң on Y, ғ on U, ұ or ү on E, қ on R, ө on J, һ on H."
+   ],
+   "practice": "Сәлеметсіз бе?",
    "keys": {
     "legend": "",
     "map": {
@@ -2397,9 +2484,11 @@
   "guide": {
    "status": "experimental",
    "family": "georgian",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Georgian by sound, no capitals.",
+   "points": [
+    "Shift gives ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C."
+   ],
+   "practice": "გამარჯობა",
    "keys": {
     "legend": "",
     "map": {
@@ -2486,9 +2575,12 @@
   "guide": {
    "status": "experimental",
    "family": "thai",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Thai on the Kedmanee layout.",
+   "points": [
+    "Digits: ๐ is Shift + Q, ๑ to ๙ are Shift + hold on W E R T I O P S D.",
+    "Next words come after a space."
+   ],
+   "practice": "สวัสดีครับ",
    "keys": {
     "legend": "",
     "map": {
@@ -2617,9 +2709,12 @@
   "guide": {
    "status": "experimental",
    "family": "hindi",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Hindi by sound, in English letters.",
+   "points": [
+    "namaste gives नमस्ते.",
+    "End a word with ~ to keep its last virama (agar~)."
+   ],
+   "practice": "namaste",
    "keys": {
     "legend": "",
     "roles": [
@@ -2669,9 +2764,12 @@
   "guide": {
    "status": "experimental",
    "family": "hebrew",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Hebrew on the Israeli PC layout, right to left.",
+   "points": [
+    "Q types ת, and W types the geresh (צ'יפס).",
+    "Held: ף on P, ץ on M, / on Q."
+   ],
+   "practice": "שלום, מה שלומך?",
    "keys": {
     "legend": "",
     "map": {
@@ -2754,9 +2852,11 @@
   "guide": {
    "status": "experimental",
    "family": "korean",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Korean on the 2-set layout (두벌식).",
+   "points": [
+    "Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on O and P."
+   ],
+   "practice": "안녕하세요",
    "keys": {
     "legend": "",
     "map": {
@@ -2843,9 +2943,12 @@
   "guide": {
    "status": "experimental",
    "family": "vietnamese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Vietnamese in Telex.",
+   "points": [
+    "aa â, aw ă, ee ê, oo ô, ow ơ, uw ư, dd đ.",
+    "Tones: s sắc, f huyền, r hỏi, x ngã, j nặng. z takes it off."
+   ],
+   "practice": "Xin chào",
    "keys": {
     "legend": "",
     "roles": [
@@ -2896,9 +2999,13 @@
   "guide": {
    "status": "ready",
    "family": "chinese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Cantonese by its sounds, as Yale spells them.",
+   "points": [
+    "Tones are never typed, and the low tone's h is optional.",
+    "Z works for j, and n and l stand in for each other.",
+    "A whole phrase goes in one run: ngodeigamyatheuiyamcha."
+   ],
+   "practice": "neihou",
    "keys": {
     "legend": "",
     "roles": [
@@ -2949,9 +3056,12 @@
   "guide": {
    "status": "ready",
    "family": "chinese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Cantonese by its sounds, as Jyutping spells them.",
+   "points": [
+    "Tones are never typed.",
+    "A whole phrase goes in one run, no spaces."
+   ],
+   "practice": "neihou",
    "keys": {
     "legend": "",
     "roles": [
@@ -3002,9 +3112,12 @@
   "guide": {
    "status": "ready",
    "family": "chinese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Mandarin by its sounds, in Pinyin.",
+   "points": [
+    "Tones are never typed. v types ü.",
+    "A whole phrase goes in one run, no spaces."
+   ],
+   "practice": "nihao",
    "keys": {
     "legend": "",
     "roles": [
@@ -3055,9 +3168,12 @@
   "guide": {
    "status": "ready",
    "family": "chinese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Characters by their shapes, up to five parts.",
+   "points": [
+    "Type a character's parts in order: hqi (竹手戈) gives 我.",
+    "The code shows as radicals as you type."
+   ],
+   "practice": "我",
    "keys": {
     "legend": "",
     "map": {
@@ -3136,9 +3252,11 @@
   "guide": {
    "status": "ready",
    "family": "chinese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Cangjie's first and last parts only.",
+   "points": [
+    "Two letters a character, so you'll pick from the bar more often."
+   ],
+   "practice": "我",
    "keys": {
     "legend": "",
     "map": {
@@ -3217,9 +3335,12 @@
   "guide": {
    "status": "ready",
    "family": "chinese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Mandarin by Zhuyin's symbols, on the Hsu (許氏) layout.",
+   "points": [
+    "Each letter types a Zhuyin symbol, and some carry two.",
+    "Tones are optional: D ˊ, F ˇ, J ˋ, S ˙."
+   ],
+   "practice": "你好",
    "keys": {
     "legend": "",
     "map": {
@@ -3297,9 +3418,12 @@
   "guide": {
    "status": "experimental",
    "family": "japanese",
-   "line": "",
-   "points": [],
-   "practice": "",
+   "line": "Japanese in romaji.",
+   "points": [
+    "kyou gives きょう, nn ん, and - ー.",
+    "Whole sentences come first among the choices."
+   ],
+   "practice": "konnichiha",
    "keys": {
     "legend": "",
     "roles": [

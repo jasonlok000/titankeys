@@ -41,9 +41,11 @@
   "guide": {
     "status": "experimental",
     "family": "korean",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Korean on the 2-set layout (두벌식).",
+    "points": [
+      "Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on O and P."
+    ],
+    "practice": "안녕하세요",
     "keys": {
       "legend": "",
       "map": {

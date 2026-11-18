@@ -47,9 +47,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Estonian on the printed letters, with its accents held.",
+    "points": [
+      "Hold O for õ or ö, A for ä, U for ü."
+    ],
+    "practice": "Tänan, hästi",
     "keys": {
       "legend": "",
       "roles": [

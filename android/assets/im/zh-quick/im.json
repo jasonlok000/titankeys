@@ -57,9 +57,11 @@
   "guide": {
     "status": "ready",
     "family": "chinese",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Cangjie's first and last parts only.",
+    "points": [
+      "Two letters a character, so you'll pick from the bar more often."
+    ],
+    "practice": "我",
     "keys": {
       "legend": "",
       "map": {

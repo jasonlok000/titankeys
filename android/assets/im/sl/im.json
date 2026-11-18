@@ -45,9 +45,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Slovenian on the printed letters, with its accents held.",
+    "points": [
+      "Hold C for č, S for š, Z for ž."
+    ],
+    "practice": "Hvala, dobro",
     "keys": {
       "legend": "",
       "roles": [

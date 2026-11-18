@@ -47,9 +47,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Hungarian on the printed letters, with its accents held.",
+    "points": [
+      "Hold O for ó, ö or ő, U for ú, ü or ű."
+    ],
+    "practice": "Köszönöm szépen",
     "keys": {
       "legend": "",
       "roles": [

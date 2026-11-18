@@ -55,9 +55,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Czech on the printed letters, with its accents held.",
+    "points": [
+      "Hold C for č, R for ř, U for ú or ů."
+    ],
+    "practice": "Děkuji, dobře",
     "keys": {
       "legend": "",
       "roles": [

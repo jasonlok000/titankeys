@@ -50,9 +50,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Icelandic on the printed letters, with its accents held.",
+    "points": [
+      "Hold D for ð, T for þ, A for á or æ."
+    ],
+    "practice": "Góðan daginn",
     "keys": {
       "legend": "",
       "roles": [

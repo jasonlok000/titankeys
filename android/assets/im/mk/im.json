@@ -73,9 +73,12 @@
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Macedonian by sound.",
+    "points": [
+      "Q is љ, W is њ, X is џ, Z is ѕ.",
+      "Held: ч or ќ on L, ш, ж or ѓ on P."
+    ],
+    "practice": "Здраво, како си?",
     "keys": {
       "legend": "",
       "map": {

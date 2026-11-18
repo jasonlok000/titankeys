@@ -47,9 +47,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Italian on the printed letters, with its accents held.",
+    "points": [
+      "Hold E for é or è, A for à, O for ò."
+    ],
+    "practice": "Perché è così",
     "keys": {
       "legend": "",
       "roles": [

@@ -77,9 +77,12 @@
   "guide": {
     "status": "experimental",
     "family": "greek",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Greek on the PC layout.",
+    "points": [
+      "W types ς, and Q types ;, Greek's question mark.",
+      "Hold a vowel for its accent, and V for ώ."
+    ],
+    "practice": "Καλημέρα, τι κάνεις;",
     "keys": {
       "legend": "",
       "map": {

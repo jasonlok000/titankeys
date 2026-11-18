@@ -73,9 +73,12 @@
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Serbian in Cyrillic, by sound.",
+    "points": [
+      "Q is љ, W is њ, X is џ, Z is ж.",
+      "Held: ч or ћ on L, ш or ђ on P."
+    ],
+    "practice": "Здраво, како си?",
     "keys": {
       "legend": "",
       "map": {

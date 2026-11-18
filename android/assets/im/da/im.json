@@ -46,9 +46,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Danish on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for æ or å, O for ø."
+    ],
+    "practice": "Hvordan går det?",
     "keys": {
       "legend": "",
       "roles": [

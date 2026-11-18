@@ -18,13 +18,33 @@
     "layout": "Layout",
     "lazySounds": "Lazy sounds (n for l, z for j)",
     "radicals": "Show the radicals as I type",
-    "alphabets": "Alphabets"
+    "alphabets": "Alphabets",
+    "fixes": "Fix slips as I type",
+    "capitals": "Capital letter to start a sentence",
+    "doubleSpace": "Double Space types a full stop",
+    "sentenceSpaces": "Space after a sentence",
+    "commaSpace": "Space after , ; :",
+    "hold": "Hold a letter for its symbol",
+    "swipe": "Swipe to type words",
+    "shorthand": "Spell out shorthand",
+    "spelling": "Spelling",
+    "chineseCharacters": "Characters",
+    "variant": "Spelling"
   },
   "notAvailable": {
     "corrections": "Corrections: not in {X}. Pick the word you mean from the bar instead.",
     "correctionsChinese": "Corrections: not in {X}. Pick the character you mean from the choices instead.",
     "swiping": "Swipe typing: English only, for now.",
-    "suggestions": "Suggestions: not in {X} yet. No word list with a licence we can use."
+    "suggestions": "Suggestions: not in {X} yet. No word list with a licence we can use.",
+    "holdAccents": "Hold for symbols: holding gives accents in {X}. Symbols are on Alt and Sym.",
+    "holdLetters": "Hold for symbols: holding gives letters in {X}. Symbols are on Alt and Sym.",
+    "englishOnly": "English only.",
+    "chineseOnly": "Chinese only.",
+    "noVariants": "{X} has just the one spelling.",
+    "noCapitals": "{X} has no capitals.",
+    "noSpaceAfterFullStop": "{X} puts no space after a full stop.",
+    "engineMarks": "{X}'s marks come with their own spacing.",
+    "noFullStop": "{X} has no full stop, so double Space types two spaces."
   },
   "roles": {
     "shift": {
@@ -107,6 +127,15 @@
       "Type in Telex: aa gives â, dd gives đ, and s f r x j add the tones.",
       "Press the same key again to undo its mark.",
       "The bar starts with what Space will type. Tap another to pick it, or swipe up for more."
+    ],
+    "georgian": [
+      "Every key types a Georgian letter. The page shows which is which.",
+      "Georgian has no capitals, so Shift gives a second letter on seven keys.",
+      "No accents here, so holding a key still gives its symbol."
+    ],
+    "plain": [
+      "Types the way English does: no accents to hold.",
+      "Hold a letter for its symbol, as in English."
     ]
   },
   "legend": {

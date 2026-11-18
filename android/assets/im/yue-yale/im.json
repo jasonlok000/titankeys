@@ -57,9 +57,13 @@
   "guide": {
     "status": "ready",
     "family": "chinese",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Cantonese by its sounds, as Yale spells them.",
+    "points": [
+      "Tones are never typed, and the low tone's h is optional.",
+      "Z works for j, and n and l stand in for each other.",
+      "A whole phrase goes in one run: ngodeigamyatheuiyamcha."
+    ],
+    "practice": "neihou",
     "keys": {
       "legend": "",
       "roles": [

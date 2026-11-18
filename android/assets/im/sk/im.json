@@ -56,9 +56,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Slovak on the printed letters, with its accents held.",
+    "points": [
+      "Hold C for č, L for ĺ or ľ, O for ó or ô."
+    ],
+    "practice": "Ďakujem, dobre",
     "keys": {
       "legend": "",
       "roles": [

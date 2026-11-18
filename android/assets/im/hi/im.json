@@ -44,9 +44,12 @@
   "guide": {
     "status": "experimental",
     "family": "hindi",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Hindi by sound, in English letters.",
+    "points": [
+      "namaste gives नमस्ते.",
+      "End a word with ~ to keep its last virama (agar~)."
+    ],
+    "practice": "namaste",
     "keys": {
       "legend": "",
       "roles": [

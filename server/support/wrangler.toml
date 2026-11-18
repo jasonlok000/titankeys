@@ -1,0 +1,21 @@
+name = "titankeys-support"
+main = "src/worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+APP_PACKAGE = "com.titankeys"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "titankeys-support"
+# Replace with the owner's database ID before deploying.
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["17 2 * * *"]
+
+[observability]
+enabled = false

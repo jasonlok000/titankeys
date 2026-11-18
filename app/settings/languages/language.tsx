@@ -12,6 +12,7 @@ import { holdLabel } from "../hold";
 import { sentenceSpacesLabel } from "../sentence-spaces";
 import { shorthandLabel } from "../shorthand/index";
 import { HowTo } from "../../../lib/how-to";
+import { TryIt } from "../../../lib/try-it";
 
 /**
  * One language: its input methods, each with a switch, and its own options (English's spelling, Chinese's characters). The
@@ -70,7 +71,6 @@ export default function LanguagePage() {
       {languagesFull && <Note>Four languages at a time, tops. Turn one off first.</Note>}
       {methodsFull && methods.length > MAX_PER_LANGUAGE && <Note>Four at a time in one language, tops. Turn one off first.</Note>}
     </Section>
-    <HowTo methods={methods} />
     {options && <Section title="Options">
       {language.id === "en" && <Field label="Spelling" href="/settings/spelling">{spellingLabel(settings)}</Field>}
       {language.id === "zh" && <Field label="Characters" href="/settings/chinese">{chineseLabel(settings)}</Field>}
@@ -93,5 +93,8 @@ export default function LanguagePage() {
         onChange={swipeTyping => void save.run({ swipeTyping })} />}
       {has("shorthand") && <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>}
     </Section>}
+    {/* The owner-approved order (language-flow.html): Turn on and options, How it works, the keys, Try it. */}
+    <HowTo methods={methods} />
+    <TryIt methods={methods.filter(im => inputMethods.includes(im.id))} />
   </Screen>;
 }

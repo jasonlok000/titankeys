@@ -49,9 +49,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Azerbaijani on the printed letters, with its accents held.",
+    "points": [
+      "Hold E for ə, I for ı, G for ğ."
+    ],
+    "practice": "Necəsən, dostum?",
     "keys": {
       "legend": "",
       "roles": [

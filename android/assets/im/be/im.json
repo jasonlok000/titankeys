@@ -75,9 +75,11 @@
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Belarusian on the PC layout (ЙЦУКЕН).",
+    "points": [
+      "Held: э or ж on L, б or ю on M, х or the apostrophe on P, ё on T."
+    ],
+    "practice": "Добры дзень",
     "keys": {
       "legend": "",
       "map": {

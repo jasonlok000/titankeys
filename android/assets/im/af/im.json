@@ -46,9 +46,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Afrikaans on the printed letters, with its accents held.",
+    "points": [
+      "Hold E for é, ê or ë, O for ó or ö."
+    ],
+    "practice": "Hoe gaan dit?",
     "keys": {
       "legend": "",
       "roles": [

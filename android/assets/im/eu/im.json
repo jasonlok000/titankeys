@@ -44,9 +44,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Basque on the printed letters, with its accents held.",
+    "points": [
+      "Hold N for ñ, C for ç."
+    ],
+    "practice": "Kaixo, zer moduz?",
     "keys": {
       "legend": "",
       "roles": [

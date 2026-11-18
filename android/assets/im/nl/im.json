@@ -47,9 +47,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Dutch on the printed letters, with its accents held.",
+    "points": [
+      "Hold E for é or ë, I for ï, O for ö."
+    ],
+    "practice": "Één café",
     "keys": {
       "legend": "",
       "roles": [

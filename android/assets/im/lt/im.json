@@ -49,9 +49,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Lithuanian on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for ą, E for ę or ė, U for ų or ū."
+    ],
+    "practice": "Ačiū, gerai",
     "keys": {
       "legend": "",
       "roles": [

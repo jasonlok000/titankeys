@@ -46,9 +46,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Swedish on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for å or ä, O for ö."
+    ],
+    "practice": "Hej, hur mår du?",
     "keys": {
       "legend": "",
       "roles": [

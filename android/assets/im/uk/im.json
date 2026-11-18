@@ -75,9 +75,11 @@
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Ukrainian on the PC layout (ЙЦУКЕН).",
+    "points": [
+      "Held: ж or є on L, б or ю on M, х, ї or the apostrophe on P, ґ on U."
+    ],
+    "practice": "Привіт, як справи?",
     "keys": {
       "legend": "",
       "map": {

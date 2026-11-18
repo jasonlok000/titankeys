@@ -46,9 +46,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Finnish on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for ä or å, O for ö."
+    ],
+    "practice": "Hyvää päivää",
     "keys": {
       "legend": "",
       "roles": [

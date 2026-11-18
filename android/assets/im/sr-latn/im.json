@@ -46,9 +46,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Serbian, Latin on the printed letters, with its accents held.",
+    "points": [
+      "Hold C for č or ć, D for đ, Z for ž."
+    ],
+    "practice": "Hvala, dobro sam",
     "keys": {
       "legend": "",
       "roles": [

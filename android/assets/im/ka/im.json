@@ -69,9 +69,11 @@
   "guide": {
     "status": "experimental",
     "family": "georgian",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Georgian by sound, no capitals.",
+    "points": [
+      "Shift gives ჭ on W, ღ on R, თ on T, შ on S, ჟ on J, ძ on Z, ჩ on C."
+    ],
+    "practice": "გამარჯობა",
     "keys": {
       "legend": "",
       "map": {

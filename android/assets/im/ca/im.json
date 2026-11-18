@@ -48,9 +48,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Catalan on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for à or á, E for é or è, C for ç."
+    ],
+    "practice": "Què tal, com va?",
     "keys": {
       "legend": "",
       "roles": [

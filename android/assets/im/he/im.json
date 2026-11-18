@@ -83,9 +83,12 @@
   "guide": {
     "status": "experimental",
     "family": "hebrew",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Hebrew on the Israeli PC layout, right to left.",
+    "points": [
+      "Q types ת, and W types the geresh (צ'יפס).",
+      "Held: ף on P, ץ on M, / on Q."
+    ],
+    "practice": "שלום, מה שלומך?",
     "keys": {
       "legend": "",
       "map": {

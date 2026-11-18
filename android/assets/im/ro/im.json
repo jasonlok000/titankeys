@@ -46,9 +46,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Romanian on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for ă or â, S for ș, T for ț."
+    ],
+    "practice": "Mulțumesc frumos",
     "keys": {
       "legend": "",
       "roles": [

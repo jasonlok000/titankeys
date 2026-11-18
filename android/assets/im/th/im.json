@@ -192,9 +192,12 @@
   "guide": {
     "status": "experimental",
     "family": "thai",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Thai on the Kedmanee layout.",
+    "points": [
+      "Digits: ๐ is Shift + Q, ๑ to ๙ are Shift + hold on W E R T I O P S D.",
+      "Next words come after a space."
+    ],
+    "practice": "สวัสดีครับ",
     "keys": {
       "legend": "",
       "map": {

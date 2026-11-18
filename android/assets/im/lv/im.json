@@ -53,9 +53,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Latvian on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for ā, E for ē, K for ķ."
+    ],
+    "practice": "Labdien, kā iet?",
     "keys": {
       "legend": "",
       "roles": [

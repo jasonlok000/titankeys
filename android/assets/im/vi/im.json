@@ -41,9 +41,12 @@
   "guide": {
     "status": "experimental",
     "family": "vietnamese",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Vietnamese in Telex.",
+    "points": [
+      "aa â, aw ă, ee ê, oo ô, ow ơ, uw ư, dd đ.",
+      "Tones: s sắc, f huyền, r hỏi, x ngã, j nặng. z takes it off."
+    ],
+    "practice": "Xin chào",
     "keys": {
       "legend": "",
       "roles": [

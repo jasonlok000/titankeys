@@ -48,9 +48,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Galician on the printed letters, with its accents held.",
+    "points": [
+      "Hold N for ñ, A for á, O for ó."
+    ],
+    "practice": "Bo día, que tal?",
     "keys": {
       "legend": "",
       "roles": [

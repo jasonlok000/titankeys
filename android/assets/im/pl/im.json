@@ -50,9 +50,11 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Polish on the printed letters, with its accents held.",
+    "points": [
+      "Hold A for ą, L for ł, Z for ź or ż."
+    ],
+    "practice": "Dzień dobry, Łukasz",
     "keys": {
       "legend": "",
       "roles": [

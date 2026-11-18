@@ -49,9 +49,12 @@
   "guide": {
     "status": "experimental",
     "family": "latin",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Spanish on the printed letters, with its accents held.",
+    "points": [
+      "Hold N for ñ, A for á, U for ú or ü.",
+      "A sentence that opens with ¿ or ¡ still gets its capital."
+    ],
+    "practice": "¿Qué tal, señor?",
     "keys": {
       "legend": "",
       "roles": [

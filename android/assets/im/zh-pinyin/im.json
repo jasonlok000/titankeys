@@ -57,9 +57,12 @@
   "guide": {
     "status": "ready",
     "family": "chinese",
-    "line": "",
-    "points": [],
-    "practice": "",
+    "line": "Mandarin by its sounds, in Pinyin.",
+    "points": [
+      "Tones are never typed. v types ü.",
+      "A whole phrase goes in one run, no spaces."
+    ],
+    "practice": "nihao",
     "keys": {
       "legend": "",
       "roles": [

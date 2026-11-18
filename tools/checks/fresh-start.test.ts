@@ -32,6 +32,7 @@ const KEPT_FILES: Record<string, string> = {
   "swipe-calibration-v1": "an old file the engine deletes every time it starts",
   "swipe-accuracy-v1": "the same",
   "sharing": "Sharing's counts IDs, so totals already sent can still be deleted; the wipe empties its totals first (Counts.clear)",
+  "support-ledger.json": "the private supporter key still removes the board entry and the saved Play receipts prevent duplicate credit",
 };
 
 test("the wipe keeps only the listed preferences, so the guide, Back's disclosure and the release notes go as on a new install", () => {

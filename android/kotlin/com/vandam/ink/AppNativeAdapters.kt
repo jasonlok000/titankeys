@@ -33,6 +33,7 @@ import com.titankeys.keyboard.CrashReport
 import com.titankeys.keyboard.ExactTyping
 import com.titankeys.keyboard.FixedScale
 import com.titankeys.keyboard.GuideActivity
+import com.titankeys.keyboard.GuideMotion
 import com.titankeys.keyboard.Haptic
 import com.titankeys.keyboard.HapticGroup
 import com.titankeys.keyboard.Haptics
@@ -59,6 +60,9 @@ import com.titankeys.keyboard.Snippets
 import com.titankeys.keyboard.Trace
 import com.titankeys.keyboard.TouchpadPreview
 import com.titankeys.keyboard.UpdateNotice
+import com.titankeys.support.SupportBilling
+import com.titankeys.support.SupportBoard
+import com.titankeys.support.SupportStats
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -92,6 +96,11 @@ internal fun createAppNativeAdapters(activity: MainActivity): Map<String, Native
 
 private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapter, Application.ActivityLifecycleCallbacks {
     private val typing by lazy { SwipeTyping.get(activity) }
+    private val support = lazy { SupportBilling(activity, ::supportChanged) }
+    private var fixtureReceiptSeen = false
+
+    private fun fixtureReceipt() = AppBuild.kind(activity) == "debug" && activity.intent.getBooleanExtra(SUPPORT_RECEIPT_FIXTURE, false)
+    private fun supportChanged() = activity.emit(JSONObject().put("type", "titankeys-support").toString())
     private var stopWatching: (() -> Unit)? = null
     private val previewController = lazy { TouchpadPreview(activity) }
     private var watchingRequested = false
@@ -145,6 +154,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     }
 
     init {
+        if (!SupportStats.preview(activity)) SupportStats.firstRun(activity)
         inkPress = press
         activity.application.registerActivityLifecycleCallbacks(this)
         activity.window.decorView.viewTreeObserver.addOnWindowFocusChangeListener(windowFocus)
@@ -230,6 +240,8 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         if (crashOffer != null) showCrashOffer(target)
         if (target !== activity) return
         visible = true
+        SupportStats.preview(activity)
+        if (!fixtureReceipt()) runCatching { support.value.onResume() }
         syncPreview()
         publishState()
     }
@@ -250,6 +262,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             crashDialog = null
         }
         if (target !== activity) return
+        if (support.isInitialized()) support.value.close()
         activity.window.decorView.viewTreeObserver.removeOnWindowFocusChangeListener(windowFocus)
         visible = false
         syncPreview()
@@ -276,6 +289,52 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             // Asynchronous engine operations complete through their own outcome callback.
             val result: String? = when (operation) {
                 "state" -> state().toString()
+                "supportState" -> supportState().toString()
+                "supportRefresh" -> {
+                    if (!fixtureReceipt()) support.value.refresh()
+                    "null"
+                }
+                "supportPurchase" -> JSONObject.quote(
+                    if (fixtureReceipt()) "unavailable" else support.value.purchase(data.getString("productId")))
+                "supportReceiptSeen" -> {
+                    val id = data.getString("id")
+                    if (fixtureReceipt()) fixtureReceiptSeen = true else support.value.ledger.receiptSeen(id)
+                    supportChanged()
+                    "null"
+                }
+                "supportStatsSeen" -> {
+                    SupportStats.dismiss(activity)
+                    supportChanged()
+                    "null"
+                }
+                "supportBoardRead" -> {
+                    if (fixtureReceipt()) supportedBoardUnavailable().toString()
+                    else {
+                        SupportBoard.read(activity) { complete(NativeResult.Success(it.toString())) }
+                        null
+                    }
+                }
+                "supportBoardJoin" -> {
+                    val ledger = support.value.ledger
+                    val accountKey = ledger.accountKey()
+                    val proofs = ledger.boardProofs()
+                    if (fixtureReceipt() || accountKey == null || proofs.length() == 0) supportedBoardUnavailable().toString()
+                    else {
+                        SupportBoard.join(activity, accountKey, proofs, data.getBoolean("anonymous"),
+                            data.optString("name").ifBlank { null }, data.optString("message").ifBlank { null }) {
+                            boardResult(it, true, complete)
+                        }
+                        null
+                    }
+                }
+                "supportBoardRemove" -> {
+                    val accountKey = support.value.ledger.accountKey()
+                    if (fixtureReceipt() || accountKey == null) supportedBoardUnavailable().toString()
+                    else {
+                        SupportBoard.remove(activity, accountKey) { boardResult(it, false, complete) }
+                        null
+                    }
+                }
                 // A control on a TitanKeys screen (lib/app-haptics.ts). Only the app's own haptics: the keyboard's play from the keyboard.
                 "haptic" -> {
                     val haptic = Haptic.of(data.getString("id"))
@@ -576,6 +635,29 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     private fun operationResult(error: String?, complete: NativeResultHandler) {
         complete(if (error == null) NativeResult.Success("null")
             else NativeResult.Failure(NativeErrorKind.UNEXPECTED, error, true))
+    }
+
+    private fun supportedBoardUnavailable() = JSONObject().put("available", false).put("entries", JSONArray())
+
+    private fun boardResult(response: JSONObject, joined: Boolean, complete: NativeResultHandler) {
+        val ledger = support.value.ledger
+        if (response.optBoolean("available") && runCatching { ledger.boardJoined(joined) }.isFailure) {
+            response.put("available", false)
+        }
+        complete(NativeResult.Success(response.put("joined", ledger.boardJoined).toString()))
+        supportChanged()
+    }
+
+    private fun supportState(): JSONObject {
+        val preview = SupportStats.preview(activity)
+        val state = if (fixtureReceipt()) {
+            val receipt = if (fixtureReceiptSeen) JSONObject.NULL else JSONObject().put("id", "debug-fixture")
+                .put("productId", "support_tip_full").put("quantity", 1).put("previousCents", 480).put("totalCents", 680)
+            JSONObject().put("billing", "unavailable").put("purchaseResult", JSONObject.NULL).put("products", JSONArray())
+                .put("totalCents", 680).put("receipt", receipt).put("boardJoined", false)
+        } else support.value.state().put("boardJoined", support.value.ledger.boardJoined)
+        return state.put("reduceMotion", !GuideMotion.enabled)
+            .put("statsCardDue", SupportStats.due(activity, preview)).put("stats", SupportStats.totals(activity, preview))
     }
 
     private fun state(): JSONObject {
@@ -918,6 +1000,7 @@ internal object CrashOfferHosts {
 
 /** The other-phone warning has shown once (#75). */
 private const val PHONE_WARNING_SEEN = "phone_warning_seen"
+private const val SUPPORT_RECEIPT_FIXTURE = "com.titankeys.debug.supportReceipt"
 private const val LANGUAGE_NOTE_SEEN = "language_settings_moved_seen"
 private const val ENGLISH = InputMethod.ENGLISH_ID
 /** TitanKeys Debug's switch that fakes another phone (#75). */

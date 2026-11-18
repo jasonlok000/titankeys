@@ -163,7 +163,7 @@ class Composer(
     private sealed interface PendingInput
     private data class PendingSwipe(val swipe: Swipe, val startedAt: Long, val endedAt: Long, val metaState: Int,
                                     val endContact: Float) : PendingInput
-    private class PendingText(var text: String, val letterTap: Boolean) : PendingInput
+    private class PendingText(var text: String, val letterTap: Boolean, val autoCapital: Boolean) : PendingInput
     private class PendingEdit(val action: () -> Unit, val transferable: Boolean = false, val leaves: Boolean = false) : PendingInput
     private class FullStop(val time: Long, val snapshot: Snapshot)
     /**
@@ -261,6 +261,10 @@ class Composer(
     var onStroke: ((Swipe) -> Unit)? = null
     /** Told when a word changes by itself, unless that lands as a swipe ends, where a vibration would run into the swipe's own. */
     var onAutocorrect: (() -> Unit)? = null
+    /** Counts for the on-device support card, independent of Sharing. */
+    var onWordTyped: () -> Unit = {}
+    var onSwipeTyped: () -> Unit = {}
+    var onAutomaticCapital: () -> Unit = {}
     /**
      * Told how a typed word ended, from [typed] to [word], for the guide, which waits for a real fix: the same word twice when
      * nothing was fixed.
@@ -534,13 +538,13 @@ class Composer(
         return true
     }
 
-    private fun enqueueText(text: String, letterTap: Boolean) {
+    private fun enqueueText(text: String, letterTap: Boolean, autoCapital: Boolean) {
         val units = pendingInput.sumOf { if (it is PendingText) it.text.length else 0 }
         if (units + text.length > MAX_PENDING_TEXT) return
         val last = pendingInput.lastOrNull() as? PendingText
-        if (!letterTap && last != null && !last.letterTap && last.text.length + text.length <= MAX_TEXT_CHUNK) {
+        if (!letterTap && !autoCapital && last != null && !last.letterTap && last.text.length + text.length <= MAX_TEXT_CHUNK) {
             last.text += text
-        } else enqueue(PendingText(text, letterTap))
+        } else enqueue(PendingText(text, letterTap, autoCapital))
     }
 
     private fun scheduleDrain() {
@@ -571,7 +575,7 @@ class Composer(
                 try {
                     when (pending) {
                         is PendingEdit -> pending.action()
-                        is PendingText -> type(pending.text, pending.letterTap)
+                        is PendingText -> type(pending.text, pending.letterTap, pending.autoCapital)
                         is PendingSwipe -> Unit
                     }
                 } finally {
@@ -652,6 +656,13 @@ class Composer(
                     val word = choices.first()
                     val inserted = leadingSpace + word + if (trailingSpace) " " else ""
                     if (!edit(EditCause.Swipe, replaced, inserted)) return@finish
+                    onSwipeTyped()
+                    if (!resumes) {
+                        onWordTyped()
+                        if (sentenceCase && word.firstOrNull()?.isUpperCase() == true &&
+                            recognition.words.first().firstOrNull()?.isLowerCase() == true && SwipeTyping.startsSentence(context + leadingSpace))
+                            onAutomaticCapital()
+                    }
                     val accepted = snapshot()
                     automaticSpace = accepted.takeIf { trailingSpace }
                     val swiped = Composition.Swiped(word, leadingSpace, trailingSpace, path, context, recognition, pending.endedAt,
@@ -726,11 +737,11 @@ class Composer(
     }
 
     /** Keys wait for pending swipes, retaining the order in which the user entered them. */
-    fun type(text: String, letterTap: Boolean = false) {
+    fun type(text: String, letterTap: Boolean = false, autoCapital: Boolean = false) {
         // A light touch types a word, as a swipe does, so it types nothing where words are off.
         if (text.isEmpty() || letterTap && !field.words) return
         if (!executingQueued && hasPendingInput) {
-            enqueueText(text, letterTap)
+            enqueueText(text, letterTap, autoCapital)
             return
         }
         val corrected = undo
@@ -792,6 +803,8 @@ class Composer(
         val cause = if (dropsSpace) EditCause.DropSpace else if (letterTap) EditCause.Tap else EditCause.Key
         if (spaces.isNotEmpty() && !edit(EditCause.MarkSpace, 0, spaces)) return
         if (!edit(cause, if (dropsSpace) 1 else 0, typed)) return
+        if (letterTap && text.any(Char::isLetter)) onWordTyped()
+        if ((autoCapital || cased != text) && cased.firstOrNull()?.isUpperCase() == true) onAutomaticCapital()
         if (dropsSpace) markAfterSpace = editor.before()
         automaticSpace = if (letterTap) snapshot() else null
         // Holding the key takes the spaces out with the letter, so its symbol lands straight after the mark.
@@ -873,8 +886,8 @@ class Composer(
     }
 
     /** Puts in [text] just as it is, as a paste does: no fix of the word before, and no space added. */
-    fun paste(text: String) {
-        if (defer { paste(text) }) return
+    fun paste(text: String, engineWord: Boolean = false) {
+        if (defer { paste(text, engineWord) }) return
         leave()
         invalidate(false)
         fullStop = null
@@ -883,6 +896,7 @@ class Composer(
         correcting = null
         awaitingNextWord = null
         if (!edit(EditCause.Paste, 0, text)) return
+        if (engineWord && text.any(Char::isLetter)) onWordTyped()
         automaticSpace = null
         spaced = null
         predictLater()
@@ -1233,6 +1247,7 @@ class Composer(
                 // A tapped word is whole, so it gets the capitals step that a typed word gets at its end ("WhatsApp").
                 val word = corrector()?.capitals(chosen, before.dropLast(tail.length) + space) ?: chosen
                 if (!edit(EditCause.Choose, tail.length, "$space$word ")) return
+                if (word.any(Char::isLetter)) onWordTyped()
                 composition = Composition.None
                 automaticSpace = snapshot()
                 val correction = correcting?.takeIf { anchor == editSnapshot }
@@ -1274,6 +1289,7 @@ class Composer(
         val space = if (anchor.selected) "" else wordSpace(anchor.before.orEmpty())
         val trailingSpace = !closesWord(anchor.after?.firstOrNull())
         if (!edit(EditCause.Choose, 0, space + chosen + if (trailingSpace) " " else "")) return
+        if (chosen.any(Char::isLetter)) onWordTyped()
         composition = Composition.None
         automaticSpace = snapshot().takeIf { trailingSpace }
         manualWord.clear()
@@ -1701,6 +1717,7 @@ class Composer(
      */
     private fun wordEnded(word: String?, fix: TypedCorrector.Fix?, mark: String, completed: String?): Ended? {
         val ended = endWord(word, fix, mark, completed) ?: return null
+        if (word != null || completed != null) onWordTyped()
         if (word != null && fix == null) awaitApostrophe(word, mark)
         checkApostrophes()
         return ended

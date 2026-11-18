@@ -1,5 +1,7 @@
 package com.titankeys.keyboard
 
+import com.titankeys.support.SupportStats
+
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.animation.ValueAnimator
@@ -854,7 +856,13 @@ class TitanKeysIme : InputMethodService() {
         composer.fixOn = { kind -> languages.current.isEnglish && TypingSettings.fixOn(this, kind.id) }
         composer.onStroke = Trace::stroke
         // Backspace putting a word back plays nothing: the key press is felt already.
-        composer.onAutocorrect = { haptics.play(Haptic.Autocorrect) }
+        composer.onAutocorrect = {
+            haptics.play(Haptic.Autocorrect)
+            localUse(SupportStats.Count.Corrections)
+        }
+        composer.onWordTyped = { localUse(SupportStats.Count.Words) }
+        composer.onSwipeTyped = { localUse(SupportStats.Count.Swipes) }
+        composer.onAutomaticCapital = { localUse(SupportStats.Count.Caps) }
         composer.onFixed = { typed, word -> KeyboardEvents.publish { KeyboardEvent.Fixed(typed, word) } }
         // Sharing's daily totals (#96): the composer counts only in fields that allow learning; the guide's own fields never count.
         composer.count = { key -> if (!inGuide) Counts.add(key) }
@@ -3687,7 +3695,7 @@ class TitanKeysIme : InputMethodService() {
                     // An input method with its own letters types its letter (Russian's й on Q), in its own capitals.
                     val word = languages.current.letter(key[0], shifted)
                         ?: if ((key == "I" && TypingSettings.autoCapitaliseIn(this, languages.languageId) && languages.current.isEnglish) || shifted) key else key.lowercase()
-                    composer.type(word, letterTap = true)
+                    composer.type(word, letterTap = true, autoCapital = modifiers.autoShifted)
                 }
                 modifiers.consume()
             }
@@ -4088,7 +4096,8 @@ class TitanKeysIme : InputMethodService() {
         if (state.commit.isNotEmpty()) {
             val text = state.commit
             rawLog?.committed(languages.current.engine, text)
-            if (pendingInput.isNotEmpty()) enqueue { composer.paste(text) } else composer.paste(text)
+            if (pendingInput.isNotEmpty()) enqueue { composer.paste(text, engineWord = true) }
+            else composer.paste(text, engineWord = true)
             // What was picked stays one word for every gesture and the bar ([PickedWords]).
             pickedWords.picked(text)
         }
@@ -4255,6 +4264,11 @@ class TitanKeysIme : InputMethodService() {
      */
     private fun tally(key: String) {
         if (editing && field.learning && !inGuide) Counts.add(key)
+        if (key.startsWith("gesture.")) localUse(SupportStats.Count.Gestures)
+    }
+
+    private fun localUse(count: SupportStats.Count) {
+        if (editing && field.learning && !inGuide) SupportStats.add(this, count)
     }
 
     /** A count for Chinese's or Japanese's choices, under "zh." or "ja.". Other input methods' choices aren't counted. */
@@ -4842,9 +4856,10 @@ class TitanKeysIme : InputMethodService() {
             KeyEvent.KEYCODE_SPACE -> { composer.space(event.repeatCount > 0, event.eventTime); modifiers.useHeld() }
             KeyEvent.KEYCODE_TAB -> { modifiers.useHeld(); command(event) }
             else -> {
+                val autoCapital = modifiers.autoShifted && !event.isShiftPressed && !event.isCapsLockOn
                 inputMethodLetter(event)?.let { text ->
                     modifiers.consume()
-                    composer.type(text)
+                    composer.type(text, autoCapital = autoCapital)
                     return true
                 }
                 val typed = event.getUnicodeChar(event.metaState or modifiers.metaState)
@@ -4859,7 +4874,7 @@ class TitanKeysIme : InputMethodService() {
                 val text = String(Character.toChars(typed))
                 modifiers.consume()
                 // Controlled insertion avoids unacknowledged app key updates overtaking later input.
-                composer.type(text)
+                composer.type(text, autoCapital = autoCapital)
             }
         }
         return true

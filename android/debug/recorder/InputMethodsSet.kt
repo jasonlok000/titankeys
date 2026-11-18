@@ -14,11 +14,17 @@ import com.titankeys.engine.TypingSettings
  *   adb shell am broadcast -n com.titankeys.debug/com.titankeys.keyboard.InputMethodsSet --es on en,ru,ko --es current ru
  *
  * Ids that aren't input methods are dropped, as Settings drops them; English comes back when nothing is left. The result says
- * what was set, or why not.
+ * what was set, or why not. With --ez read true, it only reports the two saved settings.
  */
 class InputMethodsSet : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!context.packageName.endsWith(".debug")) return
+        if (intent.getBooleanExtra("read", false)) {
+            val on = TypingSettings.inputMethods(context)
+            val current = TypingSettings.currentInputMethod(context)
+            resultData = "on $on; typing $current"
+            return
+        }
         val index = InputMethodList.index(context)
         val asked = intent.getStringExtra("on")?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
         val on = index.on(InputMethodIndex.setting(asked)).map { it.id }

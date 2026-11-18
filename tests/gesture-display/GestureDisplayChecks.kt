@@ -27,8 +27,10 @@ fun main() {
     aFlicksGlowFollowsTheFinger()
     everyFlickShowsItsGlow()
     aWordDragOnLongTextNeverRunsOutOfPills()
+    unspacedWordDragDrawsEachStep()
     theSelectionsEndMarkTurnsSmoothly()
     aHoldDrawsTheRealWords()
+    unspacedHoldDrawsWhatWillGo()
     aHoldWithNoTextLeftDrawsNoPills()
     aPausedHoldFadesAndBlinks()
     aHoldsDotsSpeedUpAsFarAsItsWordsDid()
@@ -1204,6 +1206,83 @@ private fun aHoldDrawsTheRealWords() {
     isTrue((0..6).all { unknown.holdWordWidth(it) > 0f }, "With no text known, a made-up row shows")
 }
 
+/** A stand-in for ICU's Thai dictionary, with the same boundaries when a word has been deleted. */
+private val thaiWords = WordBreaker { text ->
+    val words = listOf("ฉัน", "ชอบ", "กิน", "ข้าว")
+    val pieces = ArrayList<WordPiece>()
+    var start = 0
+    while (start < text.length) {
+        val word = words.firstOrNull { text.startsWith(it, start) }
+        val end = start + (word?.length ?: 1)
+        pieces += WordPiece(start, end, word != null || text[start].isLetterOrDigit())
+        start = end
+    }
+    pieces
+}
+
+private fun unspacedWordDragDrawsEachStep() {
+    val chinese = "你好𠮷。"
+    val breaker = PickedWords.CHARACTERS
+    val anchor = WordSelection.at(chinese, 2, 2, breaker) ?: error("Missing Chinese anchor")
+    same(anchor, 1 to 2, "The gesture starts on 好")
+    val display = GestureDisplay()
+    display.cursorFrame(ON_SPACE, 0, 0f, true, 1_000)
+    display.wordText(chinese, anchor, breaker)
+    for (index in -1..2) near(display.wordWidth(index), GestureDisplay.widthFor(1), "Each Chinese character gets one pill")
+    same(display.wordWidth(-2), 0f, "There is no word before 你")
+    same(display.wordWidth(3), 0f, "There is no word after the stop")
+    var selection = anchor
+    val steps = listOf(
+        Triple(1, "好𠮷", 0 to 1), Triple(1, "好𠮷。", 0 to 2), Triple(1, "好𠮷。", 0 to 2),
+        Triple(-1, "好𠮷", 0 to 1), Triple(-1, "好", 0 to 0), Triple(-1, "你好", 1 to 0),
+        Triple(-1, "你好", 1 to 0), Triple(1, "好", 0 to 0),
+    )
+    for ((direction, selected, pills) in steps) {
+        val next = WordSelection.extend(chinese, selection.first, selection.second, anchor.first, anchor.second, direction, breaker)
+        if (selection != next) display.wordStep(direction)
+        selection = next
+        same(chinese.substring(selection.first, selection.second), selected, "The step moves one character or reaches the edge")
+        same(display.wordsLeft to display.wordsRight, pills, "The selected pills follow the actual extent and reversal")
+    }
+
+    val thai = "ฉันชอบกินข้าว"
+    val thaiAnchor = WordSelection.at(thai, 6, 6, thaiWords) ?: error("Missing Thai anchor")
+    same(thaiAnchor, 3 to 6, "The gesture starts on ชอบ")
+    display.wordText(thai, thaiAnchor, thaiWords)
+    same(display.wordWidth(-2), 0f, "The row ends before ฉัน")
+    same(display.wordWidth(3), 0f, "The row ends after ข้าว")
+    for ((index, letters) in listOf(3, 3, 3, 4).withIndex()) {
+        near(display.wordWidth(index - 1), GestureDisplay.widthFor(letters), "Thai pills follow dictionary boundaries")
+    }
+    val thaiStep = WordSelection.extend(thai, thaiAnchor.first, thaiAnchor.second, thaiAnchor.first, thaiAnchor.second, 1, thaiWords)
+    same(thai.substring(thaiStep.first, thaiStep.second), "ชอบกิน", "One step takes only the next Thai word")
+    display.wordText(thai, thaiAnchor, thaiWords, moreBefore = true, moreAfter = true)
+    near(display.wordWidth(1), GestureDisplay.widthFor(3), "A complete Thai word stays visible inside a clipped read")
+    isTrue(display.wordWidth(4) > 0f, "There can be more words past the clipped read")
+}
+
+private fun unspacedHoldDrawsWhatWillGo() {
+    val phrases = listOf(
+        Triple("你好𠮷。", PickedWords.CHARACTERS, listOf("。", "𠮷", "好", "你")),
+        Triple("ฉันชอบกินข้าว", thaiWords, listOf("ข้าว", "กิน", "ชอบ", "ฉัน")),
+    )
+    for ((text, breaker, units) in phrases) {
+        val display = GestureDisplay()
+        display.deleteHeld(200, 1_000, before = text, breaker = breaker)
+        var before = text
+        for ((index, expected) in units.withIndex()) {
+            val letters = expected.codePointCount(0, expected.length)
+            near(display.holdWordWidth(index), GestureDisplay.widthFor(letters), "The next pill has the length of the actual unit")
+            val cut = wordDeleteLength(before, after = null, breaker = breaker)
+            same(before.takeLast(cut), expected, "The actual delete takes the displayed unit")
+            before = before.dropLast(cut)
+            display.wordDeleted(1_100L + index * 200L, letters)
+            display.deleteText(before, breaker = breaker)
+        }
+        same(display.holdWordWidth(units.size), 0f, "No pill beyond the start of the editor")
+    }
+}
+
 /** With no real text left before the cursor a hold draws no pills at all, only its caret. */
 private fun aHoldWithNoTextLeftDrawsNoPills() {
     val empty = GestureDisplay()
@@ -1786,7 +1865,7 @@ private fun aWordDragOnLongTextNeverRunsOutOfPills() {
         val from = maxOf(0, start - reach)
         val to = minOf(text.length, end + reach)
         val window = text.substring(from, to)
-        display.wordText(window.substring(0, anchor.first - from), anchor.second - anchor.first, window.substring(anchor.second - from),
+        display.wordText(window, anchor.first - from to anchor.second - from, thaiWords,
             moreBefore = start - from >= reach, moreAfter = to - end >= reach)
     }
     for (direction in listOf(1, -1)) {
@@ -1932,8 +2011,11 @@ private fun aSelectionIsSomethingToDelete() {
     same(GestureDisplay.deleteTakes("hello there ", "world!"), 6, "A selection's dots are the selection's")
     same(GestureDisplay.deleteTakes("hello there", null), 5, "With none, the last word's, as before")
     // A hold eats the selection first, then the words before it.
-    same(GestureDisplay.deleteLine("hello ", "world").toString(), "hello world", "A hold's words end with the selection")
-    same(GestureDisplay.deleteLine("hello", null), "hello", "and without one are the text before the cursor")
+    val hold = GestureDisplay()
+    hold.deleteHeld(200, 1_000, before = "hello ", selected = "one two")
+    near(hold.holdWordWidth(0), GestureDisplay.widthFor(6), "One pill for the entire selection")
+    near(hold.holdWordWidth(1), GestureDisplay.widthFor(5), "The word before the selection is next")
+    same(hold.holdWordWidth(2), 0f, "There are no other words")
 }
 
 // #89 and #93 ---------------------------------------------------------------------------------------------------------------------

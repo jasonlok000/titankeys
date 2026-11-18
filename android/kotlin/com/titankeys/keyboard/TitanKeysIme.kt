@@ -530,7 +530,7 @@ class TitanKeysIme : InputMethodService() {
                 val selected = selectionToDelete()
                 if (!GestureDisplay.nothingToDelete(before, selected)) {
                     strip?.gesture?.deleteHeld(deleteHold.repeatMillis, SystemClock.uptimeMillis(), deleteHold.pace,
-                        GestureDisplay.deleteLine(before, selected))
+                        before, selected, wordBreaker())
                     // The dots at the lift keep clear of this hold's ticks.
                     haptics.holdStarted()
                     // The guide wants to know that this delete stays down, before its first word goes.
@@ -566,7 +566,7 @@ class TitanKeysIme : InputMethodService() {
             haptics.heldDeleteWord(word, deleteHold.pace, deleteHold.repeatMillis)
             // A dot for each character of the word, for the dots that play when the hold lifts, and the real words for the bar.
             val before = currentInputConnection?.getTextBeforeCursor(FLICK_REACH, 0)
-            GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
+            strip?.gesture?.deleteText(before, selected, wordBreaker())
             val deletes = editor.deletes
             composer.backspace(true)
             strip?.gesture?.wordDeleted(SystemClock.uptimeMillis(), deleteDots(deletes, before, selected))
@@ -663,9 +663,12 @@ class TitanKeysIme : InputMethodService() {
         val connection = currentInputConnection ?: return
         val before = connection.getTextBeforeCursor(GestureDisplay.LINE_REACH, 0) ?: return
         val after = connection.getTextAfterCursor(GestureDisplay.LINE_REACH, 0) ?: return
-        val head = before.takeLastWhile { !it.isWhitespace() }
-        val tail = after.takeWhile { !it.isWhitespace() }
-        strip?.gesture?.wordText(before.dropLast(head.length), head.length + tail.length, after.drop(tail.length))
+        val text = before.toString() + after
+        val caret = before.length
+        val breaks = wordBreaker()
+        val word = WordSelection.at(text, caret, caret, breaks) ?: (caret to caret)
+        strip?.gesture?.wordText(text, word, breaks,
+            moreBefore = caret >= GestureDisplay.LINE_REACH, moreAfter = after.length >= GestureDisplay.LINE_REACH)
     }
 
     /**
@@ -3155,7 +3158,7 @@ class TitanKeysIme : InputMethodService() {
             nothing()
             return@changeSelection null
         }
-        showWordText(text, start, end, word)
+        showWordText(text, start, end, word, breaks)
         strip?.gesture?.wordSelected(SystemClock.uptimeMillis(), held = inFront && tripleDown)
         word
     }
@@ -3182,9 +3185,10 @@ class TitanKeysIme : InputMethodService() {
         rememberCursor()
         changeSelection { text, start, end, offset ->
             // The same word three taps take ([wordBreaker]): in Chinese a unit, not the whole run.
-            val word = WordSelection.at(text, start, end, wordBreaker()) ?: (start to end)
+            val breaks = wordBreaker()
+            val word = WordSelection.at(text, start, end, breaks) ?: (start to end)
             wordAnchor = offset + word.first to offset + word.second
-            showWordText(text, start, end, word)
+            showWordText(text, start, end, word, breaks)
             word
         }
     }
@@ -3193,7 +3197,8 @@ class TitanKeysIme : InputMethodService() {
     private fun extendWords(direction: Int) = enqueue {
         changeSelection { text, start, end, offset ->
             val anchor = wordAnchor ?: return@changeSelection null
-            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction, wordBreaker())
+            val breaks = wordBreaker()
+            val range = WordSelection.extend(text, start, end, anchor.first - offset, anchor.second - offset, direction, breaks)
             if (range == start to end) {
                 // Nothing more that way: the selection reached an end of the text. It plays once, until it moves away.
                 if (selectionWall.reached()) haptics.play(Haptic.SelectionEnd)
@@ -3205,7 +3210,7 @@ class TitanKeysIme : InputMethodService() {
                 else text.subSequence(minOf(start, range.first), maxOf(start, range.first))
             haptics.play(Haptic.SelectionWord)
             // The words around the anchor are read again from here, so on long text the pills never run out.
-            showWordText(text, start, end, anchor.first - offset to anchor.second - offset)
+            showWordText(text, start, end, anchor.first - offset to anchor.second - offset, breaks)
             strip?.gesture?.wordStep(direction)
             range
         }
@@ -3215,10 +3220,9 @@ class TitanKeysIme : InputMethodService() {
      * Shows the words around [anchor] on the bar, from [text], the text read around the selection from [start] to [end]. Where
      * that text is cut off at its reach, more lies beyond it.
      */
-    private fun showWordText(text: CharSequence, start: Int, end: Int, anchor: Pair<Int, Int>) {
+    private fun showWordText(text: CharSequence, start: Int, end: Int, anchor: Pair<Int, Int>, breaker: WordBreaker) {
         if (anchor.first !in 0..text.length || anchor.second !in anchor.first..text.length) return
-        strip?.gesture?.wordText(text.subSequence(0, anchor.first), anchor.second - anchor.first,
-            text.subSequence(anchor.second, text.length), moreBefore = start >= WORD_REACH, moreAfter = text.length - end >= WORD_REACH)
+        strip?.gesture?.wordText(text, anchor, breaker, moreBefore = start >= WORD_REACH, moreAfter = text.length - end >= WORD_REACH)
     }
 
     /** What a Ctrl shortcut plays, as [ShortcutFeel] has it: only Ctrl + C with nothing selected, a no. A key held down plays once. */
@@ -3626,7 +3630,7 @@ class TitanKeysIme : InputMethodService() {
                     // and plays just this; its steps after stay quiet, as the stroke has had its say (see [deleteWall]).
                     if (nothingLeft && deleteWall.reached()) haptics.play(Haptic.deleteFoundNothing(tookAny = false))
                     // A hold's first word: the bar's words are the real ones before it goes.
-                    GestureDisplay.deleteLine(before, selected)?.let { strip?.gesture?.deleteText(it) }
+                    strip?.gesture?.deleteText(before, selected, wordBreaker())
                     val deletes = editor.deletes
                     composer.backspace(true)
                     if (!nothingLeft) {

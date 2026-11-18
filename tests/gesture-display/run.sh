@@ -12,6 +12,6 @@ engine=android/kotlin/com/titankeys/engine
 "$kotlin/bin/kotlinc" -nowarn -no-stdlib -no-reflect -classpath "$stdlib:$sdk/platforms/android-36/android.jar" -d "$work" \
   "$engine/Swipe.java" "$engine/Calibration.java" "$engine/TouchAlignment.java" \
   "$keyboard/Contact.kt" "$keyboard/CursorGesture.kt" "$keyboard/CursorMode.kt" "$keyboard/DeleteSwipe.kt" "$keyboard/WordBreaks.kt" \
-  "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/WordSelection.kt" "$keyboard/GestureDisplay.kt" "$keyboard/TrailThickness.kt" \
+  "$keyboard/Layout.kt" "$keyboard/Touchpad.kt" "$keyboard/WordSelection.kt" "$keyboard/ChineseWords.kt" "$keyboard/GestureDisplay.kt" "$keyboard/TrailThickness.kt" \
   tests/gesture-display/GestureDisplayChecks.kt
 java -cp "$work:$stdlib" com.titankeys.keyboard.GestureDisplayChecksKt

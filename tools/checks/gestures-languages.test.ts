@@ -30,8 +30,8 @@ test("double space types the language's own full stop, and the words come from t
   expect(ime).toContain("WordSelection.atOrBefore(text, start, end, breaks)");
   expect(ime).toContain("val breaks = wordBreaker()");
   // A slide starts from the same word and steps by the same words.
-  expect(ime).toContain("WordSelection.at(text, start, end, wordBreaker())");
-  expect(ime).toContain("direction, wordBreaker())");
+  expect(ime).toContain("WordSelection.at(text, start, end, breaks)");
+  expect(ime).toContain("direction, breaks)");
 });
 
 test("a held delete takes a code being built as flicks do, one step a word, before the field (owner, 2026-11-17)", () => {

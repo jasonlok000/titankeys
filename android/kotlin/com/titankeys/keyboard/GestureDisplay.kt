@@ -336,9 +336,28 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * reads them again at each step, so on long text its pills go on as far as the selection does.
      */
     fun wordText(before: CharSequence, letters: Int, after: CharSequence, moreBefore: Boolean = false, moreAfter: Boolean = false) {
+        wordPills(letters, WordSelection.lengths(before, cutStart = moreBefore), WordSelection.lengths(after, cutEnd = moreAfter),
+            moreBefore, moreAfter)
+    }
+
+    /** Draws the same segments the drag can select, using the complete text around its anchor to read the boundaries. */
+    internal fun wordText(text: CharSequence, anchor: Pair<Int, Int>, breaker: WordBreaker,
+                          moreBefore: Boolean = false, moreAfter: Boolean = false) {
+        val (start, end) = anchor
+        val letters = Character.codePointCount(text, start, end)
+        val words = WordSelection.gestureWords(text, breaker)
+        if (words == null) return wordText(text.subSequence(0, start), letters, text.subSequence(end, text.length), moreBefore, moreAfter)
+        val before = words.filter { it.start < start && (!moreBefore || it.start > 0) }
+            .map { Character.codePointCount(text, it.start, minOf(start, it.end)) }.toIntArray()
+        val after = words.filter { it.end > end && (!moreAfter || it.end < text.length) }
+            .map { Character.codePointCount(text, maxOf(end, it.start), it.end) }.toIntArray()
+        wordPills(letters, before, after, moreBefore, moreAfter)
+    }
+
+    private fun wordPills(letters: Int, before: IntArray, after: IntArray, moreBefore: Boolean, moreAfter: Boolean) {
         anchorLetters = letters
-        leftWords = WordSelection.lengths(before, cutStart = moreBefore).reversedArray()
-        rightWords = WordSelection.lengths(after, cutEnd = moreAfter)
+        leftWords = before.reversedArray()
+        rightWords = after
         wordsMoreBefore = moreBefore
         wordsMoreAfter = moreAfter
         changed()
@@ -377,7 +396,8 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * 0 at the slowest to 1 at the top-speed line: the glow gets stronger with it, and stops changing at the line. [before] is
      * the real text before the cursor, for the words on the bar: see [deleteText].
      */
-    fun deleteHeld(repeatMillis: Long, now: Long, pace: Float = 1f, before: CharSequence? = null) {
+    fun deleteHeld(repeatMillis: Long, now: Long, pace: Float = 1f, before: CharSequence? = null, selected: CharSequence? = null,
+                   breaker: WordBreaker? = null) {
         if (!begin(Scene.DeleteHold, now)) return
         deleteMillis = repeatMillis
         deletePace = pace.coerceIn(0f, 1f)
@@ -392,7 +412,7 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         // From a flick's reach, the glow eases to the pace's; after that it follows the pace, which already moves smoothly.
         if (!flickReach.isNaN()) reachEasing = true
         flickReach = Float.NaN
-        if (before != null) deleteText(before)
+        if (before != null || selected != null) deleteText(before, selected, breaker)
         changed()
     }
 
@@ -489,15 +509,20 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
      * caret. Text the field doesn't give keeps the words already known, and past the known ones the bar shows made-up words only
      * where more text lies beyond what was read.
      */
-    fun deleteText(before: CharSequence) {
+    fun deleteText(before: CharSequence?, selected: CharSequence? = null, breaker: WordBreaker? = null) {
         if (scene != Scene.DeleteHold || leaving) return
-        // A text cut off at the reach starts in the middle of a word, which is not drawn: more lies beyond it.
-        val more = before.length >= LINE_REACH
-        val whole = if (more) before.subSequence(before.indexOfFirst { it.isWhitespace() }.let { if (it < 0) before.length else it }, before.length) else before
-        val words = wordLengths(whole)
-        val needed = deleted + words.size
+        if (before == null && selected == null) return
+        val visible = before?.takeLast(LINE_REACH)?.toString().orEmpty()
+        val more = before == null || before.length >= LINE_REACH
+        val words = if (breaker != null && WordBreaks.anySpaceless(visible)) deleteWidths(visible, breaker)
+            else wordLengths(visible).reversedArray()
+        // The distant end may be in the middle of a word. Keep the full units nearer the caret.
+        val count = if (more && visible.firstOrNull()?.isWhitespace() == false) (words.size - 1).coerceAtLeast(0) else words.size
+        val first = if (selected == null) 0 else 1
+        val needed = deleted + first + count
         if (needed > holdLetters.size) holdLetters = holdLetters.copyOf(max(needed, holdLetters.size * 2))
-        for (j in words.indices) holdLetters[deleted + j] = words[words.size - 1 - j]
+        if (selected != null) holdLetters[deleted] = glyphs(selected, 0, selected.length).coerceAtLeast(1)
+        for (j in 0 until count) holdLetters[deleted + first + j] = words[j]
         holdKnown = needed
         holdMore = more
         changed()
@@ -1535,9 +1560,30 @@ class GestureDisplay(private val changed: () -> Unit = {}) {
         fun dotsFor(removed: CharSequence?, length: Int): Int =
             if (removed != null) removed.count { !it.isWhitespace() }.coerceAtLeast(1) else length.coerceAtLeast(1)
 
-        /** The text a held delete eats, in order from the end: the words before the cursor, then the selection, which goes first. */
-        fun deleteLine(before: CharSequence?, selected: CharSequence?): CharSequence? =
-            if (selected == null) before else "${before ?: ""}$selected"
+        /** The widths nearest the cursor first, from the same cuts a held delete will use. */
+        private fun deleteWidths(text: String, breaker: WordBreaker): IntArray {
+            val widths = ArrayList<Int>()
+            var end = text.length
+            while (end > 0) {
+                val start = end - wordDeleteLength(text.substring(0, end), after = null, breaker = breaker)
+                val width = glyphs(text, start, end)
+                if (width > 0) widths += width
+                end = start
+            }
+            return widths.toIntArray()
+        }
+
+        /** Counts non-space code points, so a character encoded as two UTF-16 units fills one place. */
+        private fun glyphs(text: CharSequence, start: Int, end: Int): Int {
+            var at = start
+            var count = 0
+            while (at < end) {
+                val point = Character.codePointAt(text, at)
+                if (!Character.isWhitespace(point) && !Character.isSpaceChar(point)) count++
+                at += Character.charCount(point)
+            }
+            return count
+        }
         private const val FLOURISH_IN = .25f
         private const val FLOURISH_OUT = .35f
         /** With motion off, a flourish stays this long as a still picture and then goes. */

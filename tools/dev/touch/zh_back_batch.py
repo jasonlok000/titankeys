@@ -13,6 +13,7 @@ import languages
 from checks import adb, record
 
 YALE = chinese_checks.YALE
+METHODS = ["en", YALE]
 TAGS = ("TitanKeysSym", "TitanKeysIM")
 
 
@@ -40,11 +41,6 @@ def field_at(step, window=None):
         raise checks.Stop(f"{step}: {error}") from error
 
 
-def current_method(log):
-    started = [match[1] for line in log if (match := re.search(r"Input method at field start: ([\w-]+) \(", line))]
-    return started[-1] if started else None
-
-
 def input_shown():
     state = set(re.findall(r"\bmInputShown=(true|false)\b", adb("shell", "dumpsys", "input_method")))
     return next(iter(state)) == "true" if len(state) == 1 else None
@@ -54,12 +50,13 @@ def check_back_then_enter():
     field_at("before Yale setup")
     tags = {tag: adb("shell", "getprop", f"log.tag.{tag}").strip() for tag in TAGS}
     try:
-        started = language_checks.turn_on(["en", YALE], YALE)
+        language_checks.turn_on(METHODS, YALE)
+        ids = languages.subtype_ids()
         for tag in TAGS:
             adb("shell", "setprop", f"log.tag.{tag}", "D")
-        method = current_method(lines())
-        if not started or method != YALE:
-            record("zh-back-setup", None, f"Yale start could not be verified (last method: {method or 'unavailable'})")
+        method = language_checks.active_method(METHODS, ids)
+        if method != YALE:
+            record("zh-back-setup", None, f"Yale start could not be verified (active method: {method or 'unavailable'})")
             return
         field_at("after Yale setup")
         chinese_checks.fresh()
@@ -92,9 +89,9 @@ def check_back_then_enter():
         after_back_log = lines()
         record("zh-back-window", shown if shown_before is True else None,
                f"Android Back left the same Debug field focused. IME shown before: {shown_before}, after: {shown}")
-        method = current_method(after_back_log)
-        if method is not None and method != YALE:
-            record("zh-back-method", None, f"the method changed to {method} before typing the Yale code")
+        method = language_checks.active_method(METHODS, ids)
+        if method != YALE:
+            record("zh-back-method", None, f"Yale could not be verified after Back (active method: {method or 'unavailable'})")
             return
         record("zh-back-field", after_back == "", "the field is empty after Back" if not after_back else "Back changed the empty field")
 

@@ -10,6 +10,7 @@ PROBE = Path(__file__).resolve().parents[1] / "zh_back_batch.py"
 APP = "com.titankeys.debug"
 ACTIVITY = "com.titankeys.keyboard.SpaceGestureActivity"
 WINDOW = f"mCurrentFocus=Window{{abcd u0 {APP}/{ACTIVITY}}}"
+IDS = {1: "en", 2: "yue-yale"}
 YALE = "Input method at field start: yue-yale (saved)"
 OPEN = "TitanKeysSym: Sym handled: panel now Symbols, shown true"
 CODE = [*(f"key:{letter}" for letter in "neihou"), "+600"]
@@ -26,15 +27,15 @@ class ZhBackProbeTest(unittest.TestCase):
             guarded=Mock(), set_text=Mock(),
         )
         self.chinese = SimpleNamespace(YALE="yue-yale", CODE="neihou", code=Mock(return_value=CODE), fresh=Mock(), play=Mock())
-        self.language_checks = SimpleNamespace(turn_on=Mock(return_value=True))
-        self.languages = SimpleNamespace(FIELD_ACTIVITY=ACTIVITY, front=Mock(return_value=WINDOW))
+        self.language_checks = SimpleNamespace(turn_on=Mock(return_value=True), active_method=Mock(return_value="yue-yale"))
+        self.languages = SimpleNamespace(FIELD_ACTIVITY=ACTIVITY, front=Mock(return_value=WINDOW), subtype_ids=Mock(return_value=IDS))
         spec = importlib.util.spec_from_file_location("zh_back_batch_test_target", PROBE)
         self.probe = importlib.util.module_from_spec(spec)
         with patch.dict(sys.modules, checks=self.checks, chinese_checks=self.chinese,
                         language_checks=self.language_checks, languages=self.languages):
             spec.loader.exec_module(self.probe)
         self.probe.time = SimpleNamespace(sleep=Mock())
-        self.probe.lines = Mock(side_effect=[[YALE], [YALE], [YALE, OPEN], [YALE, OPEN], [YALE, OPEN]])
+        self.probe.lines = Mock(side_effect=[[], [OPEN], [OPEN], [OPEN]])
         self.operations = Mock()
         self.operations.attach_mock(self.chinese.fresh, "fresh")
         self.operations.attach_mock(self.chinese.play, "play")
@@ -52,10 +53,13 @@ class ZhBackProbeTest(unittest.TestCase):
     def verdict(self, name):
         return next(result.args[1] for result in self.checks.record.call_args_list if result.args[0] == name)
 
-    def test_explicit_yale_and_real_back_precede_exact_enter(self):
+    def test_live_yale_and_real_back_precede_exact_enter_without_field_start_log(self):
+        # turn_on can return False after a same-method restart without a field-start log.
+        self.language_checks.turn_on.return_value = False
         self.checks.field.side_effect = ["", "", "", "", "", "", "neihou"]
         self.probe.check_back_then_enter()
         self.language_checks.turn_on.assert_called_once_with(["en", "yue-yale"], "yue-yale")
+        self.assertEqual(self.language_checks.active_method.call_args_list, [call(["en", "yue-yale"], IDS)] * 2)
         self.assertEqual(self.operations.mock_calls, [
             call.fresh(), call.play("key:sym", "+700"), call.guarded("keyevent", "4"),
             call.play(*CODE), call.play("key:enter", "+400"),
@@ -79,25 +83,31 @@ class ZhBackProbeTest(unittest.TestCase):
         self.assertIs(self.verdict("zh-back-window"), False)
         self.assertIs(self.verdict("zh-enter"), True)
 
-    def test_method_change_after_back_refuses_the_yale_input(self):
-        english = YALE.replace("yue-yale", "en")
-        self.probe.lines.side_effect = [[YALE], [YALE], [YALE, OPEN], [YALE, OPEN, english]]
-        self.probe.check_back_then_enter()
-        self.assertIsNone(self.verdict("zh-back-method"))
-        self.chinese.play.assert_called_once_with("key:sym", "+700")
-        self.checks.set_text.assert_not_called()
-
-    def test_no_android_back_if_yale_or_symbols_is_unverified(self):
-        for proof in ("language", "panel"):
-            with self.subTest(proof=proof):
+    def test_wrong_or_unverified_live_method_after_back_refuses_yale_input(self):
+        for method in ("en", None):
+            with self.subTest(method=method):
                 self.checks.record.reset_mock()
-                self.probe.lines.side_effect = (
-                    [[YALE.replace("yue-yale", "en")]] if proof == "language"
-                    else [[YALE], [YALE, OPEN], [YALE, OPEN]]
-                )
+                self.chinese.play.reset_mock()
+                self.language_checks.active_method.side_effect = ["yue-yale", method]
+                # The old field-start message still says Yale.
+                self.probe.lines.side_effect = [[YALE], [YALE, OPEN], [YALE, OPEN]]
                 self.probe.check_back_then_enter()
-                self.assertIsNone(self.verdict("zh-back-setup"))
-                self.checks.guarded.assert_not_called()
+                self.assertIsNone(self.verdict("zh-back-method"))
+                self.chinese.play.assert_called_once_with("key:sym", "+700")
+                self.checks.set_text.assert_not_called()
+
+    def test_saved_yale_without_live_readback_refuses_input_despite_old_log(self):
+        self.language_checks.active_method.return_value = None
+        self.probe.lines.side_effect = [[YALE]]
+        self.probe.check_back_then_enter()
+        self.assertIsNone(self.verdict("zh-back-setup"))
+        self.assertEqual(self.operations.mock_calls, [])
+
+    def test_no_android_back_if_symbols_is_unverified(self):
+        self.probe.lines.side_effect = [[], []]
+        self.probe.check_back_then_enter()
+        self.assertIsNone(self.verdict("zh-back-setup"))
+        self.checks.guarded.assert_not_called()
 
     def test_replaced_window_after_back_stops_without_further_input(self):
         self.checks.guarded.side_effect = lambda *_: setattr(

@@ -214,11 +214,20 @@ internal object RawLogLines {
         RawLogLine("sel").put("t", time).put("start", start).put("end", end)
             .put("cs", composingStart).put("ce", composingEnd).put("before", before).toString()
 
-    fun fieldStart(inputType: Int, imeOptions: Int, reference: Boolean, restarting: Boolean,
-                   selectionStart: Int, selectionEnd: Int, before: String?, time: Long) =
-        RawLogLine("start").put("t", time).put("inputType", inputType).put("imeOptions", imeOptions)
-            .put("reference", reference).put("restarting", restarting)
+    /**
+     * A field started, in the app [packageName]. Every field gets one, so the log says which app each moment was in; [recorded]
+     * is false for a field whose typing isn't recorded (a password, no suggestions, exact typing), and then it has no text.
+     */
+    fun fieldStart(packageName: String?, inputType: Int, imeOptions: Int, reference: Boolean, restarting: Boolean,
+                   selectionStart: Int, selectionEnd: Int, before: String?, time: Long, recorded: Boolean = true) =
+        RawLogLine("start").put("t", time).put("package", packageName).put("recorded", recorded).put("inputType", inputType)
+            .put("imeOptions", imeOptions).put("reference", reference).put("restarting", restarting)
             .put("selStart", selectionStart).put("selEnd", selectionEnd).put("before", before).toString()
+
+    /** The owner's MARK ([OwnerMark]), in any field: the time, and the field's app and type, never its text. */
+    fun ownerMark(wall: String, packageName: String?, inputType: Int, time: Long) =
+        RawLogLine("mark").put("t", time).put("kind", "MARK").put("label", wall).put("package", packageName)
+            .put("inputType", inputType).toString()
 
     fun fieldEnd(time: Long) = RawLogLine("end").put("t", time).toString()
 

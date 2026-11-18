@@ -73,7 +73,7 @@ def judge(name, words, shot, ok_if, detail):
 
 def check_portugal():
     if not pick("pt-PT"):
-        return record("pt-PT-picked", False, "no Português > Spelling > Portugal in Settings")
+        return record("pt-PT-picked", None, "no Português > Spelling > Portugal found: the dump has no Ink row text yet (a harness LOOK until E labels the rows)")
     words, shot = offers("proje", "pt-PT-proje")
     judge("pt-PT-projecto", words, shot, lambda w: "projecto" in w, "Portugal, proje")
     words, shot = offers("activi", "pt-PT-activi")

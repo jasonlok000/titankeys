@@ -81,7 +81,7 @@ LATIN = {
     "gl": ("Galego", "Galician", "GL", "gl", "main_gl__experimental", LEIPZIG, {"apostrophes": False}),
     "et": ("Eesti", "Estonian", "ET", "et", "main_et__experimental", LEIPZIG, {"apostrophes": False}),
     "is": ("Íslenska", "Icelandic", "IS", "is", "main_is__experimental", LEIPZIG, {"apostrophes": False}),
-    "af": ("Afrikaans", "Afrikaans", "AF", "af", "main_af__experimental", LEIPZIG, {}),
+    "af": ("Afrikaans", "Afrikaans", "AF", "af", "main_af__experimental", LEIPZIG, {"extra_accents": "èôû"}),
     "eo": ("Esperanto", "Esperanto", "EO", "eo", "main_eo__experimental", LEIPZIG, {"apostrophes": False}),
     "sk": ("Slovenčina", "Slovak", "SK", "sk", "main_sk__experimental", FREQUENCY_WORDS, {"apostrophes": False}),
     "az": ("Azərbaycan", "Azerbaijani", "AZ", "az", "main_az", AZERBAIJANI, {"apostrophes": False}),
@@ -107,12 +107,12 @@ NATIONAL = {
     # GrammarDB's 4 million forms have one frequency, so they're ranked by Leipzig's Belarusian news (J's find, 2026-11-17).
     "be": ("Беларуская", "Belarusian", "БЕ", "be", "main_be", None, "belarusian", {"p": "х'", "l": "эж", "m": "бю", "t": "ё"},
            {"rank_by": "leipzig/bel_newscrawl_2015_1M/bel_newscrawl_2015_1M-sentences.txt"}),
-    "bg": ("Български", "Bulgarian", "БГ", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "юь"}),
+    "bg": ("Български", "Bulgarian", "БГ", "bg", "main_bg__experimental", LEIPZIG, "bulgarian_phonetic", {"p": "ящ", "m": "юь", "i": "ѝ"}),
     "el": ("Ελληνικά", "Greek", "ΕΛ", "el", "main_el__legacy", AOSP, "greek", {}),
     "sr": ("Српски", "Serbian, Cyrillic", "СР", "sr", "main_sr", AOSP, "serbian_and_montenegrin_cyrillic",
            {"p": "шђ", "l": "чћ"}, {"keys": {"z": "ж"}, "own_letters": True}),
     "mk": ("Македонски", "Macedonian", "МК", "mk", "frequencywords/mk_full.txt", FREQUENCY_WORDS_OWN,
-           "serbian_and_montenegrin_cyrillic", {"p": "шжѓ", "l": "чќ"}, {"counts": True}),
+           "serbian_and_montenegrin_cyrillic", {"p": "шжѓ", "l": "чќ", "i": "ѝ", "e": "ѐ"}, {"counts": True}),
     "kk": ("Қазақ тілі", "Kazakh", "ҚА", "kk", "main_kk__experimental", LEIPZIG, "russian",
            {"f": "ә", "u": "ғ", "r": "қ", "y": "ң", "j": "ө", "e": "ұү", "h": "һ", "s": "і", "p": "хъ", "l": "жэ", "m": "бю",
             "t": "ё"}, {"layout_note": "with Kazakh's letters held on the Russian letters nearest them"}),
@@ -415,7 +415,7 @@ def build_latin(data, ident):
     common = common_letters(own if ident in OWN_ACCENTS else words, lower(locale))
     # CLDR's letters first, in its order, then any other letter the word list uses often (é in Afrikaans).
     ordered = main + sorted(c for c in common if c not in main)
-    accents = latin_accents(ordered)
+    accents = latin_accents([*ordered, *extra.get("extra_accents", "")])
     variants = None
     notices = [CLDR_NOTICE]
     if "variants" in extra:

@@ -67,13 +67,13 @@
     "по"
   ],
   "howTo": [
-    "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
+    "Use the Serbian Cyrillic layout: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
     "Rest a finger on the key under the letter on the bar, then press it."
   ],
   "guide": {
     "status": "experimental",
     "family": "cyrillic",
-    "line": "Serbian in Cyrillic, by sound.",
+    "line": "Type with the Serbian Cyrillic layout.",
     "points": [
       "Q is љ, W is њ, X is џ, Z is ж.",
       "Held: ч or ћ on L, ш or ђ on P."

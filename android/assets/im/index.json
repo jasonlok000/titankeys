@@ -847,7 +847,7 @@
   "guide": {
    "status": "experimental",
    "family": "plain",
-   "line": "Indonesian on the printed letters. Nothing to hold.",
+   "line": "Type Indonesian on the printed keys. Hold a letter for its symbol.",
    "points": [],
    "practice": "Apa kabar?",
    "keys": {
@@ -1326,7 +1326,7 @@
    "experimental": true
   },
   "howTo": [
-   "Hold a letter for its accents: hold E for é, ê or ë, O for ó or ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+   "Hold a letter for its accents: hold E for é, ê, ë or è, O for ó, ö or ô, and U for û. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
   ],
   "guide": {
    "status": "experimental",
@@ -2231,13 +2231,13 @@
    "experimental": true
   },
   "howTo": [
-   "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
+   "Use the Serbian Cyrillic layout: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
    "Rest a finger on the key under the letter on the bar, then press it."
   ],
   "guide": {
    "status": "experimental",
    "family": "cyrillic",
-   "line": "Serbian in Cyrillic, by sound.",
+   "line": "Type with the Serbian Cyrillic layout.",
    "points": [
     "Q is љ, W is њ, X is џ, Z is ж.",
     "Held: ч or ћ on L, ш or ђ on P."

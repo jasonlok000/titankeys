@@ -8,9 +8,10 @@
   "keys": "qwerty",
   "accents": {
     "a": "á",
-    "e": "éêë",
+    "e": "éêëè",
     "i": "ï",
-    "o": "óö"
+    "o": "óöô",
+    "u": "û"
   },
   "words": "words.combined",
   "variants": null,
@@ -41,7 +42,7 @@
     "hulle"
   ],
   "howTo": [
-    "Hold a letter for its accents: hold E for é, ê or ë, O for ó or ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold E for é, ê, ë or è, O for ó, ö or ô, and U for û. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
   ],
   "guide": {
     "status": "experimental",

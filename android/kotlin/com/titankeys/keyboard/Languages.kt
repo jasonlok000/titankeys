@@ -276,6 +276,8 @@ internal class Languages(
         val words = method?.takeIf { it.engine == null }?.let { InputMethodList.words(context, it, variant) }
         // Its next-word table, where J's tables have one: the bar's words after a word ([NextWords]).
         val pairs = method?.let { InputMethodList.nextWords(context, it, variant) }
+        // The words its bar never offers: profanity, slurs, sexual violence, self-harm ([BlockedWords]).
+        val blocked = method?.let { InputMethodList.blocked(context, it) } ?: BlockedWords.NONE
         val wordsMillis = SystemClock.elapsedRealtime() - startedAt - fileMillis
         // An engine starts here, off the main thread, as it may take a while (Rime unpacks its tables the first time).
         val engineBegan = SystemClock.elapsedRealtime()
@@ -290,7 +292,7 @@ internal class Languages(
                     " (${if (fromWarm != null) "the warm one" else "a new one"}, $engineMillis ms: ${engine?.timing.orEmpty()})"
                 else "${words?.size ?: 0} words, no engine"
             }; its file $fileMillis ms, words and next words $wordsMillis ms")
-            if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs, variant)
+            if (method != null && (method.engine == null || engine != null)) apply(method, words, ticket, listTicket, engine, pairs, variant, blocked)
             else {
                 release(engine)
                 Log.w(LOG_TAG, "Input method $id didn't load (${if (method == null) "its im.json" else "its engine"}): typing English")
@@ -309,7 +311,7 @@ internal class Languages(
     }
 
     private fun apply(method: InputMethod, words: WordList?, ticket: Int, listTicket: Int, engine: InputEngine? = null,
-                      pairs: NextWords? = null, spelling: String? = null) {
+                      pairs: NextWords? = null, spelling: String? = null, blocked: BlockedWords = BlockedWords.NONE) {
         if (ticket != loading) {
             if (engine !== loadedEngine) release(engine)
             return
@@ -321,6 +323,8 @@ internal class Languages(
         loadedVariant = spelling
         slot.done(listTicket, words)
         this.words.nextWords = pairs
+        this.words.safety = blocked
+        this.words.id = method.id
         this.words.other = !current.isEnglish
         this.words.wordBreak = current.rules.wordBreak
         this.words.apostrophes = current.rules.apostrophes

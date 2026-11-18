@@ -27,9 +27,29 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     var capitals = true
     /** Blocked words and Favourites, shared by every language ([WordRules]). */
     var rules: WordRules = WordRules.NONE
+    /** The words the bar never offers in the input method typing ([BlockedWords]); one the user typed and learned may come back. */
+    var safety: BlockedWords = BlockedWords.NONE
+
+    /** The input method typing now, for [WordNoise]. */
+    var id = ""
+
+    /** [rules], and the input method's blocked words and fragments, for everything the bar offers and every fix. */
+    private val offered: WordRules get() {
+        val rules = rules
+        val safety = safety
+        val id = id
+        return WordRules({ rules.blocked(it) || (safety.blocks(it) || WordNoise.fragment(id, it)) && learning?.knows(it) != true },
+            rules.favourite)
+    }
+
+    /** A next word from the table worth offering: no fragment, and common enough where the language has a floor. */
+    private fun nextWord(word: String): Boolean {
+        val list = list()
+        return WordNoise.nextWord(id, word) { list?.frequency(it) ?: Int.MAX_VALUE }
+    }
 
     /** Whether [word] may be offered or fixed to in the input method typing now: not blocked, nor unsaved in it. D's fixes ask. */
-    fun usable(word: String) = rules.usable(word) && learning?.isHidden(word) != true
+    fun usable(word: String) = offered.usable(word) && learning?.isHidden(word) != true
 
     /** Whether [word] is a favourite: first among similar words, in every language. */
     fun favourite(word: String) = rules.favourite(word)
@@ -65,11 +85,11 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
         if (prefix.isEmpty()) {
             val start = com.titankeys.engine.SwipeTyping.startsSentence(before)
             val previous = if (start) null else previousWord(before.trimEnd())
-            result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, rules,
-                spelling = { word -> list()?.spelling(word) ?: word }, shown = shown()))
+            result(BarWords.next(previous, learning, starters, capitals && sentenceCapitalisation, nextWords, offered,
+                spelling = { word -> list()?.spelling(word) ?: word }, shown = shown(), nextWord = ::nextWord))
             return
         }
-        val completions = BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), rules, shown())
+        val completions = BarWords.complete(prefix, learning, list()?.complete(prefix).orEmpty(), offered, shown())
         // A word no completion explains may be a slip: its likeliest word goes first among the others (LanguageCorrections).
         val slip = if (completions.any { it.equals(prefix, ignoreCase = true) }) null
             else suggest(prefix, before.dropLast(prefix.length))?.takeIf(::usable)
@@ -108,7 +128,7 @@ class LanguageWords(private val english: Words, private val current: () -> WordL
     override fun known(word: String) =
         if (other) list()?.contains(word) == true || word in starters || learning?.knows(word) == true else english.known(word)
     override fun sentenceStarts(): List<String> =
-        if (other) BarWords.next(null, learning, starters, capitals = false, table = nextWords, rules = rules,
+        if (other) BarWords.next(null, learning, starters, capitals = false, table = nextWords, rules = offered,
             spelling = { word -> list()?.spelling(word) ?: word }) else english.sentenceStarts()
     override fun typed(word: String, rememberCase: Boolean) { if (!other) english.typed(word, rememberCase) }
     override fun untyped(word: String) {

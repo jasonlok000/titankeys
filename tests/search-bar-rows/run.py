@@ -15,7 +15,10 @@ old_state = '    override fun state(result: (Editor.State?) -> Unit) = result(if
 assert old_state in base
 base = base.replace(old_state, '    override fun state(result: (Editor.State?) -> Unit) { if (holdState) pendingStates += result else result(if (unreadable) null else Editor.State(before()!!, after()!!, start, end)) }', 1)
 base = base.replace('    var bar = emptyList<String>()', '    var bar = emptyList<String>()\n    val rows = ArrayList<Pair<String, List<String>>>()', 1)
-base = base.replace('{ bar = it })', '{ bar = it; rows += editor.text to it.toList() })', 1)
+# The Typist's bar callback records every row: a needle that no longer matches must fail here, not leave rows empty.
+callback = '{ bar = it; bars += it })'
+assert base.count(callback) == 1
+base = base.replace(callback, '{ bar = it; bars += it; rows += editor.text to it.toList() })', 1)
 source = base.replace('fun main() {', 'fun originalAutocorrectMain() {', 1) + '\n' + (Path(__file__).with_name('SearchRows.kt')).read_text()
 with tempfile.TemporaryDirectory() as temporary:
     target = Path(temporary) / 'AutocorrectChecks.kt'

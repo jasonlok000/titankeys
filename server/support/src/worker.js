@@ -228,7 +228,11 @@ async function preview(request, env) {
     // Counted here, in the Worker: the totals never leave it.
     const reached = mine.results[0].cents + body.addCents;
     const rank = ahead.results.filter(other => other.cents > reached).length + 1;
-    return json({ rank, tier: messageTier(rank), messageLimit: messageLimit(rank) });
+    // The account's own place and public id now, so the app can mark "you" on the board. Its own data only.
+    const own = await rankOf(env.DB, accountId);
+    const { results: ids } = own === null ? { results: [] }
+        : await env.DB.prepare("SELECT public_id FROM supporters WHERE account_id = ?").bind(accountId).all();
+    return json({ rank, tier: messageTier(rank), messageLimit: messageLimit(rank), myRank: own, myId: ids[0]?.public_id ?? null });
 }
 
 /** Anyone can report an entry, a few times an hour per address. It's kept for the owner; nothing is hidden by itself. */

@@ -429,7 +429,10 @@ test("the rank preview says where more would put you, never anyone's total, with
     const preview = body => api("rank-preview", body, { "CF-Connecting-IP": "203.0.113.9" });
     const NEWCOMER = "e".repeat(64);
     // A newcomer with $2 would be third; with $4 more, second; with $6, first.
-    expect(await (await preview({ accountKey: NEWCOMER, addCents: 200 })).json()).toEqual({ rank: 3, tier: "top3", messageLimit: 120 });
+    expect(await (await preview({ accountKey: NEWCOMER, addCents: 200 })).json())
+        .toEqual({ rank: 3, tier: "top3", messageLimit: 120, myRank: null, myId: null });
+    const own = await (await preview({ accountKey: (2).toString(16).padStart(64, "0"), addCents: 0 })).json();
+    expect(own).toMatchObject({ rank: 2, myRank: 2, myId: (await entries())[1].id });
     expect((await (await preview({ accountKey: NEWCOMER, addCents: 400 })).json()).rank).toBe(2);
     expect((await (await preview({ accountKey: NEWCOMER, addCents: 600 })).json()).rank).toBe(1);
     // An account already on the board counts its own total, not itself as someone ahead.

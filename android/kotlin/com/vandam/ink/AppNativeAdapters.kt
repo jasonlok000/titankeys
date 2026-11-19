@@ -331,8 +331,20 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 "supportBoardRead" -> {
                     if (checkoutPreview || fixtureReceipt()) supportedBoardUnavailable().toString()
                     else {
-                        SupportBoard.read(activity, data.optInt("offset", 0), data.optInt("limit", 20)) {
-                            complete(NativeResult.Success(it.toString()))
+                        val accountKey = support.value.ledger.accountKey()?.takeIf { support.value.ledger.boardJoined }
+                        SupportBoard.read(activity, data.optInt("offset", 0), data.optInt("limit", 20)) { board ->
+                            // E's shape (support v4): myRank, and "you" on the account's own entry, from the preview with nothing added.
+                            if (accountKey == null || !board.optBoolean("available")) {
+                                complete(NativeResult.Success(board.put("myRank", JSONObject.NULL).toString()))
+                            } else SupportBoard.preview(activity, accountKey, 0) { mine ->
+                                val myId = mine.optString("myId").takeIf { mine.optBoolean("available") && it.isNotEmpty() && it != "null" }
+                                board.put("myRank", if (myId != null && mine.has("myRank")) mine.get("myRank") else JSONObject.NULL)
+                                val entries = board.optJSONArray("entries") ?: JSONArray()
+                                for (index in 0 until entries.length()) entries.optJSONObject(index)?.let { entry ->
+                                    if (myId != null && entry.optString("id") == myId) entry.put("you", true)
+                                }
+                                complete(NativeResult.Success(board.toString()))
+                            }
                         }
                         null
                     }
@@ -351,7 +363,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                     }
                 }
                 // "This puts you at #N" before paying (#support v2): the place this account would reach with addCents more.
-                "supportRankPreview" -> {
+                "supportPreviewRank" -> {
                     val accountKey = if (checkoutPreview || fixtureReceipt()) null else support.value.ledger.accountKey()
                     if (accountKey == null) JSONObject().put("available", false).toString()
                     else {
@@ -359,9 +371,9 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                         null
                     }
                 }
-                "supportReport" -> if (checkoutPreview) JSONObject().put("available", false).toString() else {
+                "supportReportEntry" -> if (checkoutPreview) JSONObject().put("available", false).put("ok", false).toString() else {
                     SupportBoard.report(activity, data.getString("id"), data.optString("reason").ifBlank { null }) {
-                        complete(NativeResult.Success(it.toString()))
+                        complete(NativeResult.Success(it.put("ok", it.optBoolean("available")).toString()))
                     }
                     null
                 }

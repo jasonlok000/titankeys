@@ -22,11 +22,13 @@ export type SupportState = {
 /** A place on the board: rank, public id, name and the message as much as the place shows. Never an amount. */
 // rank is optional and name and message read as strings, so the current screen's samples still type-check; the server sends
 // null for a missing name or a message the place doesn't show.
-export type BoardEntry = { rank?: number; id: string; name?: string; message?: string };
+export type BoardEntry = { rank?: number; id: string; name?: string; message?: string; you?: boolean };
 /** How much of a message a place shows: top 3 120 characters, top 10 80, top 100 40, beyond that the name only. */
 export type MessageTier = "top3" | "top10" | "top100" | "name";
 export type Board = {
   available: boolean; postingReady?: boolean; entries?: BoardEntry[]; total?: number; nextOffset?: number | null; joined?: boolean;
+  /** This account's place, when it's on the board. */
+  myRank?: number | null;
   /** After posting: the new place, its tier and how long a message it allows. */
   rank?: number | null; tier?: MessageTier; messageLimit?: number;
 };
@@ -44,8 +46,8 @@ export const seeSupportReceipt = (id: string) => invoke("supportReceiptSeen", { 
 export const onSupportChanged = (callback: () => void) => onNativeMessage("titankeys-support", callback);
 export const readBoard = (offset = 0, limit = 20) => read<Board>("supportBoardRead", { offset, limit });
 /** "This puts you at #N": the place [addCents] more would reach. Rate-limited on the server. */
-export const previewRank = (addCents: number) => read<RankPreview>("supportRankPreview", { addCents });
-export const reportEntry = (id: string, reason = "") => read<{ available: boolean }>("supportReport", { id, reason });
+export const previewRank = (addCents: number) => read<RankPreview>("supportPreviewRank", { addCents });
+export const reportEntry = (id: string, reason = "") => read<{ available: boolean; ok: boolean }>("supportReportEntry", { id, reason });
 export const joinBoard = (anonymous: boolean, name: string, message: string) =>
   read<Board>("supportBoardJoin", { anonymous, name, message });
 export const removeBoard = () => read<Board>("supportBoardRemove");

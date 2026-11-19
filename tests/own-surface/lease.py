@@ -14,7 +14,7 @@ valid=source[source.index('fun valid(): Boolean'):source.index('fun watch(')]
 limited=block('private class LimitedOutput(').replace('private class','class',1)
 native='\n'.join(block(marker) for marker in (
     'private fun ownedContent(', 'private fun spaceEditor(', 'private fun guideKeys(', 'private fun panelView(',
-    'private fun panelState(', 'private fun descendants(',
+    'private fun panelState(', 'private fun fullyVisible(', 'private fun descendants(',
 ))
 fixture=r'''
 package com.titankeys.keyboard
@@ -28,7 +28,10 @@ class GuideActivity:Activity()
 class Window { var decorView:View?=null }
 object android { object R { object id { const val content=1 } } }
 object EditorInfo { const val IME_FLAG_NO_PERSONALIZED_LEARNING=1 }
-object GuideHooks { const val FIELD="com.titankeys.guide" }
+object GuideHooks {
+ const val FIELD="com.titankeys.guide"
+ const val PLAYGROUND="com.titankeys.playground"
+}
 class Display(val displayId:Int)
 class Rect(var left:Int=0,var top:Int=0,var right:Int=0,var bottom:Int=0)
 open class View(val context:Context=Context()) {
@@ -143,8 +146,21 @@ fun main(args: Array<String>) {
  val guideLease=Lease(Context(),guideWindow,keys,"guide",null)
  check(guideLease.valid())
  check(!Lease(Context(),guideWindow,guideField,"guide",null).valid())
- guideField.privateImeOptions="com.titankeys.playground"
+ val playgroundEditor=FeedEditor()
+ val playground=Lease(Context(),guideWindow,keys,"playground-keys",playgroundEditor)
+ check(!playground.valid())
+ guideField.privateImeOptions=GuideHooks.PLAYGROUND
  check(!guideLease.valid())
+ check(!playground.valid())
+ guideWindow.focused=guideField
+ check(playground.valid())
+ check(!Lease(Context(),guideWindow,keys,"playground-keys",null).valid())
+ guideField.rootView=guideWindow
+ check(!Lease(Context(),guideWindow,guideField,"playground-keys",playgroundEditor).valid())
+ keys.clipped=true; check(!playground.valid())
+ keys.clipped=false; check(playground.valid())
+ playgroundEditor.good=false; check(!playground.valid())
+ playgroundEditor.good=true
  guideField.privateImeOptions=GuideHooks.FIELD
  guideContent.children.add(GuideKeyboardView(guide)); check(!guideLease.valid())
  guideContent.children.removeAt(guideContent.children.lastIndex)

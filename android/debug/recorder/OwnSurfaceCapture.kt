@@ -86,7 +86,7 @@ class OwnSurfaceCapture : BroadcastReceiver() {
             // PixelCopy may still own the bitmap. It retains the slot until its callback recycles it.
         }
         timeout = Runnable { fail("timeout") }
-        fun complete(success: Boolean) {
+        fun complete(success: Boolean, drawStarted: Long = 0, drawFinished: Long = 0) {
             try {
                 if (finished) return
                 if (!success) return fail("copy-failed")
@@ -116,12 +116,16 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                     .put("capturedElapsedMs", captured).put("expiresElapsedMs", expiry)
                     .put("kind", if (target == "settings") "pixelcopy" else "view-draw")
                     .put("width", bitmap.width).put("height", bitmap.height).put("x", at[0]).put("y", at[1])
-                    .put("bytes", bytes).put("sha256", digest).toString()
+                    .put("bytes", bytes).put("sha256", digest)
+                if (target == "playground-keys") {
+                    metadata.put("drawStartedUptimeMs", drawStarted).put("drawFinishedUptimeMs", drawFinished)
+                }
+                val response = metadata.toString()
                 record = Record(id, file, expiry, lease, unwatch)
                 main.removeCallbacks(timeout)
                 main.postDelayed({ if (record?.id == id) discard() }, expiry - now)
                 finished = true
-                result.resultData = metadata
+                result.resultData = response
                 result.finish()
             } catch (_: OutOfMemoryError) {
                 fail("allocation-failed")
@@ -132,6 +136,8 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                 pending = false
             }
         }
+        val drawStarted: Long
+        val drawFinished: Long
         try {
             unwatch = lease.watch {
                 if (record?.lease === lease) discard() else fail("ownership-lost")
@@ -146,10 +152,13 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                 PixelCopy.request(view as SurfaceView, bitmap, { status -> complete(status == PixelCopy.SUCCESS) }, main)
                 return
             }
-            view.draw(Canvas(bitmap))
+            val canvas = Canvas(bitmap)
+            drawStarted = SystemClock.uptimeMillis()
+            view.draw(canvas)
+            drawFinished = SystemClock.uptimeMillis()
         } catch (_: OutOfMemoryError) { return complete(false) }
           catch (_: RuntimeException) { return complete(false) }
-        complete(true)
+        complete(true, drawStarted, drawFinished)
     }
 
     private fun read(intent: Intent) {
@@ -204,7 +213,8 @@ class OwnSurfaceCapture : BroadcastReceiver() {
             "panel" -> isImeWindow(targetRoot) && spaceEditor(window) != null && editor?.valid() == true &&
                 panelAtCapture != null && panelView(targetRoot) === target && panelState(target) == panelAtCapture
             "editor" -> targetRoot === window && spaceEditor(window) === target && editor?.valid() == true
-            "guide" -> targetRoot === window && guideKeys(window) === target
+            "guide" -> targetRoot === window && guideKeys(window, GuideHooks.FIELD) === target
+            "playground-keys" -> targetRoot === window && editor?.valid() == true && guideKeys(window, GuideHooks.PLAYGROUND) === target
             else -> false
         }
         fun watch(cancel: () -> Unit): (() -> Unit)? {
@@ -254,7 +264,10 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                 if (!selected(context)) return null
                 val roots = WindowInspector.getGlobalWindowViews().filter { it.context.packageName == APP && it.isAttachedToWindow }
                 val front = roots.singleOrNull { it.hasWindowFocus() } ?: return null
-                val editor = if (target == "strip" || target == "panel" || target == "editor") FeedEditor.capture(APP) ?: return null else null
+                val editor = when (target) {
+                    "strip", "panel", "editor", "playground-keys" -> FeedEditor.capture(APP) ?: return null
+                    else -> null
+                }
                 val view = when (target) {
                     "settings" -> settingsSurface(front)
                     "strip" -> {
@@ -267,7 +280,8 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                         roots.asSequence().filter(::isImeWindow).flatMap(::descendants).singleOrNull { panelState(it) != null }
                     }
                     "editor" -> spaceEditor(front)
-                    "guide" -> guideKeys(front)
+                    "guide" -> guideKeys(front, GuideHooks.FIELD)
+                    "playground-keys" -> guideKeys(front, GuideHooks.PLAYGROUND)
                     else -> null
                 } ?: return null
                 Lease(context.applicationContext, front, view, target, editor).takeIf { it.valid() }
@@ -336,12 +350,14 @@ class OwnSurfaceCapture : BroadcastReceiver() {
             return field
         }
 
-        private fun guideKeys(window: View): GuideKeyboardView? {
+        private fun guideKeys(window: View, marker: String): GuideKeyboardView? {
             val content = ownedContent(window, "com.titankeys.keyboard.GuideActivity") as? FrameLayout ?: return null
             val field = descendants(content).filterIsInstance<EditText>().singleOrNull() ?: return null
-            // GuideActivity also hosts the Playground. The lesson marker identifies the guide without inspecting field text.
-            if (field.privateImeOptions != GuideHooks.FIELD) return null
-            return descendants(content).filterIsInstance<GuideKeyboardView>().singleOrNull()
+            // GuideActivity hosts both routes. Identify their editors without inspecting field text.
+            if (field.privateImeOptions != marker) return null
+            val keys = descendants(content).filterIsInstance<GuideKeyboardView>().singleOrNull() ?: return null
+            if (marker == GuideHooks.PLAYGROUND && (window.findFocus() !== field || !fullyVisible(keys))) return null
+            return keys
         }
 
         private fun panelView(window: View): View? = descendants(window).singleOrNull { panelState(it) != null }
@@ -353,11 +369,14 @@ class OwnSurfaceCapture : BroadcastReceiver() {
                 is Strip -> (view.notice as? Strip.Notice.Picker)?.takeIf { it.back && it.items.isNotEmpty() } ?: return null
                 else -> return null
             }
+            return state.takeIf { fullyVisible(view) }
+        }
+
+        private fun fullyVisible(view: View): Boolean {
             val visible = Rect()
-            if (!view.isShown || !view.isAttachedToWindow || view.context.packageName != APP || view.alpha <= 0f ||
-                view.width <= 0 || view.height <= 0 || !view.getLocalVisibleRect(visible) ||
-                visible.left != 0 || visible.top != 0 || visible.right != view.width || visible.bottom != view.height) return null
-            return state
+            return view.isShown && view.isAttachedToWindow && view.context.packageName == APP && view.alpha > 0f &&
+                view.width > 0 && view.height > 0 && view.getLocalVisibleRect(visible) &&
+                visible.left == 0 && visible.top == 0 && visible.right == view.width && visible.bottom == view.height
         }
 
         private fun descendants(view: View): Sequence<View> = sequence {

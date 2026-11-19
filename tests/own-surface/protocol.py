@@ -8,12 +8,15 @@ ns='{http://schemas.android.com/apk/res/android}'
 receiver=next(n for n in xml.findall('receiver') if n.get(ns+'name')=='com.titankeys.keyboard.OwnSurfaceCapture')
 assert receiver.get(ns+'permission')=='android.permission.DUMP' and receiver.get(ns+'exported')=='true'
 source=(root/'android/debug/recorder/OwnSurfaceCapture.kt').read_text()
-assert 'PixelCopy.request(view as SurfaceView, bitmap' in source and 'view.draw(Canvas(bitmap))' in source
+assert 'PixelCopy.request(view as SurfaceView, bitmap' in source and 'view.draw(canvas)' in source
+assert 'drawStarted = SystemClock.uptimeMillis()\n            view.draw(canvas)\n            drawFinished = SystemClock.uptimeMillis()' in source
 assert 'android.R.id.content' in source and 'owner.window.decorView !== window' in source
 assert 'isOrderedBroadcast' in source and 'intent.component?.packageName != APP' in source
 assert 'WindowInspector.getGlobalWindowViews()' in source
 assert 'SpaceGestureActivity' in source and 'FeedEditor.capture(APP)' in source
-assert 'GuideActivity' in source and 'field.privateImeOptions != GuideHooks.FIELD' in source
+assert 'GuideActivity' in source and 'field.privateImeOptions != marker' in source
+assert 'guideKeys(front, GuideHooks.FIELD)' in source and 'guideKeys(front, GuideHooks.PLAYGROUND)' in source
+assert 'field.text' not in source and 'field.length' not in source
 assert 'filterIsInstance<GuideKeyboardView>().singleOrNull()' in source
 panel = source[source.index('private fun panelState('):source.index('private fun descendants(')]
 assert 'is ChoicesMenu' in panel and 'view.page.cells.isNotEmpty()' in panel

@@ -24,7 +24,9 @@ private class Intent(val args: Map<String, Any>, val component: Component?) {
 
 private object SystemClock {
     var now = 100L
+    var uptime = 10L
     fun elapsedRealtime() = now
+    fun uptimeMillis() = uptime
 }
 private object main {
     private val callbacks = mutableMapOf<Runnable, Long>()
@@ -68,7 +70,7 @@ private open class View {
     val width = 100
     val height = 100
     fun getLocationOnScreen(at: IntArray) { at[0] = 5; at[1] = 6 }
-    fun draw(canvas: Canvas) = Unit
+    fun draw(canvas: Canvas) { SystemClock.uptime += 3 }
 }
 private class SurfaceView : View()
 private object PixelCopy {
@@ -187,10 +189,18 @@ fun lifecycle(temp: File) {
     val expired = parse(result().resultData).getValue("id")
     main.advance(OwnCapturePolicy.TTL)
     check(!file.exists() && read(expired)["error"] == "absent")
-    for (target in listOf("editor", "guide", "panel")) {
+    for (target in listOf("editor", "guide", "panel", "playground-keys")) {
+        val beforeDraw = SystemClock.uptime
         capture(target)
         val native = parse(result().resultData)
         check(native["target"] == target && native["kind"] == "view-draw" && file.exists())
+        if (target == "playground-keys") {
+            check(native["drawStartedUptimeMs"] == beforeDraw.toString())
+            check(native["drawFinishedUptimeMs"] == (beforeDraw + 3).toString())
+            check(native["capturedElapsedMs"] == SystemClock.now.toString())
+        } else {
+            check("drawStartedUptimeMs" !in native && "drawFinishedUptimeMs" !in native)
+        }
         check(PixelCopy.callback == null)
         Lease.last!!.lose()
         check(read(native.getValue("id"))["error"] == "absent" && !file.exists())

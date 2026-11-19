@@ -7,7 +7,7 @@ internal object OwnCapturePolicy {
     const val TTL = 120_000L
     const val TIMEOUT = 5_000L
     fun target(value: String?) = when (value) {
-        "settings", "strip", "panel", "editor", "guide" -> true
+        "settings", "strip", "panel", "editor", "guide", "playground-keys" -> true
         else -> false
     }
     fun id(value: String?) = value != null && Regex("[a-f0-9]{32}").matches(value)

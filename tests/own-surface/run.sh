@@ -20,7 +20,10 @@ class ChoicesMenu(context: Context) : View(context) {
     val revision = 0
 }
 class GuideKeyboardView(context: Context) : View(context)
-object GuideHooks { const val FIELD = "com.titankeys.guide" }
+object GuideHooks {
+    const val FIELD = "com.titankeys.guide"
+    const val PLAYGROUND = "com.titankeys.playground"
+}
 EOF
 "$kotlin/bin/kotlinc" -nowarn -classpath "$android" android/debug/recorder/OwnCapturePolicy.kt \
   android/debug/recorder/OwnSurfaceCapture.kt android/debug/recorder/FeedFocusGuard.kt \

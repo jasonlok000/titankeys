@@ -4787,6 +4787,8 @@ class TitanKeysIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        // Back closes the visible Sym panel before the picker hidden beneath it. Repeats from that push stay with the panel.
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown && backKey(event, down = true)) return true
         // Back closes the bigger menu, and the choices stay on the bar.
         if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen) {
             if (event.repeatCount == 0) closeChoicesMenu()
@@ -4805,10 +4807,7 @@ class TitanKeysIme : InputMethodService() {
         }
         if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = true)
         // Android hands back to a shown keyboard first, which would only close the strip.
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
-            backKey(event, down = true)
-            return true
-        }
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) return true
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
             if (keyCode == KeyEvent.KEYCODE_SYM) symLog("Sym outside a field went on to Android")
             return super.onKeyDown(keyCode, event)

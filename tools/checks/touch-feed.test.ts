@@ -77,14 +77,24 @@ test("Debug queues input only after it verifies the owned editor and hook", () =
     const source = read(`android/debug/recorder/${name}.kt`);
     expect(source).toContain(`val dispatch = ${hook}.dispatch`);
     expect(source).toContain("dispatch?.let { FeedEditor.capture(context.packageName) }");
-    expect(source).toMatch(/if \(intent.getBooleanExtra\(FeedBurst.VERIFY_ONLY, false\)\)\s*return answer\(FeedBurst.probeAtUptime\(editor != null\)\)[\s\S]*burst.post\(/);
-    expect(source).toMatch(/if \(!burst.begin\(\)\) return answer\([^)]+\)[\s\S]*burst.post\(/);
+    expect(source).toMatch(/if \(intent.getBooleanExtra\(FeedBurst.VERIFY_ONLY, false\)\)\s*return (?:answer\()?FeedBurst.probeAtUptime\(editor != null\)[\s\S]*burst.post\(/);
+    expect(source).toMatch(/if \(!burst.begin\(\)\) return (?:answer\()?"Debug editor changed before queueing"[\s\S]*burst.post\(/);
     expect(source).toContain(`{ ${hook}.dispatch }`);
     expect(source).toContain("{ send ->");
     expect(source).toContain("send(event)");
     expect(source).not.toContain("dispatch(event)");
     expect(source).toContain("${FeedBurst.READY}");
   }
+});
+
+test("on-device fixtures use the guarded Debug key queue and keep their report private", () => {
+  const app = read("android/debug/recorder/OnDeviceTestsActivity.kt");
+  expect(read("android/debug/recorder/manifest.xml")).toContain('android:name="com.titankeys.keyboard.OnDeviceTestsActivity"');
+  expect(read("android/src/main/AndroidManifest.xml")).not.toContain("OnDeviceTestsActivity");
+  expect(app).toContain("KeyFeed().queue(this, Intent().putExtra");
+  expect(app).toContain("if (!active || !hasWindowFocus())");
+  expect(app).toContain("IME_FLAG_NO_PERSONALIZED_LEARNING");
+  expect(app).toContain('AtomicFile(File(filesDir, "on-device-test-results.txt"))');
 });
 
 test("the focus guard checks the same owned editor, window and hook before every dispatch", () => {

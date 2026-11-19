@@ -33,6 +33,7 @@ class OnDeviceTestsActivity : Activity() {
     private lateinit var resultsView: TextView
     private val report by lazy { AtomicFile(File(filesDir, "on-device-test-results.txt")) }
     private val keyboard by lazy { getSystemService(InputMethodManager::class.java) }
+    private val haptics by lazy { Haptics(this) }
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -47,7 +48,7 @@ class OnDeviceTestsActivity : Activity() {
         page.addView(label)
         start = Button(this).apply {
             text = "Start tests"
-            setOnClickListener { if (active) stop() else begin() }
+            onPress(haptics) { if (active) stop() else begin() }
         }
         page.addView(start)
         editor = EditText(this).apply {

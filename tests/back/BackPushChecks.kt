@@ -1,6 +1,7 @@
 package com.titankeys.keyboard
 
 import com.titankeys.keyboard.BackPush.Action
+import java.io.File
 
 fun main() {
     secondPairOfEventsDoesNotHideTheKeyboard()
@@ -10,6 +11,7 @@ fun main() {
     aLaterPushIsNormalBackAgain()
     withoutAPanelBackIsNormal()
     aPanelThatOpensAgainStillCloses()
+    aVisiblePanelGetsBackBeforeThePicker()
     println("Back checks passed")
 }
 
@@ -95,4 +97,14 @@ private fun aPanelThatOpensAgainStillCloses() {
         Press(true, true, 1_180, 1_180),
         Press(false, false, 1_260, 1_180),
     ), listOf(Action.ClosePanel, Action.UseUp, Action.ClosePanel, Action.UseUp), "A panel that is open must always close")
+}
+
+private fun aVisiblePanelGetsBackBeforeThePicker() {
+    val onKeyDown = File("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt").readText()
+        .substringAfter("override fun onKeyDown(").substringBefore("override fun onKeyUp(")
+    val panelBack = onKeyDown.indexOf("backKey(event, down = true)")
+    val choicesBack = onKeyDown.indexOf("keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen")
+    val pickerBack = onKeyDown.indexOf("keyCode == KeyEvent.KEYCODE_BACK && openPicker() != null")
+    same(panelBack >= 0 && panelBack < choicesBack && panelBack < pickerBack, true,
+        "Back must close the visible Symbols panel before it can dismiss the hidden Yale starter choices")
 }

@@ -41,7 +41,7 @@ const TEXT = {
   putsYouAt: (rank: number, from: number | null) => from && from !== rank ? `This puts you at #${rank}, up from #${from}` : `This puts you at #${rank}`,
   chipIn: "Chip in",
   // SUPPORTER: the thank-you, the opt-in after it, and moving up.
-  thanks: "Thank you!", thanksLine: "Fun fact: I don't actually drink coffee. But this means a lot.",
+  thanks: "Thank you!", thanksLine: "Fun fact: I don't actually drink coffee. I'm more of an orange juice person. But this means a lot.",
   join: "Join the board?",
   name: "Your name (optional)", message: "A message (optional)", addMe: "Add me", keepAnonymous: "Keep me anonymous",
   limit: (tier: number | null) => tier === 3 ? "Up to 120 characters. You've earned the room." : tier === 10 ? "Up to 80 characters."
@@ -347,7 +347,7 @@ function Thanks({ cups, reduceMotion, moveUp, join, board, later }: {
       <RisingThanks cups={cups} width={supportWidth} height={600} reduceMotion={reduceMotion} done={() => setSettled(true)}>
         {settled && [
           <CanvasText key="thanks" x={20} y={150} width={supportWidth - 40} height={70} size={56} align="center" colour={over ? INK : CREAM}>{TEXT.thanks}</CanvasText>,
-          <CanvasText key="line" x={30} y={232} width={supportWidth - 60} height={90} size={27} align="center" colour={over ? INK : CREAM}>{TEXT.thanksLine}</CanvasText>,
+          <CanvasText key="line" x={30} y={232} width={supportWidth - 60} height={130} size={27} align="center" colour={over ? INK : CREAM}>{TEXT.thanksLine}</CanvasText>,
         ]}
       </RisingThanks>
       {settled && moveUp !== null && <Text size={22} align="center">{TEXT.moveUp(moveUp)}</Text>}

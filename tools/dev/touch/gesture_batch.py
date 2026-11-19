@@ -11,9 +11,10 @@ with English, through Debug's InputMethodsSet:
 
 Chinese, Japanese and Hindi type their first word from a code, picked with Space. With a code pending, a flick clears the whole
 code and leaves the field alone (CODE_FLICK, D's list as of main 3593072b). Chinese deletes one character per flick. Japanese and Thai use word breaks for adjacent words.
-"""
-import os
 
+TK_GESTURE_ONLY filters the language checks by kind (flick, stop, taps, code-flick) or by kind:input-method (stop:et).
+Separate selections with commas. Use --batch gestures-fix to run a selection without the English benchmarks.
+"""
 import checks
 import language_checks
 from checks import Stop, play, record
@@ -22,6 +23,8 @@ from checks import Stop, play, record
 # Chinese and Japanese, "। " in Hindi, a plain second space in Thai (it types no mark), ". " in the rest.
 STOPS = {"yue-yale": "。", "yue-jyutping": "。", "zh-pinyin": "。", "ja": "。", "hi": "। ", "th": "  "}
 PLAIN_STOP = ". "
+# These dictionaries correct qwe on the first Space. Type a known word to check the committed word and stop together.
+STOP_WORDS = {"da": "med", "et": "see"}
 # The input methods whose words come from a code, picked with Space; "nihon" picks 日本 in Japanese.
 CODES = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "hi": "namaste"}
 # Two known words typed with no space between. Chinese flicks remove a character; Japanese and Thai take a word.
@@ -92,16 +95,18 @@ def double_space(im):
     if im in CODES:
         before = first_word(im)
     else:
-        # Danish corrects the made-up qwe on the first Space. Use a dictionary word
-        # so this check measures punctuation and still verifies the committed prefix.
-        play(*keys("med" if im == "da" else FIRST), "+300")
+        play(*keys(STOP_WORDS.get(im, FIRST)), "+300")
         before = checks.field()
     play("key:space", "+90", "key:space", "+500")
     text = checks.field()
     want = STOPS.get(im, PLAIN_STOP)
-    # The first word's own Space is there already when it was typed rather than picked.
-    ok = text.startswith(before.rstrip(" ")) and text.endswith(want)
-    record(f"stop-{im}", ok, f"after {before!r}, double Space: {text!r}, wanted it to end {want!r}")
+    if im in STOP_WORDS:
+        ok = before.lower() == STOP_WORDS[im] and text == before + want
+        expected = f"wanted {STOP_WORDS[im]!r} followed by {want!r}"
+    else:
+        ok = text.startswith(before.rstrip(" ")) and text.endswith(want)
+        expected = f"wanted it to end {want!r}"
+    record(f"stop-{im}", ok, f"after {before!r}, double Space: {text!r}, {expected}")
 
 
 def three_taps(im):
@@ -131,28 +136,38 @@ def code_flick(im):
 
 def check_every_language():
     """Every input method, in the languages batch's sets with English, each with its flick, double Space and three taps."""
+    by_kind = {"flick": flick, "stop": double_space, "taps": three_taps, "code-flick": code_flick}
+    only = checks.gesture_selectors()
+    unmatched = only.copy()
+    plan = []
     for group in language_checks.sets():
         for im in group:
-            if checks.past_cutoff():
-                raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the languages didn't run")
-            try:
-                if not language_checks.turn_on(["en", *group], im):
-                    record(f"gestures-{im}", False, f"the field didn't start with {im}")
+            selected = []
+            for kind, check in by_kind.items():
+                if kind == "code-flick" and im not in CODE_FLICK:
                     continue
-                # TK_GESTURE_ONLY=flick,stop runs only those (the night run's harness fix, 2026-11-17).
-                only = set(filter(None, os.environ.get("TK_GESTURE_ONLY", "").split(",")))
-                if not only or "flick" in only:
-                    flick(im)
-                if not only or "stop" in only:
-                    double_space(im)
-                if not only or "taps" in only:
-                    three_taps(im)
-                if im in CODE_FLICK and (not only or "code-flick" in only):
-                    code_flick(im)
-            except Stop:
-                raise
-            except (Exception, SystemExit) as error:  # noqa: BLE001 (one language mustn't end the night's run)
-                record(f"gestures-{im}", False, f"the check broke: {error!r}")
+                matches = only.intersection((kind, f"{kind}:{im}"))
+                if not only or matches:
+                    selected.append(check)
+                    unmatched.difference_update(matches)
+            if selected:
+                plan.append((group, im, selected))
+    if unmatched:
+        raise Stop(f"TK_GESTURE_ONLY has no matching checks for {', '.join(sorted(unmatched))}")
+
+    for group, im, selected in plan:
+        if checks.past_cutoff():
+            raise Stop("the morning cutoff came (TK_CUTOFF_EPOCH): the rest of the languages didn't run")
+        try:
+            if not language_checks.turn_on(["en", *group], im):
+                record(f"gestures-{im}", False, f"the field didn't start with {im}")
+                continue
+            for check in selected:
+                check(im)
+        except Stop:
+            raise
+        except (Exception, SystemExit) as error:  # noqa: BLE001 (one language mustn't end the night's run)
+            record(f"gestures-{im}", False, f"the check broke: {error!r}")
 
 
 BATCH = [english, checks.check_89_flick_end, checks.check_89_long_word, checks.check_89_long_delete,

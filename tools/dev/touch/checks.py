@@ -326,6 +326,10 @@ BATCHES = {"chinese-ui": "chinese_checks", "languages": "language_checks", "guid
            "evening": "evening_batch"}
 
 
+def gesture_selectors():
+    return {part.strip() for part in os.environ.get("TK_GESTURE_ONLY", "").split(",") if part.strip()}
+
+
 def report(name, stamp, hands, finished=False):
     """One file with every result, its shot and what's left for hands: $TK_OUT/touch/report-NAME-STAMP.md."""
     out = os.path.join(os.environ.get("TK_OUT", os.path.expanduser("~/tk-out")), "touch")
@@ -333,8 +337,10 @@ def report(name, stamp, hands, finished=False):
     path = os.path.join(out, f"report-{name}-{stamp}.md")
     counts = {v: sum(1 for _, each, _, _ in details if each == v) for v in ("YES", "NO", "LOOK")}
     lines = [f"# {name}, {stamp}", "", f"{counts['YES']} YES, {counts['NO']} NO, {counts['LOOK']} to look at", ""]
-    partial_languages = name in ("gestures", "languages") and os.environ.get("TK_LANG_FROM")
-    if finished and counts["YES"] and not counts["NO"] and not counts["LOOK"] and not hands and not partial_languages:
+    partial_languages = name in ("gestures", "gestures-fix", "languages") and os.environ.get("TK_LANG_FROM")
+    partial_gestures = ((name == "gestures" and gesture_selectors())
+                        or (name == "gestures-fix" and gesture_selectors() != {"flick", "stop"}))
+    if finished and counts["YES"] and not counts["NO"] and not counts["LOOK"] and not hands and not (partial_languages or partial_gestures):
         lines += [batch_plan.REUSABLE, ""]
     for check, verdict, detail, shot in details:
         lines.append(f"- **{verdict}** {check}: {detail}" + (f" (`shots/{shot}.png`)" if shot else ""))

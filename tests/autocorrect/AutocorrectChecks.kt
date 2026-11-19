@@ -217,7 +217,9 @@ private class Typist(world: Realistic, val autocorrect: Autocorrect? = world.aut
     var externalChanges = 0
     /** How many times the keyboard was told to vibrate because a word changed by itself. */
     var vibrations = 0
-    val composer = Composer(editor, composerWords, { _, action -> posted += action }, {}, { autoCapitalise }, { bar = it })
+    /** Every row the bar showed, in order. */
+    val bars = ArrayList<List<String>>()
+    val composer = Composer(editor, composerWords, { _, action -> posted += action }, {}, { autoCapitalise }, { bar = it; bars += it })
 
     init {
         composer.autocorrect = autocorrect
@@ -2788,7 +2790,8 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     val waiting = typist(field = gesturesField, offered = diOffers).type("d")
     waiting.words.completions = null
     waiting.type("i")
-    same(waiting.bar, listOf("di"), "#98 fresh di: the middle updates before the model replies")
+    same(waiting.bar.firstOrNull(), "di", "#98 fresh di: the middle updates before the model replies")
+    must(waiting.bar.size > 1, "#98 fresh di: the row stays while the model replies, not one word (bar ${waiting.bar})")
     same(waiting.type(" ").text, "di ", "#98 fresh di: Space agrees while the reply is pending")
 
     val editing = typist(field = gesturesField, offered = diOffers).type("do")
@@ -2796,9 +2799,10 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     editing.backspace()
     val older = editing.words.unanswered.removeLast()
     editing.type("i")
-    same(editing.bar, listOf("di"), "#98 edited di: the old do row can't stay visible")
+    same(editing.bar.firstOrNull(), "di", "#98 edited di: the old row's middle can't stay")
+    val held = editing.bar
     older(listOf("do", "day", "down"))
-    same(editing.bar, listOf("di"), "#98 edited di: an older lookup can't replace the row")
+    same(editing.bar, held, "#98 edited di: an older lookup can't replace the row")
     editing.words.unanswered.removeLast()(diOffers)
     same(editing.bar, listOf("di") + diOffers, "#98 edited di: only the current lookup adds side choices")
     same(editing.type(" ").text, "di ", "#98 edited di: Space keeps the literal after the reply")
@@ -2814,14 +2818,22 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     val literal = typist(field = gesturesField, autocorrect = null, offered = diOffers).type("d")
     literal.words.completions = null
     literal.type("i")
-    same(literal.bar, listOf("di"), "#98 Debug field without fixes: replace the old row while the reply is pending")
+    same(literal.bar.firstOrNull(), "di", "#98 Debug field without fixes: the middle updates while the reply is pending")
     literal.words.unanswered.removeLast()(diOffers)
     same(literal.bar, listOf("di") + diOffers, "#98 Debug field without fixes: a settled completion cannot displace the literal")
     same(literal.type(" ").text, "di ", "#98 Debug field without fixes: Space agrees with the middle")
     val fixes = typist(field = gesturesField, offered = listOf("the", "this", "that")).type("t")
     fixes.words.completions = null
     fixes.type("h")
-    same(fixes.bar, listOf("the"), "#98 Debug field: the correction takes the middle while the reply is pending")
+    same(fixes.bar.firstOrNull(), "the", "#98 Debug field: the correction takes the middle while the reply is pending")
+    // No one-word row in between: typing on, with each lookup pending, keeps the row and moves its middle (code review of 30cba1d6).
+    val flicker = typist(field = gesturesField, offered = listOf("hello", "help", "held")).type("he")
+    flicker.words.completions = null
+    flicker.bars.clear()
+    flicker.type("l")
+    must(flicker.bars.none { it.size == 1 }, "No one-word bar while a word is typed with its lookup pending (bars ${flicker.bars})")
+    val pendingMiddle = flicker.bar.firstOrNull()
+    same(flicker.type(" ").text.trimEnd().substringAfterLast(' '), pendingMiddle, "Space types the pending row's middle")
     same(fixes.type(" ").text, "the ", "#98 Debug field: Space still applies the tracked correction")
 
     // On the phone, completing the prefix warms the model's context, then preparing the next word evicts that score.

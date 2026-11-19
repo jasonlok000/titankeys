@@ -2118,6 +2118,9 @@ class Composer(
     private fun sameLetters(a: String, b: String) = a.filter(Char::isLetter).equals(b.filter(Char::isLetter), ignoreCase = true)
 
     /** Shows [suggestions], less hidden and blocked words; with [keepFirst], the first is what Space types and always shows (#98). */
+    /** The words the bar shows now, which a word's row keeps while its lookup runs ([predict]). */
+    private var shownRow = emptyList<String>()
+
     private fun show(suggestions: List<String>, keepFirst: Boolean = false) {
         barIdle = suggestions.isEmpty()
         // The cursor says it without asking the app: anywhere but the start, or not known, there may be text.
@@ -2125,7 +2128,8 @@ class Composer(
         shownAlternatives = suggestions.indices.filter {
             keepFirst && it == 0 || suggestions[it].lowercase() !in hidden && words.allowed(suggestions[it])
         }
-        showWords(shownAlternatives.map(suggestions::get))
+        shownRow = shownAlternatives.map(suggestions::get)
+        showWords(shownRow)
     }
 
     private fun predict() {
@@ -2186,7 +2190,10 @@ class Composer(
                 spaceWord(emptyList(), anchor, prefix, guided = false, keepPrefix = replacingOldWords)
             if (pending == null) offerStarts(anchor)
             else {
-                composition = Composition.Typed(prefix, trailingSpace, anchor, listOf(pending.text), pending)
+                // The row on the bar stays while the lookup runs, its middle now what Space types: a one-word row and then the
+                // full one flickered on every key (code review of 30cba1d6). The side words follow once the lookup answers.
+                val held = if (replacingOldWords) shownRow else emptyList()
+                composition = Composition.Typed(prefix, trailingSpace, anchor, spaceFirst(held, pending.text), pending)
                 show(composition.alternatives, keepFirst = true)
                 barIdle = !replacingOldWords
             }

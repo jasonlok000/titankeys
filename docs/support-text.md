@@ -14,14 +14,13 @@ marked "supporters only". Every other line here is pre-payment.
 
 The cup is the main image. The liquid changes to match the selected amount.
 
-- **Amounts:** A sip, 1/5 cup, 2/5 cup.
+- **Amounts:** A sip, A bigger sip, Half a coffee, Custom.
 - **Cadence:** Monthly is selected first. One-time uses the same amount controls.
 - **Checkout:** Chip in · {price}. Monthly adds “a month” and “Cancel any time in Google Play.”
 
-**Custom, on a separate screen from One-time** (Play's multi-quantity, $1 units):
+**Custom, beside the fixed amounts** (one-time, with Play multi-quantity or a fixed amount):
 
 - **Button:** Pick your own
-- **Screen title:** Pick your own
 - **Amount readout:** ${n} · about {cups}, with friendly fractions ("1 2/5 cups"), and "about 1 cup" for one.
 - **Over 5 cups:** That's a whole pot. I'll need a bigger table.
 
@@ -38,9 +37,9 @@ The orange rolls in and pours into the glass. The level represents cumulative su
 **Supporters** (a separate screen linked from the support page)
 
 - **Title:** The coffee fund
-- **Line:** Our top 10 supporters, in cups of coffee.
-- **Supporters only** (someone who has paid, on their own view): **The orange juice fund**, with "Our top 10 supporters, in cups of coffee I didn't drink."
-- **Each row:** {name}, {cups} cups, and their message, if they left one. No name: "Anonymous".
+- **Line:** Our top 10 supporters.
+- **Supporters only** (someone who has paid, on their own view): **The orange juice fund**.
+- **Each row:** {rank}, {name}, and their message, if they left one. No name: "Anonymous".
 - **Empty:** Nobody here yet. The top spot is wide open.
 - **Privacy line:** Only what you type here is shown, never what you paid. Remove yourself any time.
 - **Remove me:** Remove me
@@ -69,6 +68,6 @@ nonzero stat and up to two more. Opening the popup uses the one automatic appear
 
 **Dismiss:** Nah
 
-## 3. Settings > About
+## 3. Settings
 
-**Row:** Support TitanKeys. This is the only standing entry.
+**Row:** Support TitanKeys, above About. This is the only standing entry.

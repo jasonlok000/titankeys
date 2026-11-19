@@ -112,6 +112,7 @@ export default function Settings() {
       <Field label={newsText.title} href="/settings/news" />
       <Field label="Send feedback" href="/settings/feedback" />
       <Field label={bugText.settingsLabel} href="/settings/bug" />
+      <Field label="Support TitanKeys" href="/support" />
       <Field label="About" href="/settings/about" />
     </Section>
     {/* So many settings, it's easy to mess them up (owner, 2026-11-13: "Two resets. Reset most things and reset literally

@@ -16,9 +16,10 @@ export type SupportState = {
   receipt: Receipt | null;
   reduceMotion?: boolean;
   boardJoined?: boolean;
+  preview?: boolean;
   purchaseResult?: "launched" | "pending" | "cancelled" | "unavailable" | null;
 };
-export type BoardEntry = { id: string; name?: string; message?: string; cups: number };
+export type BoardEntry = { id: string; name?: string; message?: string };
 export type Board = { available: boolean; postingReady?: boolean; entries?: BoardEntry[]; joined?: boolean };
 
 const invoke = (operation: string, payload: object = {}) => callNative("titankeys", operation, payload);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas, CanvasPath, Rectangle } from "ink";
+import { Canvas, CanvasPath, CanvasText, Rectangle } from "ink";
 import { RoundedFill, RoundedOutline } from "./rounded";
 
 type Point = readonly [number, number];
@@ -62,7 +62,7 @@ function useProgress(duration: number, reduceMotion = false) {
   return reduceMotion ? duration : frame;
 }
 
-/** A small glass demitasse on a ceramic saucer. The body and coffee have independent reflections. */
+/** A takeaway cup, drawn from the same rounded key shapes and swipe colours as the guide. */
 export function CoffeeCup({ amount, reduceMotion }: { amount: number; reduceMotion?: boolean }) {
   const [level, setLevel] = useState(amount);
   const current = useRef(amount);
@@ -89,56 +89,56 @@ export function CoffeeCup({ amount, reduceMotion }: { amount: number; reduceMoti
     return () => clearInterval(timer);
   }, [amount, reduceMotion]);
 
-  const cx = 289;
-  const cupTop = 84;
-  const cupBottom = 218;
-  const coffeeTop = cupBottom - 15 - 109 * clamp(level / .48);
-  const radiusAt = (y: number) => 91 - (y - cupTop) * .20;
-  const coffeeWidth = radiusAt(coffeeTop) - 9;
-  return <Canvas width={supportWidth} height={258}>
-    <SceneLight height={258} />
-    <RoundedOutline x={1} y={1} width={592} height={256} radius={27} stroke="#68402C" strokeWidth={2} />
-    <OvalFill x={cx + 5} y={226} rx={157} ry={16} colour="#100906" />
-    <OvalFill x={cx} y={219} rx={128} ry={18} colour="#71452F" />
-    <OvalFill x={cx} y={215} rx={121} ry={15} colour="#B77D51" />
-    <OvalFill x={cx} y={213} rx={100} ry={11} colour="#5E3625" />
-    <CanvasPath points={oval(373, 140, 39, 39, -1.5, 1.7)} stroke="#774A32" strokeWidth={17} />
-    <CanvasPath points={oval(373, 140, 39, 39, -1.42, 1.68)} stroke="#E1A76E" strokeWidth={5} />
-    {Array.from({ length: 54 }, (_, i) => {
-      const y = cupTop + i * 2.4;
-      const radius = radiusAt(y);
-      const filled = y + 1.2 >= coffeeTop;
-      const depth = clamp((y - coffeeTop) / Math.max(1, cupBottom - coffeeTop));
-      return <Rectangle key={i} x={cx - radius} y={y} width={radius * 2} height={2.45}
-        fill={filled ? shade("4E281D", "995334", 1 - depth) : shade("35211A", "4D3227", 1 - i / 54)} />;
+  const cx = 298;
+  const height = 221;
+  const raised = "#342C28";
+  const edge = "#574840";
+  const gauge = { x: 390, y: 56, width: 22, height: 119, radius: 10 };
+  const liquid = 99 * clamp(level);
+  const keys = [["Q", 72, 78], ["W", 121, 78], ["E", 170, 78], ["A", 84, 125], ["S", 133, 125],
+    ["O", 427, 86], ["P", 476, 86], ["L", 445, 133], ["Del", 494, 133]] as const;
+  return <Canvas width={supportWidth} height={height}>
+    <RoundedFill x={1} y={1} width={592} height={219} radius={26} fill="#1A1512" />
+    <RoundedOutline x={1} y={1} width={592} height={219} radius={26} stroke="#594137" strokeWidth={2} />
+    {keys.map(([label, x, y]) => <RoundedFill key={label} x={x} y={y + 4} width={43} height={36} radius={9} fill="#100C0A" />)}
+    {keys.map(([label, x, y]) => <RoundedFill key={label} x={x} y={y} width={43} height={35} radius={9} fill={raised} />)}
+    {keys.map(([label, x, y]) => <CanvasText key={label} x={x} y={y} width={43} height={35} align="center" size={17} colour="#AB9183">{label}</CanvasText>)}
+    <OvalFill x={cx} y={194} rx={92} ry={12} colour="#100B08" />
+    {Array.from({ length: 63 }, (_, i) => {
+      const y = 56 + i * 2.15;
+      const half = 70 - i * .39;
+      const sleeve = y >= 92 && y < 153;
+      const fill = sleeve ? shade("AE522E", "DE8251", 1 - (y - 92) / 61) : shade("C29373", "FFE8C5", 1 - i / 90);
+      return <Rectangle key={i} x={cx - half} y={y} width={half * 2} height={2.18} fill={fill} />;
     })}
-    <OvalFill x={cx} y={cupBottom - 4} rx={63} ry={10} colour="#45271C" />
-    <OvalFill x={cx} y={coffeeTop} rx={coffeeWidth} ry={12} colour="#BE7846" />
-    <OvalFill x={cx} y={coffeeTop + 1} rx={coffeeWidth - 6} ry={8} colour="#8F4B2A" />
-    <CanvasPath points={oval(cx, coffeeTop - 1, coffeeWidth - 3, 9, .2, 2.5)} stroke="#EEAD70" strokeWidth={3} />
-    <CanvasPath points={[[cx - 91, cupTop], [cx - 76, 166], [cx - 64, 203], [cx - 53, 216],
-      [cx + 52, 216], [cx + 64, 203], [cx + 76, 166], [cx + 91, cupTop]]} stroke="#DEAA85" strokeWidth={4} />
-    <CanvasPath points={oval(cx, cupTop, 91, 13)} stroke={cream} strokeWidth={3} />
-    <CanvasPath points={[[cx - 73, 110], [cx - 61, 164], [cx - 52, 189]]} stroke="#BF8A67" strokeWidth={4} />
-    <CanvasPath points={[[cx + 66, 125], [cx + 56, 168], [cx + 48, 196]]} stroke="#8D5840" strokeWidth={3} />
-    <CanvasPath points={oval(cx, 219, 126, 17, .12, 2.99)} stroke="#CB8C5C" strokeWidth={3} />
-    {pouring && <CanvasPath points={[[cx + 26, 38], [cx + 14, 51], [cx + 6, 69], [cx, coffeeTop]]}
-      stroke="#D99152" strokeWidth={5} />}
-    {!pouring && <>
-      <CanvasPath points={Array.from({ length: 24 }, (_, i) => [281 - 10 * Math.sin(i * Math.PI / 18), 63 - i * 1.75])}
-        stroke="#A37155" strokeWidth={3} />
-      <CanvasPath points={Array.from({ length: 24 }, (_, i) => [306 + 8 * Math.sin(i * Math.PI / 21), 61 - i * 1.45])}
-        stroke="#BA8461" strokeWidth={2} />
-    </>}
+    <OvalFill x={cx} y={190} rx={46} ry={8} colour="#D1A281" />
+    <RoundedFill x={217} y={33} width={162} height={29} radius={12} fill="#41312A" />
+    <RoundedFill x={230} y={27} width={136} height={20} radius={10} fill="#503D33" />
+    <RoundedOutline x={217} y={33} width={162} height={29} radius={12} stroke="#A48776" strokeWidth={2} />
+    <CanvasPath points={[[234, 42], [353, 42]]} stroke="#6C5448" strokeWidth={3} />
+    <CanvasPath points={[[228, 62], [253, 188], [266, 196], [329, 196], [343, 188], [367, 62]]}
+      stroke="#F9DAB4" strokeWidth={2.5} />
+    <RoundedFill x={272} y={99} width={52} height={45} radius={13} fill="#3A241A" />
+    <RoundedOutline x={272} y={99} width={52} height={45} radius={13} stroke="#F3B27F" strokeWidth={2} />
+    <CanvasPath points={[[284, 118], [294, 128], [315, 110]]} stroke="#FFBA7C" strokeWidth={4} />
+    <RoundedFill {...gauge} fill="#2F2019" />
+    <RoundedOutline {...gauge} stroke={edge} strokeWidth={2} />
+    <Rectangle x={396} y={165 - liquid} width={10} height={liquid} fill={pouring ? "#FFBC81" : "#DF8354"} />
+    {[72, 99, 126, 153].map(y => <CanvasPath key={y} points={[[415, y], [422, y]]} stroke="#836354" strokeWidth={2} />)}
+    <CanvasPath points={[[89, 151], [111, 136], [138, 134], [163, 111], [191, 101], [211, 77], [205, 57], [184, 50], [174, 31]]}
+      stroke="#683F2C" strokeWidth={8} />
+    <CanvasPath points={[[89, 151], [111, 136], [138, 134], [163, 111], [191, 101], [211, 77], [205, 57], [184, 50], [174, 31]]}
+      stroke="#DD8259" strokeWidth={2.5} />
+    <CanvasPath points={[[91, 150], [92, 150]]} stroke="#FFC590" strokeWidth={7} />
   </Canvas>;
 }
 
 export function OrangeGlass({ previous, total, reduceMotion }: { previous: number; total: number; reduceMotion?: boolean }) {
-  const frame = useProgress(2080, reduceMotion);
+  const frame = useProgress(2450, reduceMotion);
   const arrival = ease(frame / 630);
   const squeeze = ease((frame - 620) / 240);
   const pour = ease((frame - 735) / 980);
-  const lift = 8 * Math.sin(Math.PI * clamp((frame - 1745) / 335));
+  const lift = 8 * Math.sin(Math.PI * clamp((frame - 2000) / 450));
   const cx = 300;
   const top = 96 - lift;
   const bottom = 231 - lift;
@@ -151,12 +151,17 @@ export function OrangeGlass({ previous, total, reduceMotion }: { previous: numbe
   const leaf = (angle: number, offset = 0): Point =>
     [fruitX + (fruitRadius + offset) * Math.cos(angle + roll), fruitY + (fruitRadius + offset) * Math.sin(angle + roll)];
   const glow = frame > 735;
-  const over = total > 1 && frame > 850 && frame < 1970 && cups >= 1;
+  const spillStart = Math.max(1, previous);
+  const over = total > spillStart ? clamp((cups - spillStart) / Math.max(.02, total - spillStart)) : 0;
+  const stream = clamp(over * 1.65);
+  const pool = clamp((over - .48) / .52);
   return <Canvas width={supportWidth} height={270}>
     <RoundedFill x={1} y={1} width={592} height={268} radius={27} fill={glow ? "#3A190F" : "#2B140E"} />
     {glow && <SceneLight height={270} warm />}
     <RoundedOutline x={1} y={1} width={592} height={268} radius={27} stroke="#A65126" strokeWidth={2} />
     <OvalFill x={cx} y={241} rx={116} ry={13} colour="#261007" />
+    {pool > 0 && <OvalFill x={cx + 24} y={244} rx={20 + 104 * pool} ry={3 + 8 * pool} colour="#C96525" />}
+    {pool > 0 && <OvalFill x={cx + 31} y={242} rx={15 + 67 * pool} ry={2 + 4 * pool} colour="#FFA853" />}
     {Array.from({ length: 54 }, (_, i) => {
       const y = top + i * 2.4;
       const r = 70 - i * .355;
@@ -181,13 +186,14 @@ export function OrangeGlass({ previous, total, reduceMotion }: { previous: numbe
     {frame >= 755 && frame < 1690 &&
       <CanvasPath points={[[cx, 66], [cx + 3, 84], [cx - 2, 104], [cx, Math.max(107, juiceTop)]]}
         stroke="#FFBC54" strokeWidth={7} />}
-    {over && [-1, 1].map(side => {
-      const arc = clamp((frame - 890) / 610);
-      return <CanvasPath key={side} points={[[cx + side * 62, top + 6], [cx + side * (77 + 13 * arc), top - 19],
-        [cx + side * (96 + 14 * arc), top - 14], [cx + side * (101 + 22 * arc), top + 37 * arc]]}
-        stroke={amber} strokeWidth={4} />;
+    {over > 0 && [-1, 1].map(side => {
+      const points: Point[] = Array.from({ length: 17 }, (_, i) => {
+        const part = i / 16 * stream;
+        return [cx + side * (64 + 29 * Math.sin(part * 2.4)), top + 5 + 141 * part ** 2 - 22 * Math.sin(part * Math.PI)];
+      });
+      return <CanvasPath key={side} points={points} stroke={amber} strokeWidth={side === 1 ? 6 : 3} />;
     })}
-    {frame >= 1745 && [[207, 77], [394, 53], [405, 123]].map(([x, y], i) =>
+    {frame >= 2000 && [[207, 77], [394, 53], [405, 123]].map(([x, y], i) =>
       <CanvasPath key={i} points={[[x - 5, y], [x, y - 4], [x + 5, y], [x, y + 4], [x - 5, y]]}
         stroke={amber} strokeWidth={2} />)}
   </Canvas>;

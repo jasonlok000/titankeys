@@ -7,7 +7,7 @@ Each line is marked:
 - **PRE:** anyone can see it, before paying. Coffee only: no orange, no juice.
 - **SUPPORTER:** only someone who has paid sees it.
 
-The only reveal is the thank-you.
+The orange juice first shows in the thank-you. After that, only the supporter's own view of the board says it.
 
 ## The Settings card
 

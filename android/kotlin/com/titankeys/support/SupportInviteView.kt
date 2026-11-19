@@ -3,7 +3,11 @@ package com.titankeys.support
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PathMeasure
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -13,6 +17,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.LinearInterpolator
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -27,7 +32,9 @@ import com.titankeys.keyboard.R
 import com.titankeys.keyboard.Radii
 import com.titankeys.keyboard.onPress
 import java.text.NumberFormat
+import kotlin.math.PI
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /** The playground's once-only invitation. The photo is decorative, so the stats and actions stay native and readable. */
 internal class SupportInviteView(
@@ -39,6 +46,7 @@ internal class SupportInviteView(
 ) : FrameLayout(context) {
     private val format = NumberFormat.getIntegerInstance()
     private val scrim = ColorDrawable(Color.BLACK)
+    private val steam = SupportSteamView(context)
     private var scrimFade: ValueAnimator? = null
     private val card = ScrollView(context).apply {
         background = shape(ESPRESSO, Radii.LARGE)
@@ -129,6 +137,7 @@ internal class SupportInviteView(
                     addUpdateListener { scrim.alpha = it.animatedValue as Int }
                     start()
                 }
+                steam.sweepOnce()
             }
         })
     }
@@ -140,6 +149,7 @@ internal class SupportInviteView(
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 setImageResource(R.drawable.support_coffee)
             }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            addView(steam, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
             addView(View(context).apply {
                 background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(ESPRESSO_CLEAR, ESPRESSO))
             }, LayoutParams(LayoutParams.MATCH_PARENT, dp(42), Gravity.BOTTOM))
@@ -223,5 +233,73 @@ internal class SupportInviteView(
         const val MUTED = 0xFFCDB3A0.toInt()
         const val OUTLINE = 0xFF765445.toInt()
         const val SCRIM_ALPHA = 201
+    }
+}
+
+/** A short highlight follows the curl already in the photograph, like a swipe there and gone. */
+private class SupportSteamView(context: Context) : View(context) {
+    private val curl = PathMeasure()
+    private val highlight = Path()
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFC991.toInt()
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+    }
+    private var sweep: ValueAnimator? = null
+    private var progress = 0f
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        val curve = Path().apply {
+            moveTo(w * .477f, h * .408f)
+            cubicTo(w * .438f, h * .325f, w * .456f, h * .249f, w * .503f, h * .208f)
+            cubicTo(w * .546f, h * .168f, w * .578f, h * .147f, w * .572f, h * .098f)
+            cubicTo(w * .571f, h * .071f, w * .550f, h * .044f, w * .528f, h * .024f)
+        }
+        curl.setPath(curve, false)
+    }
+
+    fun sweepOnce() {
+        if (!GuideMotion.enabled) return
+        sweep = ValueAnimator.ofFloat(0f, 1f).apply {
+            startDelay = 300
+            duration = 1_180
+            interpolator = LinearInterpolator()
+            addUpdateListener {
+                progress = it.animatedFraction
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        if (progress <= 0f || progress >= 1f) return
+        val front = curl.length * progress * 1.25f
+        highlight.rewind()
+        if (!curl.getSegment((front - curl.length * .25f).coerceAtLeast(0f), front, highlight, true)) return
+        val glow = sin(progress * PI)
+        paint.strokeWidth = width * .005f
+        paint.alpha = (20 * glow).roundToInt()
+        canvas.drawPath(highlight, paint)
+        paint.strokeWidth = width * .002f
+        paint.alpha = (82 * glow).roundToInt()
+        canvas.drawPath(highlight, paint)
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (visibility != VISIBLE) stop()
+    }
+
+    override fun onDetachedFromWindow() {
+        stop()
+        super.onDetachedFromWindow()
+    }
+
+    private fun stop() {
+        sweep?.cancel()
+        sweep = null
+        progress = 0f
+        invalidate()
     }
 }

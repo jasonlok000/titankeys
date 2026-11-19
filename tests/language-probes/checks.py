@@ -14,6 +14,38 @@ import switcher_checks
 
 
 class LanguageProbes(unittest.TestCase):
+    def test_same_method_restart_verifies_saved_set_and_android_subtype(self):
+        on = ["en", "ru"]
+        debug = f"{checks.APP}/com.titankeys.keyboard.TitanKeysIme"
+        subtype = {method: ident for ident, method in language_checks.languages.subtype_ids().items()}
+        for saved, active, logs, wanted in [
+            ("en,ru", "en", [], True),
+            ("en,ru", "ru", ["TitanKeysIM: Input method at field start: en (saved)"], False),
+            ("en,fr", "en", ["TitanKeysIM: Input method at field start: en (saved)"], False),
+        ]:
+            with self.subTest(saved=saved, active=active, logs=logs):
+                methods = ["en"]
+
+                def adb(*args):
+                    if args[:4] == ("shell", "settings", "get", "secure"):
+                        return debug
+                    if args[-3:] == ("--ez", "read", "true"):
+                        return f'Broadcast completed: result=0, data="on {methods[0]}; typing en"'
+                    self.assertEqual(args[-6:], ("--es", "on", "en,ru", "--es", "current", "en"))
+                    methods[0] = saved
+                    return 'Broadcast completed: result=0, data="on en,ru; typing en"'
+
+                with patch.dict(language_checks.os.environ, {"TK_DEBUG_IME": debug}), \
+                        patch.object(language_checks, "field_in_front", return_value=True), \
+                        patch.object(language_checks, "adb", side_effect=adb), \
+                        patch.object(language_checks.languages, "current_subtype", return_value=subtype[active]), \
+                        patch.object(language_checks.languages, "log_lines", return_value=logs), \
+                        patch.object(language_checks.languages, "logs_on"), \
+                        patch.object(language_checks.own_editor, "restart") as restart, \
+                        patch.object(language_checks.time, "sleep"):
+                    self.assertIs(language_checks.turn_on(on, "en"), wanted)
+                restart.assert_called_once_with()
+
     def test_review_restart_reorders_both_owned_activities_before_focusing(self):
         app = checks.APP
         field = review_batch.languages.FIELD_ACTIVITY

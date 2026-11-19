@@ -186,10 +186,10 @@ def turn_on(on, current):
     if "typing " + current not in out:
         raise Stop(f"InputMethodsSet didn't take {current}: {out.strip()[-200:]}")
     own_editor.restart()
+    ids = languages.subtype_ids()
     for _ in range(10):
-        # A restart with the same method may keep the last field-start line: Languages logs changes only.
-        latest = next((line for line in reversed(languages.log_lines()) if "field start:" in line), "")
-        if f"field start: {current} (" in latest:
+        # A same-method restart may write no log line. Verify what Settings and Android report now.
+        if active_method(on, ids) == current:
             return True
         time.sleep(.5)
     return False

@@ -203,12 +203,12 @@ def gestures(keys):
 
 
 def fresh():
-    """Debug's Space gestures field in front (the guide's and the playground's type English only), no code, empty."""
+    """Clear Debug's Space gestures field and return the text the editor reports after the clear."""
     guide_checks.leave_guide()
     if not languages.in_field():
         raise Stop(f"not in the Space gestures field: {languages.front().strip()}")
     play(*[g for _ in range(20) for g in ("key:del", "+60")])
-    checks.set_text("")
+    return checks.set_text("")
 
 
 def log_since(seen):

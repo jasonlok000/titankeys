@@ -39,7 +39,9 @@ def check_key_feed():
             if not language_checks.turn_on(["en", "th", "ka"], im):
                 record(f"key-feed-{im}", False, f"the field didn't start with {im}")
                 continue
-            language_checks.fresh()
+            if language_checks.fresh() != "":
+                record(f"key-feed-{im}", None, "the test field still contained text after setup; the chord wasn't sent")
+                continue
             adb("logcat", "-c")
             answer = feed(keys)
             time.sleep(1)

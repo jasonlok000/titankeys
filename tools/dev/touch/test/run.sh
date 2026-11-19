@@ -8,6 +8,7 @@ javac -d "$work" android/kotlin/com/titankeys/engine/TouchAlignment.java tools/d
 java -cp "$work" com.titankeys.engine.AlignmentDump android/assets/calibration/titan-2-saved.profile > "$work/alignment.txt"
 cc -O2 -Wall -Wextra -Werror -o "$work/tk-inject" tools/dev/touch/inject.c
 python3 tools/dev/touch/test/test_touch.py "$work/alignment.txt" "$work/tk-inject"
+python3 -B tools/dev/touch/test/test_keyfeed_batch.py
 
 # TK_KEYFEED's scripts: gestures.py writes the keys by Android's names for the key feed, and leaves the injector none.
 python3 tools/dev/touch/gestures.py --keyfeed-out "$work/k.keys" --feed-out "$work/k.feed" --out "$work/k.tki" chord:shift+q +100 key:space:60:none

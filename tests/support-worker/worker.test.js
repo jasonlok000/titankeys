@@ -318,3 +318,42 @@ test("partial and full Play refunds reduce the same order without restoring data
     expect(await entries()).toEqual([]);
     expect(await (await publish([tip])).json()).toEqual({ cups: 0 });
 });
+
+test("a subscription credits every paid month's order, each once, even posted only in the latest month", async () => {
+    const month = await paid({ kind: "subscription", productId: MONTHLY, label: "sub", tokenLabel: "sub", cents: 200 });
+    // Play's renewal orders: the first, then ..0 and ..1. The latest is ..1.
+    const first = ORDERS.get("GPA.fixture-sub");
+    for (const id of ["GPA.fixture-sub..0", "GPA.fixture-sub..1"]) ORDERS.set(id, { ...first, orderId: id });
+    TOKENS.get("purchases/subscriptionsv2/tokens/" + month.purchaseToken).lineItems[0].latestSuccessfulOrderId = "GPA.fixture-sub..1";
+    expect(await (await publish([month])).json()).toEqual({ cups: 1.2 });
+    // Posting again adds nothing; next month's renewal adds one month.
+    expect(await (await publish([month])).json()).toEqual({ cups: 1.2 });
+    ORDERS.set("GPA.fixture-sub..2", { ...first, orderId: "GPA.fixture-sub..2" });
+    TOKENS.get("purchases/subscriptionsv2/tokens/" + month.purchaseToken).lineItems[0].latestSuccessfulOrderId = "GPA.fixture-sub..2";
+    expect(await (await publish([month])).json()).toEqual({ cups: 1.6 });
+    expect(db.query("SELECT COUNT(*) AS count FROM support_orders").get().count).toBe(4);
+    // An earlier order Play no longer has is skipped; a refunded month counts nothing.
+    ORDERS.delete("GPA.fixture-sub..0");
+    ORDERS.set("GPA.fixture-sub..1", { ...first, orderId: "GPA.fixture-sub..1", state: "REFUNDED" });
+    expect(await (await publish([month])).json()).toEqual({ cups: 1.2 });
+});
+
+test("names and messages lose control, bidi and zero-width characters, and keep their words", async () => {
+    const tip = await paid({ label: "chars" });
+    await publish([tip], { name: "‮Sun​ny\u0007", message: "⁦Che‪ers⁩ ﻿!" });
+    const [entry] = await entries();
+    expect(entry.name).toBe("Sunny");
+    expect(entry.message).toBe("Cheers !");
+    await publish([tip], { name: "​‮", message: "damn fine keyboard" });
+    expect((await entries())[0]).toMatchObject({ name: null, message: "damn fine keyboard" });
+});
+
+test("Remove me deletes the account's orders, so rejoining starts fresh", async () => {
+    const tip = await paid({ label: "leaver" });
+    await publish([tip]);
+    db.exec("PRAGMA foreign_keys=OFF");
+    expect((await api("remove", { accountKey: ACCOUNT })).status).toBe(204);
+    expect(db.query("SELECT COUNT(*) AS count FROM support_orders").get().count).toBe(0);
+    expect(db.query("SELECT COUNT(*) AS count FROM supporters").get().count).toBe(0);
+    db.exec("PRAGMA foreign_keys=ON");
+});

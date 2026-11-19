@@ -18,3 +18,18 @@ test("only an available, configured board offers posting, and an opted-in suppor
   expect(page).toContain("canJoinBoard && offerBoard");
   expect(page).toContain("{board.available && (board.joined ?? state?.boardJoined) &&");
 });
+
+test("the support ledger survives a bad file and never writes on the main thread (review, 2026-11-19)", async () => {
+  const ledger = await Bun.file(new URL("../../android/kotlin/com/titankeys/support/SupportLedger.kt", import.meta.url)).text();
+  const billing = await Bun.file(new URL("../../android/kotlin/com/titankeys/support/SupportBilling.kt", import.meta.url)).text();
+  // A bad file goes aside, unread and unlogged; Support starts empty and buying waits.
+  expect(ledger).toContain('file.baseFile.renameTo(File(file.baseFile.parentFile, "$FILE.bad-${System.currentTimeMillis()}"))');
+  expect(ledger).not.toMatch(/Log\.\w\(/);
+  expect(billing).toContain('.put("billing", if (offers.isEmpty() || ledger.broken) "unavailable" else "ready")');
+  // Writes go to the ledger's own thread; Play is told only once the credit is on the disk.
+  expect(ledger).toContain("writer.execute {");
+  expect(billing).toMatch(/\{ saved ->\s+post \{ finish\(purchase, product, saved\) \}/);
+  expect(billing.indexOf("client.acknowledgePurchase")).toBeGreaterThan(billing.indexOf("private fun finish("));
+  // Each renewal's order is its key.
+  expect(ledger).toContain("val key = supportKey(token, orderId, product.monthly)");
+});

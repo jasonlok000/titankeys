@@ -3521,6 +3521,7 @@ class TitanKeysIme : InputMethodService() {
             else -> {
                 writeQuickSetting(item, !quickSettingOn(item))
                 readSettings()
+                if (item == QuickSetting.Autocorrect || item == QuickSetting.AutoCapitalise) composer.refreshTypedSuggestions()
                 panel?.render()
                 KeyboardEvents.publish { KeyboardEvent.QuickSettingUsed(item, quickSettingOn(item)) }
                 // Opening Settings, the keyboard list or the clipboard opens something you see, so only a switch plays.

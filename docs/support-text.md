@@ -1,80 +1,96 @@
 # Support TitanKeys: the words
 
-For the 3.0 pre-release (owner's idea: fun and honest). Donations go through Google Play Billing. `{monthly}` and `{tip}` are
-placeholders for the prices. Nothing here guilt-trips, and nothing claims "best".
+Every line for the support flow (mockup v4, owner-approved 2026-11-19). Donations go through Google Play Billing, and prices
+come from Play in local currency. Nothing here guilt-trips, and nothing claims "best".
 
-**Coffee until they pay** (owner): every line a non-payer can see says coffee. The orange juice is only in the lines
-marked "supporters only". Every other line here is pre-payment.
+Each line is marked:
+- **PRE:** anyone can see it, before paying. Coffee only: no orange, no juice.
+- **SUPPORTER:** only someone who has paid sees it.
 
-## 1. The support page
+The only reveal is the thank-you.
 
-**Heading:** Support TitanKeys
+## The Settings card
 
-**Line:** TitanKeys stays free. Your coffee buys me time to work on it.
+- PRE **Title:** Support TitanKeys
+- PRE **Line:** Free, no ads, made by one person. Chip in a coffee if you like it.
 
-**Lines** (pre-payment):
+## The popup, once, after about 10 typing days
 
-- Donating gets you nothing. No badge, no secret theme, no bonus features. It's all free already.
-- What it does get: one developer more time on TitanKeys.
-- That means bugs fixed faster, more languages, and new tricks for the keys.
-- No ads and no paywall. Ever.
+Shown over the front page, once. "Nah" hides it for good. Up to four tiles, only the ones above zero.
 
-The cup is the main image. The liquid changes to match the selected amount.
+- PRE **Line:** Look at all that typing. Here's what TitanKeys did for you so far.
+- PRE **Tiles:**
+  - {n} words typed
+  - {n} swipes
+  - {n} fixes
+  - {n} gestures
+- PRE **Button:** See the coffee fund
+- PRE **Dismiss:** Nah
 
-- **Amounts:** A sip, A bigger sip, Half a coffee, Custom.
-- **Cadence:** Monthly is selected first. One-time uses the same amount controls.
-- **Checkout:** Chip in · {price}. Monthly adds “a month” and “Cancel any time in Google Play.”
+## The support page
 
-**Custom, beside the fixed amounts** (one-time, with Play multi-quantity or a fixed amount):
+- PRE **Heading:** Support TitanKeys
+- PRE **Lines:**
+  - Donating gets you nothing. Well, a spot on the board.
+  - What it really buys: time to fix bugs, add languages and build new things.
+  - No ads and no paywall. Ever.
 
-- **Button:** Pick your own
-- **Amount readout:** ${n} · about {cups}, with friendly fractions ("1 2/5 cups"), and "about 1 cup" for one.
-- **Over 5 cups:** That's a whole pot. I'll need a bigger table.
+## The board
 
-**Thank-you, after paying** (supporters only: the one place the orange juice is revealed) (`{drink}` follows the tier: "this sip", "this fifth of a cup" or "these two fifths of a cup"):
+- PRE **Title:** The coffee fund
+- PRE **Line:** Everyone who chipped in and wanted to be here, by rank.
+- SUPPORTER **Title** (their own view): The orange juice fund
+- SUPPORTER **Line:** Everyone who kept me in orange juice, by rank. Cheers.
+- PRE **Empty:** Nobody here yet. Any amount puts you at #1.
+- PRE **No name:** Anonymous
+- PRE **Report** (tap on a row): Report this
+- PRE **Report confirmation:** Thanks. We'll take a look.
 
-The tiers: the lowest price Play allows, then $1 and $2, with Play's rounding in local currency. A cup is about $5.
+## The amounts
 
-> Confession. I don't drink coffee.
->
-> Thanks for {drink} of orange juice.
+- PRE **Cadence:** One-time · Monthly (Monthly first)
+- PRE **Tiers**, each with Play's price:
+  - **A sip:** A little nudge.
+  - **A bigger sip:** Keeps the fixes coming.
+  - **Half a coffee:** A proper boost.
+  - **Custom** (one-time only): Your call.
+- PRE **Monthly note:** A month. Cancel any time in Google Play.
+- PRE **Custom sheet title:** How much coffee?
+- PRE **Custom readout:** ${n} · about {cups} cups (friendly fractions: "1 2/5 cups"; "about 1 cup" for one)
+- PRE **Over 5 cups:** That's a whole pot. I'll need a bigger table.
+- PRE **Rank preview:** This puts you at #{n}
+- PRE **Rank preview, already on the board:** This puts you at #{n}, up from #{m}
+- PRE **Pay button:** Chip in
 
-The orange rolls in and pours into the glass. The level represents cumulative support. The glass spills past one cup.
+## The thank-you
 
-**Supporters** (a separate screen linked from the support page)
+- SUPPORTER **Thank-you** (over the rising orange): Thank you! Fun fact: I don't actually drink coffee. But this means a lot.
 
-- **Title:** The coffee fund
-- **Line:** Our top 10 supporters.
-- **Supporters only** (someone who has paid, on their own view): **The orange juice fund**.
-- **Each row:** {rank}, {name}, and their message, if they left one. No name: "Anonymous".
-- **Empty:** Nobody here yet. The top spot is wide open.
-- **Privacy line:** Only your name, message and cups are shown. Remove yourself any time.
-- **Remove me:** Remove me
+## The opt-in, after the thank-you
 
-**After paying, the opt-in** (it skips straight to the thank-you if they don't want it):
+- SUPPORTER **Title:** Join the board?
+- SUPPORTER **Name field:** Your name (optional)
+- SUPPORTER **Message field:** A message (optional)
+- SUPPORTER **Limit line:**
+  - Top 3: Up to 120 characters. You've earned the room.
+  - Top 10: Up to 80 characters.
+  - Top 100: Up to 40 characters.
+  - Below the top 100: Your name only, for now. Move up for a message.
+- SUPPORTER **Button:** Add me
+- SUPPORTER **Second button:** Keep me anonymous
 
-- **Title:** Join the supporters?
-- **Line:** Put your name on the board, with a short message if you like.
-- **Name field:** Your name
-- **Message field:** A short message (optional)
-- **Button:** Add me
-- **Second button:** Keep me anonymous
+## Moving up
 
-## 2. The two-week popup
+- SUPPORTER **Invite:** You're in the top {tier} now. Want to add a longer message?
+- SUPPORTER **Its buttons:** Write more · Later
 
-Shown on the next app open after two weeks from first recorded keyboard use. The counts stay on the device. Show one prominent
-nonzero stat and up to two more. Opening the popup uses the one automatic appearance for that install.
+## Privacy
 
-**Title:** Two weeks with TitanKeys
+- PRE **Privacy line:** The board shows names, messages and rank only. Remove yourself any time.
+- SUPPORTER **Remove button:** Remove me
 
-**Lines:**
+## Errors
 
-> If TitanKeys has earned a coffee, you can buy it one.
-
-**Action:** Buy me a coffee
-
-**Dismiss:** Nah
-
-## 3. Settings
-
-**Row:** Support TitanKeys, above About. This is the only standing entry.
+- PRE **Billing unavailable:** Google Play can't take payments on this phone right now.
+- PRE **Play not ready yet:** Google Play isn't ready yet. Try again in a moment.
+- PRE **Offline:** You're offline, so the board can't load. (The rank preview hides.)

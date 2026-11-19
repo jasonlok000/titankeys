@@ -34,11 +34,13 @@ import java.util.IdentityHashMap
  */
 class RimeEngine(
     private val rime: RimeCalls,
+    /** Whether the compiled files for a schema are already installed. */
+    private val schemaReady: (RimeData, String) -> Boolean = { _, _ -> true },
     /** Puts the data in place under the folder it's given; true once it's there. */
     private val install: (RimeData) -> Boolean,
 ) : InputEngine {
     /** The engine the keyboard makes by name (InputEngines): the phone's Rime, with the data from the APK. */
-    constructor(context: Context) : this(RimeNative, RimeAssets.installer(context))
+    constructor(context: Context) : this(RimeNative, RimeAssets.schemaReadiness(context), RimeAssets.installer(context))
 
     /** TitanKeys' schemas, one per Chinese input method: an input method's `"engine": { "rime": "<id>" }`. */
     enum class Schema(val id: String) {
@@ -75,10 +77,12 @@ class RimeEngine(
             val selectBegan = System.nanoTime()
             timing = "Rime ${if (opening) "opened in $openMillis ms" else "open already"}, $id " +
                 if (selecting) "selected" else "selected already"
-            if (selecting && !select(id)) {
-                // An input method turned on after Rime opened (a warm engine keeps it open): its files come now, and Rime
-                // opens again with them, as a sync does, so the other engines select theirs again ([reopen]).
-                if (!reopen(rime, data, install) || !select(id)) return false
+            if (selecting) {
+                // Native selection can succeed with missing tables. Install them with Rime closed so it opens them afresh.
+                val effective = effective(id)
+                if (!schemaReady(data, effective) || !select(id)) {
+                    if (!reopen(rime, data, install) || !schemaReady(data, effective) || !select(id)) return false
+                }
             }
             if (selecting) timing += " in ${millisSince(selectBegan)} ms"
             // A restored backup's learned words merge in now ([RimeBackup]), once the schema has opened its dictionary.
@@ -105,7 +109,7 @@ class RimeEngine(
                 .getOrDefault(false)
             timing = "Rime opened in ${millisSince(began)} ms"
             val id = method.engineArg
-            if (open && id != null && schema == null && claimed(rime, this)) {
+            if (open && id != null && schema == null && claimed(rime, this) && schemaReady(data, effective(id))) {
                 val selectBegan = System.nanoTime()
                 if (select(id)) timing += ", $id selected in ${millisSince(selectBegan)} ms"
             }

@@ -216,5 +216,5 @@ test("a switch types with the warm engine, which keeps its schema, and the log s
   expect(languages).toContain('if (fromWarm != null) "the warm one" else "a new one"');
   expect(languages).toContain("its file $fileMillis ms, words and next words $wordsMillis ms");
   const engine = read("android/kotlin/com/titankeys/rime/RimeEngine.kt");
-  expect(engine).toContain("if (open && id != null && schema == null && claimed(rime, this)) {");
+  expect(engine).toContain("if (open && id != null && schema == null && claimed(rime, this) && schemaReady(data, effective(id))) {");
 });

@@ -62,7 +62,10 @@ test("the end opens no other page of the app", () => {
   // It is not an end-screen link: /end child pages must still return to the end.
   const leave = guide.slice(guide.indexOf("    private fun leave()"), guide.indexOf("    private fun keyName("));
   expect(leave).toContain('Connected.pageIntent(this, "/")');
-  const pages = [...guide.replace(leave, "").matchAll(/Connected\.pageIntent\(this, (\w+|"[^"]*")\)/g)].map(match => match[1]);
+  const invite = guide.slice(guide.indexOf("    private fun showSupportInvite()"), guide.indexOf("    /** Puts back what [kept]"));
+  expect(invite).toContain("if (playgroundFromEnd ||");
+  expect(invite).toContain('Connected.pageIntent(this, "/support")');
+  const pages = [...guide.replace(leave, "").replace(invite, "").matchAll(/Connected\.pageIntent\(this, (\w+|"[^"]*")\)/g)].map(match => match[1]);
   // The playground's own Guide button is the one other page link, and it's the playground's, not the end's.
   expect(pages.sort()).toEqual(["BORING_GUIDE", "page"].sort());
 });

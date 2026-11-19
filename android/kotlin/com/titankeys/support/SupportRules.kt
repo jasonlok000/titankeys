@@ -33,8 +33,11 @@ internal fun ByteArray.toHex() = joinToString("") { "%02x".format(it.toInt() and
 
 internal object SupportCard {
     const val WAIT_MILLIS = 14L * 24 * 60 * 60 * 1000
-    fun due(now: Long, firstRun: Long, seen: Boolean) =
-        !seen && firstRun > 0 && now >= firstRun && now - firstRun >= WAIT_MILLIS
+    fun due(now: Long, firstUse: Long, seen: Boolean) =
+        !seen && firstUse > 0 && now >= firstUse && now - firstUse >= WAIT_MILLIS
+
+    /** The first available count leads. At most two other counts follow in the same order. */
+    fun displayed(counts: LongArray) = counts.withIndex().filter { it.value > 0 }.take(3)
 }
 
 internal data class SupportCredit(val id: String, val productId: String, val quantity: Int,

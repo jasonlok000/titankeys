@@ -36,11 +36,13 @@ class RimeEngine(
     private val rime: RimeCalls,
     /** Whether the compiled files for a schema are already installed. */
     private val schemaReady: (RimeData, String) -> Boolean = { _, _ -> true },
+    private val hasUnusedAssets: (RimeData) -> Boolean = { false },
     /** Puts the data in place under the folder it's given; true once it's there. */
     private val install: (RimeData) -> Boolean,
 ) : InputEngine {
     /** The engine the keyboard makes by name (InputEngines): the phone's Rime, with the data from the APK. */
-    constructor(context: Context) : this(RimeNative, RimeAssets.schemaReadiness(context), RimeAssets.installer(context))
+    constructor(context: Context) : this(RimeNative, RimeAssets.schemaReadiness(context), RimeAssets.unusedAssets(context),
+        RimeAssets.installer(context))
 
     /** TitanKeys' schemas, one per Chinese input method: an input method's `"engine": { "rime": "<id>" }`. */
     enum class Schema(val id: String) {
@@ -73,14 +75,15 @@ class RimeEngine(
                 .getOrDefault(false)
             val openMillis = millisSince(began)
             if (!open) return false
-            val selecting = schema != id || seen != syncs
+            val prune = hasUnusedAssets(data)
+            val selecting = prune || schema != id || seen != syncs
             val selectBegan = System.nanoTime()
             timing = "Rime ${if (opening) "opened in $openMillis ms" else "open already"}, $id " +
                 if (selecting) "selected" else "selected already"
             if (selecting) {
                 // Native selection can succeed with missing tables. Install them with Rime closed so it opens them afresh.
                 val effective = effective(id)
-                if (!schemaReady(data, effective) || !select(id)) {
+                if (prune || !schemaReady(data, effective) || !select(id)) {
                     if (!reopen(rime, data, install) || !schemaReady(data, effective) || !select(id)) return false
                 }
             }

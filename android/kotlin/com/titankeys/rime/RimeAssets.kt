@@ -19,9 +19,7 @@ object RimeAssets {
         return { data ->
             val manifest = assets.open(RimeData.MANIFEST).bufferedReader().use { it.readText() }
             val groups = schemaFiles(app)
-            // With no Chinese input method on, as when one starts before Settings has saved it, or the keyboard hasn't said
-            // which are, every schema's files.
-            val schemas = runCatching { schemasOn(app) }.getOrDefault(emptySet()).ifEmpty { groups?.keys.orEmpty() }
+            val schemas = enabledSchemas(app, groups.orEmpty())
             data.install(manifest, groups, schemas) { path -> assets.open("${RimeData.ASSETS}/$path") }
         }
     }
@@ -36,6 +34,17 @@ object RimeAssets {
             files == null || files[schema]?.let(data::hasSchemaFiles) == true
         }
     }
+
+    /** When a warm schema starts again, the files it no longer needs can go after closing its native session. */
+    fun unusedAssets(context: Context): (RimeData) -> Boolean {
+        val app = context.applicationContext
+        val groups by lazy { schemaFiles(app).orEmpty() }
+        return { data -> runCatching { data.hasUnusedSchemaFiles(groups, enabledSchemas(app, groups)) }.getOrDefault(false) }
+    }
+
+    private fun enabledSchemas(context: Context, groups: Map<String, Set<String>>): Set<String> =
+        // If no saved Chinese methods are available yet, install every schema.
+        runCatching { schemasOn(context) }.getOrDefault(emptySet()).ifEmpty { groups.keys }
 
     private fun schemaFiles(context: Context): Map<String, Set<String>>? = runCatching {
         context.assets.open(RimeData.SCHEMAS).bufferedReader().use { RimeData.groups(it.readText()) }

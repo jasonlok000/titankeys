@@ -1685,7 +1685,7 @@ class TitanKeysIme : InputMethodService() {
         clearSettlements()
         modifiers.fieldStarted(restarting, editing, samePosition)
         deadKeyPending = false
-        readSettings()
+        readSettings(reconcileRimeAssets = editing && code == null)
         if (editing && !restarting) rememberEnterApp(info)
         if (!restarting) rememberApp(info)
         cancelShowStrip()
@@ -1737,21 +1737,21 @@ class TitanKeysIme : InputMethodService() {
         updateHold()
     }
 
-    private fun refreshFieldMethods() {
+    private fun refreshFieldMethods(reconcileRimeAssets: Boolean = false) {
         // The guide's lessons teach English, so they type it whatever input method is on. The playground is free practice: it
         // types in the input methods that are on, and a held Sym opens the switcher there (owner, 2026-11-17: "long press for
         // sym doesn't trigger the language selection in the playground").
         languages.englishOnly = inGuide
         val info = currentInputEditorInfo
         val sample = if (editing) PracticeInputMethod.requested(info?.packageName, packageName, info?.privateImeOptions) else null
-        languages.refresh(sample)
+        languages.refresh(sample, reconcileRimeAssets)
         // Which input methods are on may have changed, and with them the mark at Q.
         if (::languages.isInitialized) showInputMark()
     }
 
     /** Puts the saved settings to use. A field start does this, and so does a change that must apply in the field that is open. */
-    private fun readSettings() {
-        refreshFieldMethods()
+    private fun readSettings(reconcileRimeAssets: Boolean = false) {
+        refreshFieldMethods(reconcileRimeAssets)
         languages.variant()
         val english = languages.current.isEnglish
         // Each input method's own sentence ends and opening marks, for capitals and spaces (Greek's ;, Hindi's ।, Spanish's ¿¡).

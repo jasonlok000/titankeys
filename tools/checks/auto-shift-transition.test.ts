@@ -23,7 +23,7 @@ test("a field gets its own automatic Shift before replaying saved physical keys"
   const start = body("onStartInput");
   ordered(start, "samePosition", "refreshesShift == true", "loadGate.takeKeys(pendingInput)");
   ordered(start,
-    "readSettings()",
+    "readSettings(reconcileRimeAssets = editing && code == null)",
     "composer.start(field, info.initialSelStart, info.initialSelEnd)",
     "refreshAutoShiftBeforeKeys()",
     "pendingInput.addAll(held)",

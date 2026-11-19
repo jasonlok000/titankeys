@@ -6,6 +6,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import com.titankeys.engine.TypingSettings
+import com.titankeys.rime.RimeEngine
 
 /**
  * The keyboard's input methods while it runs (docs/languages.md): which are on, which one types now, and its word list,
@@ -104,21 +105,24 @@ internal class Languages(
     /** An enabled method selected for the current Try it editor instead of the saved method. */
     var practising = false
         private set
+    private var rimeAssetsPending = false
 
     /**
      * Reads which input methods are on and which types now, as a field starts: Settings or a restore may have changed them.
      * An enabled sample method applies to its editor only. Otherwise the setting decides, unless Android's keyboard list
      * picked another since the keyboard last set it ([KeyboardListSync]).
      */
-    fun refresh(sampleId: String? = null) {
+    fun refresh(sampleId: String? = null, reconcileRimeAssets: Boolean = false) {
         val index = InputMethodList.index(context)
         val setting = TypingSettings.inputMethods(context)
-        on = index.on(setting)
+        val enabled = index.on(setting)
+        if (on.any { old -> old.engine == RimeEngine.ENGINE && enabled.none { it.id == old.id } }) rimeAssetsPending = true
+        on = enabled
         warmUp()
         val sample = PracticeInputMethod.enabled(sampleId, on)
         practising = sample != null
         if (sample != null) {
-            if (sample.id != target || variantChanged(sample.id)) use(sample.id)
+            refreshChoice(sample.id, reconcileRimeAssets)
             return
         }
         val picked = sync.heard(android())
@@ -131,7 +135,7 @@ internal class Languages(
             lastLogged = line
             Log.i(LOG_TAG, line)
         }
-        if (choice.id != target || variantChanged(choice.id)) use(choice.id)
+        refreshChoice(choice.id, reconcileRimeAssets)
         // Android's keyboard list shows one entry for TitanKeys, the input method typing now, under its name; languages switch
         // inside the keyboard (owner, 2026-11-16). A restore or Settings may have left it otherwise: checked at every field start.
         val shown = listOf(choice.id)
@@ -143,6 +147,14 @@ internal class Languages(
         }
     }
     private var lastLogged: String? = null
+
+    private fun refreshChoice(id: String, reconcileRimeAssets: Boolean) {
+        // Reopening Rime loses its code. Reuse the ordinary loader only after the editor has reset the engine.
+        val prune = reconcileRimeAssets && rimeAssetsPending && !englishOnly && !loadingNow && isRime(id)
+        if (id != target || variantChanged(id) || prune) use(id)
+    }
+
+    private fun isRime(id: String) = on.any { it.id == id && it.engine == RimeEngine.ENGINE }
 
     /**
      * Android says its keyboard list's entry is [id]: as the keyboard starts, or when it was picked there. A pick of an input
@@ -238,6 +250,7 @@ internal class Languages(
     }
 
     private fun use(id: String) {
+        if (isRime(id)) rimeAssetsPending = false
         target = id
         val ticket = ++loading
         val listTicket = slot.begin(id)

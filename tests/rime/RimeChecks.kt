@@ -41,6 +41,7 @@ fun main(args: Array<String>) {
     switchingInputMethodsKeepsRimeOpen()
     anInputMethodTurnedOnWhileRimeIsOpenStarts()
     nativeSchemaSelectionCanSucceedWithoutItsDictionary(args.firstOrNull() ?: "android/assets/im")
+    aWarmSchemaDropsOnlyFilesNoEnabledSchemaUses()
     theWarmEngineHasYaleReady()
     theChineseInputMethodsAreRimes(args.firstOrNull())
     theBackupTakesRimesSnapshots()
@@ -561,8 +562,8 @@ fun nativeSchemaSelectionCanSucceedWithoutItsDictionary(methods: String) {
         rime.installed = on.toSet()
         true
     }
-    val warm = RimeEngine(rime, ready, install)
-    val cangjie = RimeEngine(rime, ready, install)
+    val warm = RimeEngine(rime, ready, install = install)
+    val cangjie = RimeEngine(rime, ready, install = install)
     try {
         check(warm.warm(method("tk_yale"), root), "Yale warms Rime with its own files")
         check(!ready(data, "tk_cangjie"), "none of Cangjie's unshared tables was copied for Yale alone")
@@ -577,6 +578,51 @@ fun nativeSchemaSelectionCanSucceedWithoutItsDictionary(methods: String) {
     } finally {
         cangjie.stop()
         warm.stop()
+        root.deleteRecursively()
+    }
+}
+
+/** Disabling another method must also reclaim its data when the current schema stays selected. */
+fun aWarmSchemaDropsOnlyFilesNoEnabledSchemaUses() {
+    val root = kotlin.io.path.createTempDirectory("tk-rime-warm-prune").toFile()
+    val data = RimeData(root)
+    val common = "default.yaml"
+    val pinyin = "pinyin.table.bin"
+    val cantonese = "cantonese.table.bin"
+    val yale = "yale.prism.bin"
+    val jyutping = "jyutping.prism.bin"
+    val files = listOf(common, pinyin, cantonese, yale, jyutping).associateWith { it.toByteArray() }
+    val groups = mapOf("tk_pinyin" to setOf(pinyin), "tk_yale" to setOf(cantonese, yale),
+        "tk_jyutping" to setOf(cantonese, jyutping))
+    val enabled = groups.keys.toMutableSet()
+    val rime = FakeRime()
+    val engine = RimeEngine(rime, hasUnusedAssets = { it.hasUnusedSchemaFiles(groups, enabled) }) {
+        it.install(manifest(files), groups, enabled) { path -> files.getValue(path).inputStream() }
+    }
+    try {
+        engine.variant(ChineseVariant.HongKong)
+        check(engine.start(method("tk_pinyin"), root), "Pinyin starts while all three methods are on")
+        val learned = File(data.user, "learned.fixture").apply { writeText("kept") }
+        check(!data.hasUnusedSchemaFiles(groups, enabled), "the current asset set is already good")
+        enabled.remove("tk_yale")
+        check(data.hasUnusedSchemaFiles(groups, enabled), "Yale's own prism can go")
+        check(engine.start(method("tk_pinyin"), root), "warm Pinyin starts again with Yale off")
+        check(!File(data.shared, yale).exists(), "Yale's own prism was removed from the warm session")
+        check(data.hasSchemaFiles(setOf(cantonese, jyutping)), "Jyutping still needs the shared Cantonese table")
+        enabled.remove("tk_jyutping")
+        check(engine.start(method("tk_pinyin"), root), "warm Pinyin starts again with Jyutping off")
+        check(!File(data.shared, cantonese).exists() && !File(data.shared, jyutping).exists(), "last Cantonese method's files went")
+        check(data.hasSchemaFiles(setOf(common, pinyin)), "shared and Pinyin files stay")
+        check(!data.hasUnusedSchemaFiles(groups, enabled), "no unused files remain")
+        same("kept", learned.readText(), "learned data stays through reopen")
+        type(engine, "ni")
+        same("NI0", engine.space().commit, "the kept schema types after reopening")
+        val closes = rime.calls.count { it == "close" }
+        same(2, closes, "one native reopen for each smaller installed set")
+        check(engine.start(method("tk_pinyin"), root), "another unchanged start works")
+        same(closes, rime.calls.count { it == "close" }, "no reopen for an unchanged set")
+    } finally {
+        engine.stop()
         root.deleteRecursively()
     }
 }

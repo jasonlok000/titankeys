@@ -28,6 +28,13 @@ class RimeData(private val root: File) {
         File(shared, path).let { it.isFile && it.canRead() }
     }
 
+    /** Files of disabled schemas that no enabled schema still needs. */
+    fun hasUnusedSchemaFiles(groups: Map<String, Set<String>>, schemas: Set<String>): Boolean {
+        val used = schemas.flatMap { groups[it].orEmpty() }.toSet()
+        val unused = groups.values.flatten().toSet() - used
+        return unused.isNotEmpty() && installedFiles().keys.any { it in unused && File(shared, it).isFile }
+    }
+
     /** Rime's own snapshots of the learned words ([RimeBackup]), in its sync folder, named by [INSTALLATION]. */
     val snapshots get() = File(user, "sync/$INSTALLATION")
 

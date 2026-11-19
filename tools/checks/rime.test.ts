@@ -218,3 +218,18 @@ test("a switch types with the warm engine, which keeps its schema, and the log s
   const engine = read("android/kotlin/com/titankeys/rime/RimeEngine.kt");
   expect(engine).toContain("if (open && id != null && schema == null && claimed(rime, this) && schemaReady(data, effective(id))) {");
 });
+
+test("same-method cleanup waits for a field start that did not preserve a Rime code", () => {
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+  const start = ime.slice(ime.indexOf("override fun onStartInput("), ime.indexOf("private fun refreshFieldMethods("));
+  expect(start).toMatch(/if \(code == null\) languages\.engine\?\.reset\(\)[\s\S]*readSettings\(reconcileRimeAssets = editing && code == null\)/);
+  expect(start).toMatch(/if \(code != null && !languages\.loadingNow[\s\S]*showPicker\(code\)/);
+  expect(ime.match(/readSettings\(reconcileRimeAssets = /g)).toHaveLength(1);
+  expect(ime).toContain("private fun refreshFieldMethods(reconcileRimeAssets: Boolean = false)");
+  expect(ime).toContain("private fun readSettings(reconcileRimeAssets: Boolean = false)");
+
+  const languages = read("android/kotlin/com/titankeys/keyboard/Languages.kt");
+  expect(languages).toContain("old.engine == RimeEngine.ENGINE && enabled.none { it.id == old.id } }) rimeAssetsPending = true");
+  expect(languages).toContain("reconcileRimeAssets && rimeAssetsPending && !englishOnly && !loadingNow && isRime(id)");
+  expect(languages).toContain("if (id != target || variantChanged(id) || prune) use(id)");
+});

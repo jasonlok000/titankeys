@@ -152,7 +152,7 @@ test("changing the enabled methods refreshes the mark and open picker in the cur
   expect(update).toContain("refreshFieldMethods()");
   expect(update).not.toContain("LanguagePicker.Choices");
   expect(update).toContain("SwitchOverlay.refreshedRow(on, open.opened)");
-  expect(body(ime, "refreshFieldMethods")).toContain("languages.refresh(sample)");
+  expect(body(ime, "refreshFieldMethods")).toContain("languages.refresh(sample, reconcileRimeAssets)");
   expect(body(ime, "refreshFieldMethods")).toContain("showInputMark()");
   expect(body(ime, "onDestroy")).toContain("main.removeCallbacks(methodsChanged)");
 });

@@ -1,3 +1,12 @@
+        <activity android:name="com.titankeys.keyboard.OnDeviceTestsActivity"
+            android:label="TitanKeys On-device Tests" android:exported="true"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
+            android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name="com.titankeys.keyboard.RecorderActivity"
             android:label="TitanKeys Recorder"

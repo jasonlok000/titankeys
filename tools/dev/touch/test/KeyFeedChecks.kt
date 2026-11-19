@@ -28,6 +28,13 @@ fun main() {
     same("past 15 s is refused", plan("D 0 Q;U 15001 Q"), null)
     same("a bad name is refused", plan("D 0 q"), null)
     same("nothing is refused", plan(""), null)
+    for (case in OnDeviceTestCases.entries) {
+        val events = KeyFeedPlan.read(case.keys, 400, 50)
+        same("${case.name} fits its on-device observation window",
+            events != null && events.isNotEmpty() && events.last().millis < OnDeviceTestCases.SETTLE_MILLIS, true)
+        same("${case.name} has a valid editor position", case.cursor in 0..case.text.length, true)
+        same("${case.name} has no repeated keys", events?.none { it.repeat != 0 }, true)
+    }
     if (failed > 0) {
         println("$failed key feed checks failed")
         kotlin.system.exitProcess(1)

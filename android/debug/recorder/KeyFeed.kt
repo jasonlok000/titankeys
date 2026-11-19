@@ -27,23 +27,28 @@ import android.view.ViewConfiguration
 class KeyFeed : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (!context.packageName.endsWith(".debug")) return
+        answer(queue(context, intent))
+    }
+
+    internal fun queue(context: Context, intent: Intent): String {
+        require(context.packageName.endsWith(".debug"))
         val dispatch = KeyFeedHook.dispatch
         val editor = dispatch?.let { FeedEditor.capture(context.packageName) }
         if (intent.getBooleanExtra(FeedBurst.VERIFY_ONLY, false))
-            return answer(FeedBurst.probeAtUptime(editor != null))
-        if (dispatch == null) return answer("no Debug keyboard hook")
-        if (editor == null) return answer("no focused active Debug editor")
+            return FeedBurst.probeAtUptime(editor != null)
+        if (dispatch == null) return "no Debug keyboard hook"
+        if (editor == null) return "no focused active Debug editor"
         val steps = KeyFeedPlan.read(intent.getStringExtra("keys").orEmpty(), ViewConfiguration.getKeyRepeatTimeout().toLong(),
-            ViewConfiguration.getKeyRepeatDelay().toLong()) ?: return answer("bad keys")
+            ViewConfiguration.getKeyRepeatDelay().toLong()) ?: return "bad keys"
         val codes = steps.map { it.name }.distinct().associateWith { KeyEvent.keyCodeFromString("KEYCODE_$it") }
-        codes.entries.firstOrNull { it.value == KeyEvent.KEYCODE_UNKNOWN }?.let { return answer("no key called ${it.key}") }
+        codes.entries.firstOrNull { it.value == KeyEvent.KEYCODE_UNKNOWN }?.let { return "no key called ${it.key}" }
         val device = keyboard(context)
-        val start = FeedBurst.startTime(intent, KeyFeedPlan.MAX_MILLIS) ?: return answer("start_uptime out of range")
+        val start = FeedBurst.startTime(intent, KeyFeedPlan.MAX_MILLIS) ?: return "start_uptime out of range"
         val downTimes = HashMap<Int, Long>()
         val burst = FeedBurst("key", editor, dispatch, { KeyFeedHook.dispatch }) {
             if (downTimes.isNotEmpty()) KeyFeedHook.cancelHeld?.invoke(downTimes)
         }
-        if (!burst.begin()) return answer("Debug editor changed before queueing")
+        if (!burst.begin()) return "Debug editor changed before queueing"
         for ((index, step) in steps.withIndex()) {
             burst.post(start + step.millis, index == steps.lastIndex) { send ->
                 val now = SystemClock.uptimeMillis()
@@ -57,7 +62,7 @@ class KeyFeed : BroadcastReceiver() {
                 Log.d(TAG, "key feed: $step ${if (taken) "taken by the keyboard" else "on to the app"}")
             }
         }
-        answer("queued ${steps.size} key events, ${steps.last().millis} ms, on device ${device?.id ?: "none (no $DEVICE)"}; ${FeedBurst.READY}")
+        return "queued ${steps.size} key events, ${steps.last().millis} ms, on device ${device?.id ?: "none (no $DEVICE)"}; ${FeedBurst.READY}"
     }
 
     private fun answer(text: String) {

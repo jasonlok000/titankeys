@@ -960,3 +960,9 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - The owner approved replacing the Playground banner with one large popup. It appears once on opening the app after fourteen days from the first recorded keyboard use. Keep prior dismissals. The one standing link is Settings > About > Support TitanKeys.
 - The popup leads with up to three nonzero stats from the device. Use a coffee cup and a short steam trace. The support screen animates the amount in one cup. Monthly opens first, one-time shares the same three choices, and custom amounts and the supporters board each open on their own screen.
 - Read the board when its screen opens. Reveal the orange juice after the purchase, with a glass that fills to the cumulative amount and spills past one cup.
+
+## Codex (2026-11-19, support review)
+
+- The owner moved Support TitanKeys directly above About in Settings and asked for a takeaway cup in TitanKeys' keyboard style.
+- Use A sip, A bigger sip, Half a coffee, and Custom on the same screen. These are display names. Use the localized price from Google Play for checkout.
+- Lead with the Coffee Fund. The visible ranking shows place, name, and optional message. The Debug preview uses labeled sample rankings and sample prices, and its test checkout plays the orange juice reveal without Billing.

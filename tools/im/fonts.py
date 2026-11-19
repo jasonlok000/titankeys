@@ -102,6 +102,18 @@ def howto_text():
     return out
 
 
+def keymap_text():
+    """Legends drawn from the generated guide, including the explicit Shift and hold layers."""
+    for path in glob.glob(os.path.join(ROOT, "android", "assets", "im", "*", "im.json")):
+        with open(path, encoding="utf-8") as f:
+            keys = json.load(f).get("guide", {}).get("keys", {})
+        for layer in ("map", "shift", "held", "heldShift", "accents"):
+            for legend in keys.get(layer, {}).values():
+                yield legend
+                if keys.get("capitals"):
+                    yield legend.upper()
+
+
 def cjk_in_text():
     """Every Hangul and Chinese character in the input methods' names and in the app's own text."""
     index = json.load(open(os.path.join(ROOT, "android", "assets", "im", "index.json"), encoding="utf-8"))
@@ -202,7 +214,7 @@ def add_missing(font, codes, sources):
             count += add_glyphs(font, path, sorted(available))
             wanted.difference_update(available)
     if wanted:
-        sys.exit("U+%04X in a how-to is in none of the sources: give Noto Sans Devanagari, or add a source" % min(wanted))
+        sys.exit("U+%04X used by Settings is in none of the sources: give Noto Sans Devanagari, or add a source" % min(wanted))
     return count
 
 
@@ -210,6 +222,8 @@ def main():
     inter, georgian, cjk = sys.argv[1], sys.argv[2], sys.argv[3]
     devanagari = sys.argv[4] if len(sys.argv) > 4 else None
     hangul, han = cjk_in_text()
+    labels = [*howto_text(), *keymap_text()]
+    label_codes = {ord(c) for text in labels for c in text if not c.isspace() and ord(c) > 0x7F}
     for weight in ("Regular", "Medium"):
         font = cut(os.path.join(inter, "Inter-%s.otf" % weight))
         georgian_path = os.path.join(georgian, "NotoSansGeorgian-%s.ttf" % weight)
@@ -221,18 +235,17 @@ def main():
         add_glyphs(font, os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight), names_in(is_hebrew))
         count_hangul = add_glyphs(font, os.path.join(cjk, "NotoSansKR-%s.otf" % weight), hangul)
         count_han = add_missing(font, han, cjk_paths)
-        # The remaining language copy needs kana, Hebrew, Devanagari, Bopomofo and other outlines.
-        howto_codes = {ord(c) for chunk in howto_text() for c in chunk if not c.isspace() and ord(c) > 0x7F}
+        # The remaining language copy and keymaps need kana, Hebrew, Devanagari, Bopomofo and other outlines.
         with tempfile.TemporaryDirectory() as temp:
-            count_howto = add_missing(font, howto_codes, [
+            count_labels = add_missing(font, label_codes, [
                 os.path.join(inter, "Inter-%s.otf" % weight), georgian_path,
                 os.path.join(georgian, "NotoSansThai-%s.ttf" % weight),
                 os.path.join(georgian, "NotoSansHebrew-%s.ttf" % weight), *cjk_paths,
                 devanagari_font(devanagari, weight, temp) if devanagari else None])
         out = os.path.join(ROOT, "assets", "fonts", "Inter-%s.otf" % weight)
         font.save(out)
-        print("%s: %d glyphs, %d Georgian, %d Hangul, %d Chinese, %d more for the how-tos, %d bytes"
-              % (out, len(font.getGlyphOrder()), count, count_hangul, count_han, count_howto, os.path.getsize(out)))
+        print("%s: %d glyphs, %d Georgian, %d Hangul, %d Chinese, %d more for how-tos and keymaps, %d bytes"
+              % (out, len(font.getGlyphOrder()), count, count_hangul, count_han, count_labels, os.path.getsize(out)))
 
 
 if __name__ == "__main__":

@@ -966,3 +966,8 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - The owner moved Support TitanKeys directly above About in Settings and asked for a takeaway cup in TitanKeys' keyboard style.
 - Use A sip, A bigger sip, Half a coffee, and Custom on the same screen. These are display names. Use the localized price from Google Play for checkout.
 - Lead with the Coffee Fund. The visible ranking shows place, name, and optional message. The Debug preview uses labeled sample rankings and sample prices, and its test checkout plays the orange juice reveal without Billing.
+
+## Codex (2026-11-19, key previews and keymaps)
+
+- Show a resting key preview and its setting only for input methods whose key map changes the printed letters. Keep the existing previews on those methods and keep long-press accents available.
+- The Settings keymaps use the bundled fonts for their legends. Include every mapped, Shift, and held key in both font weights, including the Quick and Cangjie radicals.

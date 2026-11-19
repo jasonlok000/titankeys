@@ -5,9 +5,12 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PathMeasure
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -20,7 +23,6 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.widget.Button
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -28,15 +30,13 @@ import com.titankeys.keyboard.GuideFonts
 import com.titankeys.keyboard.GuideMotion
 import com.titankeys.keyboard.Haptic
 import com.titankeys.keyboard.Haptics
-import com.titankeys.keyboard.R
+import com.titankeys.keyboard.Layout
 import com.titankeys.keyboard.Radii
 import com.titankeys.keyboard.onPress
 import java.text.NumberFormat
-import kotlin.math.PI
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
-/** The playground's once-only invitation. The photo is decorative, so the stats and actions stay native and readable. */
+/** The playground's once-only invitation. The illustration is decorative, so the stats and actions stay readable. */
 internal class SupportInviteView(
     context: Context,
     totals: LongArray,
@@ -46,7 +46,7 @@ internal class SupportInviteView(
 ) : FrameLayout(context) {
     private val format = NumberFormat.getIntegerInstance()
     private val scrim = ColorDrawable(Color.BLACK)
-    private val steam = SupportSteamView(context)
+    private val art = SupportInviteArt(context)
     private var scrimFade: ValueAnimator? = null
     private val card = ScrollView(context).apply {
         background = shape(ESPRESSO, Radii.LARGE)
@@ -67,7 +67,7 @@ internal class SupportInviteView(
 
         val panel = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            addView(art(), LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+            addView(art, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         }
         card.addView(panel)
         val content = LinearLayout(context).apply {
@@ -137,28 +137,9 @@ internal class SupportInviteView(
                     addUpdateListener { scrim.alpha = it.animatedValue as Int }
                     start()
                 }
-                steam.sweepOnce()
+                art.sweepOnce()
             }
         })
-    }
-
-    private fun art() = object : FrameLayout(context) {
-        init {
-            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-            addView(ImageView(context).apply {
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                setImageResource(R.drawable.support_coffee)
-            }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-            addView(steam, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-            addView(View(context).apply {
-                background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(ESPRESSO_CLEAR, ESPRESSO))
-            }, LayoutParams(LayoutParams.MATCH_PARENT, dp(42), Gravity.BOTTOM))
-        }
-
-        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            val height = (MeasureSpec.getSize(widthMeasureSpec) * 0.4f).roundToInt()
-            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY))
-        }
     }
 
     private fun stat(metric: IndexedValue<Long>, hero: Boolean): LinearLayout {
@@ -226,8 +207,6 @@ internal class SupportInviteView(
 
     private companion object {
         const val TITLE = "Two weeks with TitanKeys"
-        const val ESPRESSO = 0xFF21130F.toInt()
-        const val ESPRESSO_CLEAR = 0x0021130F
         const val CREAM = 0xFFFFF2DC.toInt()
         const val AMBER = 0xFFFFBB76.toInt()
         const val MUTED = 0xFFCDB3A0.toInt()
@@ -236,26 +215,72 @@ internal class SupportInviteView(
     }
 }
 
-/** A short highlight follows the curl already in the photograph, like a swipe there and gone. */
-private class SupportSteamView(context: Context) : View(context) {
-    private val curl = PathMeasure()
-    private val highlight = Path()
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFFFC991.toInt()
+private const val ESPRESSO = 0xFF21130F.toInt()
+
+/** The guide's physical keys in the background, with a swipe that curls into steam behind the cup. */
+private class SupportInviteArt(context: Context) : View(context) {
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val keyLabel = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF8C8077.toInt()
+        textSize = 8f
+        textAlign = Paint.Align.CENTER
+        typeface = GuideFonts.medium(context)
+    }
+    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val backdrop = RadialGradient(227f, 72f, 145f, 0xFF593321.toInt(), ESPRESSO, Shader.TileMode.CLAMP)
+    private val footer = LinearGradient(0f, 120f, 0f, HEIGHT, 0x0021130F, ESPRESSO, Shader.TileMode.CLAMP)
+    private val paper = LinearGradient(183f, 0f, 264f, 0f, 0xFFE6C5A9.toInt(), 0xFFFFF0D7.toInt(), Shader.TileMode.CLAMP)
+    private val cardboard = LinearGradient(183f, 0f, 264f, 0f, 0xFFB84F24.toInt(), 0xFFF69951.toInt(), Shader.TileMode.CLAMP)
+    private val trailColour = LinearGradient(87f, 124f, 260f, 10f, 0xFFF07C37.toInt(), 0xFFFFD2A1.toInt(), Shader.TileMode.CLAMP)
+    private val trail = Path().apply {
+        moveTo(87f, 124f)
+        cubicTo(111f, 125f, 122f, 96f, 145f, 94f)
+        cubicTo(166f, 92f, 173f, 110f, 191f, 96f)
+        cubicTo(207f, 83f, 211f, 57f, 224f, 42f)
+        cubicTo(235f, 29f, 260f, 35f, 260f, 21f)
+        cubicTo(260f, 15f, 254f, 11f, 247f, 10f)
+    }
+    private val trailMeasure = PathMeasure(trail, false)
+    private val highlight = Path()
+    private val cup = Path().apply {
+        moveTo(184f, 51f)
+        lineTo(264f, 51f)
+        lineTo(253f, 136f)
+        quadTo(251f, 143f, 244f, 144f)
+        quadTo(224f, 148f, 204f, 144f)
+        quadTo(197f, 143f, 195f, 136f)
+        close()
+    }
+    private val sleeve = Path().apply {
+        moveTo(181f, 76f)
+        quadTo(224f, 82f, 267f, 76f)
+        lineTo(261f, 119f)
+        quadTo(224f, 126f, 187f, 119f)
+        close()
+    }
+    private val lid = Path().apply {
+        moveTo(181f, 46f)
+        lineTo(187f, 39f)
+        quadTo(189f, 36f, 195f, 36f)
+        lineTo(253f, 36f)
+        quadTo(259f, 36f, 261f, 39f)
+        lineTo(267f, 46f)
+        close()
     }
     private var sweep: ValueAnimator? = null
     private var progress = 0f
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        val curve = Path().apply {
-            moveTo(w * .477f, h * .408f)
-            cubicTo(w * .438f, h * .325f, w * .456f, h * .249f, w * .503f, h * .208f)
-            cubicTo(w * .546f, h * .168f, w * .578f, h * .147f, w * .572f, h * .098f)
-            cubicTo(w * .571f, h * .071f, w * .550f, h * .044f, w * .528f, h * .024f)
-        }
-        curl.setPath(curve, false)
+    init {
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        setMeasuredDimension(width, (width * HEIGHT / WIDTH).roundToInt())
     }
 
     fun sweepOnce() {
@@ -273,17 +298,97 @@ private class SupportSteamView(context: Context) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
+        val saved = canvas.save()
+        canvas.scale(width / WIDTH, height / HEIGHT)
+        fill.shader = backdrop
+        canvas.drawRect(0f, 0f, WIDTH, HEIGHT, fill)
+        fill.shader = null
+        drawKeys(canvas)
+        fill.shader = footer
+        canvas.drawRect(0f, 120f, WIDTH, HEIGHT, fill)
+        fill.shader = null
+        drawTrail(canvas)
+        drawCup(canvas)
+        canvas.restoreToCount(saved)
+    }
+
+    private fun drawKeys(canvas: Canvas) {
+        val saved = canvas.save()
+        canvas.translate(44f, 67f)
+        canvas.rotate(-9f, 156f, 40f)
+        for ((row, keys) in Layout.rows.withIndex()) {
+            var left = 0f
+            val top = row * 23f
+            for ((column, key) in keys.withIndex()) {
+                val span = 31f * if (row == 3) Layout.bottomWidths[column] else 1f
+                val right = left + span - 4f
+                fill.color = 0xFF100D0B.toInt()
+                canvas.drawRoundRect(left, top + 2f, right, top + 21f, 4f, 4f, fill)
+                fill.color = 0xFF302822.toInt()
+                canvas.drawRoundRect(left, top, right, top + 18f, 4f, 4f, fill)
+                fill.color = 0xFF211C19.toInt()
+                canvas.drawRoundRect(left + 1f, top + 1f, right - 1f, top + 17f, 3f, 3f, fill)
+                val centre = (left + right) / 2f
+                if (key == Layout.SPACE) {
+                    fill.color = keyLabel.color
+                    canvas.drawRoundRect(centre - 8f, top + 9f, centre + 8f, top + 10.5f, 1f, 1f, fill)
+                } else {
+                    canvas.drawText(key, centre, top + 12f, keyLabel)
+                }
+                left += span
+            }
+        }
+        canvas.restoreToCount(saved)
+    }
+
+    private fun drawTrail(canvas: Canvas) {
+        stroke.color = 0x44F07C37
+        stroke.strokeWidth = 7f
+        canvas.drawPath(trail, stroke)
+        stroke.shader = trailColour
+        stroke.alpha = 255
+        stroke.strokeWidth = 2.2f
+        canvas.drawPath(trail, stroke)
+        stroke.shader = null
+        fill.color = 0xFFF07C37.toInt()
+        canvas.drawCircle(87f, 124f, 3.4f, fill)
+
         if (progress <= 0f || progress >= 1f) return
-        val front = curl.length * progress * 1.25f
+        val front = trailMeasure.length * progress * 1.2f
         highlight.rewind()
-        if (!curl.getSegment((front - curl.length * .25f).coerceAtLeast(0f), front, highlight, true)) return
-        val glow = sin(progress * PI)
-        paint.strokeWidth = width * .005f
-        paint.alpha = (20 * glow).roundToInt()
-        canvas.drawPath(highlight, paint)
-        paint.strokeWidth = width * .002f
-        paint.alpha = (82 * glow).roundToInt()
-        canvas.drawPath(highlight, paint)
+        if (!trailMeasure.getSegment((front - trailMeasure.length * .2f).coerceAtLeast(0f), front, highlight, true)) return
+        stroke.color = 0xFFFFE9C6.toInt()
+        stroke.strokeWidth = 3.2f
+        canvas.drawPath(highlight, stroke)
+    }
+
+    private fun drawCup(canvas: Canvas) {
+        fill.color = 0x660A0706
+        canvas.drawOval(172f, 136f, 276f, 153f, fill)
+        fill.shader = paper
+        fill.alpha = 255
+        canvas.drawPath(cup, fill)
+        fill.shader = cardboard
+        canvas.drawPath(sleeve, fill)
+        fill.shader = null
+
+        val saved = canvas.save()
+        canvas.clipPath(sleeve)
+        stroke.color = 0x38FFE0BE
+        stroke.strokeWidth = .9f
+        for (ridge in 0..12) {
+            val left = 185f + ridge * 6.5f
+            val bottom = 190f + ridge * 5.7f
+            canvas.drawLine(left, 76f, bottom, 124f, stroke)
+        }
+        canvas.restoreToCount(saved)
+
+        fill.color = 0xFF322B27.toInt()
+        canvas.drawPath(lid, fill)
+        fill.color = 0xFF151211.toInt()
+        canvas.drawRoundRect(179f, 44f, 269f, 56f, 4f, 4f, fill)
+        fill.color = 0xFF635149.toInt()
+        canvas.drawRoundRect(181f, 46f, 267f, 48f, 1f, 1f, fill)
     }
 
     override fun onWindowVisibilityChanged(visibility: Int) {
@@ -301,5 +406,10 @@ private class SupportSteamView(context: Context) : View(context) {
         sweep = null
         progress = 0f
         invalidate()
+    }
+
+    private companion object {
+        const val WIDTH = 400f
+        const val HEIGHT = 160f
     }
 }

@@ -62,7 +62,10 @@ import com.titankeys.keyboard.TouchpadPreview
 import com.titankeys.keyboard.UpdateNotice
 import com.titankeys.support.SupportBilling
 import com.titankeys.support.SupportBoard
+import com.titankeys.support.SupportProduct
 import com.titankeys.support.SupportStats
+import java.text.NumberFormat
+import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -97,6 +100,8 @@ internal fun createAppNativeAdapters(activity: MainActivity): Map<String, Native
 private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapter, Application.ActivityLifecycleCallbacks {
     private val typing by lazy { SwipeTyping.get(activity) }
     private val support = lazy { SupportBilling(activity, ::supportChanged) }
+    private val checkoutPreview = AppBuild.kind(activity) == "debug" &&
+        activity.intent.getBooleanExtra(SUPPORT_PREVIEW_FIXTURE, false)
     private var fixtureReceiptSeen = false
 
     private fun fixtureReceipt() = AppBuild.kind(activity) == "debug" && activity.intent.getBooleanExtra(SUPPORT_RECEIPT_FIXTURE, false)
@@ -253,7 +258,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         visible = true
         if (!setupLossFixture()) PhoneSetup.observe(activity, returned = false)
         SupportStats.preview(activity)
-        if (!fixtureReceipt()) runCatching { support.value.onResume() }
+        if (!checkoutPreview && !fixtureReceipt()) runCatching { support.value.onResume() }
         syncPreview()
         publishState()
     }
@@ -303,30 +308,34 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 "state" -> state().toString()
                 "supportState" -> supportState().toString()
                 "supportRefresh" -> {
-                    if (!fixtureReceipt()) support.value.refresh()
+                    if (!checkoutPreview && !fixtureReceipt()) support.value.refresh()
                     "null"
                 }
                 "supportPurchase" -> JSONObject.quote(
-                    if (fixtureReceipt()) "unavailable" else support.value.purchase(data.getString("productId")))
+                    if (checkoutPreview || fixtureReceipt()) "unavailable" else support.value.purchase(data.getString("productId")))
                 "supportReceiptSeen" -> {
-                    val id = data.getString("id")
-                    if (fixtureReceipt()) fixtureReceiptSeen = true else support.value.ledger.receiptSeen(id)
-                    supportChanged()
+                    if (!checkoutPreview) {
+                        val id = data.getString("id")
+                        if (fixtureReceipt()) fixtureReceiptSeen = true else support.value.ledger.receiptSeen(id)
+                        supportChanged()
+                    }
                     "null"
                 }
                 "supportStatsSeen" -> {
-                    SupportStats.dismiss(activity)
-                    supportChanged()
+                    if (!checkoutPreview) {
+                        SupportStats.dismiss(activity)
+                        supportChanged()
+                    }
                     "null"
                 }
                 "supportBoardRead" -> {
-                    if (fixtureReceipt()) supportedBoardUnavailable().toString()
+                    if (checkoutPreview || fixtureReceipt()) supportedBoardUnavailable().toString()
                     else {
                         SupportBoard.read(activity) { complete(NativeResult.Success(it.toString())) }
                         null
                     }
                 }
-                "supportBoardJoin" -> {
+                "supportBoardJoin" -> if (checkoutPreview) supportedBoardUnavailable().toString() else {
                     val ledger = support.value.ledger
                     val accountKey = ledger.accountKey()
                     val proofs = ledger.boardProofs()
@@ -339,7 +348,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                         null
                     }
                 }
-                "supportBoardRemove" -> {
+                "supportBoardRemove" -> if (checkoutPreview) supportedBoardUnavailable().toString() else {
                     val accountKey = support.value.ledger.accountKey()
                     if (fixtureReceipt() || accountKey == null) supportedBoardUnavailable().toString()
                     else {
@@ -670,6 +679,19 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     }
 
     private fun supportState(): JSONObject {
+        if (checkoutPreview) {
+            val currency = NumberFormat.getCurrencyInstance(Locale.CANADA)
+            return JSONObject()
+                .put("preview", true)
+                .put("billing", "ready")
+                .put("purchaseResult", JSONObject.NULL)
+                .put("products", JSONArray(SupportProduct.entries.map { product ->
+                    JSONObject().put("id", product.id).put("price", "${currency.format(product.cents / 100.0)} CAD")
+                        .put("amountMicros", product.cents * 10_000).put("currency", "CAD").put("baseCents", product.cents)
+                }))
+                .put("totalCents", 0).put("receipt", JSONObject.NULL).put("boardJoined", false)
+                .put("reduceMotion", !GuideMotion.enabled).put("statsCardDue", false)
+        }
         val preview = SupportStats.preview(activity)
         val state = if (fixtureReceipt()) {
             val receipt = if (fixtureReceiptSeen) JSONObject.NULL else JSONObject().put("id", "debug-fixture")
@@ -1047,6 +1069,7 @@ private const val SETUP_LOSS_FIXTURE = "com.titankeys.debug.setupLoss"
 /** The other-phone warning has shown once (#75). */
 private const val PHONE_WARNING_SEEN = "phone_warning_seen"
 private const val SUPPORT_RECEIPT_FIXTURE = "com.titankeys.debug.supportReceipt"
+private const val SUPPORT_PREVIEW_FIXTURE = "com.titankeys.debug.supportPreview"
 private const val LANGUAGE_NOTE_SEEN = "language_settings_moved_seen"
 private const val ENGLISH = InputMethod.ENGLISH_ID
 /** TitanKeys Debug's switch that fakes another phone (#75). */

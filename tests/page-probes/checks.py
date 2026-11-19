@@ -148,6 +148,7 @@ class ProbeTests(unittest.TestCase):
     def test_valid_owned_dump_missing_label_is_failure(self):
         ui = PageUI(Mock(), sleep=lambda _: None)
         ui.snapshot = Mock(return_value=[node('English')])
+        ui.own = lambda: ''  # the scroll fallback swipes the page: a page that never moves still ends in Missing
         with self.assertRaises(Missing):
             ui.find('Português')
 
@@ -296,6 +297,50 @@ class ProbeTests(unittest.TestCase):
                 batch.check_chinese_groups_and_limit()
             self.assertIs(fake_checks.record.call_args.args[1], not broken)
             self.assertTrue(ui.restored)
+
+
+class FindScrollTests(unittest.TestCase):
+    """2026-11-19: Ink pages with no scrollable node in the dump, and pages still rendering, read as absent."""
+
+    def ui_over(self, pages):
+        from page_probe import PageUI
+        ui = PageUI(Mock(), sleep=lambda seconds: None)
+        state = {'page': 0, 'swipes': 0}
+
+        def snapshot():
+            return pages[min(state['page'], len(pages) - 1)]
+
+        def adb(*args):
+            if 'swipe' in args:
+                state['swipes'] += 1
+                state['page'] += 1
+            return ''
+        ui.snapshot, ui.own, ui.c.adb = snapshot, lambda: '', adb
+        return ui, state
+
+    def test_scrolls_a_page_with_no_scrollable_node(self):
+        top = [{'text': 'Up top', 'bounds': '[0,0][1076,1200]'}]
+        middle = [{'text': 'Further down', 'bounds': '[0,0][1076,1200]'}]
+        below = [{'text': 'Space after , ; :', 'class': 'android.widget.Switch', 'checkable': 'true', 'bounds': '[0,600][1076,700]'}]
+        ui, state = self.ui_over([top, middle, below])
+        self.assertEqual(ui.find('Space after , ; :', 'toggle')['text'], 'Space after , ; :')
+        self.assertGreaterEqual(state['swipes'], 1)
+
+    def test_rereads_a_page_still_rendering(self):
+        empty = [{'text': '', 'bounds': '[0,0][1076,1200]'}]
+        ready = [{'content-desc': 'Up to 4 languages at once. Hold Sym to switch.', 'bounds': '[0,700][1076,780]'}]
+        pages = [empty, ready]
+        from page_probe import PageUI
+        ui = PageUI(Mock(), sleep=lambda seconds: None)
+        reads = iter(pages + [ready] * 5)
+        ui.snapshot, ui.own = lambda: next(reads), lambda: ''
+        self.assertTrue(ui.find('Up to 4 languages at once. Hold Sym to switch.'))
+
+    def test_still_missing_after_the_page_stops_moving(self):
+        page = [{'text': 'Nothing here', 'bounds': '[0,0][1076,1200]'}]
+        ui, _ = self.ui_over([page])
+        with self.assertRaises(Missing):
+            ui.find('粵語')
 
 
 if __name__ == '__main__':

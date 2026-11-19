@@ -135,7 +135,12 @@ class PageUI:
     def scroll(self, nodes, down):
         scrolls = [n for n in nodes if n.get('scrollable') == 'true']
         if not scrolls:
-            return False
+            # Ink's pages may not mark their list scrollable in the dump (2026-11-19's languages-page: four labels below the
+            # fold or just after a navigation read as absent). Then the largest Debug-owned node stands for the page; find()'s
+            # fingerprint check stops when a swipe moves nothing.
+            scrolls = [n for n in nodes if re.fullmatch(r'\[\d+,\d+\]\[\d+,\d+\]', n.get('bounds', ''))]
+            if not scrolls:
+                return False
         x0, y0, x1, y1 = bounds(max(scrolls, key=lambda n: (bounds(n)[2] - bounds(n)[0]) * (bounds(n)[3] - bounds(n)[1])))
         x = (x0 + x1) // 2
         high, low = y0 + (y1 - y0) // 4, y0 + (y1 - y0) * 3 // 4
@@ -145,6 +150,12 @@ class PageUI:
         return True
 
     def find(self, label=None, kind=None):
+        # A page still rendering after a navigation reads without its rows: three quick re-reads before any scrolling.
+        for _ in range(3):
+            found = next((n for n in self.snapshot() if matches(n, label, kind)), None)
+            if found:
+                return found
+            self.sleep(.6)
         for down in (True, False):
             seen = set()
             for _ in range(24):

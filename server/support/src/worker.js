@@ -56,10 +56,17 @@ async function readJson(request) {
     }
 }
 
+/**
+ * Control characters, bidi embeddings, overrides and isolates (U+202A-202E, U+2066-2069), marks that only steer direction, and
+ * zero-width characters: none of them shows as text, and on a public board they can reorder or hide what's around them. No
+ * content filter: the words themselves stay (owner's rule).
+ */
+const INVISIBLE = /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/gu;
+
 function optionalText(value) {
     if (value == null) return null;
     if (typeof value !== "string" || Array.from(value).length > 80) throw badRequest();
-    return value.trim() || null;
+    return value.replace(INVISIBLE, "").trim() || null;
 }
 
 function isAccountKey(value) {
@@ -109,7 +116,8 @@ async function publish(request, env, verifier) {
     const verified = await Promise.allSettled(Array.from(unique.values(), purchase => verifier.verify(env, accountId, purchase)));
     const receipts = [];
     for (const result of verified) {
-        if (result.status === "fulfilled") receipts.push(result.value);
+        // A subscription answers with each paid month's order; a tip with its one.
+        if (result.status === "fulfilled") receipts.push(...[result.value].flat());
         else if (!(result.reason instanceof ExpiredSubscription)) throw result.reason;
     }
     // Old, expired proofs cannot authorize a profile or grant new credit.
@@ -137,7 +145,12 @@ async function publish(request, env, verifier) {
 async function remove(request, db) {
     const body = await readJson(request);
     if (!hasKeys(body, ["accountKey"]) || !isAccountKey(body.accountKey)) throw badRequest();
-    await db.prepare("DELETE FROM supporters WHERE account_id = ?").bind(await hash(body.accountKey)).run();
+    // The orders go with the profile, so rejoining starts fresh, as the privacy line says.
+    const accountId = await hash(body.accountKey);
+    await db.batch([
+        db.prepare("DELETE FROM support_orders WHERE account_id = ?").bind(accountId),
+        db.prepare("DELETE FROM supporters WHERE account_id = ?").bind(accountId),
+    ]);
     return done();
 }
 
@@ -152,7 +165,10 @@ async function adminDelete(request, env) {
     if (difference !== 0) return json({ error: "not_found" }, 404);
     const body = await readJson(request);
     if (!hasKeys(body, ["id"]) || typeof body.id !== "string" || !PUBLIC_ID.test(body.id)) throw badRequest();
-    await env.DB.prepare("DELETE FROM supporters WHERE public_id = ?").bind(body.id).run();
+    await env.DB.batch([
+        env.DB.prepare("DELETE FROM support_orders WHERE account_id IN (SELECT account_id FROM supporters WHERE public_id = ?)").bind(body.id),
+        env.DB.prepare("DELETE FROM supporters WHERE public_id = ?").bind(body.id),
+    ]);
     return done();
 }
 

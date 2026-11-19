@@ -147,6 +147,22 @@ function rejected() {
     return new SupportError(422, "purchase_unverified");
 }
 
+/** The most monthly orders one subscription can credit: twenty years. */
+const MAX_RENEWALS = 240;
+
+/**
+ * Every order a subscription has paid so far, oldest first. Play names a renewal's order after the first one, with "..N" for
+ * the Nth renewal (GPA.1234-5678-9012-34567, then GPA.1234-5678-9012-34567..0, ..1). From the latest successful order, that
+ * gives each earlier month's order to look up, so a month counts even when nobody posted during it.
+ */
+export function subscriptionOrders(latest) {
+    const renewal = /^(.+)\.\.(\d{1,4})$/.exec(latest);
+    if (!renewal) return [latest];
+    const count = Number(renewal[2]);
+    if (count >= MAX_RENEWALS) return [latest];
+    return [renewal[1], ...Array.from({ length: count + 1 }, (_, index) => `${renewal[1]}..${index}`)];
+}
+
 export class ExpiredSubscription extends SupportError {
     constructor() {
         super(422, "purchase_expired");
@@ -222,6 +238,29 @@ export function playVerifier(fetcher = fetch) {
                 const matches = item.lineItems?.filter(line => line.productId === productId) ?? [];
                 if (matches.length !== 1 || !matches[0].latestSuccessfulOrderId) throw rejected();
                 orderId = matches[0].latestSuccessfulOrderId;
+                // Every paid month, each verified and keyed by its own order. An earlier order Play no longer has (or a month
+                // with no charge) is skipped; the latest must verify.
+                const tokenHash = await hash(purchaseToken);
+                const receipts = [];
+                for (const each of subscriptionOrders(orderId)) {
+                    let order;
+                    try {
+                        order = await orderFor(env, each, productId, purchaseToken);
+                    } catch (error) {
+                        if (each !== orderId && error instanceof SupportError && error.status === 422) continue;
+                        throw error;
+                    }
+                    let cents;
+                    try {
+                        cents = netCents(order, unit);
+                    } catch (error) {
+                        // A month still pending counts once it's processed, at a later post.
+                        if (each !== orderId && error instanceof SupportError && error.status === 409) continue;
+                        throw error;
+                    }
+                    receipts.push({ productId, cents, nominalCents: unit, orderHash: await hash(each), tokenHash });
+                }
+                return receipts;
             }
             const order = await orderFor(env, orderId, productId, purchaseToken);
             const orderQuantity = order.lineItems[0].oneTimePurchaseDetails?.quantity;

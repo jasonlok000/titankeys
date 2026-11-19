@@ -46,7 +46,8 @@ internal class SupportBilling(private val activity: Activity, private val change
         val price: String, val micros: Long, val currency: String)
 
     fun state() = JSONObject()
-        .put("billing", if (offers.isEmpty()) "unavailable" else "ready")
+        // A history that couldn't be read: buying waits rather than risk a credit counted twice or lost.
+        .put("billing", if (offers.isEmpty() || ledger.broken) "unavailable" else "ready")
         .put("purchaseResult", result ?: JSONObject.NULL)
         .put("products", JSONArray(offers.values.map { offer ->
             JSONObject().put("id", offer.product.id).put("price", offer.price)
@@ -146,6 +147,7 @@ internal class SupportBilling(private val activity: Activity, private val change
 
     fun purchase(productId: String): String {
         if (flowOpen) return "pending"
+        if (ledger.broken) return "unavailable"
         val offer = offers[productId] ?: return "unavailable"
         val product = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(offer.details)
             .apply { offer.token?.let(::setOfferToken) }.build()
@@ -195,9 +197,12 @@ internal class SupportBilling(private val activity: Activity, private val change
         val product = purchase.products.singleOrNull()?.let(SupportProduct::find) ?: return
         val token = purchase.purchaseToken
         val offer = launchedOffer?.takeIf { it.product == product } ?: offers[product.id]
+        // The credit goes to the disk on the ledger's own thread; Play hears of it only once it's there.
         val recorded = runCatching {
-            ledger.record(token, product, purchase.quantity, purchase.accountIdentifiers?.obfuscatedAccountId,
-                offer?.micros, offer?.currency, notify = fromFlow || !purchase.isAcknowledged)
+            ledger.record(token, purchase.orderId, product, purchase.quantity, purchase.accountIdentifiers?.obfuscatedAccountId,
+                offer?.micros, offer?.currency, notify = fromFlow || !purchase.isAcknowledged) { saved ->
+                post { finish(purchase, product, saved) }
+            }
         }.getOrDefault(false)
         if (!recorded) {
             result = "unavailable"
@@ -206,6 +211,16 @@ internal class SupportBilling(private val activity: Activity, private val change
         }
         result = null
         changed()
+    }
+
+    /** The credit is on the disk ([saved]), or couldn't be written: then Play isn't told, and the next reconcile tries again. */
+    private fun finish(purchase: Purchase, product: SupportProduct, saved: Boolean) {
+        val token = purchase.purchaseToken
+        if (!saved) {
+            result = "unavailable"
+            changed()
+            return
+        }
         if (product.monthly && purchase.isAcknowledged || !finalizing.add(token)) return
         if (product.monthly) {
             val params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(token).build()

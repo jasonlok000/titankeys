@@ -43,7 +43,21 @@ internal object SupportCard {
 internal data class SupportCredit(val id: String, val productId: String, val quantity: Int,
     val previousCents: Long, val totalCents: Long)
 
-/** A Play token counts once, even if it's delivered again after a crash or while the purchase is reconciled. */
+/**
+ * What a credit is keyed by. A tip's token is new each time. A subscription keeps one token for every month, so each renewal is
+ * keyed by its own order (GPA.…, then GPA.…..0, ..1): each paid month counts once. Without an order ID, the token.
+ */
+internal fun supportKey(token: String, orderId: String?, monthly: Boolean) =
+    if (monthly && !orderId.isNullOrBlank()) "order:$orderId" else token
+
+/**
+ * A subscription a ledger from before [supportKey] credited by its token: that credit was for the month it was bought in, so the
+ * order Play shows now takes it over, without a second credit. The token's own entry then goes, so the next renewal counts.
+ */
+internal fun keyedByOldToken(processed: Set<String>, token: String, key: String) =
+    key != token && sha256(token) in processed && sha256(key) !in processed
+
+/** A key ([supportKey]) counts once, even if it's delivered again after a crash or while the purchase is reconciled. */
 internal fun supportCredit(processed: Set<String>, totalCents: Long, token: String, product: SupportProduct, quantity: Int,
     micros: Long? = null, currency: String? = null): SupportCredit? {
     if (token.isBlank() || quantity !in 1..10_000) return null

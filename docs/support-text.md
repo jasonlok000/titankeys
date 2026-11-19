@@ -12,6 +12,13 @@ marked "supporters only". Every other line here is pre-payment.
 
 **Line:** TitanKeys stays free. Your coffee buys me time to work on it.
 
+**Lines** (pre-payment):
+
+- Donating gets you nothing. No badge, no secret theme, no bonus features. It's all free already.
+- What it does get: one developer more time on TitanKeys.
+- That means bugs fixed faster, more languages, and new tricks for the keys.
+- No ads and no paywall. Ever.
+
 The cup is the main image. The liquid changes to match the selected amount.
 
 - **Amounts:** A sip, A bigger sip, Half a coffee, Custom.
@@ -41,7 +48,7 @@ The orange rolls in and pours into the glass. The level represents cumulative su
 - **Supporters only** (someone who has paid, on their own view): **The orange juice fund**.
 - **Each row:** {rank}, {name}, and their message, if they left one. No name: "Anonymous".
 - **Empty:** Nobody here yet. The top spot is wide open.
-- **Privacy line:** Only what you type here is shown, never what you paid. Remove yourself any time.
+- **Privacy line:** Only your name, message and cups are shown. Remove yourself any time.
 - **Remove me:** Remove me
 
 **After paying, the opt-in** (it skips straight to the thank-you if they don't want it):

@@ -67,7 +67,8 @@ internal class SupportInviteView(
         content.line(label(TITLE, 25f, CREAM, GuideFonts.heavy(context), Gravity.START).apply { isAccessibilityHeading = true })
 
         // Up to four nonzero counts, two to a row.
-        val shown = SupportCard.displayed(totals)
+        // F's four tiles: words typed, swipes, fixes and gestures (auto-capitals aren't one of them).
+        val shown = SupportCard.displayed(totals.copyOf().also { it[SupportStats.Count.Caps.ordinal] = 0 })
         for (pair in shown.chunked(2)) {
             val row = LinearLayout(context)
             for ((index, metric) in pair.withIndex()) {
@@ -78,7 +79,6 @@ internal class SupportInviteView(
             if (pair.size == 1) row.addView(View(context), LinearLayout.LayoutParams(0, 0, 1f).apply { marginStart = dp(8) })
             content.line(row, gap = if (pair === shown.chunked(2).first()) 18 else 8)
         }
-        content.line(label(LINE_TEXT, 18f, MUTED, gravity = Gravity.START), gap = 18)
         content.line(action(SEE_FUND).apply { onPress(haptics) { close(true) } }, gap = 16)
         content.line(action(NAH, quiet = true).apply { onPress(haptics, Haptic.AppRefused) { close(false) } }, gap = 4)
 
@@ -136,8 +136,8 @@ internal class SupportInviteView(
         val one = metric.value == 1L
         val name = when (count) {
             SupportStats.Count.Words -> if (one) "word typed" else "words typed"
-            SupportStats.Count.Swipes -> if (one) "word swiped" else "words swiped"
-            SupportStats.Count.Corrections -> if (one) "slip fixed" else "slips fixed"
+            SupportStats.Count.Swipes -> if (one) "swipe" else "swipes"
+            SupportStats.Count.Corrections -> if (one) "fix" else "fixes"
             SupportStats.Count.Caps -> if (one) "auto-capital" else "auto-capitals"
             SupportStats.Count.Gestures -> if (one) "gesture" else "gestures"
         }
@@ -196,9 +196,8 @@ internal class SupportInviteView(
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
 
     private companion object {
-        // F: these words come from docs/support-text.md when F's rewrite lands.
-        const val TITLE = "F: You've typed with TitanKeys for a while now."
-        const val LINE_TEXT = "If TitanKeys has earned a coffee, you can buy it one."
+        // F's words (docs/support-text.md), coffee only.
+        const val TITLE = "Look at all that typing. Here's what TitanKeys did for you so far."
         const val SEE_FUND = "See the coffee fund"
         const val NAH = "Nah"
         const val CREAM = 0xFFFFF1E6.toInt()

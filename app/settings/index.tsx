@@ -113,8 +113,8 @@ export default function Settings() {
       <Field label={newsText.title} href="/settings/news" />
       <Field label="Send feedback" href="/settings/feedback" />
       <Field label={bugText.settingsLabel} href="/settings/bug" />
-      {/* A card, not a plain row, directly above About (owner-approved support flow v4). F: its line. */}
-      <SupportCard title="Support TitanKeys" line="TitanKeys stays free. Your coffee buys me time to work on it."
+      {/* A card, not a plain row, directly above About (owner-approved support flow v4). F's words. */}
+      <SupportCard title="Support TitanKeys" line="Free, no ads, made by one person. Chip in a coffee if you like it."
         onPress={() => navigate("/support")} />
       <Field label="About" href="/settings/about" />
     </Section>

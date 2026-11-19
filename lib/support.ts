@@ -1,8 +1,8 @@
 import { callNative, onNativeMessage } from "ink/native";
 
 export const supportTitle = "Support TitanKeys";
-export const supportUnavailable = "Google Play support isn't ready yet.";
-export const supportPending = "Google Play is still processing this payment.";
+export const supportUnavailable = "Google Play can't take payments on this phone right now.";
+export const supportPending = "Google Play isn't ready yet. Try again in a moment.";
 export const tipUnit = "support_tip_unit";
 export const customPrices = [3, 5, 10, 20, 50];
 export const cupCents = 500;

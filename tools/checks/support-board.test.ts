@@ -9,7 +9,11 @@ test("the board reads from the deployed HTTPS origin and checks readiness before
   const guard = native.indexOf("check(path != POST_PATH || postingReady)");
   expect(guard).toBeGreaterThan(-1);
   expect(guard).toBeLessThan(native.indexOf("Connected.open(ORIGIN + path"));
-  expect(native).toContain("if (path == BOARD_PATH) postingReady = false");
+  expect(native).toContain("if (path.startsWith(BOARD_PATH)) postingReady = false");
+  // Pages of the ranked board, and the rank preview and reports, go through the same origin (support v2).
+  expect(native).toContain("request(\"$BOARD_PATH?offset=${offset.coerceAtLeast(0)}&limit=${limit.coerceIn(1, 50)}\", null, done)");
+  expect(native).toContain("request(\"/v1/rank-preview\"");
+  expect(native).toContain("request(\"/v1/report\"");
 });
 
 test("only an available, configured board offers posting, and an opted-in supporter can still remove their entry", () => {

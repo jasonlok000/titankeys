@@ -331,7 +331,9 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 "supportBoardRead" -> {
                     if (checkoutPreview || fixtureReceipt()) supportedBoardUnavailable().toString()
                     else {
-                        SupportBoard.read(activity) { complete(NativeResult.Success(it.toString())) }
+                        SupportBoard.read(activity, data.optInt("offset", 0), data.optInt("limit", 20)) {
+                            complete(NativeResult.Success(it.toString()))
+                        }
                         null
                     }
                 }
@@ -347,6 +349,21 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                         }
                         null
                     }
+                }
+                // "This puts you at #N" before paying (#support v2): the place this account would reach with addCents more.
+                "supportRankPreview" -> {
+                    val accountKey = if (checkoutPreview || fixtureReceipt()) null else support.value.ledger.accountKey()
+                    if (accountKey == null) JSONObject().put("available", false).toString()
+                    else {
+                        SupportBoard.preview(activity, accountKey, data.getLong("addCents")) { complete(NativeResult.Success(it.toString())) }
+                        null
+                    }
+                }
+                "supportReport" -> if (checkoutPreview) JSONObject().put("available", false).toString() else {
+                    SupportBoard.report(activity, data.getString("id"), data.optString("reason").ifBlank { null }) {
+                        complete(NativeResult.Success(it.toString()))
+                    }
+                    null
                 }
                 "supportBoardRemove" -> if (checkoutPreview) supportedBoardUnavailable().toString() else {
                     val accountKey = support.value.ledger.accountKey()

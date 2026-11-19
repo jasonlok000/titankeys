@@ -7,9 +7,8 @@ const CENT = 10_000_000n;
 
 const TIPS = new Map([
     ["support_tip_sip", "TIP_SIP_CENTS"],
+    // Custom is the $1 unit in any quantity (owner, 2026-11-19): no fixed ladder beside it.
     ["support_tip_small", 100], ["support_tip_full", 200], ["support_tip_unit", 100],
-    ["support_tip_3", 300], ["support_tip_5", 500], ["support_tip_10", 1000],
-    ["support_tip_20", 2000], ["support_tip_50", 5000],
 ]);
 const MONTHLY = new Map([
     ["support_monthly_sip", "MONTHLY_SIP_CENTS"],

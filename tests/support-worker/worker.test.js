@@ -20,6 +20,7 @@ let worker;
 let env;
 let serviceAccount;
 const schema = await Bun.file(new URL("../../server/support/migrations/0001_support.sql", import.meta.url)).text();
+const ranksSchema = await Bun.file(new URL("../../server/support/migrations/0002_ranks_reports.sql", import.meta.url)).text();
 
 beforeAll(async () => {
     const signer = await crypto.subtle.generateKey({
@@ -84,10 +85,10 @@ async function fakeGoogle(url, options) {
 beforeEach(() => {
     if (db) db.close();
     db = new Database(":memory:");
-    db.exec("PRAGMA foreign_keys=ON; " + schema);
+    db.exec("PRAGMA foreign_keys=ON; " + schema + ranksSchema);
     worker = createWorker(playVerifier(fakeGoogle));
     env = { DB: fixtureD1(db), PLAY_SERVICE_ACCOUNT: serviceAccount, APP_PACKAGE: "com.titankeys",
-        TIP_SIP_CENTS: "49", MONTHLY_SIP_CENTS: "69", ADMIN_TOKEN: OWNER_SECRET };
+        TIP_SIP_CENTS: "49", MONTHLY_SIP_CENTS: "69", ADMIN_TOKEN: OWNER_SECRET, RATE_SALT: "fixture-salt-0123456789" };
     TOKENS.clear();
     ORDERS.clear();
     PROVIDER_ERRORS.clear();
@@ -130,6 +131,20 @@ async function publish(purchases, fields = {}) {
         message: "Cheers", purchases, ...fields });
 }
 
+/** The account's total in cups, from the database: the API never returns amounts. */
+function cupsOf(accountKeyHash) {
+    const row = db.query("SELECT COALESCE(SUM(cents), 0) AS cents FROM support_orders WHERE account_id = ?").get(accountKeyHash);
+    return Math.round(row.cents / 50) / 10;
+}
+
+async function cupsAfter(posting, accountKey = ACCOUNT) {
+    const response = await posting;
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(Object.keys(body).sort()).toEqual(["messageLimit", "rank", "tier"]);
+    return cupsOf(await hash(accountKey));
+}
+
 async function entries() {
     const response = await api("leaderboard");
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -142,7 +157,7 @@ test("the leaderboard advertises posting only with complete local configuration"
         expect(response.status).toBe(200);
         expect(response.headers.get("Cache-Control")).toBe("no-store");
         expect(response.headers.get("X-TitanKeys-Posting")).toBe(readiness);
-        expect(await response.json()).toEqual({ entries: [] });
+        expect(await response.json()).toEqual({ entries: [], total: 0, nextOffset: null });
     };
     await assertBoard("ready");
     for (const [setting, invalid] of [
@@ -185,12 +200,13 @@ test("only verified opt-in changes the board and the database stores hashes", as
     expect(outgoing).toEqual([]);
     const wrongAccount = await publish([tip], { accountKey: "a".repeat(64) });
     expect(wrongAccount.status).toBe(422);
-    expect((await publish([tip], { message: "🧃".repeat(81) })).status).toBe(400);
+    expect((await publish([tip], { message: "🧃".repeat(121) })).status).toBe(400);
     expect(await entries()).toEqual([]);
 
     const result = await publish([tip], { message: "🧃".repeat(80) });
-    expect(await result.json()).toEqual({ cups: 1.4 });
-    expect((await entries())[0]).toMatchObject({ name: "Sunny", message: "🧃".repeat(80), cups: 1.4 });
+    expect(await result.json()).toEqual({ rank: 1, tier: "top3", messageLimit: 120 });
+    expect((await entries())[0]).toEqual({ rank: 1, id: expect.any(String), name: "Sunny", message: "🧃".repeat(80) });
+    expect(cupsOf(await hash(ACCOUNT))).toBe(1.4);
     const row = db.query("SELECT * FROM support_orders").get();
     expect(row.token_hash).toBe(await hash(tip.purchaseToken));
     expect(row.order_hash).toBe(await hash("GPA.fixture-unit"));
@@ -202,11 +218,11 @@ test("only verified opt-in changes the board and the database stores hashes", as
 test("retries and repeated tokens do not double count, but separate renewal orders accrue", async () => {
     const firstMonth = await paid({ kind: "subscription", productId: MONTHLY, label: "month-0", tokenLabel: "month", cents: 200 });
     await Promise.all([publish([firstMonth, firstMonth]), publish([firstMonth])]);
-    expect((await entries())[0].cups).toBe(.4);
+    expect(cupsOf(await hash(ACCOUNT))).toBe(.4);
     const secondMonth = await paid({ kind: "subscription", productId: MONTHLY, label: "month-1", tokenLabel: "month", cents: 200 });
     const custom = await paid({ label: "custom", quantity: 7, cents: 700 });
-    const fixed = await paid({ label: "fixed", productId: "support_tip_5", cents: 500 });
-    expect(await (await publish([secondMonth, custom, fixed])).json()).toEqual({ cups: 3.2 });
+    const fixed = await paid({ label: "fixed", productId: "support_tip_unit", quantity: 5, cents: 500 });
+    expect(await cupsAfter(publish([secondMonth, custom, fixed]))).toBe(3.2);
     expect(db.query("SELECT COUNT(*) AS count FROM support_orders").get().count).toBe(4);
 });
 
@@ -214,17 +230,18 @@ test("fixed tiers, the sip, and zero or pending receipts use the Play data", asy
     const pending = await paid({ label: "waiting", provider: { purchaseState: 2 } });
     const notPaid = await paid({ label: "test", provider: { purchaseType: 0 } });
     const notARealCharge = await paid({ label: "free", cents: 0 });
-    const guessedQty = await paid({ label: "fixed-multiple", productId: "support_tip_20", quantity: 2, cents: 4000 });
+    const guessedQty = await paid({ label: "fixed-multiple", productId: "support_tip_full", quantity: 2, cents: 400 });
     expect((await publish([pending])).status).toBe(409);
     expect((await publish([notPaid])).status).toBe(422);
     expect((await publish([guessedQty])).status).toBe(422);
-    expect(await (await publish([notARealCharge])).json()).toEqual({ cups: 0 });
+    expect(await cupsAfter(publish([notARealCharge]))).toBe(0);
     expect(db.query("SELECT COUNT(*) AS count FROM supporters").get().count).toBe(0);
-    const choices = await Promise.all([3, 5, 10, 20, 50].map(amount => paid({
-        label: "fixed-" + amount, productId: "support_tip_" + amount, cents: amount * 100,
+    const choices = await Promise.all([[3, "support_tip_unit"], [5, "support_tip_unit"], [10, "support_tip_unit"], [20, "support_tip_unit"],
+        [50, "support_tip_unit"]].map(([amount, productId]) => paid({
+        label: "fixed-" + amount, productId, quantity: amount, cents: amount * 100,
     })));
     const sip = await paid({ label: "sip", productId: "support_tip_sip", cents: 49 });
-    expect(await (await publish([...choices, sip])).json()).toEqual({ cups: 17.7 });
+    expect(await cupsAfter(publish([...choices, sip]))).toBe(17.7);
 });
 
 test("a rejected receipt rolls back the entire submission and provider errors stay private", async () => {
@@ -243,7 +260,7 @@ test("a rejected receipt rolls back the entire submission and provider errors st
 
 test("only a documented expired subscription can be skipped alongside a fresh verified receipt", async () => {
     const old = await paid({ kind: "subscription", productId: MONTHLY, label: "expired", cents: 200 });
-    expect(await (await publish([old])).json()).toEqual({ cups: .4 });
+    expect(await cupsAfter(publish([old]))).toBe(.4);
     const active = await paid({ label: "active" });
     const path = "purchases/subscriptionsv2/tokens/" + old.purchaseToken;
     PROVIDER_ERRORS.set(path, { status: 410, reason: "subscriptionNoLongerAvailable" });
@@ -251,7 +268,7 @@ test("only a documented expired subscription can be skipped alongside a fresh ve
     expect(onlyExpired.status).toBe(422);
     expect(await onlyExpired.json()).toEqual({ error: "purchase_expired" });
     expect((await entries())[0].name).toBe("Sunny");
-    expect(await (await publish([old, active], { name: "Verified edit" })).json()).toEqual({ cups: .6 });
+    expect(await cupsAfter(publish([old, active], { name: "Verified edit" }))).toBe(.6);
     expect((await entries())[0].name).toBe("Verified edit");
 
     for (const error of [
@@ -271,7 +288,7 @@ test("anonymity and user or owner removal clear public data", async () => {
     await publish([tip]);
     await publish([tip], { anonymous: true, name: "Do not expose this", message: "Public note" });
     const [entry] = await entries();
-    expect(entry).toMatchObject({ name: null, message: "Public note", cups: .2 });
+    expect(entry).toMatchObject({ rank: 1, name: null, message: "Public note" });
     expect((await api("admin/delete", { id: entry.id }, { Authorization: "Bearer invalid" })).status).toBe(404);
     expect(await entries()).toHaveLength(1);
     expect((await api("remove", { accountKey: ACCOUNT })).status).toBe(204);
@@ -285,20 +302,27 @@ test("anonymity and user or owner removal clear public data", async () => {
     expect(db.query("SELECT * FROM supporters").all()).toEqual([]);
 });
 
-test("the top ten sort by real cents and expose only cups and opt-in text", async () => {
+test("the board ranks everyone by real cents, a page at a time, and shows only place, id, name and message", async () => {
     for (let quantity = 1; quantity <= 12; quantity++) {
         const accountKey = quantity.toString(16).padStart(64, "0");
         const tip = await paid({ label: "supporter-" + quantity, accountKey, quantity, cents: quantity * 100 });
         expect((await publish([tip], { accountKey, name: "Supporter " + quantity })).status).toBe(200);
     }
-    const board = await entries();
-    expect(board.map(entry => entry.name)).toEqual(Array.from({ length: 10 }, (_, idx) => "Supporter " + (12 - idx)));
-    expect(Object.keys(board[0]).sort()).toEqual(["cups", "id", "message", "name"]);
+    const page = await (await api("leaderboard?limit=10")).json();
+    expect(page.entries.map(entry => entry.name)).toEqual(Array.from({ length: 10 }, (_, idx) => "Supporter " + (12 - idx)));
+    expect(page.entries.map(entry => entry.rank)).toEqual(Array.from({ length: 10 }, (_, idx) => idx + 1));
+    expect(Object.keys(page.entries[0]).sort()).toEqual(["id", "message", "name", "rank"]);
+    expect(page).toMatchObject({ total: 12, nextOffset: 10 });
+    const rest = await (await api("leaderboard?offset=10&limit=10")).json();
+    expect(rest.entries.map(entry => [entry.rank, entry.name])).toEqual([[11, "Supporter 2"], [12, "Supporter 1"]]);
+    expect(rest.nextOffset).toBe(null);
+    expect(JSON.stringify([page, rest])).not.toMatch(/cents|cups/);
+    expect((await api("leaderboard?limit=51")).status).toBe(400);
 });
 
 test("partial and full Play refunds reduce the same order without restoring data on replay", async () => {
     const tip = await paid({ label: "part", quantity: 7, cents: 910, tax: 91, currency: "CAD" });
-    expect(await (await publish([tip])).json()).toEqual({ cups: 1.4 });
+    expect(await cupsAfter(publish([tip]))).toBe(1.4);
     const order = ORDERS.get("GPA.fixture-part");
     order.state = "PARTIALLY_REFUNDED";
     order.orderHistory = { partialRefundEvents: [{ state: "PROCESSED_SUCCESSFULLY",
@@ -306,17 +330,17 @@ test("partial and full Play refunds reduce the same order without restoring data
     voided = [{ orderId: "GPA.fixture-part", purchaseToken: tip.purchaseToken, voidedQuantity: 2 }];
     await worker.scheduled({}, env);
     await worker.scheduled({}, env);
-    expect((await entries())[0].cups).toBe(1);
+    expect(cupsOf(await hash(ACCOUNT))).toBe(1);
     order.state = "PROCESSED";
     delete order.orderHistory;
-    expect(await (await publish([tip])).json()).toEqual({ cups: 1 });
+    expect(await cupsAfter(publish([tip]))).toBe(1);
     voided = [{ orderId: "GPA.fixture-part", purchaseToken: "unrelated-token" }];
     await worker.scheduled({}, env);
-    expect((await entries())[0].cups).toBe(1);
+    expect(cupsOf(await hash(ACCOUNT))).toBe(1);
     voided = [{ orderId: "GPA.fixture-part", purchaseToken: tip.purchaseToken }];
     await worker.scheduled({}, env);
     expect(await entries()).toEqual([]);
-    expect(await (await publish([tip])).json()).toEqual({ cups: 0 });
+    expect(await cupsAfter(publish([tip]))).toBe(0);
 });
 
 test("a subscription credits every paid month's order, each once, even posted only in the latest month", async () => {
@@ -325,17 +349,17 @@ test("a subscription credits every paid month's order, each once, even posted on
     const first = ORDERS.get("GPA.fixture-sub");
     for (const id of ["GPA.fixture-sub..0", "GPA.fixture-sub..1"]) ORDERS.set(id, { ...first, orderId: id });
     TOKENS.get("purchases/subscriptionsv2/tokens/" + month.purchaseToken).lineItems[0].latestSuccessfulOrderId = "GPA.fixture-sub..1";
-    expect(await (await publish([month])).json()).toEqual({ cups: 1.2 });
+    expect(await cupsAfter(publish([month]))).toBe(1.2);
     // Posting again adds nothing; next month's renewal adds one month.
-    expect(await (await publish([month])).json()).toEqual({ cups: 1.2 });
+    expect(await cupsAfter(publish([month]))).toBe(1.2);
     ORDERS.set("GPA.fixture-sub..2", { ...first, orderId: "GPA.fixture-sub..2" });
     TOKENS.get("purchases/subscriptionsv2/tokens/" + month.purchaseToken).lineItems[0].latestSuccessfulOrderId = "GPA.fixture-sub..2";
-    expect(await (await publish([month])).json()).toEqual({ cups: 1.6 });
+    expect(await cupsAfter(publish([month]))).toBe(1.6);
     expect(db.query("SELECT COUNT(*) AS count FROM support_orders").get().count).toBe(4);
     // An earlier order Play no longer has is skipped; a refunded month counts nothing.
     ORDERS.delete("GPA.fixture-sub..0");
     ORDERS.set("GPA.fixture-sub..1", { ...first, orderId: "GPA.fixture-sub..1", state: "REFUNDED" });
-    expect(await (await publish([month])).json()).toEqual({ cups: 1.2 });
+    expect(await cupsAfter(publish([month]))).toBe(1.2);
 });
 
 test("names and messages lose control, bidi and zero-width characters, and keep their words", async () => {
@@ -356,4 +380,91 @@ test("Remove me deletes the account's orders, so rejoining starts fresh", async 
     expect(db.query("SELECT COUNT(*) AS count FROM support_orders").get().count).toBe(0);
     expect(db.query("SELECT COUNT(*) AS count FROM supporters").get().count).toBe(0);
     db.exec("PRAGMA foreign_keys=ON");
+});
+
+async function supporter(number, cents, fields = {}) {
+    const accountKey = number.toString(16).padStart(64, "0");
+    const tip = await paid({ label: "rank-" + number, accountKey, quantity: cents / 100, cents });
+    const response = await publish([tip], { accountKey, name: "S" + number, ...fields });
+    expect(response.status).toBe(200);
+    return { accountKey, ...(await response.json()) };
+}
+
+test("messages are as long as the place allows: 120 for the top 3, 80 for the top 10, 40 for the top 100, then the name only", async () => {
+    const long = "m".repeat(120);
+    const first = await supporter(1, 10_000, { message: long });
+    expect(first).toMatchObject({ rank: 1, tier: "top3", messageLimit: 120 });
+    // Ten more above it: it drops to 11th, and the board shows 40 characters of what it stored.
+    for (let n = 2; n <= 11; n++) await supporter(n, 20_000 + n * 100);
+    const page = await (await api("leaderboard?offset=10&limit=1")).json();
+    expect(page.entries[0]).toMatchObject({ rank: 11, name: "S1", message: "m".repeat(40) });
+    // Posting at 11th keeps only what that place allows.
+    const again = await supporter(12, 500, { message: long });
+    expect(again).toMatchObject({ rank: 12, tier: "top100", messageLimit: 40 });
+    expect(db.query("SELECT message FROM supporters WHERE name = 'S12'").get().message).toBe("m".repeat(40));
+    expect(messageLimitFor(4)).toBe(80);
+});
+
+function messageLimitFor(rank) {
+    return rank <= 3 ? 120 : rank <= 10 ? 80 : rank <= 100 ? 40 : 0;
+}
+
+test("beyond 100th the board shows the name only, and the message is still kept", async () => {
+    db.exec("INSERT INTO supporters (account_id, public_id, name, message) VALUES ('low', '00000000-0000-4000-8000-000000000000', 'Low', 'kept')");
+    for (let n = 1; n <= 101; n++) {
+        const account = "acct-" + n;
+        const id = "00000000-0000-4000-8000-" + n.toString().padStart(12, "0");
+        if (n <= 100) db.query("INSERT INTO supporters (account_id, public_id, name, message) VALUES (?, ?, ?, ?)").run(account, id, "A" + n, "hi");
+        db.query("INSERT INTO support_orders (order_hash, product_id, token_hash, account_id, nominal_cents, cents) VALUES (?, 'support_tip_unit', ?, ?, ?, ?)")
+            .run("o" + n, "t" + n, n <= 100 ? account : "low", 1_000_000, n <= 100 ? 10_000 : 1);
+    }
+    const last = await (await api("leaderboard?offset=100&limit=5")).json();
+    expect(last.entries).toEqual([{ rank: 101, id: "00000000-0000-4000-8000-000000000000", name: "Low", message: null }]);
+    expect(db.query("SELECT message FROM supporters WHERE account_id = 'low'").get().message).toBe("kept");
+});
+
+test("the rank preview says where more would put you, never anyone's total, within an hourly limit", async () => {
+    await supporter(1, 500);
+    await supporter(2, 300);
+    const preview = body => api("rank-preview", body, { "CF-Connecting-IP": "203.0.113.9" });
+    const NEWCOMER = "e".repeat(64);
+    // A newcomer with $2 would be third; with $4 more, second; with $6, first.
+    expect(await (await preview({ accountKey: NEWCOMER, addCents: 200 })).json()).toEqual({ rank: 3, tier: "top3", messageLimit: 120 });
+    expect((await (await preview({ accountKey: NEWCOMER, addCents: 400 })).json()).rank).toBe(2);
+    expect((await (await preview({ accountKey: NEWCOMER, addCents: 600 })).json()).rank).toBe(1);
+    // An account already on the board counts its own total, not itself as someone ahead.
+    expect((await (await preview({ accountKey: (2).toString(16).padStart(64, "0"), addCents: 300 })).json()).rank).toBe(1);
+    expect((await (await preview({ accountKey: ACCOUNT, addCents: 0 })).json()).rank).toBe(1);
+    expect((await preview({ accountKey: ACCOUNT, addCents: -1 })).status).toBe(400);
+    expect((await preview({ accountKey: ACCOUNT, addCents: 1.5 })).status).toBe(400);
+    let status = 200;
+    for (let i = 0; i < 40 && status === 200; i++) status = (await preview({ accountKey: NEWCOMER, addCents: 100 })).status;
+    expect(status).toBe(429);
+    expect(JSON.stringify(db.query("SELECT key FROM rate_limits").all())).not.toContain("203.0.113.9");
+    // The account limit holds from another address too.
+    expect((await api("rank-preview", { accountKey: NEWCOMER, addCents: 1 }, { "CF-Connecting-IP": "x" })).status).toBe(429);
+});
+
+test("anyone can report an entry a few times an hour; the owner lists reports, and nothing is hidden by itself", async () => {
+    const { rank } = await supporter(1, 500, { message: "hello" });
+    expect(rank).toBe(1);
+    const [entry] = await entries();
+    const report = (id, ip = "198.51.100.1") => api("report", { id, reason: "‮spam" }, { "CF-Connecting-IP": ip });
+    expect((await report(entry.id)).status).toBe(204);
+    expect((await report("00000000-0000-4000-8000-0000000000ff")).status).toBe(404);
+    for (let i = 0; i < 3; i++) await report(entry.id);
+    expect((await report(entry.id)).status).toBe(429);
+    expect((await report(entry.id, "198.51.100.2")).status).toBe(204);
+    expect(await entries()).toHaveLength(1);
+    expect((await api("admin/reports", undefined, { Authorization: "Bearer wrong-token-".repeat(3) })).status).toBe(404);
+    const list = await (await api("admin/reports", undefined, { Authorization: "Bearer " + OWNER_SECRET })).json();
+    expect(list.reports).toHaveLength(5);
+    expect(list.reports[0]).toMatchObject({ id: entry.id, name: "S1", message: "hello", reason: "spam" });
+    expect(JSON.stringify(db.query("SELECT * FROM support_reports").all())).not.toContain("198.51.100");
+});
+
+test("without a rate salt, the preview and reports stay off rather than count by raw address", async () => {
+    delete env.RATE_SALT;
+    expect((await api("rank-preview", { accountKey: ACCOUNT, addCents: 100 })).status).toBe(503);
+    expect((await api("report", { id: "00000000-0000-4000-8000-000000000001", reason: null })).status).toBe(503);
 });

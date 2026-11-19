@@ -18,8 +18,17 @@ internal object SupportBoard {
     // Only read and changed on the board's single executor.
     private var postingReady = false
 
-    fun read(context: Context, done: (JSONObject) -> Unit) =
-        request(BOARD_PATH, null, done)
+    /** A page of the ranked board: place, public id, name and the message the place shows. Never an amount. */
+    fun read(context: Context, offset: Int, limit: Int, done: (JSONObject) -> Unit) =
+        request("$BOARD_PATH?offset=${offset.coerceAtLeast(0)}&limit=${limit.coerceIn(1, 50)}", null, done)
+
+    /** "This puts you at #N": the place this account would reach with [addCents] more. The server limits how often. */
+    fun preview(context: Context, accountKey: String, addCents: Long, done: (JSONObject) -> Unit) =
+        request("/v1/rank-preview", JSONObject().put("accountKey", accountKey).put("addCents", addCents), done)
+
+    /** Reports an entry to the owner. Nothing is hidden by itself. */
+    fun report(context: Context, publicId: String, reason: String?, done: (JSONObject) -> Unit) =
+        request("/v1/report", JSONObject().put("id", publicId).put("reason", reason ?: JSONObject.NULL), done)
 
     fun join(context: Context, accountKey: String, purchases: JSONArray, anonymous: Boolean,
              name: String?, message: String?, done: (JSONObject) -> Unit) {
@@ -47,7 +56,7 @@ internal object SupportBoard {
                     check(Connected.ok(connection))
                     val bytes = connection.inputStream.use { Connected.readLimited(it, 32 * 1024) }
                     val data = if (bytes.isEmpty()) JSONObject() else JSONObject(String(bytes, Charsets.UTF_8))
-                    if (path == BOARD_PATH) {
+                    if (path.startsWith(BOARD_PATH)) {
                         postingReady = connection.getHeaderField("X-TitanKeys-Posting") == "ready"
                         data.put("postingReady", postingReady)
                     }
@@ -56,7 +65,7 @@ internal object SupportBoard {
                     connection.disconnect()
                 }
             }.getOrElse {
-                if (path == BOARD_PATH) postingReady = false
+                if (path.startsWith(BOARD_PATH)) postingReady = false
                 JSONObject().put("available", false).put("entries", JSONArray())
             }
             main.post { done(result) }

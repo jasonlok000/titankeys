@@ -26,7 +26,9 @@ class InputMethodIndex(entries: List<Entry>) {
         val variants: List<VariantName> = emptyList(),
         /** The language it types: Serbian's Cyrillic and Latin, Chinese's Yale, Jyutping and Pinyin share one. */
         val language: Language = Language(id, name, nameEnglish, label, script, experimental = id != InputMethod.ENGLISH_ID),
-    )
+    ) {
+        val hasKeyPreview: Boolean = InputMethod.mappedPreview(guide?.get("keys") as? Map<*, *>, script)
+    }
 
     /**
      * A language, as Settings > Languages and the held Sym's switcher show it: its input methods are ticked on its own page

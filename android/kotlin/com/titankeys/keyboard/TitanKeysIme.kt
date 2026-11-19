@@ -3175,7 +3175,7 @@ class TitanKeysIme : InputMethodService() {
         if (open != null && open !is LanguagePicker.Choices) return ""
         val method = languages.current
         val key = barHover.key.singleOrNull() ?: return ""
-        if (!TypingSettings.keyPreview(this, method.id, method.keyPreviewDefault)) return ""
+        if (!method.hasKeyPreview || !TypingSettings.keyPreview(this, method.id, true)) return ""
         return method.keyPreview(key, modifiers.shift != Modifiers.Level.Off)
     }
 

@@ -1844,7 +1844,9 @@ private fun practiceOnlyUsesEnabledMethods(folder: File) {
  */
 private fun everyGuideIsComplete(folder: File) {
     val roles = setOf("shift", "space", "enter", "backspace", "sym")
-    val index = Json.parse(File(folder, "index.json").readText()) as List<*>
+    val indexText = File(folder, "index.json").readText()
+    val index = Json.parse(indexText) as List<*>
+    val nativeIndex = InputMethodIndex.parse(indexText)
     val indexed = index.associate { entry -> (entry as Map<*, *>)["id"] as String to entry["guide"] }
     val byLanguage = HashMap<String, MutableList<InputMethod>>()
     for (dir in folder.listFiles { file -> File(file, "im.json").isFile }.orEmpty().sortedBy { it.name }) {
@@ -1867,10 +1869,12 @@ private fun everyGuideIsComplete(folder: File) {
             "${(keys?.get("map") as? Map<*, *>)?.size}"
         }
         check("${dir.name}: the index carries it", indexed[dir.name] == guide)
+        same("${dir.name}: the index agrees on Key preview", nativeIndex[method.id]?.hasKeyPreview, method.hasKeyPreview)
         val language = (index.first { (it as Map<*, *>)["id"] == dir.name } as Map<*, *>)["language"] as? Map<*, *>
         byLanguage.getOrPut(language?.get("id") as? String ?: dir.name) { mutableListOf() } += method
     }
     val settings = Json.parse(File(folder, "languages.json").readText()) as Map<*, *>
+    byLanguage[InputMethod.ENGLISH_ID] = mutableListOf(InputMethod.ENGLISH)
     for ((language, methods) in byLanguage) {
         val rows = (settings[language] as Map<*, *>)["settings"] as List<*>
         val available = rows.map { it as Map<*, *> }.filter { it["available"] == true }.map { it["id"] }.toSet()
@@ -1879,6 +1883,10 @@ private fun everyGuideIsComplete(folder: File) {
         val decided = setOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold", "swipe", "shorthand")
         same("$language: its settings as LanguageSettings shows them", available.filter { it in decided }.toSet(), shown)
         check("$language: every row not available says why", rows.map { it as Map<*, *> }.all { it["available"] == true || it["reason"] is String })
+        val preview = rows.map { it as Map<*, *> }.single { it["id"] == "keyPreview" }
+        val mapped = methods.filter { it.hasKeyPreview }.map { it.id }.toSet()
+        same("$language: Key preview appears only for mapped methods", (preview["methods"] as? List<*>).orEmpty().toSet(), mapped)
+        same("$language: Key preview is available when a method is mapped", preview["available"], mapped.isNotEmpty())
     }
     val zh = (settings["zh"] as Map<*, *>)["groups"] as List<*>
     same("Chinese's groups", zh.map { (it as Map<*, *>)["title"] }, listOf("Cantonese", "Mandarin", "By shape"))

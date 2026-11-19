@@ -83,10 +83,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "af"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -165,10 +163,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "az"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -411,10 +407,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "bs"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -493,10 +487,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "ca"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -575,10 +567,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "cs"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -657,10 +647,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "da"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -739,10 +727,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "de"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -899,10 +885,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "en"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -981,10 +965,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "eo"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1063,10 +1045,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "es"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1145,10 +1125,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "et"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1227,10 +1205,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "eu"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1309,10 +1285,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "fi"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1391,10 +1365,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "fr"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1473,10 +1445,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "ga"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1555,10 +1525,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "gl"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1721,10 +1689,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "hi"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1803,10 +1769,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "hr"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1885,10 +1849,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "hu"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -1966,10 +1928,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "id"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2048,10 +2008,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "is"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2130,10 +2088,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "it"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2215,10 +2171,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "ja"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2544,10 +2498,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "lt"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2626,10 +2578,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "lv"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2790,10 +2740,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "nb"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2872,10 +2820,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "nl"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -2954,10 +2900,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "nn"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3036,10 +2980,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "pl"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3120,10 +3062,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "pt"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3202,10 +3142,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "ro"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3366,10 +3304,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "sk"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3448,10 +3384,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "sl"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3540,8 +3474,7 @@
     "level": "input-method",
     "available": true,
     "methods": [
-     "sr",
-     "sr-latn"
+     "sr"
     ]
    }
   ]
@@ -3621,10 +3554,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "sv"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3788,10 +3719,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "tr"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -3952,10 +3881,8 @@
    {
     "id": "keyPreview",
     "level": "input-method",
-    "available": true,
-    "methods": [
-     "vi"
-    ]
+    "available": false,
+    "reason": "notThisMethod"
    }
   ]
  },
@@ -4063,10 +3990,7 @@
     "level": "input-method",
     "available": true,
     "methods": [
-     "yue-jyutping",
-     "yue-yale",
      "zh-cangjie",
-     "zh-pinyin",
      "zh-quick",
      "zh-zhuyin"
     ]

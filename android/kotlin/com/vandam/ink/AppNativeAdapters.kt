@@ -792,11 +792,10 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("languageNoteSeen", appPreferences().getBoolean(LANGUAGE_NOTE_SEEN, false))
             .put("chineseVariant", TypingSettings.chineseVariant(activity))
             .put("methodOptions", JSONObject().apply {
-                val english = JSONObject().put("keyPreview", TypingSettings.keyPreview(activity, InputMethod.ENGLISH_ID, false))
-                put(InputMethod.ENGLISH_ID, english)
                 for (method in inputMethodIndex().entries) {
-                    val default = InputMethod.mappedPreview(method.guide?.get("keys") as? Map<*, *>, method.script)
-                    val options = JSONObject().put("keyPreview", TypingSettings.keyPreview(activity, method.id, default))
+                    val options = JSONObject()
+                    if (method.hasKeyPreview)
+                        options.put("keyPreview", TypingSettings.keyPreview(activity, method.id, true))
                     if (method.id in setOf("yue-yale", "yue-jyutping"))
                         options.put("lazySounds", TypingSettings.lazySounds(activity, method.id))
                     put(method.id, options)
@@ -976,7 +975,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                     val options = methods.getJSONObject(id)
                     if ((id == "yue-yale" || id == "yue-jyutping") && options.has("lazySounds"))
                         TypingSettings.lazySounds(activity, id, options.getBoolean("lazySounds"))
-                    if (options.has("keyPreview") && (id == InputMethod.ENGLISH_ID || inputMethodIndex().entries.any { it.id == id }))
+                    if (options.has("keyPreview") && inputMethodIndex()[id]?.hasKeyPreview == true)
                         TypingSettings.setKeyPreview(activity, id, options.getBoolean("keyPreview"))
                 }
             }

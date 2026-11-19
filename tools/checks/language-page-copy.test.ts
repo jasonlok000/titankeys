@@ -45,20 +45,23 @@ test("generated language pages keep global, language and input-method controls a
   expect(availableSettings(globalSettings, "global").map(row => row.id)).toEqual(["learn"]);
   expect(availableSettings(chinese.settings, "language").map(row => row.id)).toContain("chineseCharacters");
   expect(availableSettings(chinese.settings, "language").map(row => row.id)).not.toContain("lazySounds");
-  for (const id of ["yue-yale", "yue-jyutping", "zh-pinyin", "zh-zhuyin", "zh-cangjie", "zh-quick"]) {
-    const options = id.startsWith("yue-") ? ["lazySounds", "keyPreview"] : ["keyPreview"];
-    expect(availableSettings(chinese.settings, "input-method", id).map(row => row.id)).toEqual(options);
+  for (const id of ["yue-yale", "yue-jyutping"]) {
+    expect(availableSettings(chinese.settings, "input-method", id).map(row => row.id)).toEqual(["lazySounds"]);
   }
-  expect(availableSettings(languagePage("pt")!.settings, "input-method", "pt").map(row => row.id)).toEqual(["variant", "keyPreview"]);
-  expect(availableSettings(languagePage("en")!.settings, "input-method", "en").map(row => row.id)).toEqual(["keyPreview"]);
+  expect(availableSettings(languagePage("pt")!.settings, "input-method", "pt").map(row => row.id)).toEqual(["variant"]);
+  expect(availableSettings(languagePage("en")!.settings, "input-method", "en")).toEqual([]);
   expect(availableSettings(languagePage("en")!.settings, "language").map(row => row.id)).toContain("spelling");
+  const withPreview: string[] = [];
   for (const method of methods) {
     const shared = availableSettings(languagePage(method.language.id)!.settings, "language").map(row => row.id);
     const specific = availableSettings(languagePage(method.language.id)!.settings, "input-method", method.id);
-    expect(specific.some(row => row.id === "keyPreview")).toBe(true);
+    if (specific.some(row => row.id === "keyPreview")) withPreview.push(method.id);
     expect(shared.includes("spelling")).toBe(false);
     expect(shared.includes("chineseCharacters")).toBe(method.language.id === "zh");
   }
+  expect(withPreview.sort()).toEqual([
+    "be", "bg", "el", "he", "ka", "kk", "ko", "mk", "ru", "sr", "th", "uk", "zh-cangjie", "zh-quick", "zh-zhuyin",
+  ]);
   expect(availableSettings(thai.settings, "language").map(row => row.id)).not.toContain("doubleSpace");
   const notes = unavailableNotes(thai.settings, "Thai");
   expect(notes).toContain("Thai has no full stop, so double Space types two spaces.");

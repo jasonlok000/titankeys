@@ -199,11 +199,11 @@ fun englishAlternativesUseTheirShownIndex() {
 
 private fun previewLegendsUseTheGuide() {
     val korean = method("ko")
-    same(true, korean.keyPreviewDefault, "Korean preview defaults on")
+    same(true, korean.hasKeyPreview, "Korean has a preview")
     same("ㅂ", korean.keyPreview('Q', false), "Korean Q")
     same("ㅃ", korean.keyPreview('Q', true), "Korean Shift+Q")
     val russian = method("ru")
-    same(true, russian.keyPreviewDefault, "Russian preview defaults on")
+    same(true, russian.hasKeyPreview, "Russian has a preview")
     val preview = KeyPreview()
     for (resting in listOf(false, true)) {
         if (resting && preview.follow("Q", russian.keyPreview('Q', false))) preview.rest(russian.keyPreview('Q', false))
@@ -214,19 +214,23 @@ private fun previewLegendsUseTheGuide() {
     }
     same("Й", russian.keyPreview('Q', true), "Russian Shift+Q")
     val thai = method("th")
-    same(true, thai.keyPreviewDefault, "Thai preview defaults on")
+    same(true, thai.hasKeyPreview, "Thai has a preview")
     same("ๆ", thai.keyPreview('Q', false), "Thai Q")
     same("๐", thai.keyPreview('Q', true), "Thai Shift+Q")
     same("ๅ", thai.keyPreview('Q', false, hold = true), "Thai held Q")
     same("+", thai.keyPreview('Q', true, hold = true), "Thai held Shift+Q")
     val zhuyin = method("zh-zhuyin")
-    same(true, zhuyin.keyPreviewDefault, "Zhuyin preview defaults on")
+    same(true, zhuyin.hasKeyPreview, "Zhuyin has a preview")
     same("ㄆ", zhuyin.keyPreview('P', false), "Hsu P")
     same("", zhuyin.keyPreview('Q', false), "Hsu Q has no mapped symbol")
     same("弓", method("zh-quick").keyPreview('N', false), "Quick's N")
     same("難", method("zh-cangjie").keyPreview('X', false), "Cangjie's X")
-    same(false, method("yue-yale").keyPreviewDefault, "Yale uses the printed letters")
-    same(false, InputMethod.ENGLISH.keyPreviewDefault, "English preview defaults off")
+    for (unmapped in listOf(InputMethod.ENGLISH, method("es"), method("yue-yale"), method("zh-pinyin"), method("ja"))) {
+        same(false, unmapped.hasKeyPreview, "${unmapped.id} has no preview")
+        same("", unmapped.keyPreview('N', false), "${unmapped.id} has no base preview legend")
+        same("", unmapped.keyPreview('N', true), "${unmapped.id} has no shifted preview legend")
+    }
+    same("ñ", method("es").keyPreview('N', false, hold = true), "Spanish can still show a held accent")
 }
 
 private fun method(id: String) = InputMethod.parse(File("android/assets/im/$id/im.json").readText())

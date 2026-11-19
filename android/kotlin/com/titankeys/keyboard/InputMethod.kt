@@ -118,7 +118,7 @@ data class InputMethod(
         return if (shift) key.heldShift ?: key.held else key.held
     }
 
-    val keyPreviewDefault: Boolean get() = mappedPreview(previewKeys, script)
+    val hasKeyPreview: Boolean = mappedPreview(previewKeys, script)
 
     /** Returns the legend only. Typing and the input engine do not receive this value. */
     fun keyPreview(printed: Char, shift: Boolean, hold: Boolean = false): String {
@@ -127,6 +127,7 @@ data class InputMethod(
         fun legend(layer: String) = (previewKeys?.get(layer) as? Map<*, *>)?.get(key.toString()) as? String
         if (hold) return (if (shift) legend("heldShift") else null)
             ?: legend("held") ?: held(key, shift) ?: accentsOf(key, shift).firstOrNull().orEmpty()
+        if (!hasKeyPreview) return ""
         if (shift) legend("shift")?.let { return it }
         val base = legend("map")
         if (base != null) return if (shift && previewKeys?.get("capitals") == true) base.uppercase(javaLocale) else base

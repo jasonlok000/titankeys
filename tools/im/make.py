@@ -1120,6 +1120,8 @@ def setting_reason(row, im):
     english = im["id"] == "en"
     full_stop = rules.get("fullStop", ". ")
     chinese = im.get("script") == "Hani"
+    key_map = im.get("guide", {}).get("keys", {}).get("map", {})
+    mapped = im["script"] != "Latn" and any(output and output != key for key, output in key_map.items())
     return {
         "fixes": None if english or (im.get("words") and engine is None) else ("correctionsChinese" if chinese else "corrections"),
         "capitals": None if rules.get("capitalise") else "noCapitals",
@@ -1133,7 +1135,7 @@ def setting_reason(row, im):
         "chineseCharacters": None if chinese else "chineseOnly",
         "variant": None if im.get("variants") else "noVariants",
         "lazySounds": None if im["id"] in ("yue-yale", "yue-jyutping") else "notThisMethod",
-        "keyPreview": None,
+        "keyPreview": None if mapped else "notThisMethod",
     }[row]
 
 

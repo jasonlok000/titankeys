@@ -9,6 +9,8 @@ import org.json.JSONObject
 internal object SupportStats {
     private const val FIXTURE = "com.titankeys.debug.supportStats"
     private const val FIRST_USE = "firstUse"
+    private const val DAYS = "typingDays"
+    private const val LAST_DAY = "lastTypingDay"
     private var previewing = false
 
     enum class Count(val key: String) {
@@ -23,6 +25,9 @@ internal object SupportStats {
         val edit = store.edit().putLong(count.key, store.getLong(count.key, 0) + 1)
         // Older releases recorded when the app opened. Only a counted keyboard event can start this clock.
         if (!store.contains(FIRST_USE)) edit.putLong(FIRST_USE, System.currentTimeMillis())
+        // A typing day counts once, on the first counted event of that local day.
+        val today = java.time.LocalDate.now().toEpochDay()
+        edit.putInt(DAYS, SupportCard.typingDays(store.getInt(DAYS, 0), store.getLong(LAST_DAY, -1), today)).putLong(LAST_DAY, today)
         edit.apply()
     }
 
@@ -44,7 +49,7 @@ internal object SupportStats {
     fun due(context: Context, fixture: Boolean = false): Boolean {
         if (fixture) return true
         val store = preferences(context)
-        return SupportCard.due(System.currentTimeMillis(), store.getLong(FIRST_USE, 0), store.getBoolean("seen", false))
+        return SupportCard.due(store.getInt(DAYS, 0), store.getBoolean("seen", false))
     }
 
     /** Claims the once-only invite. A Debug launch supplies fake totals without spending the real invite. */

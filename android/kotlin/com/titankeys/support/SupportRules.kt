@@ -9,12 +9,8 @@ internal enum class SupportProduct(val id: String, val monthly: Boolean, val cen
     TipSip("support_tip_sip", false, 50),
     TipSmall("support_tip_small", false, 100),
     TipFull("support_tip_full", false, 200),
-    TipUnit("support_tip_unit", false, 100),
-    TipThree("support_tip_3", false, 300),
-    TipFive("support_tip_5", false, 500),
-    TipTen("support_tip_10", false, 1_000),
-    TipTwenty("support_tip_20", false, 2_000),
-    TipFifty("support_tip_50", false, 5_000);
+    /** Custom: $1, bought in any quantity (owner, 2026-11-19: no fixed ladder; monthly has its three tiers only). */
+    TipUnit("support_tip_unit", false, 100);
 
     fun value(quantity: Int, micros: Long?, currency: String?): Long {
         val unit = if (currency == "USD" && micros != null) (micros + 5_000) / 10_000 else cents
@@ -32,12 +28,15 @@ internal fun sha256(value: String) = MessageDigest.getInstance("SHA-256")
 internal fun ByteArray.toHex() = joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
 internal object SupportCard {
-    const val WAIT_MILLIS = 14L * 24 * 60 * 60 * 1000
-    fun due(now: Long, firstUse: Long, seen: Boolean) =
-        !seen && firstUse > 0 && now >= firstUse && now - firstUse >= WAIT_MILLIS
+    /** Days the keyboard typed something, counted once each (owner, support flow v4: "after about 10 typing days"). */
+    const val TYPING_DAYS = 10
+    fun due(typingDays: Int, seen: Boolean) = !seen && typingDays >= TYPING_DAYS
 
-    /** The first available count leads. At most two other counts follow in the same order. */
-    fun displayed(counts: LongArray) = counts.withIndex().filter { it.value > 0 }.take(3)
+    /** The typing-day count after a counted event on [today] (a local epoch day), where [lastDay] was the last one counted. */
+    fun typingDays(days: Int, lastDay: Long, today: Long) = if (today == lastDay) days else days + 1
+
+    /** Up to four nonzero counts, in order, for the card's tiles. */
+    fun displayed(counts: LongArray) = counts.withIndex().filter { it.value > 0 }.take(4)
 }
 
 internal data class SupportCredit(val id: String, val productId: String, val quantity: Int,

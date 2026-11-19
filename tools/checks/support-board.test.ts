@@ -9,14 +9,17 @@ test("the board reads from the deployed HTTPS origin and checks readiness before
   const guard = native.indexOf("check(path != POST_PATH || postingReady)");
   expect(guard).toBeGreaterThan(-1);
   expect(guard).toBeLessThan(native.indexOf("Connected.open(ORIGIN + path"));
-  expect(native).toContain("if (path == BOARD_PATH) postingReady = false");
+  expect(native).toContain("if (path.startsWith(BOARD_PATH)) postingReady = false");
+  // Pages of the ranked board, and the rank preview and reports, go through the same origin (support v2).
+  expect(native).toContain("request(\"$BOARD_PATH?offset=${offset.coerceAtLeast(0)}&limit=${limit.coerceIn(1, 50)}\", null, done)");
+  expect(native).toContain("request(\"/v1/rank-preview\"");
+  expect(native).toContain("request(\"/v1/report\"");
 });
 
 test("only an available, configured board offers posting, and an opted-in supporter can still remove their entry", () => {
-  expect(page).toContain("const canJoinBoard = hasSupport && board.available && board.postingReady === true");
-  expect(page).toContain("canJoinBoard && !offerBoard");
-  expect(page).toContain("canJoinBoard && offerBoard");
-  expect(page).toContain("{board.available && (board.joined ?? state?.boardJoined) &&");
+  // The opt-in comes only after a payment, and only while the board is up and posting is configured (support flow v4).
+  expect(page).toContain("const offer = !joinDone && shownBoard.available && shownBoard.postingReady === true && (!joined || movedUp)");
+  expect(page).toContain("{board.joined && <Button onPress={remove}>");
 });
 
 test("the support ledger survives a bad file and never writes on the main thread (review, 2026-11-19)", async () => {

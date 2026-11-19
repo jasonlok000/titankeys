@@ -63,38 +63,102 @@ async function readJson(request) {
  */
 const INVISIBLE = /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/gu;
 
-function optionalText(value) {
+function optionalText(value, max = NAME_LIMIT) {
     if (value == null) return null;
-    if (typeof value !== "string" || Array.from(value).length > 80) throw badRequest();
+    if (typeof value !== "string" || Array.from(value).length > max) throw badRequest();
     return value.replace(INVISIBLE, "").trim() || null;
 }
 
-function isAccountKey(value) {
-    return typeof value === "string" && ACCOUNT_KEY.test(value);
+/** A name, up to 80 characters. */
+const NAME_LIMIT = 80;
+/** The longest message anyone can post: the top three's. */
+const MESSAGE_LIMIT = 120;
+/** How much of a message a place on the board shows (owner, 2026-11-19): beyond 100th, the name alone. */
+export function messageLimit(rank) {
+    if (!Number.isInteger(rank) || rank < 1) return 0;
+    return rank <= 3 ? 120 : rank <= 10 ? 80 : rank <= 100 ? 40 : 0;
 }
 
-function cups(cents) {
-    // One cup is 500 cents. Round to the nearest tenth once, after totaling the retained receipts.
-    return Math.round(cents / 50) / 10;
+export function messageTier(rank) {
+    const limit = messageLimit(rank);
+    return limit === 120 ? "top3" : limit === 80 ? "top10" : limit === 40 ? "top100" : "name";
+}
+
+/** A message cut to [limit] code points, or null. */
+function cut(message, limit) {
+    if (!message || limit <= 0) return null;
+    const points = Array.from(message);
+    return points.length <= limit ? message : points.slice(0, limit).join("").trimEnd();
+}
+
+/** Everyone who opted in and has credit, with their total: only ever read inside SQL, never returned. */
+const TOTALS = `
+    SELECT s.account_id, s.public_id, s.name, s.message, SUM(o.cents) AS cents
+    FROM supporters s JOIN support_orders o ON s.account_id = o.account_id
+    GROUP BY s.account_id HAVING SUM(o.cents) > 0`;
+
+/** An account's place on the board, or null when it isn't on it. Ties go by public id, as the board lists them. */
+async function rankOf(db, accountId) {
+    const row = await db.prepare(`
+        WITH totals AS (${TOTALS})
+        SELECT (SELECT COUNT(*) FROM totals t WHERE t.cents > me.cents OR (t.cents = me.cents AND t.public_id < me.public_id)) + 1 AS rank
+        FROM totals me WHERE me.account_id = ?
+    `).bind(accountId).all();
+    return row.results[0]?.rank ?? null;
+}
+
+/** A per-hour counter under a salted hash. False once [limit] is used up this hour. */
+async function allowed(env, kind, value, limit) {
+    const salt = env.RATE_SALT;
+    if (typeof salt !== "string" || salt.length < 16) throw new SupportError(503, "support_unavailable");
+    const hour = Math.floor(Date.now() / 3_600_000);
+    const key = kind + ":" + await hash(salt + ":" + value);
+    const { results } = await env.DB.prepare(`
+        INSERT INTO rate_limits (key, window, count) VALUES (?, ?, 1)
+        ON CONFLICT (key, window) DO UPDATE SET count = count + 1 RETURNING count
+    `).bind(key, hour).all();
+    return results[0].count <= limit;
+}
+
+const PREVIEWS_PER_HOUR = 30;
+const REPORTS_PER_HOUR = 5;
+const PAGE_LIMIT = 50;
+
+function isAccountKey(value) {
+    return typeof value === "string" && ACCOUNT_KEY.test(value);
 }
 
 function validAdminToken(token) {
     return typeof token === "string" && token.length >= 32;
 }
 
-async function board(env) {
-    const { results } = await env.DB.prepare(`
-        SELECT s.public_id AS id, s.name, s.message, SUM(o.cents) AS cents
-        FROM supporters s JOIN support_orders o ON s.account_id = o.account_id
-        GROUP BY s.account_id HAVING SUM(o.cents) > 0
-        ORDER BY cents DESC, s.public_id ASC LIMIT 10
-    `).all();
-    const entries = results.map(({ id, name, message, cents }) => ({ id, name, message, cups: cups(cents) }));
+/**
+ * Everyone who opted in, ranked by total, a page at a time: place, public id, name and the message as much as the place shows.
+ * Never an amount.
+ */
+async function board(request, env) {
+    const query = new URL(request.url).searchParams;
+    const offset = Number(query.get("offset") ?? "0");
+    const limit = Number(query.get("limit") ?? "20");
+    if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000 || !Number.isInteger(limit) || limit < 1 || limit > PAGE_LIMIT) {
+        throw badRequest();
+    }
+    const [page, count] = await env.DB.batch([
+        env.DB.prepare(`
+            WITH totals AS (${TOTALS})
+            SELECT rank, id, name, message FROM (
+                SELECT ROW_NUMBER() OVER (ORDER BY cents DESC, public_id ASC) AS rank, public_id AS id, name, message FROM totals
+            ) ORDER BY rank LIMIT ? OFFSET ?
+        `).bind(limit, offset),
+        env.DB.prepare(`WITH totals AS (${TOTALS}) SELECT COUNT(*) AS count FROM totals`),
+    ]);
+    const entries = page.results.map(({ rank, id, name, message }) => ({ rank, id, name, message: cut(message, messageLimit(rank)) }));
+    const total = count.results[0].count;
     const adminToken = env.ADMIN_TOKEN;
     const ready = validAdminToken(adminToken) && adminToken.trimEnd() === adminToken &&
         adminToken.length <= ADMIN_HEADER_LIMIT - ADMIN_SCHEME.length && await playPostingConfigured(env);
     const headers = ready ? { ...RESPONSE_HEADERS, "X-TitanKeys-Posting": "ready" } : RESPONSE_HEADERS;
-    return json({ entries }, 200, headers);
+    return json({ entries, total, nextOffset: offset + entries.length < total ? offset + entries.length : null }, 200, headers);
 }
 
 async function publish(request, env, verifier) {
@@ -104,7 +168,7 @@ async function publish(request, env, verifier) {
         !Array.isArray(body.purchases) || body.purchases.length < 1 || body.purchases.length > 10) throw badRequest();
     const enteredName = optionalText(body.name);
     const name = body.anonymous ? null : enteredName;
-    const message = optionalText(body.message);
+    const message = optionalText(body.message, MESSAGE_LIMIT);
     const unique = new Map();
     for (const purchase of body.purchases) {
         if (!hasKeys(purchase, ["kind", "productId", "purchaseToken"]) ||
@@ -137,9 +201,53 @@ async function publish(request, env, verifier) {
             WHERE support_orders.account_id = excluded.account_id AND support_orders.token_hash = excluded.token_hash
         `).bind(receipt.orderHash, receipt.productId, receipt.tokenHash, receipt.nominalCents, receipt.cents, accountId));
     }
-    statements.push(db.prepare("SELECT COALESCE(SUM(cents), 0) AS cents FROM support_orders WHERE account_id = ?").bind(accountId));
-    const results = await db.batch(statements);
-    return json({ cups: cups(results.at(-1).results[0].cents) });
+    await db.batch(statements);
+    // The message keeps only what the new place allows (a place beyond 100th keeps a top-100 message, unshown until it rises).
+    const rank = await rankOf(db, accountId);
+    const stored = cut(message, Math.max(messageLimit(rank), 40));
+    if (stored !== message) await db.prepare("UPDATE supporters SET message = ? WHERE account_id = ?").bind(stored, accountId).run();
+    return json({ rank, tier: messageTier(rank), messageLimit: messageLimit(rank) });
+}
+
+/**
+ * "This puts you at #N": the place this account would reach with [addCents] more, before paying. Only the place comes back,
+ * never anyone's total, and each account and each address has an hourly limit.
+ */
+async function preview(request, env) {
+    const body = await readJson(request);
+    if (!hasKeys(body, ["accountKey", "addCents"]) || !isAccountKey(body.accountKey) ||
+        !Number.isSafeInteger(body.addCents) || body.addCents < 0 || body.addCents > 1_000_000) throw badRequest();
+    const accountId = await hash(body.accountKey);
+    const address = request.headers.get("CF-Connecting-IP") ?? "";
+    if (!await allowed(env, "preview-account", accountId, PREVIEWS_PER_HOUR) ||
+        !await allowed(env, "preview-address", address, PREVIEWS_PER_HOUR * 2)) throw new SupportError(429, "too_many_requests");
+    const [mine, ahead] = await env.DB.batch([
+        env.DB.prepare("SELECT COALESCE(SUM(cents), 0) AS cents FROM support_orders WHERE account_id = ?").bind(accountId),
+        env.DB.prepare(`WITH totals AS (${TOTALS}) SELECT account_id, cents FROM totals WHERE account_id != ?`).bind(accountId),
+    ]);
+    // Counted here, in the Worker: the totals never leave it.
+    const reached = mine.results[0].cents + body.addCents;
+    const rank = ahead.results.filter(other => other.cents > reached).length + 1;
+    // The account's own place and public id now, so the app can mark "you" on the board. Its own data only.
+    const own = await rankOf(env.DB, accountId);
+    const { results: ids } = own === null ? { results: [] }
+        : await env.DB.prepare("SELECT public_id FROM supporters WHERE account_id = ?").bind(accountId).all();
+    return json({ rank, tier: messageTier(rank), messageLimit: messageLimit(rank), myRank: own, myId: ids[0]?.public_id ?? null });
+}
+
+/** Anyone can report an entry, a few times an hour per address. It's kept for the owner; nothing is hidden by itself. */
+async function report(request, env) {
+    const body = await readJson(request);
+    if (!hasKeys(body, ["id", "reason"]) || typeof body.id !== "string" || !PUBLIC_ID.test(body.id)) throw badRequest();
+    const reason = optionalText(body.reason, MESSAGE_LIMIT);
+    if (!await allowed(env, "report", request.headers.get("CF-Connecting-IP") ?? "", REPORTS_PER_HOUR)) {
+        throw new SupportError(429, "too_many_requests");
+    }
+    const { results } = await env.DB.prepare("SELECT 1 FROM supporters WHERE public_id = ?").bind(body.id).all();
+    if (results.length === 0) return json({ error: "not_found" }, 404);
+    await env.DB.prepare("INSERT INTO support_reports (public_id, reason, created) VALUES (?, ?, ?)")
+        .bind(body.id, reason, Date.now()).run();
+    return done();
 }
 
 async function remove(request, db) {
@@ -154,15 +262,31 @@ async function remove(request, db) {
     return done();
 }
 
-async function adminDelete(request, env) {
+/** The owner's bearer token, compared through hashes so its length and content can't be timed. */
+async function isOwner(request, env) {
     const candidate = request.headers.get("Authorization");
     const secret = env.ADMIN_TOKEN;
     if (!validAdminToken(secret) || candidate === null ||
-        !candidate.startsWith(ADMIN_SCHEME) || candidate.length > ADMIN_HEADER_LIMIT) return json({ error: "not_found" }, 404);
+        !candidate.startsWith(ADMIN_SCHEME) || candidate.length > ADMIN_HEADER_LIMIT) return false;
     const [supplied, expected] = await Promise.all([hash(candidate.slice(ADMIN_SCHEME.length)), hash(secret)]);
     let difference = 0;
     for (let i = 0; i < expected.length; i++) difference |= supplied.charCodeAt(i) ^ expected.charCodeAt(i);
-    if (difference !== 0) return json({ error: "not_found" }, 404);
+    return difference === 0;
+}
+
+/** The owner's list of reports, newest first, with the entry as it reads now. */
+async function adminReports(request, env) {
+    if (!await isOwner(request, env)) return json({ error: "not_found" }, 404);
+    const { results } = await env.DB.prepare(`
+        SELECT r.public_id AS id, s.name, s.message, r.reason, r.created
+        FROM support_reports r LEFT JOIN supporters s ON s.public_id = r.public_id
+        ORDER BY r.created DESC, r.id DESC LIMIT 500
+    `).all();
+    return json({ reports: results });
+}
+
+async function adminDelete(request, env) {
+    if (!await isOwner(request, env)) return json({ error: "not_found" }, 404);
     const body = await readJson(request);
     if (!hasKeys(body, ["id"]) || typeof body.id !== "string" || !PUBLIC_ID.test(body.id)) throw badRequest();
     await env.DB.batch([
@@ -207,7 +331,10 @@ export function createWorker(verifier = playVerifier()) {
         async fetch(request, env) {
             try {
                 const path = new URL(request.url).pathname;
-                if (request.method === "GET" && path === "/v1/leaderboard") return await board(env);
+                if (request.method === "GET" && path === "/v1/leaderboard") return await board(request, env);
+                if (request.method === "POST" && path === "/v1/rank-preview") return await preview(request, env);
+                if (request.method === "POST" && path === "/v1/report") return await report(request, env);
+                if (request.method === "GET" && path === "/v1/admin/reports") return await adminReports(request, env);
                 if (request.method === "POST" && path === "/v1/support") return await publish(request, env, verifier);
                 if (request.method === "POST" && path === "/v1/remove") return await remove(request, env.DB);
                 if (request.method === "POST" && path === "/v1/admin/delete") return await adminDelete(request, env);
@@ -219,6 +346,8 @@ export function createWorker(verifier = playVerifier()) {
         },
         async scheduled(_, env) {
             try {
+                // Rate counters older than the last hour are done with.
+                await env.DB.prepare("DELETE FROM rate_limits WHERE window < ?").bind(Math.floor(Date.now() / 3_600_000) - 1).run();
                 await reconcileRefunds(env, verifier);
             } catch {
                 // Neither Google URLs nor response details belong in invocation errors.

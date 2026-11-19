@@ -19,11 +19,20 @@ export type SupportState = {
   preview?: boolean;
   purchaseResult?: "launched" | "pending" | "cancelled" | "unavailable" | null;
 };
-/** One supporter on the board, ranked by the server; the message arrives already cut to its rank's limit. Never an amount. */
-export type BoardEntry = { id: string; rank?: number; name?: string; message?: string; you?: boolean };
-export type Board = { available: boolean; postingReady?: boolean; entries?: BoardEntry[]; joined?: boolean; myRank?: number | null };
-/** Where adding [addCents] would put this supporter; unavailable hides "This puts you at #N". */
-export type RankPreview = { available: boolean; rank?: number };
+/** A place on the board: rank, public id, name and the message as much as the place shows. Never an amount. */
+// rank is optional and name and message read as strings, so the current screen's samples still type-check; the server sends
+// null for a missing name or a message the place doesn't show.
+export type BoardEntry = { rank?: number; id: string; name?: string; message?: string; you?: boolean };
+/** How much of a message a place shows: top 3 120 characters, top 10 80, top 100 40, beyond that the name only. */
+export type MessageTier = "top3" | "top10" | "top100" | "name";
+export type Board = {
+  available: boolean; postingReady?: boolean; entries?: BoardEntry[]; total?: number; nextOffset?: number | null; joined?: boolean;
+  /** This account's place, when it's on the board. */
+  myRank?: number | null;
+  /** After posting: the new place, its tier and how long a message it allows. */
+  rank?: number | null; tier?: MessageTier; messageLimit?: number;
+};
+export type RankPreview = { available: boolean; rank?: number; tier?: MessageTier; messageLimit?: number };
 
 const invoke = (operation: string, payload: object = {}) => callNative("titankeys", operation, payload);
 async function read<T>(operation: string, payload?: object): Promise<T> {
@@ -35,12 +44,13 @@ export const refreshSupport = () => invoke("supportRefresh");
 export const buySupport = (productId: string) => read<SupportState["purchaseResult"]>("supportPurchase", { productId });
 export const seeSupportReceipt = (id: string) => invoke("supportReceiptSeen", { id });
 export const onSupportChanged = (callback: () => void) => onNativeMessage("titankeys-support", callback);
-export const readBoard = () => read<Board>("supportBoardRead");
+export const readBoard = (offset = 0, limit = 20) => read<Board>("supportBoardRead", { offset, limit });
+/** "This puts you at #N": the place [addCents] more would reach. Rate-limited on the server. */
+export const previewRank = (addCents: number) => read<RankPreview>("supportPreviewRank", { addCents });
+export const reportEntry = (id: string, reason = "") => read<{ available: boolean; ok: boolean }>("supportReportEntry", { id, reason });
 export const joinBoard = (anonymous: boolean, name: string, message: string) =>
   read<Board>("supportBoardJoin", { anonymous, name, message });
 export const removeBoard = () => read<Board>("supportBoardRemove");
-export const previewRank = (addCents: number) => read<RankPreview>("supportPreviewRank", { addCents });
-export const reportEntry = (id: string) => read<{ available: boolean; ok?: boolean }>("supportReportEntry", { id });
 
 /** How long a message may be at a rank (owner, support flow v4): top 3, 120; top 10, 80; top 100, 40; beyond, name only. */
 export const MESSAGE_LIMITS = [[3, 120], [10, 80], [100, 40]] as const;

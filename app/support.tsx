@@ -57,8 +57,8 @@ const tiers = [
   { id: "small", label: "A bigger sip", line: "Keeps the fixes coming." },
   { id: "full", label: "Half a coffee", line: "A proper boost." },
 ] as const;
-/** Custom's steps, in dollars: $1 buys the unit product (Play asks how many), the rest are Play's fixed tips. */
-export const customSteps = [1, 3, 5, 10, 20, 50];
+/** Custom's dollars: the $1 unit product, bought N times (Google Play asks how many, from 1 to 50 here). */
+const CUSTOM_MOST = 50;
 
 export default function SupportPage() {
   return <SupportFlow />;
@@ -73,7 +73,8 @@ export function SupportFlow({ scene = "page" }: { scene?: "page" | "custom" | "b
   const [monthly, setMonthly] = useState(true);
   const [thanked, setThanked] = useState(false);
   const [tier, setTier] = useState(0);
-  const [step, setStep] = useState(2);
+  const [dollars, setDollars] = useState(5);
+  const [joinRank, setJoinRank] = useState<number | null>(null);
   const [rank, setRank] = useState<number | null>(null);
   const [rankBefore, setRankBefore] = useState<number | null>(null);
   const [testReceipt, setTestReceipt] = useState<Receipt>();
@@ -87,18 +88,27 @@ export function SupportFlow({ scene = "page" }: { scene?: "page" | "custom" | "b
     const stop = onSupportChanged(update);
     update();
     void refreshSupport().then(update).catch(update);
-    void readBoard().then(data => { if (active) setBoard(data); }).catch(() => {});
+    void (async () => {
+      let data = await readBoard(0, 20);
+      const pages = scene === "board" ? 5 : 1;
+      for (let page = 1; page < pages && data.available && data.nextOffset; page++) {
+        const more = await readBoard(data.nextOffset, 20);
+        if (!more.available) break;
+        data = { ...more, entries: [...(data.entries ?? []), ...(more.entries ?? [])] };
+      }
+      if (active) setBoard(data);
+    })().catch(() => {});
     return () => { active = false; stop(); };
   }, [scene]);
   const shownBoard = preview ? sampleBoard() : board;
 
   const products = state?.products ?? [];
   const custom = scene === "custom";
-  const customDollars = customSteps[step];
+  const customDollars = dollars;
   const product = custom
-    ? products.find(each => each.id === (customDollars === 1 ? tipUnit : `support_tip_${customDollars}`))
+    ? products.find(each => each.id === tipUnit)
     : products.find(each => each.id === `support_${monthly ? "monthly" : "tip"}_${tiers[tier].id}`);
-  const addCents = product?.baseCents ?? 0;
+  const addCents = custom ? (product?.baseCents ?? 0) * dollars : product?.baseCents ?? 0;
 
   // "This puts you at #N": asked again whenever the amount changes; hidden when the server can't answer.
   useEffect(() => {
@@ -131,6 +141,12 @@ export function SupportFlow({ scene = "page" }: { scene?: "page" | "custom" | "b
   }
 
   const receipt = testReceipt ?? state?.receipt;
+  useEffect(() => {
+    if (!receipt || preview) return;
+    let active = true;
+    void previewRank(0).then(result => { if (active && result.available) setJoinRank(result.rank ?? null); }).catch(() => {});
+    return () => { active = false; };
+  }, [receipt?.id, preview]);
   if (receipt) {
     const finish = () => {
       setJoinDone(false);
@@ -138,7 +154,7 @@ export function SupportFlow({ scene = "page" }: { scene?: "page" | "custom" | "b
       if (testReceipt) setTestReceipt(undefined);
       else void seeSupportReceipt(receipt.id).then(supportState).then(setState).catch(() => {});
     };
-    const nowRank = preview ? sampleRank(receipt.totalCents - receipt.previousCents) : shownBoard.myRank ?? null;
+    const nowRank = preview ? sampleRank(receipt.totalCents - receipt.previousCents) : joinRank ?? shownBoard.myRank ?? null;
     const joined = shownBoard.joined ?? state?.boardJoined;
     const movedUp = !!joined && rankTier(nowRank) !== null && (rankBefore === null || (rankTier(nowRank) ?? 999) < (rankTier(rankBefore) ?? 999));
     const offer = !joinDone && shownBoard.available && shownBoard.postingReady === true && (!joined || movedUp);
@@ -165,7 +181,7 @@ export function SupportFlow({ scene = "page" }: { scene?: "page" | "custom" | "b
 
   const billingStatus = state?.purchaseResult === "unavailable" ? supportUnavailable :
     state?.purchaseResult === "pending" ? supportPending : "";
-  const price = product?.price ?? "";
+  const price = custom ? (product ? `$${dollars}` : "") : product?.price ?? "";
   const checkout = pending ? "Opening Google Play…" : price ? `${TEXT.chipIn} · ${price}` : state ? supportUnavailable : "Checking prices…";
   const footer = <>
     {rank !== null && <RankLine text={TEXT.putsYouAt(rank, shownBoard.joined ? shownBoard.myRank ?? null : null)} accent={accent} />}
@@ -187,9 +203,9 @@ export function SupportFlow({ scene = "page" }: { scene?: "page" | "custom" | "b
       <Text size={44} align="center">{`$${customDollars} · ${cupWords(customDollars)}`}</Text>
       {customDollars / 5 > 5 && <Text size={22} tone="accent" align="center">{TEXT.wholePot}</Text>}
       <Stack axis="horizontal" align="center" gap={16}>
-        <Button disabled={step === 0} onPress={() => setStep(Math.max(0, step - 1))}>Less</Button>
-        <StepBar steps={customSteps.length} at={step} accent={accent} />
-        <Button disabled={step >= customSteps.length - 1} onPress={() => setStep(step + 1)}>More</Button>
+        <Button disabled={dollars <= 1} onPress={() => setDollars(Math.max(1, dollars - 1))}>Less</Button>
+        <StepBar steps={CUSTOM_MOST} at={dollars - 1} accent={accent} />
+        <Button disabled={dollars >= CUSTOM_MOST} onPress={() => setDollars(Math.min(CUSTOM_MOST, dollars + 1))}>More</Button>
       </Stack>
       {footer}
     </Stack>

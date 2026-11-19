@@ -9,12 +9,8 @@ internal enum class SupportProduct(val id: String, val monthly: Boolean, val cen
     TipSip("support_tip_sip", false, 50),
     TipSmall("support_tip_small", false, 100),
     TipFull("support_tip_full", false, 200),
-    TipUnit("support_tip_unit", false, 100),
-    TipThree("support_tip_3", false, 300),
-    TipFive("support_tip_5", false, 500),
-    TipTen("support_tip_10", false, 1_000),
-    TipTwenty("support_tip_20", false, 2_000),
-    TipFifty("support_tip_50", false, 5_000);
+    /** Custom: $1, bought in any quantity (owner, 2026-11-19: no fixed ladder; monthly has its three tiers only). */
+    TipUnit("support_tip_unit", false, 100);
 
     fun value(quantity: Int, micros: Long?, currency: String?): Long {
         val unit = if (currency == "USD" && micros != null) (micros + 5_000) / 10_000 else cents

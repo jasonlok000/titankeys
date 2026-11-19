@@ -18,13 +18,28 @@ object RimeAssets {
         val assets = app.assets
         return { data ->
             val manifest = assets.open(RimeData.MANIFEST).bufferedReader().use { it.readText() }
-            val groups = runCatching { assets.open(RimeData.SCHEMAS).bufferedReader().use { RimeData.groups(it.readText()) } }.getOrNull()
+            val groups = schemaFiles(app)
             // With no Chinese input method on, as when one starts before Settings has saved it, or the keyboard hasn't said
             // which are, every schema's files.
             val schemas = runCatching { schemasOn(app) }.getOrDefault(emptySet()).ifEmpty { groups?.keys.orEmpty() }
             data.install(manifest, groups, schemas) { path -> assets.open("${RimeData.ASSETS}/$path") }
         }
     }
+
+    /** librime can select a schema before its compiled tables are installed. Check the same groups the installer uses. */
+    fun schemaReadiness(context: Context): (RimeData, String) -> Boolean {
+        val app = context.applicationContext
+        val groups by lazy { schemaFiles(app) }
+        return { data, schema ->
+            val files = groups
+            // An older package without a group list installs all schemas together.
+            files == null || files[schema]?.let(data::hasSchemaFiles) == true
+        }
+    }
+
+    private fun schemaFiles(context: Context): Map<String, Set<String>>? = runCatching {
+        context.assets.open(RimeData.SCHEMAS).bufferedReader().use { RimeData.groups(it.readText()) }
+    }.getOrNull()
 
     /**
      * The Rime schemas of the input methods that are on (Settings > Languages): the keyboard sets this when it starts

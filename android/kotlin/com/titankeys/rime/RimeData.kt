@@ -23,6 +23,11 @@ class RimeData(private val root: File) {
     /** Whether any data is installed, so Rime can open. */
     val installed get() = marker.isFile
 
+    /** Every file in the packaged schema's group is present where Rime can read it. */
+    fun hasSchemaFiles(paths: Set<String>): Boolean = paths.all { path ->
+        File(shared, path).let { it.isFile && it.canRead() }
+    }
+
     /** Rime's own snapshots of the learned words ([RimeBackup]), in its sync folder, named by [INSTALLATION]. */
     val snapshots get() = File(user, "sync/$INSTALLATION")
 

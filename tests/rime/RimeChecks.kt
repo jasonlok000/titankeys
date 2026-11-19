@@ -40,6 +40,7 @@ fun main(args: Array<String>) {
     withNoVariantTheChinesePageOpensOnce()
     switchingInputMethodsKeepsRimeOpen()
     anInputMethodTurnedOnWhileRimeIsOpenStarts()
+    nativeSchemaSelectionCanSucceedWithoutItsDictionary(args.firstOrNull() ?: "android/assets/im")
     theWarmEngineHasYaleReady()
     theChineseInputMethodsAreRimes(args.firstOrNull())
     theBackupTakesRimesSnapshots()
@@ -88,6 +89,8 @@ private class FakeRime : RimeCalls {
     /** The schemas whose files are installed now, and the ones Rime had when it opened, which it can select: null is all. */
     var installed: Set<String>? = null
     private var deployed: Set<String>? = null
+    var acceptsMissingSchema = false
+    private var selectedSchema: String? = null
     /**
      * librime-predict's suggestions: after a commit from a code or a suggestion, the next words, "<word>+0" and on; none at the
      * start. Escape and Backspace clear them, as its predictor does, and clearing the composition alone doesn't: the predictor
@@ -120,7 +123,8 @@ private class FakeRime : RimeCalls {
         // Selecting a schema resets its switches: the variant switch's reset is zh_hk.
         options.clear()
         options["zh_hk"] = true
-        return id.startsWith("tk_") && deployed?.contains(id) != false
+        selectedSchema = id
+        return id.startsWith("tk_") && (acceptsMissingSchema || deployed?.contains(id) != false)
     }
 
     override fun option(name: String, on: Boolean) {
@@ -134,7 +138,16 @@ private class FakeRime : RimeCalls {
         calls += "key $keycode"
         return when (keycode) {
             in 'a'.code..'z'.code -> { code += keycode.toChar(); page = 0; suggestions = emptyList(); true }
-            RimeKeys.SPACE -> if (code.isEmpty()) false else { committed(choices()[0]); code = ""; true }
+            RimeKeys.SPACE -> if (code.isEmpty()) false else {
+                val first = when {
+                    acceptsMissingSchema && deployed?.contains(selectedSchema) == false -> code
+                    acceptsMissingSchema && selectedSchema == "tk_cangjie" && code == "hqi" -> "我"
+                    else -> choices().first()
+                }
+                committed(first)
+                code = ""
+                true
+            }
             RimeKeys.RETURN -> if (code.isEmpty()) false else { commit = code; code = ""; true }
             RimeKeys.ESCAPE -> { val had = suggestions.isNotEmpty(); suggestions = emptyList(); had }
             RimeKeys.BACKSPACE -> if (code.isEmpty()) { val had = suggestions.isNotEmpty(); suggestions = emptyList(); had }
@@ -516,13 +529,13 @@ fun anInputMethodTurnedOnWhileRimeIsOpenStarts() {
     val on = mutableSetOf("tk_yale")
     rime.installed = emptySet()
     val install = { _: RimeData -> rime.installed = on.toSet(); true }
-    val warm = RimeEngine(rime, install)
+    val warm = RimeEngine(rime, install = install)
     check(warm.warm(method("tk_yale"), dataDir), "Yale's engine warms Rime up")
-    val yale = RimeEngine(rime, install)
+    val yale = RimeEngine(rime, install = install)
     check(yale.start(method("tk_yale"), dataDir), "Yale starts")
     // Cangjie turned on in Settings, then switched to: the keyboard starts its engine, then stops Yale's.
     on += "tk_cangjie"
-    val cangjie = RimeEngine(rime, install)
+    val cangjie = RimeEngine(rime, install = install)
     check(cangjie.start(method("tk_cangjie"), dataDir), "Cangjie starts")
     yale.stop()
     same("tk_cangjie", cangjie.schema, "with its schema")
@@ -531,6 +544,41 @@ fun anInputMethodTurnedOnWhileRimeIsOpenStarts() {
     warm.stop()
     cangjie.stop()
     same(rime.calls.count { it == "open" }, rime.calls.count { it == "close" }, "each open has its close once the engines stop")
+}
+
+/** librime can accept a Cangjie schema with a missing table and commit the literal code on Space. */
+fun nativeSchemaSelectionCanSucceedWithoutItsDictionary(methods: String) {
+    val groups = RimeData.groups(File(File(methods).parentFile, RimeData.SCHEMAS).readText())
+    val root = kotlin.io.path.createTempDirectory("tk-rime-new-schema").toFile()
+    val data = RimeData(root)
+    val rime = FakeRime().apply { acceptsMissingSchema = true }
+    val on = mutableSetOf("tk_yale")
+    val ready = { data: RimeData, schema: String -> data.hasSchemaFiles(groups.getValue(schema)) }
+    val install = { data: RimeData ->
+        for (schema in on) for (path in groups.getValue(schema)) {
+            File(data.shared, path).apply { parentFile.mkdirs(); writeText("fixture") }
+        }
+        rime.installed = on.toSet()
+        true
+    }
+    val warm = RimeEngine(rime, ready, install)
+    val cangjie = RimeEngine(rime, ready, install)
+    try {
+        check(warm.warm(method("tk_yale"), root), "Yale warms Rime with its own files")
+        check(!ready(data, "tk_cangjie"), "none of Cangjie's unshared tables was copied for Yale alone")
+        on += "tk_cangjie"
+        cangjie.variant(ChineseVariant.HongKong)
+        check(cangjie.start(method("tk_cangjie"), root), "Cangjie starts in the same process")
+        type(cangjie, "hqi")
+        same("我", cangjie.space().commit, "Space commits the Cangjie candidate even when librime accepts an absent schema")
+        check(ready(data, "tk_cangjie"), "all of Cangjie's packaged files are now readable")
+        check(rime.calls.indexOf("close") in 1 until rime.calls.indexOf("schema tk_cangjie"),
+            "the existing session closes before the first Cangjie select")
+    } finally {
+        cangjie.stop()
+        warm.stop()
+        root.deleteRecursively()
+    }
 }
 
 /** No default variant: the first Chinese switch with none picked opens Settings' Chinese page, once, and never in the guide. */

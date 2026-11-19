@@ -1,13 +1,16 @@
 package com.titankeys.support
 
 fun main() {
-    val firstRun = 1_000L
-    val day14 = firstRun + SupportCard.WAIT_MILLIS
-    check(!SupportCard.due(day14 - 1, firstRun, false))
-    check(SupportCard.due(day14, firstRun, false))
-    check(!SupportCard.due(day14, firstRun, true))
-    check(!SupportCard.due(firstRun - 1, firstRun, false))
+    val firstUse = 1_000L
+    val day14 = firstUse + SupportCard.WAIT_MILLIS
+    check(!SupportCard.due(day14 - 1, firstUse, false))
+    check(SupportCard.due(day14, firstUse, false))
+    check(!SupportCard.due(day14, firstUse, true))
+    check(!SupportCard.due(firstUse - 1, firstUse, false))
     check(!SupportCard.due(day14, 0, false))
+    check(SupportCard.displayed(longArrayOf(0, 1, 2, 3, 4)).map { it.index } == listOf(1, 2, 3))
+    check(SupportCard.displayed(longArrayOf(0, 0, 0, 0, 1)).single() == IndexedValue(4, 1L))
+    check(SupportCard.displayed(LongArray(5)).isEmpty())
 
     val ids = SupportProduct.entries.map { it.id }
     check(ids.distinct().size == 12)

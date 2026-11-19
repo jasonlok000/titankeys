@@ -954,3 +954,9 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 
 - Owner in the follow-up chat: "make deploying it live your step." The TitanKeys task owns the Cloudflare Worker, its D1 database and connecting the app. The owner still signs and publishes the APK.
 - Read the board from its verified HTTPS address when opening Support. Show posting only after the Worker reports configured receipt verification. Keep removal available to people who already opted in.
+
+## Codex (2026-11-19, support invite)
+
+- The owner approved replacing the Playground banner with one large popup. It appears once on opening the app after fourteen days from the first recorded keyboard use. Keep prior dismissals. The one standing link is Settings > About > Support TitanKeys.
+- The popup leads with up to three nonzero stats from the device. Use a coffee cup and a short steam trace. The support screen animates the amount in one cup. Monthly opens first, one-time shares the same three choices, and custom amounts and the supporters board each open on their own screen.
+- Read the board when its screen opens. Reveal the orange juice after the purchase, with a glass that fills to the cumulative amount and spills past one cup.

@@ -48,6 +48,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.titankeys.support.SupportInviteView
 import com.titankeys.support.SupportStats
 import com.titankeys.connected.Connected
 import com.titankeys.connected.Contributions
@@ -774,8 +775,9 @@ class GuideActivity : Activity() {
     /** The playground's ways out, to the written guide and to Settings. */
     private lateinit var guideAction: TextView
     private lateinit var settingsAction: TextView
-    private lateinit var supportCard: LinearLayout
-    private var supportStatsShowing = false
+    private var supportInvite: SupportInviteView? = null
+    private var supportTotals: LongArray? = null
+    private var checkSupportOnOpen = true
     private lateinit var close: ImageView
     private lateinit var title: TextView
     private lateinit var body: TextView
@@ -1042,6 +1044,8 @@ class GuideActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         repairs = savedInstanceState?.getInt(REPAIR) ?: intent.getIntExtra(REPAIR, 0)
+        supportTotals = savedInstanceState?.getLongArray(SUPPORT_TOTALS)
+        checkSupportOnOpen = savedInstanceState == null
         opened(this)
         GuideFonts.load(this)
         overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
@@ -1226,8 +1230,9 @@ class GuideActivity : Activity() {
         awaitingAccessibility = false
         // The keyboard list can close without a change, so this checks each time the guide comes back.
         checkKeyboard()
+        if (playground && started) showSupportInvite()
         // During setup there is nothing to type yet, and another keyboard would cover the slide.
-        if (settingUp) return
+        if (settingUp || supportInvite != null) return
         // The finale and the end have no field: the keyboard stays down, also back from the share screen, so its bar never shows
         // there and nothing jumps when it goes (Master, 2026-11-13: the bar showed, and the buttons dropped 88 px as it hid).
         keyboardShown(keyboardHere())
@@ -1239,7 +1244,7 @@ class GuideActivity : Activity() {
     /** The playground's field takes the focus once it's laid out, if it hasn't got it: a field not laid out yet can't take it. */
     private fun focusPlaygroundField() {
         field.post {
-            if (isFinishing || isDestroyed || settingUp || field.isFocused) return@post
+            if (isFinishing || isDestroyed || settingUp || supportInvite != null || field.isFocused) return@post
             field.isFocusable = true
             field.isFocusableInTouchMode = true
             field.requestFocus()
@@ -1248,6 +1253,10 @@ class GuideActivity : Activity() {
 
     @Deprecated("Back reaches an activity here, because the app does not opt in to predictive back")
     override fun onBackPressed() {
+        if (supportInvite != null) {
+            closeSupportInvite(openSupport = false)
+            return
+        }
         // Back goes to the step before, like the Back button. From the first step or the ending it leaves the guide.
         // With the leaving pop-up open, Back closes it: you stay.
         if (leavePopup != null) {
@@ -1581,11 +1590,6 @@ class GuideActivity : Activity() {
                 addView(phantom, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(24) })
             addView(actions, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16) })
-            if (playground) {
-                supportCard = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-                addView(supportCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
-            }
         }
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3311,11 +3315,12 @@ class GuideActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(REPAIR, repairs)
+        supportTotals?.let { outState.putLongArray(SUPPORT_TOTALS, it) }
     }
 
     /** The keyboard stays up for the story and the playground, and stays down during setup. */
     private fun keyboardShown(want: Boolean) {
-        val shown = want && keyboardHere()
+        val shown = want && keyboardHere() && supportInvite == null
         val state = if (shown) WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE else WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
         window.setSoftInputMode(state or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         // Down, the field can't take focus. Cleared, focus otherwise goes straight back to the field, the first thing that takes it,
@@ -3348,7 +3353,6 @@ class GuideActivity : Activity() {
         hideHint()
         guideAction.visibility = View.VISIBLE
         settingsAction.visibility = View.VISIBLE
-        paintSupport()
         // The header (design v2): the wordmark on the left, the words a minute in the middle once you type, Guide and Settings on
         // the right, and a fixed height, so it never jumps (owner: the name grew when a panel opened).
         paintChapter()
@@ -3366,62 +3370,44 @@ class GuideActivity : Activity() {
         for (view in listOf(title, field, keys, chapter, script, guideAction, settingsAction))
             view.animate().alpha(1f).setStartDelay(0).setDuration(FADE_MILLIS).start()
         showScript()
+        root.post(::showSupportInvite)
         field.requestFocus()
         focusPlaygroundField()
     }
 
-    private fun paintSupport() {
-        val fixture = SupportStats.preview(this)
-        if (!supportStatsShowing && SupportStats.due(this, fixture)) {
-            supportStatsShowing = true
-            if (!fixture) SupportStats.seen(this)
-        }
-        val due = supportStatsShowing
-        val totals = if (due) SupportStats.totals(this, fixture) else null
-        supportCard.removeAllViews()
-        supportCard.setPadding(dp(14), dp(9), dp(14), dp(9))
-        supportCard.background = rounded(Accent.raised, Radii.MEDIUM)
-        val heading = if (due) "Two weeks with TitanKeys" else "Like TitanKeys? Keep it going."
-        val detail = if (totals == null) "Everything's free, and stays free. Chip in if you want more of it." else {
-            val words = totals.getLong("words")
-            val swipes = totals.getLong("swipes")
-            val corrections = totals.getLong("corrections")
-            val caps = totals.getLong("caps")
-            val gestures = totals.getLong("gestures")
-            "$words words typed. $swipes swipes. $corrections autocorrects. $caps auto-capitals. $gestures gestures.\n\n" +
-                "That's a lot of thumb work. If TitanKeys has earned a coffee, you can buy it one."
-        }
-        val open = {
-            if (due) SupportStats.dismiss(this)
+    private fun showSupportInvite() {
+        if (playgroundFromEnd || !visible || !hasWindowFocus() || settingUp || supportInvite != null || isFinishing || isDestroyed) return
+        val restored = supportTotals
+        val totals = restored ?: if (checkSupportOnOpen) {
+            checkSupportOnOpen = false
+            SupportStats.claimInvite(this, intent.getBooleanExtra(SUPPORT_OPEN, false))
+        } else null
+        if (totals == null) return
+        val invite = SupportInviteView(this, totals, haptics, animate = restored == null, close = ::closeSupportInvite)
+        supportTotals = totals
+        supportInvite = invite
+        column.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        column.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        keyboardShown(false)
+        root.addView(invite, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        invite.requestApplyInsets()
+        invite.requestFocus()
+    }
+
+    private fun closeSupportInvite(openSupport: Boolean) {
+        val invite = supportInvite ?: return
+        supportInvite = null
+        supportTotals = null
+        root.removeView(invite)
+        column.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        column.descendantFocusability = ViewGroup.FOCUS_BEFORE_DESCENDANTS
+        if (openSupport) {
+            // An invite restored after process death has no callback to the underlying page.
+            if (playgroundExit == null) startActivity(Connected.pageIntent(this, "/support"))
             leavePlayground(PLAYGROUND_SUPPORT)
-        }
-        val summary = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(TextView(context).apply {
-                text = heading
-                typeface = HEAVY
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
-                setTextColor(Accent.colour)
-            })
-            addView(TextView(context).apply {
-                text = detail
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                setTextColor(GuideColours.CREAM)
-            })
-        }
-        supportCard.addView(summary)
-        if (due) {
-            supportCard.addView(LinearLayout(this).apply {
-                addView(topAction("Support TitanKeys", open).apply { setTextColor(Accent.colour) })
-                addView(topAction("Nah") {
-                    SupportStats.dismiss(this@GuideActivity)
-                    supportStatsShowing = false
-                    paintSupport()
-                }.apply { setTextColor(GuideColours.CREAM) })
-            })
         } else {
-            summary.contentDescription = "$heading $detail"
-            summary.onPress(haptics, action = open)
+            keyboardShown(ready && !settingUp)
+            focusPlaygroundField()
         }
     }
 
@@ -5184,6 +5170,9 @@ class GuideActivity : Activity() {
         private const val FIELD_HINT = "Type here. Or swipe."
         private const val TAG = "TitanKeysGuide"
         private const val PLAYGROUND = "playground"
+        private const val SUPPORT_OPEN = "support_open"
+        private const val SUPPORT_OPEN_CONSUMED = "support_open_consumed"
+        private const val SUPPORT_TOTALS = "support_totals"
         private const val PLAYGROUND_LABEL = "Playground"
         /** The share slide's offer (#34), while it is unanswered. It opens the full disclosure. */
         private const val SHARE_OFFER = "Share to improve TitanKeys"
@@ -5436,7 +5425,13 @@ class GuideActivity : Activity() {
             val open = {
                 // One that is starting does not count as open yet, so a second ask in the meantime is left out.
                 playgroundStarting = SystemClock.uptimeMillis()
-                activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(PLAYGROUND, true).putExtra(FROM_END, fromEnd))
+                // The front page can reopen its playground as Settings closes. A launcher intent counts only once.
+                val launch = activity.intent
+                val launcherOpen = !fromEnd && launch.action == Intent.ACTION_MAIN && launch.hasCategory(Intent.CATEGORY_LAUNCHER) &&
+                    !launch.getBooleanExtra(SUPPORT_OPEN_CONSUMED, false)
+                if (launcherOpen) launch.putExtra(SUPPORT_OPEN_CONSUMED, true)
+                activity.startActivity(Intent(activity, GuideActivity::class.java).putExtra(PLAYGROUND, true)
+                    .putExtra(FROM_END, fromEnd).putExtra(SUPPORT_OPEN, launcherOpen))
             }
             if (guidesOpen > 0) waitingPlayground = open else open()
         }

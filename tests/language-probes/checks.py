@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/dev/touch"))
@@ -46,46 +46,6 @@ class LanguageProbes(unittest.TestCase):
                     self.assertIs(language_checks.turn_on(on, "en"), wanted)
                 restart.assert_called_once_with()
 
-    def test_review_restart_reorders_both_owned_activities_before_focusing(self):
-        app = checks.APP
-        field = review_batch.languages.FIELD_ACTIVITY
-        main = "com.vandam.ink.MainActivity"
-        windows = [f"mCurrentFocus=Window{{123 u0 {app}/{activity}}}" for activity in [field, main, field, field]]
-        with patch.object(review_batch.languages, "front", side_effect=windows) as front, \
-                patch.object(review_batch.languages, "focus_field", return_value=True) as focus, \
-                patch.object(review_batch, "adb") as adb, patch.object(review_batch.time, "sleep"):
-            events = Mock()
-            events.attach_mock(front, "front")
-            events.attach_mock(focus, "focus")
-            events.attach_mock(adb, "adb")
-            review_batch.field_start_again()
-        self.assertEqual(events.mock_calls, [
-            call.front(), call.adb("shell", "am", "start", "--activity-reorder-to-front", "-n", f"{app}/{main}"),
-            call.front(), call.adb("shell", "am", "start", "--activity-reorder-to-front", "-n", f"{app}/{field}"),
-            call.front(), call.focus(), call.front(),
-        ])
-
-    def test_review_restart_stops_without_focusing_if_own_activity_is_unverified(self):
-        app = checks.APP
-        field = review_batch.languages.FIELD_ACTIVITY
-        in_field = f"mCurrentFocus=Window{{123 u0 {app}/{field}}}"
-        in_main = f"mCurrentFocus=Window{{123 u0 {app}/com.vandam.ink.MainActivity}}"
-        in_release = f"mCurrentFocus=Window{{123 u0 com.titankeys/{field}}}"
-        in_owner = "mCurrentFocus=Window{123 u0 other.app/.Main}"
-        for windows, starts in [
-            ([in_release], 0),
-            ([in_field, in_owner], 1),
-            ([in_field, in_main, in_owner], 2),
-            ([in_field, in_main, in_main], 2),
-        ]:
-            with self.subTest(starts=starts), patch.object(review_batch.languages, "front", side_effect=windows), \
-                    patch.object(review_batch.languages, "focus_field") as focus, \
-                    patch.object(review_batch, "adb") as adb, patch.object(review_batch.time, "sleep"):
-                with self.assertRaises(checks.Stop):
-                    review_batch.field_start_again()
-                self.assertEqual(adb.call_count, starts)
-                focus.assert_not_called()
-
     def test_cangjie_review_requires_fresh_readback_in_the_same_yale_editor(self):
         activity = review_batch.languages.FIELD_ACTIVITY
         window = f"mCurrentFocus=Window{{123 u0 {checks.APP}/{activity}}}"
@@ -111,8 +71,8 @@ class LanguageProbes(unittest.TestCase):
                         patch.object(review_batch.languages, "front", side_effect=lambda: front if restarted else window), \
                         patch.object(review_batch.languages, "log_lines", return_value=logs), \
                         patch.object(review_batch, "debug_pid", side_effect=lambda: pid if restarted else "123"), \
-                        patch.object(review_batch, "field_start_again", side_effect=restart), \
-                        patch.object(review_batch, "adb", return_value="on en,yue-yale,zh-cangjie; typing zh-cangjie"), \
+                        patch.object(review_batch.own_editor, "restart", side_effect=restart) as restart_editor, \
+                        patch.object(review_batch, "adb", return_value="on en,yue-yale,zh-cangjie; typing zh-cangjie") as adb, \
                         patch.object(review_batch, "play") as yale_keys, patch.object(checks, "field", return_value=yale), \
                         patch.object(checks, "set_text", return_value="") as clear, patch.object(review_batch.time, "sleep"), \
                         patch.object(chinese_checks, "shot_then", return_value=typed) as cangjie_keys, \
@@ -120,6 +80,8 @@ class LanguageProbes(unittest.TestCase):
                     review_batch.check_cangjie_after_yale()
                 yale_actions = tuple(f"key:{key}" for key in "neihou")
                 self.assertEqual(yale_keys.call_args.args, (*yale_actions, "+500", "key:space", "+600"))
+                self.assertEqual(restart_editor.call_count, int(chinese_checks.cjk(yale)))
+                self.assertFalse(any(command.args[:3] == ("shell", "am", "start") for command in adb.call_args_list))
                 record.assert_called_once()
                 self.assertIs(record.call_args.args[1], verdict)
                 if verdict is None:

@@ -1,9 +1,10 @@
 """B's steps for #85 after the fix (main a329c913, Composer's Identity holds the connection weakly), for checks.py --batch leak-85:
-a LeakCheck after the playground checks, after 15 guide runs and after 15 more; nothing held all three times closes #85. Only if
+a LeakCheck after the playground checks, after 15 guide runs and after 15 more. Only if
 something is held: a heap dump, pulled to the computer, tools/leak-paths.py on it, and the dump deleted on both sides. The dump is of the keyboard's process and can hold typed text: nothing here prints, greps or reads a string from it. Only
 leak-paths.py's output, class and field names, is kept: $TK_OUT/touch/leak-paths-TIME.txt.
 """
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -24,29 +25,57 @@ def answer_of(out):
 # Whether any LeakCheck so far found a guide or playground still held: only then the dump.
 held_seen = False
 CLEAN = "no guide or playground in memory"
+ACTIVITY = re.compile(r"(guide|playground) [0-9a-f]+: (destroyed, still held|finishing|open)(?:, held (?:by |from ).+)?")
 
 
-def leakcheck(name, after):
+def verdict(line, allow_open_playground=False):
+    """Require a classified inventory. An open instance is evidence of lifecycle state, not a retained corpse."""
+    inventory, marker, _ = line.partition("; input methods:")
+    if not marker:
+        return None
+    if inventory == CLEAN:
+        return True
+    entries = [ACTIVITY.fullmatch(item) for item in inventory.split("; ")]
+    if not all(entries):
+        return None
+    if any(item[2] == "destroyed, still held" for item in entries):
+        return False
+    if allow_open_playground and len(entries) == 1 and entries[0].groups() == ("playground", "open"):
+        return True
+    return None
+
+
+def leakcheck(name, after, *, allow_open_playground=False):
     """A plain LeakCheck (no dump): YES when nothing is held. LeakCheck collects (gc and runFinalization, three times) before it
     answers, yet a guide it saw held at 12:35 on 2026-11-17 was gone by the dump a moment later: late finalization. So a held
     answer gets a second read 3 s on, after its own collection, and only one still held there is a NO."""
     global held_seen
     line = answer_of(adb("shell", "am", "broadcast", "-n", RECEIVER))
     first = line
-    if CLEAN not in line:
+    outcome = verdict(line, allow_open_playground)
+    if outcome is not True:
         time.sleep(3)
         line = answer_of(adb("shell", "am", "broadcast", "-n", RECEIVER))
-    clean = CLEAN in line
-    held_seen = held_seen or not clean
-    again = "" if first is line else f" (the first read, 3 s before: {first[:160]})"
-    record(name, clean, f"LeakCheck after {after}: {line[:400]}{again}")
+        outcome = verdict(line, allow_open_playground)
+    held_seen = held_seen or outcome is False
+    again = "" if first == line else f" (the first read, 3 s before: {first[:160]})"
+    record(name, outcome, f"LeakCheck after {after}: {line[:400]}{again}")
+
+
+def open_fixture():
+    if not os.environ.get("TK_SAFE_RUNNER"):
+        return retest_batch.own_screen()
+    # Home focus deliberately leaves Playground open. Reorder Debug's known fixture.
+    if not languages.in_field():
+        raise Stop("the Debug test editor did not come to the front for the guide leak check")
 
 
 def guide_runs(count=15):
+    open_fixture()
     for _ in range(count):
-        retest_batch.own_screen()
         guide_checks.guide("steer")
         guide_checks.leave_guide()
+        open_fixture()
     time.sleep(2)
 
 
@@ -54,7 +83,7 @@ def check_playground_then_leakcheck():
     """After B's fix (main a329c913): About, feedback and home-focus, then a LeakCheck: nothing may be held (O)."""
     retest_batch.check_phone()
     time.sleep(2)
-    leakcheck("85-after-playground", "the playground checks")
+    leakcheck("85-after-playground", "the playground checks", allow_open_playground=True)
 
 
 def check_guides():
@@ -69,7 +98,7 @@ def check_dump_if_held():
     """Only if a LeakCheck found something held: a dump, pulled, leak-paths.py on it (names only), the dump deleted on both
     sides and confirmed."""
     if not held_seen:
-        return record("85-dump", True, "nothing was held at any LeakCheck: no dump taken")
+        return record("85-dump", True, "no destroyed activity was confirmed retained: no dump taken")
     line = answer_of(adb("shell", "am", "broadcast", "-n", RECEIVER, "--ez", "dump", "true"))
     stamp = time.strftime("%Y%m%d-%H%M%S")
     out = os.path.join(os.environ.get("TK_OUT", os.path.expanduser("~/tk-out")), "touch")

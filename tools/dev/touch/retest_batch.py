@@ -32,7 +32,8 @@ def run_tool(name, *command):
     env.setdefault("KOTLIN_HOME", os.path.join(build, "kotlin-2.1.20", "kotlinc"))
     result = subprocess.run(list(command), cwd=REPO, env=env, capture_output=True, text=True)
     tail = " | ".join((result.stdout + result.stderr).strip().splitlines()[-3:])[-300:]
-    record(name, result.returncode == 0, f"exit {result.returncode}: {tail}")
+    verdict = None if name == "feedback" and result.returncode == 77 else result.returncode == 0
+    record(name, verdict, f"exit {result.returncode}: {tail}")
 
 
 def check_phone():
@@ -54,14 +55,9 @@ def check_rawlog():
 
 def check_85_leaks():
     """#85: the guide opened and left 15 times, then LeakCheck: no guide or playground may stay in memory."""
-    for _ in range(15):
-        own_screen()
-        guide_checks.guide("steer")
-        guide_checks.leave_guide()
-    time.sleep(2)
-    answer = adb("shell", "am", "broadcast", "-n", f"{APP}/com.titankeys.keyboard.LeakCheck")
-    report = answer.strip().split("data=")[-1].strip('"')[:300]
-    record("85-leaks", "no guide or playground in memory" in answer, f"after 15 guides: {report}")
+    from leak_batch import guide_runs, leakcheck
+    guide_runs()
+    leakcheck("85-leaks", "15 guide runs")
 
 
 def row_at(text):

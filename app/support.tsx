@@ -158,7 +158,7 @@ function CustomTip({ products, buy, pending, reduceMotion }: {
   return <Stack align="center" gap={16}>
     <CoffeeCup amount={selected ? selected.amount / 5 : .1} reduceMotion={reduceMotion} />
     {selected && <>
-      <Text size={25}>{`${selected.product.price} · about ${quantity} ${quantity === "1" ? "cup" : "cups"}`}</Text>
+      <Text size={25}>{`${selected.product.price} · about ${quantity} ${selected.amount < 5 ? "of a cup" : selected.amount === 5 ? "cup" : "cups"}`}</Text>
       {selected.amount > 25 && <Note>That's a whole pot. I'll need a bigger table.</Note>}
       <Stack axis="horizontal" gap={16}>
         <Button disabled={index === 0} onPress={() => setIndex(Math.max(0, index - 1))}>Less</Button>
@@ -166,7 +166,7 @@ function CustomTip({ products, buy, pending, reduceMotion }: {
       </Stack>
       <Checkout label={`Chip in · ${selected.product.price}`} disabled={pending} onPress={() => void buy(selected.product.id)} />
     </>}
-    {unit && <Button disabled={pending} onPress={() => void buy(tipUnit)}>{`Choose quantity in Google Play · ${unit.price} each`}</Button>}
+    {unit && <Button disabled={pending} onPress={() => void buy(tipUnit)}>{`Pick quantity · ${unit.price} each`}</Button>}
     {!unit && !selected && <Note>{supportUnavailable}</Note>}
   </Stack>;
 }

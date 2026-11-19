@@ -21,8 +21,8 @@ The cup is the main image. The liquid changes to match the selected amount.
 **Custom, on a separate screen from One-time** (Play's multi-quantity, $1 units):
 
 - **Button:** Pick your own
-- **Sheet title:** How much coffee?
-- **Slider readout:** ${n} · about {cups} cups, with friendly fractions ("1 2/5"), and "about 1 cup" for one.
+- **Screen title:** Pick your own
+- **Amount readout:** ${n} · about {cups}, with friendly fractions ("1 2/5 cups"), and "about 1 cup" for one.
 - **Over 5 cups:** That's a whole pot. I'll need a bigger table.
 
 **Thank-you, after paying** (supporters only: the one place the orange juice is revealed) (`{drink}` follows the tier: "this sip", "this fifth of a cup" or "these two fifths of a cup"):

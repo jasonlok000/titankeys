@@ -2785,6 +2785,24 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     val gesturesField = Field.of(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
         EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_EXTRACT_UI)
     val diOffers = listOf("do", "did", "different")
+    val waiting = typist(field = gesturesField, offered = diOffers).type("d")
+    waiting.words.completions = null
+    waiting.type("i")
+    same(waiting.bar, listOf("di"), "#98 fresh di: the middle updates before the model replies")
+    same(waiting.type(" ").text, "di ", "#98 fresh di: Space agrees while the reply is pending")
+
+    val editing = typist(field = gesturesField, offered = diOffers).type("do")
+    editing.words.completions = null
+    editing.backspace()
+    val older = editing.words.unanswered.removeLast()
+    editing.type("i")
+    same(editing.bar, listOf("di"), "#98 edited di: the old do row can't stay visible")
+    older(listOf("do", "day", "down"))
+    same(editing.bar, listOf("di"), "#98 edited di: an older lookup can't replace the row")
+    editing.words.unanswered.removeLast()(diOffers)
+    same(editing.bar, listOf("di") + diOffers, "#98 edited di: only the current lookup adds side choices")
+    same(editing.type(" ").text, "di ", "#98 edited di: Space keeps the literal after the reply")
+
     val restarted = typist(field = gesturesField, offered = diOffers).type("d")
     // The editor can restart the same field without changing its existing text or cursor.
     restarted.composer.start(gesturesField, 1, 1)
@@ -2793,12 +2811,41 @@ private fun spaceTypesTheMiddleWord(world: Realistic) {
     same(restarted.bar, listOf("di") + diOffers, "#98 Debug field: the literal takes the middle when the correction tracker lost the prefix")
     same(restarted.type(" ").text, "di ", "#98 Debug field: Space preserves the untracked prefix")
     same(restarted.words.typed, emptyList<String>(), "#98 Debug field: its private text is never learned")
-    val literal = typist(field = gesturesField, autocorrect = null, offered = diOffers).type("di")
+    val literal = typist(field = gesturesField, autocorrect = null, offered = diOffers).type("d")
+    literal.words.completions = null
+    literal.type("i")
+    same(literal.bar, listOf("di"), "#98 Debug field without fixes: replace the old row while the reply is pending")
+    literal.words.unanswered.removeLast()(diOffers)
     same(literal.bar, listOf("di") + diOffers, "#98 Debug field without fixes: a settled completion cannot displace the literal")
     same(literal.type(" ").text, "di ", "#98 Debug field without fixes: Space agrees with the middle")
-    val fixes = typist(field = gesturesField, offered = listOf("the", "this", "that")).type("th")
-    same(fixes.bar.firstOrNull(), "the", "#98 Debug field: an applied correction still takes the middle")
+    val fixes = typist(field = gesturesField, offered = listOf("the", "this", "that")).type("t")
+    fixes.words.completions = null
+    fixes.type("h")
+    same(fixes.bar, listOf("the"), "#98 Debug field: the correction takes the middle while the reply is pending")
     same(fixes.type(" ").text, "the ", "#98 Debug field: Space still applies the tracked correction")
+
+    // On the phone, completing the prefix warms the model's context, then preparing the next word evicts that score.
+    var contextReady = true
+    val contextual = world.autocorrect()
+    contextual.corrector = TypedCorrector(world.lists, world.data, contextual.rejected, contextual.recent,
+        nextWordChance = { _, candidate -> if (!contextReady) Double.NaN else if (candidate == "do") 0.0 else -50.0 })
+    fun scoredDi() = typist(field = gesturesField, autocorrect = contextual, offered = listOf("did", "different")).type("di")
+    val settled = scoredDi()
+    same(settled.bar, listOf("do", "did", "different"), "#98 a ready context can put do in the centre of the completed row")
+    contextReady = false
+    same(settled.type(" ").text, "do ", "#98 preparing the next word cannot take back the shown correction")
+    val unscored = scoredDi()
+    same(unscored.bar.firstOrNull(), "di", "#98 without context scores the literal is shown")
+    contextReady = true
+    same(unscored.type(" ").text, "di ", "#98 context arriving after the row cannot replace the shown literal")
+    val refused = scoredDi()
+    refused.words.refusedFixes += "di>do"
+    same(refused.type(" ").text, "di ", "#98 a refused correction cannot be applied from the earlier row")
+    val fixesOff = scoredDi()
+    fixesOff.composer.autocorrect = null
+    fixesOff.composer.refreshTypedSuggestions()
+    same(fixesOff.bar.firstOrNull(), "di", "#98 switching fixes off refreshes the centre for the same editor")
+    same(fixesOff.type(" ").text, "di ", "#98 switching fixes off drops the cached correction")
     // The word data still loading: Space keeps the word as typed, so it's the middle word, not the first completion.
     check("\"di\" before the word data loads", typist(autocorrect = Autocorrect(KeptOnceStore.inMemory(), {}), offered = short).type("so di"))
     // The typed word blocked: Space still types it, so it still shows in the middle.

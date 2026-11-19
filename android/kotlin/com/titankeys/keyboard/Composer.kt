@@ -110,6 +110,9 @@ class Composer(
         val knownSelection get() = selection.start >= 0 && selection.end >= 0
     }
 
+    /** The centre word and, for a tracked word, the correction decision shown for this editor snapshot. */
+    private data class SpaceChoice(val text: String, val typed: String? = null, val fix: TypedCorrector.Fix? = null)
+
     private sealed interface Composition {
         val alternatives: List<String>
 
@@ -138,7 +141,7 @@ class Composer(
         }
 
         class Typed(val prefix: String, val trailingSpace: Boolean, val snapshot: Snapshot,
-                    override val alternatives: List<String>) : Composition
+                    override val alternatives: List<String>, val space: SpaceChoice? = null) : Composition
 
         /** Popular sentence starts, which stand in when there is nothing better to show. */
         class Starts(val snapshot: Snapshot, override val alternatives: List<String>) : Composition
@@ -929,13 +932,19 @@ class Composer(
         if (!unspaceAddress(" ")) return
         val anchor = snapshot()
         holdForNextWord(composition as? Composition.Swiped, anchor)
+        val shown = (composition as? Composition.Typed)?.takeIf { it.snapshot == anchor && restoredWord == null }?.space
         composition = Composition.None
         val before = anchor.before.orEmpty()
         val correction = correcting
         val ending = endingWord(anchor, correction)
         val completed = completeManualWord(anchor)
         correcting = null
-        val fix = ending?.let { findFix(it, anchor) }
+        val fix = ending?.let { word ->
+            // Preparing the next word can replace the model's cached scores after this suggestion was drawn.
+            // If this is still the same word, use the decision the user saw, including a decision to keep it.
+            if (shown?.typed == word && (shown.fix == null || mayUseFix(shown.fix, anchor))) shown.fix
+            else findFix(word, anchor)
+        }
         if (fix != null && !edit(EditCause.Autocorrect, fix.typed.length, fix.word)) return
         val pending = fullStop
         fullStop = null
@@ -1214,13 +1223,19 @@ class Composer(
         if (hidden.remove(word.lowercase())) showAgain()
     }
 
+    /** A quick setting can change the Space result without restarting the editor. */
+    fun refreshTypedSuggestions() {
+        val typed = composition as? Composition.Typed ?: return
+        if (typed.snapshot == snapshot()) showAgain()
+    }
+
     /** While a word is typed, its middle word is worked out again: it may be the hidden fix, which Space then skips (#98). */
     private fun showAgain() {
         val typed = composition as? Composition.Typed
         if (typed == null || typed.trailingSpace && !addressField) return show(composition.alternatives)
         val space = spaceWord(typed.alternatives, typed.snapshot, typed.prefix, false)
-        val again = ApostropheContext.offerOther(space?.let { spaceFirst(typed.alternatives, it) } ?: typed.alternatives, typed.prefix)
-        composition = Composition.Typed(typed.prefix, typed.trailingSpace, typed.snapshot, again)
+        val again = ApostropheContext.offerOther(space?.let { spaceFirst(typed.alternatives, it.text) } ?: typed.alternatives, typed.prefix)
+        composition = Composition.Typed(typed.prefix, typed.trailingSpace, typed.snapshot, again, space)
         show(again, keepFirst = space != null)
     }
 
@@ -1712,8 +1727,11 @@ class Composer(
             else shorthandCorrector()?.shorthandFix(word, before.dropLast(word.length)) ?: capitalI(word, before.dropLast(word.length)))
             ?: return null
         // A word hidden from the bar while it waits to be forgotten isn't put in by Space either (#98).
-        return fix.takeIf { before.endsWith(it.typed) && allowedFix(it) && it.word.lowercase() !in hidden }
+        return fix.takeIf { mayUseFix(it, anchor) }
     }
+
+    private fun mayUseFix(fix: TypedCorrector.Fix, anchor: Snapshot) =
+        anchor.before?.endsWith(fix.typed) == true && allowedFix(fix) && fix.word.lowercase() !in hidden
 
     /**
      * Whether [fix] may go in: its words must not be blocked, and the fix not refused. A fix that only changes the capitals puts in
@@ -2073,14 +2091,15 @@ class Composer(
      * another language's likeliest word for a slip ("do"), only goes beside it (owner, #98: "When I type di, I see do in the
      * middle, but space still types di anyways").
      */
-    private fun spaceWord(found: List<String>, anchor: Snapshot, prefix: String, guided: Boolean): String? {
-        if (addressField) return prefix.takeIf { it.isNotEmpty() }
+    private fun spaceWord(found: List<String>, anchor: Snapshot, prefix: String, guided: Boolean, keepPrefix: Boolean = false): SpaceChoice? {
+        if (addressField) return prefix.takeIf { it.isNotEmpty() }?.let { SpaceChoice(it) }
         val word = typedWordAt(anchor)
         // A swiped word being fixed by hand isn't autocorrected: Space keeps it as it stands (endingWord).
-        val fix = word?.takeIf { correcting == null }?.let { findFix(it, anchor) }
-        return fix?.word ?: when {
+        val tracked = word?.takeIf { correcting == null }
+        val fix = tracked?.let { findFix(it, anchor) }
+        val text = fix?.word ?: when {
             // A word nothing completes keeps the starts that follow it.
-            corrector() == null && found.isEmpty() -> null
+            corrector() == null && found.isEmpty() && !keepPrefix -> null
             word != null -> word
             // The guide places its own word.
             guided -> null
@@ -2089,6 +2108,7 @@ class Composer(
             // Space keeps the text at the cursor even when we did not track the whole word.
             else -> typedWordAt(anchor, anyway = true) ?: prefix.takeIf { it.isNotEmpty() }
         }
+        return text?.let { SpaceChoice(it, tracked, fix) }
     }
 
     /** [found] with [space], what Space types, first: see [spaceWord]. */
@@ -2158,15 +2178,17 @@ class Composer(
         val context = if (trailingSpace) before.dropLast(1) else before
         val prefix = if (addressField) addressPrefix else words.prefix(context)
         val afterAddressPick = pickedAddress != null
-        // Completions wait for the models, which can take seconds to load. An emptied field shows its starts at once, as a chat
-        // app's does after it sends: the last message's words must not stay on the bar meanwhile (owner, 2026-11-12).
-        if (addressPrefix.isNotEmpty() || barIdle && automaticSpace != anchor && !afterAddressPick) {
-            val pending = if (completeUnknownWord) null else spaceWord(emptyList(), anchor, prefix, guided = false)
+        val replacingOldWords = !addressField && !barIdle && !completeUnknownWord && prefix.isNotEmpty()
+        // Replace an earlier word's row with the current Space result while the model finds new side choices.
+        // An emptied field shows its starters straight away, so the last message's words don't stay on the bar.
+        if (addressPrefix.isNotEmpty() || replacingOldWords || barIdle && automaticSpace != anchor && !afterAddressPick) {
+            val pending = if (completeUnknownWord) null else
+                spaceWord(emptyList(), anchor, prefix, guided = false, keepPrefix = replacingOldWords)
             if (pending == null) offerStarts(anchor)
             else {
-                composition = Composition.Typed(prefix, trailingSpace, anchor, listOf(pending))
+                composition = Composition.Typed(prefix, trailingSpace, anchor, listOf(pending.text), pending)
                 show(composition.alternatives, keepFirst = true)
-                barIdle = true
+                barIdle = !replacingOldWords
             }
         } else if (barForText && before.isEmpty() && after.isEmpty()) offerStarts(anchor)
         val current = epoch
@@ -2181,12 +2203,12 @@ class Composer(
             // in the guide, where that place may hold the guide's word.
             val space = if (completeUnknownWord) null else spaceWord(guided, anchor, prefix, guided !== found)
             val suggestions = if (completeUnknownWord) guided
-                else (space?.let { spaceFirst(guided, it) } ?: guided).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
+                else (space?.let { spaceFirst(guided, it.text) } ?: guided).let { if (guided === found) ApostropheContext.offerOther(it, prefix) else it }
             if (suggestions.isEmpty()) {
                 if (!afterAddressPick) offerStarts(anchor)
                 return@complete
             }
-            composition = Composition.Typed(prefix, trailingSpace, anchor, suggestions)
+            composition = Composition.Typed(prefix, trailingSpace, anchor, suggestions, space)
             show(suggestions, keepFirst = space != null)
             // The first word is the one most likely to be picked, so have what follows it ready.
             suggestions.firstOrNull()?.let {

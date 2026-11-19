@@ -64,7 +64,7 @@ Shown over the front page, once. "Nah" hides it for good. Up to four tiles, only
 
 ## The thank-you
 
-- SUPPORTER **Thank-you** (over the rising orange): Thank you! Fun fact: I don't actually drink coffee. But this means a lot.
+- SUPPORTER **Thank-you** (over the rising orange): Thank you! Fun fact: I don't actually drink coffee. I'm more of an orange juice person. But this means a lot.
 
 ## The opt-in, after the thank-you
 

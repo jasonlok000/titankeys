@@ -215,19 +215,23 @@ class LiveSwitchTest(unittest.TestCase):
         guarded.assert_called_once_with("tap", "54", "1170")
 
     def test_fallback_only_when_live_readback_fails(self):
+        ids = {7: "ru"}
         with patch.object(language_checks, "field_in_front", return_value=True), \
              patch.object(language_checks.languages, "logs_on"), patch.object(checks, "keyboard") as keyboard, \
              patch.object(language_checks, "switch_live", side_effect=[True, False]), \
              patch.object(language_checks, "adb", return_value='data="on en,ru; typing ru"') as adb, \
              patch.object(language_checks.own_editor, "restart") as restart, \
-             patch.object(language_checks.languages, "log_lines", return_value=["field start: ru (the saved setting)"]):
+             patch.object(language_checks.languages, "subtype_ids", return_value=ids), \
+             patch.object(language_checks, "active_method", return_value="ru") as active_method:
             self.assertTrue(language_checks.turn_on(["en", "ru"], "ru"))
             adb.assert_not_called()
             restart.assert_not_called()
+            active_method.assert_not_called()
             self.assertTrue(language_checks.turn_on(["en", "ru"], "ru"))
             adb.assert_called_once_with("shell", "am", "broadcast", "-n", language_checks.RECEIVER,
                                         "--es", "on", "en,ru", "--es", "current", "ru")
             restart.assert_called_once_with()
+            active_method.assert_called_once_with(["en", "ru"], ids)
             keyboard.assert_not_called()
 
 

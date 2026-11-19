@@ -8,6 +8,7 @@
    switch, else J by the shot), and "teh" + Space typing "the " (O). French's Fix typos is put back as it was, then the owner's
    languages.
 """
+import re
 import time
 
 import checks
@@ -25,12 +26,15 @@ QUICK_F = ["key:sym", "+700", "key:alt", "+700", "key:f", "+600", "key:sym", "+6
 
 
 def debug_pid():
-    return adb("shell", "pidof", APP).strip()
+    pid = adb("shell", "pidof", APP).strip()
+    return pid if re.fullmatch(r"[1-9][0-9]*", pid) else None
 
 
 def require_review_activity(activity):
-    if not APP.endswith(".debug") or not languages.front().strip().endswith(f" u0 {APP}/{activity}}}"):
+    front = languages.front().strip() if APP.endswith(".debug") else ""
+    if not front.endswith(f" u0 {APP}/{activity}}}"):
         raise Stop(f"the review check couldn't confirm Debug's {activity.rsplit('.', 1)[-1]} in front")
+    return front
 
 
 def field_start_again():
@@ -47,27 +51,61 @@ def field_start_again():
     require_review_activity(languages.FIELD_ACTIVITY)
 
 
+def review_editor():
+    """Read the Debug process and the specific Space gestures window together."""
+    try:
+        window = require_review_activity(languages.FIELD_ACTIVITY)
+    except Stop:
+        return None
+    pid = debug_pid()
+    return (pid, window) if pid else None
+
+
 def check_cangjie_after_yale():
+    name = "cangjie-after-yale"
+    yale = ["en", "yue-yale"]
+    on = [*yale, "zh-cangjie"]
     language_checks.fresh()
-    if not language_checks.turn_on(["en", "yue-yale"], "yue-yale"):
-        raise Stop("the field didn't start with Yale")
+    if not language_checks.turn_on(yale, "yue-yale"):
+        return record(name, None, "Yale could not be verified in the sample field")
     language_checks.fresh()
+    editor = review_editor()
+    if editor is None:
+        return record(name, None, "Debug's process and sample field could not be verified before Yale")
     play(*[f"key:{k}" for k in chinese_checks.CODE], "+500", "key:space", "+600")  # Yale used: Rime open
     used = checks.field()
-    pid = debug_pid()
+    if not chinese_checks.cjk(used) or review_editor() != editor:
+        return record(name, None, "Yale did not commit Chinese in the same Debug field")
+
     out = adb("shell", "am", "broadcast", "-n", f"{APP}/com.titankeys.keyboard.InputMethodsSet", "--es", "on",
-              "en,yue-yale,zh-cangjie", "--es", "current", "zh-cangjie")
+              ",".join(on), "--es", "current", "zh-cangjie")
     if "typing zh-cangjie" not in out:
-        raise Stop(f"InputMethodsSet didn't take zh-cangjie: {out.strip()[-200:]}")
-    adb("logcat", "-c")
-    field_start_again()
-    started = any("field start: zh-cangjie (" in line for line in languages.log_lines())
-    checks.set_text("")
-    text = chinese_checks.shot_then("cangjie-after-yale", ["key:h", "key:q", "key:i", "+500"], ["key:space", "+400"])
-    same = debug_pid() == pid
-    record("cangjie-after-yale", (text or "").strip() == "我" and same and started,
-           f"Yale typed {used!r} first; field start with zh-cangjie: {started}; hqi + Space typed {text!r} (wanted 我); "
-           f"Debug's process {'the same' if same else 'restarted'}", "cangjie-after-yale")
+        return record(name, None, "Debug could not enable Cangjie")
+    try:
+        field_start_again()
+    except Stop as error:
+        return record(name, None, str(error))
+
+    ids = languages.subtype_ids()
+    for _ in range(10):
+        if review_editor() != editor:
+            return record(name, None, "Debug's process or sample field changed before Cangjie could be verified")
+        if language_checks.active_method(on, ids) == "zh-cangjie":
+            break
+        time.sleep(.5)
+    else:
+        return record(name, None, "Cangjie could not be verified from the saved methods and Android's active subtype")
+
+    if review_editor() != editor:
+        return record(name, None, "Debug's process or sample field changed after Cangjie was verified")
+    cleared = checks.set_text("")
+    if cleared != "" or review_editor() != editor:
+        return record(name, None, "The same Debug field could not be confirmed empty before Cangjie")
+    text = chinese_checks.shot_then(name, ["key:h", "key:q", "key:i", "+500"], ["key:space", "+400"])
+    if text is None or review_editor() != editor:
+        return record(name, None, "The Cangjie result could not be read in the same Debug process and field", name)
+    record(name, text.strip() == "我", f"Yale typed {used!r} in the same Debug process and field. "
+           f"With Cangjie active after the field restart, hqi + Space typed {text!r} (wanted 我)", name)
 
 
 def fix_typos_toggle():

@@ -86,6 +86,51 @@ class LanguageProbes(unittest.TestCase):
                 self.assertEqual(adb.call_count, starts)
                 focus.assert_not_called()
 
+    def test_cangjie_review_requires_fresh_readback_in_the_same_yale_editor(self):
+        activity = review_batch.languages.FIELD_ACTIVITY
+        window = f"mCurrentFocus=Window{{123 u0 {checks.APP}/{activity}}}"
+        replacement = f"mCurrentFocus=Window{{456 u0 {checks.APP}/{activity}}}"
+        for method, pid, front, yale, typed, verdict in [
+            ("zh-cangjie", "123", window, "你好", "我", True),
+            ("zh-cangjie", "123", window, "你好", "hqi ", False),
+            (None, "123", window, "你好", None, None),
+            ("zh-cangjie", "456", window, "你好", None, None),
+            ("zh-cangjie", "123", replacement, "你好", None, None),
+            ("zh-cangjie", "123", window, "neihou ", None, None),
+        ]:
+            with self.subTest(method=method, pid=pid, front=front, yale=yale, typed=typed):
+                restarted = False
+                logs = ["TitanKeysIM: Input method at field start: zh-cangjie (saved)"] if method is None else []
+
+                def restart():
+                    nonlocal restarted
+                    restarted = True
+
+                with patch.object(language_checks, "fresh"), patch.object(language_checks, "turn_on", return_value=True), \
+                        patch.object(language_checks, "active_method", return_value=method) as readback, \
+                        patch.object(review_batch.languages, "front", side_effect=lambda: front if restarted else window), \
+                        patch.object(review_batch.languages, "log_lines", return_value=logs), \
+                        patch.object(review_batch, "debug_pid", side_effect=lambda: pid if restarted else "123"), \
+                        patch.object(review_batch, "field_start_again", side_effect=restart), \
+                        patch.object(review_batch, "adb", return_value="on en,yue-yale,zh-cangjie; typing zh-cangjie"), \
+                        patch.object(review_batch, "play") as yale_keys, patch.object(checks, "field", return_value=yale), \
+                        patch.object(checks, "set_text", return_value="") as clear, patch.object(review_batch.time, "sleep"), \
+                        patch.object(chinese_checks, "shot_then", return_value=typed) as cangjie_keys, \
+                        patch.object(review_batch, "record") as record:
+                    review_batch.check_cangjie_after_yale()
+                yale_actions = tuple(f"key:{key}" for key in "neihou")
+                self.assertEqual(yale_keys.call_args.args, (*yale_actions, "+500", "key:space", "+600"))
+                record.assert_called_once()
+                self.assertIs(record.call_args.args[1], verdict)
+                if verdict is None:
+                    clear.assert_not_called()
+                    cangjie_keys.assert_not_called()
+                else:
+                    clear.assert_called_once_with("")
+                    readback.assert_called_with(["en", "yue-yale", "zh-cangjie"], review_batch.languages.subtype_ids())
+                    cangjie_keys.assert_called_once_with(
+                        "cangjie-after-yale", ["key:h", "key:q", "key:i", "+500"], ["key:space", "+400"])
+
     def test_shape_and_phonetic_methods_use_composition(self):
         for method, actions, expected in [
             ("zh-cangjie", ["h", "q", "i", "space"], "我"),

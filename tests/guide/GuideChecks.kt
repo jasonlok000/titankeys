@@ -1165,8 +1165,9 @@ private fun theReopenedPlaygroundIsFocused() {
         "Back in front, the playground focuses its field")
     same(body("private fun showPlayground()").contains("focusPlaygroundField()"), true, "and as it shows")
     val focus = body("private fun focusPlaygroundField()")
-    same(listOf("field.post {", "settingUp || field.isFocused) return@post", "field.isFocusableInTouchMode = true", "field.requestFocus()")
-        .all { it in focus }, true, "after layout, only if it hasn't the focus, never during setup")
+    same(listOf("field.post {", "settingUp || supportInvite != null || field.isFocused) return@post",
+        "field.isFocusableInTouchMode = true", "field.requestFocus()")
+        .all { it in focus }, true, "after layout, unless focused, in setup, or behind the support invite")
 }
 
 /** How much of a title's line stays free in the renders' measure, for the phone's (#66). */

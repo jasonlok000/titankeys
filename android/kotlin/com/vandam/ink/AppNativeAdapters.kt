@@ -165,7 +165,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
     }
 
     init {
-        if (!SupportStats.preview(activity)) SupportStats.firstRun(activity)
+        SupportStats.preview(activity)
         inkPress = press
         activity.application.registerActivityLifecycleCallbacks(this)
         activity.window.decorView.viewTreeObserver.addOnWindowFocusChangeListener(windowFocus)

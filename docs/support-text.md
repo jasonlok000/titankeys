@@ -6,38 +6,19 @@ placeholders for the prices. Nothing here guilt-trips, and nothing claims "best"
 **Coffee until they pay** (owner): every line a non-payer can see says coffee. The orange juice is only in the lines
 marked "supporters only". Every other line here is pre-payment.
 
-## 1. The front-page card
-
-**Title:** Like TitanKeys? Keep it going.
-
-**Line:** Everything's free, and stays free. Chip in if you want more of it.
-
-## 2. The support page
+## 1. The support page
 
 **Heading:** Support TitanKeys
 
-**Lines:**
+**Line:** TitanKeys stays free. Your coffee buys me time to work on it.
 
-- Donating gets you nothing. No badge, no secret theme, no bonus features. It's all free already.
-- What it does get: one developer more time on TitanKeys.
-- That means bugs fixed faster, more languages, and new tricks for the keys.
-- No ads and no paywall. Ever.
+The cup is the main image. The liquid changes to match the selected amount.
 
-**Monthly** (three rows, each with its price, `{price} a month`):
+- **Amounts:** A sip, 1/5 cup, 2/5 cup.
+- **Cadence:** Monthly is selected first. One-time uses the same amount controls.
+- **Checkout:** Chip in · {price}. Monthly adds “a month” and “Cancel any time in Google Play.”
 
-- A sip: about 1/10 of a cup
-- About 1/5 of a cup
-- About 2/5 of a cup
-
-**Its note:** Cancel any time in Google Play.
-
-**One-time tip** (the same three rows, each with its price):
-
-- A sip: about 1/10 of a cup
-- About 1/5 of a cup
-- About 2/5 of a cup
-
-**Custom, on the one-time row** (Play's multi-quantity, $1 units):
+**Custom, on a separate screen from One-time** (Play's multi-quantity, $1 units):
 
 - **Button:** Pick your own
 - **Sheet title:** How much coffee?
@@ -48,12 +29,13 @@ marked "supporters only". Every other line here is pre-payment.
 
 The tiers: the lowest price Play allows, then $1 and $2, with Play's rounding in local currency. A cup is about $5.
 
-> Thank you! Now, a confession: I don't drink coffee. It gives me insomnia and a headache. I do love orange juice, though.
-> So thank you for {drink} of orange juice. Seriously, thank you.
+> Confession. I don't drink coffee.
+>
+> Thanks for {drink} of orange juice.
 
-**The orange animation's alt text** (supporters only): An orange bounces in, squeezes itself into a glass, and gives a little cheers.
+The orange rolls in and pours into the glass. The level represents cumulative support. The glass spills past one cup.
 
-**Supporters** (the support page, under the buttons)
+**Supporters** (a separate screen linked from the support page)
 
 - **Title:** The coffee fund
 - **Line:** Our top 10 supporters, in cups of coffee.
@@ -72,22 +54,21 @@ The tiers: the lowest price Play allows, then $1 and $2, with Play's rounding in
 - **Button:** Add me
 - **Second button:** Keep me anonymous
 
-## 3. The 2-week card
+## 2. The two-week popup
 
-Shown once, in the app only, never on the keyboard. The counts are on-device only.
+Shown on the next app open after two weeks from first recorded keyboard use. The counts stay on the device. Show one prominent
+nonzero stat and up to two more. Opening the popup uses the one automatic appearance for that install.
 
 **Title:** Two weeks with TitanKeys
 
 **Lines:**
 
-> {words} words typed. {swipes} swipes. {corrections} autocorrects. {caps} auto-capitals. {gestures} gestures.
->
-> That's a lot of thumb work. If TitanKeys has earned a coffee, you can buy it one.
+> If TitanKeys has earned a coffee, you can buy it one.
 
-**Link:** Support TitanKeys
+**Action:** Buy me a coffee
 
 **Dismiss:** Nah
 
-## 4. Settings > About
+## 3. Settings > About
 
-**Row:** Support TitanKeys
+**Row:** Support TitanKeys. This is the only standing entry.

@@ -13,10 +13,9 @@ test("the board reads from the deployed HTTPS origin and checks readiness before
 });
 
 test("only an available, configured board offers posting, and an opted-in supporter can still remove their entry", () => {
-  expect(page).toContain("const canJoinBoard = hasSupport && board.available && board.postingReady === true");
-  expect(page).toContain("canJoinBoard && !offerBoard");
-  expect(page).toContain("canJoinBoard && offerBoard");
-  expect(page).toContain("{board.available && (board.joined ?? state?.boardJoined) &&");
+  // The opt-in comes only after a payment, and only while the board is up and posting is configured (support flow v4).
+  expect(page).toContain("const offer = !joinDone && shownBoard.available && shownBoard.postingReady === true && (!joined || movedUp)");
+  expect(page).toContain("{board.joined && <Button onPress={remove}>");
 });
 
 test("the support ledger survives a bad file and never writes on the main thread (review, 2026-11-19)", async () => {

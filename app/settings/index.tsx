@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Field, Screen, Section, replace, setRouteParents, useAction, useSnapshot } from "ink";
+import { Field, Screen, Section, navigate, replace, setRouteParents, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
 import { close } from "ink/icons";
 import { showKeyCalibration, state, update } from "../../lib/titankeys";
@@ -22,6 +22,7 @@ import { languagesLabel } from "./languages";
 import { tapKeysLabel } from "./tap-keys";
 import { RESET_NOTE, resetDone } from "./reset-most";
 import { Note } from "../../lib/note";
+import { SupportCard } from "../../lib/support-art";
 import { Needs, needs, useRecheck } from "../../lib/system-needs";
 
 // Links into Settings land with their parent pages under them, so ← and Back go up and never to the front page.
@@ -112,7 +113,9 @@ export default function Settings() {
       <Field label={newsText.title} href="/settings/news" />
       <Field label="Send feedback" href="/settings/feedback" />
       <Field label={bugText.settingsLabel} href="/settings/bug" />
-      <Field label="Support TitanKeys" href="/support" />
+      {/* A card, not a plain row, directly above About (owner-approved support flow v4). F: its line. */}
+      <SupportCard title="Support TitanKeys" line="TitanKeys stays free. Your coffee buys me time to work on it."
+        onPress={() => navigate("/support")} />
       <Field label="About" href="/settings/about" />
     </Section>
     {/* So many settings, it's easy to mess them up (owner, 2026-11-13: "Two resets. Reset most things and reset literally

@@ -1,14 +1,14 @@
 package com.titankeys.support
 
 fun main() {
-    val firstUse = 1_000L
-    val day14 = firstUse + SupportCard.WAIT_MILLIS
-    check(!SupportCard.due(day14 - 1, firstUse, false))
-    check(SupportCard.due(day14, firstUse, false))
-    check(!SupportCard.due(day14, firstUse, true))
-    check(!SupportCard.due(firstUse - 1, firstUse, false))
-    check(!SupportCard.due(day14, 0, false))
-    check(SupportCard.displayed(longArrayOf(0, 1, 2, 3, 4)).map { it.index } == listOf(1, 2, 3))
+    // About ten typing days, each counted once; never again once seen.
+    check(!SupportCard.due(9, false))
+    check(SupportCard.due(10, false))
+    check(!SupportCard.due(30, true))
+    check(SupportCard.typingDays(3, 100, 100) == 3)
+    check(SupportCard.typingDays(3, 100, 101) == 4)
+    check(SupportCard.typingDays(0, -1, 100) == 1)
+    check(SupportCard.displayed(longArrayOf(0, 1, 2, 3, 4)).map { it.index } == listOf(1, 2, 3, 4))
     check(SupportCard.displayed(longArrayOf(0, 0, 0, 0, 1)).single() == IndexedValue(4, 1L))
     check(SupportCard.displayed(LongArray(5)).isEmpty())
 

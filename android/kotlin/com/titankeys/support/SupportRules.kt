@@ -32,12 +32,15 @@ internal fun sha256(value: String) = MessageDigest.getInstance("SHA-256")
 internal fun ByteArray.toHex() = joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
 internal object SupportCard {
-    const val WAIT_MILLIS = 14L * 24 * 60 * 60 * 1000
-    fun due(now: Long, firstUse: Long, seen: Boolean) =
-        !seen && firstUse > 0 && now >= firstUse && now - firstUse >= WAIT_MILLIS
+    /** Days the keyboard typed something, counted once each (owner, support flow v4: "after about 10 typing days"). */
+    const val TYPING_DAYS = 10
+    fun due(typingDays: Int, seen: Boolean) = !seen && typingDays >= TYPING_DAYS
 
-    /** The first available count leads. At most two other counts follow in the same order. */
-    fun displayed(counts: LongArray) = counts.withIndex().filter { it.value > 0 }.take(3)
+    /** The typing-day count after a counted event on [today] (a local epoch day), where [lastDay] was the last one counted. */
+    fun typingDays(days: Int, lastDay: Long, today: Long) = if (today == lastDay) days else days + 1
+
+    /** Up to four nonzero counts, in order, for the card's tiles. */
+    fun displayed(counts: LongArray) = counts.withIndex().filter { it.value > 0 }.take(4)
 }
 
 internal data class SupportCredit(val id: String, val productId: String, val quantity: Int,

@@ -91,10 +91,14 @@ function cut(message, limit) {
     return points.length <= limit ? message : points.slice(0, limit).join("").trimEnd();
 }
 
-/** Everyone who opted in and has credit, with their total: only ever read inside SQL, never returned. */
+/**
+ * Everyone who opted in under a name and has credit, with their total: only ever read inside SQL, never returned. An anonymous
+ * supporter keeps their credit but isn't on the board (owner, 2026-11-20: "if they are anonymous they don't get on the board").
+ */
 const TOTALS = `
     SELECT s.account_id, s.public_id, s.name, s.message, SUM(o.cents) AS cents
     FROM supporters s JOIN support_orders o ON s.account_id = o.account_id
+    WHERE s.name IS NOT NULL
     GROUP BY s.account_id HAVING SUM(o.cents) > 0`;
 
 /** An account's place on the board, or null when it isn't on it. Ties go by public id, as the board lists them. */

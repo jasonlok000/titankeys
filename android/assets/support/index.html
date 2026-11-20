@@ -87,6 +87,7 @@
     border-radius: 32px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--t-l); line-height: 1.2;
     opacity: var(--fade); transition: --fade .15s var(--ease); }
   .primary:active { --fade: .86; }
+  .primary:disabled { --fade: .4; }
   .chev-down { position: relative; animation: nudge 1.6s ease-in-out infinite; }
   @keyframes nudge { 50% { top: 3px; } }
   .primary .sub { font-size: var(--t-xs); font-weight: 400; opacity: .85; margin-top: 2px; font-variant-numeric: tabular-nums; }
@@ -610,7 +611,7 @@
       <h1 data-t="join"></h1>
       <div class="limit" id="limit"></div>
       <div class="optpreview" id="optpreview"></div>
-      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="name" maxlength="40" autocomplete="off" placeholder="Anonymous"></div>
+      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="name" maxlength="40" autocomplete="off" placeholder="Your name"></div>
       <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="msg" rows="1" placeholder="Say hi"></textarea></div></div>
       <div class="limitnote" id="overlimit"></div>
     </div>
@@ -651,7 +652,7 @@ const T = {
   putsYou: (n, m) => m && m !== n ? `<b>#${n}</b><span class="from"> ▲ from #${m}</span>` : `You'd be <b>#${n}</b>`,
   chipIn: "Buy it",
   thanksTitle: "Thank you!", thanksLine: "Fun fact: I don't actually drink coffee. I'm more of an orange juice person. But this means a lot.",
-  join: "Join the board?", nameField: "Name (optional)", messageField: "Message (optional)",
+  join: "Join the board?", nameField: "Name", namePlaceholder: "Your name", messageField: "Message (optional)",
   limits: { 3: "120 characters. Say something grand.", 10: "80 characters. Make it count.", 100: "40 characters. Short and sweet.", 0: "Name only for now. Climb for a message." },
   addMe: "Add me", stayAnonymous: "Skip the board",
   invite: tier => `You're in the top ${tier} now. Want a longer message?`, writeMore: "Write more", later: "Later",
@@ -1060,7 +1061,10 @@ function drawOptin(rank) {
     $("#namecount").textContent = `${name.value.length}/40`;
     $("#msgcount").textContent = `${msg.value.length}/${n}`; $("#msgcount").classList.toggle("full", msg.value.length >= n);
     $("#overlimit").textContent = n && msg.value.length >= n ? T.limitNote : "";
-    const me = { id: "p", rank, name: name.value || null, message: n ? msg.value.slice(0, n) || null : null, you: true };
+    // The board only lists names (owner, 2026-11-20: "if they are anonymous they don't get on the board"): Add me waits
+    // for one, and the preview shows where it will go.
+    $("#optin [data-act=add]").disabled = !name.value.trim();
+    const me = { id: "p", rank, name: name.value.trim() || T.namePlaceholder, message: n ? msg.value.slice(0, n) || null : null, you: true };
     // Beyond the top 100, the places around yours, so the row has a board to sit on.
     const rows = n ? [me] : [{ id: "a", rank: rank - 1, name: "Jun", message: null, ghost: true }, me, { id: "b", rank: rank + 1, name: "Sam", message: null, ghost: true }];
     $("#optpreview").innerHTML = `<div class="kicker">${T.previewLabel}</div>` + (rank <= 3
@@ -1105,6 +1109,7 @@ document.addEventListener("click", async ev => {
   document.querySelectorAll(".rank.held").forEach(x => x.classList.remove("held"));
   const act = ev.target.closest("[data-act]")?.dataset.act;
   if (act === "nah") api.nah();
+  if (act === "add" && !$("#name").value.trim()) return;
   if (act === "add" || act === "anon") { await api.join(act === "anon", $("#name").value.trim(), $("#msg").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
   if (act === "remove") { await api.remove().catch(() => {}); SAMPLE.joined = false; route("board"); }
   if (act === "later") route("support");

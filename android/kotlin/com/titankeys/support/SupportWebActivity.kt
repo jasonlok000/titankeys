@@ -67,10 +67,7 @@ class SupportWebActivity : Activity() {
         preview = AppBuild.kind(this) == "debug" && intent.getBooleanExtra(PREVIEW_FIXTURE, false)
         if (!preview) billing = SupportBilling(this, ::billingChanged).also { it.refresh() }
         WebView.setWebContentsDebuggingEnabled(AppBuild.kind(this) == "debug")
-        // TitanKeys Debug can build the WebView without FixedScale's density, for a phone check of how its layers draw:
-        // adb shell setprop debug.titankeys.supportfixed off (2026-11-20).
-        val unwrapped = AppBuild.kind(this) == "debug" && debugProp("debug.titankeys.supportfixed") == "off"
-        web = WebView(if (unwrapped) applicationContext else this).apply {
+        web = WebView(this).apply {
             // See-through only for the popup over the front page; the page itself is opaque, as a transparent WebView drew
             // its layered parts (the pay button, the thank-you) squeezed.
             setBackgroundColor(if (mode == "popup") Color.TRANSPARENT else Color.BLACK)
@@ -92,15 +89,9 @@ class SupportWebActivity : Activity() {
             }
             // No overscroll stretch: the page scrolls inside its own screens, and the stretch stayed, squashing the button.
             overScrollMode = android.view.View.OVER_SCROLL_NEVER
-            // Drawn in software: on this phone the WebView's GPU layers (anything animated or pinned: the selected cup's pulse,
-            // the pay bar, the thank-you's bubbles) drew squeezed or stretched. The page is small enough to draw this way.
-            // TitanKeys Debug can try another way for a phone check: adb shell setprop debug.titankeys.supportlayer hardware
-            // (or none). Software drew a changed part at 1/1.5625 its size, as the toggle's labels (2026-11-20).
-            when (if (AppBuild.kind(this@SupportWebActivity) == "debug") debugProp("debug.titankeys.supportlayer") else "") {
-                "hardware" -> setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-                "none" -> setLayerType(android.view.View.LAYER_TYPE_NONE, null)
-                else -> setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
-            }
+            // The WebView's own drawing, no software layer: software drew a changed part at 1/1.5625 its size until the next
+            // full redraw, as the toggle's labels (2026-11-20). What once drew squeezed in the GPU's layers was the page's
+            // transform animations and opacity transitions, now gone (android/assets/support/index.html).
             webViewClient = Client()
             webChromeClient = null
             addJavascriptInterface(Bridge(), BRIDGE)
@@ -342,14 +333,6 @@ class SupportWebActivity : Activity() {
         val tier = when (limit) { 120 -> "top3"; 80 -> "top10"; 40 -> "top100"; else -> "name" }
         // As the server answers: the place now too, for "up from #M".
         return JSONObject().put("available", true).put("rank", rank).put("tier", tier).put("messageLimit", limit).put("myRank", 14)
-    }
-
-    /** A TitanKeys Debug system property for trying the WebView's drawing on the phone; empty when unset. */
-    private fun debugProp(name: String): String = try {
-        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
-            .invoke(null, name) as? String ?: ""
-    } catch (error: ReflectiveOperationException) {
-        ""
     }
 
     companion object {

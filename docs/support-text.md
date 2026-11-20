@@ -39,7 +39,6 @@ The juice first shows in the thank-you. After that, only the supporter's own boa
 - SUPPORTER **Line:** The good people. Cheers, all of you.
 - PRE **Empty:** Nobody here yet. Any amount puts you at #1.
 - PRE **Empty board's button:** Be the first
-- PRE **No name:** Anonymous
 - PRE **Full board link:** See everyone
 - PRE **Divider after rank 10:** Top 10
 - PRE **Pinned bar** (non-supporters): Chip in · you'd be #{n}
@@ -81,7 +80,7 @@ The juice first shows in the thank-you. After that, only the supporter's own boa
 ## The opt-in
 
 - SUPPORTER **Title:** Join the board?
-- SUPPORTER **Name field:** Name (optional), placeholder "Anonymous"
+- SUPPORTER **Name field:** Name, placeholder "Your name". Add me waits for a name: the board lists only names (owner, 2026-11-20).
 - SUPPORTER **Message field:** Message (optional), placeholder "Say hi"
 - SUPPORTER **Preview label:** Here's you on the board
 - SUPPORTER **Top-3 badge** (with ♛): Top 3

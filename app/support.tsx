@@ -43,7 +43,7 @@ const TEXT = {
   // SUPPORTER: the thank-you, the opt-in after it, and moving up.
   thanks: "Thank you!", thanksLine: "Fun fact: I don't actually drink coffee. I'm more of an orange juice person. But this means a lot.",
   join: "Join the board?",
-  name: "Your name (optional)", message: "A message (optional)", addMe: "Add me", keepAnonymous: "Keep me anonymous",
+  name: "Your name", message: "A message (optional)", addMe: "Add me", keepAnonymous: "Keep me anonymous",
   limit: (tier: number | null) => tier === 3 ? "Up to 120 characters. You've earned the room." : tier === 10 ? "Up to 80 characters."
     : tier === 100 ? "Up to 40 characters." : "Your name only, for now. Move up for a message.",
   moveUp: (tier: number) => `You're in the top ${tier} now. Want to add a longer message?`,
@@ -326,7 +326,7 @@ function JoinSupporters({ rank, join }: {
         onChange={value => setMessage(Array.from(value).slice(0, limit).join(""))} />}
       <Note>{TEXT.limit(rankTier(rank))}</Note>
       <Note>{TEXT.privacy}</Note>
-      <Checkout label={TEXT.addMe} disabled={saving} onPress={() => void send(false)} />
+      <Checkout label={TEXT.addMe} disabled={saving || !name.trim()} onPress={() => void send(false)} />
       <Button disabled={saving} onPress={() => void send(true)}>{TEXT.keepAnonymous}</Button>
     </Stack>
   </Screen>;

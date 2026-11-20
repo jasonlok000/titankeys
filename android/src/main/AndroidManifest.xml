@@ -38,7 +38,7 @@
         <activity
             android:name="com.titankeys.support.SupportWebActivity"
             android:exported="false"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <activity
             android:name="com.titankeys.keyboard.ShareDisclosureActivity"

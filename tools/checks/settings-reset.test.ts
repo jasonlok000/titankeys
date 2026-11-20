@@ -153,7 +153,7 @@ test("the boring guide and the release notes say where they are", () => {
   const guide = read("app/settings/guide-boring.tsx");
   expect(guide).toContain("Reset most things");
   expect(guide).toContain("Reset literally everything");
-  expect(read("release-notes.txt")).toContain("- Two resets:");
+  expect(read("docs/release-notes-2.1.md")).toContain("- Two resets:");
 });
 
 test("Reset most things turns News back on, its default, and keeps what you dismissed", () => {

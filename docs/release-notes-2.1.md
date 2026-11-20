@@ -1,0 +1,69 @@
+# 2.1.0
+
+## The guide, take two
+- Chapters: The guide's now a few big chapters with small, hands-on steps inside. It notices when you go off track and drags you back.
+- Type along: Each step has its own text to type in a box. Words you get right go grey, and missed ones get skipped, so you never get stuck.
+- Mean on purpose: It's way more sarcastic now. You'll paste something you won't like, and you'll have to find a clown.
+- Two guides: The fun one on the keys, and the boring one with every detail. Pick your poison in Settings > Guide.
+- New look: Pure black, Inter everywhere, and way less orange. Each slide gets its own little decoration, just for looks.
+- Playground: Type fast and it comments. Type really fast and it rains shit. Five quiet seconds and it all calms down.
+- Something to type: The front page has a new text to type along to, about an hour of it. It roasts you the whole way.
+- Holds still: Opening Sym, emoji or the clipboard doesn't move a slide or the front page anymore. Not even for a frame.
+
+## Typing
+- Middle means Space: The middle word on the bar is always exactly what Space will type. Tap it or press Space, same thing.
+- Missing apostrophes: dont, whats, cant and todays get theirs. Plurals stay plurals.
+- Its or it's: its, lets, your and friends wait for the next two words, then get an apostrophe only if it clearly fits. It never takes one out.
+- Pick your fixes: Settings > What gets fixed has a switch for every kind of fix. All on to start.
+- Your shorthand stays: shd, sth, idk, cuz and friends never get "fixed". Want them spelled out instead? Turn on Spell out shorthand in Settings, switch off the ones you hate, and add your own. Yours are saved in lowercase, so a capital from the start of a sentence can't sneak in.
+- Fewer dumb fixes: Typos like defalt, receieve and bckspace get fixed now.
+- Capital at the start: Shift turns on by itself at the start of a sentence. Press Shift once if you want lowercase.
+- Long words fit: Long suggestions fit in their spot, and the three spots never move.
+- One size: The bar's three words are the same size, and everything on the bar sits dead centre of the black you see, the bar and the border under the screen. The best one's in bold.
+- Canadian spelling: Settings > English spelling has Canadian now. Colour and realize. Both. Eh.
+- Two new shortcuts: Hold Shift and press Backspace to delete a word, and Alt + Sym switches to your next keyboard. They're built in, so Key Mapper can sit this one out. Don't want them? Switch either off in Settings > Shortcuts.
+- Alt + Backspace: Deletes forward, the letter after the cursor, like Delete on a PC. Hold it to keep going. Rather have Android's own, which deletes the line? Turn off Alt + Backspace deletes forward in Settings. For a word, hold Shift with Backspace, or use Ctrl.
+- Same size at any setting: TitanKeys ignores the phone's font size and display size, so a huge font doesn't blow it up anymore. The bar's text is a bit bigger now, and Settings > Bar text size has Smaller, Normal and Bigger. Everyone starts on Normal. The bar keeps its height.
+- Orange off means off: Turn off Orange accents and nothing TitanKeys draws is orange anymore, keys, bar, guide or Settings. It'll tell you what it thinks of that.
+- Snippets start with /: Alt+G or hold G, so no more digging for ; on the Sym panel. Already have snippets with ;? You keep it. Pick another in Settings > Snippets.
+- Smart Launcher's search: Smart Launcher grabs your keys before any keyboard sees them, so fixes, Shift + Backspace and Sym did nothing there. With the Back service on, TitanKeys types in its search box like in any other app.
+
+## Touchpad
+- Steer and select: Taps for steering and selecting count on Space itself, not the keys next to it. The first tap counts sooner, at 150 ms, so fewer steers get missed. A triple tap with no slide selects the word.
+- You see it right away: The bar shows the gesture as soon as your tap counts, and the dots follow your real text.
+- Delete: A single flick lifts the word off and dissolves it. Keep holding and it eats a word at a time, each with a firm hit. Slide further out to go faster, or back onto Backspace to pause.
+- Word menu: Hold a word on the bar, then I moves it up and O moves it down: blocked, not saved, saved, favourite, and back again. Learned a word you hate? O unsaves it, and O again blocks it. A book claps shut for a save, hearts burst for a favourite. It doesn't time out. The word's colour says where it stands: orange for a favourite, white for saved, grey for not saved, and grey and struck through for blocked.
+- Scroll assistant: It starts out matching the phone's own Scroll assistant. Change it and it stays your way.
+
+## Haptics
+- One feel, one meaning: Moving, a step, done, locked, gone and "nope" each feel different, so you can tell what happened without looking.
+- Your switches: Settings > Haptics has one switch for all of it and one for every single haptic.
+- Quiet swell: When something changes by itself, like autocorrect, a snippet or a held symbol, you get a soft swell. Just a nod. Nothing to do.
+- Quiet when it should be: Key presses don't buzz, except in the word menu, and a fast run of buzzes doesn't turn into a rattle.
+- Word menu presses: I and O give a light tick the moment you press them, then the step's own buzz lands with its effect. Settings > Haptics > Press a word menu button turns it off.
+- Playground: Its big moments buzz too: the confetti, the rain, the shake, the lightning and the plant. Settings > Haptics > Playground effects turns them off.
+- Every tap: Every button in TitanKeys' own screens gives a light tick now, so you feel what you pressed. Settings > Haptics > A press turns it off.
+- The app too: Switches and steppers in Settings have their own feel, and anything the app won't do says nope.
+
+## Bar and panels
+- Idle games: Leave the bar alone for three minutes and, one time in four, it starts playing with your words. Never two in a row, never the same game twice running. Come back and it puts everything where it was.
+- Clipboard: Recent clips, then pinned ones, a page at a time.
+- Rounded corners: Nothing on the Sym panel gets cut off by the screen's corners.
+- Shift chip: An automatic capital shows as a small arrow, and the words stay put.
+
+## Settings
+- New name: It's TitanKeys Keyboard in your launcher, the keyboard list and Accessibility now, so searching "keyboard" finds it.
+- Two resets: So many switches, so easy to wreck. Settings > Reset most things puts every switch and choice back how it started, and your words, snippets, shorthand and app lists stay. Reset literally everything wipes all of it too, like a fresh install.
+
+## Privacy and data
+- Record a bug: Something broke? Settings > Record a bug records up to three minutes, shows you what's in it, and you share it wherever you want. Nothing gets uploaded.
+- No more typing log: The full typing log is gone from public builds. A log left over from 2.0 is deleted.
+- Share swipes: The last word of a message now counts too, if you agreed to share. The guide asks on a screen of its own at the end, and Not now really means not now.
+
+## Fixed
+- Notifications: A pop-up at the top no longer steals the touchpad while you type, even after you lock and unlock.
+- Teams: Typing in Microsoft Teams works properly now. Fuck Microsoft.
+- Guide crashes: Touching the guide's text box at the wrong moment doesn't crash it anymore.
+- Backups: A file that isn't a TitanKeys backup and a damaged backup now get different messages.
+- Stuck capitals: Saving a word at the start of a sentence no longer makes it a capital everywhere. Words that got stuck that way are fixed when you update.
+- Highlight stays put: In the word menu and the quick settings, the highlight stays on the key you pressed instead of vanishing.

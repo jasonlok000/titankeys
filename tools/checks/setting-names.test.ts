@@ -39,7 +39,7 @@ test("the bar is turned off in one place, and the cursor setting uses its one na
   // Alt + Backspace: the boring guide and the release notes name the switch as Settings shows it.
   expect(settings).toContain("label={altBackspaceLabel}");
   expect(read("app/settings/guide-boring.tsx")).toContain(`Turn off ${altBackspaceLabel} in Settings`);
-  expect(read("release-notes.txt")).toContain(`Turn off ${altBackspaceLabel} in Settings`);
+  expect(read("docs/release-notes-2.1.md")).toContain(`Turn off ${altBackspaceLabel} in Settings`);
   expect(read("app/settings/guide-boring.tsx")).toContain(`Turn it off with ${scrollLabel} in Settings`);
 });
 

@@ -81,7 +81,7 @@ test("Bar text size lives in Settings > The bar, and no Size is left in Look and
   const guide = read("app/settings/guide-boring.tsx");
   expect(guide).toContain("Settings > Bar text size has Smaller, Normal and Bigger.");
   expect(guide).toContain("Everyone starts at Normal.");
-  const notes = read("release-notes.txt");
+  const notes = read("docs/release-notes-2.1.md");
   expect(notes).toContain("Settings > Bar text size");
   expect(notes).not.toContain("Settings > Size");
   expect(notes).toContain("Settings > Bar text size has Smaller, Normal and Bigger.");

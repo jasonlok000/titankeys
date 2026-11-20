@@ -46,6 +46,8 @@ The juice first shows in the thank-you. After that, only the supporter's own boa
 - PRE **Pinned bar, with the amount:** Chip in a sip · you'd be #{n}
 - PRE **Report** (tap on a row): Report
 - PRE **Report sheet title:** Report {name}?
+- PRE **Report sheet body:** We'll check it, and it goes if it breaks the rules.
+- PRE **Report sheet cancel:** Never mind
 - PRE **Report confirmation:** Got it. We'll take a look.
 
 ## The amounts

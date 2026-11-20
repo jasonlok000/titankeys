@@ -67,6 +67,12 @@ class SupportWebActivity : Activity() {
                 javaScriptCanOpenWindowsAutomatically = false
                 setGeolocationEnabled(false)
                 cacheMode = WebSettings.LOAD_NO_CACHE
+                // The page sets its own width (690, its design width); the WebView scales it to fill the screen.
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                setSupportZoom(false)
+                builtInZoomControls = false
+                textZoom = 100
             }
             webViewClient = Client()
             webChromeClient = null

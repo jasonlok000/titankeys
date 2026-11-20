@@ -30,7 +30,7 @@ test("every bridge message is checked before it runs, and only from the page's o
 
 test("the page opens from the card at the very bottom of Settings and from the front page; the invite is its popup", () => {
   const settings = read("app/settings/index.tsx");
-  const card = settings.indexOf('<SupportCard title="Support TitanKeys"');
+  const card = settings.indexOf('<SupportCard title="Buy me a coffee"');
   expect(card).toBeGreaterThan(settings.indexOf('<Section title="Start over">'));
   expect(settings.slice(card)).toContain('onPress={() => void openSupport("page")}');
   expect(read("app/index.tsx")).toContain('else if (action === "support") void openSupport("page");');

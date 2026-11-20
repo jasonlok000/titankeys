@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Laid out at the design width (690 CSS px, as the renders) and scaled to the screen by the app's WebView. -->
+<meta name="viewport" content="width=690, viewport-fit=cover">
+<link rel="icon" href="data:,">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'">
 <title>Support TitanKeys</title>
 <!--
@@ -815,6 +817,8 @@ function emptyBoard(withButton = false) {
 }
 function drawBoardPreview() {
   const e = board.entries || [];
+  // Supporters see their own name for the board (the orange juice fund) from the first screen on.
+  document.querySelector('#support [data-t="fund"]').textContent = state.supporter ? T.supporters : T.fund;
   $("#seeall").textContent = e.length > 3 ? T.allRanks(board.total || e.length) + " ›" : "";
   $("#boardpreview").innerHTML = e.length ? podiumCompact(e) : emptyBoard();
 }
@@ -1146,7 +1150,7 @@ async function route(id) {
   // In the app, Settings is behind this screen: going back closes it.
   if (id === "settings" && native) { api.close(); return; }
   if (id === "support") { board = await api.board(); state = await api.state(); drawBoardPreview(); drawTiers(); }
-  if (id === "board" || id === "fund") { board = await api.board(); drawBoardFull(id === "fund"); show("board"); return; }
+  if (id === "board" || id === "fund") { board = await api.board(); drawBoardFull(id === "fund" || !!state.supporter); show("board"); return; }
   if (id === "custom") drawCustom();
   if (id === "popup") { if (native) state = await api.state(); drawPopup(await api.stats()); }
   if (id === "optin") drawOptin(sampleRank(selected()?.cents || 0));

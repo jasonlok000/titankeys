@@ -26,15 +26,18 @@ export function cupParts(x: number, y: number, scale: number, key: string, band:
  * Settings' Support TitanKeys entry, directly above About (owner-approved support flow v4): a card, not a plain row, with the
  * cup, the title, one line and a chevron. The whole card opens the support page.
  */
-export function SupportCard({ title, line, onPress }: { title: string; line: string; onPress: () => void }) {
+/** [lines]: one or two short lines under the title, each drawn on its own row (canvas text doesn't wrap). */
+export function SupportCard({ title, lines, onPress }: { title: string; lines: string[]; onPress: () => void }) {
   const height = 128;
   const accent = useAccent();
+  const textWidth = supportWidth - 112 - 64;
   return <Canvas width={supportWidth} height={height}>
     <RoundedFill x={1} y={1} width={supportWidth - 2} height={height - 2} radius={28} fill={SURFACE} onPress={onPress} />
     <RoundedOutline x={1} y={1} width={supportWidth - 2} height={height - 2} radius={28} stroke={accent} strokeWidth={1.5} />
     {cupParts(26, 26, 2.6, "card", accent)}
-    <CanvasText x={112} y={22} width={410} height={36} size={30} colour={CREAM}>{title}</CanvasText>
-    <CanvasText x={112} y={62} width={420} height={48} size={22} colour={MUTED}>{line}</CanvasText>
+    <CanvasText x={112} y={18} width={textWidth} height={38} size={30} colour={CREAM} align="start">{title}</CanvasText>
+    {lines.slice(0, 2).map((line, row) =>
+      <CanvasText key={row} x={112} y={60 + row * 28} width={textWidth} height={28} size={21} colour={MUTED} align="start">{line}</CanvasText>)}
     <CanvasText x={supportWidth - 52} y={0} width={30} height={height} size={36} colour={accent} align="center">›</CanvasText>
   </Canvas>;
 }

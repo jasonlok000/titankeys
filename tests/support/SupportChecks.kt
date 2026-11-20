@@ -46,5 +46,6 @@ fun main() {
     check(!keyedByOldToken(setOf(sha256(month1)), "sub-token", month1))
     check(!keyedByOldToken(emptySet(), "sub-token", month1))
     check(!keyedByOldToken(setOf(sha256("tip-token")), "tip-token", "tip-token"))
+    supportWebChecks()
     println("Support checks passed")
 }

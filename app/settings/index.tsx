@@ -23,6 +23,7 @@ import { tapKeysLabel } from "./tap-keys";
 import { RESET_NOTE, resetDone } from "./reset-most";
 import { Note } from "../../lib/note";
 import { SupportCard } from "../../lib/support-art";
+import { openSupport } from "../../lib/support";
 import { Needs, needs, useRecheck } from "../../lib/system-needs";
 
 // Links into Settings land with their parent pages under them, so ← and Back go up and never to the front page.
@@ -113,9 +114,6 @@ export default function Settings() {
       <Field label={newsText.title} href="/settings/news" />
       <Field label="Send feedback" href="/settings/feedback" />
       <Field label={bugText.settingsLabel} href="/settings/bug" />
-      {/* A card, not a plain row, directly above About (owner-approved support flow v4). F's words. */}
-      <SupportCard title="Support TitanKeys" line="Free, no ads, made by one person. Chip in a coffee if you like it."
-        onPress={() => navigate("/support")} />
       <Field label="About" href="/settings/about" />
     </Section>
     {/* So many settings, it's easy to mess them up (owner, 2026-11-13: "Two resets. Reset most things and reset literally
@@ -125,5 +123,8 @@ export default function Settings() {
       <Field label="Reset literally everything" href="/settings/reset-everything" />
       {resetDone.shown && <Note>{RESET_NOTE}</Note>}
     </Section>
+    {/* At the very bottom of Settings (owner, 2026-11-19), opening the support page, the bundled HTML page. F's words. */}
+    <SupportCard title="Support TitanKeys" line="Free, no ads, made by one person. Chip in a coffee if you like it."
+      onPress={() => void openSupport("page")} />
   </Screen>;
 }

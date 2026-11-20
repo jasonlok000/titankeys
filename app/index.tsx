@@ -4,6 +4,7 @@ import { arrowOutward } from "ink/icons";
 import { cancelPlayground, markNotesSeen, markPhoneWarningSeen, onAppWindow, openGuide, openPlayground, state } from "../lib/titankeys";
 import { INK, useAccent } from "../lib/brand";
 import { connectedState, declineContributions, setContribute } from "../lib/connected";
+import { openSupport } from "../lib/support";
 import { Disclosure } from "../lib/contribute";
 import { frontChoice } from "../lib/front";
 import { RADIUS } from "../lib/radii";
@@ -99,7 +100,7 @@ export function FrontPage({ fromEnd = false }: { fromEnd?: boolean }) {
         if (!here) return;
         if (action === "settings" || action === "guide" || action === "support") leaving = true;
         if (action === "settings") replace("/settings");
-        else if (action === "support") navigate("/support");
+        else if (action === "support") void openSupport("page");
         // The guide is a page in Settings, so Ink opens it over the top of Settings (lib/settings-tree.ts): ← goes up there.
         else if (action === "guide") navigate("/settings/guide");
         // The playground closed from its setup slide, so this page shows setup again.

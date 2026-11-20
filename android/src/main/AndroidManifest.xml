@@ -34,6 +34,12 @@
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
+        <!-- The support page: one offline HTML page from the app's assets in a WebView, with no network (SupportWebActivity.kt). -->
+        <activity
+            android:name="com.titankeys.support.SupportWebActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode" />
         <activity
             android:name="com.titankeys.keyboard.ShareDisclosureActivity"
             android:exported="false"

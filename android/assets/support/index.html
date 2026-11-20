@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support TitanKeys</title>
+<!-- A stand-in until E's page (tools/dev/preview/pages/support-app.html) replaces it. It shows the bridge works. -->
+<style>
+  body { margin: 0; min-height: 100vh; background: #000; color: #fff1e6; font: 20px/1.4 sans-serif; display: grid; place-items: center; }
+  main { padding: 24px; max-width: 32em; }
+  button { font: inherit; padding: 12px 20px; border-radius: 24px; border: 0; background: #ff7a2f; color: #160a04; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Support TitanKeys</h1>
+  <p id="line">Loading…</p>
+  <button id="close" type="button">Close</button>
+</main>
+<script>
+  // The bridge (SupportWebProtocol.kt): post {id, op, args}; replies and events come to titankeysSupport.receive.
+  const pending = new Map();
+  let next = 1;
+  window.titankeysSupport = {
+    receive(text) {
+      const message = JSON.parse(text);
+      if (message.event) return;
+      const done = pending.get(message.id);
+      pending.delete(message.id);
+      if (done) done(message);
+    },
+  };
+  function call(op, args) {
+    return new Promise(resolve => {
+      const id = next++;
+      pending.set(id, resolve);
+      TitanKeysSupport.post(JSON.stringify({ id, op, args }));
+    });
+  }
+  call("state").then(answer => {
+    const state = answer.result;
+    document.getElementById("line").textContent = answer.ok
+      ? `${state.products.length} ways to chip in${state.preview ? " (sample)" : ""}. ${state.cups} cups so far.`
+      : "Support isn't available right now.";
+  });
+  document.getElementById("close").addEventListener("click", () => call("close"));
+</script>
+</body>
+</html>

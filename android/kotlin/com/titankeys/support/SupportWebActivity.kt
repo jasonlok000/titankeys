@@ -43,8 +43,19 @@ class SupportWebActivity : Activity() {
     private var lastReceipt: String? = null
     private var pageReady = false
 
-    /** The same sizes at any display or font size, as every TitanKeys screen ([FixedScale]). */
-    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+    /**
+     * The same sizes at any display or font size, as every TitanKeys screen ([FixedScale]), but at the page's own unit: the
+     * screen is [DESIGN_WIDTH] CSS pixels wide, as the page was designed and rendered. The page then draws at scale 1 (a
+     * WebView zoomed to fit drew layered parts stretched).
+     */
+    override fun attachBaseContext(base: Context) {
+        val width = base.resources.displayMetrics.widthPixels
+        val config = android.content.res.Configuration().apply {
+            fontScale = 1f
+            densityDpi = Math.round(160f * width / DESIGN_WIDTH)
+        }
+        super.attachBaseContext(if (width > 0) FixedScale.wrap(base).createConfigurationContext(config) else FixedScale.wrap(base))
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,13 +78,12 @@ class SupportWebActivity : Activity() {
                 javaScriptCanOpenWindowsAutomatically = false
                 setGeolocationEnabled(false)
                 cacheMode = WebSettings.LOAD_NO_CACHE
-                // The page sets its own width (690, its design width); the WebView scales it to fill the screen.
-                useWideViewPort = true
-                loadWithOverviewMode = true
                 setSupportZoom(false)
                 builtInZoomControls = false
                 textZoom = 100
             }
+            // No overscroll stretch: the page scrolls inside its own screens, and the stretch stayed, squashing the button.
+            overScrollMode = android.view.View.OVER_SCROLL_NEVER
             webViewClient = Client()
             webChromeClient = null
             addJavascriptInterface(Bridge(), BRIDGE)
@@ -303,6 +313,8 @@ class SupportWebActivity : Activity() {
         const val PREVIEW_FIXTURE = "com.titankeys.debug.supportPreview"
         private const val BRIDGE = "TitanKeysSupport"
         private const val PAGE = 20
+        /** The page's design width in CSS pixels: the renders and the reviews were made at it. */
+        private const val DESIGN_WIDTH = 690f
         /** The page's own content only: no scripts, styles, images or fonts from anywhere else, and no requests out. */
         private const val CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data:; font-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"

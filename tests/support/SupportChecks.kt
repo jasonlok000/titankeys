@@ -25,7 +25,7 @@ fun main() {
     check(supportCredit(emptySet(), 0, "", unit, 1) == null)
     check(supportCredit(emptySet(), 0, "test-pending", unit, 0) == null)
     check(SupportProduct.TipSip.value(1, 490_000, "USD") == 49L)
-    check(SupportProduct.TipFull.value(1, 4_000_000, "EUR") == 200L)
+    check(SupportProduct.TipFull.value(1, 4_000_000, "EUR") == 250L)
     check(SupportProduct.TipUnit.value(7, 1_000_000, "USD") == 700L)
     check(SupportProduct.MonthlySmall.value(1, null, null) == 100L)
     check(sha256("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
@@ -39,7 +39,7 @@ fun main() {
     check(supportKey("sub-token", null, monthly = true) == "sub-token")
     val first = checkNotNull(supportCredit(emptySet(), 0, month0, monthly, 1))
     val second = checkNotNull(supportCredit(setOf(first.id), first.totalCents, month1, monthly, 1))
-    check(second.totalCents == 400L)
+    check(second.totalCents == 500L)
     check(supportCredit(setOf(first.id, second.id), second.totalCents, month1, monthly, 1) == null)
     // A ledger from before: the token's credit becomes this month's order, without a second credit; the next renewal counts.
     check(keyedByOldToken(setOf(sha256("sub-token")), "sub-token", month1))

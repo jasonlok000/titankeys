@@ -471,3 +471,12 @@ test("without a rate salt, the preview and reports stay off rather than count by
     expect((await api("rank-preview", { accountKey: ACCOUNT, addCents: 100 })).status).toBe(503);
     expect((await api("report", { id: "00000000-0000-4000-8000-000000000001", reason: null })).status).toBe(503);
 });
+
+test("half a coffee is $2.50, one-time and monthly, and counts no more than that", async () => {
+    const tip = await paid({ label: "half", productId: "support_tip_full", cents: 250 });
+    expect(await cupsAfter(publish([tip]))).toBe(.5);
+    const over = await paid({ label: "half-over", productId: "support_tip_full", cents: 300 });
+    expect(await cupsAfter(publish([over]))).toBe(1);
+    const month = await paid({ kind: "subscription", productId: MONTHLY, label: "half-month", cents: 250 });
+    expect(await cupsAfter(publish([month]))).toBe(1.5);
+});

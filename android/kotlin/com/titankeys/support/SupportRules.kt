@@ -5,10 +5,10 @@ import java.security.MessageDigest
 internal enum class SupportProduct(val id: String, val monthly: Boolean, val cents: Long) {
     MonthlySip("support_monthly_sip", true, 50),
     MonthlySmall("support_monthly_small", true, 100),
-    MonthlyFull("support_monthly_full", true, 200),
+    MonthlyFull("support_monthly_full", true, 250),
     TipSip("support_tip_sip", false, 50),
     TipSmall("support_tip_small", false, 100),
-    TipFull("support_tip_full", false, 200),
+    TipFull("support_tip_full", false, 250),
     /** Custom: $1, bought in any quantity (owner, 2026-11-19: no fixed ladder; monthly has its three tiers only). */
     TipUnit("support_tip_unit", false, 100);
 

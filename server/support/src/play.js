@@ -8,11 +8,11 @@ const CENT = 10_000_000n;
 const TIPS = new Map([
     ["support_tip_sip", "TIP_SIP_CENTS"],
     // Custom is the $1 unit in any quantity (owner, 2026-11-19): no fixed ladder beside it.
-    ["support_tip_small", 100], ["support_tip_full", 200], ["support_tip_unit", 100],
+    ["support_tip_small", 100], ["support_tip_full", 250], ["support_tip_unit", 100],
 ]);
 const MONTHLY = new Map([
     ["support_monthly_sip", "MONTHLY_SIP_CENTS"],
-    ["support_monthly_small", 100], ["support_monthly_full", 200],
+    ["support_monthly_small", 100], ["support_monthly_full", 250],
 ]);
 const PRODUCT_FIELDS = "orderId,productId,purchaseState,purchaseType,quantity,refundableQuantity,obfuscatedExternalAccountId";
 const SUBSCRIPTION_FIELDS = "subscriptionState,testPurchase,externalAccountIdentifiers(obfuscatedExternalAccountId),lineItems(productId,latestSuccessfulOrderId)";

@@ -51,7 +51,16 @@ Malformed inputs return `400`. Pending purchases or refunds return `409`, receip
 
 The Worker checks Google Play's [one-time purchase](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.products) or [subscription](https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2) and the matching [order](https://developers.google.com/android-publisher/api-ref/rest/v3/orders). Test purchases, pending charges and unpaid orders earn no credit.
 
-The USD base price comes from the approved product list. Set the two sip prices to the USD base in Play Console. Multiply the $1 custom unit by Google's verified purchase quantity. Only the custom unit can have quantity above one. There is no fixed ladder beside it, and monthly has its three tiers only (owner, 2026-11-19). The app never supplies the price, quantity or order ID to the Worker.
+The USD base price comes from the approved product list (owner, 2026-11-19): a cup is $5 everywhere, and each of one-time and monthly has three tiers, the sip (the lowest price Play allows), $1 and $2.50 ("Half a coffee"), plus the one-time $1 unit for Custom.
+
+| Product | USD base |
+| --- | --- |
+| `support_tip_sip`, `support_monthly_sip` | Play's lowest price; set `TIP_SIP_CENTS` and `MONTHLY_SIP_CENTS` to it in cents |
+| `support_tip_small`, `support_monthly_small` | $1.00 |
+| `support_tip_full`, `support_monthly_full` | $2.50 |
+| `support_tip_unit` (Custom, multi-quantity) | $1.00 each |
+
+In Play Console, create each product at that USD price and let Play convert it to local prices. Set the two sip prices to the USD base in Play Console. Multiply the $1 custom unit by Google's verified purchase quantity. Only the custom unit can have quantity above one. There is no fixed ladder beside it, and monthly has its three tiers only (owner, 2026-11-19). The app never supplies the price, quantity or order ID to the Worker.
 
 Take the paid USD amount before tax and cap it at that item's nominal value. For other currencies, start from the Play USD base and prorate for confirmed refunds in the purchase currency. This uses Play's own regional pricing and avoids a separate exchange-rate service. Add retained cents across the account. The board sorts by that total and never shows it, in cents or cups.
 

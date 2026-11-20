@@ -14,6 +14,8 @@ fun supportWebChecks() {
         "https://appassets.androidplatform.net.evil.example/support/index.html", "javascript:alert(1)", ""))
         check(SupportWebAssets.assetPath(refused) == null) { "should refuse $refused" }
     check(SupportWebAssets.mime("support/index.html") == "text/html")
+    check(SupportWebAssets.assetPath("$origin/support/inter_bold.otf") == "support/inter_bold.otf")
+    check(SupportWebAssets.mime("support/inter_bold.otf") == "font/otf")
     check(SupportWebAssets.start("popup").endsWith("#popup") && SupportWebAssets.start("anything").endsWith("#page"))
 
     // Messages: each op with checked arguments.

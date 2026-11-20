@@ -2,48 +2,724 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'">
 <title>Support TitanKeys</title>
-<!-- A stand-in until E's page (tools/dev/preview/pages/support-app.html) replaces it. It shows the bridge works. -->
+<!--
+  TitanKeys' support screens, round 1 (support-app.html). Built to ship as an offline asset in a full-screen WebView: local fonts
+  only, no network, and every bit of data through window.TitanKeysSupport (the bridge G builds). Without the bridge it runs on the
+  SAMPLE data below, so the page also works as its own preview: support-app.html#support, ?state=... for renders.
+  The Titan's square screen: 1076 x 1200 px, about 690 x 770 CSS px. Words: F's docs/support-text.md (47a38854).
+-->
 <style>
-  body { margin: 0; min-height: 100vh; background: #000; color: #fff1e6; font: 20px/1.4 sans-serif; display: grid; place-items: center; }
-  main { padding: 24px; max-width: 32em; }
-  button { font: inherit; padding: 12px 20px; border-radius: 24px; border: 0; background: #ff7a2f; color: #160a04; }
+  @font-face { font-family: Inter; src: url(inter_regular.otf); font-weight: 400; }
+  @font-face { font-family: Inter; src: url(inter_bold.otf); font-weight: 700; }
+  :root {
+    /* Colour: pure black, one orange, three greys. */
+    --bg: #000; --s1: #0E0B0A; --s2: #171311; --line: #2A2623; --ink: #FFF1E6; --muted: #A39B94; --faint: #6B645F;
+    --accent: #EF804E; --accent-soft: #EF804E26; --on-accent: #160A04;
+    /* Type scale (1.25): 13 · 15 · 17 · 21 · 26 · 33 · 41 · 52. */
+    --t-xs: 13px; --t-s: 15px; --t-m: 17px; --t-l: 21px; --t-xl: 26px; --t-2xl: 33px; --t-3xl: 41px; --t-4xl: 52px;
+    /* Spacing: 4-based. */
+    --g1: 4px; --g2: 8px; --g3: 12px; --g4: 16px; --g5: 24px; --g6: 32px; --g7: 48px;
+    --side: 32px; --measure: 36ch; --r-s: 12px; --r-m: 18px; --r-l: 26px;
+    --ease: cubic-bezier(.2, .8, .2, 1); --spring: cubic-bezier(.3, 1.4, .5, 1);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden;
+    font: 400 var(--t-m)/1.45 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  .app { position: relative; width: 100%; height: 100%; max-width: 690px; margin: 0 auto; overflow: hidden; }
+  .view { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; display: none; }
+  .view::-webkit-scrollbar { display: none; }
+  .view.on { display: block; animation: enter .32s var(--ease); }
+  @keyframes enter { from { opacity: 0; transform: translateY(10px); } }
+  .pad { padding: 0 var(--side); }
+  .bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: var(--g3); height: 64px; padding: 0 var(--side);
+    background: linear-gradient(#000 70%, #0000); }
+  .bar .back { width: 40px; height: 40px; margin-left: -10px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
+  .bar .back svg { width: 22px; height: 22px; }
+  .bar .title { font-weight: 700; font-size: var(--t-m); opacity: 0; transition: opacity .2s; }
+  .bar.scrolled .title { opacity: 1; }
+  h1 { margin: 0; font-size: var(--t-3xl); line-height: 1.08; letter-spacing: -.02em; font-weight: 700; }
+  .kicker { color: var(--accent); font-size: var(--t-xs); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  .lede { color: var(--muted); font-size: var(--t-m); max-width: var(--measure); margin: var(--g2) 0 0; }
+  .muted { color: var(--muted); }
+  .clip1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clip2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .clip3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+
+  /* Buttons. */
+  .primary { display: flex; align-items: center; justify-content: center; gap: var(--g2); width: 100%; height: 60px; border-radius: 30px;
+    background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--t-l); transition: transform .15s var(--ease), filter .2s; }
+  .primary:active { transform: scale(.98); }
+  .primary .price { font-weight: 400; opacity: .8; }
+  .secondary { width: 100%; height: 52px; border-radius: 26px; border: 1.5px solid var(--line); font-weight: 700; color: var(--ink); }
+  .quiet { width: 100%; height: 48px; color: var(--muted); font-weight: 700; }
+
+  /* The cup, drawn like the guide: cream outline, orange coffee that rises. */
+  .cup { display: block; }
+  .cup .stroke { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  .cup .fill { fill: var(--accent); transition: y .6s var(--ease), height .6s var(--ease); }
+  .steam path { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-linecap: round; stroke-dasharray: 14; animation: steam 2.8s ease-in-out infinite; }
+  .steam path + path { animation-delay: 1.1s; }
+  @keyframes steam { 0% { stroke-dashoffset: 14; opacity: 0; } 35% { opacity: .9; } 100% { stroke-dashoffset: -14; opacity: 0; } }
+
+  /* ---------- Settings: the card at the very bottom. ---------- */
+  .srow { display: flex; justify-content: space-between; align-items: center; height: 64px; border-bottom: 1px solid var(--line); font-size: var(--t-l); }
+  .srow span { color: var(--muted); font-size: var(--t-m); }
+  .ssec { margin: var(--g6) 0 var(--g2); }
+  .coffeecard { position: relative; display: flex; align-items: center; gap: var(--g4); width: 100%; margin: var(--g6) 0 var(--g7); padding: var(--g5);
+    border-radius: var(--r-l); background: radial-gradient(120% 140% at 0% 0%, #2A150B, var(--s1) 60%); text-align: left; isolation: isolate; overflow: hidden; }
+  .coffeecard::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; z-index: -1;
+    background: conic-gradient(from var(--spin), var(--line) 0 62%, var(--accent) 80%, var(--line) 98%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: spin 7s linear infinite; }
+  @property --spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  @keyframes spin { to { --spin: 360deg; } }
+  .coffeecard .t { font-weight: 700; font-size: var(--t-xl); }
+  .coffeecard .s { color: var(--muted); font-size: var(--t-m); }
+  .coffeecard .go { margin-left: auto; color: var(--accent); }
+
+  /* ---------- The popup, over the front page. ---------- */
+  .front { padding: 26px var(--side); filter: brightness(.3) blur(2px); }
+  .front .logo { font-weight: 700; font-size: var(--t-xl); } .front .logo b { color: var(--accent); }
+  .front .prompt { font-weight: 700; font-size: var(--t-2xl); margin: 40px 0 var(--g2); text-transform: uppercase; }
+  .front .box { height: 120px; border-radius: var(--r-m); background: var(--s2); border-left: 3px solid var(--accent); margin-top: var(--g5); }
+  .sheet { position: absolute; left: var(--g5); right: var(--g5); bottom: var(--g5); padding: var(--g6) var(--g6) var(--g4); border-radius: 32px;
+    background: var(--s2); border: 1px solid var(--line); box-shadow: 0 -20px 80px #000; animation: sheet .5s var(--spring); }
+  @keyframes sheet { from { transform: translateY(40px); opacity: 0; } }
+  .sheet .line { font-size: var(--t-2xl); font-weight: 700; line-height: 1.12; letter-spacing: -.01em; max-width: 14ch; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--g2); margin: var(--g5) 0; }
+  .tile { padding: var(--g4); border-radius: var(--r-m); background: var(--s1); animation: rise .5s var(--ease) backwards; }
+  .tile:nth-child(2) { animation-delay: .08s; } .tile:nth-child(3) { animation-delay: .16s; } .tile:nth-child(4) { animation-delay: .24s; }
+  @keyframes rise { from { transform: translateY(12px); opacity: 0; } }
+  .tile b { display: block; font-size: var(--t-2xl); line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .tile span { color: var(--muted); font-size: var(--t-s); }
+  .sheet .actions { display: grid; gap: var(--g1); }
+
+  /* ---------- The support page. ---------- */
+  .hero { padding: var(--g2) var(--side) 0; }
+  .points { list-style: none; margin: var(--g4) 0 0; padding: 0; display: grid; gap: var(--g2); }
+  .points li { display: flex; gap: var(--g3); align-items: baseline; color: var(--muted); max-width: 40ch; }
+  .points li::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); transform: translateY(-3px); }
+  .points li:first-child { color: var(--ink); }
+  .section { margin-top: var(--g7); }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 var(--side); margin-bottom: var(--g4); }
+  .section-head a { color: var(--muted); font-size: var(--t-s); font-weight: 700; text-decoration: none; cursor: pointer; }
+
+  /* Podium: first in the middle, raised; each place rises in turn. */
+  .podium { display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: var(--g2); align-items: end; padding: 0 var(--side); }
+  .place { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0;
+    padding: var(--g5) var(--g3) var(--g4); border-radius: var(--r-l) var(--r-l) var(--r-s) var(--r-s); background: var(--s1);
+    border: 1px solid var(--line); animation: podium .7s var(--spring) backwards; }
+  .place.p2 { height: 196px; animation-delay: .12s; } .place.p1 { height: 236px; } .place.p3 { height: 178px; animation-delay: .22s; }
+  .place.p1 { background: linear-gradient(180deg, #2B160C, var(--s1) 75%); border-color: #EF804E80; }
+  @keyframes podium { from { transform: translateY(30px) scaleY(.85); opacity: 0; transform-origin: bottom; } }
+  .medal { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: var(--t-s);
+    border: 1.5px solid var(--faint); color: var(--ink); margin-bottom: var(--g3); }
+  .p1 .medal { width: 42px; height: 42px; background: var(--accent); border: 0; color: var(--on-accent); font-size: var(--t-m);
+    box-shadow: 0 0 0 6px var(--accent-soft); }
+  .place .name { font-weight: 700; font-size: var(--t-m); width: 100%; }
+  .p1 .name { font-size: var(--t-l); }
+  .place .msg { color: var(--muted); font-size: var(--t-xs); line-height: 1.4; margin-top: var(--g1); width: 100%; }
+  .place.you { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+  .ranks { list-style: none; margin: var(--g4) 0 0; padding: 0 var(--side); }
+  .rank { position: relative; display: grid; grid-template-columns: 40px 1fr auto; gap: var(--g3); align-items: start; padding: var(--g3) 0;
+    border-bottom: 1px solid var(--line); animation: rise .45s var(--ease) backwards; }
+  .rank .n { color: var(--faint); font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .rank .who { min-width: 0; }
+  .rank .who b { display: block; font-size: var(--t-m); }
+  .rank .who span { color: var(--muted); font-size: var(--t-s); }
+  .rank .more { width: 32px; height: 32px; margin: -4px -6px 0 0; border-radius: 50%; color: var(--faint); display: grid; place-items: center; }
+  .rank.you { margin: 0 calc(-1 * var(--g3)); padding-left: var(--g3); padding-right: var(--g3); border-radius: var(--r-s);
+    background: linear-gradient(90deg, var(--accent-soft), transparent); border-bottom-color: transparent; }
+  .rank.you .n { color: var(--accent); }
+  .tag { margin-left: var(--g2); padding: 1px 7px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-size: 11px;
+    font-weight: 700; letter-spacing: .06em; vertical-align: 2px; }
+  .reportbox { grid-column: 2 / 4; display: flex; gap: var(--g2); align-items: center; }
+  .reportbox button { height: 34px; padding: 0 var(--g4); border-radius: 17px; border: 1px solid var(--line); color: var(--ink); font-size: var(--t-s); font-weight: 700; }
+  .toast { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: var(--g3) var(--g5); border-radius: 24px;
+    background: var(--ink); color: var(--on-accent); font-weight: 700; font-size: var(--t-s); white-space: nowrap; z-index: 9; animation: sheet .4s var(--spring); }
+
+  /* Amounts. */
+  .seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin: 0 var(--side); padding: 4px; border-radius: 26px;
+    background: var(--s1); border: 1px solid var(--line); }
+  .seg .knob { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 22px; background: var(--ink);
+    transition: transform .35s var(--spring); }
+  .seg.right .knob { transform: translateX(100%); }
+  .seg button { position: relative; height: 42px; font-weight: 700; color: var(--muted); transition: color .25s; }
+  .seg button.on { color: var(--on-accent); }
+  .tiers { display: grid; gap: var(--g2); margin: var(--g4) var(--side) 0; }
+  .tier { display: grid; grid-template-columns: 44px 1fr auto; gap: var(--g4); align-items: center; padding: var(--g3) var(--g4);
+    border-radius: var(--r-m); background: var(--s1); border: 1.5px solid var(--line); text-align: left;
+    transition: border-color .2s, background .3s, transform .15s var(--ease); }
+  .tier:active { transform: scale(.985); }
+  .tier.on { border-color: var(--accent); background: linear-gradient(90deg, #22120A, var(--s1)); }
+  .tier .nm { font-weight: 700; font-size: var(--t-m); }
+  .tier .ln { color: var(--muted); font-size: var(--t-s); }
+  .tier .pr { font-weight: 700; font-size: var(--t-m); color: var(--muted); font-variant-numeric: tabular-nums; transition: color .2s; }
+  .tier.on .pr { color: var(--accent); }
+  .tier .chev { color: var(--muted); }
+  .privacy { color: var(--faint); font-size: var(--t-xs); padding: var(--g5) var(--side) 0; max-width: 46ch; }
+  .spacer { height: 180px; }
+
+  /* The pay dock: rank preview and Chip in, always in reach. */
+  .dock { position: sticky; bottom: 0; z-index: 4; padding: var(--g6) var(--side) var(--g5); background: linear-gradient(#0000, #000 14%); }
+  .preview { display: flex; align-items: center; justify-content: center; gap: var(--g2); height: 28px; margin-bottom: var(--g3);
+    color: var(--muted); font-size: var(--t-s); }
+  .preview b { color: var(--accent); font-variant-numeric: tabular-nums; display: inline-block; }
+  .preview b.bump { animation: bump .45s var(--spring); }
+  @keyframes bump { 0% { transform: translateY(8px); opacity: 0; } }
+  .preview .up { color: var(--faint); }
+  .note { text-align: center; color: var(--faint); font-size: var(--t-xs); margin-top: var(--g2); min-height: 18px; }
+
+  /* Custom. */
+  .readout { text-align: center; margin-top: var(--g5); }
+  .readout .d { font-size: var(--t-4xl); font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+  .readout .c { color: var(--accent); font-size: var(--t-l); margin-top: var(--g2); }
+  .readout .pot { color: var(--muted); font-size: var(--t-s); margin-top: var(--g1); min-height: 22px; }
+  .cups { display: flex; justify-content: center; align-items: flex-end; gap: var(--g2); height: 190px; margin-top: var(--g6); }
+  .slider { margin: var(--g6) var(--side) 0; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 4px; margin: 0;
+    background: linear-gradient(90deg, var(--accent) var(--p), var(--line) var(--p)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; border-radius: 50%; background: var(--ink);
+    border: 7px solid var(--accent); box-shadow: 0 0 0 8px var(--accent-soft); }
+  .ticks { display: flex; justify-content: space-between; margin-top: var(--g3); color: var(--faint); font-size: var(--t-xs); }
+
+  /* Test checkout (Debug): a sheet like Play's. */
+  .scrim { position: absolute; inset: 0; background: #000C; z-index: 8; animation: enter .25s; }
+  .checkout { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--g4) var(--side) var(--g6); border-radius: 28px 28px 0 0;
+    background: var(--s2); border-top: 1px solid var(--line); animation: up .4s var(--ease); }
+  @keyframes up { from { transform: translateY(100%); } }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto var(--g5); }
+  .checkout .row { display: flex; justify-content: space-between; align-items: baseline; padding: var(--g3) 0; border-bottom: 1px solid var(--line); }
+  .checkout .row b { font-size: var(--t-xl); }
+
+  /* ---------- The thank-you: a warm rise, then the words. ---------- */
+  #thanks { background: #000; overflow: hidden; }
+  .flood { position: absolute; left: 0; right: 0; bottom: 0; height: 0; will-change: height; }
+  .flood .body { position: absolute; inset: 0; background: linear-gradient(0deg, #E8693A 0%, #EF804E 30%, #F7A570 70%, #FFD3A8 100%); }
+  .flood svg { position: absolute; left: 0; top: -30px; width: 200%; height: 32px; animation: wave 3s linear infinite; }
+  @keyframes wave { to { transform: translateX(-50%); } }
+  .bubble { position: absolute; bottom: 0; width: 8px; height: 8px; border-radius: 50%; background: #FFE6CC88; animation: bubble 3s ease-in infinite; }
+  @keyframes bubble { from { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-420px); opacity: 0; } }
+  .thanks-words { position: absolute; left: var(--side); right: var(--side); top: 150px; text-align: center; z-index: 2; }
+  .thanks-words h1 { font-size: var(--t-4xl); opacity: 0; transform: translateY(16px); transition: opacity .6s, transform .6s var(--ease); }
+  .thanks-words p { font-size: var(--t-xl); line-height: 1.35; margin: var(--g4) auto 0; max-width: 22ch; opacity: 0; transform: translateY(16px);
+    transition: opacity .6s .15s, transform .6s .15s var(--ease); }
+  .settled .thanks-words h1, .settled .thanks-words p { opacity: 1; transform: none; }
+  .dark-words .thanks-words { color: var(--on-accent); }
+  .thanks-actions { position: absolute; left: var(--side); right: var(--side); bottom: var(--g6); z-index: 2; display: grid; gap: var(--g2);
+    opacity: 0; transform: translateY(12px); transition: opacity .5s .4s, transform .5s .4s var(--ease); }
+  .settled .thanks-actions { opacity: 1; transform: none; }
+  .thanks-actions .invite { text-align: center; font-weight: 700; font-size: var(--t-l); margin-bottom: var(--g2); }
+  /* The actions sit on the orange whatever the total, so they're always dark. */
+  .thanks-actions .primary { background: var(--on-accent); color: var(--ink); }
+  .thanks-actions .quiet { color: #160A04B0; }
+  .dark-words .thanks-actions .invite { color: var(--on-accent); }
+
+  /* ---------- Opt-in. ---------- */
+  .field { margin-top: var(--g4); padding: var(--g3) var(--g4); border-radius: var(--r-m); background: var(--s1); border: 1.5px solid var(--line); }
+  .field.focus { border-color: var(--accent); }
+  .field label { display: flex; justify-content: space-between; color: var(--muted); font-size: var(--t-xs); font-weight: 700; letter-spacing: .04em; }
+  .field label .count { font-variant-numeric: tabular-nums; }
+  .field label .count.full { color: var(--accent); }
+  .field input, .field textarea { width: 100%; margin-top: var(--g1); background: none; border: 0; outline: 0; color: var(--ink);
+    font: inherit; font-size: var(--t-l); resize: none; }
+  .field textarea { min-height: 3.2em; line-height: 1.35; }
+  .limit { display: flex; align-items: center; gap: var(--g3); margin-top: var(--g4); padding: var(--g3) var(--g4); border-radius: var(--r-m);
+    background: var(--accent-soft); color: var(--ink); font-size: var(--t-s); }
+  .limit .badge { flex: none; padding: 3px 9px; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--t-xs); }
+  .previewrow { margin-top: var(--g5); }
+
+  /* Empty and offline. */
+  .empty { margin: 0 var(--side); padding: var(--g6) var(--g5); border-radius: var(--r-l); border: 1.5px dashed var(--line); text-align: center; }
+  .empty .spot { width: 64px; height: 64px; margin: 0 auto var(--g4); border-radius: 50%; display: grid; place-items: center;
+    border: 2px dashed var(--accent); color: var(--accent); font-weight: 700; font-size: var(--t-l); animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.06); box-shadow: 0 0 0 10px var(--accent-soft); } }
+  .empty p { margin: 0; font-size: var(--t-l); font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+  .reduce *, .reduce *::before, .reduce *::after { animation: none !important; transition: none !important; }
 </style>
 </head>
 <body>
-<main>
-  <h1>Support TitanKeys</h1>
-  <p id="line">Loading…</p>
-  <button id="close" type="button">Close</button>
-</main>
+<div class="app" id="app">
+
+  <!-- Settings, with the coffee card at the very bottom. -->
+  <section class="view" id="settings">
+    <div class="bar"><button class="back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+    <div class="pad">
+      <h1>Settings</h1>
+      <div class="ssec kicker">Help</div>
+      <div class="srow">Setup <span>›</span></div>
+      <div class="srow">Guide <span>›</span></div>
+      <div class="srow">Send feedback <span>›</span></div>
+      <div class="srow">About <span>3.0</span></div>
+      <div class="ssec kicker">Start over</div>
+      <div class="srow">Reset most things <span>›</span></div>
+      <div class="srow">Reset literally everything <span>›</span></div>
+      <button class="coffeecard" data-go="support">
+        <span data-cup="steam" data-size="56"></span>
+        <span><div class="t" data-t="cardTitle"></div><div class="s" data-t="cardLine"></div></span>
+        <svg class="go" width="22" height="22" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- The popup: once, after about ten typing days, over the front page. -->
+  <section class="view" id="popup">
+    <div class="front" aria-hidden="true">
+      <div class="logo">Titan<b>Keys</b></div>
+      <div class="prompt">Practice. You need it.</div>
+      <div class="muted">Type or swipe whatever you like.</div>
+      <div class="box"></div>
+    </div>
+    <div class="sheet" role="dialog" aria-labelledby="popupline">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+        <div class="line" id="popupline" data-t="popupLine"></div><span data-cup="steam" data-size="52"></span>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="actions">
+        <button class="primary" data-go="support" data-t="popupButton"></button>
+        <button class="quiet" data-act="nah" data-t="nah"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- The support page. -->
+  <section class="view" id="support">
+    <div class="bar"><button class="back" data-go="settings" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="title" data-t="heading"></span></div>
+    <div class="hero">
+      <h1 data-t="heading"></h1>
+      <ul class="points" id="points"></ul>
+    </div>
+    <div class="section">
+      <div class="section-head"><span class="kicker" data-t="fund"></span><a data-go="board" id="seeall"></a></div>
+      <div id="boardpreview"></div>
+    </div>
+    <div class="section">
+      <div class="seg" id="cadence"><span class="knob"></span><button data-cad="m" data-t="monthly"></button><button data-cad="o" data-t="oneTime"></button></div>
+      <div class="tiers" id="tiers"></div>
+    </div>
+    <div class="privacy" data-t="privacy"></div>
+    <div class="dock">
+      <div class="preview" id="preview"></div>
+      <button class="primary" id="pay"></button>
+      <div class="note" id="paynote"></div>
+    </div>
+  </section>
+
+  <!-- Custom: one-time, any whole number of dollars. -->
+  <section class="view" id="custom">
+    <div class="bar"><button class="back" data-go="support" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+    <div class="pad"><h1 data-t="howMuch"></h1></div>
+    <div class="cups" id="custcups"></div>
+    <div class="readout"><div class="d" id="custd"></div><div class="c" id="custc"></div><div class="pot" id="custpot"></div></div>
+    <div class="slider"><input type="range" id="slider" min="1" max="50" value="5" aria-label="Dollars"><div class="ticks"><span>$1</span><span>$25</span><span>$50</span></div></div>
+    <div class="dock" style="position:absolute;left:0;right:0;bottom:0">
+      <div class="preview" id="preview2"></div>
+      <button class="primary" id="pay2"></button>
+      <div class="note" data-t="oneTimeNote"></div>
+    </div>
+  </section>
+
+  <!-- The thank-you. -->
+  <section class="view" id="thanks">
+    <div class="flood" id="flood"><svg viewBox="0 0 1380 32" preserveAspectRatio="none"><path fill="#FFD3A8" d="M0 18 Q86 2 172 18 T345 18 T517 18 T690 18 T862 18 T1035 18 T1207 18 T1380 18 V32 H0 Z"/></svg><div class="body"></div><div id="bubbles"></div></div>
+    <div class="thanks-words"><h1 data-t="thanksTitle"></h1><p data-t="thanksLine"></p></div>
+    <div class="thanks-actions" id="thanksactions"></div>
+  </section>
+
+  <!-- The opt-in. -->
+  <section class="view" id="optin">
+    <div class="bar"></div>
+    <div class="pad">
+      <h1 data-t="join"></h1>
+      <div class="limit" id="limit"></div>
+      <div class="field focus"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="name" maxlength="40" autocomplete="off"></div>
+      <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="msg" rows="2"></textarea></div>
+      <div class="previewrow" id="optpreview"></div>
+      <div style="display:grid;gap:8px;margin:32px 0 32px">
+        <button class="primary" data-act="add" data-t="addMe"></button>
+        <button class="quiet" data-act="anon" data-t="stayAnonymous"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- The board: everyone, or the supporter's own view. -->
+  <section class="view" id="board">
+    <div class="bar"><button class="back" data-go="support" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="title" id="boardbartitle"></span></div>
+    <div class="pad"><h1 id="boardtitle"></h1><p class="lede" id="boardline"></p></div>
+    <div style="margin-top:32px" id="boardfull"></div>
+    <div class="privacy" data-t="privacy"></div>
+    <div class="pad" style="padding-top:16px;padding-bottom:48px" id="removebox"></div>
+  </section>
+
+  <div id="overlay"></div>
+</div>
+
 <script>
-  // The bridge (SupportWebProtocol.kt): post {id, op, args}; replies and events come to titankeysSupport.receive.
-  const pending = new Map();
-  let next = 1;
-  window.titankeysSupport = {
-    receive(text) {
-      const message = JSON.parse(text);
-      if (message.event) return;
-      const done = pending.get(message.id);
-      pending.delete(message.id);
-      if (done) done(message);
-    },
-  };
-  function call(op, args) {
-    return new Promise(resolve => {
-      const id = next++;
-      pending.set(id, resolve);
-      TitanKeysSupport.post(JSON.stringify({ id, op, args }));
-    });
-  }
-  call("state").then(answer => {
-    const state = answer.result;
-    document.getElementById("line").textContent = answer.ok
-      ? `${state.products.length} ways to chip in${state.preview ? " (sample)" : ""}. ${state.cups} cups so far.`
-      : "Support isn't available right now.";
+"use strict";
+// F's words (docs/support-text.md, 47a38854). PRE lines are coffee only; the juice is in SUPPORTER lines alone.
+const T = {
+  cardTitle: "Buy me a coffee", cardLine: "You made it to the bottom. Fancy a coffee?",
+  popupLine: "Your thumbs have been busy.", tiles: ["Words", "Swipes", "Fixes", "Gestures"], popupButton: "Coffee fund", nah: "Nah",
+  heading: "Support TitanKeys",
+  points: ["Donating gets you nothing. Well, a spot on the board.", "It buys time: fixes, languages, new tricks.", "No ads. No paywall. Ever."],
+  fund: "The coffee fund", fundLine: "The good people, by rank.",
+  supporters: "The orange juice fund", supportersLine: "The good people. Cheers, all of you.",
+  empty: "Empty. Any amount makes you #1.", anonymous: "Anonymous", report: "Report", reported: "Got it. We'll take a look.",
+  oneTime: "One-time", monthly: "Monthly",
+  tiers: [["A sip", "Small, but it counts."], ["A bigger sip", "Now we're brewing."], ["Half a coffee", "That's real caffeine."]],
+  custom: ["Custom", "You pick."],
+  monthlyNote: "Every month. Cancel any time in Play.", oneTimeNote: "", howMuch: "How much coffee?",
+  wholePot: "That's a whole pot. I'll need a bigger table.",
+  putsYou: (n, m) => m && m !== n ? `This puts you at <b>#${n}</b> <span class="up">up from #${m}</span>` : `This puts you at <b>#${n}</b>`,
+  chipIn: "Chip in",
+  thanksTitle: "Thank you!", thanksLine: "Fun fact: I don't actually drink coffee. I'm more of an orange juice person. But this means a lot.",
+  join: "Join the board?", nameField: "Name (optional)", messageField: "Message (optional)",
+  limits: { 3: "120 characters. Say something grand.", 10: "80 characters. Make it count.", 100: "40 characters. Short and sweet.", 0: "Name only for now. Climb for a message." },
+  addMe: "Add me", stayAnonymous: "Stay anonymous",
+  invite: tier => `You're in the top ${tier} now. Want a longer message?`, writeMore: "Write more", later: "Later",
+  privacy: "Only names, messages and rank. Leave any time.", removeMe: "Remove me",
+  billing: "Play can't take payments on this phone.", notReady: "Play's still waking up. Try again soon.",
+  offline: "You're offline. The board will be back.",
+  allRanks: n => `All ${n}`, seeAll: "See all",
+};
+const LIMITS = [[3, 120], [10, 80], [100, 40]];
+const limitAt = rank => rank ? (LIMITS.find(([top]) => rank <= top) || [0, 0])[1] : 0;
+const tierAt = rank => rank ? (LIMITS.find(([top]) => rank <= top) || [0])[0] : 0;
+
+// Sample data, used when there's no bridge (preview and renders): long names and messages at each limit.
+const L120 = "Finally a keyboard that gets the Titan. Swiping on real keys still feels like a magic trick to me, every single day!!!";
+const L80 = "Obrigado from Lisbon. Portuguese accents on hold are perfect, keep it up please!";
+const L40 = "Typing in Polish without Gboard. Finally";
+const SAMPLE_ROWS = [
+  ["Maximilian Alexander von Hohenzollern-Sigmaringen", L120, 6200], [null, L120, 4500], ["Priya Ramanathan-Krishnamurthy", L120, 3300],
+  ["Tomás", L80, 2100], ["Sam K.", null, 1100], [null, "Keep going.", 800], ["Lukas", L80, 600], ["Ana", "the guide is so good", 500],
+  ["R.", null, 400], ["Kenji Watanabe-Yamamoto", L80, 300], ["Olu", L40, 300], [null, null, 200], ["Marta", L40, 200], ["Dev", null, 100],
+  ["Chris", L40, 100], ["Felix", "Hi from Berlin", 50],
+];
+const SAMPLE = {
+  state: { products: [
+    { id: "support_monthly_sip", price: "$0.99", baseCents: 99 }, { id: "support_monthly_small", price: "$1.39", baseCents: 139 },
+    { id: "support_monthly_full", price: "$2.79", baseCents: 279 }, { id: "support_tip_sip", price: "$0.99", baseCents: 99 },
+    { id: "support_tip_small", price: "$1.39", baseCents: 139 }, { id: "support_tip_full", price: "$2.79", baseCents: 279 },
+    { id: "support_tip_unit", price: "$1.00", baseCents: 100 } ], totalCents: 0, billing: "ready", reduceMotion: false, preview: true },
+  mine: 150, joined: false, stats: [12408, 3112, 214, 388], offline: false, empty: false,
+};
+function sampleBoard(addCents = 0) {
+  if (SAMPLE.offline) return { available: false, entries: [] };
+  if (SAMPLE.empty) return { available: true, entries: [], total: 0, myRank: null, joined: false };
+  const rows = SAMPLE_ROWS.map(([name, message, cents], i) => ({ id: "s" + i, name, message, cents }));
+  if (SAMPLE.joined) rows.push({ id: "you", name: "Mei Wong", message: L80, cents: SAMPLE.mine + addCents, you: true });
+  rows.sort((a, b) => b.cents - a.cents);
+  const entries = rows.map((r, i) => ({ ...r, rank: i + 1, message: r.message ? r.message.slice(0, limitAt(i + 1)) || null : null }));
+  return { available: true, postingReady: true, joined: SAMPLE.joined, entries, total: entries.length,
+    myRank: SAMPLE.joined ? entries.find(e => e.you).rank : null };
+}
+const sampleRank = addCents => SAMPLE_ROWS.filter(r => r[2] > SAMPLE.mine + addCents).length + 1;
+
+// The bridge: native when it's there (G's window.TitanKeysSupport, JSON strings), the samples when it isn't.
+// G's bridge (claude/support-webview): TitanKeysSupport.post(JSON {id, op, args}); answers and events come back through
+// window.titankeysSupport.receive(text). Without it, the samples answer, so the page previews on its own.
+const native = window.TitanKeysSupport;
+let nextId = 1;
+const waiting = new Map();
+const events = { receipt: null, state: null };
+window.titankeysSupport = {
+  receive(text) {
+    const msg = JSON.parse(text);
+    if (msg.event) { events[msg.event]?.(msg.data); return; }
+    const wait = waiting.get(msg.id); if (!wait) return;
+    waiting.delete(msg.id);
+    msg.ok ? wait.resolve(msg.result) : wait.reject(new Error(msg.error));
+  },
+};
+const call = (op, args = {}) => new Promise((resolve, reject) => {
+  const id = nextId++;
+  waiting.set(id, { resolve, reject });
+  native.post(JSON.stringify({ id, op, args }));
+});
+const STAT_KEYS = ["words", "swipes", "corrections", "gestures"];
+const api = {
+  state: () => native ? call("state") : Promise.resolve(SAMPLE.state),
+  // Every page of the board, up to 100 places (each page is a read the server counts).
+  board: async () => {
+    if (!native) return sampleBoard();
+    let data = await call("board", { page: 0 });
+    for (let page = 1; page < 5 && data.available && data.nextOffset; page++) {
+      const more = await call("board", { page });
+      if (!more.available) break;
+      data = { ...more, entries: [...data.entries, ...more.entries] };
+    }
+    return data;
+  },
+  preview: cents => native ? call("previewRank", { cents }).then(r => ({ ...r, myRank: board.myRank })) : Promise.resolve(SAMPLE.offline
+    ? { available: false } : { available: true, rank: sampleRank(cents), myRank: SAMPLE.joined ? sampleRank(0) : null }),
+  buy: (productId, quantity) => native ? call("purchase", quantity > 1 ? { productId, quantity } : { productId }) : Promise.resolve({ result: "preview" }),
+  join: (anonymous, name, message) => native ? call("joinBoard", anonymous ? { anonymous } : { anonymous, name, message }) : Promise.resolve({ available: true }),
+  report: publicId => native ? call("report", { publicId }) : Promise.resolve({ available: true, ok: true }),
+  remove: () => native ? call("removeMe") : Promise.resolve({ available: true }),
+  nah: () => native ? call("dismissPopup").then(() => call("close")) : Promise.resolve(history.back()),
+  close: () => native ? call("close") : Promise.resolve(history.back()),
+  stats: async () => native ? STAT_KEYS.map(k => (state.stats || {})[k] || 0) : SAMPLE.stats,
+};
+
+// ---------- Rendering. ----------
+// Animation frames on a 16 ms timer: the same on screen, and they still run where frame callbacks are paused.
+const frame = fn => setTimeout(() => fn(performance.now()), 16);
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let state = SAMPLE.state, board = { available: false, entries: [] };
+let cadence = "m", tier = 0, dollars = 5, lastRank = null;
+
+function cup(fill, size, steam) {
+  const h = size * 1.25, level = 7 + (1 - Math.max(0, Math.min(1, fill))) * 21;
+  return `<svg class="cup" width="${size}" height="${h}" viewBox="0 0 24 30" aria-hidden="true">
+    ${steam ? `<g class="steam"><path d="M10 4 q-2 -2 0 -4"/><path d="M14 4 q-2 -2 0 -4"/></g>` : ""}
+    <defs><clipPath id="cc${size}${Math.round(fill * 100)}"><path d="M5 8 L19 8 L17.4 29 L6.6 29 Z"/></clipPath></defs>
+    <rect class="fill" x="0" y="${level}" width="24" height="30" clip-path="url(#cc${size}${Math.round(fill * 100)})"/>
+    <path class="stroke" d="M5 8 L19 8 L17.4 29 L6.6 29 Z"/><path class="stroke" d="M3.5 5.2 h17 v2.8 h-17 z M7 5.2 l1-2.2 h8 l1 2.2"/></svg>`;
+}
+function fillText() {
+  document.querySelectorAll("[data-t]").forEach(el => { const v = T[el.dataset.t]; if (typeof v === "string") el.textContent = v; });
+  document.querySelectorAll("[data-cup]").forEach(el => { el.innerHTML = cup(.45, +el.dataset.size, el.dataset.cup === "steam"); });
+  $("#points").innerHTML = T.points.map(p => `<li>${esc(p)}</li>`).join("");
+}
+
+function podium(entries, you) {
+  const order = [1, 0, 2].filter(i => entries[i]);
+  return `<div class="podium">${order.map(i => {
+    const e = entries[i];
+    return `<div class="place p${i + 1}${e.you ? " you" : ""}"><div class="medal">${i + 1}</div>
+      <div class="name clip1">${esc(e.name || T.anonymous)}</div>${e.message ? `<div class="msg ${i === 0 ? "clip3" : "clip2"}">${esc(e.message)}</div>` : ""}</div>`;
+  }).join("")}</div>`;
+}
+function ranks(entries, from, to, reporting) {
+  return `<ul class="ranks">${entries.slice(from, to).map((e, k) => `<li class="rank${e.you ? " you" : ""}" style="animation-delay:${.05 * k + .3}s" data-id="${e.id}">
+    <span class="n">${e.rank}</span><span class="who"><b class="clip1">${esc(e.name || T.anonymous)}${e.you ? '<span class="tag">YOU</span>' : ""}</b>${e.message ? `<span class="clip2">${esc(e.message)}</span>` : ""}</span>
+    ${reporting && !e.you ? `<button class="more" data-report="${e.id}" aria-label="${T.report}"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg></button>` : "<span></span>"}</li>`).join("")}</ul>`;
+}
+function emptyBoard() {
+  if (!board.available) return `<div class="empty"><p>${esc(T.offline)}</p></div>`;
+  return `<div class="empty"><div class="spot">#1</div><p>${esc(T.empty)}</p></div>`;
+}
+function drawBoardPreview() {
+  const e = board.entries || [];
+  $("#seeall").textContent = e.length > 3 ? T.allRanks(board.total || e.length) + " ›" : "";
+  $("#boardpreview").innerHTML = e.length ? podium(e) + ranks(e, 3, 5, false) : emptyBoard();
+}
+function drawBoardFull(supporter) {
+  const e = board.entries || [];
+  $("#boardtitle").textContent = supporter ? T.supporters : T.fund;
+  $("#boardbartitle").textContent = supporter ? T.supporters : T.fund;
+  $("#boardline").textContent = supporter ? T.supportersLine : T.fundLine;
+  $("#boardfull").innerHTML = e.length ? podium(e) + ranks(e, 3, e.length, true) : emptyBoard();
+  $("#removebox").innerHTML = board.joined ? `<button class="secondary" data-act="remove">${T.removeMe}</button>` : "";
+}
+
+const product = id => (state.products || []).find(p => p.id === id);
+// Product ids for a tier: native's tiers list where it gives one, else the usual names.
+const tierId = (cad, i) => state.tiers ? state.tiers[cad === "m" ? "monthly" : "oneTime"][i] : `support_${cad === "m" ? "monthly" : "tip"}_${["sip", "small", "full"][i]}`;
+function selected() {
+  if (tier === 3) { const unit = product("support_tip_unit"); return unit && { id: unit.id, price: "$" + dollars, cents: unit.baseCents * dollars }; }
+  const p = product(tierId(cadence, tier));
+  return p && { id: p.id, price: p.price, cents: p.baseCents };
+}
+function drawTiers() {
+  $("#cadence").classList.toggle("right", cadence === "o");
+  document.querySelectorAll("#cadence button").forEach(b => b.classList.toggle("on", b.dataset.cad === cadence));
+  if (cadence === "m" && tier === 3) tier = 0;
+  const rows = T.tiers.map(([nm, ln], i) => {
+    const p = product(tierId(cadence, i));
+    return `<button class="tier${i === tier ? " on" : ""}" data-tier="${i}">${cup([.2, .45, .75][i], 30)}<span><div class="nm">${nm}</div><div class="ln">${ln}</div></span><span class="pr">${p ? p.price : ""}</span></button>`;
   });
-  document.getElementById("close").addEventListener("click", () => call("close"));
+  if (cadence === "o") rows.push(`<button class="tier" data-go="custom">${cup(1, 30)}<span><div class="nm">${T.custom[0]}</div><div class="ln">${T.custom[1]}</div></span><svg class="chev" width="20" height="20" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`);
+  $("#tiers").innerHTML = rows.join("");
+  drawPay();
+}
+async function drawPreview(el) {
+  const s = selected();
+  if (!s) { el.innerHTML = ""; return; }
+  const r = await api.preview(s.cents).catch(() => ({ available: false }));
+  if (!r.available) { el.innerHTML = ""; return; }
+  el.innerHTML = T.putsYou(r.rank, r.myRank);
+  if (lastRank !== null && lastRank !== r.rank) el.querySelector("b").classList.add("bump");
+  lastRank = r.rank;
+}
+function drawPay() {
+  const s = selected();
+  $("#pay").innerHTML = s ? `${T.chipIn} <span class="price">· ${s.price}</span>` : T.notReady;
+  $("#paynote").textContent = state.billing !== "ready" ? T.billing : cadence === "m" ? T.monthlyNote : "";
+  drawPreview($("#preview"));
+}
+const cupWords = d => {
+  const whole = Math.floor(d / 5), part = d % 5;
+  if (whole === 1 && !part) return "about 1 cup";
+  return `about ${[whole || "", part ? part + "/5" : ""].filter(Boolean).join(" ")} cup${whole || part > 0 ? "s" : ""}`;
+};
+function drawCustom() {
+  tier = 3; cadence = "o";
+  const s = $("#slider"); s.value = dollars; s.style.setProperty("--p", ((dollars - 1) / 49 * 100) + "%");
+  $("#custd").textContent = "$" + dollars;
+  $("#custc").textContent = cupWords(dollars);
+  $("#custpot").textContent = dollars > 25 ? T.wholePot : "";
+  const n = dollars / 5, count = Math.min(10, Math.ceil(n)), size = count > 5 ? 44 : count > 2 ? 64 : 96;
+  $("#custcups").innerHTML = Array.from({ length: Math.max(1, count) }, (_, i) => cup(Math.min(1, n - i), size)).join("");
+  const sel = selected();
+  $("#pay2").innerHTML = sel ? `${T.chipIn} <span class="price">· ${sel.price}</span>` : T.notReady;
+  drawPreview($("#preview2"));
+}
+
+// The popup's tiles count up.
+function drawPopup(stats) {
+  $("#tiles").innerHTML = stats.map((n, i) => n > 0 ? `<div class="tile"><b data-to="${n}">0</b><span>${T.tiles[i]}</span></div>` : "").join("");
+  const start = performance.now();
+  const f = now => {
+    const t = reduce ? 1 : Math.min(1, (now - start - 250) / 1300), e = 1 - Math.pow(1 - Math.max(0, t), 3);
+    document.querySelectorAll("#tiles b").forEach(b => { b.textContent = Math.round(+b.dataset.to * e).toLocaleString("en"); });
+    if (t < 1) frame(f);
+  };
+  frame(f);
+}
+
+// The thank-you: the gradient rises to the total (a cup fills the screen), floods past it, then the words settle.
+let raf;
+function thanks(totalCups, after) {
+  const view = $("#thanks"), flood = $("#flood"), H = view.clientHeight || 770;
+  const target = Math.min(1.1, Math.max(.35, totalCups)) * H;
+  view.classList.remove("settled"); view.classList.toggle("dark-words", totalCups >= .55);
+  $("#bubbles").innerHTML = Array.from({ length: 9 }, (_, i) => `<span class="bubble" style="left:${8 + i * 11}%;animation-delay:${(i * .37) % 3}s"></span>`).join("");
+  $("#thanksactions").innerHTML = after;
+  clearTimeout(raf);
+  const start = performance.now(), D = 2000;
+  const f = now => {
+    const t = reduce ? 1 : Math.min(1, (now - start) / D), e = 1 - Math.pow(1 - t, 3);
+    flood.style.height = (e * target) + "px";
+    if (t < 1) raf = frame(f); else view.classList.add("settled");
+  };
+  raf = frame(f);
+}
+
+function drawOptin(rank) {
+  const n = limitAt(rank), t = tierAt(rank);
+  $("#limit").innerHTML = `<span class="badge">${t ? "Top " + t : "#" + rank}</span><span>${esc(T.limits[t])}</span>`;
+  $("#msgfield").style.display = n ? "" : "none";
+  const name = $("#name"), msg = $("#msg");
+  msg.maxLength = n || 0;
+  const count = () => {
+    $("#namecount").textContent = `${name.value.length}/40`;
+    $("#msgcount").textContent = `${msg.value.length}/${n}`; $("#msgcount").classList.toggle("full", msg.value.length >= n);
+    $("#optpreview").innerHTML = ranks([{ id: "p", rank, name: name.value || null, message: n ? msg.value.slice(0, n) || null : null, you: true }], 0, 1, false);
+  };
+  name.oninput = msg.oninput = count; count();
+}
+
+function toast(text) {
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = text;
+  $("#app").appendChild(el); setTimeout(() => el.remove(), 2200);
+}
+
+// ---------- Navigation. ----------
+function show(id) {
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === id));
+  const v = $("#" + id); if (v) v.scrollTop = 0;
+}
+document.addEventListener("click", async ev => {
+  const go = ev.target.closest("[data-go]"); if (go) { route(go.dataset.go); return; }
+  const cad = ev.target.closest("[data-cad]"); if (cad) { cadence = cad.dataset.cad; drawTiers(); return; }
+  const t = ev.target.closest("[data-tier]"); if (t) { tier = +t.dataset.tier; drawTiers(); return; }
+  const rep = ev.target.closest("[data-report]");
+  if (rep) { const li = rep.closest(".rank"); if (!li.querySelector(".reportbox")) li.insertAdjacentHTML("beforeend", `<div class="reportbox"><button data-confirm="${rep.dataset.report}">${T.report}</button></div>`); return; }
+  const conf = ev.target.closest("[data-confirm]");
+  if (conf) { conf.parentElement.remove(); await api.report(conf.dataset.confirm); toast(T.reported); return; }
+  const act = ev.target.closest("[data-act]")?.dataset.act;
+  if (act === "nah") api.nah();
+  if (act === "add" || act === "anon") { await api.join(act === "anon", $("#name").value.trim(), $("#msg").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
+  if (act === "remove") { await api.remove(); SAMPLE.joined = false; route("board"); }
+  if (act === "later") route("support");
+  if (act === "write") route("optin");
+});
+// Chip in: Play takes over. The thank-you comes with the receipt event (in the samples, at once).
+$("#pay").onclick = $("#pay2").onclick = async () => {
+  const s = selected(); if (!s) return;
+  const r = await api.buy(s.id, tier === 3 ? dollars : 1).catch(() => ({ result: "unavailable" }));
+  if (r.result === "unavailable") $("#paynote").textContent = T.billing;
+  if (!native) paid(s.cents);
+};
+// A receipt from Play: the thank-you with the real total, then the opt-in for the place it earned.
+events.receipt = async receipt => {
+  const before = board.myRank ?? null;
+  const after = await api.preview(0).catch(() => ({ available: false }));
+  const rank = after.available ? after.rank : null;
+  const movedUp = !!board.joined && rank && tierAt(rank) && tierAt(rank) < (tierAt(before) || 999);
+  const actions = movedUp ? `<div class="invite">${esc(T.invite(tierAt(rank)))}</div><button class="primary" data-act="write">${T.writeMore}</button><button class="quiet" data-act="later">${T.later}</button>`
+    : board.joined ? `<button class="primary" data-go="fund">${T.supporters}</button>`
+    : `<button class="primary" data-go="optin">${T.join}</button><button class="quiet" data-act="later">${T.later}</button>`;
+  show("thanks"); thanks((receipt.totalCents ?? state.totalCents) / 500, actions);
+  drawOptin(rank || 101);
+};
+events.state = data => { state = data; reduce = reduce || !!data.reduceMotion; drawTiers(); };
+$("#slider").oninput = e => { dollars = +e.target.value; drawCustom(); };
+$("#support").addEventListener("scroll", e => e.target.querySelector(".bar").classList.toggle("scrolled", e.target.scrollTop > 80));
+$("#board").addEventListener("scroll", e => e.target.querySelector(".bar").classList.toggle("scrolled", e.target.scrollTop > 80));
+
+// After paying (the receipt): the thank-you, then the opt-in, or the move-up invite for someone already on the board.
+function paid(cents, opts = {}) {
+  const before = SAMPLE.joined ? sampleRank(0) : null, after = sampleRank(cents);
+  const total = (SAMPLE.mine + cents) / 500;
+  const movedUp = opts.moveUp ?? (SAMPLE.joined && tierAt(after) && tierAt(after) < (tierAt(before) || 999));
+  const actions = movedUp ? `<div class="invite">${esc(T.invite(tierAt(after)))}</div><button class="primary" data-act="write">${T.writeMore}</button><button class="quiet" data-act="later">${T.later}</button>`
+    : SAMPLE.joined ? `<button class="primary" data-go="fund">${T.supporters}</button>`
+    : `<button class="primary" data-go="optin">${T.join}</button><button class="quiet" data-act="later">${T.later}</button>`;
+  show("thanks"); thanks(opts.cups ?? total, actions);
+  drawOptin(after);
+}
+
+async function route(id) {
+  // In the app, Settings is behind this screen: going back closes it.
+  if (id === "settings" && native) { api.close(); return; }
+  if (id === "support") { board = await api.board(); state = await api.state(); drawBoardPreview(); drawTiers(); }
+  if (id === "board" || id === "fund") { board = await api.board(); drawBoardFull(id === "fund"); show("board"); return; }
+  if (id === "custom") drawCustom();
+  if (id === "popup") { if (native) state = await api.state(); drawPopup(await api.stats()); }
+  if (id === "optin") drawOptin(sampleRank(selected()?.cents || 0));
+  show(id);
+}
+
+// ---------- Start, and the render states (?state=...). ----------
+fillText();
+const q = new URLSearchParams(location.search);
+if (q.get("reduce")) { reduce = true; document.documentElement.classList.add("reduce"); }
+if (q.get("empty")) SAMPLE.empty = true;
+if (q.get("offline")) SAMPLE.offline = true;
+if (q.get("joined")) SAMPLE.joined = true;
+if (q.get("cad")) cadence = q.get("cad");
+if (q.get("tier")) tier = +q.get("tier");
+if (q.get("dollars")) dollars = +q.get("dollars");
+(async () => {
+  // Native opens #page or #popup.
+  const s = { page: "support" }[location.hash.slice(1)] || q.get("state") || location.hash.slice(1) || "support";
+  if (s === "thanks") { await route("support"); paid(selected().cents, { cups: q.get("cups") ? +q.get("cups") : undefined, moveUp: q.get("moveup") ? true : undefined }); }
+  else if (s === "optin") { show("optin"); drawOptin(+(q.get("rank") || 8)); if (q.get("fill")) { $("#name").value = "Maximilian Alexander von Hohenzollern"; $("#msg").value = L120.slice(0, limitAt(+(q.get("rank") || 8))); $("#name").dispatchEvent(new Event("input")); } }
+  else if (s === "checkout") {
+    await route("support");
+    const sel = selected();
+    $("#overlay").innerHTML = `<div class="scrim"><div class="checkout"><div class="grab"></div><div class="kicker">Test checkout · Debug</div>
+      <div class="row" style="margin-top:12px"><span>${esc(T.tiers[tier][0])} · ${cadence === "m" ? T.monthly : T.oneTime}</span><b>${sel.price}</b></div>
+      <p class="muted" style="font-size:15px">Sample payment. No charge.</p><button class="primary">Confirm</button></div></div>`;
+  }
+  else await route(s);
+  if (q.get("scroll")) { const v = document.querySelector(".view.on"); v.scrollTop = { mid: (v.scrollHeight - v.clientHeight) / 2, bottom: v.scrollHeight }[q.get("scroll")] ?? 0; v.dispatchEvent(new Event("scroll")); }
+  if (q.get("report")) document.querySelector("[data-report]")?.click();
+})();
 </script>
 </body>
 </html>

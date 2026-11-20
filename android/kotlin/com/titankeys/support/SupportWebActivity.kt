@@ -145,15 +145,20 @@ class SupportWebActivity : Activity() {
                 // The test checkout: the receipt that a real purchase would bring, so the page plays its thank-you.
                 if (preview) event("receipt", sampleReceipt(call.productId, call.quantity))
             }
-            is SupportCall.JoinBoard -> if (preview) answer(JSONObject().put("available", true).put("rank", 14).put("tier", "top100")
-                .put("messageLimit", 40).put("joined", true)) else {
+            is SupportCall.JoinBoard -> if (preview) {
+                answer(JSONObject().put("available", true).put("rank", 14).put("tier", "top100").put("messageLimit", 40).put("joined", true))
+                event("state", state())
+            } else {
                 val ledger = billing?.ledger
                 val key = ledger?.accountKey()
                 val proofs = ledger?.boardProofs()
                 if (key == null || proofs == null || proofs.length() == 0) answer(JSONObject().put("available", false))
                 else SupportBoard.join(this, key, proofs, call.anonymous, call.name, call.message) { joined(it, true, ::answer) }
             }
-            SupportCall.RemoveMe -> if (preview) answer(JSONObject().put("available", true).put("joined", false)) else {
+            SupportCall.RemoveMe -> if (preview) {
+                answer(JSONObject().put("available", true).put("joined", false))
+                event("state", state())
+            } else {
                 val key = billing?.ledger?.accountKey()
                 if (key == null) answer(JSONObject().put("available", false))
                 else SupportBoard.remove(this, key) { joined(it, false, ::answer) }
@@ -266,7 +271,8 @@ class SupportWebActivity : Activity() {
         val rank = SAMPLE_TOTALS.withIndex().count { (index, total) -> index != 13 && total > reached } + 1
         val limit = when { rank <= 3 -> 120; rank <= 10 -> 80; rank <= 100 -> 40; else -> 0 }
         val tier = when (limit) { 120 -> "top3"; 80 -> "top10"; 40 -> "top100"; else -> "name" }
-        return JSONObject().put("available", true).put("rank", rank).put("tier", tier).put("messageLimit", limit)
+        // As the server answers: the place now too, for "up from #M".
+        return JSONObject().put("available", true).put("rank", rank).put("tier", tier).put("messageLimit", limit).put("myRank", 14)
     }
 
     companion object {

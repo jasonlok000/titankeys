@@ -45,6 +45,7 @@ object SupportWebAssets {
         "png" -> "image/png"
         "webp" -> "image/webp"
         "woff2" -> "font/woff2"
+        "otf" -> "font/otf"
         "json" -> "application/json"
         else -> "application/octet-stream"
     }

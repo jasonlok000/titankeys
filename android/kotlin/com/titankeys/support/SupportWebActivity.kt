@@ -59,7 +59,10 @@ class SupportWebActivity : Activity() {
         preview = AppBuild.kind(this) == "debug" && intent.getBooleanExtra(PREVIEW_FIXTURE, false)
         if (!preview) billing = SupportBilling(this, ::billingChanged).also { it.refresh() }
         WebView.setWebContentsDebuggingEnabled(AppBuild.kind(this) == "debug")
-        web = WebView(this).apply {
+        // TitanKeys Debug can build the WebView without FixedScale's density, for a phone check of how its layers draw:
+        // adb shell setprop debug.titankeys.supportfixed off (2026-11-20).
+        val unwrapped = AppBuild.kind(this) == "debug" && debugProp("debug.titankeys.supportfixed") == "off"
+        web = WebView(if (unwrapped) applicationContext else this).apply {
             // See-through only for the popup over the front page; the page itself is opaque, as a transparent WebView drew
             // its layered parts (the pay button, the thank-you) squeezed.
             setBackgroundColor(if (mode == "popup") Color.TRANSPARENT else Color.BLACK)
@@ -85,7 +88,7 @@ class SupportWebActivity : Activity() {
             // the pay bar, the thank-you's bubbles) drew squeezed or stretched. The page is small enough to draw this way.
             // TitanKeys Debug can try another way for a phone check: adb shell setprop debug.titankeys.supportlayer hardware
             // (or none). Software drew a changed part at 1/1.5625 its size, as the toggle's labels (2026-11-20).
-            when (if (AppBuild.kind(this@SupportWebActivity) == "debug") debugLayer() else "") {
+            when (if (AppBuild.kind(this@SupportWebActivity) == "debug") debugProp("debug.titankeys.supportlayer") else "") {
                 "hardware" -> setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
                 "none" -> setLayerType(android.view.View.LAYER_TYPE_NONE, null)
                 else -> setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
@@ -327,10 +330,10 @@ class SupportWebActivity : Activity() {
         return JSONObject().put("available", true).put("rank", rank).put("tier", tier).put("messageLimit", limit).put("myRank", 14)
     }
 
-    /** TitanKeys Debug's debug.titankeys.supportlayer, for trying the WebView's drawing on the phone; empty when unset. */
-    private fun debugLayer(): String = try {
+    /** A TitanKeys Debug system property for trying the WebView's drawing on the phone; empty when unset. */
+    private fun debugProp(name: String): String = try {
         Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
-            .invoke(null, "debug.titankeys.supportlayer") as? String ?: ""
+            .invoke(null, name) as? String ?: ""
     } catch (error: ReflectiveOperationException) {
         ""
     }

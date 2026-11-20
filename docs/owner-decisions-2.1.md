@@ -986,3 +986,11 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   layer and no debug switches; no transform animation and no opacity transition anywhere, fades through `--fade`; the docks'
   fade changes colour, never opacity. Each was a squashed or stretched drawing on the owner's phone. Checked by
   tools/checks/support-page.test.ts.
+- **Fixing earlier words** (owner, 2026-11-20, after the list of every way a finished word changes): one setting, "Fix
+  earlier words": Off, Small fixes (the default) or Everything (today's behaviour). Small fixes: one-letter slips and
+  apostrophe-only changes, were→we're included ("were and we're are apostrophe only tho ... an easy mistake"). Everything
+  adds their/there→they're and your→you're ("more like they thought it wrong in their mind"), real word for real word
+  (are→were, the→to: grammar, not typos), and changing an earlier fix or re-fixing a fix. It replaces the Second look and
+  Context apostrophes switches; Second look off becomes Off. Swiped look-alikes follow it too. Undoing a fix for a web or
+  email address stays on. Joined quick swipes stay as they are (a known trade-off). With a Cantonese input method on, Jyutping
+  and Yale syllables (ja, ga, la, lor, wor...) count as known words ("I'm also ok with this cantonese specific optimization").

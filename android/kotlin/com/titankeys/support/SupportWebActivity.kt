@@ -53,11 +53,18 @@ class SupportWebActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mode = if (intent.getStringExtra(MODE) == "popup") "popup" else "page"
+        // The page is an opaque window; only the popup sees through to the front page.
+        if (mode != "popup") {
+            setTranslucent(false)
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.BLACK))
+        }
         preview = AppBuild.kind(this) == "debug" && intent.getBooleanExtra(PREVIEW_FIXTURE, false)
         if (!preview) billing = SupportBilling(this, ::billingChanged).also { it.refresh() }
         WebView.setWebContentsDebuggingEnabled(AppBuild.kind(this) == "debug")
         web = WebView(this).apply {
-            setBackgroundColor(Color.TRANSPARENT)
+            // See-through only for the popup over the front page; the page itself is opaque, as a transparent WebView drew
+            // its layered parts (the pay button, the thank-you) squeezed.
+            setBackgroundColor(if (mode == "popup") Color.TRANSPARENT else Color.BLACK)
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = false

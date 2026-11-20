@@ -83,6 +83,9 @@ class SupportWebActivity : Activity() {
             }
             // No overscroll stretch: the page scrolls inside its own screens, and the stretch stayed, squashing the button.
             overScrollMode = android.view.View.OVER_SCROLL_NEVER
+            // Drawn in software: on this phone the WebView's GPU layers (anything animated or pinned: the selected cup's pulse,
+            // the pay bar, the thank-you's bubbles) drew squeezed or stretched. The page is small enough to draw this way.
+            setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
             webViewClient = Client()
             webChromeClient = null
             addJavascriptInterface(Bridge(), BRIDGE)

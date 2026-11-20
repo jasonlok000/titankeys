@@ -284,7 +284,11 @@
   /* The pay dock: one button, with the rank it buys underneath its price. About 96px. */
   /* The one bottom dock: the same on every screen with a primary action, 20px above the safe area, a caption under it, and a
      40px fade that shows only while something scrolls beneath. */
-  .dock, .boardbar { position: sticky; bottom: 0; z-index: 4; padding: var(--g4) var(--side) calc(20px + env(safe-area-inset-bottom)); background: #000; margin-top: var(--g6); }
+  /* Fixed, not sticky: in the app's WebView a sticky bar in a scrolling screen drew squeezed near the end of the scroll.
+     Each screen with a bar keeps its height free at the bottom instead. */
+  .view:has(.dock), .view:has(.boardbar) { padding-bottom: 150px; }
+  #optin.view { padding-bottom: 0; }
+  .dock, .boardbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; padding: var(--g4) var(--side) calc(20px + env(safe-area-inset-bottom)); background: #000; margin-top: var(--g6); }
   #support { scroll-padding-bottom: 140px; }
   .tiers { margin-bottom: 0; }
   #support .privacy { padding-top: 20.5px; }

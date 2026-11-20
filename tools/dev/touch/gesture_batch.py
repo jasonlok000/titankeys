@@ -21,20 +21,28 @@ from checks import Stop, play, record
 
 # What double Space after a word leaves at the end of the field, by input method (D, main 3593072b): "。" with no space in
 # Chinese and Japanese, "। " in Hindi, a plain second space in Thai (it types no mark), ". " in the rest.
-STOPS = {"yue-yale": "。", "yue-jyutping": "。", "zh-pinyin": "。", "ja": "。", "hi": "। ", "th": "  "}
+STOPS = {"yue-yale": "。", "yue-jyutping": "。", "zh-pinyin": "。", "zh-cangjie": "。", "zh-quick": "。", "zh-zhuyin": "。",
+         "ja": "。", "hi": "। ", "th": "  "}
 PLAIN_STOP = ". "
 # These dictionaries correct qwe on the first Space. Type a known word to check the committed word and stop together.
 STOP_WORDS = {"da": "med", "et": "see"}
 # The input methods whose words come from a code, picked with Space; "nihon" picks 日本 in Japanese.
-CODES = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "hi": "namaste"}
+# Cangjie and Quick: qwe picks 抽水. Zhuyin is on the Hsu layout: nehw is ㄋㄧ ㄏㄠ, 你好 (qwe is no syllable there).
+CODES = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "zh-cangjie": "qwe", "zh-quick": "qwe",
+         "zh-zhuyin": "nehw", "ja": "nihon", "hi": "namaste"}
 # Two known words typed with no space between. Chinese flicks remove a character; Japanese and Thai take a word.
 # In Chinese and Japanese the second comes after the first is picked, while next-word suggestions show (no code): a flick
 # then clears them and deletes a word as usual.
 JOINED = {"yue-yale": ("neihou", "ngodei"), "yue-jyutping": ("neihou", "ngodei"), "zh-pinyin": ("nihao", "women"),
+          "zh-cangjie": ("qwe", "qwe"), "zh-quick": ("qwe", "qwe"), "zh-zhuyin": ("nehw", "nehw"),
           "ja": ("watashi", "nihon"), "th": ("gik", "wx")}  # Thai: เรา then ไป, on Kedmanee's plain layer
 # A flick with a code pending clears the whole code and leaves the field alone (D): the code each types.
 CODE_FLICK = {"yue-yale": "neihou", "yue-jyutping": "neihou", "zh-pinyin": "nihao", "ja": "nihon", "ko": "gksrnr",
-              "vi": "tieeng", "hi": "namaste"}
+              "vi": "tieeng", "hi": "namaste", "zh-cangjie": "qwe", "zh-quick": "qwe", "zh-zhuyin": "nehw"}
+# Where the second plain word's keys stay a code (Hindi's transliteration, Vietnamese Telex, Korean's last syllable composing),
+# the word flick can't be checked this way: the flick clears the code by design, which code-flick checks (night run,
+# 2026-11-20: their "asd" never reached the field, so the check's own guard failed).
+CODE_SECOND = {"hi", "vi", "ko"}
 # The touchpad ignores touches for 500 ms after steady typing (Contact.TYPING_COOLDOWN_MILLIS, by design): a flick waits this
 # long after the last key, in the same gesture script (2026-11-17's night run flicked at 400 ms, and its flicks were NO).
 FLICK_AFTER_TYPING = "+800"
@@ -82,7 +90,7 @@ def flick(im):
     play(FLICK_AFTER_TYPING, "flick", "+500")
     after = checks.field()
     # Chinese flicks take one character, even when a pick committed several.
-    expected = typed[:-1] if im in ("zh-pinyin", "yue-jyutping", "yue-yale") else before
+    expected = typed[:-1] if im in ("zh-pinyin", "yue-jyutping", "yue-yale", "zh-cangjie", "zh-quick", "zh-zhuyin") else before
     record(name, bool(before) and typed != before and after == expected,
            f"{before!r} then {typed!r}; the flick left {after!r}, wanted {expected!r}")
 
@@ -104,7 +112,9 @@ def double_space(im):
         ok = before.lower() == STOP_WORDS[im] and text == before + want
         expected = f"wanted {STOP_WORDS[im]!r} followed by {want!r}"
     else:
-        ok = text.startswith(before.rstrip(" ")) and text.endswith(want)
+        # A dictionary may correct the typed keys on the first Space (Belarusian's йцу, Macedonian's љње): only the ending is the
+        # gesture's, after something typed (night run, 2026-11-20).
+        ok = text.endswith(want) and text[:-len(want)].strip() != ""
         expected = f"wanted it to end {want!r}"
     record(f"stop-{im}", ok, f"after {before!r}, double Space: {text!r}, {expected}")
 
@@ -145,6 +155,8 @@ def check_every_language():
             selected = []
             for kind, check in by_kind.items():
                 if kind == "code-flick" and im not in CODE_FLICK:
+                    continue
+                if kind == "flick" and im in CODE_SECOND:
                     continue
                 matches = only.intersection((kind, f"{kind}:{im}"))
                 if not only or matches:

@@ -2394,7 +2394,13 @@ class Composer(
     private fun endsWord(text: String): Boolean {
         if (text.isEmpty()) return false
         val last = text.codePointBefore(text.length)
-        return Character.isLetterOrDigit(last) || ")]}\"'’”".indexOf(last.toChar()) >= 0
+        // A word can end in a vowel sign, a mark rather than a letter: most Hindi words do (नमस्ते ends in े), and double Space
+        // gave three spaces instead of "। " (night run, 2026-11-20).
+        val mark = when (Character.getType(last)) {
+            Character.NON_SPACING_MARK.toInt(), Character.COMBINING_SPACING_MARK.toInt(), Character.ENCLOSING_MARK.toInt() -> true
+            else -> false
+        }
+        return Character.isLetterOrDigit(last) || mark || ")]}\"'’”".indexOf(last.toChar()) >= 0
     }
 
     companion object {

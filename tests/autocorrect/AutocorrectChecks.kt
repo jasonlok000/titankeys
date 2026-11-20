@@ -1307,6 +1307,8 @@ private fun markSpacing(world: Realistic) {
     same(quick(inLanguage("。", sentence = 2)).text, "hi。", "and Two spaces after a sentence gives 。 none either")
     same(quick(inLanguage("। ")).text, "hi। ", "Hindi: a double Space types । and its space")
     same(quick(inLanguage("। ", sentence = 2)).text, "hi।  ", "and two spaces with Two spaces after a sentence")
+    // Night run, 2026-11-20: नमस्ते ends in the vowel sign े, a mark, not a letter, and gave three spaces.
+    same(inLanguage("। ").type("नमस्ते ").quickSpace().text, "नमस्ते। ", "Hindi: a word ending in a vowel sign gets । too")
     same(quick(inLanguage("")).text, "hi  ", "Thai has no full stop: two Spaces stay two spaces")
     same(quick(inLanguage(". ")).text, "hi. ", "The default is English's")
 

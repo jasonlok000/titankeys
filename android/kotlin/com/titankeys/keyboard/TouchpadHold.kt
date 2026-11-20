@@ -70,6 +70,11 @@ class TouchpadHold {
         lettingGo = false
     }
 
+    /** No second Back came in time (the keyboard's LET_GO_MILLIS): the hold comes back, as after a second Back. */
+    fun letGoExpired() {
+        lettingGo = false
+    }
+
     /** What to do with one Back event while the status is held. */
     enum class Back {
         /** Do not keep the event. The app gets it. */

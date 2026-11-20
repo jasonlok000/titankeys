@@ -685,7 +685,8 @@ private fun discardedKeys() {
 private fun takenKeys() {
     val keys = TakenKeys()
     same(keys.takes(LETTER, pressed = true, taking = true), true, "A letter goes to the keyboard")
-    same(keys.takes(LETTER, pressed = true, taking = true), true, "Its repeats go to the keyboard too")
+    same(keys.takes(LETTER, pressed = true, taking = true, repeat = 1), true, "Its repeats go to the keyboard too")
+    same(keys.takes(LETTER, pressed = true, taking = false, repeat = 1), true, "Its repeats stay with it once the field has closed")
     same(keys.holding, true, "A taken key that is down is still heard")
     same(keys.takes(LETTER, pressed = false, taking = true), true, "Its release goes with it")
     same(keys.holding, false, "Nothing is down once it is let go")
@@ -697,6 +698,10 @@ private fun takenKeys() {
     same(keys.takes(KeyEvent.KEYCODE_VOLUME_UP, pressed = true, taking = true), false, "The phone's own keys stay with the app")
     same(keys.takes(LETTER, pressed = true, taking = false), false, "Outside the field the app keeps its keys")
     same(keys.takes(LETTER, pressed = false, taking = true), false, "A release whose press the app had stays the app's")
+    // Key audit, 2026-11-20: a release lost to another key filter (Key Mapper, Extend) must not take the next push from the app.
+    keys.takes(LETTER, pressed = true, taking = true)
+    same(keys.takes(LETTER, pressed = true, taking = false), false, "A new push after a lost release, outside the field, is the app's")
+    same(keys.holding, false, "and nothing is held for the lost release any more")
     keys.takes(LETTER, pressed = true, taking = true)
     keys.clear()
     same(keys.holding, false, "With the Back service off, nothing is held for it")

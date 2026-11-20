@@ -18,10 +18,15 @@ class TakenKeys {
     /** Whether a taken key is still down, so its release must still be heard. */
     val holding get() = down.isNotEmpty()
 
-    /** Whether the keyboard takes this press ([pressed]) or release. [taking] is whether it takes new presses now. */
-    fun takes(code: Int, pressed: Boolean, taking: Boolean): Boolean {
+    /**
+     * Whether the keyboard takes this press ([pressed]) or release. [taking] is whether it takes new presses now. A first push
+     * ([repeat] 0) of a key still down means its release was lost, such as to another key filter ahead of TitanKeys: it starts
+     * over, so the lost release can't keep the next push from the app (key audit, 2026-11-20).
+     */
+    fun takes(code: Int, pressed: Boolean, taking: Boolean, repeat: Int = 0): Boolean {
         if (!pressed) return down.remove(code)
-        if (code in down) return true
+        if (code in down && repeat > 0) return true
+        down -= code
         if (!taking || !typing(code)) return false
         down += code
         return true

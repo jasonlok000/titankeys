@@ -303,9 +303,13 @@
   #support { scroll-padding-bottom: 140px; }
   .tiers { margin-bottom: 0; }
   #support .privacy { padding-top: 20.5px; }
-  .dock::before, .boardbar::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 56px; background: linear-gradient(#0000, #000 32px);
-    pointer-events: none; --fade: 0; opacity: var(--fade); transition: --fade .2s; }
-  .dock.covering::before, .boardbar.covering::before { --fade: 1; }
+  /* The fade over what scrolls beneath a dock changes colour, never opacity: at opacity 0 the WebView dropped the fade from
+     the dock's layer, the layer shrank by 56px and drew the dock squashed flat at the list's end (the owner's phone,
+     2026-11-20). */
+  @property --cover { syntax: "<color>"; inherits: false; initial-value: #0000; }
+  .dock::before, .boardbar::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 56px;
+    background: linear-gradient(#0000, var(--cover) 32px); pointer-events: none; transition: --cover .2s; }
+  .dock.covering::before, .boardbar.covering::before { --cover: #000; }
   .dock .primary { min-height: 62px; }
   .dock .err, .dock .note { text-align: center; color: #9A8F88; font-size: var(--t-xs); margin-top: var(--g2); min-height: 20px; }
 

@@ -22,6 +22,15 @@ test("no transition or animation on the page moves opacity or transform directly
   expect(style).toContain('@property --fade { syntax: "<number>"');
 });
 
+test("the docks' fade keeps its size: it changes colour, never opacity", async () => {
+  const page = await read("android/assets/support/index.html");
+  const rule = page.slice(page.indexOf(".dock::before, .boardbar::before {"));
+  const body = rule.slice(0, rule.indexOf("}"));
+  expect(body).toContain("var(--cover)");
+  expect(body).not.toContain("opacity");
+  expect(page).toContain(".dock.covering::before, .boardbar.covering::before { --cover: #000; }");
+});
+
 test("the board lists only names", async () => {
   const worker = await read("server/support/src/worker.js");
   expect(worker).toContain("WHERE s.name IS NOT NULL");

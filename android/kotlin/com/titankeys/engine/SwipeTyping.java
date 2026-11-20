@@ -569,6 +569,16 @@ public final class SwipeTyping {
         return TypingSettings.fixOn(context, id);
     }
 
+    /** How far autocorrect may go back to a finished word: off, small or bold (TypingSettings.earlierWords). */
+    public String earlierWords() {
+        return TypingSettings.earlierWords(context);
+    }
+
+    /** Whether a Cantonese input method is on, so its romanised syllables count as words. */
+    public boolean cantoneseOn() {
+        return TypingSettings.cantoneseOn(context);
+    }
+
     /** Whether autocorrect fixes a word only when it's sure, as Settings asks. */
     public boolean fixOnlyWhenSure() {
         return TypingSettings.fixOnlyWhenSure(context);

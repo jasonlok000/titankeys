@@ -96,9 +96,11 @@ class AutocorrectLoader(private val context: Context, private val typing: SwipeT
 
     private class PhoneLexicon(private val typing: SwipeTyping, private val words: TypedPredictions,
                                private val favourites: FavouriteWords) : Lexicon {
-        override fun known(word: String) = words.contains(word) || typing.personalWord(word)
+        override fun known(word: String) = words.contains(word) || personal(word)
         override fun frequency(word: String) = words.frequencyOf(word)
-        override fun personal(word: String) = typing.personalWord(word)
+        // With a Cantonese input method on, its romanised syllables ("ja", "lor") are the user's own words: never fixed.
+        override fun personal(word: String) = typing.personalWord(word) || typing.cantoneseOn() && CantoneseSyllables.contains(word)
+        override fun earlierWords(): String = typing.earlierWords()
         override fun name(word: String): String? = typing.properName(word) ?: typing.savedSpelling(word)
         override fun preferredSpelling(word: String): String = typing.preferredSpelling(word)
         override fun acronym(word: String) = words.acronym(word)

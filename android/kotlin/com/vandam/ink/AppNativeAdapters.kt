@@ -786,6 +786,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("autocorrect", TypingSettings.autocorrect(activity))
             .put("fixToggles", JSONObject(FixKind.entries.associate { it.id to TypingSettings.fixOn(activity, it.id) }))
             .put("fixOnlyWhenSure", TypingSettings.fixOnlyWhenSure(activity))
+            .put("earlierWords", TypingSettings.earlierWords(activity))
             .put("suggestionBar", TypingSettings.suggestionBar(activity))
             .put("launcherHidesBar", TypingSettings.launcherHidesBar(activity))
             .put("cursorControl", TypingSettings.cursorControl(activity))
@@ -1004,6 +1005,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                 for (id in toggles.keys()) FixKind.of(id)?.let { TypingSettings.fixOn(activity, it.id, toggles.getBoolean(id)) }
             }
             "fixOnlyWhenSure" -> TypingSettings.fixOnlyWhenSure(activity, value as Boolean)
+            "earlierWords" -> TypingSettings.earlierWords(activity, value as String)
             // Each write contains only the changed options for the named method.
             "methodOptions" -> (value as JSONObject).let { methods ->
                 for (id in methods.keys()) {

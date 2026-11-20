@@ -8,6 +8,7 @@ import com.titankeys.engine.PhoneWords
 import com.titankeys.engine.Swipe
 import com.titankeys.engine.SwipeTyping
 import com.titankeys.engine.TypingSettings
+import com.titankeys.keyboard.CantoneseSyllables
 import com.titankeys.keyboard.Composer
 import com.titankeys.keyboard.Editor
 import com.titankeys.keyboard.EnterKey
@@ -1630,6 +1631,36 @@ private fun suggestionBar(world: Realistic) {
     }
 }
 
+/**
+ * Fix earlier words (owner, 2026-11-20): Small fixes keeps to apostrophes, slips on rare words and short non-words; Off changes
+ * nothing behind the cursor; Bold allows the rest. With a Cantonese input method on, its syllables are left as typed.
+ */
+private fun earlierWords() {
+    val common = mapOf("are" to 250, "were" to 240, "the" to 255, "they" to 240, "food" to 200, "good" to 230, "their" to 230,
+        "dome" to 90, "some" to 240, "has" to 240, "is" to 255, "this" to 250)
+    val known = { word: String -> word.lowercase() in common }
+    val frequency = { word: String -> common[word.lowercase()] ?: 0 }
+    fun small(word: String, fixed: String, fixedBefore: Boolean = false) =
+        EarlierWords.allows(EarlierWords.SMALL, word, fixed, fixedBefore, known, frequency)
+    same(small("its", "it's"), true, "Small: an apostrophe")
+    same(small("were", "we're"), true, "Small: were to we're is an apostrophe only")
+    same(small("dome", "some"), true, "Small: a slip on a rare word")
+    same(small("hs", "has"), true, "Small: a short non-word")
+    same(small("ja", "is"), true, "Small: ja to is, unless Cantonese is on")
+    same(small("are", "were"), false, "Small: never a common word for another")
+    same(small("food", "good"), false, "Small: food to good is a guess at the meaning")
+    same(small("their", "they're"), false, "Small: their to they're changes letters")
+    same(small("the", "this", fixedBefore = true), false, "Small: never changes its mind about a fix")
+    same(small("wierd", "weird"), true, "Small: two letters swapped are one slip")
+    same(small("tehn", "than"), false, "Small: two keys away")
+    same(EarlierWords.allows(EarlierWords.OFF, "its", "it's", false, known, frequency), false, "Off: nothing behind the cursor")
+    same(EarlierWords.allows(EarlierWords.BOLD, "are", "were", false, known, frequency), true, "Bold: as before 3.0")
+    same(EarlierWords.oneKey("teh", "the"), true, "a swap is one key")
+    same(EarlierWords.oneKey("the", "this"), false, "the and this are two keys apart")
+    for (word in listOf("ja", "lor", "wor", "ga", "la", "nei", "hai", "sik", "gwai")) same(CantoneseSyllables.contains(word), true, "Cantonese: $word")
+    for (word in listOf("teh", "hte", "becuase", "taht")) same(CantoneseSyllables.contains(word), false, "not Cantonese: $word")
+}
+
 private fun smallerChecks() {
     // A changed word must feel different from a swipe tick (tests/haptics has the rest).
     must(Haptic.Autocorrect.family != Haptic.SwipeKey.family, "A changed word feels different from a swipe tick")
@@ -2978,6 +3009,7 @@ fun main() {
     val world = Realistic()
     favourites()
     smallerChecks()
+    earlierWords()
     nextWordChecks()
     composerFlow(world)
     markSpacing(world)

@@ -438,7 +438,46 @@ public final class TypingSettings {
      * fixed. All are on by default, which is autocorrect as it always was.
      */
     public static boolean fixOn(Context context, String id) {
+        // The second look and context apostrophes go back to finished words: Fix earlier words decides them (owner, 2026-11-20).
+        // Context apostrophes also keep a switch turned off before 3.0, as that person had it.
+        if (SECOND_LOOK.equals(id)) return !EARLIER_OFF.equals(earlierWords(context));
+        if (CONTEXT_APOSTROPHES.equals(id)) {
+            return !EARLIER_OFF.equals(earlierWords(context)) && preferences(context).getBoolean("fix_" + id, true);
+        }
         return preferences(context).getBoolean("fix_" + id, true);
+    }
+
+    private static final String SECOND_LOOK = "secondLook";
+    private static final String CONTEXT_APOSTROPHES = "contextApostrophes";
+    public static final String EARLIER_WORDS = "earlier_words";
+    /**
+     * Fix earlier words' values, as EarlierWords in the autocorrect has them (values, not keys, so declared together). Off: a
+     * finished word stays as it was left. Small, the default: only a slip on a rare word or a short non-word, or an apostrophe.
+     * Bold: also guesses what was meant (their to they're, are to were, a changed or redone fix), autocorrect before 3.0.
+     */
+    public static final String EARLIER_OFF = "off", EARLIER_SMALL = "small", EARLIER_BOLD = "bold";
+
+    /**
+     * How far autocorrect may go back to a finished word (Settings > What gets fixed > Fix earlier words; owner, 2026-11-20):
+     * [EARLIER_OFF], [EARLIER_SMALL] or [EARLIER_BOLD]. Small by default. From before 3.0, the Second look switch off is Off.
+     */
+    public static String earlierWords(Context context) {
+        String stored = preferences(context).getString(EARLIER_WORDS, null);
+        if (EARLIER_OFF.equals(stored) || EARLIER_SMALL.equals(stored) || EARLIER_BOLD.equals(stored)) return stored;
+        return preferences(context).getBoolean("fix_" + SECOND_LOOK, true) ? EARLIER_SMALL : EARLIER_OFF;
+    }
+
+    public static void earlierWords(Context context, String level) {
+        if (!EARLIER_OFF.equals(level) && !EARLIER_SMALL.equals(level) && !EARLIER_BOLD.equals(level)) {
+            throw new IllegalArgumentException("Fix earlier words is off, small or bold: " + level);
+        }
+        preferences(context).edit().putString(EARLIER_WORDS, level).apply();
+    }
+
+    /** Whether a Cantonese input method is on, so its romanised syllables count as words (owner, 2026-11-20). */
+    public static boolean cantoneseOn(Context context) {
+        for (String id : inputMethods(context).split(",")) if (id.trim().startsWith("yue-")) return true;
+        return false;
     }
 
     public static void fixOn(Context context, String id, boolean on) {

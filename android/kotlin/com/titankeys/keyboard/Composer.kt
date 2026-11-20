@@ -1402,6 +1402,12 @@ class Composer(
     /** Once the next word is finished, its fit decides between look-alikes such as "we're" and "were". */
     private fun checkLookAlike() {
         val earlier = awaitingNextWord ?: return
+        // A word behind the cursor: Fix earlier words decides, off with it (owner, 2026-11-20). Small and Bold both allow it,
+        // as it only ever changes the apostrophe.
+        if (!fixOn(FixKind.SECOND_LOOK)) {
+            awaitingNextWord = null
+            return
+        }
         val anchor = snapshot()
         val before = anchor.before
         val followed = anchor.selection.end - earlier.snapshot.selection.end

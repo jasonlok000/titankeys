@@ -2,6 +2,7 @@ import { Field, Screen, Section, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
 import { type State, state, update } from "../../lib/titankeys";
 import { fixKinds } from "../../lib/fixes";
+import { earlierWordsLabel } from "./earlier-words";
 import { shorthandLabel } from "./shorthand/index";
 import { languageValues } from "../../lib/language-page";
 
@@ -25,6 +26,7 @@ export default function Fixes() {
       {fixKinds.map(({ id, label, example }) => <Toggle key={id} label={label} subtitle={example} value={fixToggles[id] ?? true}
         disabled={!autocorrect} onChange={on => save.run({ fixToggles: { [id]: on } })} />)}
       <Field label="Spell out shorthand" href="/settings/shorthand">{shorthandLabel(settings)}</Field>
+      <Field label="Fix earlier words" href="/settings/earlier-words">{earlierWordsLabel(settings)}</Field>
     </Section>
     <Section title="How sure">
       <Toggle label="Only fix when sure" subtitle="A fix has to win by more before it goes in. You get fewer fixes, and fewer wrong ones."

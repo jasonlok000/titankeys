@@ -37,6 +37,11 @@ interface Lexicon {
     fun fixes(kind: FixKind): Boolean = true
     /** Whether the user wants a fix only when it's clearly right: fewer fixes, and fewer wrong ones. Off by default. */
     fun onlyWhenSure(): Boolean = false
+    /**
+     * How far a fix may go back to a finished word, in Settings > What gets fixed > Fix earlier words: [EarlierWords.SMALL] on the
+     * phone by default. Bold here, so a word list without the setting fixes as autocorrect always did.
+     */
+    fun earlierWords(): String = EarlierWords.BOLD
     /** Calls [action] with each word in lowercase and its frequency. */
     fun forEachWord(action: (String, Int) -> Unit)
     /** Whether a fix may put in [word]: another input method's blocked or unsaved words may not. English checks its own. */
@@ -411,6 +416,9 @@ class TypedCorrector(
      */
     fun contextApostrophe(before: String, word: String, after: String): String? =
         apostrophes?.takeIf { on(FixKind.CONTEXT_APOSTROPHES) }?.decide(before, word, after)
+            // The word is behind the cursor by now. Small fixes only puts in an apostrophe ("its" to "it's", "were" to "we're"),
+            // never other letters ("their" to "they're", "your" to "you're"): that's Bold's (owner, 2026-11-20).
+            ?.takeIf { lexicon.earlierWords() != EarlierWords.SMALL || EarlierWords.apostropheOnly(word, it) }
 
     private fun typoFix(word: String, before: String, typedPrevious: String?): Fix? {
         if (isInsideAddress(before + word)) return null
@@ -507,16 +515,17 @@ class TypedCorrector(
                     "$title ${trailing.next}${trailing.tail}", false)
             }
             // A fix made at the last space, seen again with the word after it. Shorthand spelled out stays as the setting asks.
-            val fixed = respelled(typo?.takeUnless(::isShorthand)?.let { context.reconsiderFix(trailing.before, it, trailing.word, trailing.next) }, trailing.word)
+            val fixed = (respelled(typo?.takeUnless(::isShorthand)?.let { context.reconsiderFix(trailing.before, it, trailing.word, trailing.next) }, trailing.word)
                 ?: respelled(context.review(trailing.before, trailing.word, trailing.next, trailing.beforePrevious, typedAsIs = typo == null), trailing.word)
-                    ?.takeIf { secondLookMay(trailing.word, it) }
+                    ?.takeIf { secondLookMay(trailing.word, it) })
+                ?.takeIf { earlierMay(trailing.word, it, fixedBefore = typo != null) }
             if (fixed != null) return Review(trailing.word, fixed, "${trailing.word} ${trailing.next}${trailing.tail}",
                 "$fixed ${trailing.next}${trailing.tail}", false)
         }
         if (!latestTyped || trailing.tail.firstOrNull() !in SENTENCE_END_MARKS || isDeliberate(trailing.next) || modelDecides(trailing.next))
             return null
         return respelled(context.review(trailing.word, trailing.next, PairCounts.SENTENCE_END), trailing.next)
-            ?.takeIf { secondLookMay(trailing.next, it) }?.let { fixed ->
+            ?.takeIf { secondLookMay(trailing.next, it) && earlierMay(trailing.next, it, fixedBefore = false) }?.let { fixed ->
             Review(trailing.next, fixed, "${trailing.next}${trailing.tail}", "$fixed${trailing.tail}", true)
         }
     }
@@ -531,6 +540,10 @@ class TypedCorrector(
         !isKnown(word) -> on(FixKind.TYPOS)
         else -> true
     }
+
+    /** Whether Fix earlier words lets the second look change [word] to [fixed] (owner, 2026-11-20). See [EarlierWords]. */
+    private fun earlierMay(word: String, fixed: String, fixedBefore: Boolean) =
+        EarlierWords.allows(lexicon.earlierWords(), word, fixed, fixedBefore, ::isKnown) { lexicon.frequency(lowered(it)) }
 
     /**
      * A word whose apostrophe the next-word model decides ("shed" for "she'd"): the second check leaves it to the model, as it could

@@ -1,6 +1,6 @@
 // Checks that Settings' What gets fixed page has a switch for every kind of fix in FixKind.kt, and that its switches reach the keyboard.
 import { expect, test } from "bun:test";
-import { fixKinds } from "../../lib/fixes";
+import { earlierKinds, fixKinds } from "../../lib/fixes";
 
 const root = new URL("../../", import.meta.url);
 const read = (path: string) => Bun.file(new URL(path, root)).text();
@@ -9,7 +9,9 @@ test("the page lists every kind of fix in FixKind.kt, in its order", async () =>
   const source = await read("android/kotlin/com/titankeys/autocorrect/FixKind.kt");
   const native = [...source.matchAll(/^\s+[A-Z_]+\("(\w+)"\)[,;]/gm)].map(match => match[1]);
   expect(native.length).toBeGreaterThan(10);
-  expect(fixKinds.map(({ id }) => id)).toEqual(native);
+  // The two that go back to finished words are Fix earlier words' (owner, 2026-11-20).
+  expect(fixKinds.map(({ id }) => id)).toEqual(native.filter(id => !earlierKinds.includes(id)));
+  expect(earlierKinds.every(id => native.includes(id))).toBe(true);
   for (const { id, label, example } of fixKinds) {
     expect(label.length, id).toBeLessThanOrEqual(34);
     expect(example, id).toContain("→");
@@ -21,6 +23,7 @@ test("Settings opens the page, and its switches are ones the bridge handles", as
   const page = await read("app/settings/fixes.tsx");
   expect(page).toContain('href="/settings/shorthand"');
   const bridge = await read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt");
+  expect(page).toContain('href="/settings/earlier-words"');
   for (const key of ["fixToggles", "fixOnlyWhenSure"]) {
     expect(page).toContain(key);
     expect(bridge).toContain(`"${key}" ->`);

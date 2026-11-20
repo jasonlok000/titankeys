@@ -30,6 +30,7 @@ const parents: Record<string, string> = {
   "/settings/whats-new": "/settings/about",
   "/settings/licences": "/settings/about",
   "/settings/fixes": "/settings/typing",
+  "/settings/earlier-words": "/settings/fixes",
   "/settings/hold": "/settings/typing",
   "/settings/sentence-spaces": "/settings/typing",
   "/settings/shorthand": "/settings/typing",

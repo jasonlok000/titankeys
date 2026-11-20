@@ -293,11 +293,15 @@
   /* The pay dock: one button, with the rank it buys underneath its price. About 96px. */
   /* The one bottom dock: the same on every screen with a primary action, 20px above the safe area, a caption under it, and a
      40px fade that shows only while something scrolls beneath. */
-  /* Fixed, not sticky: in the app's WebView a sticky bar in a scrolling screen drew squeezed near the end of the scroll.
-     Each screen with a bar keeps its height free at the bottom instead. */
-  .view:has(.dock), .view:has(.boardbar) { padding-bottom: 150px; }
-  #optin.view { padding-bottom: 0; }
-  .dock, .boardbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; padding: var(--g4) var(--side) calc(20px + env(safe-area-inset-bottom)); background: #000; margin-top: var(--g6); }
+  /* Screens with a pay bar are split: the header and the bar stay put, only the content between them scrolls (.scroll). In
+     the app's WebView, a bar pinned over scrolling content (sticky or fixed) drew squeezed near the end of the scroll. */
+  .view.split.on { display: flex; flex-direction: column; overflow: hidden; }
+  .view.split > .bar { position: relative; }
+  .view.split > .scroll { position: relative; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: none; scrollbar-width: none; }
+  .view.split > .scroll::-webkit-scrollbar { display: none; }
+  .view.fill.split > .scroll { display: flex; flex-direction: column; }
+  .view.split > .dock, .view.split .boardbar { margin-top: 0; }
+  .dock, .boardbar { position: relative; z-index: 4; padding: var(--g4) var(--side) calc(20px + env(safe-area-inset-bottom)); background: #000; margin-top: var(--g6); }
   #support { scroll-padding-bottom: 140px; }
   .tiers { margin-bottom: 0; }
   #support .privacy { padding-top: 20.5px; }
@@ -1081,11 +1085,21 @@ function toast(text) {
   $("#app").appendChild(el); setTimeout(() => el.remove(), 2200);
 }
 
+// ---------- Split screens: header and pay bar fixed, the content between them scrolls. ----------
+for (const id of ["support", "custom", "board"]) {
+  const v = $("#" + id), sc = document.createElement("div");
+  sc.className = "scroll";
+  [...v.children].filter(c => !c.matches(".bar, .dock, #boardbar")).forEach(c => sc.appendChild(c));
+  v.insertBefore(sc, v.querySelector(":scope > .dock, :scope > #boardbar"));
+  v.classList.add("split");
+}
+/** The element that scrolls in screen [v]: its .scroll when split, else the screen itself. */
+const scroller = v => v.querySelector(":scope > .scroll") || v;
 // ---------- Navigation. ----------
 function show(id) {
   document.documentElement.classList.toggle("see-through", !!native && id === "popup");
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === id));
-  const v = $("#" + id); if (v) v.scrollTop = 0;
+  const v = $("#" + id); if (v) scroller(v).scrollTop = 0;
 }
 document.addEventListener("click", async ev => {
   const go = ev.target.closest("[data-go]"); if (go) { route(go.dataset.go); return; }
@@ -1104,7 +1118,7 @@ document.addEventListener("click", async ev => {
   if (act === "add" || act === "anon") { await api.join(act === "anon", $("#name").value.trim(), $("#msg").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
   if (act === "remove") { await api.remove().catch(() => {}); SAMPLE.joined = false; route("board"); }
   if (act === "later") route("support");
-  if (act === "first") { cadence = "o"; tier = 0; drawTiers(); const v = $("#support"); v.scrollTo({ top: v.scrollHeight, behavior: reduce ? "auto" : "smooth" }); }
+  if (act === "first") { cadence = "o"; tier = 0; drawTiers(); const v = scroller($("#support")); v.scrollTo({ top: v.scrollHeight, behavior: reduce ? "auto" : "smooth" }); }
   if (act === "write") route("optin");
   if (act === "retry") route(document.querySelector(".view.on").id === "board" ? "board" : "support");
 });
@@ -1131,7 +1145,7 @@ document.addEventListener("contextmenu", ev => { const li = ev.target.closest("[
 // Paying: Play takes over. The thank-you comes with the receipt event (in the samples, at once).
 $("#pay").onclick = $("#pay2").onclick = async ev => {
   if (ev.currentTarget.id === "pay" && !tiersSeen) {
-    const v = $("#support"), dock = v.querySelector(".dock");
+    const v = scroller($("#support"));
     v.scrollTo({ top: $("#cadence").offsetTop - 80, behavior: reduce ? "auto" : "smooth" });
     return;
   }
@@ -1144,8 +1158,8 @@ $("#slider").oninput = e => { dollars = toDollars(+e.target.value); drawCustom()
 $("#custd").oninput = e => { const v = Math.round(+e.target.value); if (v >= 1 && v <= 50) { dollars = v; drawCustom(); } };
 document.querySelectorAll("#quick button").forEach(b => b.onclick = () => { dollars = +b.dataset.dollars; drawCustom(); });
 $("#custd").onblur = () => { $("#custd").value = dollars; };
-for (const id of ["support", "board", "settings", "optin", "custom"]) $("#" + id).addEventListener("scroll", e => {
-  e.target.querySelector(".bar")?.classList.toggle("scrolled", e.target.scrollTop > 8);
+for (const id of ["support", "board", "settings", "optin", "custom"]) scroller($("#" + id)).addEventListener("scroll", e => {
+  e.target.closest(".view").querySelector(".bar")?.classList.toggle("scrolled", e.target.scrollTop > 8);
   docks();
 });
 /** The tiers count as seen once they're fully above the dock. */
@@ -1154,7 +1168,7 @@ function seeTiers() { if (!tiersSeen) { tiersSeen = true; drawPay($("#pay")); } 
 /** The docks' fade shows only while something scrolls beneath them. */
 function docks() {
   document.querySelectorAll(".view.on .dock, .view.on .boardbar").forEach(d => {
-    const v = d.closest(".view");
+    const v = scroller(d.closest(".view"));
     d.classList.toggle("covering", v.scrollHeight - v.scrollTop - v.clientHeight > 2);
   });
 }
@@ -1226,7 +1240,7 @@ if (q.get("dollars")) dollars = +q.get("dollars");
       <p>Sample payment. No charge.</p><button class="primary">Confirm</button></div></div>`;
   }
   else await route(s);
-  if (q.get("scroll")) { const v = document.querySelector(".view.on"); v.scrollTop = { mid: (v.scrollHeight - v.clientHeight) / 2, bottom: v.scrollHeight }[q.get("scroll")] ?? +q.get("scroll"); v.dispatchEvent(new Event("scroll")); v.querySelector(".bar")?.classList.toggle("scrolled", v.scrollTop > 8); docks(); }
+  if (q.get("scroll")) { const v = scroller(document.querySelector(".view.on")); v.scrollTop = { mid: (v.scrollHeight - v.clientHeight) / 2, bottom: v.scrollHeight }[q.get("scroll")] ?? +q.get("scroll"); v.dispatchEvent(new Event("scroll")); v.closest(".view").querySelector(".bar")?.classList.toggle("scrolled", v.scrollTop > 8); docks(); }
   if (q.get("report")) { const li = [...document.querySelectorAll("#board [data-hold]")].find(x => x.getBoundingClientRect().top > 260); if (li) openReport(li); }
   if (q.get("focus")) $("#" + q.get("focus"))?.focus();
 })();

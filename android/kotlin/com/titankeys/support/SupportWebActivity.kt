@@ -73,7 +73,22 @@ class SupportWebActivity : Activity() {
             addJavascriptInterface(Bridge(), BRIDGE)
         }
         setContentView(web)
+        // Full screen, as every TitanKeys screen: the page is laid out for the whole display, and its gradient reaches the top.
+        window.setDecorFitsSystemWindows(false)
+        window.insetsController?.apply {
+            hide(android.view.WindowInsets.Type.systemBars())
+            systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
         web.loadUrl(SupportWebAssets.start(mode))
+    }
+
+    /** Back goes through the page first: a sheet closes, a sub-screen returns to the support page; only the main page closes. */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (!pageReady) return finish()
+        web.evaluateJavascript("!!(window.titankeysSupport && window.titankeysSupport.back && window.titankeysSupport.back())") {
+            if (it != "true" && !isFinishing) finish()
+        }
     }
 
     override fun onResume() {
@@ -104,7 +119,9 @@ class SupportWebActivity : Activity() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) =
             SupportWebAssets.assetPath(request.url.toString()) == null
 
-        override fun onPageFinished(view: WebView, url: String) {
+        // Ready as soon as our own page starts: its script asks for its state while it is still loading, and a message
+        // dropped then would leave the page blank for good.
+        override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
             pageReady = SupportWebAssets.assetPath(url) != null
         }
 

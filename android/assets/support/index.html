@@ -702,6 +702,20 @@ window.titankeysSupport = {
     waiting.delete(msg.id);
     msg.ok ? wait.resolve(msg.result) : wait.reject(new Error(msg.error));
   },
+  // The phone's Back key: true when the page handled it, false when the screen should close.
+  back() {
+    if (document.querySelector(".sheetwrap")) {
+      document.querySelector(".sheetwrap").remove();
+      document.querySelectorAll(".rank.held").forEach(x => x.classList.remove("held"));
+      return true;
+    }
+    const id = document.querySelector(".view.on")?.id;
+    if (id === "popup") { api.nah(); return true; }
+    if (!id || id === "support" || id === "settings") return false;
+    const button = document.querySelector(".view.on .bar .back");
+    if (button) button.click(); else route("support");
+    return true;
+  },
 };
 const call = (op, args = {}) => new Promise((resolve, reject) => {
   const id = nextId++;

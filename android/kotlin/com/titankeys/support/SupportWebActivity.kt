@@ -15,7 +15,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.titankeys.keyboard.AppBuild
-import com.titankeys.keyboard.FixedScale
 import com.titankeys.keyboard.GuideMotion
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,9 +42,12 @@ class SupportWebActivity : Activity() {
     private var lastReceipt: String? = null
     private var pageReady = false
 
-    /** The same sizes at any display or font size, as every TitanKeys screen ([FixedScale]). The page zooms itself to its
-     * 690px design width (android/assets/support/index.html). */
-    override fun attachBaseContext(base: Context) = super.attachBaseContext(FixedScale.wrap(base))
+    /*
+     * No FixedScale here, unlike other TitanKeys screens: the WebView lays out at the display's own density, and a context
+     * with another density made it draw its layered parts (the thank-you's words, the quick picks) squeezed or stretched. The
+     * page keeps its sizes itself: it zooms to its 690px design width (android/assets/support/index.html), and WebSettings.textZoom
+     * is pinned, so display and font size don't change it.
+     */
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {

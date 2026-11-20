@@ -976,3 +976,13 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - Support (owner, after trying v4 on the phone): rated 3/10 (the mockup 6/10). Rebuild the support screens as one bundled offline HTML page in a full-screen WebView with a locked-down bridge to billing and the board; the Settings card goes to the very bottom of Settings; tighter copy; an independent reviewer scores each design round against the 3/10 and 6/10 benchmarks until it reaches 9/10.
 - Support design loop ended by the owner (2026-11-20): round 11 (E, 79927b71 on claude/support-v4) is the final design; build it. Reviewer scores by round: 6.5, 7.0, 7.3, 7.4, 7.6, 7.8, 8.4, 8.6, 8.8, 8.9 (r10); reports in .dev/support-review-r*.md.
 - **The switcher over Q to O** (owner, 2026-11-20, after a phone preview of six placements: "lets do q to o"). Both switcher rows now share Q to O (9 keys) with Back on P: one takes all nine, two four each (Q–R, T–I), three three each (Q–E, R–Y, U–O), four two each (Q–W … U–I). This replaces "centred within W–O" above; the accents and Chinese choices keep W to O.
+- **Support wording** (owner, 2026-11-20): never "fund" ("i hate the word fund"); the board is "The good people", its link
+  "See everyone", the popup's button "See the good people". Monthly has no custom note.
+- **Anonymous supporters aren't on the board** (owner, 2026-11-20: "if they are anonymous they dont get on the board"). Add me
+  waits for a name; Skip the board keeps the credit off the board; the server's board lists only rows with a name.
+- **The support page keeps the top of the screen filled** (owner, 2026-11-20: "we shdn't leave the top of the screen empty"):
+  backgrounds reach the top edge, and only the page's controls keep below the camera.
+- **The support page as it ships** (2026-11-20, after the owner's "visually bugged"): the WebView's own drawing, no software
+  layer and no debug switches; no transform animation and no opacity transition anywhere, fades through `--fade`; the docks'
+  fade changes colour, never opacity. Each was a squashed or stretched drawing on the owner's phone. Checked by
+  tools/checks/support-page.test.ts.

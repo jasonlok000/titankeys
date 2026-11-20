@@ -5,6 +5,15 @@ the 2.1 milestone is closed. The 2.1 list is [todo-2.1.md](todo-2.1.md), kept as
 [owner-decisions-2.1.md](owner-decisions-2.1.md), under "3.0". The orchestrating session keeps this list up to date, checked
 against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 
+## The 3.0 candidate (2026-11-20)
+
+- Done and on the phone for the owner's 1–2 days: switcher over Q to O, the key audit's five fixes, the Hindi full stop,
+  the support page's text, top band, fades, drawing mode and flat pay button, anonymous supporters off the board.
+- Waiting: the frame-by-frame pass over every support screen on the shipping build (needs the phone); a focused scripted
+  pass over what changed since the night run; the overnight Back log (on the phone in /data/local/tmp/tk-night) read in the
+  morning; the unsigned release rebuilt from the final commit. Then the owner signs, pre-releases and daily-drives it.
+- Tell F: the support text changes above (docs/support-text.md).
+
 ## Where the issues stand
 
 - **Ready to build:** #65, #66, #67, #68, #69, #70 with #71, #72, #73, #74, #75, #77, #79, #81, #82, #84, #85, #86, #87, #89,

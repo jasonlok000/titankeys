@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<!-- No viewport-fit=cover: drawing into the camera cutout made the WebView draw layered parts squeezed. -->
+<!-- The window fills the screen, the camera cutout's band included; the app tells the page its height (--cut). -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
   // The page is laid out at its design width, 690 CSS px (the renders and reviews were made at it), and zoomed to the screen:
@@ -10,7 +10,12 @@
   // getBoundingClientRect is zoomed; offset and client sizes aren't (see ZOOM below).
   window.ZOOM = 1;
   const fitZoom = () => { window.ZOOM = innerWidth / 690; document.documentElement.style.zoom = window.ZOOM; };
-  fitZoom(); addEventListener("resize", fitZoom);
+  // The camera cutout's height in phone pixels, from the app: --cut keeps the page's controls below the camera while its
+  // backgrounds fill the band (owner, 2026-11-20: "we shdn't leave the top of the screen empty").
+  let cutPx = 0;
+  const setCut = () => document.documentElement.style.setProperty("--cut", cutPx / devicePixelRatio / window.ZOOM + "px");
+  window.titankeysCut = px => { cutPx = +px || 0; setCut(); };
+  fitZoom(); addEventListener("resize", () => { fitZoom(); setCut(); });
 </script>
 <link rel="icon" href="data:,">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'">
@@ -44,7 +49,7 @@
     font: 400 var(--t-m)/1.45 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-wrap: pretty; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
   .app { position: relative; width: 100%; height: 100%; margin: 0 auto; overflow: hidden; background: #000; }
-  .view { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; display: none; }
+  .view { position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none; display: none; padding-top: var(--cut, 0px); }
   .view::-webkit-scrollbar { display: none; }
   html, body, .view { overscroll-behavior: none; }
   /* In the app, the popup is a see-through window over the real front page: no drawn front page, a dim scrim instead. */

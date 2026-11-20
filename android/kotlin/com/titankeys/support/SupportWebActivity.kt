@@ -42,6 +42,14 @@ class SupportWebActivity : Activity() {
     private var billing: SupportBilling? = null
     private var lastReceipt: String? = null
     private var pageReady = false
+    /** The camera cutout's height at the top of the screen, in phone pixels; the page keeps its controls below it. */
+    private var cutTop = 0
+
+    /** Tells the page the cutout's height ([cutTop]): it sets --cut, in its own CSS pixels. */
+    private fun sendCut() {
+        if (!pageReady) return
+        web.evaluateJavascript("window.titankeysCut && window.titankeysCut($cutTop)", null)
+    }
 
     /** The same sizes at any display or font size, as every TitanKeys screen ([FixedScale]). The page also zooms itself to
      * its 690px design width (android/assets/support/index.html), and WebSettings.textZoom is pinned. */
@@ -100,19 +108,23 @@ class SupportWebActivity : Activity() {
         // Full screen from the first frame (the Fullscreen theme, and the bars hidden before the page is added): hiding them
         // after the WebView had laid out left it drawing its layered parts for the old, shorter window, squeezed.
         window.setDecorFitsSystemWindows(false)
-        // The window stays out of the camera cutout (the default): drawn into it, the WebView drew layered parts squeezed.
+        // The page fills the screen to its top edge, the camera cutout's band included, so the orange thank-you and the black
+        // pages reach the top; only the page's own controls keep below the camera, by --cut (owner, 2026-11-20: "we shdn't
+        // have elements there ... we shdn't leave the top of the screen empty"). The squeezing that once came with the band was
+        // the transform-animated layers, now gone.
+        window.attributes = window.attributes.apply {
+            layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        }
         window.insetsController?.apply {
             hide(android.view.WindowInsets.Type.systemBars())
             systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        // The page sits below the camera cutout: the cutout's band stays black, so the back arrow and the title never land
-        // under the camera.
         val frame = android.widget.FrameLayout(this).apply {
             setBackgroundColor(if (mode == "popup") Color.TRANSPARENT else Color.BLACK)
             addView(web, android.widget.FrameLayout.LayoutParams(-1, -1))
-            setOnApplyWindowInsetsListener { view, insets ->
-                val top = insets.displayCutout?.safeInsetTop ?: 0
-                if (view.paddingTop != top) view.setPadding(0, top, 0, 0)
+            setOnApplyWindowInsetsListener { _, insets ->
+                cutTop = insets.displayCutout?.safeInsetTop ?: 0
+                sendCut()
                 insets
             }
         }
@@ -162,6 +174,8 @@ class SupportWebActivity : Activity() {
         override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
             pageReady = SupportWebAssets.assetPath(url) != null
         }
+
+        override fun onPageFinished(view: WebView, url: String) = sendCut()
 
         private fun refused() = WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     }

@@ -83,7 +83,13 @@ class SupportWebActivity : Activity() {
             overScrollMode = android.view.View.OVER_SCROLL_NEVER
             // Drawn in software: on this phone the WebView's GPU layers (anything animated or pinned: the selected cup's pulse,
             // the pay bar, the thank-you's bubbles) drew squeezed or stretched. The page is small enough to draw this way.
-            setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+            // TitanKeys Debug can try another way for a phone check: adb shell setprop debug.titankeys.supportlayer hardware
+            // (or none). Software drew a changed part at 1/1.5625 its size, as the toggle's labels (2026-11-20).
+            when (if (AppBuild.kind(this@SupportWebActivity) == "debug") debugLayer() else "") {
+                "hardware" -> setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                "none" -> setLayerType(android.view.View.LAYER_TYPE_NONE, null)
+                else -> setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null)
+            }
             webViewClient = Client()
             webChromeClient = null
             addJavascriptInterface(Bridge(), BRIDGE)
@@ -319,6 +325,14 @@ class SupportWebActivity : Activity() {
         val tier = when (limit) { 120 -> "top3"; 80 -> "top10"; 40 -> "top100"; else -> "name" }
         // As the server answers: the place now too, for "up from #M".
         return JSONObject().put("available", true).put("rank", rank).put("tier", tier).put("messageLimit", limit).put("myRank", 14)
+    }
+
+    /** TitanKeys Debug's debug.titankeys.supportlayer, for trying the WebView's drawing on the phone; empty when unset. */
+    private fun debugLayer(): String = try {
+        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java)
+            .invoke(null, "debug.titankeys.supportlayer") as? String ?: ""
+    } catch (error: ReflectiveOperationException) {
+        ""
     }
 
     companion object {

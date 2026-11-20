@@ -35,12 +35,12 @@ The juice first shows in the thank-you. After that, only the supporter's own boa
 
 - PRE **Title:** The coffee fund
 - PRE **Line:** The good people, by rank.
-- SUPPORTER **Title** (their own view): The orange juice fund
+- SUPPORTER **Title** (their own view): The good people
 - SUPPORTER **Line:** The good people. Cheers, all of you.
 - PRE **Empty:** Nobody here yet. Any amount puts you at #1.
 - PRE **Empty board's button:** Be the first
 - PRE **No name:** Anonymous
-- PRE **Full board link:** See all {n}
+- PRE **Full board link:** See everyone
 - PRE **Divider after rank 10:** Top 10
 - PRE **Pinned bar** (non-supporters): Chip in · you'd be #{n}
 - PRE **Pinned bar, with the amount:** Chip in a sip · you'd be #{n}

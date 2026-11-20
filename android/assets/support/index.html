@@ -626,12 +626,12 @@
 // F's words (docs/support-text.md, 47a38854). PRE lines are coffee only; the juice is in SUPPORTER lines alone.
 const T = {
   cardTitle: "Buy me a coffee", cardLine: "You made it to the bottom. Fancy a coffee?",
-  popupLine: "Your thumbs have been busy.", tiles: ["Words", "Swipes", "Fixes", "Gestures"], popupButton: "See the supporters", nah: "Nah",
+  popupLine: "Your thumbs have been busy.", tiles: ["Words", "Swipes", "Fixes", "Gestures"], popupButton: "See the good people", nah: "Nah",
   heading: "Support TitanKeys",
   // Owner: one sentence, no bullets.
   intro: "Donating gets you nothing, but it lets me spend more time on fixes, languages and new tricks.",
   fund: "Supporters", fundLine: "The good people, by rank.",
-  supporters: "The orange juice fund", supportersLine: "The good people. Cheers, all of you.",
+  supporters: "The good people", supportersLine: "Cheers, all of you.",
   empty: "Nobody here yet. Any amount puts you at #1.", anonymous: "Anonymous", report: "Report", reported: "Got it. We'll take a look.",
   oneTime: "One-time", monthly: "Monthly",
   tiers: [["A sip", "Small, but it counts."], ["A bigger sip", "Now we're brewing."], ["Half a coffee", "That's real caffeine."]],
@@ -648,7 +648,7 @@ const T = {
   privacy: "Only names, messages and rank. Leave any time.", removeMe: "Remove me",
   billing: "Play can't take payments on this phone.", notReady: "Play's still waking up. Try again soon.",
   offline: "You're offline. The board will be back.",
-  allRanks: n => `See all ${n}`, retry: "Try again", previewLabel: "Here's you on the board",
+  allRanks: () => "See everyone", retry: "Try again", previewLabel: "Here's you on the board",
   perMonth: "/month",
   beFirst: "Be the first", topBadge: "Top 3",
   popupAfter: "TitanKeys is free. Buy me a coffee?",
@@ -667,7 +667,6 @@ const T = {
   joinAction: "Put me on the board",
   // Stand-in (F: wording): the opt-in's note over the limit.
   limitNote: "The higher you rank, the more you can say.",
-  customNote: "Custom is one-time only.",
   amount: (cups, rank) => `${cupsText(cups)}${rank ? ` · you're #${rank}` : ""}`,
 };
 const LIMITS = [[3, 120], [10, 80], [100, 40]];
@@ -842,9 +841,9 @@ function emptyBoard(withButton = false) {
 }
 function drawBoardPreview() {
   const e = board.entries || [];
-  // Supporters see their own name for the board (the orange juice fund) from the first screen on.
+  // Supporters see their own name for the board (the good people) from the first screen on.
   document.querySelector('#support [data-t="fund"]').textContent = state.supporter ? T.supporters : T.fund;
-  $("#seeall").textContent = e.length > 3 ? T.allRanks(board.total || e.length) + " ›" : "";
+  $("#seeall").textContent = e.length > 3 ? T.allRanks() + " ›" : "";
   $("#boardpreview").innerHTML = e.length ? podiumCompact(e) : emptyBoard();
 }
 function drawBoardFull(supporter) {
@@ -881,8 +880,6 @@ function drawTiers() {
     return `<button class="tier${on ? " on" : ""}" data-tier="${i}">${cup(LEVELS[i], 34)}<span><div class="nm">${nm}</div><div class="ln">${ln}</div></span><span class="pr">${p ? p.price : ""}</span></button>`;
   });
   if (cadence === "o") rows.push(`<button class="tier" data-go="custom">${cup(0, 30, { dashed: true })}<span><div class="nm">${T.custom[0]}</div><div class="ln">${T.custom[1]}</div></span><svg class="chev" width="22" height="22" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`);
-  // The same footnote height on both, so the button doesn't move.
-  if (cadence === "m") rows.push(`<div class="tiernote row">${cadence === "m" ? `<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>${esc(T.customNote)}` : ""}</div>`);
 
   $("#tiers").innerHTML = rows.join("");
   // The selected cup keeps its fill and gives a small pulse.
@@ -1166,7 +1163,7 @@ function afterPayment(totalCups, rank, before, joined, forceMoveUp, giftCups = t
       <div class="segbar">${Array.from({ length: segs }, (_, i) => `<i></i>`).join("")}</div></div>`
     : `<div class="progress"><div class="pl"><b>${esc(T.invite(tierAt(rank)))}</b></div></div>`;
   const actions = movedUp ? `${card}<button class="primary" data-act="write">${T.writeMore}</button><button class="quiet" data-act="later">${T.later}</button>`
-    : joined ? `<button class="primary" data-go="fund">${T.supporters}</button>`
+    : joined ? `<button class="primary" data-go="fund">${T.popupButton}</button>`
     : `<button class="primary" data-go="optin">${T.joinAction}</button><button class="quiet" data-act="later">${T.later}</button>`;
   paidRank = rank || null;
   show("thanks"); thanks(totalCups, rank, actions, giftCups, pin);

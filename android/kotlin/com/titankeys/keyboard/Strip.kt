@@ -1039,13 +1039,19 @@ class Strip(
             val top = minOf(line - iconSize / 2f, height - inside - iconSize)
             drawIcon(canvas, icon(Action.Close), centre, backIconTop(centre, top, iconSize), iconSize, 1f, 0f, 255, look.ink, 1f)
         }
+        // Since the switcher starts at Q (2026-11-20), an item over Q reaches the screen's left corner: the pill and the text keep
+        // in from the curve at their own lowest points, as the bar's words do (the bar's corner rule).
+        val pillSide = sideFor(barHeight - (line + pillHeight / 2)).toFloat()
         for ((index, item) in picker.items.withIndex()) {
             val columns = picker.columns.getOrNull(index) ?: continue
-            val left = menuColumn(columns.first).first
-            val right = menuColumn(columns.last).second
+            val keysLeft = menuColumn(columns.first).first
+            val keysRight = menuColumn(columns.last).second
+            val left = maxOf(keysLeft, side.toFloat())
+            val right = minOf(keysRight, (width - side).toFloat())
             val marked = pickerMark in columns
             if (marked) {
-                menuBox.set(left + dp(2), line - pillHeight / 2, right - dp(2), line + pillHeight / 2)
+                menuBox.set(maxOf(keysLeft + dp(2), pillSide), line - pillHeight / 2, minOf(keysRight - dp(2), width - pillSide),
+                    line + pillHeight / 2)
                 menuPaint.color = GuideMotion.faded(look.accent, MENU_PILL_ALPHA)
                 canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
             }

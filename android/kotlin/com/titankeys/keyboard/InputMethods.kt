@@ -148,22 +148,24 @@ sealed interface SwitchPick {
 }
 
 /**
- * The held Sym's switcher, over the top row's keys W to O (columns 1 to 8): the languages that are on, spread evenly (two
- * take four keys each, three or four take two each with the rest empty, more take one). Picking a language with more than
+ * The held Sym's switcher, over the top row's keys Q to O (columns 0 to 8), with Back on P (owner, 2026-11-20: "lets do q
+ * to o"): the languages that are on, spread evenly (one takes all nine keys, two four each, three three each, four two
+ * each, with the key left over empty). Picking a language with more than
  * one input method on shows a second row with them, spread the same way, the language typing now's included; a language
  * with one switches to it. The top two rows pick, as the word menu's do: rest a finger on a key to mark, press it
  * (docs/languages.md, "Switching"; owner, 2026-11-16).
  */
 object SwitchOverlay {
-    /** The first and last columns the overlay uses: W and O. */
-    const val FIRST = 1
+    /** The first and last columns the overlay uses: Q and O. P is Back's. */
+    const val FIRST = 0
     const val LAST = 8
     /** The rows of letters that pick: the top two. */
     const val ROWS = 2
 
     /**
-     * The key columns each of [count] places spans, centred within W to O, every place the same whole number of keys (owner,
-     * 2026-11-17): one takes W to O, two four keys each, three two each over E to I, four two each.
+     * The key columns each of [count] places spans within Q to O, every place the same whole number of keys (owner,
+     * 2026-11-17), from Q (owner, 2026-11-20): one takes Q to O, two four keys each (Q–R, T–I), three three each (Q–E,
+     * R–Y, U–O), four two each (Q–W, E–R, T–Y, U–I).
      */
     fun columns(count: Int): List<IntRange> {
         val shown = count.coerceIn(0, InputMethod.MAX_LANGUAGES)

@@ -126,9 +126,9 @@ def method_groups(on):
 
 
 def pick_key(index, count):
-    """The first key over the tile, from SwitchOverlay.columns, counting W to O."""
-    width = 8 // count
-    return "qwertyuiop"[1 + (8 - width * count) // 2 + index * width]
+    """The first key over the tile, from SwitchOverlay.columns, counting Q to O."""
+    width = 9 // count
+    return "qwertyuiop"[(9 - width * count) // 2 + index * width]
 
 
 def switch_live(on, target):

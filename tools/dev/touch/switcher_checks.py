@@ -1,6 +1,6 @@
 """The held Sym's switcher and the screen's taps (C's work on main e133d51a), for checks.py --batch switcher.
 
-1. Three languages on, a held Sym: the tiles over E-R, T-Y and U-I, centred within W to O (the screenshot's margins).
+1. Three languages on, a held Sym: the tiles over Q-E, R-Y and U-O, three keys each, Back on P.
 2. A resting finger slid across the switcher: one menu_mark per tile it enters, not one per key (Debug's HapticsDump).
 3. A tap on the screen on a Sym panel item and on a switcher tile picks it, logs "tap at … on …" and a haptic line
    (TitanKeysTap). A panel item plays screen_tap, a switcher tile menu_press, and a bar word bar_word.
@@ -54,10 +54,10 @@ def setup(on, current):
 
 
 def check_centred():
-    """Three languages on (English, Russian, Greek), a held Sym: three tiles, two keys each, centred within W to O."""
+    """Three languages on (English, Russian, Greek), a held Sym: three tiles, three keys each, over Q to O."""
     setup(["en", "ru", "el"], "en")
     play(*HOLD_SYM, shot="switcher-three", at=1300)
-    record("switcher-three", None, "tiles over E-R, T-Y and U-I, equal margins left and right", "switcher-three")
+    record("switcher-three", None, "tiles over Q-E, R-Y and U-O, Back on P", "switcher-three")
     play("key:sym", "+500")  # Sym closes it with no change
 
 
@@ -65,7 +65,7 @@ def check_one_mark_per_tile():
     """A resting finger slid from W to O over the switcher's second row (Serbian's two, four keys each): one menu_mark per
     tile it enters, two in all, not one per key."""
     setup(["en", "ru", "sr", "sr-latn"], "en")
-    play(*HOLD_SYM, "key:u", "+600")  # SR is over U-I with three languages: a press there opens its second row
+    play(*HOLD_SYM, "key:u", "+600")  # SR is over U-O with three languages: a press there opens its second row
     since = now()
     play("rest:0.15,0.125,0.85,0.125:1800", "+400")
     played, _ = haptics_since(since)
@@ -118,7 +118,7 @@ def check_screen_taps():
     checks.guarded("keyevent", "4")
     time.sleep(.6)
     language_checks.fresh()
-    # The switcher with three languages: Russian's tile, over T-Y. Picked, Q types й.
+    # The switcher with three languages: Russian's tile, over R-Y. Picked, Q types й.
     play(*HOLD_SYM)
     since = now()
     lines = tap_lines(lambda: checks.guarded("tap", str(column_x(4.5)), str(BAR_Y)))

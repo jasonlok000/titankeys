@@ -4537,7 +4537,7 @@ class TitanKeysIme : InputMethodService() {
         if (AppBuild.kind(this) == "debug") Log.i(CHOICES_TAG, line)
     }
 
-    /** Sym held for the hold time: the overlay, with every input method that's on over W to O. */
+    /** Sym held for the hold time: the overlay, with every input method that's on over Q to O. */
     private fun openSwitchOverlay() {
         if (!editing) {
             symLog("Sym held, but no overlay: not editing")

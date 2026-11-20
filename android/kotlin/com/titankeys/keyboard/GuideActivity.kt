@@ -3383,7 +3383,12 @@ class GuideActivity : Activity() {
             SupportStats.claimInvite(this, intent.getBooleanExtra(SUPPORT_OPEN, false))
         } else null
         if (totals == null) return
-        val invite = SupportInviteView(this, totals, haptics, animate = restored == null, close = ::closeSupportInvite)
+        // The once-only invite is the support page itself, in popup mode, over the front page (owner, 2026-11-19).
+        if (restored == null) {
+            startActivity(com.titankeys.support.SupportWebActivity.intent(this, "popup"))
+            return
+        }
+        val invite = SupportInviteView(this, totals, haptics, animate = false, close = ::closeSupportInvite)
         supportTotals = totals
         supportInvite = invite
         column.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS

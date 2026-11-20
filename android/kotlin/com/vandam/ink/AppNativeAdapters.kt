@@ -307,6 +307,12 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             val result: String? = when (operation) {
                 "state" -> state().toString()
                 "supportState" -> supportState().toString()
+                // The support page, a bundled offline HTML page in its own WebView screen: "page" or "popup" (SupportWebActivity).
+                "supportOpen" -> {
+                    val mode = if (data.optString("mode") == "popup") "popup" else "page"
+                    activity.startActivity(com.titankeys.support.SupportWebActivity.intent(activity, mode, preview = checkoutPreview))
+                    "null"
+                }
                 "supportRefresh" -> {
                     if (!checkoutPreview && !fixtureReceipt()) support.value.refresh()
                     "null"

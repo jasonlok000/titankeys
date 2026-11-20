@@ -83,6 +83,7 @@ test("the release manifest has exactly the expected components", () => {
   expect(components(manifest())).toEqual([
     { tag: "activity", name: "com.vandam.ink.BackupActivity", exported: "false" },
     { tag: "activity", name: "com.vandam.ink.ContactsPermissionActivity", exported: "false" },
+    { tag: "activity", name: "com.titankeys.support.SupportWebActivity", exported: "false" },
     { tag: "activity", name: "com.titankeys.keyboard.ShareDisclosureActivity", exported: "false" },
     { tag: "activity", name: "com.titankeys.keyboard.BackDisclosureActivity", exported: "false" },
     { tag: "activity", name: "com.vandam.ink.RawLogExportActivity", exported: "false" },

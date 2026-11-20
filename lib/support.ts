@@ -40,6 +40,8 @@ async function read<T>(operation: string, payload?: object): Promise<T> {
 }
 
 export const supportState = () => read<SupportState>("supportState");
+/** Opens the support page: the bundled offline HTML page in its own WebView screen (SupportWebActivity). */
+export const openSupport = (mode: "page" | "popup" = "page") => invoke("supportOpen", { mode });
 export const refreshSupport = () => invoke("supportRefresh");
 export const buySupport = (productId: string) => read<SupportState["purchaseResult"]>("supportPurchase", { productId });
 export const seeSupportReceipt = (id: string) => invoke("supportReceiptSeen", { id });

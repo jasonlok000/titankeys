@@ -31,13 +31,15 @@ export function SupportCard({ title, lines, onPress }: { title: string; lines: s
   const height = 128;
   const accent = useAccent();
   const textWidth = supportWidth - 112 - 64;
+  const shown = lines.slice(0, 2), shift = (2 - shown.length) * 14;
   return <Canvas width={supportWidth} height={height}>
     <RoundedFill x={1} y={1} width={supportWidth - 2} height={height - 2} radius={28} fill={SURFACE} onPress={onPress} />
     <RoundedOutline x={1} y={1} width={supportWidth - 2} height={height - 2} radius={28} stroke={accent} strokeWidth={1.5} />
     {cupParts(26, 26, 2.6, "card", accent)}
-    <CanvasText x={112} y={18} width={textWidth} height={38} size={30} colour={CREAM} align="start">{title}</CanvasText>
-    {lines.slice(0, 2).map((line, row) =>
-      <CanvasText key={row} x={112} y={60 + row * 28} width={textWidth} height={28} size={21} colour={MUTED} align="start">{line}</CanvasText>)}
+    {/* Title and lines centred in the card together: one line sits lower than two. */}
+    <CanvasText x={112} y={18 + shift} width={textWidth} height={38} size={30} colour={CREAM} align="start">{title}</CanvasText>
+    {shown.map((line, row) =>
+      <CanvasText key={row} x={112} y={60 + shift + row * 28} width={textWidth} height={28} size={21} colour={MUTED} align="start">{line}</CanvasText>)}
     <CanvasText x={supportWidth - 52} y={0} width={30} height={height} size={36} colour={accent} align="center">›</CanvasText>
   </Canvas>;
 }

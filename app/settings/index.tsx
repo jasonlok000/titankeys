@@ -124,7 +124,7 @@ export default function Settings() {
       {resetDone.shown && <Note>{RESET_NOTE}</Note>}
     </Section>
     {/* At the very bottom of Settings (owner, 2026-11-19), opening the support page, the bundled HTML page. F's words. */}
-    <SupportCard title="Buy me a coffee" lines={["You made it to the bottom.", "Fancy a coffee?"]}
+    <SupportCard title="Support TitanKeys" lines={["Buy me a coffee?"]}
       onPress={() => void openSupport("page")} />
   </Screen>;
 }

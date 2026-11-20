@@ -622,10 +622,10 @@
 // F's words (docs/support-text.md, 47a38854). PRE lines are coffee only; the juice is in SUPPORTER lines alone.
 const T = {
   cardTitle: "Buy me a coffee", cardLine: "You made it to the bottom. Fancy a coffee?",
-  popupLine: "Your thumbs have been busy.", tiles: ["Words", "Swipes", "Fixes", "Gestures"], popupButton: "See the coffee fund", nah: "Nah",
+  popupLine: "Your thumbs have been busy.", tiles: ["Words", "Swipes", "Fixes", "Gestures"], popupButton: "See the supporters", nah: "Nah",
   heading: "Support TitanKeys",
-  points: ["Donating gets you nothing. Well, a spot on the board.", "It buys time: fixes, languages, new tricks.", "No ads. No paywall. Ever."],
-  fund: "The coffee fund", fundLine: "The good people, by rank.",
+  points: ["Donating gets you nothing. Well, a spot on the board.", "It lets me spend more time on fixes, languages and new tricks.", "No ads. No paywall. Ever."],
+  fund: "Supporters", fundLine: "The good people, by rank.",
   supporters: "The orange juice fund", supportersLine: "The good people. Cheers, all of you.",
   empty: "Nobody here yet. Any amount puts you at #1.", anonymous: "Anonymous", report: "Report", reported: "Got it. We'll take a look.",
   oneTime: "One-time", monthly: "Monthly",
@@ -634,7 +634,7 @@ const T = {
   monthlyNote: "Every month · cancel any time in Play", howMuch: "How much coffee?",
   wholePot: "That's a whole pot. I'll need a bigger table.",
   putsYou: (n, m) => m && m !== n ? `<b>#${n}</b><span class="from"> ▲ from #${m}</span>` : `You'd be <b>#${n}</b>`,
-  chipIn: "Chip in",
+  chipIn: "Buy it",
   thanksTitle: "Thank you!", thanksLine: "Fun fact: I don't actually drink coffee. I'm more of an orange juice person. But this means a lot.",
   join: "Join the board?", nameField: "Name (optional)", messageField: "Message (optional)",
   limits: { 3: "120 characters. Say something grand.", 10: "80 characters. Make it count.", 100: "40 characters. Short and sweet.", 0: "Name only for now. Climb for a message." },
@@ -646,12 +646,12 @@ const T = {
   allRanks: n => `See all ${n}`, retry: "Try again", previewLabel: "Here's you on the board",
   perMonth: "/month",
   beFirst: "Be the first", topBadge: "Top 3",
-  popupAfter: "TitanKeys is free. Fancy chipping in?",
+  popupAfter: "TitanKeys is free. Buy me a coffee?",
   youGave: cups => cups < .15 ? "You gave a sip" : `You gave ${cupsText(cups)}`,
   inTotal: (cups, rank) => `${cups} in total${rank ? ` · you're #${rank}` : ""}`,
   unlockHead: (spots, top) => `${spots} ${spots === 1 ? "spot" : "spots"} from the top ${top}`,
   unlockSub: (top, chars) => `Top ${top} gets ${chars} characters`,
-  boardBar: rank => `Chip in a sip · you'd be #${rank}`,
+  boardBar: rank => `A sip · you'd be #${rank}`,
   pickCup: "Pick a cup",
   // Placeholders for F (round 7): the move-up progress line, the Top 10 divider, the report sheet's line.
   progress: (rank, top, spots) => `#${rank} → top ${top} · ${spots} to go`,
@@ -884,7 +884,7 @@ function drawTiers() {
   $("#tiers .tier.on .cup")?.classList.add("pick");
   drawPay($("#pay"));
 }
-/** The pay button: Chip in and the price, and under it the place it buys (hidden when the server can't say). */
+/** The pay button: "Buy it" and the price, and under it the place it buys (hidden when the server can't say). */
 // Nothing is picked on the first view; the dock says "Pick a cup" until a tier is tapped.
 let tiersSeen = false;
 async function drawPay(button) {
@@ -1110,7 +1110,7 @@ for (const e of ["pointerup", "pointercancel", "pointerleave"]) document.addEven
   clearTimeout(holdTimer); document.querySelectorAll(".rank.pressed").forEach(x => x.classList.remove("pressed"));
 }, true);
 document.addEventListener("contextmenu", ev => { const li = ev.target.closest("[data-hold]"); if (li) { ev.preventDefault(); openReport(li); } });
-// Chip in: Play takes over. The thank-you comes with the receipt event (in the samples, at once).
+// Paying: Play takes over. The thank-you comes with the receipt event (in the samples, at once).
 $("#pay").onclick = $("#pay2").onclick = async ev => {
   if (ev.currentTarget.id === "pay" && !tiersSeen) {
     const v = $("#support"), dock = v.querySelector(".dock");

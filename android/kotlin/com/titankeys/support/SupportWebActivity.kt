@@ -95,7 +95,18 @@ class SupportWebActivity : Activity() {
             hide(android.view.WindowInsets.Type.systemBars())
             systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-        setContentView(web)
+        // The page sits below the camera cutout: the cutout's band stays black, so the back arrow and the title never land
+        // under the camera.
+        val frame = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(if (mode == "popup") Color.TRANSPARENT else Color.BLACK)
+            addView(web, android.widget.FrameLayout.LayoutParams(-1, -1))
+            setOnApplyWindowInsetsListener { view, insets ->
+                val top = insets.displayCutout?.safeInsetTop ?: 0
+                if (view.paddingTop != top) view.setPadding(0, top, 0, 0)
+                insets
+            }
+        }
+        setContentView(frame)
         web.loadUrl(SupportWebAssets.start(mode))
     }
 

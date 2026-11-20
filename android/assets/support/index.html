@@ -64,12 +64,10 @@
   .bar .back { width: 44px; height: 44px; margin-left: -12px; display: grid; place-items: center; border-radius: 50%; color: var(--ink); }
   .bar .back svg { width: 24px; height: 24px; }
   .bar .title { font-weight: 700; font-size: var(--t-m); opacity: 0; }
-  .bar.scrolled .title { opacity: 1; }
   .bar.scrolled { background: #000; box-shadow: 0 1px 0 var(--line); }
   .bar.scrolled::after { opacity: 1; height: 28px; }
-  /* The big title fades as it slides under the bar, so no glyph peeks out under it. */
-  .view h1 { transition: opacity .2s; }
-  .bar.scrolled ~ * h1 { opacity: 0; transition: none; visibility: hidden; }
+  /* No title swap on scroll (owner: it flickered while changing size): the big title scrolls away under the bar's fade,
+     and the bar keeps only the back arrow. */
   h1 { margin: 0; font-size: var(--t-3xl); line-height: 1.1; letter-spacing: -.02em; font-weight: 700; }
   .kicker { color: var(--accent); font-size: var(--t-xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
   .lede { color: var(--muted); font-size: var(--t-m); margin: var(--g2) 0 0; }

@@ -260,6 +260,7 @@
   .tier .chev { color: var(--muted); }
   .tiernote { display: flex; align-items: center; gap: var(--g3); color: var(--muted); font-size: var(--t-xs); margin: 0 0 var(--g1); padding: 0 var(--g4); }
   .tiernote:empty { display: none; }
+  .tiernote.row { min-height: 63px; margin: 0; padding: 0 var(--g4); border: 1.5px dashed var(--line); border-radius: var(--r-m); }
   .tiernote svg { flex: none; color: var(--muted); }
   .privacy { color: var(--dim); font-size: var(--t-xs); padding: var(--g6) var(--side) 0; }
   #board > .privacy { padding-bottom: 0; }
@@ -284,6 +285,7 @@
   .chip { display: inline-flex; align-items: center; height: 24px; padding: 0; margin-top: var(--g2); border: 0 !important; letter-spacing: .1em; text-transform: uppercase;
     border: 1px solid var(--line-strong); color: var(--muted); font-size: var(--t-xs); font-weight: 700; }
   .quick { display: flex; justify-content: center; gap: var(--g2); margin: var(--g5) 0 56px; position: relative; z-index: 5; }
+  #custom .readout { position: static; }
   .quick button { height: 44px; min-width: 112px; padding: 0 var(--g4); border-radius: 22px; border: 1.5px solid var(--line-strong); font-weight: 700;
     font-variant-numeric: tabular-nums; transition: background .2s, border-color .2s, color .2s; }
   .quick button.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
@@ -298,9 +300,8 @@
     font: inherit; text-align: center; font-variant-numeric: tabular-nums; caret-color: var(--accent); padding: 0; -moz-appearance: textfield; }
   .readout .d input::-webkit-inner-spin-button { -webkit-appearance: none; }
   .readout .c { color: var(--accent); font-size: var(--t-l); margin-top: var(--g2); }
-  .readout .pot { color: var(--body); font-size: var(--t-m); margin-top: var(--g2); height: 26px; overflow: hidden; }
-  .readout .pot:empty { height: 0; margin: 0; }
-  #custom .slider { margin-top: 20px; }
+  .readout .pot { position: absolute; left: var(--side); right: var(--side); bottom: 136px; color: var(--body); font-size: var(--t-m); text-align: center; z-index: 6; }
+  #custom .slider { margin-top: 7px; }
   #custom .dock { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
   .cups .times, .bigcup .times { font-size: 64px; line-height: .9; font-weight: 700; color: var(--accent); align-self: center; font-variant-numeric: tabular-nums; }
   .readout .rk { color: var(--muted); font-size: var(--t-s); height: 22px; font-variant-numeric: tabular-nums; }
@@ -345,19 +346,22 @@
   .thanks-words .bigcup { margin-bottom: var(--g4); display: flex; align-items: baseline; gap: 10px; border-radius: 50%; }
   .thanks-words .bigcup.mark { animation: markpulse .65s var(--ease); }
   @keyframes markpulse { 30% { transform: scale(1.08); } 100% { transform: scale(1); } }
-  .thanks-words .bigcup.mark::before { content: ""; position: absolute; left: 50%; top: 50%; width: 160px; height: 160px; margin: -80px 0 0 -80px;
-    border-radius: 50%; background: radial-gradient(closest-side, #F07C4A40, #F07C4A00); z-index: -1; animation: glow .65s var(--ease) forwards; }
+  .thanks-words .bigcup.mark::before { content: ""; position: absolute; left: 50%; top: 50%; width: var(--glow, 160px); height: var(--glow, 160px);
+    margin: calc(var(--glow, 160px) / -2) 0 0 calc(var(--glow, 160px) / -2); border-radius: 50%;
+    background: radial-gradient(closest-side, #F07C4A2E 55%, #F07C4A00); z-index: -1; animation: glow .65s var(--ease) forwards;
+    clip-path: inset(var(--glowclip, 0px) 0 0 0); }
   @keyframes glow { from { opacity: 0; } 40% { opacity: 1; } to { opacity: 0; } }
   .bigcup.mark.pinned::before { animation: none; opacity: 1; }
-  .thanks-words .bigcup.mark::after { content: ""; position: absolute; left: 50%; top: 50%; width: 96px; height: 96px; margin: -48px 0 0 -48px; z-index: -1;
+  .thanks-words .bigcup.mark::after { content: ""; position: absolute; left: 50%; top: 50%; width: var(--ring, 96px); height: var(--ring, 96px);
+    margin: calc(var(--ring, 96px) / -2) 0 0 calc(var(--ring, 96px) / -2); z-index: -1;
     border-radius: 50%; border: 2px solid #F07C4A99; animation: ring .65s var(--ease) forwards; }
-  @keyframes ring { from { transform: scale(.7); opacity: 1; } to { transform: scale(1.45); opacity: 0; } }
+  @keyframes ring { from { transform: scale(.85); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
   .thanks-words .bigcup { position: relative; }
   .confetti { position: absolute; left: 50%; top: 40%; margin-left: -9px; animation: burst 1.1s cubic-bezier(.15, .8, .3, 1) forwards; }
   @keyframes burst { from { transform: translate(calc(var(--x) * .55), calc(var(--y) * .55)) rotate(0); opacity: 0; } 15% { opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0; } }
   .confetti.pinned { animation: none; transform: translate(calc(var(--x) * .8), calc(var(--y) * .8)) rotate(var(--r)); }
   .bigcup.mark.pinned { animation: none; transform: scale(1.08); }
-  .bigcup.mark.pinned::after { animation: none; transform: scale(1.12); opacity: 1; }
+  .bigcup.mark.pinned::after { animation: none; transform: none; opacity: 1; }
   .bigcup.onblack::before { display: none; }
   @keyframes burst { from { transform: translate(0, 0) rotate(0); opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--x), var(--y)) rotate(var(--r)); opacity: 0; } }
   .thanks-words .bigcup svg { align-self: flex-end; }
@@ -457,10 +461,11 @@
   /* Empty and offline: one solid card; the empty board asks you to be first. */
   .emptywrap { padding: 0 var(--side); }
   #board:has(.emptywrap) .pad + #mine + #boardfull { min-height: 0; }
-  #board .emptywrap { margin-top: 0; }
+  /* Empty or offline: the card and its footer centred between the subtitle and the bottom (centre ~708 on the phone). */
+  #board .emptywrap { margin-top: 167px; }
   #board .emptywrap + * , #board #boardfull:has(.emptywrap) + .privacy { margin-top: 0; }
   #board .privacy { padding-top: var(--g5); }
-  #board #boardfull:has(.emptywrap) + .privacy { padding-top: 15.4px; }
+  #board #boardfull:has(.emptywrap) + .privacy { padding-top: 10.3px; }
   .empty .offcup { transform: rotate(-14deg); }
   .empty { padding: var(--g6) var(--g5); border-radius: var(--r-l); background: #120E0C; text-align: center;
     display: flex; flex-direction: column; align-items: center; gap: var(--g4); }
@@ -632,7 +637,7 @@ const T = {
   progress: (rank, top, spots) => `#${rank} → top ${top} · ${spots} to go`,
   top10: "Top 10",
   reportWhat: name => `Report ${name}?`, cancel: "Never mind",
-  // F's report sheet line (e72d7ecc).
+  // Placeholder for F (round 9): the report sheet's body line.
   reportBody: "We'll check it, and it goes if it breaks the rules.",
   joinAction: "Put me on the board",
   // Stand-in (F: wording): the opt-in's note over the limit.
@@ -812,17 +817,6 @@ function drawBoardFull(supporter) {
   if (!supporter && !board.joined && board.available && e.length) api.preview(product(tierId("o", 0))?.baseCents || 50).then(r => {  // "a sip": the rank a one-time sip buys
     if (r.available) $("#boardbar").innerHTML = `<div class="boardbar"><button class="primary" data-go="support">${esc(T.boardBar(r.rank))}</button></div>`;
   });
-  // Empty or offline: centre the card and its footer between the subtitle and the bottom.
-  if (!e.length) setTimeout(() => {
-    const wrap = $("#board .emptywrap"), foot = $("#board > .privacy"), sub = $("#boardline");
-    if (!wrap || !foot) return;
-    const v = $("#board"), top = sub.getBoundingClientRect().bottom, h = v.clientHeight;
-    // Two passes: move the block until its centre sits halfway between the subtitle and the bottom.
-    for (let i = 0; i < 2; i++) {
-      const centre = (wrap.getBoundingClientRect().top + foot.getBoundingClientRect().bottom) / 2;
-      wrap.style.marginTop = Math.max(16, parseFloat(wrap.style.marginTop || 0) + (top + h) / 2 - centre) + "px";
-    }
-  }, 0);
   $("#removebox").innerHTML = board.joined ? `<div style="border-top:1px solid var(--line);padding-top:16px"><button class="link" data-act="remove">${T.removeMe}</button></div>` : "";
 }
 
@@ -845,7 +839,8 @@ function drawTiers() {
   });
   if (cadence === "o") rows.push(`<button class="tier" data-go="custom">${cup(0, 30, { dashed: true })}<span><div class="nm">${T.custom[0]}</div><div class="ln">${T.custom[1]}</div></span><svg class="chev" width="22" height="22" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`);
   // The same footnote height on both, so the button doesn't move.
-  rows.unshift(`<div class="tiernote">${cadence === "m" ? `<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>${esc(T.customNote)}` : ""}</div>`);
+  if (cadence === "m") rows.push(`<div class="tiernote row">${cadence === "m" ? `<svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>${esc(T.customNote)}` : ""}</div>`);
+
   $("#tiers").innerHTML = rows.join("");
   // The selected cup keeps its fill and gives a small pulse.
   $("#tiers .tier.on .cup")?.classList.add("pick");
@@ -975,6 +970,18 @@ function thanks(totalCups, rank, after, giftCups = totalCups, pin = null) {
     // The glow only over the orange: none while the cups are still above the liquid.
     const cupRect = $("#thankscup").getBoundingClientRect(), floodTop = flood.getBoundingClientRect().top;
     $("#thankscup").classList.toggle("onblack", cupRect.bottom < floodTop);
+    // Ring and glow sized from the cups (untransformed): the ring clears them by 10.3 CSS (16 phone px); the glow ends 25.6 CSS
+    // (40 phone px) outside it, clipped to the liquid.
+    const host = $("#thankscup"), cupsOnly = [...host.querySelectorAll(":scope > svg, :scope > .times")];
+    if (cupsOnly.length) {
+      const hr = host.getBoundingClientRect(), k = hr.width / (host.offsetWidth || hr.width || 1), rs = cupsOnly.map(c => c.getBoundingClientRect());
+      const L = Math.min(...rs.map(q => q.left)) / k, Rr = Math.max(...rs.map(q => q.right)) / k;
+      const T = Math.min(...rs.map(q => q.top)) / k, B = Math.max(...rs.map(q => q.bottom)) / k;
+      const ring = Math.hypot(Rr - L, B - T) + 20.6, glow = ring + 51.2;
+      host.style.setProperty("--ring", ring + "px"); host.style.setProperty("--glow", glow + "px");
+      const glowTop = host.getBoundingClientRect().top + host.offsetHeight / 2 - glow / 2;
+      host.style.setProperty("--glowclip", Math.max(0, floodTop - glowTop) + "px");
+    }
     if (el < D + HOLD + FILL && !pin) raf = frame(f);
     if (finish >= .6) { $("#amount").textContent = T.youGave(giftCups); view.classList.add("settled"); }
   };

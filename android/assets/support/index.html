@@ -69,6 +69,7 @@
   /* No title swap on scroll (owner: it flickered while changing size): the big title scrolls away under the bar's fade,
      and the bar keeps only the back arrow. */
   h1 { margin: 0; font-size: var(--t-3xl); line-height: 1.1; letter-spacing: -.02em; font-weight: 700; }
+  .intro { margin: var(--g3) 0 0; color: var(--body); font-size: var(--t-m); line-height: 1.45; max-width: 34ch; }
   .kicker { color: var(--accent); font-size: var(--t-xs); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
   .lede { color: var(--muted); font-size: var(--t-m); margin: var(--g2) 0 0; }
   .muted { color: var(--muted); }
@@ -556,7 +557,7 @@
     <div class="bar"><button class="back" data-go="settings" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="title" data-t="heading"></span></div>
     <div class="hero">
       <h1 data-t="heading"></h1>
-      <ul class="points" id="points"></ul>
+      <p class="intro" id="points"></p>
     </div>
     <div class="section">
       <div class="section-head"><span class="kicker" data-t="fund"></span><a data-go="board" id="seeall"></a></div>
@@ -627,7 +628,8 @@ const T = {
   cardTitle: "Buy me a coffee", cardLine: "You made it to the bottom. Fancy a coffee?",
   popupLine: "Your thumbs have been busy.", tiles: ["Words", "Swipes", "Fixes", "Gestures"], popupButton: "See the supporters", nah: "Nah",
   heading: "Support TitanKeys",
-  points: ["Donating gets you nothing. Well, a spot on the board.", "It lets me spend more time on fixes, languages and new tricks.", "No ads. No paywall. Ever."],
+  // Owner: one sentence, no bullets.
+  intro: "Donating gets you nothing, but it lets me spend more time on fixes, languages and new tricks.",
   fund: "Supporters", fundLine: "The good people, by rank.",
   supporters: "The orange juice fund", supportersLine: "The good people. Cheers, all of you.",
   empty: "Nobody here yet. Any amount puts you at #1.", anonymous: "Anonymous", report: "Report", reported: "Got it. We'll take a look.",
@@ -796,7 +798,7 @@ function cup(fill, size, { steam = false, dashed = false } = {}) {
 function fillText() {
   document.querySelectorAll("[data-t]").forEach(el => { const v = T[el.dataset.t]; if (typeof v === "string") el.textContent = v; });
   document.querySelectorAll("[data-cup]").forEach(el => { el.innerHTML = cup(.45, +el.dataset.size, { steam: el.dataset.cup === "steam" }); });
-  $("#points").innerHTML = T.points.map(p => `<li>${esc(p)}</li>`).join("");
+  $("#points").textContent = T.intro;
 }
 
 /** Cuts [text] to [n] characters at a word boundary, drops trailing punctuation, and adds "…". */

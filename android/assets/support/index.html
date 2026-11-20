@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- No viewport-fit=cover: drawing into the camera cutout made the WebView draw layered parts squeezed. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
   // The page is laid out at its design width, 690 CSS px (the renders and reviews were made at it), and zoomed to the screen:
   // CSS zoom changes the layout, so everything stays crisp and in proportion (a WebView zoomed to fit drew layers stretched).

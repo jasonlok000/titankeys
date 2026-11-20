@@ -90,9 +90,7 @@ class SupportWebActivity : Activity() {
         // Full screen from the first frame (the Fullscreen theme, and the bars hidden before the page is added): hiding them
         // after the WebView had laid out left it drawing its layered parts for the old, shorter window, squeezed.
         window.setDecorFitsSystemWindows(false)
-        window.attributes = window.attributes.apply {
-            layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-        }
+        // The window stays out of the camera cutout (the default): drawn into it, the WebView drew layered parts squeezed.
         window.insetsController?.apply {
             hide(android.view.WindowInsets.Type.systemBars())
             systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

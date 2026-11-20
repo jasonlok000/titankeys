@@ -7,27 +7,19 @@ import { RoundedFill, RoundedOutline } from "./rounded";
 export const supportWidth = 594;
 const SURFACE = "#110E0C";
 
-/** The lid's colour: dark, as the owner's pick (style B) draws it. */
-const LID = "#5A463B";
-
 /**
- * The cup, flat (owner's pick, style B): a solid cream body that narrows to the base, an orange sleeve round its middle and a
- * dark lid. Ink fills only rectangles, so the body and the sleeve are stacked horizontal strokes, each as wide as the cup at
- * its height. [band] is the sleeve's colour, [body] the cup's; at [x], [y], [scale] (1 is 24 x 30 units).
+ * A takeaway cup in the guide's drawn style: a cream outline and lid, an orange band for the sleeve. Parts for a canvas, at
+ * [x], [y], [scale] (1 is 24 x 30 units).
  */
-export function cupParts(x: number, y: number, scale: number, key: string, band: string, body = CREAM) {
+export function cupParts(x: number, y: number, scale: number, key: string, band: string, stroke = CREAM) {
   const at = (px: number, py: number) => [x + px * scale, y + py * scale] as const;
-  const step = 0.9, thick = step * scale + 0.8, cap = thick / 2 / scale;
-  const parts = [];
-  for (let py = 8 + step / 2; py < 29; py += step) {
-    const t = (py - 8) / 21, left = 5 + 1.6 * t + cap, right = 19 - 1.6 * t - cap;
-    const colour = py >= 14 && py <= 21 ? band : body;
-    parts.push(<CanvasPath key={`${key}-b${py.toFixed(2)}`} points={[at(left, py), at(right, py)]} stroke={colour} strokeWidth={thick} />);
-  }
-  for (let py = 5.4; py <= 7.8; py += 0.8)
-    parts.push(<CanvasPath key={`${key}-l${py.toFixed(1)}`} points={[at(3.5 + cap, py), at(20.5 - cap, py)]} stroke={LID} strokeWidth={thick} />);
-  parts.push(<CanvasPath key={`${key}-top`} points={[at(8 + cap, 4.2), at(16 - cap, 4.2)]} stroke={LID} strokeWidth={thick} />);
-  return parts;
+  const width = 1.4 * scale / 1.6;
+  return [
+    <RoundedFill key={`${key}-band`} x={x + 5.9 * scale} y={y + 15 * scale} width={12.2 * scale} height={6 * scale} radius={scale} fill={band} />,
+    <CanvasPath key={`${key}-body`} points={[at(5, 9), at(19, 9), at(17.4, 29), at(6.6, 29), at(5, 9)]} stroke={stroke} strokeWidth={width} />,
+    <CanvasPath key={`${key}-lid`} points={[at(3.5, 6.2), at(20.5, 6.2), at(20.5, 9), at(3.5, 9), at(3.5, 6.2)]} stroke={stroke} strokeWidth={width} />,
+    <CanvasPath key={`${key}-top`} points={[at(7, 6.2), at(8, 4), at(16, 4), at(17, 6.2)]} stroke={stroke} strokeWidth={width} />,
+  ];
 }
 
 /**

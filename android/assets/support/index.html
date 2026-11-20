@@ -103,14 +103,6 @@
   .cup .plus { stroke: var(--muted); stroke-width: 1.6px; stroke-linecap: round; }
   .cup.pick { animation: cuppick .45s var(--spring); }
   @keyframes cuppick { 40% { transform: scale(1.12); } }
-  /* The flat cup (style B): cream body filling from the bottom, faint when empty, an orange sleeve, a dark lid. On the
-     thank-you's orange the sleeve turns dark so it still shows. */
-  .cup.flat .empty { fill: #FFF1E6; opacity: .16; }
-  .cup.flat .sleeve { fill: var(--accent); }
-  .cup.flat .lid { fill: #5A463B; }
-  .thanks-words .cup.flat .sleeve, .drift .cup.flat .sleeve { fill: #1A1210; }
-  .thanks-words .cup.flat .lid, .drift .cup.flat .lid { fill: #1A1210; }
-  .cup.flat .fill { fill: #FFF1E6; }
   .cup .fill { fill: var(--accent); transform-box: fill-box; transform-origin: 50% 100%; transition: transform .7s cubic-bezier(.3, 1.25, .5, 1); }
   .steam path { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-linecap: round; stroke-dasharray: 14; animation: steam 2.8s ease-in-out infinite; }
   .steam path + path { animation-delay: 1.1s; }
@@ -793,24 +785,15 @@ let cadence = "m", tier = 0, dollars = 5, lastRank = null;
 let paidRank = null;
 
 let cupId = 0;
-/**
- * The cup, flat (owner's pick, style B): a solid cream body that fills from the bottom to [fill] (0..1; the empty part is a
- * faint silhouette), an orange sleeve and a dark lid. [size] is its width; [steam] curls above; [dashed] is Custom's outline
- * with a plus.
- */
+/** The cup: [fill] 0..1, [size] its width; [steam] curls above; [dashed] is Custom's outline with a plus. */
 function cup(fill, size, { steam = false, dashed = false } = {}) {
   const id = "c" + cupId++, f = Math.max(0, Math.min(1, fill));
-  const body = "M5 8 L19 8 L17.4 29 L6.6 29 Z";
-  if (dashed) return `<svg class="cup" width="${size}" height="${size * 1.25}" viewBox="0 0 24 30" aria-hidden="true">
-    <path class="stroke dash" d="${body}"/><path class="stroke dash" d="M3.5 5.2 h17 v2.8 h-17 z M7 5.2 l1-2.2 h8 l1 2.2"/>
-    <path class="stroke plus" d="M12 15 v6 M9 18 h6"/></svg>`;
-  return `<svg class="cup flat" width="${size}" height="${size * 1.25}" viewBox="0 0 24 30" aria-hidden="true">
+  return `<svg class="cup" width="${size}" height="${size * 1.25}" viewBox="0 0 24 30" aria-hidden="true">
     ${steam ? `<g class="steam"><path d="M10 4 q-2 -2 0 -4"/><path d="M14 4 q-2 -2 0 -4"/></g>` : ""}
-    <defs><clipPath id="${id}"><path d="${body}"/></clipPath></defs>
-    <path class="empty" d="${body}"/>
-    <g clip-path="url(#${id})"><rect class="fill" x="0" y="8" width="24" height="21" data-f="${f}" style="transform:scaleY(${f})"/>
-      <rect class="sleeve" x="0" y="14" width="24" height="7"/></g>
-    <rect class="lid" x="3.5" y="5" width="17" height="3.2" rx="1.2"/><path class="lid" d="M7 5 l1-2.2 h8 l1 2.2 z"/></svg>`;
+    <defs><clipPath id="${id}"><path d="M5 8 L19 8 L17.4 29 L6.6 29 Z"/></clipPath></defs>
+    ${dashed ? "" : `<g clip-path="url(#${id})"><rect class="fill" x="0" y="8" width="24" height="21" data-f="${f}" style="transform:scaleY(${f})"/></g>`}
+    <path class="stroke${dashed ? " dash" : ""}" d="M5 8 L19 8 L17.4 29 L6.6 29 Z"/><path class="stroke${dashed ? " dash" : ""}" d="M3.5 5.2 h17 v2.8 h-17 z M7 5.2 l1-2.2 h8 l1 2.2"/>
+    ${dashed ? `<path class="stroke plus" d="M12 15 v6 M9 18 h6"/>` : ""}</svg>`;
 }
 function fillText() {
   document.querySelectorAll("[data-t]").forEach(el => { const v = T[el.dataset.t]; if (typeof v === "string") el.textContent = v; });

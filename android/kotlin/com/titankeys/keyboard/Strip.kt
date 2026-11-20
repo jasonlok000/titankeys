@@ -1039,25 +1039,31 @@ class Strip(
             val top = minOf(line - iconSize / 2f, height - inside - iconSize)
             drawIcon(canvas, icon(Action.Close), centre, backIconTop(centre, top, iconSize), iconSize, 1f, 0f, 255, look.ink, 1f)
         }
-        // Since the switcher starts at Q (2026-11-20), an item over Q reaches the screen's left corner: the pill and the text keep
-        // in from the curve at their own lowest points, as the bar's words do (the bar's corner rule).
+        // Since the switcher starts at Q (2026-11-20), an item over Q reaches the screen's left corner. Every item's pill and room
+        // draw in by the same amount, enough that the outermost clears the curve at the pill's lowest point and its text at the
+        // words' (the bar's corner rule), so all the highlights stay the same shape, each centred over its keys (owner,
+        // 2026-11-20: "the hover button effect of each has to be identical").
+        val spans = picker.items.indices.mapNotNull { index ->
+            picker.columns.getOrNull(index)?.let { menuColumn(it.first).first to menuColumn(it.last).second }
+        }
+        val outerLeft = spans.minOfOrNull { it.first } ?: 0f
+        val outerRight = spans.maxOfOrNull { it.second } ?: width.toFloat()
         val pillSide = sideFor(barHeight - (line + pillHeight / 2)).toFloat()
+        val inset = maxOf(dp(2).toFloat(), pillSide - outerLeft, outerRight - (width - pillSide),
+            side - outerLeft, outerRight - (width - side))
         for ((index, item) in picker.items.withIndex()) {
             val columns = picker.columns.getOrNull(index) ?: continue
-            val keysLeft = menuColumn(columns.first).first
-            val keysRight = menuColumn(columns.last).second
-            val left = maxOf(keysLeft, side.toFloat())
-            val right = minOf(keysRight, (width - side).toFloat())
+            val left = menuColumn(columns.first).first + inset
+            val right = menuColumn(columns.last).second - inset
             val marked = pickerMark in columns
             if (marked) {
-                menuBox.set(maxOf(keysLeft + dp(2), pillSide), line - pillHeight / 2, minOf(keysRight - dp(2), width - pillSide),
-                    line + pillHeight / 2)
+                menuBox.set(left, line - pillHeight / 2, right, line + pillHeight / 2)
                 menuPaint.color = GuideMotion.faded(look.accent, MENU_PILL_ALPHA)
                 canvas.drawRoundRect(menuBox, pillHeight / 2, pillHeight / 2, menuPaint)
             }
             pickerText.color = if (marked || index == picker.current) look.accent else look.ink
-            // A long item shrinks to its keys.
-            val room = right - left - dp(4)
+            // A long item shrinks to its pill.
+            val room = right - left
             val width = pickerText.measureText(item)
             val scale = if (width > room && width > 0f) room / width else 1f
             canvas.save()

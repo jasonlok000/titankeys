@@ -85,8 +85,8 @@
   /* Buttons. */
   .primary { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 60px; padding: 8px 16px;
     border-radius: 32px; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--t-l); line-height: 1.2;
-    transition: opacity .15s var(--ease); }
-  .primary:active { opacity: .86; }
+    opacity: var(--fade); transition: --fade .15s var(--ease); }
+  .primary:active { --fade: .86; }
   .chev-down { position: relative; animation: nudge 1.6s ease-in-out infinite; }
   @keyframes nudge { 50% { top: 3px; } }
   .primary .sub { font-size: var(--t-xs); font-weight: 400; opacity: .85; margin-top: 2px; font-variant-numeric: tabular-nums; }
@@ -139,8 +139,8 @@
   .grab { width: 44px; height: 5px; border-radius: 3px; background: var(--line-strong); margin: 0 auto var(--g5); }
   .sheet .head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--g4); }
   .sheet .head .cupslot { margin-top: -18px; }
-  .sheet .head .steam { opacity: 0; transition: opacity .6s; }
-  .sheet .head.full .steam { opacity: 1; }
+  .sheet .head .steam { --fade: 0; opacity: var(--fade); transition: --fade .6s; }
+  .sheet .head.full .steam { --fade: 1; }
   .sheet .after { color: var(--body); font-size: var(--t-m); margin: 0 0 var(--g4); text-wrap: balance; }
   .sheet .line { font-size: var(--t-2xl); font-weight: 700; line-height: 1.12; letter-spacing: -.01em; }
   .herostat { position: relative; margin-top: var(--g5); animation: rise .5s var(--ease) backwards; }
@@ -270,8 +270,8 @@
   .tiers { display: grid; gap: var(--g2); margin: var(--g4) var(--side) 0; }
   .tier { display: grid; grid-template-columns: 40px 1fr auto; gap: var(--g4); align-items: center; padding: var(--g3) var(--g4);
     border-radius: var(--r-m); background: var(--s1); border: 1.5px solid var(--line); text-align: left;
-    transition: border-color .2s, background .3s, opacity .15s var(--ease); }
-  .tier:active { opacity: .86; }
+    opacity: var(--fade); transition: border-color .2s, background .3s, --fade .15s var(--ease); }
+  .tier:active { --fade: .86; }
   .tier.on { border-color: var(--accent); background: linear-gradient(90deg, #22120A, var(--s1)); }
   .tier .nm { font-weight: 700; font-size: var(--t-m); }
   .tier .ln { color: var(--muted); font-size: var(--t-xs); }
@@ -303,8 +303,8 @@
   .tiers { margin-bottom: 0; }
   #support .privacy { padding-top: 20.5px; }
   .dock::before, .boardbar::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 56px; background: linear-gradient(#0000, #000 32px);
-    pointer-events: none; opacity: 0; transition: opacity .2s; }
-  .dock.covering::before, .boardbar.covering::before { opacity: 1; }
+    pointer-events: none; --fade: 0; opacity: var(--fade); transition: --fade .2s; }
+  .dock.covering::before, .boardbar.covering::before { --fade: 1; }
   .dock .primary { min-height: 62px; }
   .dock .err, .dock .note { text-align: center; color: #9A8F88; font-size: var(--t-xs); margin-top: var(--g2); min-height: 20px; }
 
@@ -365,8 +365,11 @@
      thank-you squeezed or stretched. */
   @keyframes bubble { from { bottom: -16px; } to { bottom: 884px; } }
   #thanks.on { display: flex; flex-direction: column; }
-  .drifts { position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0; transition: opacity .8s; }
-  .settled .drifts { opacity: .8; }
+  /* Fades go through --fade, not opacity itself: an opacity transition went to its own layer on the phone's
+     WebView and drew small or narrow until it ended (2026-11-20). */
+  @property --fade { syntax: "<number>"; inherits: false; initial-value: 1; }
+  .drifts { position: absolute; inset: 0; pointer-events: none; z-index: 1; --fade: 0; opacity: var(--fade); transition: --fade .8s; }
+  .settled .drifts { --fade: .8; }
   .drift { position: absolute; animation: drift 4.5s ease-in-out infinite alternate; }
   .drift .cup .stroke { stroke: #1A1210; stroke-width: 1.6px; }
   @keyframes drift { from { margin-top: 0; margin-left: -4px; } to { margin-top: -40px; margin-left: 4px; } }
@@ -378,10 +381,10 @@
   @keyframes markpulse { 30% { top: -6px; } 100% { top: 0; } }
   .thanks-words .bigcup.mark::before { content: ""; position: absolute; left: 50%; top: 50%; width: var(--glow, 160px); height: var(--glow, 160px);
     margin: calc(var(--glow, 160px) / -2) 0 0 calc(var(--glow, 160px) / -2); border-radius: 50%;
-    background: radial-gradient(closest-side, #F07C4A2E 55%, #F07C4A00); z-index: -1; animation: glow .65s var(--ease) forwards;
+    background: radial-gradient(closest-side, #F07C4A2E 55%, #F07C4A00); z-index: -1; opacity: var(--fade); animation: glow .65s var(--ease) forwards;
     clip-path: inset(var(--glowclip, 0px) 0 0 0); }
-  @keyframes glow { from { opacity: 0; } 40% { opacity: 1; } to { opacity: 0; } }
-  .bigcup.mark.pinned::before { animation: none; opacity: 1; }
+  @keyframes glow { from { --fade: 0; } 40% { --fade: 1; } to { --fade: 0; } }
+  .bigcup.mark.pinned::before { animation: none; --fade: 1; }
   .thanks-words .bigcup.mark::after { content: ""; position: absolute; left: 50%; top: 50%; width: var(--ring, 96px); height: var(--ring, 96px);
     margin: calc(var(--ring, 96px) / -2) 0 0 calc(var(--ring, 96px) / -2); z-index: -1;
     border-radius: 50%; border: 2px solid #F07C4A99; animation: ring .65s var(--ease) forwards; }
@@ -397,22 +400,22 @@
   @keyframes burst { from { margin-left: -9px; margin-top: 0; opacity: 1; } 70% { opacity: 1; } to { margin-left: calc(var(--x) - 9px); margin-top: var(--y); opacity: 0; } }
   .thanks-words .bigcup svg { align-self: flex-end; }
   .thanks-words .bigcup b { font-size: var(--t-4xl); line-height: .8; letter-spacing: -.02em; align-self: flex-end; }
-  .thanks-words h1 { position: relative; top: 16px; font-size: var(--t-5xl); letter-spacing: -.03em; opacity: 0; transition: opacity .6s, top .6s var(--ease); }
-  .thanks-words .amount { font-size: var(--t-xl); font-weight: 700; margin-top: var(--g3); font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .5s .1s; }
-  .thanks-words .total { font-size: var(--t-m); margin-top: 2px; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity .5s .3s; }
-  .settled .thanks-words .total { opacity: .8; }
-  .thanks-words p { font-size: var(--t-m); line-height: 1.4; margin: var(--g4) auto 0; max-width: 30ch; text-wrap: balance; opacity: 0;
-    position: relative; top: 10px; transition: opacity .6s .6s, top .6s .6s var(--ease); }
-  .settled .thanks-words h1, .settled .thanks-words .amount { opacity: 1; top: 0; }
-  .settled .thanks-words p { opacity: 1; top: 0; }
+  .thanks-words h1 { position: relative; top: 16px; font-size: var(--t-5xl); letter-spacing: -.03em; --fade: 0; opacity: var(--fade); transition: --fade .6s, top .6s var(--ease); }
+  .thanks-words .amount { font-size: var(--t-xl); font-weight: 700; margin-top: var(--g3); font-variant-numeric: tabular-nums; --fade: 0; opacity: var(--fade); transition: --fade .5s .1s; }
+  .thanks-words .total { font-size: var(--t-m); margin-top: 2px; font-variant-numeric: tabular-nums; --fade: 0; opacity: var(--fade); transition: --fade .5s .3s; }
+  .settled .thanks-words .total { --fade: .8; }
+  .thanks-words p { font-size: var(--t-m); line-height: 1.4; margin: var(--g4) auto 0; max-width: 30ch; text-wrap: balance; --fade: 0; opacity: var(--fade);
+    position: relative; top: 10px; transition: --fade .6s .6s, top .6s .6s var(--ease); }
+  .settled .thanks-words h1, .settled .thanks-words .amount { --fade: 1; top: 0; }
+  .settled .thanks-words p { --fade: 1; top: 0; }
   .dark-words .thanks-words p { color: #2A1208; }
   .dark-words .thanks-words { color: var(--on-accent); }
   .thanks-words .cup .stroke { stroke: var(--ink); }
   .settled .thanks-words .cup .stroke, .dark-words .thanks-words .cup .stroke { stroke: #1A1210; stroke-width: 3px; }
   .dark-words .thanks-words .cup .fill { fill: #FFF1E6; }
   .thanks-actions { position: relative; padding: 0 var(--side) calc(20px + env(safe-area-inset-bottom)); z-index: 2; display: grid; gap: var(--g2);
-    opacity: 0; top: 12px; transition: opacity .5s .9s, top .5s .9s var(--ease); }
-  .settled .thanks-actions { opacity: 1; top: 0; }
+    --fade: 0; opacity: var(--fade); top: 12px; transition: --fade .5s .9s, top .5s .9s var(--ease); }
+  .settled .thanks-actions { --fade: 1; top: 0; }
   .progress { margin-bottom: 7.4px; color: var(--on-accent); }
   .progress .pl { display: flex; justify-content: space-between; align-items: baseline; gap: var(--g3); }
   .progress .pl b { font-size: var(--t-m); font-variant-numeric: tabular-nums; }

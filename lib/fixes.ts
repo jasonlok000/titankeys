@@ -23,5 +23,5 @@ export const earlierKinds = ["contextApostrophes", "secondLook"];
 export const earlierChoices: { value: "off" | "small" | "bold"; label: string; example: string }[] = [
   { value: "off", label: "Off", example: "A word stays as you left it once you've moved on." },
   { value: "small", label: "Small fixes", example: "its going → it's going, get dome food → get some food" },
-  { value: "bold", label: "Bold", example: "Also their going → they're going, the are → they are, and a fix changed again" },
+  { value: "bold", label: "Bold", example: "Also their going → they're going, the are → they are, and it can change a fix again" },
 ];

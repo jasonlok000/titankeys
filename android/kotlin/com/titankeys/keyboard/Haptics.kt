@@ -772,11 +772,10 @@ class Haptics(private val context: Context) {
     }
 
     private fun report(haptic: Haptic, pattern: List<Long>, result: HapticResult, word: Int? = null, dot: Int? = null, dots: Int? = null) {
-        if (!feeds) return
-        HapticFeed.record(HapticEvent(SystemClock.uptimeMillis(), haptic, pattern, result, word, dot, dots))
+        if (feeds) HapticFeed.record(HapticEvent(SystemClock.uptimeMillis(), haptic, pattern, result, word, dot, dots))
         // TitanKeys Debug only: each haptic that played, by its id, never text, so an unwanted buzz (a mistap) can be found in a
         // night's log beside the keys and taps (adb logcat -s TitanKeysHaptic).
-        if (result.played) android.util.Log.i("TitanKeysHaptic", haptic.id)
+        if (feeds && result.played) android.util.Log.i("TitanKeysHaptic", haptic.id)
     }
 
     /** Plays [pattern] alone, with no switch or gate, for the lab's editor. It still needs Android's touch feedback. */

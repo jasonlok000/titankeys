@@ -76,3 +76,14 @@ test("Back with an engine's code pending clears it as a Sym tap does, never fall
   expect(down.indexOf("KEYCODE_BACK && codePending()")).toBeLessThan(down.indexOf("KEYCODE_BACK && choicesMenuOpen"));
   expect(down.indexOf("KEYCODE_BACK && codePending()")).toBeLessThan(down.indexOf("KEYCODE_BACK && openPicker() != null"));
 });
+
+test("a Back right after one the keyboard handled is its replay, and is kept with its release", async () => {
+  // Owner, 2026-11-21: Back cleared the code, then Key Mapper's replay of the same press hid the keyboard.
+  const text = await ime();
+  const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
+  expect(down.indexOf("BACK_ECHO_MILLIS")).toBeGreaterThan(0);
+  expect(down.indexOf("BACK_ECHO_MILLIS")).toBeLessThan(down.indexOf("KEYCODE_BACK && codePending()"));
+  const up = between(text, "override fun onKeyUp(", "private fun switchKeyboardIfAsked");
+  expect(up).toContain("if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = SystemClock.uptimeMillis()");
+  expect(up.indexOf("KEYCODE_BACK && backEcho")).toBeLessThan(up.indexOf("KEYCODE_BACK && backKept"));
+});

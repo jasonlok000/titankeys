@@ -425,6 +425,9 @@ class TitanKeysIme : InputMethodService() {
 
     /** Whether this Back push was kept from the app, so its release is kept too, whatever changed in between. */
     private var backKept = false
+    /** When the keyboard last handled a Back's release (uptime), and whether the push now down is that Back's replay. */
+    private var backHandledAt = Long.MIN_VALUE / 2
+    private var backEcho = false
 
     /** The touchpad hold's wait for a second Back ends after a while, so the Back service stops hearing every key. */
     private val letGoExpired = Runnable {
@@ -4837,6 +4840,16 @@ class TitanKeysIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        // Key Mapper replays every Back about 15 ms after its release. Where the keyboard also heard the press itself (the Back
+        // service hears keys while a code is built), the replay came as a second press: Back cleared the code, then its replay
+        // hid the keyboard (owner, 2026-11-21: "rn its hiding the keyboard instead"). A Back within [BACK_ECHO_MILLIS] of one the
+        // keyboard handled is that press again, and is kept with its release.
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0 && SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS) {
+            backEcho = true
+            keyAudit("Back again ${SystemClock.uptimeMillis() - backHandledAt} ms after a handled one: its replay, kept")
+            return true
+        }
+        if (keyCode == KeyEvent.KEYCODE_BACK && backEcho) return true
         // Back closes the visible Sym panel before the picker hidden beneath it. Repeats from that push stay with the panel.
         if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown && backKey(event, down = true)) {
             backKept = true
@@ -5022,6 +5035,7 @@ class TitanKeysIme : InputMethodService() {
         // The release of a key that picked from the picker, or closed it, belongs to that.
         if (keyCode == pickerKey) {
             pickerKey = -1
+            if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = SystemClock.uptimeMillis()
             return true
         }
         // Published before the take-back, so the guide hears the letter let go too soon.
@@ -5041,8 +5055,13 @@ class TitanKeysIme : InputMethodService() {
         // A kept Back push keeps its release, and a push the app had gets its release, whatever changed in between: before, the
         // two were decided by the keyboard's state at each, so the app could get a press with no release or the reverse (key audit,
         // 2026-11-20).
+        if (keyCode == KeyEvent.KEYCODE_BACK && backEcho) {
+            backEcho = false
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_BACK && backKept) {
             backKept = false
+            backHandledAt = SystemClock.uptimeMillis()
             // Back closes an open panel and stays in the app.
             if (!backKey(event, down = false)) {
                 if (editing && isInputViewShown) {
@@ -5565,6 +5584,8 @@ class TitanKeysIme : InputMethodService() {
         private const val KEY_AUDIT_TAG = "TitanKeysKeyAudit"
         /** How soon after a key went to the app a field's start, or the same key typed, counts as part of that press. */
         private const val KEY_TWICE_MILLIS = 1500L
+        /** A Back this soon after one the keyboard handled is that press's replay (Key Mapper's comes about 15 ms after). */
+        private const val BACK_ECHO_MILLIS = 250L
         /** How long Android has to show the strip before the keyboard shows its window itself. */
         private const val SHOW_FALLBACK_MILLIS = 300L
         /** A show this soon after a hide is the app's quick hide and show. Teams took 160 to 530 ms. */

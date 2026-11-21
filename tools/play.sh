@@ -10,7 +10,8 @@
 # GitHub key. --local signs with the GitHub key instead and names the file *-local.aab: for checking a bundle on this
 # computer only, never for uploading, as the key of the first upload becomes the upload key.
 #
-# Needs an Ink SDK whose `ink build` has --bundle (tools/ink-bundle.patch adds it), at ../ink as package.json says.
+# Needs an Ink at ../ink (as package.json says) with both tools/ink/titankeys.patch and tools/ink-bundle.patch, which adds
+# `ink build --bundle`. tools/dev/build/play-bundle.sh makes one, without touching the Ink other builds use.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,7 +19,7 @@ local=false
 [[ "${1:-}" == "--local" ]] && local=true
 
 if ! ../ink/scripts/ink build --help 2>/dev/null | grep -q -- '--bundle'; then
-  echo "This Ink SDK can't build App Bundles. Apply tools/ink-bundle.patch to ../ink first." >&2
+  echo "This Ink can't build App Bundles: it lacks tools/ink-bundle.patch. Build with tools/dev/build/play-bundle.sh." >&2
   exit 2
 fi
 
@@ -26,8 +27,8 @@ fi
 # loses the accent, autoCapitalise, the press haptic, the scroll fade and the text field's clip under the header.
 patch="$PWD/tools/ink/titankeys.patch"
 if [[ -f "$patch" ]] && ! git -C ../ink apply --reverse --check "$patch" 2>/dev/null; then
-  echo "../ink doesn't carry tools/ink/titankeys.patch. Apply it on top of tools/ink-bundle.patch, then build again:" >&2
-  echo "  cd ../ink && git apply \"$patch\"" >&2
+  echo "../ink doesn't carry tools/ink/titankeys.patch. Build with tools/dev/build/play-bundle.sh, which makes an Ink with" >&2
+  echo "both patches." >&2
   exit 2
 fi
 

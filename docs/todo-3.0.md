@@ -126,7 +126,8 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
     - every phone check: the phone is locked;
     - #81's code rename, now done first thing in M2;
     - the Play bundle, because the private Ink in WSL lacks the TitanKeys patch, and fixing it would wipe its own
-      bundle patch. That's for the owner, since only the owner makes Play builds.
+      bundle patch. Fixed 2026-11-21: play-bundle.sh gets its own Ink with both patches (ink.sh), and a `--local`
+      3.0.0 bundle (code 60) builds and passes the 16 KB checks (docs/play/build-tasks.md). The upload key is the owner's.
   - **Waiting for the owner's hands:** #89, #93 and #84 by touch; #66's distance; #68's hunts; #72's Sym check; the panel
     page lines while paging.
 - **main at 58ce707 (03:50) has all of M1 and #83's rule.** It passes `bun run check` (222), all 41 test suites, the join

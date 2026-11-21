@@ -2,6 +2,18 @@
 
 For the build agent of workstream G (#36, #55). Research only so far: nothing here is built or changed yet. Inspected read-only on 2026-11-10: the Ink build copy in WSL (`~/build/ink`, commit `8a833ad`) and the TitanKeys repo (`X:\Atlas\.dev\titankeys`, branch `overnight` at `05696d9`, the same commit as `2.1.0`).
 
+**Status on 2026-11-21 (3.0.0):** the Play bundle builds. `tools/dev/build/play-bundle.sh [checkout] [--local]` asks
+`tools/dev/build/ink.sh` for an Ink with both `tools/ink/titankeys.patch` and `tools/ink-bundle.patch`
+(`~/build/ink-<hash>-<hash>`, made once from the clean `~/build/ink`), so no Ink another build uses is changed, and runs
+`tools/play.sh` in its own copy. A `--local` build (signed with the GitHub key, for checks only) from 17266d57 with this change:
+`dist/titankeys-keyboard-3.0.0-local.aab`, 274.6 MB (261.9 MB as Ink reports it), version code 60, `com.titankeys.build` =
+`play`, target SDK 36. `bundletool validate` passes; `dump config` shows `PAGE_ALIGNMENT_16K`; all 8 native libraries pass
+`tools/page-size.sh`, in the bundle and in a universal APK (`zipalign -c -P 16` ok). ONNX Runtime is 1.23.2, so section B is
+done. Play would send a Titan 269.5 MB (`bundletool get-size total`). The permissions match `permissions.md`. Still the
+owner's: `signing/upload.keystore` and `signing/upload-credentials.env`, then the same command without `--local`.
+
+The rest of this file is the research from 2026-11-10, kept as it was.
+
 **Ground rules** (from `AGENTS.md` and #55):
 
 - Build only in WSL `atlas-build` as `dev`. All sessions share one build lock (`~/build/ink/target/ink-android.lock`), and each build takes 4 to 5 minutes.

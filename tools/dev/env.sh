@@ -6,7 +6,6 @@ if [ -f "$TK_DEV/local.env" ]; then set -a; . "$TK_DEV/local.env"; set +a; fi
 : "${TK_ADB_SERIAL:=}" "${TK_ADB_HOST:=}"
 : "${TK_WSL_DISTRO:=atlas-build}" "${TK_WSL_USER:=dev}"
 : "${TK_BUILD:=$HOME/build}" "${TK_ENV_SCRIPT:=$HOME/titankeys-env.sh}"
-: "${TK_PLAY_INK:=$TK_BUILD/play/ink}"
 : "${TK_OUT:=$HOME/tk-out}"
 : "${TK_PRIVATE:=$HOME/tk-private/swipe-baseline}" "${TK_DATA:=$HOME/tk-data}"
 # ONNX Runtime's Android classes, which the phone tools compile against: the first known place that has the jar. The main
@@ -23,7 +22,7 @@ if [ -z "${TK_ORT:-}" ]; then
   unset tk_main tk_worktree_main tk_place
 fi
 : "${TK_GPU_HOST:=}" "${TK_GPU_KEY:=}"
-export TK_DEV TK_REPO TK_ADB_SERIAL TK_ADB_HOST TK_WSL_DISTRO TK_WSL_USER TK_BUILD TK_ENV_SCRIPT TK_PLAY_INK TK_OUT \
+export TK_DEV TK_REPO TK_ADB_SERIAL TK_ADB_HOST TK_WSL_DISTRO TK_WSL_USER TK_BUILD TK_ENV_SCRIPT TK_OUT \
   TK_PRIVATE TK_DATA TK_ORT TK_GPU_HOST TK_GPU_KEY
 [ -f "$TK_ENV_SCRIPT" ] && . "$TK_ENV_SCRIPT"
 # adb with the phone picked out, for the phone tools.

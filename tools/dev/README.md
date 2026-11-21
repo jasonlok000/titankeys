@@ -34,7 +34,7 @@ phone run:
 | `verify.sh build` | `bun run check`, every test that needs no phone, and a Debug build, in a throwaway copy. The last line is `RESULT: PASS` or `RESULT: FAIL`. | WSL |
 | `verify.sh phone` | All of `build`, then installs on the phone and runs the phone tests. | WSL, the phone awake and unlocked |
 | `try.sh <checkout> <command>` | Runs one command in its own throwaway copy, without the verify lock, so several runs can go at once (at most 4). | WSL |
-| `play-bundle.sh [checkout]` | Builds the Play bundle (`.aab`). | WSL, Julian's private Ink SDK |
+| `play-bundle.sh [checkout] [--local]` | Builds the Play bundle (`.aab`) with `tools/play.sh`, in its own copy, `~/build/copies/play/tk`. | WSL |
 | `keyboard.sh` | Selects TitanKeys Debug as the keyboard again after a reinstall. | the phone |
 | `compat.py` | Removes the few options that only the private Ink has, in a build copy. `verify.sh`, `try.sh` and `play-bundle.sh` run it. Never run it in the repo. | |
 | `rg` | Stands in for ripgrep where it isn't installed. | |
@@ -43,7 +43,7 @@ Each build uses an Ink that carries its own tree's `tools/ink/titankeys.patch` (
 
 `verify.sh` and `try.sh` build the checkout they sit in. Set `TK_WORKTREE=<path>` for `verify.sh` to build another one, such as a git worktree. Only one `verify.sh` or `play-bundle.sh` runs at a time on a machine: they share the build lock (see Locks).
 
-The Play bundle needs Julian's private Ink SDK, which isn't public and never goes in this repo. `play-bundle.sh` expects it at `TK_PLAY_INK` (default `~/build/play/ink`), patched with `tools/ink-bundle.patch`.
+The Play bundle needs an Ink with `tools/ink-bundle.patch` (`ink build --bundle`) on top of the tree's `tools/ink/titankeys.patch`. `play-bundle.sh` asks `ink.sh` for an Ink for both patches, `~/build/ink-<hash>-<hash>`, made once from the clean `~/build/ink` like any other, so the Ink that `verify.sh` and `try.sh` use for the same tree never changes. `TK_PLAY_COPY=<path>` builds in another copy, in a folder of its own. Without `signing/upload.keystore` (the owner's), `--local` signs with the GitHub key into `*-local.aab`, for checks only.
 
 ## phone
 

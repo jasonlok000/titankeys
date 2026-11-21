@@ -33,6 +33,17 @@ done
 [ "$(cat "$TK_BUILD/ink/core.txt")" = plain ] || fail "the clean checkout was patched"
 [ "$(ls -d "$TK_BUILD"/ink-*/ | wc -l)" = 3 ] || fail "not one Ink per patch"
 
+# A further patch, as the Play bundle adds, gets an Ink of its own with both, and no other build's Ink changes.
+printf 'diff --git a/extra.txt b/extra.txt\nnew file mode 100644\n--- /dev/null\n+++ b/extra.txt\n@@ -0,0 +1 @@\n+bundle\n' \
+  > "$work/bundle.patch"
+copy=$(tk_ink_copy_dir play "")
+cp -a "$work/tree-a/." "$copy/"
+( tk_ink_use "$copy" "$work/bundle.patch" 2>/dev/null
+  [ "$(cat "$copy/../ink/core.txt")" = "patched a" ] || fail "the bundle's Ink lost the copy's own patch"
+  [ "$(cat "$copy/../ink/extra.txt")" = bundle ] || fail "the bundle's Ink doesn't carry the further patch"
+  case "$(readlink "$TK_BUILD/copies/play/ink")" in */ink-[0-9a-f]*-[0-9a-f]*) ;; *) fail "the bundle's Ink isn't its own" ;; esac )
+[ ! -e "$(readlink "$TK_BUILD/copies/try-a/ink")/extra.txt" ] || fail "the further patch went into another build's Ink"
+
 # Pruning keeps TK_INK_KEEP, never one in use, never another ink-* folder.
 ( exec 6>"$(ls -d "$TK_BUILD"/ink-[0-9a-f]*/ | head -1 | sed 's#/$##').lock"; flock -s 6
   TK_INK_KEEP=0 tk_ink_prune none

@@ -94,6 +94,21 @@ internal fun appPressHaptic(view: android.view.View): Boolean {
 /** The live Settings screen's [InkPress], while it lives. */
 private var inkPress: InkPress? = null
 
+/**
+ * Back with no page under this one. Opened from the playground, the top of Settings is alone on Ink's stack, so Back closed the app;
+ * it goes to the front page instead, as × does, and the front page brings the playground back (owner, 2026-11-21: "backing from
+ * settings shdn't quit the app. it shd go back to playground as that's the home page"). The top of Settings says when it's showing
+ * ("backToFront"); everywhere else Back at the bottom still closes the app.
+ */
+internal fun appBackAtRoot(activity: MainActivity): Boolean {
+    if (backToFront?.get() !== activity) return false
+    activity.emit(JSONObject().put("type", "titankeys-back-front").toString())
+    return true
+}
+
+/** The screen whose top of Settings is open, which Back at the bottom of its stack sends to the front page. */
+private var backToFront: java.lang.ref.WeakReference<MainActivity>? = null
+
 internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> =
     mapOf("titankeys" to TitanKeysAdapter(activity), "connected" to ConnectedAdapter(activity))
 
@@ -306,6 +321,12 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             // Asynchronous engine operations complete through their own outcome callback.
             val result: String? = when (operation) {
                 "state" -> state().toString()
+                // The top of Settings is showing, or went: see [appBackAtRoot].
+                "backToFront" -> {
+                    backToFront = if (data.optBoolean("on")) java.lang.ref.WeakReference(activity)
+                        else backToFront?.takeIf { it.get() !== activity }
+                    "null"
+                }
                 "supportState" -> supportState().toString()
                 // The support page, a bundled offline HTML page in its own WebView screen: "page" or "popup" (SupportWebActivity).
                 "supportOpen" -> {

@@ -1960,7 +1960,7 @@ index aa4bc3b3d4cea8c33e90bbd2f80f5d49f886be92..23bfc4bea5cc781f744cfb3fc38a070d
      external fun nativeScrollBy(handle: Long, delta: Float): Boolean
  
 diff --git a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
-index 46ad2035a65f96b61f88e626b4af84ae3037af3e..0688f9a210bb520bc34259c203887bf3c20631b7 100644
+index 46ad2035a65f96b61f88e626b4af84ae3037af3e..8f46ac10db4ac90eca5e0fb87a4fbdc669c243b0 100644
 --- a/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 +++ b/platform/android/app/src/main/kotlin/com/vandam/ink/MainActivity.kt
 @@ -1,6 +1,7 @@
@@ -1999,7 +1999,17 @@ index 46ad2035a65f96b61f88e626b4af84ae3037af3e..0688f9a210bb520bc34259c203887bf3
      @Suppress("DEPRECATION")
      override fun onBackPressed() {
          handleBack()
-@@ -136,8 +158,10 @@ class MainActivity : Activity(), InkJavaScriptHost {
+@@ -97,7 +119,8 @@ class MainActivity : Activity(), InkJavaScriptHost {
+             return
+         }
+         if (engineHandle == 0L || !InkNative.nativeBack(engineHandle)) {
+-            finish()
++            // Nothing left to go back to: the app may go somewhere of its own instead of closing (appBackAtRoot).
++            if (!appBackAtRoot(this)) finish()
+         } else {
+             inkView.requestFrame()
+             syncNativePortals()
+@@ -136,8 +159,10 @@ class MainActivity : Activity(), InkJavaScriptHost {
                  if (textInputAdapter.hasEditor) syncTextInput()
              }
              override fun presented() = textInputAdapter.framePresented()
@@ -2011,7 +2021,7 @@ index 46ad2035a65f96b61f88e626b4af84ae3037af3e..0688f9a210bb520bc34259c203887bf3
          root = FrameLayout(this).apply {
              addView(
                  inkView,
-@@ -422,7 +446,7 @@ class MainActivity : Activity(), InkJavaScriptHost {
+@@ -422,7 +447,7 @@ class MainActivity : Activity(), InkJavaScriptHost {
      }
  
      internal fun performInteractionHaptic() {
@@ -2020,7 +2030,7 @@ index 46ad2035a65f96b61f88e626b4af84ae3037af3e..0688f9a210bb520bc34259c203887bf3
      }
  
      private fun executeJavaScriptCall(call: JSONObject) {
-@@ -571,6 +595,8 @@ class MainActivity : Activity(), InkJavaScriptHost {
+@@ -571,6 +596,8 @@ class MainActivity : Activity(), InkJavaScriptHost {
  
      override fun onResume() {
          super.onResume()
@@ -2085,10 +2095,10 @@ index 0000000000000000000000000000000000000000..a419266cda8f5928fe96f8e9366d16cf
 +    }
 +}
 diff --git a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
-index c882a51c100cb72226c30f2188a32ee7c184d1b1..0b92d3be7719a748e32df17c1abf928700f75fb0 100644
+index c882a51c100cb72226c30f2188a32ee7c184d1b1..255ecf0bed0085aa68cb19c390ba133f4b4db0ef 100644
 --- a/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
 +++ b/platform/android/app/src/noAppNative/kotlin/com/vandam/ink/AppNativeAdapters.kt
-@@ -1,3 +1,16 @@
+@@ -1,3 +1,19 @@
  package com.vandam.ink
  
 +import android.content.Context
@@ -2103,6 +2113,9 @@ index c882a51c100cb72226c30f2188a32ee7c184d1b1..0b92d3be7719a748e32df17c1abf9287
 +
 +/** The app's own accent as ARGB, in place of the theme's; 0 keeps the theme's. */
 +internal fun appAccent(context: android.content.Context): Int = 0
++
++/** Back with no page left to go back to: true if the app went somewhere of its own, so the screen stays open. */
++internal fun appBackAtRoot(activity: MainActivity): Boolean = false
 +
  internal fun createAppNativeAdapters(activity: MainActivity): Map<String, NativeAdapter> = emptyMap()
 diff --git a/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt b/platform/android/app/src/textInput/kotlin/com/vandam/ink/SystemKeyboardAdapter.kt

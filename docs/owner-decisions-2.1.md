@@ -1016,3 +1016,6 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - **Modifier bar in Chinese (2026-11-21):** "the alt modifier bar is not working now with chinese language ... it should work".
   Shift, Alt and Ctrl taking the bar win over an engine's row with no code, as over words in English; a row with a code keeps it.
 - **Support page custom amount (2026-11-21):** the "whole pot" line sat on "10 cups"; it's in the flow under the cups now.
+- **Back from Settings (2026-11-21):** "backing from settings shdn't quit the app. it shd go back to playground as that's the home
+  page." Back at the top of Settings with nothing under it goes where × goes, the front page and its playground; the top of
+  Settings still has no ←. Ink asks the app before closing (appBackAtRoot, tools/ink/titankeys.patch).

@@ -490,6 +490,19 @@ export function openPlayground(closed: (action: PlaygroundExit) => void, fromEnd
   return stop;
 }
 
+/**
+ * While the top of Settings shows, Back with no page under it calls `go` instead of closing the app (owner, 2026-11-21: "backing
+ * from settings shdn't quit the app"). Returns the stop, for when the page goes.
+ */
+export function backToFrontPage(go: () => void) {
+  void titankeys("backToFront", { on: true });
+  const stop = onNativeMessage("titankeys-back-front", go);
+  return () => {
+    stop();
+    void titankeys("backToFront", { on: false });
+  };
+}
+
 /** Opens the guide at its end screen, as it was left: Back from a page the end opened (app/end/index.tsx). */
 export const openGuideEnd = () => titankeys("guideEnd");
 

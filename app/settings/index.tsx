@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Field, Screen, Section, navigate, replace, setRouteParents, useAction, useSnapshot } from "ink";
 import { Toggle } from "../../lib/app-haptics";
 import { close } from "ink/icons";
-import { showKeyCalibration, state, update } from "../../lib/titankeys";
+import { backToFrontPage, showKeyCalibration, state, update } from "../../lib/titankeys";
 import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
@@ -34,6 +34,8 @@ export default function Settings() {
   const connected = useSnapshot(connectedState);
   const save = useAction(update);
   const closeAction = { icon: close, onPress: () => replace("/") };
+  // Back with nothing under the top of Settings goes where × goes, the front page and its playground, not out of the app.
+  useEffect(() => backToFrontPage(() => replace("/")), []);
   // The note after a reset stays until you leave Settings.
   useEffect(() => () => { resetDone.shown = false; }, []);
   // A setting turned on in Android's own screens shows at once when Settings comes back (lib/system-needs.tsx).

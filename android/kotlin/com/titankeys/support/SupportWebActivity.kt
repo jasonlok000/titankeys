@@ -167,9 +167,13 @@ class SupportWebActivity : Activity() {
         // dropped then would leave the page blank for good.
         override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
             pageReady = SupportWebAssets.assetPath(url) != null
+            takeEarly()
         }
 
-        override fun onPageFinished(view: WebView, url: String) = sendCut()
+        override fun onPageFinished(view: WebView, url: String) {
+            takeEarly()
+            sendCut()
+        }
 
         private fun refused() = WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     }
@@ -178,18 +182,40 @@ class SupportWebActivity : Activity() {
     private inner class Bridge {
         @JavascriptInterface
         fun post(message: String?) {
-            main.post {
-                // Only the page itself, under its own origin, may ask.
-                if (isFinishing || !pageReady || SupportWebAssets.assetPath(web.url.orEmpty()) == null) return@post
-                val request = try {
-                    SupportWebProtocol.parse(message.orEmpty())
-                } catch (error: SupportBadRequest) {
-                    send(SupportWebProtocol.failure(error.id, error.code))
-                    return@post
-                }
-                handle(request)
-            }
+            main.post { take(message.orEmpty()) }
         }
+    }
+
+    /**
+     * The page's script asks for its board and state while it is still loading, and its message can reach the main thread before
+     * onPageStarted does: dropped, it left the page blank for good, 6 opens in 15 on the phone (2026-11-20). A message from before
+     * the page counts as ours waits, a few at most, and goes once it does; a page that isn't ours never gets them.
+     */
+    private val early = ArrayDeque<String>()
+
+    private fun take(message: String) {
+        if (isFinishing) return
+        // Only the page itself, under its own origin, may ask.
+        if (!pageReady || SupportWebAssets.assetPath(web.url.orEmpty()) == null) {
+            if (early.size < EARLY_MAX) early.addLast(message)
+            return
+        }
+        val request = try {
+            SupportWebProtocol.parse(message)
+        } catch (error: SupportBadRequest) {
+            send(SupportWebProtocol.failure(error.id, error.code))
+            return
+        }
+        handle(request)
+    }
+
+    /** The page is ours now, or isn't: the waiting messages go, or are dropped. */
+    private fun takeEarly() {
+        if (early.isEmpty()) return
+        val waiting = early.toList()
+        early.clear()
+        if (!pageReady || SupportWebAssets.assetPath(web.url.orEmpty()) == null) return
+        waiting.forEach(::take)
     }
 
     private fun handle(request: SupportRequest) {
@@ -343,6 +369,8 @@ class SupportWebActivity : Activity() {
         const val PREVIEW_FIXTURE = "com.titankeys.debug.supportPreview"
         private const val BRIDGE = "TitanKeysSupport"
         private const val PAGE = 20
+        /** Messages from before the page counts as ours that wait for it: the start's board and state, with room to spare. */
+        private const val EARLY_MAX = 8
         /** The page's own content only: no scripts, styles, images or fonts from anywhere else, and no requests out. */
         private const val CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data:; font-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"

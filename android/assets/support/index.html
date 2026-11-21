@@ -1200,13 +1200,23 @@ events.receipt = async receipt => {
 };
 events.state = data => { state = data; reduce = reduce || !!data.reduceMotion; drawTiers(); };
 
+// A screen never waits for the app for good: an answer that doesn't come in time counts as the board offline, or the state
+// as it was, and a late answer still updates it through its event. A screen that waited for an answer that never came stayed
+// black (owner, 2026-11-20: "Sometimes it opens blank").
+const ANSWER_MILLIS = 6000;
+const within = (promise, fallback) => Promise.race([promise.catch(() => fallback),
+  new Promise(resolve => setTimeout(() => resolve(fallback), ANSWER_MILLIS))]);
+const OFFLINE_BOARD = { available: false, entries: [] };
+// In the app, a state that didn't come is never the samples: no prices, and the button waits for Play.
+const waitingState = () => native && state === SAMPLE.state ? { products: [], totalCents: 0, billing: "waiting", reduceMotion: false } : state;
+
 async function route(id) {
   // In the app, Settings is behind this screen: going back closes it.
   if (id === "settings" && native) { api.close(); return; }
-  if (id === "support") { board = await api.board(); state = await api.state(); drawBoardPreview(); drawTiers(); }
-  if (id === "board" || id === "fund") { board = await api.board(); drawBoardFull(id === "fund" || !!state.supporter); show("board"); return; }
+  if (id === "support") { board = await within(api.board(), OFFLINE_BOARD); state = await within(api.state(), waitingState()); drawBoardPreview(); drawTiers(); }
+  if (id === "board" || id === "fund") { board = await within(api.board(), OFFLINE_BOARD); drawBoardFull(id === "fund" || !!state.supporter); show("board"); return; }
   if (id === "custom") drawCustom();
-  if (id === "popup") { if (native) state = await api.state(); drawPopup(await api.stats()); }
+  if (id === "popup") { if (native) state = await within(api.state(), waitingState()); drawPopup(await api.stats()); }
   if (id === "optin") drawOptin(paidRank || (native ? 101 : sampleRank(selected()?.cents || 0)));
   show(id);
 }

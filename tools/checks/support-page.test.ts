@@ -12,6 +12,16 @@ test("the support WebView keeps its own drawing, with no debug switches", async 
   expect(activity).toContain("web = WebView(this)");
 });
 
+test("the page's first messages wait for its start, and no screen waits for an answer for good", async () => {
+  // Blank 6 opens in 15 (2026-11-20): the board's request reached the main thread before onPageStarted, and was dropped.
+  const activity = await read("android/kotlin/com/titankeys/support/SupportWebActivity.kt");
+  expect(activity).toContain("if (early.size < EARLY_MAX) early.addLast(message)");
+  expect(activity.match(/takeEarly\(\)/g)?.length).toBeGreaterThanOrEqual(3);
+  const page = await read("android/assets/support/index.html");
+  expect(page).not.toMatch(/board = await api\.board\(\)|state = await api\.state\(\)/);
+  expect(page).toContain("board = await within(api.board(), OFFLINE_BOARD)");
+});
+
 test("the support page makes its decor before it asks for the insets controller", async () => {
   // Before setContentView the decor may not exist, and the page crashed as it opened (dropbox, 2026-11-20).
   const activity = await read("android/kotlin/com/titankeys/support/SupportWebActivity.kt");

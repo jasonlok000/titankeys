@@ -21,8 +21,12 @@ test("the WebView loads only the page's assets: everything else gets an empty 40
 });
 
 test("every bridge message is checked before it runs, and only from the page's own origin", () => {
-  expect(activity).toContain("if (isFinishing || !pageReady || SupportWebAssets.assetPath(web.url.orEmpty()) == null) return@post");
-  expect(activity).toContain("SupportWebProtocol.parse(message.orEmpty())");
+  // A message from before the page counts as ours waits for it instead of running (or, as before, being dropped: the page
+  // then stayed blank, 2026-11-20); it runs only once the page is ours, through the same check.
+  expect(activity).toContain("if (!pageReady || SupportWebAssets.assetPath(web.url.orEmpty()) == null) {");
+  expect(activity).toContain("if (!pageReady || SupportWebAssets.assetPath(web.url.orEmpty()) == null) return\n        waiting.forEach(::take)");
+  expect(activity).toContain("SupportWebProtocol.parse(message)");
+  expect(activity).toContain("main.post { take(message.orEmpty()) }");
   expect(activity).toMatch(/@JavascriptInterface\s+fun post\(message: String\?\)/);
   expect(activity.match(/@JavascriptInterface/g)).toHaveLength(1);
   expect(activity).toContain("web.evaluateJavascript(SupportWebProtocol.deliver(message), null)");

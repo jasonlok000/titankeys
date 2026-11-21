@@ -14,7 +14,8 @@ import kotlin.math.sin
  * guide's colours, resting on the shaded patch where the taps count ([CursorGesture.inZone]), and a row of boxes over it that
  * light as each tap lands: 1, then "2 · HOLD", the last tap and its hold one box, as one tap-and-hold (owner, 2026-11-16: "2 and
  * hold or 3 and hold shd be the same box, maybe even like tap-hold"); 1, 2, "3 · HOLD" on the select slide. The last box
- * lights as brightly as the tap boxes. Once the mode registers, the earlier cues go out and the thumb shows where to slide.
+ * lights as brightly as the tap boxes. Once the mode registers, every box stays lit while the finger is held, in the showing and
+ * for real alike, and the thumb shows where to slide (owner, 2026-11-21: the showing and real use didn't light the same boxes).
  *
  * Paths, rects and text only, so tests/guide's slide renders draw it with the same stand-in Canvas as the decorations.
  */
@@ -24,8 +25,8 @@ class GuideTapDrawing(private val font: Typeface? = null) {
      * (down on the keys), and [slide] of the way through the drag to the left, from 0 to 1.
      */
     data class Pose(val taps: Int, val landed: Int = 0, val held: Boolean = false, val press: Float = 0f, val slide: Float = 0f) {
-        /** Only the hold cue stays lit after the mode starts. */
-        fun lit(box: Int) = if (held) box == taps - 1 else box < landed
+        /** Every box stays lit while the mode is on, until the lift. */
+        fun lit(box: Int) = if (held) box < taps else box < landed
     }
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -154,8 +155,9 @@ class GuideTapDrawing(private val font: Typeface? = null) {
          * The slide's own showing, at the keyboard's own speed, so it shows how quick the taps must be (owner, 2026-11-16: "The
          * animations shd reflect the speed for this to be triggered"): each tap down for [DEMO_TAP_MILLIS], the next
          * [DEMO_GAP_MILLIS] after it lifts, inside the keyboard's [TapMeter.KEYBOARD_GAP_MILLIS]. The last stays down; its box
-         * fills [DEMO_HOLD_LIGHT_MILLIS] in, as the keyboard registers the hold; with [drag] the thumb then slides left. Then it
-         * rests, and the showing starts again. [millis] is the time into the showing.
+         * fills [DEMO_HOLD_LIGHT_MILLIS] in, as the keyboard registers the hold; with [drag] the thumb then slides left, all the
+         * boxes lit, and lifts at the end, the boxes going out with it, as a real lift does. Then it rests, and the showing starts
+         * again. [millis] is the time into the showing. The field's own demo follows the same clock: see [demoSlid].
          */
         fun demoAt(millis: Long, taps: Int, drag: Boolean): Pose {
             val t = millis.mod(demoMillis(taps, drag))
@@ -171,8 +173,26 @@ class GuideTapDrawing(private val font: Typeface? = null) {
             if (held < DEMO_HOLD_LIGHT_MILLIS) return Pose(taps, taps, press = 1f)
             val sliding = held - DEMO_HOLD_LIGHT_MILLIS - DEMO_HOLD_MILLIS
             if (!drag || sliding < 0) return Pose(taps, taps, held = true, press = 1f)
+            if (sliding >= DEMO_SLIDE_MILLIS) return Pose(taps)
             return Pose(taps, taps, held = true, press = 1f, slide = ease((sliding.toFloat() / DEMO_SLIDE_MILLIS).coerceIn(0f, 1f)))
         }
+
+        /**
+         * How far the showing's thumb has slid at [millis], from 0 to 1, and 1 after it lifts: the field's caret and selection move
+         * with the thumb, on its clock, instead of on their own after it had stopped (owner, 2026-11-21: "the finger should slide
+         * after 2. hold in the demo. right now it's held still").
+         */
+        fun demoSlid(millis: Long, taps: Int, drag: Boolean): Float {
+            val sliding = millis.mod(demoMillis(taps, drag)) - demoHeldAt(taps) - DEMO_HOLD_MILLIS
+            return if (!drag || sliding < 0) 0f else ease((sliding.toFloat() / DEMO_SLIDE_MILLIS).coerceIn(0f, 1f))
+        }
+
+        /** The showing's last tap has landed by [millis]: three taps pick the word in front as the third lands. */
+        fun demoLanded(millis: Long, taps: Int, drag: Boolean) =
+            millis.mod(demoMillis(taps, drag)) >= (taps - 1) * (DEMO_TAP_MILLIS + DEMO_GAP_MILLIS)
+
+        /** When the showing's hold registers, into the showing. */
+        private fun demoHeldAt(taps: Int) = (taps - 1) * (DEMO_TAP_MILLIS + DEMO_GAP_MILLIS) + DEMO_HOLD_LIGHT_MILLIS
 
         /** How long one showing lasts, its rest at the end included. */
         fun demoMillis(taps: Int, drag: Boolean) =
@@ -196,8 +216,8 @@ class GuideTapDrawing(private val font: Typeface? = null) {
         const val DEMO_GAP_MILLIS = 110L
         /** The last tap down this long before its box fills: the keyboard registers a hold at 70 ms. */
         const val DEMO_HOLD_LIGHT_MILLIS = 120L
-        /** Then held, still, before the slide. */
-        const val DEMO_HOLD_MILLIS = 500L
+        /** Then held, still, before the slide: short, so the slide plainly follows the hold (owner, 2026-11-21). It was 500 ms. */
+        const val DEMO_HOLD_MILLIS = 200L
         const val DEMO_SLIDE_MILLIS = 900L
         const val LIVE_SLIDE_MILLIS = 650L
         const val DEMO_REST_MILLIS = 1600L

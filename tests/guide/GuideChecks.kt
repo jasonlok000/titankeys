@@ -2216,7 +2216,9 @@ private fun theGuideForNewcomers() {
     same(meter.down(1_200), false, "The second, 120 ms on, is quick enough")
     same(meter.landed, 2, "and lights 2")
     meter.hold(1_270)
-    same(meter.visibleTaps(1_270), 0, "When the hold activates, the earlier steps turn off")
+    same(meter.visibleTaps(1_270), 0, "Held, the taps aren't counted as pending: the held pose lights every box instead")
+    // The cursor's own trace starts as the slide begins: the same finger, still held, not a new tap (owner, 2026-11-21).
+    same(meter.down(1_400) to meter.held, false to true, "The slide's trace keeps the hold")
     meter.up(2_000, tap = false)
     same(meter.landed to meter.held, 0 to false, "A lift after the hold starts again")
     meter.down(3_000)
@@ -2245,7 +2247,9 @@ private fun theGuideForNewcomers() {
     same(List(2) { GuideTapDrawing.label(it, 2) }, listOf("1", "2 · HOLD"), "The cursor slide's boxes")
     same(List(3) { GuideTapDrawing.label(it, 3) }, listOf("1", "2", "3 · HOLD"), "The select slide's")
     same(GuideTapDrawing.Pose(2, 2).let { List(2, it::lit) }, listOf(true, true), "The last tap uses the same full colour")
-    same(GuideTapDrawing.Pose(2, 2, held = true).let { List(2, it::lit) }, listOf(false, true), "Held: only the fully lit hold cue remains")
+    // Held, every box stays lit, in the showing and for real alike (owner, 2026-11-21).
+    same(GuideTapDrawing.Pose(2, 2, held = true).let { List(2, it::lit) }, listOf(true, true), "Held: every box stays lit")
+    same(GuideTapDrawing.Pose(3, held = true).let { List(3, it::lit) }, listOf(true, true, true), "on the select slide too")
     same(GuideTapDrawing.Pose(2, 1).let { listOf(it.lit(0), it.lit(1)) }, listOf(true, false), "Pose: 1 lit")
     // Its showing, at the keyboard's own speed: taps 90 ms down, 110 ms apart, inside the keyboard's 200 ms.
     same(GuideTapDrawing.DEMO_GAP_MILLIS < TapMeter.KEYBOARD_GAP_MILLIS && GuideTapDrawing.DEMO_TAP_MILLIS <= 130, true,
@@ -2254,8 +2258,22 @@ private fun theGuideForNewcomers() {
     same(GuideTapDrawing.demoAt(150, 2, drag = true).let { it.landed to it.press }, 1 to 0f, "lifts")
     same(GuideTapDrawing.demoAt(210, 2, drag = true).let { it.landed to it.lit(1) }, 2 to true, "the second lands at full colour")
     same(GuideTapDrawing.demoAt(200 + 130, 2, drag = true).held, true, "and fills as the keyboard registers the hold")
-    same(GuideTapDrawing.demoAt(200 + 120 + 500 + 450, 2, drag = true).slide > 0f, true, "then the slide to the left")
-    same(GuideTapDrawing.demoAt(200 + 120 + 500 + 900 + 100, 2, drag = true).slide, 1f, "all the way")
+    // The slide follows the hold at once, all the boxes lit, then the thumb lifts and they go out (owner, 2026-11-21: "the
+    // finger should slide after 2. hold in the demo"). It used to finish the slide and stay down, still, through the rest.
+    val slideFrom = 200 + GuideTapDrawing.DEMO_HOLD_LIGHT_MILLIS + GuideTapDrawing.DEMO_HOLD_MILLIS
+    same(GuideTapDrawing.DEMO_HOLD_MILLIS <= 200L, true, "The thumb slides soon after the hold registers")
+    same(GuideTapDrawing.demoAt(slideFrom + 450, 2, drag = true).let { it.slide > 0f && List(2, it::lit) == listOf(true, true) }, true,
+        "then the slide to the left, every box lit")
+    same(GuideTapDrawing.demoAt(slideFrom + GuideTapDrawing.DEMO_SLIDE_MILLIS - 1, 2, drag = true).slide > .99f, true, "all the way")
+    same(GuideTapDrawing.demoAt(slideFrom + GuideTapDrawing.DEMO_SLIDE_MILLIS + 100, 2, drag = true).let { it.held || it.landed > 0 }, false,
+        "then it lifts, and the boxes go out")
+    // The field's caret moves on the same clock as the thumb.
+    same(GuideTapDrawing.demoSlid(slideFrom - 1, 2, drag = true), 0f, "The caret waits for the slide")
+    same(GuideTapDrawing.demoSlid(slideFrom + 450, 2, drag = true), GuideTapDrawing.demoAt(slideFrom + 450, 2, drag = true).slide,
+        "and moves with the thumb")
+    same(GuideTapDrawing.demoSlid(slideFrom + GuideTapDrawing.DEMO_SLIDE_MILLIS + 100, 2, drag = true), 1f, "and stays there after the lift")
+    same("cue is GuideCue.Taps -> GuideTapDrawing.demoMillis(cue.count, cue.drag)" in File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText(),
+        true, "The field's demo lasts one showing of the thumb")
     same(GuideTapDrawing.demoAt(GuideTapDrawing.demoMillis(2, true), 2, drag = true).landed, 1, "and again")
     same(GuideTapDrawing.demoAt(410, 3, drag = true).let { it.landed to it.held }, 3 to false, "The select slide's third tap lands")
     same("GuideTapDrawing.demoAt(now - cueStart, taps.count, taps.drag)" in File("android/kotlin/com/titankeys/keyboard/GuideKeyboardView.kt").readText(),
@@ -2270,7 +2288,7 @@ private fun theGuideForNewcomers() {
         same(cues.down(1350), true, "An expired cue still coaches a slow next tap")
         cues.hold(1420)
         val pose = GuideTapDrawing.liveAt(cues, 1720, drag = true, left = true, animate = true)!!
-        same(List(count, pose::lit), List(count) { it == count - 1 }, "Only HOLD is lit on each cursor lesson")
+        same(List(count, pose::lit), List(count) { true }, "Every box is lit while held, on each cursor lesson")
         same(pose.slide in 0.1f..0.9f, true, "The live thumb is already sliding left during the hold")
         same(GuideTapDrawing.liveAt(cues, 1720, true, false, true)?.slide, -pose.slide, "A rightward goal points right")
         same(GuideTapDrawing.liveAt(cues, 1420, true, true, false)?.slide, 1f, "Reduce motion shows the final position immediately")

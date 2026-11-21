@@ -93,7 +93,7 @@ internal class TapMeter(val taps: Int) {
     /** Taps landed so far, the one down now included, from 0 to [taps]. */
     var landed = 0
         private set
-    /** The last tap stayed down and the cursor started. */
+    /** The last tap stayed down and cursor mode is on: when the keyboard said so. */
     var heldAt = -1L
         private set
     val held get() = heldAt >= 0
@@ -116,6 +116,10 @@ internal class TapMeter(val taps: Int) {
      * shd tell me").
      */
     fun down(time: Long): Boolean {
+        // Held, the finger hasn't lifted: this is the cursor's own trace starting as the slide begins, not a new tap. It used to
+        // start the count again, so the boxes lit 1 for a moment and went out mid-slide (owner, 2026-11-21: "it stayed on for a
+        // split second and then turns off by itself").
+        if (held) return false
         heldAt = -1L
         downAt = time
         val gap = if (lastUp >= 0) time - lastUp else -1L
@@ -133,7 +137,7 @@ internal class TapMeter(val taps: Int) {
         }
     }
 
-    /** The cursor started, so the earlier tap cues have served their purpose. */
+    /** Cursor mode is on: every box stays lit until the finger lifts. */
     fun hold(time: Long) {
         if (!held) heldAt = time
         landed = taps

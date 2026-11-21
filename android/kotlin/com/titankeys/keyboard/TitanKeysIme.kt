@@ -100,6 +100,8 @@ class TitanKeysIme : InputMethodService() {
     private var tripleDown = false
     /** The touch of a Space gesture registered before any slide, so the strip shows it and its feel has played. */
     private var gestureRegistered = false
+    /** This touch has told screens that cursor mode is on, so it says it once. See [announceCursor]. */
+    private var cursorAnnounced = false
     /** This touch's Space gesture found nothing to work on, played its no, and does nothing more. See [nothingToPick]. */
     private var gestureEmpty = false
     /** This touch's gesture was refused by the guide's slide, which has said so: the rest of the touch says nothing more. */
@@ -644,7 +646,7 @@ class TitanKeysIme : InputMethodService() {
             return
         }
         Recording.sink?.gesture("drag", samples.lastOrNull()?.time ?: SystemClock.uptimeMillis(), "words=${drag.words}")
-        KeyboardEvents.publish { KeyboardEvent.CursorStarted(drag.words) }
+        announceCursor(drag.words)
         tally(if (drag.words) "gesture.selectWords" else "gesture.steer")
         cursor.start(drag.landed, drag.words)
         cursorSteps.reset()
@@ -663,6 +665,18 @@ class TitanKeysIme : InputMethodService() {
         stepCursor.run()
     }
 
+    /**
+     * Tells screens that cursor mode is on, once per touch: as the hold registers, or at the first slide if the slide came first.
+     * It used to wait for the slide, so the guide said "slide" late and dropped its tap boxes while the finger was already held
+     * (owner, 2026-11-21: "the description doesn't say slide until like some time, even tho I already triggered the cursor mode").
+     * Only the guide listens; the keyboard itself does the same either way.
+     */
+    private fun announceCursor(words: Boolean) {
+        if (cursorAnnounced) return
+        cursorAnnounced = true
+        KeyboardEvents.publish { KeyboardEvent.CursorStarted(words) }
+    }
+
     private val registerGestureLater = Runnable { registerGesture(SystemClock.uptimeMillis()) }
 
     /**
@@ -675,6 +689,8 @@ class TitanKeysIme : InputMethodService() {
         // A triple press registered as it landed, in [pickOnLand]; once it has stayed down this long it glows as held, every time,
         // whether or not a slide follows (owner, 2026-11-12).
         if (taps >= 3 && tripleDown && !gestureEmpty) strip?.gesture?.pickHeldGlow(now)
+        // That held glow is select mode on: the guide hears it now, not at the first slide.
+        if (taps >= 3 && tripleDown && !gestureEmpty) announceCursor(words = true)
         if (taps == 0 || gestureRegistered || gestureEmpty) return
         val words = taps >= 3
         // A guide slide that doesn't teach steering or selecting yet: the bar shows it registered, then the slide refuses it.
@@ -696,6 +712,7 @@ class TitanKeysIme : InputMethodService() {
         gestureRegistered = true
         Recording.sink?.gesture("registered", now, "taps=$taps")
         haptics.play(Haptic.registered(words, nothing = false))
+        announceCursor(words)
         // With text selected, steering starts from where the cursor was before the select, or the selection's end.
         if (!words && collapseSelection()) enqueue { readCursorText() }
         else if (words) readWordsAroundCursor() else readCursorText()
@@ -2924,6 +2941,7 @@ class TitanKeysIme : InputMethodService() {
                 swipeShown = 0
                 gestureRegistered = false
                 gestureEmpty = false
+                cursorAnnounced = false
                 main.removeCallbacks(registerGestureLater)
                 if (cursorGesture.touchPending) {
                     gestureLanded = first

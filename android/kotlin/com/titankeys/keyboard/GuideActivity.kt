@@ -1557,6 +1557,10 @@ class GuideActivity : Activity() {
             // 2026-11-13: the front page's keys lost their bottom row to the bar).
             if (playground) visibility = View.GONE
             gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            // Next rises 8 dp into place and pulses to 112% as it shows: both go past this row's edges, which cut it off
+            // (owner, 2026-11-21: "The next button gets cropped when it shows up").
+            clipChildren = false
+            clipToPadding = false
             addView(offer, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             addView(next, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 marginStart = dp(12)
@@ -1581,6 +1585,9 @@ class GuideActivity : Activity() {
         // the keys stay put.
         block = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            // Next is its last row, so its rise and pulse go past the block's bottom too: nothing here may cut them off.
+            clipChildren = false
+            clipToPadding = false
             addView(title, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(instruction, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(12) })
             addView(hint, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
@@ -2737,7 +2744,12 @@ class GuideActivity : Activity() {
         val cue = ghostCue(stageCue)
         if (cue != keys.cue) keys.show(cue)
         demoStart = GuideMotion.now()
-        demoLength = if (hasGhost) maxOf(keys.ghostMillis(), DEMO_MILLIS) else DEMO_MILLIS
+        // The Space-tap slides' demo lasts one showing of the thumb on the keys, so the field's caret moves as the thumb slides.
+        demoLength = when {
+            cue is GuideCue.Taps -> GuideTapDrawing.demoMillis(cue.count, cue.drag)
+            hasGhost -> maxOf(keys.ghostMillis(), DEMO_MILLIS)
+            else -> DEMO_MILLIS
+        }
         demoKeys = 0
         demoTurned = false
         demoPushes = null
@@ -2769,6 +2781,16 @@ class GuideActivity : Activity() {
             for (key in MENU_UP_KEYS) keys.light(key)
         }
         main.postDelayed(demoTick, DEMO_FRAME_MILLIS)
+    }
+
+    /**
+     * How far the demo's move has gone at [t], from 0 to 1. On a Space-tap slide it's the thumb's slide on the keys, so the caret
+     * moves while the thumb slides, after the hold (owner, 2026-11-21: "the finger should slide after 2. hold in the demo"); it
+     * used to start at [TAPS_SHARE] of a longer demo, after the thumb had stopped.
+     */
+    private fun tapSlid(t: Float): Float {
+        val taps = keys.cue as? GuideCue.Taps ?: return (t - TAPS_SHARE).coerceAtLeast(0f) / (1f - TAPS_SHARE)
+        return GuideTapDrawing.demoSlid((t * demoLength).toLong(), taps.count, taps.drag)
     }
 
     private fun endDemo() {
@@ -2852,14 +2874,26 @@ class GuideActivity : Activity() {
                 built.setSpan(BackgroundColorSpan(fieldFill()), gone.first, gone.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             GuideDemo.MoveCursor -> if (lastEnd > 0) {
-                val back = ((t - TAPS_SHARE).coerceAtLeast(0f) / (1f - TAPS_SHARE) * (lastEnd - lastStart + 1)).toInt()
+                val back = (tapSlid(t) * (lastEnd - lastStart + 1)).toInt()
                 val at = (lastEnd - back).coerceIn(1, lastEnd)
                 built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, CARET_ALPHA)), at - 1, at, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             // What the taps select: the last word, or the words the slide marks, as a real select takes them.
-            GuideDemo.SelectLast, GuideDemo.SelectTarget -> demoRange(demo, text, field.target)?.takeIf { t > TAPS_SHARE }?.let { picked ->
-                val wash = ((t - TAPS_SHARE) / .2f).coerceIn(0f, 1f) * SELECT_ALPHA
-                built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, wash)), picked.first, picked.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            GuideDemo.SelectLast, GuideDemo.SelectTarget -> {
+                val taps = keys.cue as? GuideCue.Taps
+                val range = demoRange(demo, text, field.target)
+                if (range != null && taps != null) {
+                    // On the thumb's clock: the word in front as the third tap lands, then the rest as the thumb slides.
+                    if (GuideTapDrawing.demoLanded((t * demoLength).toLong(), taps.count, taps.drag)) {
+                        val word = text.indexOf(' ', range.first).let { if (it < 0 || it > range.last) range.last else it - 1 }
+                        val end = maxOf(word, range.first + ((range.last - range.first) * tapSlid(t)).roundToInt())
+                        built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, SELECT_ALPHA)), range.first, end + 1,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                } else range?.takeIf { t > TAPS_SHARE }?.let { picked ->
+                    val wash = ((t - TAPS_SHARE) / .2f).coerceIn(0f, 1f) * SELECT_ALPHA
+                    built.setSpan(BackgroundColorSpan(GuideMotion.faded(Accent.colour, wash)), picked.first, picked.last + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
             }
             is GuideDemo.HoldLetter -> {
                 val key = keyFor(demo.key)

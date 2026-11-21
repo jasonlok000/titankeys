@@ -189,7 +189,7 @@ The first slide of the guide is setup. It opens each Settings page for you, sees
 2. **Make it your keyboard.**
 3. **Let it sit over other apps.** If Android opens its whole list, find TitanKeys Keyboard in it. The Titan sends touchpad input to the window on top, so this keeps the touchpad on the keys when an app shows its own buttons.
 4. **Turn on Scroll assistant, Sliding Mode 1,** the phone's own switch that the touchpad needs, with your apps on Sliding Mode 1.
-5. **Let TitanKeys handle Back** in Accessibility. It's optional: it makes Back work in one press, keeps the touchpad on the keys when a notification pops up, and lets TitanKeys type in Smart Launcher's search. TitanKeys never reads your screen.
+5. **Let TitanKeys handle the Back key** in Accessibility. It's optional: it makes Back work in one press, keeps the touchpad on the keys when a notification pops up, and lets TitanKeys type in Smart Launcher's search. TitanKeys never reads your screen.
 
 Then the guide teaches you the rest on the keys, and the app opens on the playground so you can show off.
 

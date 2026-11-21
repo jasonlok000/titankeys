@@ -1023,3 +1023,5 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   a quarter sth". The support page never shows a fraction or a count of cups in words: under $1 a sip, $1 a bigger sip, $2.50 half
   a coffee, $5 a coffee, $10 a few coffees, $25 and up a whole pot, in the thank-you, its total and the custom readout. The cups
   drawn beside them still show the amount, and their ×N is a whole number.
+- **The Back key's setup line (2026-11-21):** "let titankeys handle back ... is bad, like it shd be at least let TitanKeys handle
+  the back key to be clearer." The setup step and the disclosure say "Let TitanKeys handle the Back key".

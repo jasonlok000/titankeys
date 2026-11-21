@@ -79,7 +79,7 @@
     <!-- The Accessibility disclosure (#79), in Share swipes' style: a short title and lines, the full detail behind
          "What exactly does it see?". Plain, with no jokes: Play's reviewers read this screen (CONTRIBUTING.md, Writing).
          F (docs/words-m1.md), every line below. -->
-    <string name="back_disclosure_title">Let TitanKeys handle Back?</string>
+    <string name="back_disclosure_title">Let TitanKeys handle the Back key?</string>
     <string name="back_disclosure_subtitle">TitanKeys uses Android\'s Accessibility service for three things. It\'s optional.</string>
     <string name="back_disclosure_back">Back: one press hides the keyboard, and the next goes back in the app.</string>
     <string name="back_disclosure_keys">Keys: at a few moments, it sees which keys you press before the app does.</string>

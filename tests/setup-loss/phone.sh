@@ -13,7 +13,7 @@ esac
 "${adb[@]}" shell am start -W -n "$app/com.vandam.ink.MainActivity" --ez com.titankeys.debug.setupLoss true >/dev/null
 for ((attempt = 0; attempt < 15; attempt++)); do
   if [[ $(focus) == *"$app/"*"GuideActivity"* ]]; then
-    if "${adb[@]}" shell uiautomator dump /dev/tty 2>/dev/null | awk '/Let TitanKeys handle Back/ { found=1 } END { exit !found }'; then
+    if "${adb[@]}" shell uiautomator dump /dev/tty 2>/dev/null | awk '/Let TitanKeys handle the Back key/ { found=1 } END { exit !found }'; then
       echo "The Accessibility repair slide opened. Its button simulates a repair and returns to the app."
       exit 0
     fi

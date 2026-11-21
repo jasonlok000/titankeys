@@ -612,7 +612,8 @@ private fun theStepsHaveOkayWords() {
     for (part in SetupPart.entries) {
         for (text in listOfNotNull(part.title, part.body, part.action, part.help))
             same(text.replace(SLIDING_MODE_1, "").any { it.isDigit() }, false, "\"$text\" must not have a number but the phone's own Sliding Mode 1")
-        same(part.title.length <= 32 && part.title.endsWith("."), true, "Setup title \"${part.title}\" is one short sentence")
+        // 34, for "Let TitanKeys handle the Back key." (owner, 2026-11-21: "at least let TitanKeys handle the back key to be clearer").
+        same(part.title.length <= 34 && part.title.endsWith("."), true, "Setup title \"${part.title}\" is one short sentence")
         same(part.body.length <= 72, true, "Setup body \"${part.body}\" must stay short")
     }
     // Android's lists show the app as TitanKeys Keyboard (owner, 2026-11-13), so the steps that send you there say so.

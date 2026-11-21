@@ -14,7 +14,6 @@ import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
 import { hapticsLabel } from "./haptics";
 import { hiddenBarLabel, hiddenBarTitle } from "./hidden-bar";
-import { liftLabel } from "./lift";
 import { rawLogLabel } from "./rawlog";
 import { setupLabel } from "./setup";
 import { snippetsLabel } from "./snippets/index";
@@ -74,8 +73,6 @@ export default function Settings() {
 
       <Toggle label={cursorLabel} value={settings.cursorControl}
         onChange={cursorControl => save.run({ cursorControl })} />
-      {(settings.swipeTyping || settings.cursorControl)
-        && <Field label="Keep swiping after a short lift" href="/settings/lift">{liftLabel(settings)}</Field>}
       <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
       <Toggle label={scrollLabel} value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />

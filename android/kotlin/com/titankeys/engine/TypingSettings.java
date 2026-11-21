@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 public final class TypingSettings {
-    public static final int MIN_LIFT_OFF_MILLIS = 50, MAX_LIFT_OFF_MILLIS = 200, DEFAULT_LIFT_OFF_MILLIS = 90;
+    public static final int DEFAULT_LIFT_OFF_MILLIS = 90;
     public static final String TOUCHPAD_ONLY_IN_FIELDS = "touchpad_only_in_fields";
     public static final String INPUT_METHODS = "input_methods";
     private static final String DEFAULT_TAP_KEYS = "";
@@ -213,25 +213,14 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("cursor_control", enabled).apply();
     }
 
-    public static boolean liftOffGrace(Context context) { return preferences(context).getBoolean("lift_off_grace", true); }
+    // A broken swipe always joins, no longer a setting (owner, 2026-11-21: "let's remove the switch"). The joining itself is
+    // Swipe.sameStroke's rule, tuned on the recordings (docs/paper.md 4.7); this only keeps a brief flicker, and how long a
+    // swiped word waits before its last check. An old "lift_off_grace" or "lift_off_duration_ms" left in preferences is ignored.
+    public static boolean liftOffGrace(Context context) { return true; }
 
-    public static void liftOffGrace(Context context, boolean enabled) {
-        preferences(context).edit().putBoolean("lift_off_grace", enabled).apply();
-    }
+    public static int liftOffDurationMillis(Context context) { return DEFAULT_LIFT_OFF_MILLIS; }
 
-    public static int liftOffDurationMillis(Context context) {
-        return Math.max(MIN_LIFT_OFF_MILLIS, Math.min(MAX_LIFT_OFF_MILLIS,
-                preferences(context).getInt("lift_off_duration_ms", DEFAULT_LIFT_OFF_MILLIS)));
-    }
-
-    public static void liftOffDurationMillis(Context context, int millis) {
-        preferences(context).edit().putInt("lift_off_duration_ms",
-                Math.max(MIN_LIFT_OFF_MILLIS, Math.min(MAX_LIFT_OFF_MILLIS, millis))).apply();
-    }
-
-    public static int liftOffGraceMillis(Context context) {
-        return liftOffGrace(context) ? liftOffDurationMillis(context) : 0;
-    }
+    public static int liftOffGraceMillis(Context context) { return DEFAULT_LIFT_OFF_MILLIS; }
 
     /** The letters and space a light touch types, in the order they were added. */
     public static String tapKeys(Context context) {

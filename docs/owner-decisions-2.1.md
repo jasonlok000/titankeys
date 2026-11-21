@@ -1010,3 +1010,9 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   removed the keycode and shows the correct first word suggestion. another back shows the 3 first word suggestion").
 - **Chinese bar (2026-11-21):** "the three word suggestion shd not show up in the first place no matter the situation": in
   Chinese the bar's words always go to the engine's row; a picker that closes (Back, the switcher, a clear) gives them back to it.
+- **Keep swiping after a short lift (2026-11-21):** "let's remove the switch". The setting is gone: a broken swipe always joins
+  by Swipe.sameStroke's tuned rule, and the 90 ms flicker window is fixed. Its Settings page, boring guide topic and README line
+  went with it.
+- **Modifier bar in Chinese (2026-11-21):** "the alt modifier bar is not working now with chinese language ... it should work".
+  Shift, Alt and Ctrl taking the bar win over an engine's row with no code, as over words in English; a row with a code keeps it.
+- **Support page custom amount (2026-11-21):** the "whole pot" line sat on "10 cups"; it's in the flow under the cups now.

@@ -38,7 +38,6 @@ export default function BoringGuide() {
     <Section title="Touchpad">
       <Topic title="Swipe a word">{"Slide your finger across the letters of a word without pressing. Lift to type it, with a space after. Swipe the next one straight away."}</Topic>
       <Topic title="Wrong word?">{"Touch the right one on the bar. The bar always has the next best guesses, so one touch fixes a swipe that missed."}</Topic>
-      <Topic title="Keep swiping after a short lift">{"Fingers slip. If yours leaves the keys for a moment, the swipe carries on. Set how long a moment is in Settings > Keep swiping after a short lift."}</Topic>
       <Topic title="Type with a light touch">{"Some keys type when you barely touch them, so you don't have to press them down. Pick which ones in Settings > Type with a light touch. Press a letter or Space there to add it."}</Topic>
       <Topic title="The touch zone">{"The touch zone is the part of the keys the touchpad can read: up to the middle of the outer keys on each side, and the middle of the top and bottom rows. Outside it, the touchpad can't read your finger well. The interactive guide dims everything outside the touch zone."}</Topic>
       <Topic title="Turn off swipe typing">{"Turn off Swipe to type words in Settings or in the quick settings. The touchpad stops typing words. Light-touch keys and the Sym panel still work."}</Topic>

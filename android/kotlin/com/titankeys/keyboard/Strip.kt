@@ -612,7 +612,11 @@ class Strip(
         // A strip that shows nothing has no height, and a bar there would move the app each time a modifier changes.
         // A demonstration from the guide shows its own words and menu, in place of the bar's own.
         val demo = this.demo
+        // Shift, Alt or Ctrl taking the bar win over an engine's row with no code on it, as they win over the words in English: the
+        // row was a notice, so the modifier bar never showed in Chinese (owner, 2026-11-21: "the alt modifier bar is not working now
+        // with chinese language ... it should work"). A row with a code keeps the bar, so the code being typed never hides.
         val confirm = (if (demo != null) demoNotice else notice).takeIf { showSuggestions }
+            ?.takeUnless { it is Notice.Picker && it.lead.isEmpty() && modifiers?.replacesWords == true }
         val modifierChips = modifiers.takeIf { showSuggestions && confirm == null }
         // Shift, Alt and Ctrl take the whole bar. The Shift that a sentence start turned on only gets a small mark: see [drawAutoCapital].
         val bar = modifierChips?.takeIf { it.replacesWords }

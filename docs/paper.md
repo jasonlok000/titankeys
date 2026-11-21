@@ -452,7 +452,7 @@ How the rule works (`Swipe.sameStroke`). Time alone can't tell, because quick wo
 
 Then it has to carry on or turn back (`carriesOn`: the jump points the way the finger was going, cosine at least 0.7; or `reverses`: cosine at most -0.3), and show at least two of four clues: carries on, reverses, still moving as it lands, and a quick first sample (20 ms or less). A finger coming back is usually still moving, while a new word lands still. A brief flicker within 1.5 keys also joins.
 
-How long a finger may leave the keys is also a setting: **Keep swiping after a short lift**, Short, Medium or Long.
+This is always on: the setting that once turned it off, **Keep swiping after a short lift**, went in 3.0.
 
 A later check with touch sizes on 109 labelled pairs found the keyboard made 100 right joins, 6 right separates and 3 wrong joins, and missed no break (section 4.12).
 

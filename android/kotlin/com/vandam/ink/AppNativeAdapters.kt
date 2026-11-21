@@ -805,8 +805,6 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("snippets", JSONArray(Snippets.load(activity).map { (shortcut, text) ->
                 JSONObject().put("shortcut", shortcut).put("text", text)
             }))
-            .put("liftOff", TypingSettings.liftOffGrace(activity))
-            .put("liftOffMillis", TypingSettings.liftOffDurationMillis(activity))
             .put("haptics", Haptics.enabled(activity))
             .put("hapticToggles", JSONObject(Haptics.toggles(activity)))
             .put("hapticsLab", if (HapticsLab.available(activity)) hapticsLab.value.state() else JSONObject.NULL)
@@ -1053,8 +1051,6 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             "shorthandToggles" -> (value as JSONObject).let { toggles ->
                 for (shorthand in toggles.keys()) TypingSettings.shorthandOn(activity, Shorthand.key(shorthand), toggles.getBoolean(shorthand))
             }
-            "liftOff" -> TypingSettings.liftOffGrace(activity, value as Boolean)
-            "liftOffMillis" -> TypingSettings.liftOffDurationMillis(activity, (value as Number).toInt())
             "haptics" -> Haptics.enabled(activity, value as Boolean)
             // Only the switches that came: one toggle on the page sends just its own.
             "hapticToggles" -> (value as JSONObject).let { toggles ->

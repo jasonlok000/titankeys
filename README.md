@@ -39,7 +39,6 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 - **A swipe that slips stays one word.** Your thumb falls off the top of the sensor mid-word and comes back? Still one word.
 - **Stray touches type nothing.** A resting thumb or a brush between presses is ignored, so you don't have to hold your phone like a surgeon.
 - **A swipe trail.** A small trail on the bar follows your swipe, so you can see what the keys felt.
-- **Keep swiping after a short lift.** Pick how long a finger can leave the keys before the swipe ends: Short, Medium or Long.
 - **Type with a light touch.** Pick keys that type when you barely touch them, no press needed.
 - **It knows its own name.** Swipe TitanKeys. Go on.
 

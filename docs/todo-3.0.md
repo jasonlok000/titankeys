@@ -35,6 +35,20 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   words at Small, in the practice field: its going → It's going, get dome food → get some food, their going stays.
   Not done: the frame-by-frame pass over every support screen.
 
+### The 3.0.0 pre-release (2026-11-21)
+
+- Built from cbd694cc (tests caught up in 0672f945, same keyboard code); every suite of verify.sh passes. Signed with the
+  NightKeys key (owner's go), `com.titankeys` 3.0.0 (59), 277.6 MB, sha256 aeb6e19d…bda7, md5 1ca5db51ec5427ecf8ea2498060c4684.
+  Copy in X:\Atlas\.dev\prerelease. Installed 15:23 as a new app (no release TitanKeys was on the phone); the owner turns it on
+  (keyboard and Accessibility) and daily-drives it 3 days. Not published.
+- Today's fixes in it: Back hides only with the keyboard up and always reaches the app otherwise; Key Mapper's replay of a
+  handled Back is kept; a Chinese code clears with Back as with Sym; Chinese never shows the three-word bar; Smart Launcher's
+  Back hides the keyboard; the support page's blank opens and its crash; the boring guide's Fix earlier words.
+- Firmware baseline before the Unihertz update: X:\Atlas\.devirmwareefore-2026-11-21 (V02.00.04, Android 16). After the
+  update: the same snapshot, a diff, and the phone suites again.
+- Play: account, signing key, declaration video and the 14-day test are the owner's; an internal-testing track for the owner
+  alone can start once the account exists (the only way the support page's purchases run).
+
 ## Where the issues stand
 
 - **Ready to build:** #65, #66, #67, #68, #69, #70 with #71, #72, #73, #74, #75, #77, #79, #81, #82, #84, #85, #86, #87, #89,

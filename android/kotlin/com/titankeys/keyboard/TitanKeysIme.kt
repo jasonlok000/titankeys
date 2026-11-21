@@ -4842,6 +4842,17 @@ class TitanKeysIme : InputMethodService() {
             backKept = true
             return true
         }
+        // A code being built: Back clears it, exactly as a Sym tap does ([clearCode]), the bigger menu with it, and types nothing.
+        // Before, it closed the picker and the bar fell back to three suggestions (owner, 2026-11-21: "just clear the code, so
+        // identical to what sym does now"). The next Back hides the keyboard.
+        if (keyCode == KeyEvent.KEYCODE_BACK && codePending() && isInputViewShown) {
+            if (event.repeatCount == 0) {
+                clearCode()
+                keyAudit("Back cleared the code, as Sym does; the keyboard stays")
+            }
+            pickerKey = keyCode
+            return true
+        }
         // Back closes the bigger menu, and the choices stay on the bar. Only one that can be seen: a hidden keyboard's menu or
         // picker doesn't take the app's Back (key audit, 2026-11-20).
         if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen && isInputViewShown) {

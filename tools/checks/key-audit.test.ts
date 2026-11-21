@@ -65,3 +65,14 @@ test("the touchpad hold's wait for a second Back ends", async () => {
   expect(text).toContain("main.postDelayed(letGoExpired, LET_GO_MILLIS)");
   expect(await read("android/kotlin/com/titankeys/keyboard/TouchpadHold.kt")).toContain("fun letGoExpired()");
 });
+
+test("Back with an engine's code pending clears it as a Sym tap does, never falling back to the three suggestions", async () => {
+  // Owner, 2026-11-21: "pressing back on chinese puts it to show three suggestions which is wrong" / "just clear the code, so
+  // identical to what sym does now".
+  const text = await ime();
+  const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
+  const back = down.slice(down.indexOf("KEYCODE_BACK && codePending() && isInputViewShown"));
+  expect(back.slice(0, 200)).toContain("clearCode()");
+  expect(down.indexOf("KEYCODE_BACK && codePending()")).toBeLessThan(down.indexOf("KEYCODE_BACK && choicesMenuOpen"));
+  expect(down.indexOf("KEYCODE_BACK && codePending()")).toBeLessThan(down.indexOf("KEYCODE_BACK && openPicker() != null"));
+});

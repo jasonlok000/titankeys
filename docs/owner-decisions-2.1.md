@@ -999,3 +999,6 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   i released my back and the keyboard is away, a software back is issued"). A push kept for a hide whose keyboard was already
   gone at its release (WhatsApp hides it on the Back before) now goes to the app, where it did nothing and a third push was
   needed (owner's recording).
+- **Back with a Chinese code (2026-11-21):** with letters typed and the choices showing, Back clears the code, "so identical to
+  what sym does now": the code and its choices go, nothing is typed, and the bar doesn't fall back to three suggestions ("pressing
+  back on chinese puts it to show three suggestions which is wrong"). The next Back hides the keyboard.

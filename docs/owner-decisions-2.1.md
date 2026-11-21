@@ -994,3 +994,8 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   Context apostrophes switches; Second look off becomes Off. Swiped look-alikes follow it too. Undoing a fix for a web or
   email address stays on. Joined quick swipes stay as they are (a known trade-off). With a Cantonese input method on, Jyutping
   and Yale syllables (ja, ga, la, lor, wor...) count as known words ("I'm also ok with this cantonese specific optimization").
+- **Back (2026-11-21):** "when back is pressed, if keyboard is up, keyboard hides, nothing else happens. if keyboard is not
+  up, the back must be sent." Hide only, as on any Android keyboard: the hide no longer sends the app a back after it ("after
+  i released my back and the keyboard is away, a software back is issued"). A push kept for a hide whose keyboard was already
+  gone at its release (WhatsApp hides it on the Back before) now goes to the app, where it did nothing and a third push was
+  needed (owner's recording).

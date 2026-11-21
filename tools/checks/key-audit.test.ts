@@ -23,12 +23,25 @@ test("Back's release follows its press: kept with it, or the app's with it", asy
   expect(text.match(/backKept = true/g)?.length).toBe(2);
 });
 
-test("a Back that hides the keyboard can't fire later, in another field or app", async () => {
+test("a kept Back whose keyboard was already hidden at its release still sends the app its back", async () => {
+  // WhatsApp hid the keyboard itself on the Back before; the next push was kept for a hide with nothing left to hide and did
+  // nothing, so a third push was needed (owner's recording, 2026-11-21).
+  const up = between(await ime(), "override fun onKeyUp(", "private fun switchKeyboardIfAsked");
+  expect(up).not.toContain("nothing more to do");
+  const released = up.slice(up.indexOf('keyAudit("Back released after the keyboard hid: the app gets its back")'));
+  expect(released.slice(0, 160)).toContain("main.post(sendBack)");
+});
+
+test("Back with the keyboard shown only hides it: no back is sent after the hide", async () => {
+  // Owner, 2026-11-21: "after i released my back and the keyboard is away, a software back is issued". Hide only.
   const text = await ime();
-  expect(text).toContain("main.postDelayed(backHideMissed, BACK_HIDE_MILLIS)");
-  expect(between(text, "override fun onFinishInput()", "super.onFinishInput()")).toContain("dropWaitingBack(");
-  expect(between(text, "override fun onUnbindInput()", "super.onUnbindInput()")).toContain("dropWaitingBack(");
-  expect(between(text, "override fun onWindowHidden()", "updateHold()")).toContain("main.removeCallbacks(backHideMissed)");
+  expect(text).not.toContain("passingBack");
+  expect(text).not.toContain("backHideMissed");
+  expect(between(text, "override fun onWindowHidden()", "updateHold()")).not.toContain("sendBack");
+  const up = between(text, "override fun onKeyUp(", "private fun switchKeyboardIfAsked");
+  const hide = up.slice(up.indexOf('keyAudit("Back: hiding the keyboard, the app stays")'));
+  expect(hide.slice(0, 200)).toContain("requestHideSelf(0)");
+  expect(hide.slice(0, 200)).not.toContain("sendBack");
 });
 
 test("a hidden switcher, accents or menu doesn't take Back, and the word menu's Back stays in the app", async () => {

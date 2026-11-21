@@ -162,7 +162,6 @@ class TitanKeysIme : InputMethodService() {
     private var editing = false
     private var typedInField = false
     private var fieldStartedAt = 0L
-    private var passingBack = false
     private val backPush = BackPush()
     /** Back hid the strip, so it stays hidden in this field until you tap the field or type. */
     private var hiddenByBack = false
@@ -422,16 +421,6 @@ class TitanKeysIme : InputMethodService() {
         val system = BackService.back()
         if (!system && editing) sendDownUpKeyEvents(KeyEvent.KEYCODE_BACK)
         keyAudit("Back sent to the app: ${if (system) "system back" else if (editing) "key" else "nothing, no field"}")
-    }
-
-    /**
-     * A Back that hid the keyboard waits for the hide to send the app its back. When the keyboard doesn't hide (an app that keeps
-     * it up), the wait ends here, so no later hide (Done, a tap outside) sends a back nobody pressed (key audit, 2026-11-20).
-     */
-    private val backHideMissed = Runnable {
-        if (!passingBack) return@Runnable
-        passingBack = false
-        keyAudit("Back: the keyboard didn't hide within $BACK_HIDE_MILLIS ms, so no back is kept for later")
     }
 
     /** Whether this Back push was kept from the app, so its release is kept too, whatever changed in between. */
@@ -2030,7 +2019,7 @@ class TitanKeysIme : InputMethodService() {
         clearKeyPreview()
         super.onWindowHidden()
         sleepIdleBar()
-        if (field.exact) logExact("window hidden: back $passingBack typed $typedInField")
+        if (field.exact) logExact("window hidden: typed $typedInField")
         windowHiddenAt = SystemClock.uptimeMillis()
         main.removeCallbacks(recycle)
         if (recycleAwaitsHide) {
@@ -2052,16 +2041,10 @@ class TitanKeysIme : InputMethodService() {
             keyAudit("Window hidden: the ${if (openPicker() is LanguagePicker.Switch) "switcher" else "accents"} closed with it")
             closePicker()
         }
-        main.removeCallbacks(backHideMissed)
         // A delayed hide from the previous app arrives just after this field starts. A later hide, or one
         // after you have typed, is the app's own, such as a tap outside the field or a Done key.
         cancelShowStrip()
-        if (passingBack) {
-            // Now that the strip is gone, the app's own back can run. If its field stays, the strip stays hidden.
-            passingBack = false
-            hiddenByBack = editing
-            main.post(sendBack)
-        } else if (editing && !typedInField && SystemClock.uptimeMillis() - fieldStartedAt < STALE_HIDE_MILLIS) {
+        if (editing && !typedInField && SystemClock.uptimeMillis() - fieldStartedAt < STALE_HIDE_MILLIS) {
             main.post(showStrip)
         }
         updateHold()
@@ -2078,8 +2061,6 @@ class TitanKeysIme : InputMethodService() {
         cancelShowStrip()
         cancelRecycle()
         main.removeCallbacks(sendBack)
-        // A Back still waiting for a hide goes with the app's connection: it must not fire in the next app.
-        dropWaitingBack("the app unbound")
         // The app has lost the keyboard, so coming back to it counts as a new start.
         hiddenByBack = false
         super.onUnbindInput()
@@ -2703,16 +2684,7 @@ class TitanKeysIme : InputMethodService() {
     /** The selection the bar shows, for a strip that is made after it, as [barWords] is. */
     private var barSelected: String? = null
 
-    /** A Back waiting for the keyboard to hide that can no longer be the app's: its field or app has gone. */
-    private fun dropWaitingBack(why: String) {
-        main.removeCallbacks(backHideMissed)
-        if (!passingBack) return
-        passingBack = false
-        keyAudit("Back: the wait for a hide ended, $why")
-    }
-
     override fun onFinishInput() {
-        dropWaitingBack("the field finished")
         backKept = false
         engineEditor = null
         clearKeyPreview()
@@ -5063,12 +5035,20 @@ class TitanKeysIme : InputMethodService() {
             // Back closes an open panel and stays in the app.
             if (!backKey(event, down = false)) {
                 if (editing && isInputViewShown) {
-                    passingBack = true
-                    keyAudit("Back: hiding the keyboard, then the app gets its back")
+                    // Hide only, as on any Android keyboard: the app stays where it is, and the next Back is the app's (owner,
+                    // 2026-11-21: "after i released my back and the keyboard is away, a software back is issued"). Before, the
+                    // hide sent the app a back too.
+                    keyAudit("Back: hiding the keyboard, the app stays")
+                    hiddenByBack = editing
                     requestHideSelf(0)
-                    main.removeCallbacks(backHideMissed)
-                    main.postDelayed(backHideMissed, BACK_HIDE_MILLIS)
-                } else keyAudit("Back released after the keyboard hid: nothing more to do")
+                } else {
+                    // The keyboard went while Back was down, hidden by the app (WhatsApp hides it on the Back before) before
+                    // Android told the keyboard: the push was kept for a hide that no longer had anything to hide, and did
+                    // nothing, so a second Back was needed (owner's recording, 2026-11-21). The app gets its back now.
+                    keyAudit("Back released after the keyboard hid: the app gets its back")
+                    hiddenByBack = editing
+                    main.post(sendBack)
+                }
             }
             return true
         }
@@ -5568,8 +5548,6 @@ class TitanKeysIme : InputMethodService() {
         private val GUIDE_RECENT_EMOJI = listOf("🍑", "🍆", "🤏", "💦", "😏", "🥵", "🫦", "👀", "💅", "🙈", "🔥", "🫠")
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
-        /** How long a Back that hides the keyboard waits for the hide before it gives up ([backHideMissed]). */
-        private const val BACK_HIDE_MILLIS = 1000L
         /** How long the touchpad hold waits for a second Back before it comes back ([letGoExpired]). */
         private const val LET_GO_MILLIS = 10_000L
         /** Debug's log of keys the keyboard kept, passed on or sent itself ([keyAudit]). */

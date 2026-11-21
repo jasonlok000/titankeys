@@ -88,11 +88,12 @@
     <string name="back_disclosure_touchpad">Touchpad: it keeps the touchpad on the keys when a notification pops up or another keyboard left a layer behind.</string>
     <string name="back_disclosure_never">It can\'t read your screen, and it doesn\'t keep or send anything it sees.</string>
     <!-- F: draft (2026-11-16): what stops working without it, the touchpad part is new. -->
-    <string name="back_disclosure_no">Say no and TitanKeys still types and swipes. Back may take two presses, and a notification or another keyboard\'s leftover layer can take the touchpad. You can turn it on later in Settings &gt; Setup.</string>
+    <string name="back_disclosure_no">Say no and TitanKeys still types and swipes. Some apps, such as WhatsApp, may need a second press of Back. In Smart Launcher\'s search, Back goes home instead of hiding the keyboard. A notification or another keyboard\'s leftover layer can take the touchpad. You can turn it on later in Settings &gt; Setup.</string>
     <string name="back_disclosure_more">What exactly does it see?</string>
     <!-- The detail, opened in place under the toggle. -->
     <string name="back_disclosure_more_keys">It sees which keys you press only at these moments:</string>
     <string name="back_disclosure_keys_sym">while the Sym panel is open, so Enter and Backspace turn its pages instead of reaching the app;</string>
+    <string name="back_disclosure_keys_code">while you\'re typing a code in a language such as Chinese, Japanese or Korean, so Enter types the code instead of sending, and Backspace edits the code;</string>
     <string name="back_disclosure_keys_launcher">in Smart Launcher\'s search field, where Smart Launcher would take your keys first, so TitanKeys types there as in any other app, and Back hides the keyboard instead of going home;</string>
     <string name="back_disclosure_keys_back">for a moment after you press Back, so your next press of Back reaches the app.</string>
     <string name="back_disclosure_more_end">The keys are used on your phone straight away, then forgotten. It never sees the text in your apps.</string>

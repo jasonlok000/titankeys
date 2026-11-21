@@ -17,7 +17,7 @@ For #36. Checked against [Use of the AccessibilityService API](https://support.g
 - **Touchpad:** while the keyboard has the touchpad, it shows a 1×1 `TYPE_ACCESSIBILITY_OVERLAY` window (`TouchpadOverlay`) on top, because the firmware gives a touchpad swipe to the window on top: the shade when a notification pops up, or a layer another keyboard left behind. It takes no screen touches and reads nothing. It's hidden on the lock screen and when the screen is off.
 - Nothing it sees is stored or sent.
 
-**Check before you file the declaration:** if 2.1 adds any new use of `BackService.watchKeys` or `performGlobalAction` (for example from #45 or #51), the disclosure, the declaration and the video must include it. Google: "If you change how the API is used, you must submit the form again."
+**Check before you file the declaration:** 3.0 added a new time when the service hears keys: whenever an input method has a code on the bar (Chinese, Japanese, Korean, Vietnamese and Hindi, `engineBuilding`) or Chinese's bigger menu is open. Then Enter types the code and Backspace edits it. The disclosure's detail list, the declaration text and the video (shot 7b) include it. Any later new use of `BackService.watchKeys` or `performGlobalAction` needs the disclosure, the declaration and the video changed too. Google: "If you change how the API is used, you must submit the form again."
 
 ## What Google requires
 
@@ -39,7 +39,7 @@ Because `isAccessibilityTool` is false:
 |---|---|
 | Is your app an accessibility tool? (if asked) | No |
 | Why does your app need the AccessibilityService API? | **App functionality** |
-| Short description (if there is a text box) | "TitanKeys is a keyboard for the Unihertz Titan 2 Elite. Its accessibility service does three things. It sends Back, so one press of Back closes the keyboard and goes back in the app. While the symbol panel is open, in the Smart Launcher search field, and between two presses of Back, it receives the key presses before the app does, so that the keyboard's own keys work there. While you type, it keeps a 1-pixel window above the notification shade, so the keyboard's touchpad still reaches the keyboard when a notification pops up. It can't read the screen, and nothing it receives is stored or sent." |
+| Short description (if there is a text box) | "TitanKeys is a keyboard for the Unihertz Titan 2 Elite. Its accessibility service does three things. It handles Back: with the keyboard up, Back only hides it, and with the keyboard gone, Back reaches the app. At set times, it receives key presses before the app does, so that the keyboard's own keys work: while the symbol panel is open, while a code is being typed in an input method such as Chinese, Japanese or Korean, in the Smart Launcher search field, and between two presses of Back. While you type, it keeps a 1-pixel window on top, so the keyboard's touchpad still reaches the keyboard when a notification pops up. It can't read the screen, and nothing it receives is stored or sent." |
 | Does your app collect or share personal or sensitive data through the accessibility capabilities? | **No.** Key presses are handled at once on the phone and never kept or sent. |
 | Video link | The declaration video (shot list below), on YouTube as unlisted. **Not verified:** Google's page doesn't say where the video must be hosted. An unlisted YouTube link is the common choice. |
 
@@ -63,7 +63,7 @@ Because `isAccessibilityTool` is false:
 >
 > **It can't read your screen, and it doesn't keep or send anything it sees.**
 >
-> Say no and TitanKeys still types and swipes. Back may take two presses, and a notification or another keyboard's leftover layer can take the touchpad. You can turn it on later in Settings > Setup.
+> Say no and TitanKeys still types and swipes. Some apps, such as WhatsApp, may need a second press of Back. In Smart Launcher's search, Back goes home instead of hiding the keyboard. A notification or another keyboard's leftover layer can take the touchpad. You can turn it on later in Settings > Setup.
 >
 > What exactly does it see?
 >
@@ -89,7 +89,7 @@ After **Agree**, the app opens Android's Accessibility page, as the guide does t
 
 After **Not now**, the guide moves on to the next step. The setup row stays "Not done", and tapping it shows this disclosure again.
 
-**Needs a code change:** the guide's front page waits until the service is on today, so a user can't decline. It must let the user go on without it (see `build-tasks.md`). **Check on the phone:** what exactly changes without the service ("Back may take two presses"), so the "If you say no" line is true.
+**Needs a code change:** the guide's front page waits until the service is on today, so a user can't decline. It must let the user go on without it (see `build-tasks.md`).
 
 **The service description in Android's settings** (`back_service_description`) doesn't replace the disclosure. It's shortened to match it (#79, F's words): "Handles Back, and keeps the touchpad on the keys when a notification shows or another keyboard left a layer behind. At a few moments, such as while the Sym panel is open, it sees the keys you press. It can't read your screen, and it doesn't keep or send anything."
 

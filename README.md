@@ -212,7 +212,7 @@ The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exac
 
 TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
-TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service only sends Back and, while the Sym panel is open or in a launcher search, reads the keys you press. While you type, it also keeps a 1-pixel window above the notification shade, so that a notification can't take the touchpad.
+TitanKeys asks to display over other apps because of how the Titan 2 sends touchpad input. It never reads the screen. Android shows a silent "TitanKeys is displaying over other apps" notification while it's there, which you can turn off. Its Accessibility service handles Back and hears the keys you press only at set times: while the Sym panel is open, while you're typing a code in a language such as Chinese, Japanese or Korean, and in Smart Launcher's search field. While you type, it also keeps a 1-pixel window above the notification shade, so that a notification can't take the touchpad.
 
 **Settings > Record a bug** records your touches, keys and what the keyboard did, only while you ask it to and for 3 minutes at most, never in password or private fields. You see what's in the file before you share it, and TitanKeys never uploads it: you send it where you like.
 

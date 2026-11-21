@@ -451,6 +451,28 @@ class TitanKeysIme : InputMethodService() {
         if (AppBuild.kind(this) == "debug") Log.i(KEY_AUDIT_TAG, message)
     }
 
+    // A letter that appears twice when the keyboard wakes (owner, 2026-11-20: "typing c without the keyboard ... it typed out c,
+    // then keyboard wakes and types another c"). Debug's key audit tells it from its timing, never naming the key.
+    private var keyToAppCode = -1
+    private var keyToAppAt = Long.MIN_VALUE / 2
+
+    /** A typing key that went on to the app with no field: the app may type it itself, and open a field. */
+    private fun noteKeyToApp(event: KeyEvent) {
+        if (event.isSystem || event.repeatCount > 0 || Modifiers.isModifier(event.keyCode)) return
+        keyToAppCode = event.keyCode
+        keyToAppAt = SystemClock.uptimeMillis()
+        keyAudit("A key went to the app with no field (${currentInputEditorInfo?.packageName}, shown $isInputViewShown)")
+    }
+
+    /** The keyboard typed [event]'s key: the same key the app had just had with no field is the double letter. */
+    private fun checkKeyTwice(event: KeyEvent, how: String) {
+        if (event.repeatCount > 0 || event.keyCode != keyToAppCode) return
+        val gap = SystemClock.uptimeMillis() - keyToAppAt
+        if (gap < KEY_TWICE_MILLIS) keyAudit("The keyboard typed the same key $how, $gap ms after the app had it with no field " +
+            "(${currentInputEditorInfo?.packageName}, down ${SystemClock.uptimeMillis() - event.downTime} ms ago)")
+        keyToAppCode = -1
+    }
+
     private val confirmDoubleTap = Runnable {
         if (!cursorGesture.confirm()) return@Runnable
         Recording.sink?.gesture("double", SystemClock.uptimeMillis(), "")
@@ -1698,6 +1720,8 @@ class TitanKeysIme : InputMethodService() {
         if (!restarting) {
             typedInField = false
             fieldStartedAt = SystemClock.uptimeMillis()
+            if (editing && fieldStartedAt - keyToAppAt < KEY_TWICE_MILLIS)
+                keyAudit("A field started ${fieldStartedAt - keyToAppAt} ms after a key went to the app with no field (${info.packageName})")
             // Apps also restart input on the field that stays, so only a new start ends what Back did.
             hiddenByBack = false
         }
@@ -4881,6 +4905,7 @@ class TitanKeysIme : InputMethodService() {
         }
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
             if (keyCode == KeyEvent.KEYCODE_SYM) symLog("Sym outside a field went on to Android")
+            if (!editing) noteKeyToApp(event)
             return super.onKeyDown(keyCode, event)
         }
         typedInField = true
@@ -4958,12 +4983,13 @@ class TitanKeysIme : InputMethodService() {
             val captured = KeyEvent(carried)
             consumedKeys += keyCode
             enqueue(captured) {
-                key(captured)
+                if (key(captured)) checkKeyTwice(captured, "after waiting")
                 showModifiers()
             }
             return true
         }
         val handled = key(carried)
+        if (handled) checkKeyTwice(carried, "at once")
         // In an input method with its own letters, a letter key is the keyboard's, also if nothing above typed it.
         val kept = !handled && keysMapKey(carried)
         if (kept && AppBuild.kind(this) == "debug") Log.w(LOG_TAG, "A letter key in ${languages.current.id} wasn't typed: kept from the app " +
@@ -5548,6 +5574,8 @@ class TitanKeysIme : InputMethodService() {
         private const val LET_GO_MILLIS = 10_000L
         /** Debug's log of keys the keyboard kept, passed on or sent itself ([keyAudit]). */
         private const val KEY_AUDIT_TAG = "TitanKeysKeyAudit"
+        /** How soon after a key went to the app a field's start, or the same key typed, counts as part of that press. */
+        private const val KEY_TWICE_MILLIS = 1500L
         /** How long Android has to show the strip before the keyboard shows its window itself. */
         private const val SHOW_FALLBACK_MILLIS = 300L
         /** A show this soon after a hide is the app's quick hide and show. Teams took 160 to 530 ms. */

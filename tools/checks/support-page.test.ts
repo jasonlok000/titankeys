@@ -12,6 +12,14 @@ test("the support WebView keeps its own drawing, with no debug switches", async 
   expect(activity).toContain("web = WebView(this)");
 });
 
+test("the support page makes its decor before it asks for the insets controller", async () => {
+  // Before setContentView the decor may not exist, and the page crashed as it opened (dropbox, 2026-11-20).
+  const activity = await read("android/kotlin/com/titankeys/support/SupportWebActivity.kt");
+  const decor = activity.indexOf("window.decorView\n");
+  expect(decor).toBeGreaterThan(0);
+  expect(decor).toBeLessThan(activity.indexOf("window.insetsController"));
+});
+
 test("no transition or animation on the page moves opacity or transform directly", async () => {
   const page = await read("android/assets/support/index.html");
   // The cups' fill is an SVG shape, which Chromium never gives a layer of its own, so its scaleY may move.

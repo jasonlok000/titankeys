@@ -106,6 +106,9 @@ class SupportWebActivity : Activity() {
         window.attributes = window.attributes.apply {
             layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         }
+        // The decor first: before setContentView it may not exist yet, and the insets controller then crashed the page as it
+        // opened (dropbox, 2026-11-20 11:21: DecorView.getWindowInsetsController() on null).
+        window.decorView
         window.insetsController?.apply {
             hide(android.view.WindowInsets.Type.systemBars())
             systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE

@@ -669,7 +669,7 @@ const T = {
   perMonth: "/month",
   beFirst: "Be the first", topBadge: "Top 3",
   popupAfter: "TitanKeys is free. Buy me a coffee?",
-  youGave: cups => cups < .15 ? "You gave a sip" : `You gave ${cupsText(cups)}`,
+  youGave: cups => `You gave ${cupsText(cups)}`,
   inTotal: (cups, rank) => `${cups} in total${rank ? ` · you're #${rank}` : ""}`,
   unlockHead: (spots, top) => `${spots} ${spots === 1 ? "spot" : "spots"} from the top ${top}`,
   unlockSub: (top, chars) => `Top ${top} gets ${chars} characters`,
@@ -689,12 +689,15 @@ const T = {
 const LIMITS = [[3, 120], [10, 80], [100, 40]];
 const limitAt = rank => rank ? (LIMITS.find(([top]) => rank <= top) || [0, 0])[1] : 0;
 const tierAt = rank => rank ? (LIMITS.find(([top]) => rank <= top) || [0])[0] : 0;
-const FIFTHS = ["", "⅕", "⅖", "⅗", "⅘"];
-/** Real fractions in fifths: "⅖ cup", "1 cup", "1 ⅖ cups". */
+/**
+ * How much, in words that only grow, never a number: a sip, a bigger sip, half a coffee, a coffee, a few coffees, a whole pot
+ * (owner, 2026-11-21: "better to be vague, like a sip, a bigger sip, half a coffee"; "I dont really like a quarter sth"). A cup
+ * is $5. The cups drawn beside it show the exact amount.
+ */
 function cupsText(cups) {
-  const fifths = Math.round(cups * 5), whole = Math.floor(fifths / 5), part = fifths % 5;
-  const n = [whole || "", FIFTHS[part]].filter(Boolean).join("") || "⅕";
-  return `${n}\u00A0${fifths === 5 || (!whole && part) ? "cup" : "cups"}`;
+  const dollars = cups * 5 + 1e-6;
+  return dollars < 1 ? "a sip" : dollars < 2.5 ? "a bigger sip" : dollars < 5 ? "half a coffee"
+    : dollars < 10 ? "a coffee" : dollars < 25 ? "a few coffees" : "a whole pot";
 }
 
 // Sample data, used when there's no bridge (preview and renders): long names and messages at each limit.
@@ -947,7 +950,7 @@ function drawCustom() {
 /** The one cup rule, on Custom and the thank-you: up to five cups side by side (the last one partly filled), then one cup and "×N". */
 function cupRow(cups, big, fill = true) {
   const whole = Math.ceil(cups - .001);
-  if (whole > 5) return `${cup(fill ? 1 : 0, big * .85)}<b class="times">×${cupsText(cups).replace(/\s*cups?$/u, "")}</b>`;
+  if (whole > 5) return `${cup(fill ? 1 : 0, big * .85)}<b class="times">×${Math.round(cups)}</b>`;
   const size = whole <= 1 ? big : whole === 2 ? big * .8 : whole === 3 ? big * .66 : big * .54;
   return Array.from({ length: Math.max(1, whole) }, (_, i) => cup(fill ? Math.min(1, cups - i) : 0, Math.round(size))).join("");
 }

@@ -1002,3 +1002,6 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - **Back with a Chinese code (2026-11-21):** with letters typed and the choices showing, Back clears the code, "so identical to
   what sym does now": the code and its choices go, nothing is typed, and the bar doesn't fall back to three suggestions ("pressing
   back on chinese puts it to show three suggestions which is wrong"). The next Back hides the keyboard.
+- **Back in Smart Launcher (2026-11-21):** the same rule in its search field: with the keyboard up, Back hides it ("on smart
+  launcher it didn't hide the keyboard it went back to the home page"). The launcher takes keys before the keyboard, so the
+  keyboard's key watcher now takes Back there, and Key Mapper's replay of it.

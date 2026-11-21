@@ -87,3 +87,11 @@ test("a Back right after one the keyboard handled is its replay, and is kept wit
   expect(up).toContain("if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = SystemClock.uptimeMillis()");
   expect(up.indexOf("KEYCODE_BACK && backEcho")).toBeLessThan(up.indexOf("KEYCODE_BACK && backKept"));
 });
+
+test("in Smart Launcher's field, Back with the keyboard up is the keyboard's, and so is its replay", async () => {
+  // Owner, 2026-11-21: "on smart launcher it didn't hide the keyboard it went back to the home page".
+  const watched = between(await ime(), "private fun watchedKey(", "/**");
+  const back = watched.slice(watched.indexOf("Smart Launcher takes Back before the keyboard too"));
+  expect(back.slice(0, 700)).toContain("SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS");
+  expect(back.slice(0, 700)).toContain("if (down) onKeyDown(code, event) else onKeyUp(code, event)");
+});

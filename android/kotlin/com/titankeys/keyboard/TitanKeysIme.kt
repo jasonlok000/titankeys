@@ -1888,6 +1888,14 @@ class TitanKeysIme : InputMethodService() {
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
         if (watchingKeys && code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, down)) return true
+        // Smart Launcher takes Back before the keyboard too: with the keyboard up, the launcher went home instead of the keyboard
+        // hiding (owner, 2026-11-21: "on smart launcher it didn't hide the keyboard it went back to the home page"). The keyboard
+        // takes the push, and its release, as Back in any other field: it hides, and nothing else happens.
+        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && (if (down) isInputViewShown || backEcho ||
+                SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS else backKept || backEcho)) {
+            if (down) onKeyDown(code, event) else onKeyUp(code, event)
+            return true
+        }
         // Locked or asleep, the keys are the lock screen's, such as a PIN, even if Android left the launcher's field open.
         if (!takenKeys.takes(code, down, watchingKeys && screenInUse(), event.repeatCount)) {
             if (code == KeyEvent.KEYCODE_SYM) symLog("Sym went on to the app")

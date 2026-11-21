@@ -14,6 +14,23 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   morning; the unsigned release rebuilt from the final commit. Then the owner signs, pre-releases and daily-drives it.
 - Tell F: the support text changes above (docs/support-text.md).
 
+### The night log read (2026-11-20, 16:49–23:18; deleted after reading)
+
+- **Back:** all 100 physical presses reached the system, each with Key Mapper's replay. Reddit takes the first press for its
+  own back step and leaves on the second: Reddit's, not TitanKeys' or Key Mapper's. With the keyboard shown, one press hides
+  it and the app's back follows about 0.3 s later (by design). One Maps case: the app hid the keyboard itself, Back went to
+  Maps, which restarted its field, and the bar showed again. Left as it is for 3.0, noted here.
+- **Home:** all 91 arrived. No input device has a Home key: Key Mapper makes it. Tonight's log (tk-night2) records the
+  non-letter keys of event5 and event7, so a missed Home shows.
+- **Double letter:** not caught (the C test on the home screen delivered each C once). Debug's key audit now says when a key
+  goes to an app with no field, when a field starts soon after, and when the keyboard types that same key again.
+- **Mistaps:** haptics weren't logged. Debug now logs each played haptic's id (TitanKeysHaptic), never text.
+- **Crash:** the support page crashed opening once (11:21, DecorView null under the insets controller): fixed (1eef3538).
+- **Support page blank:** reproduced 6 opens in 15. The page's first request reached the main thread before onPageStarted
+  and was dropped, so no screen ever showed. Early messages now wait for the page, and no screen waits for an answer for
+  good (40595ac2, ef0753c7). The "tile memory limits exceeded" lines at each open are a side effect, not the cause.
+- **Candidate:** ef0753c7 on the phone 00:01. Overnight: the blank test again (15 opens), then every phone suite.
+
 ## Where the issues stand
 
 - **Ready to build:** #65, #66, #67, #68, #69, #70 with #71, #72, #73, #74, #75, #77, #79, #81, #82, #84, #85, #86, #87, #89,

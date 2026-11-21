@@ -6,11 +6,17 @@
 
 A keyboard for the Unihertz Titan 2 Elite. You bought a phone with keys on it, so here's a keyboard that actually uses them.
 
-Type like you always have, swipe whole words across the keys, move the cursor from Space and flick words into the void. It's free, and what you type stays on your phone, where your spelling can't hurt anyone.
+Type like you always have, in English, Chinese or 47 other languages. Swipe whole words across the keys, move the cursor from Space and flick words into the void. It's free, and what you type stays on your phone, where your spelling can't hurt anyone.
 
 **[Download it](https://github.com/jasonlok000/titankeys/releases)**
 
 </div>
+
+## See it in action
+
+Two minutes of TitanKeys on a real Titan 2 Elite, keys and all.
+
+<!-- TRAILER: paste the GitHub video link here -->
 
 > TitanKeys is an independent, modified version of [Atlas](https://github.com/juleshall4/atlas) by Julian Hall. Atlas is the original project and the base of everything here. This fork started in November 2026, and its changes are in the git history. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz.
 
@@ -32,11 +38,19 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 
 ## What it does
 
+### Languages
+
+- **49 languages.** Pick them in Settings > Languages. Keep up to four on at once, and hold Sym to switch.
+- **Chinese, six ways.** Yale or Jyutping for Cantonese, Pinyin or Zhuyin for Mandarin, Cangjie or Quick by shape. Pick traditional characters for Hong Kong or Taiwan, or simplified for mainland China.
+- **Gestures work by character in Chinese.** Flick to delete takes one character, not the whole phrase.
+- **Enter and Sym know about codes.** With a code half typed, Enter types the code as it is and never sends. Sym clears it first.
+- **Each language speaks for itself.** Its settings, key maps and practice text are in its own language.
+- **Swiping is English only.** The other languages type and correct as their own pages say.
+
 ### Typing and swiping
 
 - **Type like you already do.** Two hands, one hand, whatever. Press Space and the typo you just made is gone. Nobody saw.
 - **Swipe whole words on the same keys.** The keys are a touchpad too. Slide across a word's letters without pressing, then lift. One thumb is plenty.
-- **A swipe that slips stays one word.** Your thumb falls off the top of the sensor mid-word and comes back? Still one word.
 - **Stray touches type nothing.** A resting thumb or a brush between presses is ignored, so you don't have to hold your phone like a surgeon.
 - **A swipe trail.** A small trail on the bar follows your swipe, so you can see what the keys felt.
 - **Type with a light touch.** Pick keys that type when you barely touch them, no press needed.
@@ -52,6 +66,7 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 
 ### Deleting
 
+- **Hold Backspace to keep deleting,** like on a computer. A half-typed code loses its letters first.
 - **Flick a word away.** Flick left from Backspace and the word lifts off and dissolves. A flick never leaves two spaces behind.
 - **Hold the flick to delete a lot.** Keep your finger down and it eats a word at a time, with a firm hit for each. Slide further out to go faster.
 - **Pause.** Slide back onto Backspace and it stops. The caret blinks so you know.
@@ -80,7 +95,7 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 ### Autocorrect
 
 - **Typos fixed on Space,** with a small language model helping pick the fix that fits your sentence. Typing never waits for it.
-- **A second look.** "get dome food" becomes "get some food" once the next word makes it obvious.
+- **Fix earlier words.** When the next word shows the one before was wrong, TitanKeys goes back and fixes it: "get dome food" becomes "get some food". Small fixes is on to start. Bold also turns "their going" into "they're going", and Off leaves your words alone. English only.
 - **Apostrophes.** dont, whats and cant get theirs. its, lets, your and friends wait for the next two words, then get an apostrophe only if it clearly fits. It never takes one out.
 - **The small slips too.** Missing spaces (hellohow), a last letter twice (yeahh), Shift held too long (THe), a lone i, and names like monday and iphone get their capitals.
 - **Words from this chat.** Once a word has come up twice in the conversation, a slip on it gets fixed to that spelling.
@@ -123,7 +138,7 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 ### This phone's quirks, handled
 
 - **The touchpad stays on the keys.** A notification popping up at the top no longer steals it while you type, even after the screen has been locked.
-- **One press of Back** closes the keyboard and goes back. One. Not two.
+- **Back does one thing at a time.** With the keyboard up, Back hides it. With the keyboard gone, Back goes back in the app. With a code half typed, it clears the code.
 - **Smart Launcher's search works.** Smart Launcher grabs your keys before any keyboard sees them. With the Back service on, TitanKeys types there like anywhere else, fixes and all.
 - **Scroll assistant.** Outside text fields the keys scroll your apps, starting out the way your phone's own Scroll assistant is set.
 - **Microsoft Teams works properly.** Yes, that needed fixing.
@@ -147,6 +162,7 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 - **The playground.** After the guide, the app opens on a text to type along to, about an hour of it, and it insults you the whole way. Type fast and it comments. Type really fast and it puts on a show: confetti, rain, a shake, lightning and a plant. Five quiet seconds and it all calms down.
 - **Two resets, for when you've broken it.** Reset most things puts every switch back how it started and keeps your words, snippets, shorthand and app lists. Reset literally everything wipes all of it, like a fresh install.
 - **Record a bug.** Something broke? Settings > Record a bug records up to three minutes, shows you what's in it, and you share it wherever you want.
+- **Support page.** At the very bottom of Settings. Buy the project a coffee if you like, once or monthly, through Google Play. Nothing is locked behind it, and everything stays free. Supporters can join a board with a name and a message. It never shows amounts.
 
 ## How it works
 
@@ -173,7 +189,7 @@ The first slide of the guide is setup. It opens each Settings page for you, sees
 2. **Make it your keyboard.**
 3. **Let it sit over other apps.** If Android opens its whole list, find TitanKeys Keyboard in it. The Titan sends touchpad input to the window on top, so this keeps the touchpad on the keys when an app shows its own buttons.
 4. **Turn on Scroll assistant, Sliding Mode 1,** the phone's own switch that the touchpad needs, with your apps on Sliding Mode 1.
-5. **Let TitanKeys handle Back** in Accessibility, so one press of Back closes the keyboard and goes back. TitanKeys never reads your screen.
+5. **Let TitanKeys handle Back** in Accessibility. It's optional: it makes Back work in one press, keeps the touchpad on the keys when a notification pops up, and lets TitanKeys type in Smart Launcher's search. TitanKeys never reads your screen.
 
 Then the guide teaches you the rest on the keys, and the app opens on the playground so you can show off.
 
@@ -185,11 +201,12 @@ Atlas is a great keyboard, and TitanKeys only exists because Julian built it and
 
 What you type stays on your phone. The swipe engine and both language models run on the phone, and nothing you type is ever sent.
 
-TitanKeys uses the internet for three things only, and each is strictly limited:
+TitanKeys uses the internet for four things only, and each is strictly limited:
 
 - **News:** at most once a day, it downloads a short signed list of news from the TitanKeys website, such as a new version. It sends nothing about you or your phone. It shows as a silent notification, never while you type, and you can turn it off in **Settings > News**.
-- **Swipe contributions, only if you agree:** you can send examples of your swipes to help train the swipe models. It's off until you agree on a screen that says exactly what is sent: the swipe path, the kept word if it's a dictionary word, and the engine's numbers, never the text around it. Examples are encrypted on your phone, sent on Wi-Fi, used only for training, and you can stop and delete them at any time.
+- **Sharing, only if you agree:** one switch in **Settings > Sharing** sends examples of your swipes on Wi-Fi, and a day's totals of how TitanKeys' features worked. It's off until you agree on a screen that says exactly what is sent. Never the text you type. It's encrypted on your phone, the totals use an ID that changes every 30 days, and **Delete what I've sent** removes it from the server.
 - **Bug reports, only when you press Send:** **Settings > Send feedback**, **Record a bug** and the crash offer open a form. It sends what you wrote, the versions and your phone's model, and a recording or crash report if one is attached, encrypted on your phone so only we can read it. If it can't be sent, you can email it instead.
+- **The Support page:** while it's open, it downloads the supporters board. If you buy a coffee, Google Play handles the payment. Only if you join the board does TitanKeys send your purchase proofs and the name and message you chose. **Remove me** deletes it all.
 
 The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it.
 
@@ -217,11 +234,11 @@ This installs **TitanKeys Debug**, a separate test build.
 
 **Does it work on other phones?** Nope. It needs the Titan 2 Elite's keys and touchpad. Got another keyboard phone? The [contributing guide](CONTRIBUTING.md#bring-titankeys-to-another-device) says how to bring TitanKeys to it.
 
-**Is it free?** Yes. It's free and open source, under the GPL-3.0. Some parts use the FUTO Source First License, so it can only be shared for free, for non-commercial use.
+**Is it free?** Yes. It's free and open source, under the GPL-3.0, with no ads and nothing locked. You can buy the project a coffee on the Support page if you want to; it changes nothing in the keyboard. Some parts use the FUTO Source First License, so it can only be shared for free, for non-commercial use.
 
-**Does it need the internet?** Not to type. It only goes online for news and, if you agree, to share swipes. The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what's sent.
+**Does it need the internet?** Not to type. It only goes online for news, the Support page's board, bug reports you send and, if you agree, Sharing. The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what's sent.
 
-**Other languages?** English only for now. Native speakers can help in [issue #56](https://github.com/jasonlok000/titankeys/issues/56).
+**Other languages?** 49 of them, Chinese included. Swiping is English only for now. Native speakers can help make their language better in [issue #56](https://github.com/jasonlok000/titankeys/issues/56).
 
 **How is it different from Atlas?** See [TitanKeys and Atlas](#titankeys-and-atlas). Short version: Atlas stays simple, and TitanKeys goes further on this one phone.
 
@@ -231,7 +248,7 @@ This installs **TitanKeys Debug**, a separate test build.
 
 Bugs and ideas are welcome in [issues](https://github.com/jasonlok000/titankeys/issues). If something also happens in Atlas, please report it [there](https://github.com/juleshall4/atlas/issues) too.
 
-You can also help swiping get better for every Titan 2 Elite: **Settings > Share swipes** sends examples of your swipes, only if you agree. The guide asks on a screen of its own at the end. See [Privacy](#privacy) for what is sent.
+You can also help TitanKeys get better for every Titan 2 Elite: **Settings > Sharing** sends examples of your swipes and daily totals, only if you agree. The guide asks on a screen of its own at the end. See [Privacy](#privacy) for what is sent.
 
 Work goes both ways. Anything here is free to use in Atlas, and improvements from Atlas are welcome here.
 

@@ -1,6 +1,6 @@
 # Testers: the closed test for a new personal account
 
-For #36. Checked against Google's help pages on 2026-11-10. This is not legal advice.
+For #36. Checked against Google's help pages on 2026-11-10, and brought to 3.0 on 2026-11-21. This is not legal advice.
 
 ## The answers to the owner's two questions
 
@@ -52,8 +52,8 @@ Google's tips for engagement: give clear instructions, say what feedback you wan
 
 8. Post on r/unihertz (draft below). Read the subreddit rules first. If they limit self-promotion, ask the moderators before you post. (**Not verified:** Reddit couldn't be read from here, so the rules are not checked.)
 9. Use the other places that already reach Titan 2 Elite owners:
-   - the GitHub README and the 2.1 release notes
-   - a 2.1 announcement in the app itself, for the GitHub build only (#42): those users already have the phone
+   - the GitHub README and the 3.0 release notes
+   - an announcement in the app's news, for the GitHub build only (#42): those users already have the phone
    - other Titan 2 Elite communities you know of, if their rules allow it
 
 **Days 1 to 14: keep testers engaged**
@@ -74,11 +74,11 @@ Google's tips for engagement: give clear instructions, say what feedback you wan
 Fill in the numbers at the end of the test. Keep the answers true: Google can check.
 
 - **How easy was it to recruit testers?** "TitanKeys only works on the Unihertz Titan 2 Elite, so testers had to own one. I posted on r/unihertz, in the GitHub README and as a notice in the GitHub version of the app. [N] people joined, and [M] stayed for the full 14 days."
-- **Did testers use all the features?** "Most testers used it as their main keyboard every day. They typed, swiped, picked words from the strip, deleted with a flick, and used symbols, emoji and quick settings. Fewer used [feature]."
+- **Did testers use all the features?** "Most testers used it as their main keyboard every day. They typed, swiped, picked words from the strip, deleted with a flick, and used symbols, emoji and quick settings. [N] typed in a language other than English, [M] of them in Chinese. Fewer used [feature]."
 - **Did their use match what you expect in production?** "Yes. Production users are Titan 2 Elite owners who type on the physical keys, the same as the testers. One difference: [for example, testers tried more settings than an average user]."
 - **Summary of feedback and how it was collected:** "Feedback came through GitHub issues, the Reddit thread and Play's private feedback. The main points were [A, B, C]."
 - **Target audience:** "Adults who own a Unihertz Titan 2 Elite and type on its physical keyboard."
-- **How does the app give value?** "The Titan 2 Elite's keys are also a touchpad. TitanKeys uses both: normal typing, swiping words on the keys, cursor control and every symbol from the keys, without touching the screen. No other keyboard is built for this phone."
+- **How does the app give value?** "The Titan 2 Elite's keys are also a touchpad. TitanKeys uses both: normal typing in 49 languages, swiping words on the keys, cursor control and every symbol from the keys, without touching the screen. It's built for this one phone."
 - **Installs in the first year:** pick the lowest honest range. The phone has a small number of owners.
 - **What did you change after the test?** "[Version] fixed [A] and [B], which testers reported. [Version] changed [C]."
 - **How did you decide it is ready?** "Testers used it daily for 14 days with no crashes left open, the last reported bugs are fixed, and the same features have been used by GitHub users since [date]."
@@ -89,7 +89,7 @@ Do not post this yet. Replace the links in square brackets first.
 
 > **Title:** Looking for Titan 2 Elite owners to test TitanKeys on Google Play (free, 14 days)
 >
-> Hi all. I make TitanKeys, a free, open-source keyboard built only for the Titan 2 Elite. You type on the keys as usual, and since the keys are also a touchpad, you can swipe whole words on them too.
+> Hi all. I make TitanKeys, a free, open-source keyboard built only for the Titan 2 Elite. You type on the keys as usual, in English, Chinese or 47 other languages, and since the keys are also a touchpad, you can swipe whole words on them too.
 >
 > Until now it's only been an APK on GitHub. I'd like to put it on Google Play, so it installs and updates like any other app. Google asks new developers to run a closed test first: at least 12 people have to stay in the test for 14 days in a row. I'm hoping for 20 or more, in case a few drop out.
 >
@@ -103,7 +103,9 @@ Do not post this yet. Replace the links in square brackets first.
 >
 > **Already using TitanKeys from GitHub?** The Play version installs over it and keeps your saved words.
 >
-> **What helps most:** use it every day, try swiping, symbols and emoji, and tell me what works and what doesn't. Reply here, open a GitHub issue, or send private feedback in Play.
+> **What helps most:** use it every day, try swiping, symbols, emoji and your own languages, and tell me what works and what doesn't. Reply here, open a GitHub issue, or use Send feedback in the app's Settings.
+>
+> **Is there a catch?** No ads, nothing locked. There's a Support page where you can buy me a coffee if you want to. You never have to.
 >
 > **Privacy:** Google shows me the email address of the account you join with. I'll only use it for this test. Privacy policy: [policy link]
 >
@@ -119,8 +121,9 @@ For the Google Group welcome message, the GitHub README and the feedback page.
 > 2. Tap "Become a tester" on [opt-in link], then install from [Play link]. If you have TitanKeys from GitHub, Play updates it in place and keeps your words.
 > 3. Open TitanKeys. The guide sets everything up and teaches the gestures in a few minutes.
 > 4. Use it as your keyboard for at least 14 days. Please don't leave the test early: if you leave and rejoin, Google starts your 14 days again.
-> 5. Try as much as you can: typing, swiping, picking words from the strip, flick to delete, steer and select from Space, symbols, emoji and quick settings.
-> 6. Tell me what works and what doesn't: [GitHub issues link], titankeys@everyones-niche.com, or Play Store > your profile > Manage apps & devices > Beta > TitanKeys > Write feedback.
+> 5. Try as much as you can: typing, swiping, picking words from the strip, flick to delete, steer and select from Space, symbols, emoji, quick settings, and any language you type in.
+> 6. Tell me what works and what doesn't: Settings > Send feedback in the app, [GitHub issues link], titankeys@everyones-niche.com, or Play Store > your profile > Manage apps & devices > Beta > TitanKeys > Write feedback.
+> 7. Please don't buy anything on the Support page during the test: it's optional, and test purchases don't count.
 >
 > You can't post a public review during the test. That opens when TitanKeys is on Play for everyone.
 

@@ -1008,3 +1008,5 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   Back never closes an engine's row: with a code it clears the code; with no code (the row of words after a clear or a pick)
   it hides the keyboard, so the bar never falls back to three words ("It shd not show the 3 words no matter what"; "first back
   removed the keycode and shows the correct first word suggestion. another back shows the 3 first word suggestion").
+- **Chinese bar (2026-11-21):** "the three word suggestion shd not show up in the first place no matter the situation": in
+  Chinese the bar's words always go to the engine's row; a picker that closes (Back, the switcher, a clear) gives them back to it.

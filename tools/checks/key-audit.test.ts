@@ -96,3 +96,11 @@ test("in Smart Launcher's field, Back with the keyboard up is the keyboard's, an
   expect(back.slice(0, 700)).toContain("SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS");
   expect(back.slice(0, 700)).toContain("if (down) onKeyDown(code, event) else onKeyUp(code, event)");
 });
+
+test("Chinese never falls back to the three-word bar: a closed picker gives its words back to the engine's row", async () => {
+  // Owner, 2026-11-21: "the three word suggestion shd not show up in the first place no matter the situation".
+  const close = between(await ime(), "private fun closePicker()", "private val choicesOpen");
+  expect(close).toContain("ChineseKeys.usesBar(languages.current) && barWords.isNotEmpty()");
+  expect(close).toContain("offerBarWords(barWords)");
+  expect(close).toContain("reofferingBar = true");
+});

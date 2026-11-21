@@ -4114,7 +4114,16 @@ class TitanKeysIme : InputMethodService() {
         if (strip?.notice == open.notice) strip?.notice = null
         setPaging()
         updateKeyWatch()
+        // Chinese never shows the three-word bar: its words go back to the engine's row as soon as a picker closes over them (owner,
+        // 2026-11-21: "the three word suggestion shd not show up in the first place no matter the situation").
+        if (!reofferingBar && editing && ChineseKeys.usesBar(languages.current) && barWords.isNotEmpty()) {
+            reofferingBar = true
+            try { offerBarWords(barWords) } finally { reofferingBar = false }
+        }
     }
+
+    /** [closePicker] is giving the bar's words back to the engine's row: a row that closes again meanwhile doesn't ask twice. */
+    private var reofferingBar = false
 
     /** An engine's choices are on the bar: swipes on the keys are theirs, short ones too, as on the Sym panel. */
     private val choicesOpen get() = picker is LanguagePicker.Choices

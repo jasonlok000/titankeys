@@ -35,6 +35,20 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
   words at Small, in the practice field: its going → It's going, get dome food → get some food, their going stays.
   Not done: the frame-by-frame pass over every support screen.
 
+### The second 3.0.0 candidate (2026-11-21, evening)
+
+- Built from 4be9d058, every verify suite passing, signed with the NightKeys key: `com.titankeys` 3.0.0 (59), sha256
+  e94cf5ab…a5fa, md5 11fcd3ca70e62cbf384c989653ac95f5. Copy in .dev/prerelease. Installed 17:24 over the first candidate; the
+  release is the owner's keyboard. The 3-day clock starts again with it.
+- New since the first: the guide's cursor slides (the demo slides, every tap box lit while held, "slide" as the hold registers,
+  Next not clipped); Alt, Shift and Ctrl over Chinese's row; the support page's pot line; Keep swiping after a short lift removed;
+  Back at the top of Settings goes to the playground (Ink patch hook appBackAtRoot).
+- The dev setup came off the phone (owner's go): TitanKeys Debug, the test launcher and the reference app uninstalled, the night
+  log and its loggers stopped and deleted, the test files and recordings removed. The scripts and how to bring Debug back are in
+  .dev/phone-tools; Debug APKs stay in WSL's ~/tk-out.
+- WSL's cap is 6 GB now (.wslconfig): at 8 GB builds ran Windows out of commit space. A PC that has run long can hold ~30 GB of
+  commit outside any program; a restart clears it.
+
 ### The 3.0.0 pre-release (2026-11-21)
 
 - Built from cbd694cc (tests caught up in 0672f945, same keyboard code); every suite of verify.sh passes. Signed with the

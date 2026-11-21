@@ -1005,3 +1005,6 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - **Back in Smart Launcher (2026-11-21):** the same rule in its search field: with the keyboard up, Back hides it ("on smart
   launcher it didn't hide the keyboard it went back to the home page"). The launcher takes keys before the keyboard, so the
   keyboard's key watcher now takes Back there, and Key Mapper's replay of it.
+  Back never closes an engine's row: with a code it clears the code; with no code (the row of words after a clear or a pick)
+  it hides the keyboard, so the bar never falls back to three words ("It shd not show the 3 words no matter what"; "first back
+  removed the keycode and shows the correct first word suggestion. another back shows the 3 first word suggestion").

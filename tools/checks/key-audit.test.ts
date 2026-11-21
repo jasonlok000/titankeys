@@ -47,7 +47,7 @@ test("Back with the keyboard shown only hides it: no back is sent after the hide
 test("a hidden switcher, accents or menu doesn't take Back, and the word menu's Back stays in the app", async () => {
   const text = await ime();
   expect(text).toContain("KEYCODE_BACK && choicesMenuOpen && isInputViewShown");
-  expect(text).toContain("KEYCODE_BACK && openPicker() != null && isInputViewShown");
+  expect(text).toContain("KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && isInputViewShown");
   expect(text).toContain("KEYCODE_BACK && editing && isInputViewShown && menuOpen");
   const hidden = between(text, "override fun onWindowHidden()", "updateHold()");
   expect(hidden).toContain("it is LanguagePicker.Switch || it is LanguagePicker.Accents");
@@ -71,10 +71,11 @@ test("Back with an engine's code pending clears it as a Sym tap does, never fall
   // identical to what sym does now".
   const text = await ime();
   const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
-  const back = down.slice(down.indexOf("KEYCODE_BACK && codePending() && isInputViewShown"));
+  const back = down.slice(down.indexOf("KEYCODE_BACK && codeOnBar() && isInputViewShown"));
   expect(back.slice(0, 200)).toContain("clearCode()");
-  expect(down.indexOf("KEYCODE_BACK && codePending()")).toBeLessThan(down.indexOf("KEYCODE_BACK && choicesMenuOpen"));
-  expect(down.indexOf("KEYCODE_BACK && codePending()")).toBeLessThan(down.indexOf("KEYCODE_BACK && openPicker() != null"));
+  expect(down.indexOf("KEYCODE_BACK && codeOnBar()")).toBeLessThan(down.indexOf("KEYCODE_BACK && choicesMenuOpen"));
+  expect(down).not.toContain("KEYCODE_BACK && openPicker() != null");
+  expect(down).toContain("it !is LanguagePicker.Choices");
 });
 
 test("a Back right after one the keyboard handled is its replay, and is kept with its release", async () => {
@@ -82,7 +83,7 @@ test("a Back right after one the keyboard handled is its replay, and is kept wit
   const text = await ime();
   const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
   expect(down.indexOf("BACK_ECHO_MILLIS")).toBeGreaterThan(0);
-  expect(down.indexOf("BACK_ECHO_MILLIS")).toBeLessThan(down.indexOf("KEYCODE_BACK && codePending()"));
+  expect(down.indexOf("BACK_ECHO_MILLIS")).toBeLessThan(down.indexOf("KEYCODE_BACK && codeOnBar()"));
   const up = between(text, "override fun onKeyUp(", "private fun switchKeyboardIfAsked");
   expect(up).toContain("if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = SystemClock.uptimeMillis()");
   expect(up.indexOf("KEYCODE_BACK && backEcho")).toBeLessThan(up.indexOf("KEYCODE_BACK && backKept"));

@@ -1879,6 +1879,8 @@ class TitanKeysIme : InputMethodService() {
             if (!down) main.post(backWentThrough)
             return false
         }
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) keyAudit("Back ${if (down) "down" else "up"} heard by the service first " +
+            "(watching $watchingKeys, building $engineBuilding)")
         if (panelKeys.takes(event.keyCode, down, event.repeatCount, modifiers.panel, engineBuilding)) {
             // Once the panel has closed, a key that it took only waits for its release.
             if (!down) onKeyUp(event.keyCode, event) else if (panelOpen || engineBuilding) onKeyDown(event.keyCode, event)
@@ -4667,6 +4669,12 @@ class TitanKeysIme : InputMethodService() {
     /** An engine's code is being built on the bar. */
     private fun codePending() = (openPicker() as? LanguagePicker.Choices)?.state?.composing == true
 
+    /**
+     * Letters typed for an engine are on the bar, whether or not it calls them composing: Back clears them as a Sym tap does. Typed
+     * on the keys, Rime's row could show a code it didn't count as composing, and Back fell back to three words (2026-11-21).
+     */
+    private fun codeOnBar() = codePending() || (openPicker() as? LanguagePicker.Choices)?.state?.let { it.code.isNotEmpty() || it.typed.isNotEmpty() } == true
+
     /** Clears the engine's code and its choices, typing nothing. */
     private fun clearCode() {
         closeChoicesMenu()
@@ -4848,6 +4856,9 @@ class TitanKeysIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0) keyAudit("Back down: shown $isInputViewShown, code " +
+            "${codeOnBar()} (composing ${codePending()}), picker ${openPicker()?.javaClass?.simpleName}, menu $choicesMenuOpen, " +
+            "panel $panelOpen, ${SystemClock.uptimeMillis() - backHandledAt} ms after the last handled Back")
         // Key Mapper replays every Back about 15 ms after its release. Where the keyboard also heard the press itself (the Back
         // service hears keys while a code is built), the replay came as a second press: Back cleared the code, then its replay
         // hid the keyboard (owner, 2026-11-21: "rn its hiding the keyboard instead"). A Back within [BACK_ECHO_MILLIS] of one the
@@ -4866,7 +4877,7 @@ class TitanKeysIme : InputMethodService() {
         // A code being built: Back clears it, exactly as a Sym tap does ([clearCode]), the bigger menu with it, and types nothing.
         // Before, it closed the picker and the bar fell back to three suggestions (owner, 2026-11-21: "just clear the code, so
         // identical to what sym does now"). The next Back hides the keyboard.
-        if (keyCode == KeyEvent.KEYCODE_BACK && codePending() && isInputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && codeOnBar() && isInputViewShown) {
             if (event.repeatCount == 0) {
                 clearCode()
                 keyAudit("Back cleared the code, as Sym does; the keyboard stays")
@@ -4881,11 +4892,12 @@ class TitanKeysIme : InputMethodService() {
             pickerKey = keyCode
             return true
         }
-        // Back closes the picker, and its release goes with it.
-        if (keyCode == KeyEvent.KEYCODE_BACK && openPicker() != null && isInputViewShown) {
+        // Back closes the switcher or the accents, and its release goes with it. Never an engine's row: with no code on it, that
+        // is the bar's own words, and Back hides the keyboard as anywhere (closing it left three words, owner, 2026-11-21: "It shd
+        // not show the 3 words no matter what").
+        if (keyCode == KeyEvent.KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && isInputViewShown) {
             if (event.repeatCount == 0) {
-                // An engine's code goes with its choices.
-                if (picker is LanguagePicker.Choices) languages.engine?.reset()
+                keyAudit("Back closed the ${if (openPicker() is LanguagePicker.Switch) "switcher" else "accents"}")
                 closePicker()
             }
             pickerKey = keyCode

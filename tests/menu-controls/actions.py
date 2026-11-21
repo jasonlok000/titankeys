@@ -17,8 +17,9 @@ callback=block(source.index('            control = { key ->'))
 fixture=r'''
 class KeyEvent(val keyCode: Int, val repeatCount: Int=0, val scanCode: Int=0, val flags: Int=0) {
     companion object { const val KEYCODE_A=29; const val KEYCODE_Z=54; const val KEYCODE_ENTER=66
-        const val KEYCODE_NUMPAD_ENTER=160; const val KEYCODE_DEL=67; const val KEYCODE_SYM=63; const val KEYCODE_SPACE=62 }
+        const val KEYCODE_NUMPAD_ENTER=160; const val KEYCODE_DEL=67; const val KEYCODE_SYM=63; const val KEYCODE_SPACE=62; const val KEYCODE_BACK=4 }
 }
+object SystemClock { fun uptimeMillis()=0L }
 enum class Haptic { PanelPage }
 class Haptics { var count=0; fun play(h: Haptic) { count++ } }
 class Menu { var page=0; var open=true; var revision=0
@@ -32,6 +33,7 @@ class Languages { val engine: Engine?=Engine(); val current=0 }
 object ChineseKeys { fun isChinese(method: Int)=true }
 class Fixture {
     var pickerKey=-1
+    var backHandledAt=0L
     val choicesMenu: Menu?=Menu()
     val choicesMenuOpen get()=choicesMenu?.open==true
     val haptics=Haptics()

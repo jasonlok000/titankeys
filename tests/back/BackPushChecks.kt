@@ -104,7 +104,9 @@ private fun aVisiblePanelGetsBackBeforeThePicker() {
         .substringAfter("override fun onKeyDown(").substringBefore("override fun onKeyUp(")
     val panelBack = onKeyDown.indexOf("backKey(event, down = true)")
     val choicesBack = onKeyDown.indexOf("keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen")
-    val pickerBack = onKeyDown.indexOf("keyCode == KeyEvent.KEYCODE_BACK && openPicker() != null")
-    same(panelBack >= 0 && panelBack < choicesBack && panelBack < pickerBack, true,
+    val pickerBack = onKeyDown.indexOf("keyCode == KeyEvent.KEYCODE_BACK && openPicker().let")
+    // A code on the bar clears with Back as with Sym (owner, 2026-11-21), but only after an open panel has closed.
+    val codeBack = onKeyDown.indexOf("keyCode == KeyEvent.KEYCODE_BACK && codeOnBar()")
+    same(panelBack >= 0 && panelBack < choicesBack && panelBack < pickerBack && panelBack < codeBack, true,
         "Back must close the visible Symbols panel before it can dismiss the hidden Yale starter choices")
 }

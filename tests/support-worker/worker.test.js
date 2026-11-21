@@ -287,8 +287,14 @@ test("anonymity and user or owner removal clear public data", async () => {
     const tip = await paid({ label: "person" });
     await publish([tip]);
     await publish([tip], { anonymous: true, name: "Do not expose this", message: "Public note" });
+    // Anonymous keeps its credit but isn't on the board (owner, 2026-11-20: "if they are anonymous they don't get on the board"),
+    // and the name it was sent with is kept nowhere.
+    expect(await entries()).toEqual([]);
+    const tables = db.query("SELECT name FROM sqlite_master WHERE type = 'table'").all();
+    expect(tables.map(({ name }) => JSON.stringify(db.query(`SELECT * FROM ${name}`).all())).join("")).not.toContain("Do not expose this");
+    await publish([tip], { name: "Named again", message: "Public note" });
     const [entry] = await entries();
-    expect(entry).toMatchObject({ rank: 1, name: null, message: "Public note" });
+    expect(entry).toMatchObject({ rank: 1, name: "Named again", message: "Public note" });
     expect((await api("admin/delete", { id: entry.id }, { Authorization: "Bearer invalid" })).status).toBe(404);
     expect(await entries()).toHaveLength(1);
     expect((await api("remove", { accountKey: ACCOUNT })).status).toBe(204);
@@ -368,8 +374,9 @@ test("names and messages lose control, bidi and zero-width characters, and keep 
     const [entry] = await entries();
     expect(entry.name).toBe("Sunny");
     expect(entry.message).toBe("Cheers !");
+    // A name of nothing but invisible characters is no name: anonymous, so off the board (owner, 2026-11-20).
     await publish([tip], { name: "​‮", message: "damn fine keyboard" });
-    expect((await entries())[0]).toMatchObject({ name: null, message: "damn fine keyboard" });
+    expect(await entries()).toEqual([]);
 });
 
 test("Remove me deletes the account's orders, so rejoining starts fresh", async () => {

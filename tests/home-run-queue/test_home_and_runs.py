@@ -198,13 +198,14 @@ class LiveSwitchTest(unittest.TestCase):
         with patch.object(language_checks, "active_method", side_effect=["en", "sr-latn"]), \
              patch.object(language_checks, "play") as play:
             self.assertTrue(language_checks.switch_live(methods, "sr-latn"))
-        play.assert_called_once_with("key:sym:900:none", "+500", "key:u", "+500", "key:y", "+500")
+        # Both rows sit over Q to O since 2026-11-20 (65de9f35), so a second tile starts further left.
+        play.assert_called_once_with("key:sym:900:none", "+500", "key:u", "+500", "key:t", "+500")
 
     def test_two_languages_open_the_destination_method_row_directly(self):
         with patch.object(language_checks, "active_method", side_effect=["en", "yue-jyutping"]), \
              patch.object(language_checks, "play") as play, patch.object(checks, "guarded") as guarded:
             self.assertTrue(language_checks.switch_live(["en", "yue-yale", "yue-jyutping"], "yue-jyutping"))
-        play.assert_called_once_with("key:sym:900:none", "+500", "key:y", "+500")
+        play.assert_called_once_with("key:sym:900:none", "+500", "key:t", "+500")
         guarded.assert_not_called()
 
     def test_q_changes_methods_within_the_current_language(self):

@@ -29,7 +29,11 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **Support page blank:** reproduced 6 opens in 15. The page's first request reached the main thread before onPageStarted
   and was dropped, so no screen ever showed. Early messages now wait for the page, and no screen waits for an answer for
   good (40595ac2, ef0753c7). The "tile memory limits exceeded" lines at each open are a side effect, not the cause.
-- **Candidate:** ef0753c7 on the phone 00:01. Overnight: the blank test again (15 opens), then every phone suite.
+- **Candidate:** ef0753c7 on the phone 00:01. Overnight (01:05–01:20, owner asleep, Stay awake on): support page blank 0 of
+  15 opens (was 6 of 15); swipe recognition, swipe preview, keyboard show and hide, app screens PASS; the touch simulator
+  stopped at its start (it needs the release TitanKeys as the keyboard, a secure setting left alone), not run. Fix earlier
+  words at Small, in the practice field: its going → It's going, get dome food → get some food, their going stays.
+  Not done: the frame-by-frame pass over every support screen.
 
 ## Where the issues stand
 

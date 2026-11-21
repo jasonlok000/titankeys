@@ -11,7 +11,7 @@
 <main>
   <a class="brand" href="../">Titan<span>Keys</span></a>
   <h1>Privacy policy</h1>
-  <p class="muted">For TitanKeys 2.1 and later. Last changed on 16 November 2026.</p>
+  <p class="muted">For TitanKeys 3.0 and later. Last changed on 21 November 2026.</p>
 
   <p>TitanKeys is a keyboard for the Unihertz Titan 2 Elite. It's made by Jason Lok, who is called "we" here. This policy
   tells you what TitanKeys keeps, what it downloads, what it sends, and how you control it. TitanKeys is open source, so
@@ -25,10 +25,11 @@
         nothing about you. You can turn it off.</li>
       <li><strong>Bug reports:</strong> only when you press Send in the report form, it sends what you wrote, sealed so
         only we can read it.</li>
-      <li><strong>Sharing:</strong> only if you agree, it sends examples of your swipes and, from TitanKeys 3.0, daily
-        totals of how well its features worked, to make TitanKeys better. Never what you type. It's encrypted on your
-        phone. You can stop and delete it at any time.</li>
-      <li><strong>Support:</strong> Google Play handles payments. Joining the public supporters board is optional.</li>
+      <li><strong>Sharing:</strong> only if you agree, it sends examples of your swipes and daily totals of how well
+        its features worked, to make TitanKeys better. Never what you type. It's encrypted on your phone. You can stop and
+        delete it at any time.</li>
+      <li><strong>Support:</strong> buying a coffee is optional and unlocks nothing. Google Play handles the payment. Only
+        if you join the supporters board does TitanKeys send anything about it, and the board never shows an amount.</li>
       <li>We don't sell or rent data.</li>
     </ul>
   </div>
@@ -79,10 +80,10 @@
   </ul>
 
   <h2>What TitanKeys sends, only if you agree: sharing</h2>
-  <p>You can help make TitanKeys better for every Titan 2 Elite by sharing examples of your swipes and, from TitanKeys
-  3.0, daily totals of how its features worked. One switch covers both: you share everything below, or nothing. This is
-  off until you agree. The guide offers it at its end until you answer, and a short screen says what is shared before you
-  agree. You can change your answer at any time in Settings &gt; Sharing (called Share swipes before 3.0).</p>
+  <p>You can help make TitanKeys better for every Titan 2 Elite by sharing examples of your swipes and daily totals of
+  how its features worked. One switch covers both: you share everything below, or nothing. This is off until you agree.
+  The guide offers it at its end until you answer, and a short screen says what is shared before you agree. You can change
+  your answer at any time in Settings &gt; Sharing.</p>
 
   <h3>What is sent: swipe examples</h3>
   <p>Labelled swipe examples. Each example has:</p>
@@ -100,7 +101,7 @@
       shows it, with a button to copy it.</li>
   </ul>
 
-  <h3>What is sent: daily totals (TitanKeys 3.0 and later)</h3>
+  <h3>What is sent: daily totals</h3>
   <p>While sharing is on, TitanKeys keeps daily totals on your phone of how its features worked, and sends one small
   encrypted batch a day. Only totals for the day, never what you did one by one, and nothing is counted in password,
   email, web address or private fields. A day has:</p>
@@ -130,7 +131,7 @@
     <li>Your contacts or their names, the names of your apps, your location, the apps that you use, or any identifier of
       your phone or account.</li>
     <li>What time of day you type.</li>
-    <li>Anything from the Accessibility service.</li>
+    <li>Anything the Accessibility service hears.</li>
   </ul>
 
   <h3>Why, and on what basis</h3>
@@ -213,15 +214,37 @@
   the mail yourself.</p>
 
   <h2>Support and the supporters board</h2>
-  <p>Google Play handles purchases and subscriptions. TitanKeys keeps purchase records on your phone to show your
-  support total. The two-week card uses separate totals for words, swipes, corrections, capitals and gestures. Those
-  totals stay on your phone and are separate from Sharing.</p>
-  <p>Once the supporters board is available, TitanKeys fetches it when you open the Support page. If you choose to join,
-  TitanKeys sends the Worker a random account key and the Google Play purchase proofs needed to verify your support.
-  The Worker stores the hashed account identifier, hashed receipts and order IDs, product and credited amounts, and any
-  name or message you choose to publish. The public board shows only cups, plus any name or message you shared. You can
-  choose to appear anonymously or select Remove me to remove your entry and its associated purchase history from the
-  board. The Worker does not store your email, payment details or raw purchase tokens.</p>
+  <p>TitanKeys is free. The Support page lets you buy the project a coffee, once or every month. It's optional, and it
+  unlocks nothing.</p>
+  <ul>
+    <li><strong>Paying.</strong> Google Play handles every purchase and subscription. TitanKeys never sees your card or
+      payment details. With each purchase, Google Play gets a random account ID: a hash of a random key that TitanKeys
+      makes on your phone. It isn't your name, your email or your Google account.</li>
+    <li><strong>On your phone.</strong> TitanKeys keeps a record of your purchases on your phone, to show your support
+      total. The card that shows after ten days of typing counts your words, swipes, corrections, capitals and gestures on
+      your phone. Those counts stay on your phone, and they're separate from Sharing.</li>
+    <li><strong>Reading the board.</strong> While the Support page is open, TitanKeys downloads the board from our server.
+      The request has no identifier.</li>
+    <li><strong>Joining the board, only if you choose.</strong> Buying never needs the board. If you choose to join,
+      TitanKeys sends our server the random account key, the Google Play purchase proofs, and the name and message you
+      typed, if any. To show "This puts you at #N", it sends the account key and an amount. The server checks each
+      purchase with Google Play, then keeps, for each account key: the product, the amount credited in cents, and hashes of
+      the purchase token and the order ID. It never keeps the raw purchase token or order ID, your email, or your payment
+      details.</li>
+    <li><strong>What the board shows.</strong> Each supporter's place, and the name and message they chose to share. It
+      never shows an amount. If you choose to stay anonymous, your support still counts, but you aren't on the public
+      board.</li>
+    <li><strong>Reports.</strong> Anyone can report a board entry. The report sends the entry's public ID and, if you write
+      one, a reason. We read reports ourselves; nothing is hidden automatically.</li>
+    <li><strong>How long it's kept, and how to delete it.</strong> Your entry and its purchase history stay until you tap
+      <em>Remove me</em> on the Support page, or until we remove it. Remove me deletes both from our server. If you've lost
+      the app, email us and we remove the entry.</li>
+    <li><strong>Refunds</strong> go through Google Play. When Google tells our server about a refund, it lowers that
+      supporter's total.</li>
+    <li><strong>Against abuse.</strong> Our server counts "This puts you at #N" requests and reports from each internet
+      address, by a hashed form of the address mixed with a secret, one counter for each hour. The counters are deleted
+      within about a day. The address itself is never stored, and logging is off.</li>
+  </ul>
 
   <h2>Permissions</h2>
   <table>
@@ -231,9 +254,13 @@
         TitanKeys keeps that on your phone.</td></tr>
       <tr><td>Display over other apps</td><td>The Titan 2 Elite sends touchpad input to the window on top, so this keeps
         the touchpad on the keys. TitanKeys never reads the screen.</td></tr>
-      <tr><td>Accessibility</td><td>To send Back, and to read the keys that you press while the Sym panel is open or in a
-        launcher search. It doesn't read the screen.</td></tr>
-      <tr><td>Internet and network state</td><td>For the news, bug reports you send, and, only if you agree, for sharing.</td></tr>
+      <tr><td>Accessibility</td><td>For Back, and to hear the keys you press at a few set times: while the Sym panel is open,
+        while you're typing a code in a language such as Chinese, Japanese or Korean, and in Smart Launcher's search field. It also
+        keeps the touchpad on the keys when a notification pops up. It doesn't read the screen, and keeps and sends nothing.</td></tr>
+      <tr><td>Internet and network state</td><td>For the news, bug reports you send, the supporters board on the Support
+        page, and, only if you agree, for sharing.</td></tr>
+      <tr><td>Google Play billing</td><td>So you can buy a coffee on the Support page. Google Play handles the
+        payment.</td></tr>
       <tr><td>Notifications</td><td>To show news. TitanKeys asks first and tells you why. News also shows in Settings
         without it.</td></tr>
       <tr><td>Contacts (only if you turn on Names from my contacts)</td><td>To read the first and last names of your
@@ -246,10 +273,10 @@
   <p>If you're in the EU, the UK or another place with similar laws, you have the right to see, correct and delete your
   data and to get a copy of it, to object to how it's used, and to take back your consent at any time. Taking it back
   doesn't change what was done before. To use these rights, email us. Swipe examples are found by your contributor ID;
-  daily totals only while TitanKeys is still on your phone, as above. You can also complain to your data protection
+  daily totals only while TitanKeys is still on your phone, as above; a board entry by Remove me, or by email. You can also complain to your data protection
   authority.</p>
-  <p>Our server runs on Cloudflare, which processes the encrypted data for us under its data processing terms. It may
-  do so in the US, under the EU&#8211;US Data Privacy Framework and standard contractual clauses.</p>
+  <p>Our servers run on Cloudflare, which processes the data for us under its data processing terms. Sharing and reports
+  are encrypted; the board's names and messages are public by your choice. It may do so in the US, under the EU&#8211;US Data Privacy Framework and standard contractual clauses.</p>
 
   <h2>Children</h2>
   <p>TitanKeys isn't made for children under 13, and we don't knowingly collect data from them.</p>
@@ -265,6 +292,7 @@
   <a href="https://github.com/jasonlok000/titankeys/issues">github.com/jasonlok000/titankeys/issues</a>.</p>
   <p>To ask for deletion, send your contributor ID. An issue is public, so send the ID by email if you don't want it
   to show. While TitanKeys is on your phone, <em>Delete what I&#8217;ve sent</em> in the app does the same at once.</p>
+  <p>To remove a board entry when you no longer have the app, email us and say which entry it is.</p>
 
   <footer>
     <p><a href="../">TitanKeys</a> · <a href="https://github.com/jasonlok000/titankeys">Source code</a></p>

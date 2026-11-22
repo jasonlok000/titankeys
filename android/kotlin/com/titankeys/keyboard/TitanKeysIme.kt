@@ -5119,12 +5119,13 @@ class TitanKeysIme : InputMethodService() {
                     hiddenByBack = editing
                     requestHideSelf(0)
                 } else {
-                    // The keyboard went while Back was down, hidden by the app (WhatsApp hides it on the Back before) before
-                    // Android told the keyboard: the push was kept for a hide that no longer had anything to hide, and did
-                    // nothing, so a second Back was needed (owner's recording, 2026-11-21). The app gets its back now.
-                    keyAudit("Back released after the keyboard hid: the app gets its back")
+                    // The keyboard went while Back was down: the app or Android hid it on the push (WhatsApp, YouTube, ChatGPT and
+                    // Smart Launcher all do). The push was for the keyboard, and the keyboard is gone, so nothing else happens: the
+                    // owner's rule, "if keyboard is up, keyboard hides, nothing else happens". Sending the app a back here made one
+                    // press hide the keyboard and go back in the app (owner's recording, 2026-11-21: "the back straight up just
+                    // hides the keyboard and immediately back off in the app").
+                    keyAudit("Back released after the keyboard hid: nothing more, the app stays")
                     hiddenByBack = editing
-                    main.post(sendBack)
                 }
             }
             return true

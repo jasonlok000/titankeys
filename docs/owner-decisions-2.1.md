@@ -999,6 +999,13 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   i released my back and the keyboard is away, a software back is issued"). A push kept for a hide whose keyboard was already
   gone at its release (WhatsApp hides it on the Back before) now goes to the app, where it did nothing and a third push was
   needed (owner's recording).
+- **Back, the rule kept (2026-11-21, evening):** a push that started with the keyboard up sends nothing more, even when the app
+  or Android hid the keyboard during the push. YouTube, ChatGPT, Smart Launcher and WhatsApp all hide it on the push, so the
+  morning's "the app gets its back" made one press hide and go back ("the back straight up just hides the keyboard and
+  immediately back off in the app"). WhatsApp may need a second press again; the rule wins.
+- **Switcher labels (2026-11-21):** the corner draw-in had shrunk every label to a few px ("bugged now with the language selection
+  bar with the font sizes"); it now stops where the narrowest pill still holds the widest label at full size. The playground
+  keeps the guide's rule of no bar trail ("we can just keep it not showing on the playground then").
 - **Back with a Chinese code (2026-11-21):** with letters typed and the choices showing, Back clears the code, "so identical to
   what sym does now": the code and its choices go, nothing is typed, and the bar doesn't fall back to three suggestions ("pressing
   back on chinese puts it to show three suggestions which is wrong"). The next Back hides the keyboard.

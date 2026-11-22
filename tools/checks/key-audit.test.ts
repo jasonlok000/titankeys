@@ -23,13 +23,14 @@ test("Back's release follows its press: kept with it, or the app's with it", asy
   expect(text.match(/backKept = true/g)?.length).toBe(2);
 });
 
-test("a kept Back whose keyboard was already hidden at its release still sends the app its back", async () => {
-  // WhatsApp hid the keyboard itself on the Back before; the next push was kept for a hide with nothing left to hide and did
-  // nothing, so a third push was needed (owner's recording, 2026-11-21).
+test("a kept Back whose keyboard the app hid during the push sends nothing more", async () => {
+  // YouTube, ChatGPT, Smart Launcher and WhatsApp hide the keyboard on Back's push; sending the app a back at the release made one
+  // press hide the keyboard and go back too (owner's recording, 2026-11-21: "the back straight up just hides the keyboard and
+  // immediately back off in the app"). The owner's rule: with the keyboard up, it hides, nothing else happens.
   const up = between(await ime(), "override fun onKeyUp(", "private fun switchKeyboardIfAsked");
-  expect(up).not.toContain("nothing more to do");
-  const released = up.slice(up.indexOf('keyAudit("Back released after the keyboard hid: the app gets its back")'));
-  expect(released.slice(0, 160)).toContain("main.post(sendBack)");
+  const marker = 'keyAudit("Back released after the keyboard hid: nothing more, the app stays")';
+  expect(up).toContain(marker);
+  expect(up.slice(up.indexOf(marker)).slice(0, 160)).not.toContain("sendBack");
 });
 
 test("Back with the keyboard shown only hides it: no back is sent after the hide", async () => {

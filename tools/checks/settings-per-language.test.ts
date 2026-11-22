@@ -37,7 +37,7 @@ test("Typing is always a destination; the picker lists enabled languages once ea
 test("Typing shows supported controls while Languages retains spelling, characters, and guide entry", () => {
   expect(typingRows("en")).toEqual(["fixes", "capitals", "sentenceSpaces", "commaSpace", "doubleSpace", "hold", "swipe", "shorthand"]);
   expect(typingRows("zh")).toEqual(["doubleSpace", "hold"]);
-  expect(typingRows("fr")).toEqual(["fixes", "capitals", "sentenceSpaces", "commaSpace", "doubleSpace"]);
+  expect(typingRows("fr")).toEqual(["fixes", "capitals", "sentenceSpaces", "commaSpace", "doubleSpace", "hold"]);
   expect(typingRows("th")).toEqual(["fixes", "commaSpace"]);
   expect(page).toContain('href="/settings/spelling"');
   expect(page).toContain('href="/settings/chinese"');

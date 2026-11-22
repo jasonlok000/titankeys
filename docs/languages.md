@@ -51,8 +51,8 @@ Cyrillic and Greek; then the rest.
 
 - **Language:** what Settings > Languages lists and the held Sym's switcher shows first (owner, 2026-11-16: the Gboard way).
   Serbian has two input methods (Cyrillic and Latin), Chinese three (Yale, Jyutping, Pinyin); every other language has
-  one. Each index entry names its language (`make.py`'s `LANGUAGES`). Every language but English and Chinese is marked
-  experimental in Settings.
+  one. Each index entry names its language (`make.py`'s `LANGUAGES`). Settings shows each language's stage: see
+  "Language stages".
 - **Input method:** one way of typing, such as English, Spanish, Cantonese (Yale) or Mandarin (Pinyin). A language can have
   several. The `input_methods` setting lists the ones that are on; a language is on when any of its input methods is, so
   settings and backups from before languages read the same.
@@ -60,6 +60,30 @@ Cyrillic and Greek; then the rest.
   Brazil and Portugal. Chinese has Simplified, Hong Kong and Taiwan, shared by every Chinese input method.
 - **Engine:** code an input method uses to turn keys into text with choices. English's engine is today's code. Rime is
   Chinese's. Most input methods have none: their keys type letters directly.
+
+## Language stages
+
+Every language is at one of three stages (owner, 2026-11-22). Settings shows it on the language's row and page.
+
+- **Experimental:** it works in the tests, but no native speaker has checked it. Its page says so, and asks for help.
+- **Tested:** a native speaker has confirmed it types correctly, but it isn't as refined as Chinese yet. Today: Korean.
+- **Polished:** as refined as Chinese. Today: English and Chinese.
+
+`tools/im/make.py` sets them: `NOT_EXPERIMENTAL` (polished) and `TESTED`. The index gives each language `"experimental"`
+and `"tested"`, and its guide a `"status"` of `experimental`, `tested` or `polished`. A tested language stays
+`"experimental"` in the index, so the switcher and the rest of the keyboard treat it as before.
+
+**Tested** needs a native speaker's check that it types correctly. **Polished** needs all of these:
+- correct typing, in the layout native speakers expect;
+- checked by a native speaker;
+- good candidates, ranked, with the bar showing what Space types;
+- next words after a word, from a licensed corpus;
+- slip handling: a cautious fix, or an engine whose candidates cover slips, changing under 0.5% of words wrongly;
+- the gestures (double Space, triple Space, flick to delete) in the language's unit;
+- its own settings, key maps and practice text;
+- documented here.
+
+Never required, at any stage: swiping, an on-phone model, fixing earlier words, handwriting and voice.
 
 ## The input method file
 
@@ -166,20 +190,34 @@ data-only language is one command plus a check by eye. Where the data comes from
 
 ## Accents and the picker on the bar
 
-**Holding a letter shows its accents on the bar,** in the input method's order:
-- The held letter is typed at once, as today. At the hold time, the bar shows the letter's accents over the keys, one per
-  key, starting above the held key and spreading out to fit, between W and O: never over Q or P, as the switcher's.
-- **Picking is the word menu's way:** rest a finger on a key to mark the accent above it, press the key to pick it. The
-  accent replaces the typed letter. Releasing the held key without a press keeps the plain letter.
-- With Shift or Caps on, the accents show in capitals.
+**Holding a letter types its accent, and the bar shows the others** (owner, 2026-11-22, #107: "yea i think abc"). This goes
+for Latin accents and for Cyrillic's held letters (ж э on L, х ъ on P):
+- The held letter is typed at once, as any letter. At the hold time it becomes the first in its list, which is in the
+  input method's order, commonest first. That's so whether the letter has one choice or several. The hold plays the held
+  symbol's haptic, and with Shift or Caps on the choice is a capital.
+- The bar then shows a row over the keys, starting above the held key and spreading out to fit, between W and O: never over
+  Q or P, as the switcher's. The row is the letter's choices, then the key's own symbol at the end (the one hold for symbols
+  types on that key). It shows even when the letter has only one choice. The plain letter is never on it.
+- **The row stays after the lift,** with no timeout.
+- **A touch on the screen on an item puts it in place of the one typed,** accent or symbol. The row stays, so you can change
+  your mind again.
+- **The next key closes the row and does what it always does:** letters, Space, Backspace, Enter, Sym, Back, anything. No
+  key under the row picks after the lift. While the letter is still held, pressing the key under an item picks it too, as
+  before, and the row stays.
+- There's no undo: Backspace after a held accent deletes it, as after a held symbol.
+- The row also closes when the cursor leaves the choice behind (a touch in the field, the touchpad), or the keyboard hides.
 - The first time an input method with accents types, the bar says once, for a few seconds or until a key: "Hold a letter for
   its accents." In Cyrillic, where a hold gives the letters without a key of their own (ж э, х ъ), it says "Missing a letter?
   Hold a key to find it." instead (F; `HoldHint`). Each input method says it once ever; Reset most things brings it back.
-- In an input method with accents, **hold for symbols is off on every key**, so a hold always means one thing. Symbols stay
-  on Alt + key and the Sym panel. Input methods without accents keep hold for symbols.
+- **Keys with no choices hold for their symbol,** as in English, with Settings' Hold a letter for its symbol (each
+  language's page shows it now). With it off, such a held key types its letter once. Until 2026-11-22, hold for symbols was
+  off on every key in an input method with accents.
+- Unchanged: engines with their own choices (Chinese, Japanese, Korean), exact typing fields, which send keys and hold for
+  symbols as before, Thai's and Hebrew's third layer, and English.
 
 **The picker** is one component for accents and for Chinese:
-- A row of choices over the keys, each with the key under it. Keys under no choice do nothing while it's open.
+- A row of choices over the keys, each with the key under it. In the switcher, keys under no choice do nothing while
+  it's open; a held letter's row lets every key through once the letter is up.
 - Accents fit on one row. Chinese, and any engine with choices, has its own row and a bigger menu: see "Chinese on the
   bar".
 

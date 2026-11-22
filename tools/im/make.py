@@ -1128,7 +1128,8 @@ def setting_reason(row, im):
         "doubleSpace": None if full_stop.strip() else "noFullStop",
         "sentenceSpaces": None if full_stop.endswith(" ") else "noSpaceAfterFullStop",
         "commaSpace": None if engine not in GUIDE_OWN_MARKS else "engineMarks",
-        "hold": None if not im.get("accents") and not held_keys(im) else ("holdAccents" if im.get("accents") else "holdLetters"),
+        # With accents, the keys that hold none hold for their symbol (owner, 2026-11-22, #107): only a third layer takes it.
+        "hold": None if not held_keys(im) else "holdLetters",
         "swipe": None if english else "swiping",
         "shorthand": None if english else "englishOnly",
         "spelling": None if english else "englishOnly",
@@ -1148,7 +1149,7 @@ def family_of(im):
             "el": "greek"}.get(ident) or ("cyrillic" if script == "Cyrl" else "latin" if im.get("accents") else "plain")
 
 
-def guide_of(im, experimental):
+def guide_of(im, language):
     ident, engine, keys = im["id"], engine_name(im), im.get("keys")
     shown, shifted, held, held_shift = {}, {}, {}, {}
     if isinstance(keys, dict):
@@ -1176,7 +1177,7 @@ def guide_of(im, experimental):
     else:
         shift = "sameLetter" if ident == "he" else "secondLetter" if shifted else ("accents" if im.get("accents") else "letters")
         roles = {"shift": shift, "space": "default", "enter": "default", "backspace": "default", "sym": "default"}
-    return {"status": "experimental" if experimental else "ready", "family": family_of(im), "line": "", "points": [],
+    return {"status": stage_of(language), "family": family_of(im), "line": "", "points": [],
             "practice": "",
             "keys": {"legend": "", **({"map": shown} if shown else {}), **({"shift": shifted} if shifted else {}),
                      **({"held": held} if held else {}), **({"heldShift": held_shift} if held_shift else {}),
@@ -1195,7 +1196,7 @@ def write_guides():
         im = json.load(open(path, encoding="utf-8"))
         language = language_of(im)
         kept = {k: v for k, v in im.get("guide", {}).items() if k in ("line", "points", "practice") and v}
-        im["guide"] = {**guide_of(im, language["experimental"]), **kept}
+        im["guide"] = {**guide_of(im, language), **kept}
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(im, f, ensure_ascii=False, indent=2)
             f.write("\n")
@@ -1250,8 +1251,16 @@ LANGUAGES = {
     "zh": {"name": "中文", "nameEnglish": "Chinese", "label": "中", "script": "Hani",
            "methods": ["yue-yale", "yue-jyutping", "zh-pinyin", "zh-cangjie", "zh-quick", "zh-zhuyin"]},
 }
-# Every language is marked experimental in the app but Chinese (owner, 2026-11-16); English is the keyboard's own.
+# Three stages (owner, 2026-11-22; docs/languages.md): experimental, tested (a native speaker checked its typing) and polished
+# (as refined as Chinese). Every language is experimental but Chinese (owner, 2026-11-16); English is the keyboard's own.
 NOT_EXPERIMENTAL = {"zh"}
+# Tested languages stay "experimental" too, so the switcher and every other reader of it are unchanged.
+TESTED = {"ko"}
+
+
+def stage_of(language):
+    """A language's stage, as its guide's "status" gives it to its page."""
+    return "polished" if not language["experimental"] else "tested" if language["tested"] else "experimental"
 
 
 def language_of(im):
@@ -1259,9 +1268,9 @@ def language_of(im):
     for ident, language in LANGUAGES.items():
         if im["id"] in language["methods"]:
             info = {key: language[key] for key in ("name", "nameEnglish", "label", "script")}
-            return {"id": ident, **info, "experimental": ident not in NOT_EXPERIMENTAL}
+            return {"id": ident, **info, "experimental": ident not in NOT_EXPERIMENTAL, "tested": ident in TESTED}
     return {"id": im["id"], "name": im["name"], "nameEnglish": im["nameEnglish"], "label": im["label"], "script": im["script"],
-            "experimental": im["id"] not in NOT_EXPERIMENTAL}
+            "experimental": im["id"] not in NOT_EXPERIMENTAL, "tested": im["id"] in TESTED}
 
 
 def write_index_and_list():

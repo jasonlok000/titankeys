@@ -12,8 +12,8 @@ The facts are from [languages.md](languages.md) and each `im.json` (holds, keys,
 
 These share one template. Only the examples change, taken from each `im.json`'s `accents`.
 
-> Hold a letter for its accents: {examples}. They show on the bar over the keys. Rest a finger on the key under the one you
-> want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.
+> Hold a letter for its accents: {examples}. The first one types at once, and the bar shows the rest. Touch
+> another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol.
 
 | id | {examples} | Extra line |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ These share one template. Only the examples change, taken from each `im.json`'s 
 The first-use hint for these seven is "Missing a letter? Hold a key to find it." in place of "Hold a letter for its
 accents.", since a hold here gives letters the keys have no room for, not accents. Greek keeps the accents line.
 
-Each how-to ends with the same line: "Rest a finger on the key under the letter on the bar, then press it."
+Each how-to ends with the same line: "The letter types at once. Touch another on the bar to swap it."
 
 ### `ru` Russian
 

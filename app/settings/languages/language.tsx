@@ -6,7 +6,7 @@ import { MAX_LANGUAGES, MAX_PER_LANGUAGE } from "./index";
 import { spellingLabel } from "../spelling";
 import { chineseLabel } from "../chinese";
 import { MethodCard, MethodControls, MethodGroups } from "../../../lib/method-card";
-import { availableSettings, languagePage, languagesOf, languagesOn } from "../../../lib/language-page";
+import { availableSettings, languagePage, languagesOf, languagesOn, stageOf } from "../../../lib/language-page";
 import { guidePracticeLabel, textFor } from "../../../lib/language-copy";
 
 /**
@@ -33,7 +33,10 @@ export default function LanguagePage() {
     if (next.length === 0) return;
     void save.run({ inputMethods: next });
   };
-  const status = language.experimental ? pageText.status.Experimental : pageText.status.Ready;
+  const stage = stageOf(language);
+  const status = pageText.status[stage];
+  // F: Tested's note (page-text.json status.testedNote) is stand-in English: "Typing is checked by a native speaker. Fixes and
+  // next words are still to come."
   const settings = result.data;
   const page = languagePage(language.id);
   const pageRows = page?.settings ?? [];
@@ -44,7 +47,8 @@ export default function LanguagePage() {
   const single = methods.length === 1 ? methods[0] : undefined;
   const options = hasSpelling || hasCharacters || (single && availableSettings(pageRows, "input-method", single.id).length > 0);
   return <Screen title={language.name} subtitle={status}>
-    {language.experimental && <Note accessible>{pageText.status.experimentalNote}</Note>}
+    {stage === "Experimental" && <Note accessible>{pageText.status.experimentalNote}</Note>}
+    {stage === "Tested" && <Note accessible>{pageText.status.testedNote}</Note>}
     {single && <Section title={pageText.page.method}>
       <Toggle label={single.name}
         value={inputMethods.includes(single.id)} onChange={value => set(single, value)} />

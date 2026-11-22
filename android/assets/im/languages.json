@@ -41,8 +41,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -121,8 +120,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -201,8 +199,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -283,8 +280,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -365,8 +361,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -445,8 +440,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -525,8 +519,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -605,8 +598,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -685,8 +677,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -765,8 +756,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -923,8 +913,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1003,8 +992,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1083,8 +1071,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1163,8 +1150,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1243,8 +1229,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1323,8 +1308,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1403,8 +1387,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1483,8 +1466,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1727,8 +1709,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1807,8 +1788,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -1966,8 +1946,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2046,8 +2025,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2291,8 +2269,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2456,8 +2433,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2536,8 +2512,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2616,8 +2591,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2698,8 +2672,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2778,8 +2751,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2858,8 +2830,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -2938,8 +2909,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3018,8 +2988,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3100,8 +3069,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3180,8 +3148,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3262,8 +3229,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3342,8 +3308,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3430,8 +3395,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3512,8 +3476,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3677,8 +3640,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",
@@ -3757,8 +3719,7 @@
    {
     "id": "hold",
     "level": "language",
-    "available": false,
-    "reason": "holdAccents"
+    "available": true
    },
    {
     "id": "swipe",

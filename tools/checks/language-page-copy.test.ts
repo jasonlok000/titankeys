@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "bun:test";
 import methods from "../../android/assets/im/index.json";
 import languages from "../../android/assets/im/languages.json";
 import text from "../../tools/im/page-text.json";
-import { availableSettings, globalSettings, languagePage, listMethodCount, practiceMethod, practicePrompt, sharedKeyRoles, unavailableNotes } from "../../lib/language-page";
+import { availableSettings, globalSettings, languagePage, listMethodCount, practiceMethod, practicePrompt, sharedKeyRoles, stageOf, unavailableNotes } from "../../lib/language-page";
 import type { InputMethodEntry } from "../../lib/titankeys";
 
 test("every key role on the language diagrams has an explanation", () => {
@@ -80,4 +81,19 @@ test("the practice prompt follows the selected enabled method and falls back whe
   expect(practicePrompt(chosen!)).toBe("Try nihao");
   expect(practiceMethod([yale], pinyin.id)?.id).toBe("yue-yale");
   expect(practiceMethod([], pinyin.id)).toBeUndefined();
+});
+
+test("languages show their stage: Korean Tested, English and Chinese Polished, Spanish Experimental (owner, 2026-11-22)", () => {
+  const language = (id: string) => methods.find(method => method.language.id === id)!.language;
+  expect(stageOf(language("ko"))).toBe("Tested");
+  expect(stageOf(language("zh"))).toBe("Polished");
+  expect(stageOf(language("es"))).toBe("Experimental");
+  // English is built in (InputMethods.kt): not experimental, not tested.
+  expect(stageOf({ experimental: false, tested: false })).toBe("Polished");
+  for (const stage of ["Polished", "Tested", "Experimental"] as const) expect(text.status[stage]).toBe(stage);
+  expect(text.status.testedNote).toBeTruthy();
+  expect(Object.keys(text.status)).not.toContain("Ready");
+  const page = readFileSync("app/settings/languages/language.tsx", "utf-8");
+  expect(page).toContain('{stage === "Experimental" && <Note accessible>{pageText.status.experimentalNote}</Note>}');
+  expect(page).toContain('{stage === "Tested" && <Note accessible>{pageText.status.testedNote}</Note>}');
 });

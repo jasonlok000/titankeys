@@ -196,7 +196,7 @@ export type KeyRole = { key: "space" | "shift" | "sym" | "enter" | "backspace"; 
  * keys type where that isn't the letter (map, and Shift's), the special keys' roles, and a sample for Try it. F: drafts.
  */
 export type Guide = {
-  status?: "ready" | "experimental";
+  status?: "polished" | "tested" | "experimental";
   /** Its points' family in F's tools/im/page-text.json (points.<family>); role texts are page-text roles.<key>.<role>. */
   family?: string;
   line?: string;
@@ -206,12 +206,13 @@ export type Guide = {
 };
 
 /**
- * A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16).
+ * A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16);
+ * [tested] ones (Korean) are experimental too, and show as Tested (owner, 2026-11-22: experimental, tested, polished).
  * [settings] are the controls it supports in Settings > Typing, and [stop] is what Double Space types in it
  * (LanguageSettings.kt).
  */
 export type Language = {
-  id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean;
+  id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean; tested?: boolean;
   settings: LanguageSetting[]; stop: string;
 };
 

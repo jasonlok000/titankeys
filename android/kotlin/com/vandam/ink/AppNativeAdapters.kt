@@ -839,7 +839,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
                     .put("variants", JSONArray(it.variants.map { variant -> JSONObject().put("id", variant.id).put("name", variant.name) }))
                     .put("language", JSONObject().put("id", it.language.id).put("name", it.language.name)
                         .put("nameEnglish", it.language.nameEnglish).put("label", it.language.label).put("script", it.language.script)
-                        .put("experimental", it.language.experimental)
+                        .put("experimental", it.language.experimental).put("tested", it.language.tested)
                         .put("settings", JSONArray(languageRows(it.language.id)))
                         .put("stop", languageStop(it.language.id)))
             }))

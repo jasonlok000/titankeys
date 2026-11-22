@@ -69,7 +69,7 @@
   ],
   "howTo": [
     "Each key types the letter that sounds like it: A is а, B is б, D is д. The odd ones: Q is ч, W is ш, X is ж, Y is ъ. Hold M for ю or ь, and P for я or щ.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "guide": {
     "status": "experimental",

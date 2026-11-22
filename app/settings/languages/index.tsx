@@ -4,7 +4,7 @@ import { CREAM, DIVIDER, INK, useAccent } from "../../../lib/brand";
 import { RADIUS } from "../../../lib/radii";
 import { RoundedFill, RoundedOutline } from "../../../lib/rounded";
 import { Note } from "../../../lib/note";
-import { languagesOf, languagesOn, listMethodCount, type LanguageRow } from "../../../lib/language-page";
+import { languagesOf, languagesOn, listMethodCount, stageOf, type LanguageRow } from "../../../lib/language-page";
 import pageText from "../../../tools/im/page-text.json";
 
 /**
@@ -34,9 +34,10 @@ function LanguageItem({ row, accent, onPress }: { row: LanguageRow; accent: stri
   const title = shownName(language.name, language.nameEnglish, language.script);
   const subtitle = [title === language.nameEnglish ? undefined : language.nameEnglish, listMethodCount(methods.length, on.length)]
     .filter(Boolean).join(" · ");
-  const ready = !language.experimental;
-  const value = on.length ? list.on : ready ? status.Ready : status.Experimental;
-  const width = ready ? 87 : 146;
+  const stage = stageOf(language);
+  const ready = stage === "Polished";
+  const value = on.length ? list.on : status[stage];
+  const width = { Polished: 110, Tested: 98, Experimental: 146 }[stage];
   const pill = { x: 1, y: 1, width: width - 2, height: 32, radius: RADIUS.small };
   return <Stack align="stretch" gap={10} onPress={onPress}
     accessibilityLabel={title} accessibilityValue={[subtitle, value].filter(Boolean).join(", ")}>

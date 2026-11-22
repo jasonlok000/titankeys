@@ -463,11 +463,12 @@ internal val CHINESE_VARIANTS = listOf("zh_hk", "zh_tw", "zh_hans")
 internal sealed interface LanguagePicker {
     val notice: Strip.Notice.Picker
 
-    /** A held letter's accents. Picking one replaces the letter it typed. */
-    class Accents(val accents: List<String>, held: String) : LanguagePicker {
-        private val columns = Picker.accentColumns(accents.size, Picker.anyColumn(held))
-        override val notice = Strip.Notice.Picker(accents.take(columns.size), columns.map { it..it })
-        fun choice(key: String) = Picker.choice(key, columns)
+    /**
+     * A held letter's row ([HeldRow]): its choices and the key's symbol, the one in the field marked. Picking one puts it in
+     * place of the one in the field, and the row stays until the next key (#107).
+     */
+    class Accents(val row: HeldRow) : LanguagePicker {
+        override val notice = Strip.Notice.Picker(row.items.take(row.columns.size), row.columns.map { it..it }, row.current)
     }
 
     /**

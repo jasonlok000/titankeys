@@ -235,19 +235,21 @@ BATCH += [check_japanese_polish]
 
 
 def check_accents():
-    """H's accents (no repeat, over W to O): in Spanish a W held 2 s types exactly one "w" (O); in French a held O shows its
-    accents over I and O and nothing over P (J), and a held A over W, E and R and nothing over Q (J)."""
+    """H's accents (#107, over W to O): in Spanish a W, which has no accents, held 2 s types its symbol once, as in English
+    (O); in French a held O types ô and shows ô, œ and O's symbol over the keys around it, nothing over P (J), and a held A
+    types à and shows à, â, æ and A's symbol from W, nothing over Q (J)."""
     language_checks.fresh()
     if not language_checks.turn_on(["en", "es", "fr"], "es"):
         return record("accents-es", False, "the field didn't start with es")
     language_checks.fresh()
     play("hold:w:2000", "+500")
     text = language_checks.checks.field()
-    record("accents-es-w", text == "w", f"W held 2 s in Spanish typed {text!r}, wanted exactly 'w'")
+    record("accents-es-w", len(text) == 1 and text != "w", f"W held 2 s in Spanish typed {text!r}, wanted W's symbol once")
     language_checks.fresh()
     if not language_checks.turn_on(["en", "es", "fr"], "fr"):
         return record("accents-fr", False, "the field didn't start with fr")
-    for letter, want in (("o", "the accents over I and O, nothing over P"), ("a", "over W, E and R, nothing over Q")):
+    for letter, want in (("o", "ô typed, ô œ and the symbol over U to O, nothing over P"),
+                         ("a", "à typed, à â æ and the symbol over W to T, nothing over Q")):
         language_checks.fresh()
         play(f"key:{letter}:900:none", "+400", shot=f"accents-fr-{letter}", at=1100)
         record(f"accents-fr-{letter}", None, f"{letter.upper()} held in French: {want}", f"accents-fr-{letter}")
@@ -272,8 +274,9 @@ def check_language_settings():
             for key in ('fixes', 'capitals', 'commaSpace', 'doubleSpace'):
                 ui.find(translate(text['settings'][key]), 'toggle')
             ui.find(translate(text['settings']['sentenceSpaces']), 'action')
-            ui.expect_absent(translate(text['settings']['hold']), 'action')
-            record("settings-french", True, "French's typing controls are localized and omit Hold for symbols",
+            # Keys with no accents hold for their symbol (#107), so the row shows.
+            ui.find(translate(text['settings']['hold']), 'action')
+            record("settings-french", True, "French's typing controls are localized and include Hold for symbols",
                    guide_checks.shot("settings-french"))
     except Missing as error:
         record("settings-french", False, str(error))
@@ -350,8 +353,8 @@ def check_slips():
     language_checks.fresh()
     if language_checks.turn_on(["en", "be", "hi", "vi"], "be"):
         language_checks.fresh()
-        # г is U; э is L's second accent: L held, then O, the key under it (H's accents over W to O, as French O's over I, O).
-        play("key:u", "+90", "hold:l:900", "+300", "key:o", "+800", shot="slip-be", at=2100)
+        # г is U; э is L's first held letter, which the hold types (#107).
+        play("key:u", "+90", "hold:l:900", "+800", shot="slip-be", at=1800)
         text = language_checks.checks.field()
         record("slip-be", None if text == "гэ" else False, f"typed {text!r} (wanted гэ): гэта offered on the bar", "slip-be")
     for im, typed, want in (("hi", "namastr", "नमस्ते"), ("vi", "xon", "xin")):

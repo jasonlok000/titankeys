@@ -20,7 +20,10 @@ object LanguageSettings {
     const val SENTENCE_SPACES = "sentenceSpaces"
     /** Space after , ; : : not where the engine types its own marks (Chinese and Japanese, ChineseKeys.usesBar). */
     const val COMMA_SPACE = "commaSpace"
-    /** Hold a letter for its symbol: not with accents, where a hold shows them, nor with a third layer (Thai). */
+    /**
+     * Hold a letter for its symbol: not with a third layer (Thai), where a hold types its letter. With accents it works on the
+     * keys that hold none (owner, 2026-11-22, #107).
+     */
     const val HOLD = "hold"
     /** Swipe to type words: English's. */
     const val SWIPE = "swipe"
@@ -37,7 +40,7 @@ object LanguageSettings {
         if (method.rules.fullStop.isNotBlank()) add(DOUBLE_SPACE)
         if (method.rules.fullStop.endsWith(" ")) add(SENTENCE_SPACES)
         if (method.engine !in OWN_MARKS) add(COMMA_SPACE)
-        if (!method.hasAccents && ('a'..'z').none { method.held(it, false) != null }) add(HOLD)
+        if (('a'..'z').none { method.held(it, false) != null }) add(HOLD)
         if (method.isEnglish) {
             add(SWIPE)
             add(SHORTHAND)

@@ -23,6 +23,14 @@ const { $global, ...pages } = languages;
 export type LanguageRow = { language: Language; methods: InputMethodEntry[]; on: InputMethodEntry[] };
 type InstalledMethods = Pick<State, "inputMethods" | "availableInputMethods">;
 
+/**
+ * A language's stage (owner, 2026-11-22; docs/languages.md, "Language stages"): Tested where a native speaker has checked its
+ * typing (it stays experimental for the rest of the app), Experimental for the other experimental ones, else Polished.
+ */
+export type Stage = "Polished" | "Tested" | "Experimental";
+export const stageOf = (language: Pick<Language, "experimental" | "tested">): Stage =>
+  !language.experimental ? "Polished" : language.tested ? "Tested" : "Experimental";
+
 /** Every language in index order, with its enabled methods in switcher order. */
 export function languagesOf({ inputMethods, availableInputMethods }: InstalledMethods): LanguageRow[] {
   const rows = new Map<string, LanguageRow>();

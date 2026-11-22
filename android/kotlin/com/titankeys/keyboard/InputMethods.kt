@@ -33,6 +33,8 @@ class InputMethodIndex(entries: List<Entry>) {
     /**
      * A language, as Settings > Languages and the held Sym's switcher show it: its input methods are ticked on its own page
      * (owner, 2026-11-16, the Gboard way). [experimental]: every language but English and Chinese is marked so in Settings.
+     * [tested]: a native speaker has checked its typing (Korean); it stays [experimental], and Settings shows it as Tested
+     * (owner, 2026-11-22, docs/languages.md's stages).
      */
     data class Language(
         val id: String,
@@ -41,6 +43,7 @@ class InputMethodIndex(entries: List<Entry>) {
         val label: String,
         val script: String,
         val experimental: Boolean,
+        val tested: Boolean = false,
     )
 
     /** A language that's on, with its input methods that are on, in the setting's order. */
@@ -107,7 +110,8 @@ class InputMethodIndex(entries: List<Entry>) {
                     fun of(key: String) = language[key] as? String ?: throw Json.Error("language.$key must be text")
                     Entry(id, text("name"), text("nameEnglish"), text("label"), text("locale"), text("script"), entry["engine"] as? String,
                         howTo = howTo, guide = guide, variants = variants,
-                        language = Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true))
+                        language = Language(of("id"), of("name"), of("nameEnglish"), of("label"), of("script"), language["experimental"] == true,
+                            language["tested"] == true))
                 }
             })
         }
@@ -306,6 +310,85 @@ object Picker {
     fun choice(key: String, columns: List<Int>): Int {
         val column = column(key)
         return if (column < 0) -1 else columns.indexOf(column)
+    }
+}
+
+/** What holding a letter key does in an input method (docs/languages.md, "Accents and the picker on the bar"). */
+enum class HoldKind {
+    /** The key has choices (Latin accents, Cyrillic's held letters): the hold types the first and opens [HeldRow]. */
+    Choices,
+    /** The key has a letter on a third layer (Thai, Hebrew): the hold types it. */
+    Third,
+    /** Anything else: the hold types the key's printed symbol, as in English, if hold for symbols is on. */
+    Symbol;
+
+    companion object {
+        /**
+         * What a hold on the key printed [printed] does in [method]. Only keys with choices hold them: since the owner's
+         * decision of 2026-11-22 (#107), the other keys of an input method with accents hold for their symbol as in English.
+         */
+        fun of(method: InputMethod, printed: Char): HoldKind = when {
+            method.accentsOf(printed, false).isNotEmpty() -> Choices
+            method.held(printed, false) != null -> Third
+            else -> Symbol
+        }
+    }
+}
+
+/**
+ * A held letter's row on the bar (owner, 2026-11-22, #107: "yea i think abc"). At the hold time the letter it typed becomes
+ * [items]' first, the commonest, whether the key has one choice or several. The row shows the key's choices, then the key's
+ * own printed [symbol], the one hold for symbols types; never the plain letter. It stays after the lift, with no timeout: a
+ * touch on the screen on an item puts it in place of the one typed, and the row stays for another change of mind. The next
+ * key closes it and does what it always does. While the letter is still held, a key under an item picks it too.
+ */
+class HeldRow(choices: List<String>, symbol: String?, held: String) {
+    /**
+     * The choices, most common first, then the key's symbol, never one twice. An `im.json` never holds a key's own letter
+     * (tests/languages), so the plain letter is never here.
+     */
+    val items: List<String> = run {
+        val own = choices.filter { it.isNotEmpty() }.distinct()
+        val end = symbol?.takeIf { it.isNotEmpty() && it !in own }
+        own.take(if (end != null) Picker.ACCENTS - 1 else Picker.ACCENTS) + listOfNotNull(end)
+    }
+    /** Each item's key column, centred over the held key, between W and O. */
+    val columns: List<Int> = Picker.accentColumns(items.size, Picker.anyColumn(held))
+    /** The item in the field now: the hold types the first. */
+    var current = 0
+        private set
+    /** Whether the held letter is still down. Only then does a key under an item pick it. */
+    var held = true
+        private set
+
+    /** What the hold types in place of the letter. */
+    val first get() = items.first()
+
+    /** The held letter came up: from now on every key closes the row and types as itself. */
+    fun lift() {
+        held = false
+    }
+
+    /**
+     * A touch on the screen on item [index] (or a key under it while the letter is held): the text that takes the place of
+     * the one in the field, or null for no item. The row stays open.
+     */
+    fun pick(index: Int): String? {
+        val item = items.getOrNull(index) ?: return null
+        current = index
+        return item
+    }
+
+    /**
+     * A key pressed while the row is open, [key] being its letter (A to Z) or null for any other key: the item it picks, or
+     * -1, when the row closes and the key does what it always does. After the lift that's every key, Backspace and Space too.
+     */
+    fun key(key: String?): Int = if (!held || key == null) -1 else Picker.choice(key, columns)
+
+    companion object {
+        /** The key's printed symbol from what its key map types with Alt, or null where it types none. */
+        fun symbol(code: Int): String? =
+            if (code <= 0 || !Character.isValidCodePoint(code) || Character.isISOControl(code)) null else String(Character.toChars(code))
     }
 }
 

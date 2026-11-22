@@ -854,10 +854,11 @@ class Composer(
 
     /**
      * The key that typed the last letter stayed down, so [symbol] takes the letter's place, as if the symbol had been
-     * typed instead. If the letter is no longer the last thing in the text, it stays as it is.
+     * typed instead. If the letter is no longer the last thing in the text, it stays as it is. With [keep], [symbol] can be
+     * replaced in its turn, as a held letter's row swaps its choices (#107).
      */
-    fun replaceLetter(symbol: String) {
-        if (defer { replaceLetter(symbol) }) return
+    fun replaceLetter(symbol: String, keep: Boolean = false) {
+        if (defer { replaceLetter(symbol, keep) }) return
         val letter = typedKey ?: return
         typedKey = null
         val anchor = snapshot()
@@ -868,7 +869,17 @@ class Composer(
         fullStop = letter.fullStop
         undo = letter.undo
         type(symbol)
-        typedKey = null
+        if (!keep) typedKey = null
+    }
+
+    /**
+     * Whether the last key's text is still the last thing typed, with the cursor after it, so [replaceLetter] can swap it. True
+     * while edits wait for the app, which can't tell yet.
+     */
+    fun typedKeyIsLast(): Boolean {
+        if (hasPendingInput) return true
+        val letter = typedKey ?: return false
+        return snapshot() == letter.after
     }
 
     fun symbol(symbol: String) {

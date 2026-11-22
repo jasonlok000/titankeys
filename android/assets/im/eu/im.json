@@ -39,7 +39,7 @@
     "hau"
   ],
   "howTo": [
-    "Hold a letter for its accents: hold N for ñ, C for ç. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold N for ñ, C for ç. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "guide": {
     "status": "experimental",

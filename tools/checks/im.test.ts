@@ -35,7 +35,7 @@ test("each input method's file has every field, and its folder is its id", () =>
   }
 });
 
-type Lang = { id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean };
+type Lang = { id: string; name: string; nameEnglish: string; label: string; script: string; experimental: boolean; tested: boolean };
 const indexed: { id: string; name: string; language: Lang }[] = JSON.parse(read(`${folder}/index.json`));
 
 test("Languages shows enabled languages before a single section for the rest", () => {
@@ -54,6 +54,8 @@ test("each input method has a language: one per language, Serbian and Chinese gr
     expect(byId.get(language.id) ?? language).toEqual(language);
     byId.set(language.id, language);
     expect({ id, experimental: language.experimental }).toEqual({ id, experimental: language.id !== "zh" });
+    // Tested only for Korean (owner, 2026-11-22): a native speaker checked it; it stays experimental.
+    expect({ id, tested: language.tested }).toEqual({ id, tested: language.id === "ko" });
   }
   const methods = (language: string) => indexed.filter(e => e.language.id === language).map(e => e.id).sort();
   expect(methods("sr")).toEqual(["sr", "sr-latn"]);

@@ -2507,6 +2507,11 @@ class TitanKeysIme : InputMethodService() {
         }
         val strip = strip ?: return
         openPicker()?.let { open ->
+            // A held letter's row after the lift shows no hover: no key picks from it (#107).
+            if (open is LanguagePicker.Accents && !open.row.held) {
+                strip.pickerMark = -1
+                return
+            }
             // The choices' row shows no hover: only the bigger menu does (owner, 2026-11-17).
             if (open is LanguagePicker.Choices) {
                 strip.pickerMark = -1
@@ -2788,6 +2793,8 @@ class TitanKeysIme : InputMethodService() {
             strip?.showSuggestions = showSuggestions()
         }
         if (editing && composer.selectionChanged(newStart, newEnd)) clearSettlements()
+        // The cursor left the held letter's choice behind (a touch in the field, the touchpad): its row has nothing to swap.
+        if (openPicker() is LanguagePicker.Accents && !composer.typedKeyIsLast()) closePicker()
         // Deleting back to a sentence start, or moving the cursor there, turns the automatic Shift on again.
         if (updateAutoShift()) showModifiers()
         if (editing && field.suggestions) showSelectedWord(newStart, newEnd)
@@ -3933,7 +3940,8 @@ class TitanKeysIme : InputMethodService() {
 
     /** Only a plain letter from the phone's own keyboard can become its symbol. With Shift, Alt, Sym or a shortcut key it stays a letter. */
     private fun canHold(event: KeyEvent): Boolean {
-        if (languages.current.hasAccents) return canHoldAccent(event)
+        // A key with choices holds them; every other key holds as in English (owner, 2026-11-22, #107).
+        if (holdKind(event) == HoldKind.Choices) return canHoldAccent(event)
         if (heldLetterOf(event, false) != null) return canHoldThird(event)
         // Every field that the keyboard types in has this, also password, number and exact typing fields.
         if (!holdSymbols || !editing || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
@@ -3965,10 +3973,15 @@ class TitanKeysIme : InputMethodService() {
         return !device.isVirtual && !device.isExternal && event.isFromSource(InputDevice.SOURCE_KEYBOARD)
     }
 
+    /** What holding [event]'s letter key does in the current input method ([HoldKind]). */
+    private fun holdKind(event: KeyEvent): HoldKind =
+        if (event.keyCode in KeyEvent.KEYCODE_A..KeyEvent.KEYCODE_Z) HoldKind.of(languages.current, printedLetter(event.keyCode))
+        else HoldKind.Symbol
+
     /**
-     * In an input method with accents, holding a letter shows its accents on the bar, and hold for symbols is off on every key,
-     * so a hold always means one thing (docs/languages.md). Shift is fine: the accents show in capitals. Never in exact typing,
-     * which sends keys, or with Alt or a panel on.
+     * A letter with choices (accents, Cyrillic's held letters): the hold types the first and shows the row ([HeldRow]),
+     * whatever hold for symbols is set to (docs/languages.md). Shift is fine: the choices come in capitals. Never in exact
+     * typing, which sends keys, or with Alt or a panel on.
      */
     private fun canHoldAccent(event: KeyEvent): Boolean {
         if (!editing || field.exact || !HoldEngine.isLetter(event.keyCode) || deadKeyPending || !guideAllows(GuideLesson.HoldSymbol)) return false
@@ -3981,9 +3994,10 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * In an input method with accents, a held letter that has none types once, and its repeats do nothing: no letters, symbol,
-     * picker or haptic (owner, 2026-11-17), as a held letter does in Chinese. Not in exact typing, which sends keys, nor with
-     * Alt, Ctrl or a panel on.
+     * In an input method with accents, a held letter that has none and can't become its symbol (hold for symbols off, or Shift
+     * on) types once, and its repeats do nothing (owner, 2026-11-17), as a held letter does in Chinese. Where it can, the hold
+     * takes its repeats first and types its symbol, as in English (#107). Not in exact typing, which sends keys, nor with Alt,
+     * Ctrl or a panel on.
      */
     private fun accentlessRepeat(event: KeyEvent): Boolean =
         event.repeatCount > 0 && languages.current.hasAccents && editing && !field.exact && HoldEngine.isLetter(event.keyCode) &&
@@ -4042,9 +4056,9 @@ class TitanKeysIme : InputMethodService() {
         val letter = heldLetter ?: return
         heldLetter = null
         if (!editing) return
-        // In an input method with accents, the hold shows the letter's accents on the bar instead (docs/languages.md).
-        if (languages.current.hasAccents) {
-            showAccents(letter.keyCode)
+        // A letter with choices: the hold types the first, and its row shows on the bar (docs/languages.md, #107).
+        if (holdKind(letter) == HoldKind.Choices) {
+            showHeldRow(letter)
             return
         }
         // Thai: the key's letter on the third layer, with Shift its other one.
@@ -4126,6 +4140,7 @@ class TitanKeysIme : InputMethodService() {
     private fun closePicker() {
         replayedCode = false
         closeChoicesMenu()
+        heldRowKey = -1
         val open = picker ?: return
         picker = null
         strip?.pickerMark = -1
@@ -4149,7 +4164,8 @@ class TitanKeysIme : InputMethodService() {
     /** Which picking overlay is open, for the touchpad ([Overlays]). */
     private val openOverlay: Overlays.Open get() = when (val open = picker) {
         is LanguagePicker.Switch -> if (open.opened != null) Overlays.Open.SwitcherRow else Overlays.Open.Switcher
-        is LanguagePicker.Accents -> Overlays.Open.Accents
+        // After the lift a held letter's row is no overlay: the touchpad, swipes and the keys work as with nothing open (#107).
+        is LanguagePicker.Accents -> if (open.row.held) Overlays.Open.Accents else Overlays.Open.None
         is LanguagePicker.Choices -> if (choicesMenuOpen) Overlays.Open.ChoicesMenu else Overlays.Open.Choices
         null -> Overlays.Open.None
     }
@@ -4179,21 +4195,47 @@ class TitanKeysIme : InputMethodService() {
         return true
     }
 
-    /** A held letter's accents, on the bar over the keys around it. The letter it typed stays until one is picked. */
-    private fun showAccents(keyCode: Int) {
-        val printed = printedLetter(keyCode)
-        val accents = languages.current.accentsOf(printed, heldShift)
-        if (accents.isEmpty()) return
+    /**
+     * A held letter with choices (owner, 2026-11-22, #107): its first choice takes the letter's place, with the held symbol's
+     * haptic, and the row shows over the keys around it: the choices, then the key's own symbol. It stays after the lift until
+     * the next key; a touch on an item swaps it in.
+     */
+    private fun showHeldRow(letter: KeyEvent) {
+        val printed = printedLetter(letter.keyCode)
+        val choices = languages.current.accentsOf(printed, heldShift)
+        if (choices.isEmpty()) return
+        val row = HeldRow(choices, HeldRow.symbol(letter.getUnicodeChar(KeyEvent.META_ALT_ON)), printed.uppercase())
         haptics.play(Haptic.HeldSymbol)
-        showPicker(LanguagePicker.Accents(accents, printed.uppercase()))
+        val first = row.first
+        if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(first, keep = true) } else composer.replaceLetter(first, keep = true)
+        showPicker(LanguagePicker.Accents(row))
+        heldRowKey = letter.keyCode
+    }
+
+    /** The held letter whose row is open, until its release; -1 when none is held. */
+    private var heldRowKey = -1
+
+    /** The held letter came up: its row stays, but no key picks from it any more, and the touchpad is free again. */
+    private fun heldRowLifted() {
+        heldRowKey = -1
+        val open = openPicker() as? LanguagePicker.Accents ?: return
+        open.row.lift()
+        strip?.pickerMark = -1
+        setPaging()
+        updateKeyWatch()
+    }
+
+    /** A held letter's row still open after the lift: the next key closes it. */
+    private fun closeLiftedRow() {
+        if ((openPicker() as? LanguagePicker.Accents)?.row?.held == false) closePicker()
     }
 
     /**
      * A key while the picker is open, or a Sym that may become a hold. True when the key is taken: it picked, or closed the
      * picker, or is a Sym held back to see if it's held.
      * - A letter in the top two rows under a choice picks it.
-     * - P and Backspace go back in the switcher. Backspace closes the accents. Any other key closes the accents and types as
-     *   usual; the switcher takes it and closes.
+     * - P and Backspace go back in the switcher. Any key but one under an item while the letter is still held closes a held
+     *   letter's row and does what it always does (#107); the switcher takes it and closes.
      * - Sym, with two or more input methods on, waits: let go before the hold time it's Sym as always, held it opens the
      *   overlay. Sym with the overlay open closes it.
      */
@@ -4240,7 +4282,7 @@ class TitanKeysIme : InputMethodService() {
             return true
         }
         val choice = when (open) {
-            is LanguagePicker.Accents -> letter?.let(open::choice)
+            is LanguagePicker.Accents -> open.row.key(letter)
             is LanguagePicker.Switch -> letter?.let(open::choice)
             is LanguagePicker.Choices -> null
         } ?: -1
@@ -4249,13 +4291,22 @@ class TitanKeysIme : InputMethodService() {
             pick(open, choice)
             return true
         }
-        if (keyCode == KeyEvent.KEYCODE_DEL || open is LanguagePicker.Switch) {
+        if (open is LanguagePicker.Switch) {
             closePicker()
             pickerKey = keyCode
             return true
         }
         closePicker()
         return false
+    }
+
+    /** An item of a held letter's row, by a touch or a key under it while held: it takes the place of the one in the field. */
+    private fun pickHeld(open: LanguagePicker.Accents, choice: Int) {
+        haptics.play(Haptic.MenuPress)
+        if (choice == open.row.current) return
+        val item = open.row.pick(choice) ?: return
+        if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(item, keep = true) } else composer.replaceLetter(item, keep = true)
+        showPicker(LanguagePicker.Accents(open.row))
     }
 
     private fun switcherBack(open: LanguagePicker.Switch) {
@@ -4269,13 +4320,15 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private fun pick(open: LanguagePicker, choice: Int) {
+        // A held letter's row stays open for another change of mind, until the next key (#107).
+        if (open is LanguagePicker.Accents) {
+            pickHeld(open, choice)
+            return
+        }
         if (open !is LanguagePicker.Choices || !ChineseKeys.isChinese(languages.current)) closePicker()
         haptics.play(Haptic.MenuPress)
         when (open) {
-            is LanguagePicker.Accents -> {
-                val accent = open.accents[choice]
-                if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(accent) } else composer.replaceLetter(accent)
-            }
+            is LanguagePicker.Accents -> {}
             is LanguagePicker.Choices -> pickChoice(open, choice)
             is LanguagePicker.Switch -> {
                 val entry = when (val next = SwitchOverlay.pick(open.languages, open.opened, choice)) {
@@ -4857,6 +4910,8 @@ class TitanKeysIme : InputMethodService() {
                 consumeKeyPreview(barHover.key)
         }
         clearTeamsEgg()
+        // A held letter's row left after the lift closes on the next key, whatever it is, and the key goes on as always (#107).
+        if (event.repeatCount == 0 && !touchpad.isGestureKey(event)) closeLiftedRow()
         interruptGesture()
         strip?.gesture?.glowOff()
         wakeIdleBar()
@@ -5069,6 +5124,8 @@ class TitanKeysIme : InputMethodService() {
             main.postDelayed(expireHover, SteadyKey.LIFT_MILLIS)
         }
         if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym up: panel ${modifiers.panel}")
+        // The held letter whose row is open came up: the row stays (#107), and its release goes on as any letter's.
+        if (keyCode == heldRowKey) heldRowLifted()
         if (keyCode == KeyEvent.KEYCODE_DEL) {
             modifiers.backspaceReleased()
             backspaceRepeat.up()

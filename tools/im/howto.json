@@ -1,60 +1,60 @@
 {
   "af": [
-    "Hold a letter for its accents: hold E for é, ê, ë or è, O for ó, ö or ô, and U for û. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold E for é, ê, ë or è, O for ó, ö or ô, and U for û. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "az": [
-    "Hold a letter for its accents: hold E for ə, I for ı, G for ğ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold E for ə, I for ı, G for ğ. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "be": [
     "The keys follow the Belarusian PC layout (ЙЦУКЕН): Q is й, B is і, O is ў. The letters without a key of their own are held: э or ж on L, б or ю on M, х or the apostrophe on P, ё on T.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "bg": [
     "Each key types the letter that sounds like it: A is а, B is б, D is д. The odd ones: Q is ч, W is ш, X is ж, Y is ъ. Hold M for ю or ь, and P for я or щ.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "bs": [
-    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "ca": [
-    "Hold a letter for its accents: hold A for à or á, E for é or è, C for ç. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for à or á, E for é or è, C for ç. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "cs": [
-    "Hold a letter for its accents: hold C for č, R for ř, U for ú or ů. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold C for č, R for ř, U for ú or ů. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "da": [
-    "Hold a letter for its accents: hold A for æ or å, O for ø. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for æ or å, O for ø. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "de": [
-    "Hold a letter for its accents: hold S for ß, A for ä, O for ö, U for ü. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold S for ß, A for ä, O for ö, U for ü. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "el": [
     "The keys follow the Greek PC layout: A is α, V is ω, U is θ. W types ς, the final sigma, and Q types ;, Greek's question mark. Hold a vowel for its accent: ά, έ, ή, ί, ό, ύ, and ώ on V. Hold I or Y for ϊ or ϋ too."
   ],
   "eo": [
-    "Hold a letter for its accents: hold C for ĉ, G for ĝ, U for ŭ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold C for ĉ, G for ĝ, U for ŭ. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "es": [
-    "Hold a letter for its accents: hold N for ñ, A for á, U for ú or ü. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
+    "Hold a letter for its accents: hold N for ñ, A for á, U for ú or ü. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol.",
     "A sentence that opens with ¿ or ¡ still gets its capital."
   ],
   "et": [
-    "Hold a letter for its accents: hold O for õ or ö, A for ä, U for ü. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold O for õ or ö, A for ä, U for ü. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "eu": [
-    "Hold a letter for its accents: hold N for ñ, C for ç. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold N for ñ, C for ç. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "fi": [
-    "Hold a letter for its accents: hold A for ä or å, O for ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for ä or å, O for ö. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "fr": [
-    "Hold a letter for its accents: hold E for é, è, ê or ë, C for ç, O for ô or œ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold E for é, è, ê or ë, C for ç, O for ô or œ. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "ga": [
-    "Hold a letter for its accents: hold A for á, E for é, O for ó. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for á, E for é, O for ó. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "gl": [
-    "Hold a letter for its accents: hold N for ñ, A for á, O for ó. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold N for ñ, A for á, O for ó. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "he": [
     "Writes right to left, and the keys follow the Israeli PC layout: A is ש, E is ק. Q types ת, and W types ', for words like צ'יפס. Hold P for ף, M for ץ, and Q for /. Hebrew has no capitals, so Shift types the same letter. The bar reads right to left too: the best word stays in the middle, the next one on the right."
@@ -63,19 +63,19 @@
     "Type Hindi by how it sounds, in English letters: namaste becomes नमस्ते. Capitals are sounds of their own (namaH, maChiyoM), so Shift changes the letter. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more. Double Space types \"। \", and a word ending in ~ keeps its last virama (agar~)."
   ],
   "hr": [
-    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "hu": [
-    "Hold a letter for its accents: hold O for ó, ö or ő, U for ú, ü or ű. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold O for ó, ö or ő, U for ú, ü or ű. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "id": [
     "Types the way English does: no accents, and nothing to hold for them. Hold a letter for its symbol, as in English."
   ],
   "is": [
-    "Hold a letter for its accents: hold D for ð, T for þ, A for á or æ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold D for ð, T for þ, A for á or æ. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "it": [
-    "Hold a letter for its accents: hold E for é or è, A for à, O for ò. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold E for é or è, A for à, O for ò. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "ja": [
     "Type Japanese in romaji: kyou becomes きょう, nn ん, and - ー. Choices sit over the top row, whole sentences first. Space types the first one, and a tap picks any. For more, press Shift, swipe up on the keys, or tap ⋯. Enter or a swipe turns the page. When next words appear, tap one to use it. Enter types the romaji as letters, and double Space types 。."
@@ -85,71 +85,71 @@
   ],
   "kk": [
     "The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц. Kazakh's own letters are held: ә on F, і on S, ң on Y, ғ on U, ұ or ү on E, қ on R, ө on J, һ on H. So are ж or э on L, б or ю on M, х or ъ on P, ё on T.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "ko": [
     "The keys follow Korean's 2-set layout (두벌식): Q is ㅂ, A is ㅁ, K is ㅏ. Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ on Q to T, and ㅒ ㅖ on O and P. The syllable builds above the bar and goes in once the next letter can't join it. The bar starts with what Space will write, then words that fit. Tap one to pick it, or swipe up for more."
   ],
   "lt": [
-    "Hold a letter for its accents: hold A for ą, E for ę or ė, U for ų or ū. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for ą, E for ę or ė, U for ų or ū. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "lv": [
-    "Hold a letter for its accents: hold A for ā, E for ē, K for ķ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for ā, E for ē, K for ķ. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "mk": [
     "Each key types the letter that sounds like it: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ѕ. Hold L for ч or ќ, and P for ш, ж or ѓ.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "nb": [
-    "Hold a letter for its accents: hold A for æ or å, O for ø. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for æ or å, O for ø. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "nl": [
-    "Hold a letter for its accents: hold E for é or ë, I for ï, O for ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold E for é or ë, I for ï, O for ö. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "nn": [
-    "Hold a letter for its accents: hold A for æ or å, O for ø. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for æ or å, O for ø. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "pl": [
-    "Hold a letter for its accents: hold A for ą, L for ł, Z for ź or ż. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for ą, L for ł, Z for ź or ż. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "pt": [
-    "Hold a letter for its accents: hold A for á, à, â or ã, C for ç, O for õ. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
+    "Hold a letter for its accents: hold A for á, à, â or ã, C for ç, O for õ. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol.",
     "Brasil or Portugal? Pick your spelling on this page."
   ],
   "ro": [
-    "Hold a letter for its accents: hold A for ă or â, S for ș, T for ț. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for ă or â, S for ș, T for ț. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "ru": [
     "The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц, A is ф. The letters without a key of their own are held: ж or э on L, б or ю on M, х or ъ on P, ё on T.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "sk": [
-    "Hold a letter for its accents: hold C for č, L for ĺ or ľ, O for ó or ô. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold C for č, L for ĺ or ľ, O for ó or ô. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "sl": [
-    "Hold a letter for its accents: hold C for č, S for š, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold C for č, S for š, Z for ž. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "sr": [
     "Use the Serbian Cyrillic layout: A is а, J is ј, Y is з. Q is љ, W is њ, X is џ, Z is ж. Hold L for ч or ћ, and P for ш or ђ.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "sr-latn": [
-    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold C for č or ć, D for đ, Z for ž. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "sv": [
-    "Hold a letter for its accents: hold A for å or ä, O for ö. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym."
+    "Hold a letter for its accents: hold A for å or ä, O for ö. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "th": [
     "The keys follow Thai's Kedmanee layout, and Shift gives each key's second letter. The keys a PC has and the Titan doesn't are held: hold a key for its third letter, and Shift + hold for its fourth. Thai digits: ๐ is Shift + Q, and ๑ to ๙ are Shift + hold on W E R T I O P S D.",
     "Thai has no spaces between words, so the bar finds the word you're typing, and next words come after a space. Double Space types two spaces, as Thai has no full stop."
   ],
   "tr": [
-    "Hold a letter for its accents: hold I for ı or î, G for ğ, S for ş. They show on the bar over the keys. Rest a finger on the key under the one you want, then press it. Shift gives the capital one. Holding gives accents here, so symbols are on Alt and Sym.",
-    "Shift + I gives İ, with its dot. For I without it, hold I with Shift on and pick it."
+    "Hold a letter for its accents: hold I for ı or î, G for ğ, S for ş. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol.",
+    "Shift + I gives İ, with its dot. Hold I for ı, and hold it with Shift on for I without the dot."
   ],
   "uk": [
     "The keys follow the Ukrainian PC layout (ЙЦУКЕН): Q is й, W is ц, S is і. The letters without a key of their own are held: ж or є on L, б or ю on M, х, ї or the apostrophe on P, ґ on U.",
-    "Rest a finger on the key under the letter on the bar, then press it."
+    "The letter types at once. Touch another on the bar to swap it."
   ],
   "vi": [
     "Type in Telex. Letters: aa is â, aw ă, ee ê, oo ô, ow ơ, uw ư, dd đ. Tones go after the word's letters: s sắc, f huyền, r hỏi, x ngã, j nặng, and z takes the tone off. Press the same key again to undo its mark. The bar starts with what Space will write, then words that fit, then a likely word if you slipped. Tap one to pick it, or swipe up for more."

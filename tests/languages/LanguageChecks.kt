@@ -82,6 +82,8 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty()) thaiHebrewAndHindiNextWords(File(args[0]))
     if (args.isNotEmpty()) cyrillicHoldsReachEveryLetter(File(args[0]))
     if (args.isNotEmpty()) holdHints(File(args[0]))
+    aHeldLetterTypesItsFirstChoice()
+    if (args.isNotEmpty()) heldLettersInTheFolder(File(args[0]))
     if (args.isNotEmpty()) everyGuideIsComplete(File(args[0]))
     if (args.isNotEmpty()) practiceOnlyUsesEnabledMethods(File(args[0]))
     if (args.isNotEmpty()) noFragmentIsOffered(File(args[0]))
@@ -151,8 +153,8 @@ private fun accentsKeepTheirOrderAndCase() {
     same("a key with nothing held", de.accentsOf('q', false), emptyList<String>())
     check("German has accents", de.hasAccents)
     check("English has none", !InputMethod.ENGLISH.hasAccents)
-    // A held letter with no accents types once in an input method with accents (owner, 2026-11-17): Spanish's W holds nothing,
-    // so TitanKeysIme.accentlessRepeat takes its repeats, while N still opens its accents.
+    // Spanish's W holds no accents, so it holds for its symbol as in English (owner, 2026-11-22, #107), or, with hold for
+    // symbols off, types once (TitanKeysIme.accentlessRepeat, owner, 2026-11-17). N's hold types ñ.
     val es = InputMethod.parse(SPANISH)
     check("Spanish has accents", es.hasAccents)
     same("Spanish w holds nothing", es.accentsOf('w', false), emptyList<String>())
@@ -254,15 +256,20 @@ private fun languagesGroupTheirInputMethods() {
     fun entry(id: String, language: String, name: String = id) =
         """{"id":"$id","name":"$name","nameEnglish":"$name","label":"${id.take(2).uppercase()}","locale":"$id","script":"Latn",""" +
             """"language":{"id":"$language","name":"$language","nameEnglish":"$language","label":"${language.uppercase()}","script":"Latn",""" +
-            """"experimental":${language != "zh"}}}"""
+            """"experimental":${language != "zh"},"tested":${language == "ko"}}}"""
     val index = InputMethodIndex.parse("[" + listOf(entry("es", "es"), entry("sr-latn", "sr"), entry("sr", "sr"),
-        entry("yue-yale", "zh"), entry("zh-pinyin", "zh")).joinToString(",") + "]")
+        entry("yue-yale", "zh"), entry("zh-pinyin", "zh"), entry("ko", "ko")).joinToString(",") + "]")
     same("English is a language, not experimental", index.languages.first(),
         InputMethodIndex.Language("en", "English", "English", "EN", "Latn", false))
     same("Serbian is one language", index.methodsOf("sr").map { it.id }, listOf("sr-latn", "sr"))
-    same("languages in the index's order", index.languages.map { it.id }, listOf("en", "es", "sr", "zh"))
+    same("languages in the index's order", index.languages.map { it.id }, listOf("en", "es", "sr", "zh", "ko"))
     check("Spanish is experimental", index.languages.first { it.id == "es" }.experimental)
+    check("and not tested", !index.languages.first { it.id == "es" }.tested)
     check("Chinese isn't", !index.languages.first { it.id == "zh" }.experimental)
+    // Tested (owner, 2026-11-22): a native speaker checked Korean's typing; it stays experimental for the switcher.
+    check("Korean is tested", index.languages.first { it.id == "ko" }.tested)
+    check("and still experimental", index.languages.first { it.id == "ko" }.experimental)
+    check("English isn't tested", !index.languages.first().tested)
     val on = index.languagesOn("en,sr,es,yue-yale,sr-latn,zh-pinyin")
     same("languages on, in the order each first comes", on.map { it.language.id }, listOf("en", "sr", "es", "zh"))
     same("each with its own on, in the setting's order", on[1].methods.map { it.id }, listOf("sr", "sr-latn"))
@@ -1633,7 +1640,8 @@ private fun eachLanguageHasItsFullStop(folder: File) {
 private fun typingRowsFit(method: InputMethod) {
     val rows = LanguageSettings.rows(method)
     val expected = when (method.id) {
-        "fr" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace")
+        // Keys with no accents hold for their symbol (owner, 2026-11-22, #107), so the hold row shows.
+        "fr" -> listOf("fixes", "capitals", "doubleSpace", "sentenceSpaces", "commaSpace", "hold")
         // A held letter's symbol goes through the engine as its own mark, so the hold row stays.
         "zh-pinyin", "yue-yale", "yue-jyutping", "ja" -> listOf("doubleSpace", "hold")
         "th" -> listOf("fixes", "commaSpace")
@@ -1648,7 +1656,9 @@ private fun typingRowsFit(method: InputMethod) {
     // Hindi's and Vietnamese's engines build the words: their slipped-key choice is only ever a suggestion on the bar, never put in
     // by Space, so it isn't under Fix typos, and their pages don't show it (D, 2026-11-17).
     if (method.id == "hi" || method.id == "vi") check("${method.id}: no Fix typos row", "fixes" !in rows)
-    check("${method.id}: an accent language has no hold row", !method.hasAccents || "hold" !in rows)
+    // Only a third layer (Thai, Hebrew) takes the hold from symbols; with accents the other keys hold for theirs (#107).
+    val third = ('a'..'z').any { method.held(it, false) != null }
+    same("${method.id}: a hold row unless a third layer holds", "hold" in rows, !third)
     check("${method.id}: no capitals row without capitals", method.rules.capitalise || "capitals" !in rows)
     // The quick settings panel hides the same ones while this input method types (QuickSetting.hiddenIn).
     val hidden = QuickSetting.hiddenIn(rows)
@@ -1858,7 +1868,12 @@ private fun everyGuideIsComplete(folder: File) {
         val guide = root["guide"] as? Map<*, *>
         check("${dir.name}: has a guide", guide != null)
         guide ?: continue
-        check("${dir.name}: its status", guide["status"] in setOf("ready", "experimental"))
+        // Its stage (owner, 2026-11-22): Chinese is polished, Korean tested, the rest experimental.
+        same("${dir.name}: its status", guide["status"], when {
+            (root["script"] as? String) == "Hani" -> "polished"
+            dir.name == "ko" -> "tested"
+            else -> "experimental"
+        })
         check("${dir.name}: its family", (guide["family"] as? String).orEmpty().isNotEmpty())
         for (field in listOf("line", "practice")) check("${dir.name}: its $field", guide[field] is String)
         check("${dir.name}: its points", guide["points"] is List<*>)
@@ -1922,4 +1937,83 @@ private fun noFragmentIsOffered(folder: File) {
     }
     check("Korean's and Thai's next words were checked", checked > 400) { "$checked" }
     check("Korean's 고 is a fragment", WordNoise.fragment("ko", "고"))
+}
+
+/**
+ * A held letter with choices (owner, 2026-11-22, #107): the hold types its first choice, whether it has one or several, and
+ * the row shows its choices, then the key's own symbol, never the plain letter. The row stays after the lift; a touch on an
+ * item swaps it in and the row stays; after the lift every key closes the row and types as itself. Keys with no choices hold
+ * for their symbol, as in English.
+ */
+private fun aHeldLetterTypesItsFirstChoice() {
+    val es = InputMethod.parse(SPANISH)
+    // One choice: N types ñ at the hold, and the row shows ñ and N's symbol.
+    val n = HeldRow(es.accentsOf('n', false), "?", "N")
+    same("one choice: the hold types it", n.first, "ñ")
+    same("one choice: the row shows it and the key's symbol", n.items, listOf("ñ", "?"))
+    same("one choice: two items over the keys around N", n.columns.size, 2)
+    same("the typed item is the one marked", n.current, 0)
+    // Several: U types ú, the commonest, and the row stays after the lift with ü and the symbol to pick.
+    val u = HeldRow(es.accentsOf('u', false), "_", "U")
+    same("several choices: the hold types the first", u.first, "ú")
+    same("several choices: the row in its order, then the symbol", u.items, listOf("ú", "ü", "_"))
+    check("the row's items never include the plain letter", "u" !in u.items && "n" !in n.items)
+    same("while held, the key under the second item picks it", u.key(Layout.rows[0][u.columns[1]]), 1)
+    u.lift()
+    check("the row stays after the lift", !u.held && u.items.size == 3)
+    // A touch on the screen swaps the typed item, and the row stays for another change of mind.
+    same("a touch on ü swaps it in", u.pick(1), "ü")
+    same("ü is now the one marked", u.current, 1)
+    same("a touch on the symbol swaps that in", u.pick(2), "_")
+    same("a touch past the items swaps nothing", u.pick(3), null)
+    same("the last swap stays marked", u.current, 2)
+    // The next key closes the row and types as itself: no key picks after the lift, the ones under the items neither.
+    for (column in u.columns) same("after the lift, ${Layout.rows[0][column]} types as itself", u.key(Layout.rows[0][column]), -1)
+    same("after the lift, Backspace and every other key close the row", u.key(null), -1)
+    // No symbol from the key map: the row is the choices alone. A symbol that's a choice shows once.
+    same("no symbol", HeldRow(listOf("ñ"), null, "N").items, listOf("ñ"))
+    same("a symbol that's a choice shows once", HeldRow(listOf("ñ", "?"), "?", "N").items, listOf("ñ", "?"))
+    same("eight at most, the symbol kept last", HeldRow(List(9) { "a$it" }, "?", "G").items.last(), "?")
+    same("eight at most", HeldRow(List(9) { "a$it" }, "?", "G").items.size, Picker.ACCENTS)
+    // Capitals with Shift: the choices come in capitals, the symbol as printed.
+    val capital = HeldRow(es.accentsOf('u', true), "_", "U")
+    same("with Shift the hold types the capital", capital.first, "Ú")
+    same("with Shift the row is in capitals", capital.items, listOf("Ú", "Ü", "_"))
+    // Keys with no choices hold for their symbol in Spanish, as in English (#107).
+    same("Spanish W holds for its symbol", HoldKind.of(es, 'w'), HoldKind.Symbol)
+    same("Spanish N holds its choices", HoldKind.of(es, 'n'), HoldKind.Choices)
+    same("English holds for symbols", HoldKind.of(InputMethod.ENGLISH, 'n'), HoldKind.Symbol)
+    same("a key map's symbol", HeldRow.symbol('?'.code), "?")
+    same("no symbol where the key map types none", HeldRow.symbol(0), null)
+    same("no symbol for a control character", HeldRow.symbol(10), null)
+}
+
+/** The same in the input methods themselves: Cyrillic's held letters, a third layer, and the hold row in Settings. */
+private fun heldLettersInTheFolder(folder: File) {
+    val ru = InputMethod.parse(File(folder, "ru/im.json").readText())
+    // Russian L types д; held, it becomes ж, the first of ж э, with э and L's symbol on the row.
+    val l = HeldRow(ru.accentsOf('l', false), ";", "L")
+    same("Russian's held L types ж", l.first, "ж")
+    same("Russian's L row", l.items, listOf("ж", "э", ";"))
+    check("Russian's L row hasn't д", "д" !in l.items)
+    same("Russian's P types х, then ъ", HeldRow(ru.accentsOf('p', false), null, "P").items, listOf("х", "ъ"))
+    same("Russian's held L with Shift types Ж", HeldRow(ru.accentsOf('l', true), ";", "L").first, "Ж")
+    same("Russian's T holds ё alone, typed at once", HeldRow(ru.accentsOf('t', false), "?", "T").first, "ё")
+    same("Russian's Q holds for its symbol", HoldKind.of(ru, 'q'), HoldKind.Symbol)
+    val th = InputMethod.parse(File(folder, "th/im.json").readText())
+    val thirdKey = ('a'..'z').first { th.held(it, false) != null }
+    same("Thai's third layer still holds its letter", HoldKind.of(th, thirdKey), HoldKind.Third)
+    for (name in listOf("es", "fr", "de", "ru")) {
+        val method = InputMethod.parse(File(folder, "$name/im.json").readText())
+        check("$name shows Hold a letter for its symbol", LanguageSettings.HOLD in LanguageSettings.rows(method))
+    }
+    check("Thai has no hold row", LanguageSettings.HOLD !in LanguageSettings.rows(th))
+    // The plain letter is never on a row: no input method holds a key's own letter.
+    for (dir in folder.listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }) {
+        val method = runCatching { InputMethod.parse(File(dir, "im.json").readText()) }.getOrNull() ?: continue
+        for (key in method.accents.keys) {
+            val plain = method.letter(key, false) ?: key.toString()
+            check("${method.id}: ${key.uppercaseChar()} doesn't hold its own letter", plain !in method.accentsOf(key, false))
+        }
+    }
 }

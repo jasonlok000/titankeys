@@ -1003,6 +1003,10 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   or Android hid the keyboard during the push. YouTube, ChatGPT, Smart Launcher and WhatsApp all hide it on the push, so the
   morning's "the app gets its back" made one press hide and go back ("the back straight up just hides the keyboard and
   immediately back off in the app"). WhatsApp may need a second press again; the rule wins.
+- **Back ships as it is (2026-11-21, night):** on ae9bd573 the owner still found Back not right in YouTube search and ChatGPT,
+  and decided "i dont want to waste time fixing it now. let's ship that as is". It stays a known issue for after the launch.
+- **Korean ready (2026-11-21):** a Korean-speaking friend of the owner's tried it and "said it's working fine so we shd treat as
+  ready". Dropping its experimental mark is issue #100.
 - **Switcher labels (2026-11-21):** the corner draw-in had shrunk every label to a few px ("bugged now with the language selection
   bar with the font sizes"); it now stops where the narrowest pill still holds the widest label at full size. The playground
   keeps the guide's rule of no bar trail ("we can just keep it not showing on the playground then").

@@ -26,7 +26,7 @@ import javax.net.ssl.HttpsURLConnection
  * The privacy policy at [PRIVACY_URL] says the same, and must change whenever this does.
  */
 object Connected {
-    const val SITE = "https://jasonlok000.github.io/titankeys"
+    const val SITE = "https://everyones-niche.com/titankeys"
     const val FEED_URL = "$SITE/feed.json"
     const val PRIVACY_URL = "$SITE/privacy/"
 

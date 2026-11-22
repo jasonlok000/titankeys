@@ -1655,6 +1655,11 @@ private fun earlierWords() {
     same(small("tehn", "than"), false, "Small: two keys away")
     same(EarlierWords.allows(EarlierWords.OFF, "its", "it's", false, known, frequency), false, "Off: nothing behind the cursor")
     same(EarlierWords.allows(EarlierWords.BOLD, "are", "were", false, known, frequency), true, "Bold: as before 3.0")
+    // Settings shows Off and On; On is bold, or small with Only fix when sure (owner, 2026-11-22).
+    val settings = File("android/kotlin/com/titankeys/engine/TypingSettings.java").readText()
+    same("return fixOnlyWhenSure(context) ? EARLIER_SMALL : EARLIER_BOLD;" in settings, true, "On follows Only fix when sure")
+    same("return TypingSettings.earlierLevel(context);" in File("android/kotlin/com/titankeys/engine/SwipeTyping.java").readText(), true,
+        "and the keyboard reads that level")
     same(EarlierWords.oneKey("teh", "the"), true, "a swap is one key")
     same(EarlierWords.oneKey("the", "this"), false, "the and this are two keys apart")
     for (word in listOf("ja", "lor", "wor", "ga", "la", "nei", "hai", "sik", "gwai")) same(CantoneseSyllables.contains(word), true, "Cantonese: $word")

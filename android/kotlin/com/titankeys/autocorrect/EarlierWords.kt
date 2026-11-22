@@ -2,6 +2,7 @@ package com.titankeys.autocorrect
 
 /**
  * Fix earlier words (owner, 2026-11-20): how far a fix may go back to a word already finished. The keys are TypingSettings'.
+ * Settings shows it as Off or On; On is [SMALL] with Only fix when sure and [BOLD] without (owner, 2026-11-22).
  * [SMALL] keeps to what can't change what someone meant: an apostrophe only ("its" to "it's", "were" to "we're"), a slip on a
  * rare word ("dome" to "some"), or a short word that isn't one ("hs" to "has"). It never swaps a common word for another,
  * changes its mind about an earlier fix, or fixes a fix. [BOLD] allows all of that: autocorrect before 3.0.

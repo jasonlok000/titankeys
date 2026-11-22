@@ -56,7 +56,7 @@ export const deleteQueued = () => run("deleteQueued");
 export const deleteContributions = () => run("deleteContributions");
 export const copyContributorId = () => connected("copyContributorId");
 
-export const PRIVACY_URL = "https://jasonlok000.github.io/titankeys/privacy/";
+export const PRIVACY_URL = "https://everyones-niche.com/titankeys/privacy/";
 
 export const kilobytes = (bytes: number) => bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1_048_576).toFixed(1)} MB`;
 

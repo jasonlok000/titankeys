@@ -19,9 +19,11 @@ export const fixKinds: { id: string; label: string; example: string }[] = [
 /** The kinds Fix earlier words decides instead of a switch of their own (TypingSettings.fixOn). */
 export const earlierKinds = ["contextApostrophes", "secondLook"];
 
-/** Fix earlier words (owner, 2026-11-20): how far a fix may go back to a finished word. Stand-in wording for F. */
-export const earlierChoices: { value: "off" | "small" | "bold"; label: string; example: string }[] = [
+/**
+ * Fix earlier words (owner, 2026-11-20): whether a fix may go back to a finished word. Off and On (owner, 2026-11-22); with Only
+ * fix when sure, On keeps to the small fixes. Wording by F.
+ */
+export const earlierChoices: { value: "off" | "on"; label: string; example: string }[] = [
   { value: "off", label: "Off", example: "A word stays as you left it once you've moved on." },
-  { value: "small", label: "Small fixes", example: "its going → it's going, get dome food → get some food" },
-  { value: "bold", label: "Bold", example: "Also their going → they're going, the are → they are, and it can change a fix again" },
+  { value: "on", label: "On", example: "their going → they're going, the are → they are, get dome food → get some food. With Only fix when sure, just apostrophes and one-key slips" },
 ];

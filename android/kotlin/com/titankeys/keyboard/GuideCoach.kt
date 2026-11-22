@@ -143,6 +143,18 @@ internal class TapMeter(val taps: Int) {
         landed = taps
     }
 
+    /**
+     * The slide moved to its next stage. Held, the gesture that moved it is still going: the boxes stay lit and the thumb slides
+     * until the lift. It used to start the count again, so the moment cursor or select mode started the slide's next line wiped
+     * the boxes and stilled the thumb under a finger still held (owner, 2026-11-22: "all of it shd be highlighted and the finger
+     * shd swipe when the gestures r triggered. same for both space gestures"). True when the boxes stay.
+     */
+    fun stageChanged(): Boolean {
+        if (held) return true
+        reset()
+        return false
+    }
+
     fun reset() {
         landed = 0
         heldAt = -1L

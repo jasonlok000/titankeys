@@ -1,7 +1,7 @@
 # Announcements
 
 The news that TitanKeys shows (#42): a new version, the move to Google Play, or other important news. The app downloads
-`site/feed.json` from `https://jasonlok000.github.io/titankeys/feed.json` at most once a day, checks its Ed25519
+`site/feed.json` from `https://everyones-niche.com/titankeys/feed.json` at most once a day, checks its Ed25519
 signature, and shows each new entry once as a silent notification, only while no text field is active. The News page
 in Settings shows the same entries.
 

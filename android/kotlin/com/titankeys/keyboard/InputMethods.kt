@@ -156,24 +156,22 @@ sealed interface SwitchPick {
  * (docs/languages.md, "Switching"; owner, 2026-11-16).
  */
 object SwitchOverlay {
-    /** The first and last columns the overlay uses: Q and O. P is Back's. */
-    const val FIRST = 0
-    const val LAST = 8
     /** The rows of letters that pick: the top two. */
     const val ROWS = 2
 
     /**
-     * The key columns each of [count] places spans within Q to O, every place the same whole number of keys (owner,
-     * 2026-11-17), from Q (owner, 2026-11-20): one takes Q to O, two four keys each (Q–R, T–I), three three each (Q–E,
-     * R–Y, U–O), four two each (Q–W, E–R, T–Y, U–I).
+     * The key columns each of [count] places spans: the owner's own layout (2026-11-22, #101), every place the same whole number
+     * of keys (owner, 2026-11-17), from W, clear of the screen's corner at Q, except four, which need Q: one W–U, two three keys
+     * each (W–R, T–U), three two each (W–E, R–T, Y–U), four two each (Q–W, E–R, T–Y, U–I). P is Back's, and O is never used.
+     * With four, the pill over Q meets the corner, so every pill draws in the same amount ("trim all pills equally"): see
+     * Strip.drawPicker.
      */
-    fun columns(count: Int): List<IntRange> {
-        val shown = count.coerceIn(0, InputMethod.MAX_LANGUAGES)
-        if (shown == 0) return emptyList()
-        val keys = LAST - FIRST + 1
-        val width = keys / shown
-        val start = FIRST + (keys - width * shown) / 2
-        return List(shown) { start + width * it until start + width * (it + 1) }
+    fun columns(count: Int): List<IntRange> = when (count.coerceIn(0, InputMethod.MAX_LANGUAGES)) {
+        0 -> emptyList()
+        1 -> listOf(1..6)
+        2 -> listOf(1..3, 4..6)
+        3 -> listOf(1..2, 3..4, 5..6)
+        else -> listOf(0..1, 2..3, 4..5, 6..7)
     }
 
     /** What the switcher shows: the first four languages on, each with its first four input methods. A setting may hold more. */

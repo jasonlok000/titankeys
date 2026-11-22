@@ -569,9 +569,9 @@ public final class SwipeTyping {
         return TypingSettings.fixOn(context, id);
     }
 
-    /** How far autocorrect may go back to a finished word: off, small or bold (TypingSettings.earlierWords). */
+    /** How far autocorrect may go back to a finished word: off, small or bold (TypingSettings.earlierLevel). */
     public String earlierWords() {
-        return TypingSettings.earlierWords(context);
+        return TypingSettings.earlierLevel(context);
     }
 
     /** Whether a Cantonese input method is on, so its romanised syllables count as words. */

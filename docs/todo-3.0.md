@@ -11,7 +11,8 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **Pushed with `[skip ci]`, release held** (owner: "do the github bookkeeping but hold the release"). The release starts from Actions > App release > Run workflow, with Publish ticked.
 - **Play:** waiting on identity verification. The store graphics are in .dev/store/play-store-graphics/final. The r/unihertz post and launch plan are in .dev/private.
 - **Website on its own domain (2026-11-21):** everyones-niche.com is the Everyone's Niche landing page (repo jasonlok000.github.io); TitanKeys is at everyones-niche.com/titankeys/, privacy at /titankeys/privacy/ (GitHub Pages, HTTPS enforced, domain verified on GitHub; GoDaddy DNS: four A records, www CNAME, the challenge TXT; Zoho mail untouched). jasonlok000.github.io/titankeys/* redirects there, so 3.0's built-in feed and privacy links keep working. Play's privacy URL is the new one; 3.1 moves `Connected.SITE` and `PRIVACY_URL` in the app.
-- **Known for later:** #101 (3.1: the switcher moves to W to I with Back on P, owner's call on 2026-11-21; that also lets its highlight be as long as it can be), #102 (Back in YouTube search and ChatGPT, shipped as is), #100 (Korean ready, drop its experimental mark).
+- **Into 3.0 (2026-11-22, "fix it with the 3.1 fixes but keep it 3.0"):** the guide's Space-gesture boxes stay lit and the thumb slides while held; the switcher in the owner's 2/3/4 layout (#101); the app's links on everyones-niche.com/titankeys. A new candidate, so the 3-day daily drive starts again.
+- **Known for later:** #102 (Back in YouTube search and ChatGPT, shipped as is), #100 (Korean ready, drop its experimental mark).
 
 ## The 3.0 candidate (2026-11-20)
 

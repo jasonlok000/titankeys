@@ -45,7 +45,7 @@ The age groups on offer: "Age 5 and under", "Ages 6-8", "Ages 9-12", "Ages 13-15
 
 | Declaration | Answer | Note |
 |---|---|---|
-| **Privacy policy** | `https://jasonlok000.github.io/titankeys/privacy/` | Required for every app. It must also be linked inside the app, be public, not a PDF, and name the developer or the app ([User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311)). |
+| **Privacy policy** | `https://everyones-niche.com/titankeys/privacy/` | Required for every app. It must also be linked inside the app, be public, not a PDF, and name the developer or the app ([User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311)). |
 | **Ads** | No, my app does not contain ads | |
 | **App access** | **All or some functionality is restricted**, with instructions (below) | No login, but the main features need the Titan 2 Elite's touch-sensitive keys, which a reviewer's phone won't have. |
 | **Content rating** | As above | |

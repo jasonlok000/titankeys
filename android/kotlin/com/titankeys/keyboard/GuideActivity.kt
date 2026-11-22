@@ -4294,8 +4294,9 @@ class GuideActivity : Activity() {
 
     /** The slide moved on, or back, to another instruction: only that one shows, and the ghost follows it. */
     private fun showStage() {
-        tapMeter?.reset()
-        keys.taps(null)
+        // The taps that started the mode are still held as the slide moves on: their boxes stay lit and the thumb slides.
+        val meter = tapMeter
+        if (meter?.stageChanged() == true) keys.taps(meter, flow.tapSlideLeft) else keys.taps(null)
         startHunt()
         hideHint()
         hideChip(now = true)

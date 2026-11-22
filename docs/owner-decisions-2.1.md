@@ -1036,3 +1036,14 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   drawn beside them still show the amount, and their ×N is a whole number.
 - **The Back key's setup line (2026-11-21):** "let titankeys handle back ... is bad, like it shd be at least let TitanKeys handle
   the back key to be clearer." The setup step and the disclosure say "Let TitanKeys handle the Back key".
+- **Space gestures in the guide light up in full (2026-11-22):** "all of it shd be highlighted and the finger shd swipe when the
+  gestures r triggered. same for both sace gestures" (after a screenshot with cursor mode on and both boxes dark). The slide's
+  next line, as the mode starts, no longer resets the tap boxes: held, every box stays lit and the thumb slides, on the cursor
+  and the select slides alike. "fix it with the 3.1 fixes but keep it 3.0": it ships in 3.0 with the two 3.1 fixes below.
+- **The switcher's layout (2026-11-22, #101):** the owner's own: "2 - wer, tyu / 3- we,rt,yu / 4 - qw,er,rt,yu" (read as Q–W,
+  E–R, T–Y, U–I, as R can't be in two). One W–U. Off Q except with four; O is never used; Back stays on P. With four, the pill
+  over Q meets the screen's corner: "no trim all pills equally" and "just shape the pill around the curve as much as possible.
+  the pill still needs to look like a evenly shaped pill": every pill draws in by the same amount, just enough that the
+  outermost pill's round end clears the curve (it was measured as a square box, which drew them in further than needed).
+- **The app's site links on everyones-niche.com (2026-11-22):** the news feed and the privacy policy now load from
+  everyones-niche.com/titankeys; the old github.io address still redirects, for builds before this one.

@@ -440,27 +440,39 @@ public final class TypingSettings {
     private static final String CONTEXT_APOSTROPHES = "contextApostrophes";
     public static final String EARLIER_WORDS = "earlier_words";
     /**
-     * Fix earlier words' values, as EarlierWords in the autocorrect has them (values, not keys, so declared together). Off: a
-     * finished word stays as it was left. Small, the default: only a slip on a rare word or a short non-word, or an apostrophe.
-     * Bold: also guesses what was meant (their to they're, are to were, a changed or redone fix), autocorrect before 3.0.
+     * Fix earlier words' values, as EarlierWords in the autocorrect has them (values, not keys, so declared together). The
+     * setting is [EARLIER_OFF] or [EARLIER_ON] (owner, 2026-11-22: "change the fix earlier words to be only off and bold
+     * (renamed to be off and on)"). How far On goes is [EARLIER_SMALL] with Only fix when sure, else [EARLIER_BOLD]: see
+     * [earlierLevel]. Small: only a slip on a rare word or a short non-word, or an apostrophe. Bold: also guesses what was meant
+     * (their to they're, are to were, a changed or redone fix).
      */
-    public static final String EARLIER_OFF = "off", EARLIER_SMALL = "small", EARLIER_BOLD = "bold";
+    public static final String EARLIER_OFF = "off", EARLIER_ON = "on", EARLIER_SMALL = "small", EARLIER_BOLD = "bold";
 
     /**
-     * How far autocorrect may go back to a finished word (Settings > What gets fixed > Fix earlier words; owner, 2026-11-20):
-     * [EARLIER_OFF], [EARLIER_SMALL] or [EARLIER_BOLD]. Small by default. From before 3.0, the Second look switch off is Off.
+     * Fix earlier words, as Settings > What gets fixed shows it: [EARLIER_OFF] or [EARLIER_ON], On by default. The Small and
+     * Bold that 3.0's first candidates stored are both On now. From before 3.0, the Second look switch off is Off.
      */
     public static String earlierWords(Context context) {
         String stored = preferences(context).getString(EARLIER_WORDS, null);
-        if (EARLIER_OFF.equals(stored) || EARLIER_SMALL.equals(stored) || EARLIER_BOLD.equals(stored)) return stored;
-        return preferences(context).getBoolean("fix_" + SECOND_LOOK, true) ? EARLIER_SMALL : EARLIER_OFF;
+        if (EARLIER_OFF.equals(stored)) return EARLIER_OFF;
+        if (stored != null) return EARLIER_ON;
+        return preferences(context).getBoolean("fix_" + SECOND_LOOK, true) ? EARLIER_ON : EARLIER_OFF;
     }
 
-    public static void earlierWords(Context context, String level) {
-        if (!EARLIER_OFF.equals(level) && !EARLIER_SMALL.equals(level) && !EARLIER_BOLD.equals(level)) {
-            throw new IllegalArgumentException("Fix earlier words is off, small or bold: " + level);
+    public static void earlierWords(Context context, String value) {
+        if (!EARLIER_OFF.equals(value) && !EARLIER_ON.equals(value)) {
+            throw new IllegalArgumentException("Fix earlier words is off or on: " + value);
         }
-        preferences(context).edit().putString(EARLIER_WORDS, level).apply();
+        preferences(context).edit().putString(EARLIER_WORDS, value).apply();
+    }
+
+    /**
+     * How far autocorrect goes back to a finished word, for EarlierWords: Off, or with it on, the small fixes when Only fix when
+     * sure is on (owner, 2026-11-22: "only fix when sure makes fix earlier words use the small fixes settings"), else bold.
+     */
+    public static String earlierLevel(Context context) {
+        if (EARLIER_OFF.equals(earlierWords(context))) return EARLIER_OFF;
+        return fixOnlyWhenSure(context) ? EARLIER_SMALL : EARLIER_BOLD;
     }
 
     /** Whether a Cantonese input method is on, so its romanised syllables count as words (owner, 2026-11-20). */

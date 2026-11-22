@@ -349,9 +349,10 @@ tests/chinese-render/run.sh [folder]` draws the row and the menu with the app's 
 
 ## Switching: the overlay on a held Sym
 
-- **Holding Sym opens the switcher** over the top row, like the word menu: each language that's on, its label over Q to O
-  (9 places), Back on P, the current one marked. They're spread evenly: one takes all nine, two take four keys each,
-  three take three each, four take two each, the key left over empty (owner, 2026-11-16; Q to O, owner, 2026-11-20).
+- **Holding Sym opens the switcher** over the top row, like the word menu: each language that's on, Back on P, the current
+  one marked, every place the same whole number of keys: one over W–U, two over W–R and T–U, three over W–E, R–T and Y–U,
+  four over Q–W, E–R, T–Y and U–I (the owner's own layout, 2026-11-22, #101). With four, the pill over Q meets the screen's
+  corner: every pill draws in by the same amount, just enough that the outermost pill's round end clears the curve.
 - **Picking a language with more than one input method on** (Serbian, Chinese) shows a second row with them, spread the
   same way, the one typing now marked; picking the language typing now does the same. A language with one input method
   switches to it. With one language on that has several, the switcher opens on its row. There's no hold-Q.

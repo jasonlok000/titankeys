@@ -29,7 +29,7 @@ export default function Fixes() {
       <Field label="Fix earlier words" href="/settings/earlier-words">{earlierWordsLabel(settings)}</Field>
     </Section>
     <Section title="How sure">
-      <Toggle label="Only fix when sure" subtitle="A fix has to win by more before it goes in. You get fewer fixes, and fewer wrong ones."
+      <Toggle label="Only fix when sure" subtitle="A fix has to win by more before it goes in, and earlier words only get small fixes. You get fewer fixes, and fewer wrong ones."
         value={fixOnlyWhenSure} disabled={!autocorrect} onChange={on => save.run({ fixOnlyWhenSure: on })} />
     </Section>
   </Screen>;

@@ -2220,6 +2220,20 @@ private fun theGuideForNewcomers() {
     same(meter.visibleTaps(1_270), 0, "Held, the taps aren't counted as pending: the held pose lights every box instead")
     // The cursor's own trace starts as the slide begins: the same finger, still held, not a new tap (owner, 2026-11-21).
     same(meter.down(1_400) to meter.held, false to true, "The slide's trace keeps the hold")
+    // The mode starting moves the slide to its next line; the held taps keep every box lit and the thumb sliding (owner,
+    // 2026-11-22: "all of it shd be highlighted and the finger shd swipe when the gestures r triggered").
+    same(meter.stageChanged() to meter.held, true to true, "The slide's next line keeps the held boxes")
+    same(GuideTapDrawing.liveAt(meter, 1_500, drag = true, left = true, animate = true)?.let { it.held to (it.slide > 0f) },
+        true to true, "and the live thumb slides")
+    val select = TapMeter(3)
+    select.hold(10_000)
+    same(select.stageChanged() to GuideTapDrawing.liveAt(select, 10_100, drag = true, left = false, animate = true)?.let {
+        List(3, it::lit) to (it.slide < 0f) }, true to (listOf(true, true, true) to true), "Select mode too: three lit, sliding right")
+    val idle = TapMeter(2)
+    idle.down(20_000)
+    same(idle.stageChanged() to idle.landed, false to 0, "Not held, a new stage counts from nothing, as before")
+    same("if (meter?.stageChanged() == true) keys.taps(meter, flow.tapSlideLeft) else keys.taps(null)" in
+        File("android/kotlin/com/titankeys/keyboard/GuideActivity.kt").readText(), true, "The slide's stage change uses it")
     meter.up(2_000, tap = false)
     same(meter.landed to meter.held, 0 to false, "A lift after the hold starts again")
     meter.down(3_000)

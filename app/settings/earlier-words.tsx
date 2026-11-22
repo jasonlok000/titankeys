@@ -6,7 +6,7 @@ type Earlier = State["earlierWords"];
 const options = earlierChoices.map(({ value, label }) => ({ value, label }));
 
 export const earlierWordsLabel = ({ earlierWords }: State) =>
-  earlierChoices.find(({ value }) => value === earlierWords)?.label ?? "Small fixes";
+  earlierChoices.find(({ value }) => value === earlierWords)?.label ?? "On";
 
 /** Fix earlier words (owner, 2026-11-20): how far a fix may go back to a finished word. English only. Stand-in wording for F. */
 export default function EarlierWordsPage() {

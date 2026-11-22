@@ -209,42 +209,44 @@ private fun aTapPicksTheTileUnderIt() {
                 same("$count tiles: the key $letter picks the same tile", SwitchOverlay.choice(letter, count), tile)
         }
     }
-    same("Q's place picks the first of two", Picker.itemAt(key / 2, SwitchOverlay.columns(2), 2, cell), 0)
-    same("O's place picks nothing with two", Picker.itemAt(8.5f * key, SwitchOverlay.columns(2), 2, cell), -1)
+    same("W's place picks the first of two", Picker.itemAt(1.5f * key, SwitchOverlay.columns(2), 2, cell), 0)
+    same("Q's place picks nothing with two", Picker.itemAt(key / 2, SwitchOverlay.columns(2), 2, cell), -1)
+    same("Q's place picks the first of four", Picker.itemAt(key / 2, SwitchOverlay.columns(4), 4, cell), 0)
+    same("I's place picks nothing with two", Picker.itemAt(7.5f * key, SwitchOverlay.columns(2), 2, cell), -1)
+    same("O's place picks nothing", Picker.itemAt(8.5f * key, SwitchOverlay.columns(4), 4, cell), -1)
     same("P's place picks nothing", Picker.itemAt(9.5f * key, SwitchOverlay.columns(2), 2, cell), -1)
-    same("with three, O's place picks the third", Picker.itemAt(8.5f * key, SwitchOverlay.columns(3), 3, cell), 2)
+    same("with three, U's place picks the third", Picker.itemAt(6.5f * key, SwitchOverlay.columns(3), 3, cell), 2)
     same("a column past the items picks nothing", Picker.itemAt(6.5f * key, SwitchOverlay.columns(4), 2, cell), -1)
 }
 
 private fun theOverlaySpansTwoKeysWhenFewAreOn() {
-    // Within Q to O, every tile the same whole number of keys (owner, 2026-11-17), from Q (owner, 2026-11-20: "lets do q
-    // to o"): 1 = Q–O, 2 = four keys each, 3 = three each, 4 = two each. P is Back's.
-    same("one: Q to O", SwitchOverlay.columns(1), listOf(0..8))
-    same("two: four keys each", SwitchOverlay.columns(2), listOf(0..3, 4..7))
-    same("three: three each", SwitchOverlay.columns(3), listOf(0..2, 3..5, 6..8))
-    same("four: two each", SwitchOverlay.columns(4), listOf(0..1, 2..3, 4..5, 6..7))
+    // The owner's layout (2026-11-22, #101), every tile the same whole number of keys (owner, 2026-11-17), from W, except four,
+    // which start at Q: 1 = W–U, 2 = W–R and T–U, 3 = W–E, R–T, Y–U, 4 = Q–W, E–R, T–Y, U–I. O is never used; P is Back's.
+    same("one: W to U", SwitchOverlay.columns(1), listOf(1..6))
+    same("two: three keys each", SwitchOverlay.columns(2), listOf(1..3, 4..6))
+    same("three: two each", SwitchOverlay.columns(3), listOf(1..2, 3..4, 5..6))
+    same("four: two each, from Q", SwitchOverlay.columns(4), listOf(0..1, 2..3, 4..5, 6..7))
     for (count in 1..4) {
         val columns = SwitchOverlay.columns(count)
-        same("$count: starts at Q", columns.first().first, 0)
-        same("$count: never over P", columns.last().last <= 8, true)
+        same("$count: Q only with four", columns.first().first == 0, count == 4)
+        same("$count: never over O or P", columns.last().last <= 7, true)
         same("$count: every tile as wide", columns.map { it.last - it.first }.distinct().size, 1)
     }
     same("more than four: the first four", SwitchOverlay.columns(6).size, 4)
-    same("Q picks the first of three", SwitchOverlay.choice("Q", 3), 0)
-    same("E picks the first of three", SwitchOverlay.choice("E", 3), 0)
-    same("D, under E, too", SwitchOverlay.choice("D", 3), 0)
-    same("Y picks the second of three", SwitchOverlay.choice("Y", 3), 1)
-    same("O picks the third of three", SwitchOverlay.choice("O", 3), 2)
-    same("Q picks the first of two", SwitchOverlay.choice("Q", 2), 0)
-    same("R picks the first of two too", SwitchOverlay.choice("R", 2), 0)
+    same("Q picks nothing with three", SwitchOverlay.choice("Q", 3), -1)
+    same("W picks the first of three", SwitchOverlay.choice("W", 3), 0)
+    same("S, under W, too", SwitchOverlay.choice("S", 3), 0)
+    same("T picks the second of three", SwitchOverlay.choice("T", 3), 1)
+    same("U picks the third of three", SwitchOverlay.choice("U", 3), 2)
+    same("I picks nothing with three", SwitchOverlay.choice("I", 3), -1)
+    same("R picks the first of two", SwitchOverlay.choice("R", 2), 0)
     same("T picks the second of two", SwitchOverlay.choice("T", 2), 1)
-    same("I picks the second of two", SwitchOverlay.choice("I", 2), 1)
-    same("O picks nothing with two", SwitchOverlay.choice("O", 2), -1)
-    same("A, on the second row, picks as Q does", SwitchOverlay.choice("A", 2), 0)
+    same("U picks the second of two", SwitchOverlay.choice("U", 2), 1)
+    same("A, under Q, picks the first of four", SwitchOverlay.choice("A", 4), 0)
+    same("I picks the fourth of four", SwitchOverlay.choice("I", 4), 3)
+    same("O picks nothing", SwitchOverlay.choice("O", 4), -1)
     same("P picks nothing", SwitchOverlay.choice("P", 2), -1)
     same("Z's row picks nothing", SwitchOverlay.choice("X", 2), -1)
-    same("I picks the fourth of four", SwitchOverlay.choice("I", 4), 3)
-    same("O picks nothing with four", SwitchOverlay.choice("O", 4), -1)
 }
 
 /** Languages, then input methods: Serbian and Chinese group theirs, and the switcher's second row shows them. */

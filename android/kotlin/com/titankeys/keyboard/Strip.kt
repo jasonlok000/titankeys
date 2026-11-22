@@ -1043,22 +1043,22 @@ class Strip(
             val top = minOf(line - iconSize / 2f, height - inside - iconSize)
             drawIcon(canvas, icon(Action.Close), centre, backIconTop(centre, top, iconSize), iconSize, 1f, 0f, 255, look.ink, 1f)
         }
-        // Since the switcher starts at Q (2026-11-20), an item over Q reaches the screen's left corner. Every item's pill and room
-        // draw in by the same amount, enough that the outermost clears the curve at the pill's lowest point and its text at the
-        // words' (the bar's corner rule), so all the highlights stay the same shape, each centred over its keys (owner,
-        // 2026-11-20: "the hover button effect of each has to be identical").
+        // With four languages the switcher starts at Q (owner, 2026-11-22), where an item reaches the screen's left corner. Every
+        // item's pill and room draw in by the same amount, so all the highlights stay the same evenly shaped pill, each centred
+        // over its keys (owner, 2026-11-20: "the hover button effect of each has to be identical"; 2026-11-22: "trim all pills
+        // equally", "just shape the pill around the curve as much as possible"). The amount is just enough that the outermost
+        // pill's round end, not its square box, clears the corner's curve at every height it covers, and its text clears the
+        // words' (the bar's corner rule). Measuring the box drew every pill in further than the curve needs.
         val spans = picker.items.indices.mapNotNull { index ->
             picker.columns.getOrNull(index)?.let { menuColumn(it.first).first to menuColumn(it.last).second }
         }
         val outerLeft = spans.minOfOrNull { it.first } ?: 0f
         val outerRight = spans.maxOfOrNull { it.second } ?: width.toFloat()
-        val pillSide = sideFor(barHeight - (line + pillHeight / 2)).toFloat()
-        val clear = maxOf(dp(2).toFloat(), pillSide - outerLeft, outerRight - (width - pillSide),
+        val reach = roundEndReach(line - pillHeight / 2, pillHeight)
+        val clear = maxOf(dp(2).toFloat(), reach - outerLeft, outerRight - (width - reach),
             side - outerLeft, outerRight - (width - side))
-        // The pill's lowest point sits almost on the screen's edge, where the corner's curve is widest, so clearing it in full drew
-        // every item in to a sliver and shrank every label to a few px (owner, 2026-11-21: "bugged now with the language selection
-        // bar with the font sizes"). The draw-in stops where the narrowest item's pill still holds the widest label at the words'
-        // size, with room either side; the pill's round end keeps clear of the curve there.
+        // Never so far in that the narrowest item's pill can't hold the widest label at the words' size, with room either side
+        // (owner, 2026-11-21: "bugged now with the language selection bar with the font sizes").
         val narrowest = spans.minOfOrNull { it.second - it.first } ?: width.toFloat()
         val widest = picker.items.maxOfOrNull { pickerText.measureText(it) } ?: 0f
         val inset = minOf(clear, maxOf(dp(2).toFloat(), (narrowest - widest - 2 * dp(PICKER_PAD_DP)) / 2))
@@ -1082,6 +1082,25 @@ class Strip(
             canvas.drawText(item, (left + right) / 2 - width / 2, baseline, pickerText)
             canvas.restore()
         }
+    }
+
+    /**
+     * The least a pill of [height] whose top is at [top] must keep from the screen's side, so its round end clears the rounded
+     * corner ([sideFor]) at every height it covers: at each height, the corner's inset less how far the round end curves away
+     * from the pill's flat end there.
+     */
+    private fun roundEndReach(top: Float, height: Float): Float {
+        val radius = height / 2
+        val middle = top + radius
+        var reach = 0f
+        val steps = 24
+        for (step in 0..steps) {
+            val y = top + height * step / steps
+            val dy = y - middle
+            val curve = radius - kotlin.math.sqrt(maxOf(0f, radius * radius - dy * dy))
+            reach = maxOf(reach, sideFor(barHeight - y) - curve)
+        }
+        return reach
     }
 
     /** [text] centred over key [column] on the bar's line, shrunk to the key, in [pickerText]'s colour. */

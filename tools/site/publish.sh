@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Publishes the site/ folder (the privacy policy, the news feed and the webpage) to the gh-pages branch, which GitHub
-# Pages serves at https://jasonlok000.github.io/titankeys/. Run it from a clean checkout of the branch to publish.
+# Pages serves at https://everyones-niche.com/titankeys/. Run it from a clean checkout of the branch to publish.
 # Usage: bash tools/site/publish.sh [remote]     (the remote defaults to "fork", then "origin")
 set -euo pipefail
 cd "$(dirname "$0")/../.."

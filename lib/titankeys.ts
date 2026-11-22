@@ -95,8 +95,8 @@ export type State = {
   fixToggles: Record<string, boolean>;
   /** A fix goes in only when it's clearly right: fewer fixes, and fewer wrong ones. Off at first. */
   fixOnlyWhenSure: boolean;
-  /** Fix earlier words: off, small (the default) or bold. */
-  earlierWords: "off" | "small" | "bold";
+  /** Fix earlier words: off or on (the default). How far on goes follows fixOnlyWhenSure. */
+  earlierWords: "off" | "on";
   suggestionBar: boolean;
   /** A home screen's search field has no suggestion bar until you type in it. */
   launcherHidesBar: boolean;

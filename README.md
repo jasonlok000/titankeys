@@ -95,7 +95,7 @@ It works fine out of the box. If you can't leave things alone, nearly every beha
 ### Autocorrect
 
 - **Typos fixed on Space,** with a small language model helping pick the fix that fits your sentence. Typing never waits for it.
-- **Fix earlier words.** When the next word shows the one before was wrong, TitanKeys goes back and fixes it: "get dome food" becomes "get some food". Small fixes is on to start. Bold also turns "their going" into "they're going", and Off leaves your words alone. English only.
+- **Fix earlier words.** When the next word shows the one before was wrong, TitanKeys goes back and fixes it: "get dome food" becomes "get some food", and "their going" becomes "they're going". It's on to start. With Only fix when sure, it sticks to apostrophes and one-key slips. English only.
 - **Apostrophes.** dont, whats and cant get theirs. its, lets, your and friends wait for the next two words, then get an apostrophe only if it clearly fits. It never takes one out.
 - **The small slips too.** Missing spaces (hellohow), a last letter twice (yeahh), Shift held too long (THe), a lone i, and names like monday and iphone get their capitals.
 - **Words from this chat.** Once a word has come up twice in the conversation, a slip on it gets fixed to that spelling.
@@ -208,7 +208,7 @@ TitanKeys uses the internet for four things only, and each is strictly limited:
 - **Bug reports, only when you press Send:** **Settings > Send feedback**, **Record a bug** and the crash offer open a form. It sends what you wrote, the versions and your phone's model, and a recording or crash report if one is attached, encrypted on your phone so only we can read it. If it can't be sent, you can email it instead.
 - **The Support page:** while it's open, it downloads the supporters board. If you buy a coffee, Google Play handles the payment. Only if you join the board does TitanKeys send your purchase proofs and the name and message you chose. **Remove me** deletes it all.
 
-The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it.
+The [privacy policy](https://everyones-niche.com/titankeys/privacy/) says exactly what is sent, why, how it's protected, how long it's kept and how to delete it.
 
 TitanKeys doesn't learn from fields marked as passwords, email addresses, URLs, or private by the app.
 
@@ -236,7 +236,7 @@ This installs **TitanKeys Debug**, a separate test build.
 
 **Is it free?** Yes. It's free and open source, under the GPL-3.0, with no ads and nothing locked. You can buy the project a coffee on the Support page if you want to; it changes nothing in the keyboard. Some parts use the FUTO Source First License, so it can only be shared for free, for non-commercial use.
 
-**Does it need the internet?** Not to type. It only goes online for news, the Support page's board, bug reports you send and, if you agree, Sharing. The [privacy policy](https://jasonlok000.github.io/titankeys/privacy/) says exactly what's sent.
+**Does it need the internet?** Not to type. It only goes online for news, the Support page's board, bug reports you send and, if you agree, Sharing. The [privacy policy](https://everyones-niche.com/titankeys/privacy/) says exactly what's sent.
 
 **Other languages?** 49 of them, Chinese included. Swiping is English only for now. Native speakers can help make their language better in [issue #56](https://github.com/jasonlok000/titankeys/issues/56).
 

@@ -486,11 +486,11 @@ describe("privacy texts (#53)", () => {
   });
 
   test("the app, the README and the policy point to the same policy", async () => {
-    const url = "https://jasonlok000.github.io/titankeys/privacy/";
+    const url = "https://everyones-niche.com/titankeys/privacy/";
     expect(await text("lib/connected.ts")).toContain(url);
     expect(await text("README.md")).toContain(url);
     const kotlin = await text("android/kotlin/com/titankeys/connected/Connected.kt");
-    expect(kotlin).toContain('SITE = "https://jasonlok000.github.io/titankeys"');
+    expect(kotlin).toContain('SITE = "https://everyones-niche.com/titankeys"');
     expect(kotlin).toContain('PRIVACY_URL = "$SITE/privacy/"');
   });
 

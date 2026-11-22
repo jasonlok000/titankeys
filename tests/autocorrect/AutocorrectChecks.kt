@@ -1248,7 +1248,8 @@ private fun expansions(world: Realistic) {
     }.text
     same(panelSymbol(password, "&"), "a&", "A symbol from the panel goes in alone in a password")
     same(panelSymbol(email, ";"), "a;", "A symbol from the panel goes in alone in an email field")
-    same(panelSymbol(Typist.FIELD, "&"), "a & ", "Prose still gets spaces around the symbol")
+    same(panelSymbol(Typist.FIELD, "&"), "a&", "Prose gets \"&\" as typed too (owner, 2026-11-22)")
+    same(panelSymbol(Typist.FIELD, ";"), "a; ", "Prose still gets a space after \";\"")
     same(Typist(world, field = password).type("Ab1 x").text, "Ab1 x", "A password is typed as it is")
 }
 

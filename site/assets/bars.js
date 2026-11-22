@@ -134,6 +134,15 @@
       el("stop", { offset: 0, "stop-color": "#fff" }, fade); el("stop", { offset: 1, "stop-color": "#fff", "stop-opacity": 0 }, fade);
       const mask = el("mask", { id: "umask" }, defs); el("rect", { x: 0, y: 64, width: 1076, height: 24, fill: "url(#ufade)" }, mask);
       const under = el("rect", { x: 0, y: 64, width: 1076, height: 24, fill: "url(#uglow)", mask: "url(#umask)", opacity: 0 }, s);
+      // Space's tap glow (GestureDrawing.glow): a soft hump rising from the bottom edge under the middle word, wider and stronger
+      // with each tap (17%, 39%, 71% of the bar; strength .35, .55, .8), growing in 70 ms and fading over 250, a thin line along
+      // the bottom on the third tap. 10 dp tall, 1.3 times that once held.
+      const hump = el("linearGradient", { id: "uhump", x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
+      for (let i = 0; i <= 20; i++) { const u = i / 10 - 1; el("stop", { offset: i / 20, "stop-color": ORANGE, "stop-opacity": (1 - u * u).toFixed(3) }, hump); }
+      const tmask = el("mask", { id: "tmask" }, defs); el("rect", { x: 0, y: 69, width: 1076, height: 19, fill: "url(#ufade)" }, tmask);
+      const tap = el("rect", { y: 69, height: 19, x: 538, width: 0, fill: "url(#uhump)", mask: "url(#tmask)", opacity: 0 }, s);
+      const pulse = el("rect", { y: 86, height: 2, x: 0, width: 1076, fill: ORANGE, opacity: 0 }, s);
+      const span = 1076 - 2 * 19, widths = [.17, .39, .71], alphas = [.35, .55, .8];
       const half = 10.4;
       const words = [[313, 380], [435, 513], [563, 641], [691, 768], [818, 895]];
       const box = el("rect", { y: LINE - 24.7, height: 49.4, rx: 18, fill: ORANGE, opacity: 0, x: 411, width: 0 }, s);
@@ -143,14 +152,29 @@
       el("circle", { cx: 0, cy: LINE - 37, r: 8.4, fill: ORANGE }, handle);
       while (alive()) {
         bars.forEach(b => { b.setAttribute("fill", "#FFF"); b.setAttribute("opacity", .28); });
-        box.style.transition = handle.style.transition = under.style.transition = "none";
+        box.style.transition = handle.style.transition = under.style.transition = tap.style.transition = "none";
         box.setAttribute("opacity", 0); box.setAttribute("width", 0); handle.setAttribute("opacity", 0); under.setAttribute("opacity", 0);
+        tap.setAttribute("opacity", 0); tap.setAttribute("width", 0); tap.setAttribute("x", 538);
         await wait(700); if (!alive()) return;
-        // Three taps on Space, the third held: the glow comes up along the bottom.
-        for (let i = 0; i < 3; i++) { buzz("texture"); await wait(130); }
+        // Three taps on Space: each grows the glow under the middle word; the third is held, and the glow spreads along the
+        // whole bottom as the select starts.
+        tap.style.transition = "x .07s ease-out, width .07s ease-out, opacity .07s ease-out";
+        for (let i = 0; i < 3; i++) {
+          if (!alive()) return;
+          const w = span * widths[i];
+          tap.setAttribute("x", 538 - w / 2); tap.setAttribute("width", w); tap.setAttribute("opacity", alphas[i]);
+          buzz("texture");
+          if (i === 2) { pulse.style.transition = "none"; pulse.setAttribute("opacity", .25); await wait(20); pulse.style.transition = "opacity .3s"; pulse.setAttribute("opacity", 0); }
+          await wait(i === 2 ? 160 : 190);
+          if (i < 2) { tap.style.transition = "opacity .25s ease-in"; tap.setAttribute("opacity", alphas[i] * .7); await wait(60);
+            tap.style.transition = "x .07s ease-out, width .07s ease-out, opacity .07s ease-out"; }
+        }
         buzz("lock");
-        under.style.transition = "opacity .3s"; under.setAttribute("opacity", 1);
-        await wait(250);
+        tap.style.transition = "x .12s ease-out, width .12s ease-out, opacity .2s";
+        tap.setAttribute("x", 19); tap.setAttribute("width", span);
+        under.style.transition = "opacity .12s"; under.setAttribute("opacity", 1);
+        await wait(120); tap.setAttribute("opacity", 0);
+        await wait(130);
         for (const last of [1, 2]) {
           if (!alive()) return;
           const r = words[last][1] + 24;

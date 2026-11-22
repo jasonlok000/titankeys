@@ -34,9 +34,9 @@ export default function LanguagePage() {
     void save.run({ inputMethods: next });
   };
   const stage = stageOf(language);
-  const status = pageText.status[stage];
-  // F: Tested's note (page-text.json status.testedNote) is stand-in English: "Typing is checked by a native speaker. Fixes and
-  // next words are still to come."
+  // The stage tag stays in English on every language's page (owner, 2026-11-22: "use english for that ... if it's just the
+  // tag"), as apps keep Beta or Stable; the note under it is in the language's own words.
+  const status = stage;
   const settings = result.data;
   const page = languagePage(language.id);
   const pageRows = page?.settings ?? [];

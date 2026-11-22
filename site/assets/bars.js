@@ -239,9 +239,17 @@
     },
   };
 
+  // "Download now" on the bar is a real button: a tap on it goes where the page's Download button goes.
+  root.addEventListener("click", () => {
+    if (current !== "download") return;
+    const link = document.querySelector(".hero .actions .button");
+    if (link) location.href = link.href;
+  });
   const show = name => {
     if (name === current || !scenes[name]) return;
     current = name;
+    root.style.pointerEvents = name === "download" ? "auto" : "none";
+    root.style.cursor = name === "download" ? "pointer" : "";
     const id = ++run, alive = () => id === run;
     const next = layers[1 - front], old = layers[front];
     next.replaceChildren();

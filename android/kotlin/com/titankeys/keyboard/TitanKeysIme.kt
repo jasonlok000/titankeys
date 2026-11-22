@@ -2957,8 +2957,8 @@ class TitanKeysIme : InputMethodService() {
                 val carries = contact.wordSwipes && contact.points.isNotEmpty() && lastTouch?.let {
                     it.isNotEmpty() && letterSpace(it).couldContinue(first.x, first.y * 4 / 3, first.time - it.last().time, composer.liftOffMillis.toLong())
                 } == true
-                // The bar's mini path joins it too, as one line. Not in the guide's slides, whose drawing of the keys shows the swipe.
-                swipeCarried = carries && !inGuide && strip?.gesture?.swipeCarriesOn() == true
+                // The bar's mini path joins it too, as one line.
+                swipeCarried = carries && !inPractice && strip?.gesture?.swipeCarriesOn() == true
                 Trace.touch(contact.points, false, if (carries && Trace.listening) lastTouch.orEmpty() else emptyList())
             }
             MotionEvent.ACTION_MOVE -> {
@@ -3053,9 +3053,7 @@ class TitanKeysIme : InputMethodService() {
         val travel = contact.travel
         val first = points.firstOrNull()
         val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
-        // The guide's slides show a swipe on their drawing of the keys, so the bar's trail stays off there. The playground is a real
-        // field and keeps it (owner, 2026-11-21: "why is the swipe animation not showing on the playground?").
-        if (inGuide || !contact.wordSwipes || altOrPanel || travel == null || !far || first == null
+        if (inPractice || !contact.wordSwipes || altOrPanel || travel == null || !far || first == null
             || startsDeleteFlick(first.x, first.y) && (isDeleteWordSwipe(points) || flickCrunch.mayBeFlick)) {
             gesture.swipeCancelled()
             swipeShown = 0

@@ -99,3 +99,42 @@ footer .fine { font-size: 13px; }
   .feature p, .cta p { font-size: 16px; }
   .cta { padding: 48px 0; }
 }
+
+/* Motion. Everything is visible without it: the reveals only run where the browser supports them and nobody asked for less
+   motion. */
+@media (prefers-reduced-motion: no-preference) {
+  /* The hero comes up line by line, then the trailer slides in. */
+  @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+  @keyframes slide-in { from { opacity: 0; transform: translateX(40px) rotate(2deg) scale(.96); } to { opacity: 1; transform: none; } }
+  .hero .kicker, .hero h1, .hero .lead, .hero .actions { animation: rise .7s cubic-bezier(.2, .7, .2, 1) both; }
+  .hero h1 { animation-delay: .08s; }
+  .hero .lead { animation-delay: .2s; }
+  .hero .actions { animation-delay: .32s; }
+  .hero .hero-shot { animation: slide-in .9s .2s cubic-bezier(.2, .7, .2, 1) both; }
+  .top { animation: rise .6s both; }
+
+  /* The trailer's box sweeps in behind its word, as the boxes do in the trailer. */
+  @keyframes sweep { from { background-size: 0% 100%; } to { background-size: 100% 100%; } }
+  .box { background: linear-gradient(var(--orange), var(--orange)) no-repeat left / 100% 100%; }
+  .box.dark, h1 .box { background-image: linear-gradient(var(--black), var(--black)); }
+  .hero h1 .box { animation: sweep .6s .55s cubic-bezier(.6, 0, .2, 1) both; }
+
+  /* The hero's light drifts slowly. */
+  @keyframes drift { 0%, 100% { background-position: 0% 0%, 0 0; } 50% { background-position: 30% 20%, 0 0; } }
+  .hero { background-size: 160% 160%, 100% 100%; animation: drift 14s ease-in-out infinite; }
+
+  /* Buttons lift, pictures tilt toward you a little. */
+  .button { transition: transform .2s, box-shadow .2s; }
+  .button:hover { box-shadow: 0 10px 24px rgba(0, 0, 0, .25); }
+  .feature img { transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+  .feature img:hover { transform: perspective(900px) rotateY(-4deg) rotateX(2deg) scale(1.02); }
+  .feature:nth-child(even) img:hover { transform: perspective(900px) rotateY(4deg) rotateX(2deg) scale(1.02); }
+
+  /* Each feature rises into view as you scroll to it, its box sweeping in after. */
+  @supports (animation-timeline: view()) {
+    .feature img, .feature div { animation: rise linear both; animation-timeline: view(); animation-range: entry 5% cover 30%; }
+    .feature div { animation-range: entry 15% cover 35%; }
+    .feature h2 .box, .cta h2 .box { animation: sweep linear both; animation-timeline: view(); animation-range: entry 30% cover 40%; }
+    .cta h2, .cta p { animation: rise linear both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
+  }
+}

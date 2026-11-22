@@ -1053,8 +1053,15 @@ class Strip(
         val outerLeft = spans.minOfOrNull { it.first } ?: 0f
         val outerRight = spans.maxOfOrNull { it.second } ?: width.toFloat()
         val pillSide = sideFor(barHeight - (line + pillHeight / 2)).toFloat()
-        val inset = maxOf(dp(2).toFloat(), pillSide - outerLeft, outerRight - (width - pillSide),
+        val clear = maxOf(dp(2).toFloat(), pillSide - outerLeft, outerRight - (width - pillSide),
             side - outerLeft, outerRight - (width - side))
+        // The pill's lowest point sits almost on the screen's edge, where the corner's curve is widest, so clearing it in full drew
+        // every item in to a sliver and shrank every label to a few px (owner, 2026-11-21: "bugged now with the language selection
+        // bar with the font sizes"). The draw-in stops where the narrowest item's pill still holds the widest label at the words'
+        // size, with room either side; the pill's round end keeps clear of the curve there.
+        val narrowest = spans.minOfOrNull { it.second - it.first } ?: width.toFloat()
+        val widest = picker.items.maxOfOrNull { pickerText.measureText(it) } ?: 0f
+        val inset = minOf(clear, maxOf(dp(2).toFloat(), (narrowest - widest - 2 * dp(PICKER_PAD_DP)) / 2))
         for ((index, item) in picker.items.withIndex()) {
             val columns = picker.columns.getOrNull(index) ?: continue
             val left = menuColumn(columns.first).first + inset
@@ -1996,6 +2003,8 @@ class Strip(
         /** The size of a button's name under its icon, in sp, the gap between them, and the room between the word and Save. */
         /** The menu's icons, in dp. */
         private const val MENU_ICON_DP = 22
+        /** The least room either side of the switcher's widest label inside its pill, in dp. */
+        private const val PICKER_PAD_DP = 10
         /**
          * A hovered button's pill, as the owner's design D draws it: its height in dp, its name's size as a part of the word's,
          * the room at its left and right ends and between the name and the icon, in dp, and its strength. The spent heart's pill,

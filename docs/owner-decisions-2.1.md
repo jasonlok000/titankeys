@@ -1047,3 +1047,6 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
   outermost pill's round end clears the curve (it was measured as a square box, which drew them in further than needed).
 - **The app's site links on everyones-niche.com (2026-11-22):** the news feed and the privacy policy now load from
   everyones-niche.com/titankeys; the old github.io address still redirects, for builds before this one.
+- **Accents, for 3.1 (2026-11-22, #107):** "yea i think abc". A letter with one accent: the hold types it. Several: the hold
+  types the commonest, and the row stays after the lift for a touch on the screen to change it ("more intuitive to just press
+  the screen"); keys keep typing as keys. The key's own symbol joins every hold row.

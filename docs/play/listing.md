@@ -103,7 +103,7 @@ TitanKeys is an independent project. It isn't made by, affiliated with or endors
 - **Category: Tools.** The other fits are Productivity and Personalization. **Not verified:** that Gboard and most keyboards are in Tools (from memory). Category list: [Choose a category and tags](https://support.google.com/googleplay/android-developer/answer/9859673).
 - **Tags:** up to 5, picked from Play's own list in **Store settings > Manage tags**. Google says to pick only tags tied to the core of the app, not incidental features. Look for tags close to: keyboard, typing, text input, productivity. **Not verified:** Play's tag list can only be seen in the console.
 - **Contact details:** the developer email (required, shown in public: titankeys@everyones-niche.com, the same as the privacy policy's) and the website `https://jasonlok000.github.io/titankeys` (#58).
-- **Privacy policy URL:** `https://jasonlok000.github.io/titankeys/privacy/` (the address the app links to).
+- **Privacy policy URL:** `https://everyones-niche.com/privacy/` (the site's own domain since 2026-11-21; the app's built-in github.io address redirects there).
 
 ## Graphics needed
 

@@ -114,6 +114,12 @@ class TouchpadHold {
         /** The firmware cleared the status while the keyboard holds it. A phone without the property never loses it. */
         fun statusLost(property: String?) = property == "0"
 
+        /** How often the keyboard reads the property while it holds the status. */
+        const val WATCH_MILLIS = 200L
+
+        /** After three reports in a row that didn't bring the status back, the keyboard stops trying so often. */
+        fun watchDelay(failures: Int) = if (failures < 3) WATCH_MILLIS else 5_000L
+
         /**
          * True for the Back events that Android's handler for a shown keyboard makes. A system back also has no device, and it comes
          * past the keyboard on its way to the app, so only the flag that the handler alone sets tells them apart.

@@ -1375,7 +1375,6 @@ class TitanKeysIme : InputMethodService() {
     /** Puts the status that the firmware reads where the setting and the field need it. See [TouchpadHold]. */
     private fun updateHold() {
         if (holdWanted()) {
-            if (hold.held && !isInputViewShown) resendStatus()
             // A strip that is still up keeps the status on until it hides, and its hide leaves the status on.
             if (hold.held || isInputViewShown || main.hasCallbacks(showHold)) return
             main.postDelayed(showHold, hold.delay(SystemClock.uptimeMillis()))
@@ -1390,17 +1389,27 @@ class TitanKeysIme : InputMethodService() {
 
     /**
      * Firmware V02.00.06 (2026-11-22) writes the status it reads, debug.sf.agui_input_status, as 0 whenever a window that is not
-     * a text field gains focus, though the keyboard's own status stays on. Android sends a status only when it changes, so the
-     * hold stayed on and every app scrolled. A new back disposition sends the current status again, which writes it back as 1,
-     * with nothing shown or hidden. Older firmware never clears it, so there it reads 1 and nothing is sent.
+     * a text field gains focus, though the keyboard's own status stays on. Most apps have no editor, so the keyboard hears
+     * nothing of it, and Android sends a status only when it changes: the hold stayed on and every app scrolled (owner, in Reddit
+     * and Maps). So while the status is held, the keyboard reads the property every [TouchpadHold.WATCH_MILLIS], and when the
+     * firmware has cleared it, reports the status again the way the hold first did: a hide, then the show. Older firmware
+     * never clears it, and other phones have no property, so there this only reads.
      */
-    private fun resendStatus() {
-        if (!TouchpadHold.statusLost(PhoneChecks.property(TouchpadHold.STATUS_PROPERTY))) return
-        try {
-            backDisposition = BACK_DISPOSITION_DEFAULT
-            backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
-        } catch (error: RuntimeException) {
-            Log.w("TitanKeys", "Could not report the keyboard status", error)
+    private val statusWatch = object : Runnable {
+        private var failures = 0
+        override fun run() {
+            if (destroyed || !holdWanted() || !hold.held || isInputViewShown) {
+                failures = 0
+                return
+            }
+            if (TouchpadHold.statusLost(PhoneChecks.property(TouchpadHold.STATUS_PROPERTY))) {
+                failures++
+                Log.i("TitanKeys", "The firmware cleared the keyboard status; reporting it again ($failures)")
+                hold.hidden()
+                hideHeldWindow()
+                updateHold()
+            } else failures = 0
+            main.postDelayed(this, TouchpadHold.watchDelay(failures))
         }
     }
 
@@ -1419,6 +1428,8 @@ class TitanKeysIme : InputMethodService() {
     private fun holdWindow() {
         window.hide()
         hold.shown()
+        main.removeCallbacks(statusWatch)
+        main.postDelayed(statusWatch, TouchpadHold.WATCH_MILLIS)
     }
 
     /** With no field, a hide takes only the window away. Android's own would also turn the status off. See [TouchpadHold]. */

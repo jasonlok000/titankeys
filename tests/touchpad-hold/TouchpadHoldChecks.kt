@@ -161,4 +161,7 @@ private fun onlyAClearedStatusIsSentAgain() {
     same(TouchpadHold.statusLost("1"), false, "a status still on is left alone")
     same(TouchpadHold.statusLost(""), false, "a phone without the property has nothing to lose")
     same(TouchpadHold.statusLost(null), false, "a property that can't be read has nothing to lose")
+    same(TouchpadHold.watchDelay(0), 200L, "the property is read five times a second")
+    same(TouchpadHold.watchDelay(2), 200L, "a report or two that didn't take are tried again soon")
+    same(TouchpadHold.watchDelay(3), 5_000L, "a status that won't come back isn't hammered")
 }

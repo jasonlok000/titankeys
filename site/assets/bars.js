@@ -134,8 +134,11 @@
 
     async cursor(s, alive) {
       bg(s);
-      // As the owner's phone drew it (screenshot, 2026-11-21): the words as short bars, "Grab" on the left, the box growing over
-      // "these" and then "words", its handle at the moving end, and the underglow brighter on the side the drag leans to.
+      // Both Space gestures, with the bar's usual words between (owner, 2026-11-22: "show both cursor mode and select mode, and
+      // normal suggestions in between"). Two taps, the second held: cursor mode, the line of text on the bar with the caret
+      // stepping a letter at a time (a Texture tick for each letter, a Boundary for each space, Steer's Confirm as it starts).
+      // Three taps, the third held: select mode, as the owner's phone drew it (2026-11-21), the words as short bars, the box
+      // growing over "these" and then "words", its handle at the moving end (Select's Lock, a Boundary for each word taken).
       const defs = el("defs", {}, s), glow = el("linearGradient", { id: "uglow", x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
       [[0, 0], [.15, .25], [.5, .3], [.85, .55], [1, 0]].forEach(([o, a]) => el("stop", { offset: o, "stop-color": ORANGE, "stop-opacity": a }, glow));
       const fade = el("linearGradient", { id: "ufade", x1: 0, y1: 1, x2: 0, y2: 0 }, defs);
@@ -144,57 +147,125 @@
       const under = el("rect", { x: 0, y: 64, width: 1076, height: 24, fill: "url(#uglow)", mask: "url(#umask)", opacity: 0 }, s);
       // Space's tap glow (GestureDrawing.glow): a soft hump rising from the bottom edge under the middle word, wider and stronger
       // with each tap (17%, 39%, 71% of the bar; strength .35, .55, .8), growing in 70 ms and fading over 250, a thin line along
-      // the bottom on the third tap. 10 dp tall, 1.3 times that once held.
+      // the bottom on the third tap.
       const hump = el("linearGradient", { id: "uhump", x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
       for (let i = 0; i <= 20; i++) { const u = i / 10 - 1; el("stop", { offset: i / 20, "stop-color": ORANGE, "stop-opacity": (1 - u * u).toFixed(3) }, hump); }
       const tmask = el("mask", { id: "tmask" }, defs); el("rect", { x: 0, y: 69, width: 1076, height: 19, fill: "url(#ufade)" }, tmask);
       const tap = el("rect", { y: 69, height: 19, x: 538, width: 0, fill: "url(#uhump)", mask: "url(#tmask)", opacity: 0 }, s);
       const pulse = el("rect", { y: 86, height: 2, x: 0, width: 1076, fill: ORANGE, opacity: 0 }, s);
       const span = 1076 - 2 * 19, widths = [.17, .39, .71], alphas = [.35, .55, .8];
+
+      // The bar's usual words.
+      const usual = el("g", {}, s);
+      const ts = words(usual, ["I", "the", "a"]);
+
+      // Cursor mode: the text's line on the bar, the word at the caret in letters and the rest as a dot a letter, the caret orange.
+      const LINE_WORDS = ["Move", "the", "cursor", "back", "here"], DOT = 15, GAP = 30;
+      const steer = el("g", { opacity: 0 }, s);
+      const total = LINE_WORDS.reduce((n, w) => n + w.length * DOT, 0) + GAP * (LINE_WORDS.length - 1);
+      let x0 = 538 - total / 2;
+      const placed = LINE_WORDS.map(w => {
+        const g = el("g", {}, steer), left = x0;
+        const dots = [...w].map((_, i) => el("circle", { cx: left + DOT * (i + .5), cy: LINE, r: 3.4, fill: DIM }, g));
+        const text = word(g, left + w.length * DOT / 2, w, { size: 30 }); text.setAttribute("opacity", 0);
+        x0 += w.length * DOT + GAP;
+        return { w, left, dots, text };
+      });
+      const caret = el("rect", { x: 0, y: LINE - 20, width: 3.5, height: 40, rx: 1.75, fill: ORANGE }, steer);
+      const showWord = active => placed.forEach((p, i) => {
+        p.text.setAttribute("opacity", i === active ? 1 : 0);
+        p.dots.forEach(d => d.setAttribute("opacity", i === active ? 0 : 1));
+      });
+
+      // Select mode: the words as short bars, the box and its handle.
+      const select = el("g", { opacity: 0 }, s);
       const half = 10.4;
-      const words = [[313, 380], [435, 513], [563, 641], [691, 768], [818, 895]];
-      const box = el("rect", { y: LINE - 24.7, height: 49.4, rx: 18, fill: ORANGE, opacity: 0, x: 411, width: 0 }, s);
-      const bars = words.map(([l, r]) => el("rect", { x: l, y: LINE - half, width: r - l, height: half * 2, rx: half, fill: "#FFF", opacity: .28 }, s));
-      const handle = el("g", { opacity: 0 }, s);
+      const bars = [[313, 380], [435, 513], [563, 641], [691, 768], [818, 895]];
+      const box = el("rect", { y: LINE - 24.7, height: 49.4, rx: 18, fill: ORANGE, opacity: 0, x: 411, width: 0 }, select);
+      const barEls = bars.map(([l, r]) => el("rect", { x: l, y: LINE - half, width: r - l, height: half * 2, rx: half, fill: "#FFF", opacity: .28 }, select));
+      const handle = el("g", { opacity: 0 }, select);
       el("rect", { x: -2.3, y: LINE - 32, width: 4.6, height: 64, rx: 2.3, fill: ORANGE }, handle);
       el("circle", { cx: 0, cy: LINE - 37, r: 8.4, fill: ORANGE }, handle);
-      while (alive()) {
-        bars.forEach(b => { b.setAttribute("fill", "#FFF"); b.setAttribute("opacity", .28); });
-        box.style.transition = handle.style.transition = under.style.transition = tap.style.transition = "none";
-        box.setAttribute("opacity", 0); box.setAttribute("width", 0); handle.setAttribute("opacity", 0); under.setAttribute("opacity", 0);
-        tap.setAttribute("opacity", 0); tap.setAttribute("width", 0); tap.setAttribute("x", 538);
-        await wait(700); if (!alive()) return;
-        // Three taps on Space: each grows the glow under the middle word; the third is held, and the glow spreads along the
-        // whole bottom as the select starts.
+
+      const swap = (show, ...hide) => {
+        for (const g of [usual, steer, select]) { g.style.transition = "opacity .2s"; }
+        show.setAttribute("opacity", 1); hide.forEach(g => g.setAttribute("opacity", 0));
+      };
+      // Taps on Space: each grows the glow under the middle word; the last is held, and the glow spreads along the bottom.
+      const taps = async count => {
         tap.style.transition = "x .07s ease-out, width .07s ease-out, opacity .07s ease-out";
-        for (let i = 0; i < 3; i++) {
-          if (!alive()) return;
+        for (let i = 0; i < count; i++) {
+          if (!alive()) return false;
           const w = span * widths[i];
           tap.setAttribute("x", 538 - w / 2); tap.setAttribute("width", w); tap.setAttribute("opacity", alphas[i]);
           buzz("texture");
-          if (i === 2) { pulse.style.transition = "none"; pulse.setAttribute("opacity", .25); await wait(20); pulse.style.transition = "opacity .3s"; pulse.setAttribute("opacity", 0); }
-          await wait(i === 2 ? 160 : 190);
-          if (i < 2) { tap.style.transition = "opacity .25s ease-in"; tap.setAttribute("opacity", alphas[i] * .7); await wait(60);
+          if (i === count - 1) { pulse.style.transition = "none"; pulse.setAttribute("opacity", .25); await wait(20); pulse.style.transition = "opacity .3s"; pulse.setAttribute("opacity", 0); }
+          await wait(i === count - 1 ? 160 : 190);
+          if (i < count - 1) { tap.style.transition = "opacity .25s ease-in"; tap.setAttribute("opacity", alphas[i] * .7); await wait(60);
             tap.style.transition = "x .07s ease-out, width .07s ease-out, opacity .07s ease-out"; }
         }
-        buzz("lock");
         tap.style.transition = "x .12s ease-out, width .12s ease-out, opacity .2s";
         tap.setAttribute("x", 19); tap.setAttribute("width", span);
         under.style.transition = "opacity .12s"; under.setAttribute("opacity", 1);
         await wait(120); tap.setAttribute("opacity", 0);
+        return alive();
+      };
+      const lift = async () => {
+        under.style.transition = "opacity .25s"; under.setAttribute("opacity", 0);
+        tap.style.transition = "none"; tap.setAttribute("opacity", 0); tap.setAttribute("width", 0); tap.setAttribute("x", 538);
+      };
+
+      while (alive()) {
+        // The usual words.
+        swap(usual, steer, select); setWords(ts, ["I", "the", "a"]);
+        await wait(1200); if (!alive()) return;
+
+        // Cursor mode: two taps, the second held; the caret walks left from the end, a letter at a time.
+        if (!(await taps(2))) return;
+        buzz("confirm");
+        const stops = [];
+        placed.forEach((p, i) => { for (let k = 0; k <= p.w.length; k++) stops.push({ i, k }); });
+        let at = stops.length - 1;
+        const put = ({ i, k }) => { caret.setAttribute("x", placed[i].left + k * DOT - 1.75); showWord(i); };
+        caret.style.transition = "none"; put(stops[at]);
+        swap(steer, usual, select);
+        await wait(250);
+        caret.style.transition = "x .08s ease-out";
+        const target = stops.findIndex(st => st.i === 2 && st.k === 0);
+        while (at > target) {
+          if (!alive()) return;
+          const from = stops[at], to = stops[at - 1];
+          at--;
+          // From the start of a word to the end of the one before is the space between them: a Boundary, not a letter.
+          put(to); buzz(to.i !== from.i ? "boundary" : "texture");
+          await wait(110);
+        }
+        await wait(700); if (!alive()) return;
+        await lift();
+        swap(usual, steer, select); setWords(ts, ["and", "the", "to"]);
+        await wait(1300); if (!alive()) return;
+
+        // Select mode: three taps, the third held; the box grows over a word, then the next.
+        barEls.forEach(b => { b.setAttribute("fill", "#FFF"); b.setAttribute("opacity", .28); });
+        box.style.transition = handle.style.transition = "none";
+        box.setAttribute("opacity", 0); box.setAttribute("width", 0); handle.setAttribute("opacity", 0);
+        if (!(await taps(3))) return;
+        buzz("lock");
+        swap(select, usual, steer);
         await wait(130);
         for (const last of [1, 2]) {
           if (!alive()) return;
-          const r = words[last][1] + 24;
+          const r = bars[last][1] + 24;
           box.style.transition = "width .22s cubic-bezier(.2,.7,.2,1), opacity .15s";
           box.setAttribute("width", r - 411); box.setAttribute("opacity", 1);
           handle.style.transition = "transform .22s cubic-bezier(.2,.7,.2,1), opacity .15s";
           handle.setAttribute("transform", `translate(${r + 8} 0)`); handle.setAttribute("opacity", 1);
-          for (let i = 1; i <= last; i++) { bars[i].setAttribute("fill", "#000"); bars[i].setAttribute("opacity", .85); }
+          for (let i = 1; i <= last; i++) { barEls[i].setAttribute("fill", "#000"); barEls[i].setAttribute("opacity", .85); }
           buzz("boundary");
           await wait(600);
         }
-        await wait(1500);
+        await wait(900); if (!alive()) return;
+        await lift();
       }
     },
 

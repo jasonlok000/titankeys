@@ -1,0 +1,101 @@
+/* The TitanKeys launch page. The privacy page keeps style.css. Inter is served from this site, not a font service. */
+@font-face { font-family: Inter; src: url(assets/Inter-Medium.otf) format("opentype"); font-weight: 500; font-display: swap; }
+@font-face { font-family: Inter; src: url(assets/Inter-Bold.otf) format("opentype"); font-weight: 700; font-display: swap; }
+
+:root {
+  --orange: #EF804E;
+  --ink: #160A04;
+  --cream: #FFF1E6;
+  --muted: #A2958C;
+  --black: #000;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body { margin: 0; background: var(--black); color: var(--cream); font: 500 18px/1.55 Inter, system-ui, sans-serif; }
+img, video { max-width: 100%; height: auto; display: block; }
+a { color: var(--orange); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+/* The trailer's way of picking out a word: a solid box, the letters in the page's ink. */
+.box { background: var(--orange); color: var(--black); padding: 0 .14em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.box.dark { background: var(--black); color: var(--cream); }
+
+.top { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; padding-top: 20px; padding-bottom: 20px; position: absolute; top: 0; left: 0; right: 0; z-index: 2; }
+.mark { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-size: 22px; }
+.mark svg { height: 22px; width: auto; }
+.mark .tk { fill: var(--ink); }
+.mark .slash { fill: var(--cream); }
+.mark b { font-weight: 500; }
+.mark span { color: var(--ink); }
+.top nav { display: flex; gap: 20px; flex-wrap: wrap; }
+.top nav a { color: var(--ink); text-decoration: none; font-size: 16px; }
+.top nav a:hover { text-decoration: underline; }
+
+/* The hero: the store graphic's orange gradient behind the header and the first screen. */
+.hero { padding: 110px 0 64px; color: var(--ink);
+  background: radial-gradient(circle at 18% 10%, rgba(255, 227, 207, .55), transparent 55%), linear-gradient(160deg, #F8A273 0%, #EF804E 50%, #D9602C 100%); }
+.hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; }
+.kicker { font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 14px; margin: 0 0 12px; }
+h1 { font-weight: 700; font-size: clamp(44px, 7vw, 84px); line-height: 1.02; letter-spacing: -.035em; margin: 0 0 20px; }
+h1 .box { background: var(--black); color: var(--cream); }
+.lead { font-size: 20px; max-width: 32em; margin: 0 0 28px; }
+.hero-shot { width: 100%; height: auto; background: #111; border-radius: 18px; box-shadow: 0 30px 60px rgba(60, 20, 0, .35); justify-self: end; max-width: 440px; }
+
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin: 0; }
+.button { display: inline-block; background: var(--black); color: var(--cream); text-decoration: none; font-weight: 700; padding: 14px 26px; border-radius: 999px; transition: transform .15s; }
+.button:hover { transform: translateY(-2px); }
+.button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.button.dark { background: var(--black); color: var(--cream); }
+.button.ghost.dark { background: transparent; color: var(--black); box-shadow: inset 0 0 0 2px var(--black); }
+
+.trailer { padding-top: 72px; padding-bottom: 24px; }
+.trailer video { margin: 0 auto; border-radius: 18px; max-height: 80vh; width: auto; background: #111; }
+
+.features { padding-top: 48px; padding-bottom: 48px; }
+.feature { display: grid; grid-template-columns: .9fr 1.1fr; gap: 48px; align-items: center; padding: 40px 0; }
+.feature:nth-child(even) img { order: 2; }
+.feature img { border-radius: 18px; max-width: 460px; width: 100%; }
+.feature:nth-child(even) img { justify-self: end; }
+h2 { font-weight: 700; font-size: clamp(32px, 4.4vw, 52px); line-height: 1.08; letter-spacing: -.03em; margin: 0 0 16px; }
+.feature p { color: var(--muted); font-size: 19px; max-width: 30em; margin: 0; }
+
+.cta { color: var(--ink); padding: 80px 0;
+  background: linear-gradient(160deg, #F8A273 0%, #EF804E 50%, #D9602C 100%); }
+.cta p { font-size: 19px; max-width: 34em; margin: 0 0 28px; }
+
+footer { padding-top: 32px; padding-bottom: 48px; color: var(--muted); font-size: 15px; }
+footer .fine { font-size: 13px; }
+
+@media (max-width: 760px) {
+  .hero-grid, .feature { grid-template-columns: 1fr; gap: 28px; }
+  .feature:nth-child(even) img { order: 0; justify-self: start; }
+  .hero-shot { justify-self: start; }
+  .top nav { gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .button { transition: none; } }
+
+/* Grid items may shrink below their pictures' size, so text never runs off a phone's screen. */
+.hero-grid > *, .feature > * { min-width: 0; }
+@media (max-width: 480px) { .top { flex-wrap: wrap; } .hero { padding-top: 130px; } .top nav a { font-size: 15px; } .lead { font-size: 18px; } }
+
+/* The Titan 2 Elite's square screen: about 690 CSS px wide and nearly as tall in a browser. The phone layout's stacked pictures
+   took a whole screen each, so here the picture sits beside its words again, sized to the screen's height, and every section
+   fits on one screen. */
+@media (min-width: 600px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
+  .top { flex-wrap: nowrap; }
+  .hero { padding: 84px 0 40px; }
+  .hero-grid, .feature { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .feature:nth-child(even) img { order: 2; justify-self: end; }
+  h1 { font-size: 46px; margin-bottom: 14px; }
+  .lead { font-size: 16px; margin-bottom: 20px; }
+  .button { padding: 11px 20px; font-size: 15px; }
+  .hero-shot, .feature img { max-height: 72vh; width: auto; max-width: 100%; justify-self: center; }
+  .trailer { padding-top: 40px; }
+  .trailer video { max-height: 86vh; }
+  .features { padding-top: 16px; padding-bottom: 16px; }
+  .feature { padding: 24px 0; min-height: 88vh; }
+  h2 { font-size: 32px; margin-bottom: 12px; }
+  .feature p, .cta p { font-size: 16px; }
+  .cta { padding: 48px 0; }
+}

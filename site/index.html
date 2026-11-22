@@ -4,23 +4,101 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TitanKeys</title>
-<meta name="description" content="TitanKeys, the keyboard for the Unihertz Titan 2 Elite. The keys your Titan deserves.">
-<link rel="stylesheet" href="style.css">
+<meta name="description" content="TitanKeys, a keyboard made for the Unihertz Titan 2 Elite. Swipe whole words on the same keys you press, typos fixed as you go, 49 languages.">
+<meta name="theme-color" content="#EF804E">
+<meta property="og:title" content="TitanKeys: made for the Titan 2 Elite">
+<meta property="og:description" content="Swipe whole words on the same keys you press. Typos fixed as you go. 49 languages.">
+<meta property="og:image" content="https://jasonlok000.github.io/titankeys/assets/06-made-for.webp">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="stylesheet" href="landing.css">
 </head>
 <body>
+<!-- The launch page (#58). Same look as the app, the store graphics and the trailer: Inter, cream on near-black, the Titan
+     orange, words picked out in solid boxes. Everything is served from this site, so a visit asks nothing of any other server. -->
+<header class="top wrap">
+  <a class="mark" href="./" aria-label="TitanKeys home">
+    <svg viewBox="289.8 324.7 518.8 442.5" aria-hidden="true"><path class="tk" d="M757.7,328.4 L760.8,328.4 L602.1,540 L760.8,751.6 L657.8,751.6 L523.4,572.2 L523.4,751.6 L438.8,751.6 L438.8,600.9 Z M382.7,328.4 L632,328.4 L568.5,413 L523.4,413 L523.4,507.8 L657.8,328.4 L760.8,328.4 L607.4,532.9 L538.3,592 L523.4,572.2 L523.4,604.7 L438.8,677 L438.8,413 L319.2,413 Z"/><path class="slash" d="M289.8,756.2 L303.6,767.2 L808.6,335.8 L794.8,324.7 Z"/></svg><b>Titan<span>Keys</span></b>
+  </a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="https://jasonlok000.github.io/titan2-nightkeys/">Titan Tools ↗</a>
+  </nav>
+</header>
+
 <main>
-  <!-- A placeholder until the webpage (#58) is built here. The privacy policy and the news feed live on this site too. -->
-  <p class="brand">Titan<span>Keys</span></p>
-  <h1>The keys your Titan deserves.</h1>
-  <p class="lead">A keyboard built for the Unihertz Titan 2 Elite. Type as you always have, swipe whole words on the same keys, and reach every symbol, emoji and setting without touching the screen.</p>
-  <p>
-    <a class="button" href="https://github.com/jasonlok000/titankeys/releases/latest">Download</a>
-    <a class="button" href="https://github.com/jasonlok000/titankeys">Source code</a>
-  </p>
-  <p><a href="privacy/">Privacy policy</a></p>
-  <footer>
-    <p>TitanKeys is a modified version of <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall, under the GPL-3.0. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz. "Titan 2 Elite" is a product of Unihertz.</p>
-  </footer>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="kicker">TitanKeys 3.0</p>
+        <h1>Made for the<br>Titan 2 <span class="box">Elite</span></h1>
+        <p class="lead">A keyboard for the phone with the keyboard. Swipe whole words on the same keys you press, get typos fixed as you go, and type in 49 languages.</p>
+        <p class="actions">
+          <!-- Play: swap in the Play test link on launch day. -->
+          <a class="button" href="https://github.com/jasonlok000/titankeys/releases/latest">Download</a>
+          <a class="button ghost" href="#features">See what it does</a>
+        </p>
+      </div>
+      <!-- The trailer is the hero (owner, 2026-11-21): it plays muted on a loop, with its controls for sound. -->
+      <video class="hero-shot" id="trailer" autoplay muted loop playsinline controls preload="metadata" poster="assets/trailer-poster.jpg" width="1076" height="1200">
+        <source src="assets/trailer.mp4" type="video/mp4">
+        <a href="https://www.youtube.com/watch?v=Sqxws8baNAQ">Watch the trailer on YouTube</a>
+      </video>
+    </div>
+  </section>
+
+  <section id="features" class="features wrap">
+    <article class="feature">
+      <img src="assets/01-swipe.webp" width="807" height="900" loading="lazy" alt="Swiping the word swipe on the keys">
+      <div>
+        <h2>Swipe words right on the <span class="box">keys</span></h2>
+        <p>Slide across a word's letters on the physical keys, then lift. Press short words, swipe long ones, in the same sentence. One thumb is plenty, so one-handed typing just works.</p>
+      </div>
+    </article>
+    <article class="feature">
+      <img src="assets/02-fixes.webp" width="807" height="900" loading="lazy" alt="teh fixed to the">
+      <div>
+        <h2>Fixes typos. Cleverly. Like, <span class="box">scarily</span> cleverly</h2>
+        <p>Press Space and the typo you just made is gone. It picks the fix that fits your sentence, and nobody saw.</p>
+      </div>
+    </article>
+    <article class="feature">
+      <img src="assets/03-cursor.webp" width="807" height="900" loading="lazy" alt="Two words selected from Space">
+      <div>
+        <h2>Taps moves the <span class="box">cursor</span>. And selects</h2>
+        <p>Tap Space twice, keep the second tap down, and slide to move the cursor. Tap it three times to grab words. No more poking the screen.</p>
+      </div>
+    </article>
+    <article class="feature">
+      <img src="assets/04-symbols.webp" width="807" height="900" loading="lazy" alt="The Sym panel with symbols and emoji">
+      <div>
+        <h2>Every symbol. Every <span class="box">emoji</span></h2>
+        <p>Hold a key for the symbol printed on it, or open Sym for all of them, emoji included.</p>
+      </div>
+    </article>
+    <article class="feature">
+      <img src="assets/05-languages.webp" width="807" height="900" loading="lazy" alt="Languages, each in its own name, and the language switcher">
+      <div>
+        <h2>Many <span class="box">Languages!</span></h2>
+        <p>49 of them, up to four at once. Hold Sym to switch. Chinese six ways: Cantonese Yale and Jyutping, Pinyin, Zhuyin, Cangjie and Quick.</p>
+      </div>
+    </article>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <h2>Works out of the box.<br>Tweak <span class="box dark">everything</span> if you like.</h2>
+      <p>The guide sets it up the first time you open it. Nearly every behaviour has its own switch in Settings.</p>
+      <p class="actions">
+        <a class="button dark" href="https://github.com/jasonlok000/titankeys/releases/latest">Download</a>
+        <a class="button ghost dark" href="https://github.com/jasonlok000/titankeys">Source code</a>
+      </p>
+    </div>
+  </section>
 </main>
+
+<footer class="wrap">
+  <p>Part of <a href="https://jasonlok000.github.io/titan2-nightkeys/">Titan Tools</a>, small apps for the Titan 2 Elite. · <a href="privacy/">Privacy policy</a></p>
+  <p class="fine">TitanKeys is a modified version of <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall, under the GPL-3.0. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz. "Titan 2 Elite" is a product of Unihertz.</p>
+</footer>
 </body>
 </html>

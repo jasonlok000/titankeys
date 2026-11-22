@@ -10,7 +10,7 @@
 <meta property="og:description" content="Swipe whole words on the same keys you press. Typos fixed as you go. 49 languages.">
 <meta property="og:image" content="https://jasonlok000.github.io/titankeys/assets/06-made-for.webp">
 <link rel="icon" href="assets/icon-192.png">
-<link rel="stylesheet" href="landing.css">
+<link rel="stylesheet" href="landing.css?v=5">
 </head>
 <body>
 <!-- The launch page (#58). Same look as the app, the store graphics and the trailer: Inter, cream on near-black, the Titan
@@ -26,7 +26,7 @@
 </header>
 
 <main>
-  <section class="hero">
+  <section class="hero" data-bar="hero">
     <div class="wrap hero-grid">
       <div>
         <p class="kicker">TitanKeys 3.0</p>
@@ -44,42 +44,42 @@
         <video class="hero-shot" autoplay muted loop playsinline preload="metadata" poster="assets/trailer-poster.jpg" width="1076" height="1200">
           <source src="assets/trailer.mp4" type="video/mp4">
         </video>
-        <span class="tap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Tap to watch</span>
+        <span class="tap"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Tap to watch</span>
       </button>
     </div>
   </section>
 
   <section id="features" class="features wrap">
-    <article class="feature">
-      <img src="assets/01-swipe.webp" width="807" height="900" loading="lazy" alt="Swiping the word swipe on the keys">
+    <article class="feature" data-bar="swipe">
+      <img src="assets/01-swipe.webp" data-nobar="assets/01-swipe-nobar.webp" width="807" height="900" loading="lazy" alt="Swiping the word swipe on the keys">
       <div>
         <h2>Swipe words right on the <span class="box">keys</span></h2>
         <p>Slide across a word's letters on the physical keys, then lift. Press short words, swipe long ones, in the same sentence. One thumb is plenty, so one-handed typing just works.</p>
       </div>
     </article>
-    <article class="feature">
-      <img src="assets/02-fixes.webp" width="807" height="900" loading="lazy" alt="teh fixed to the">
+    <article class="feature" data-bar="fixes">
+      <img src="assets/02-fixes.webp" data-nobar="assets/02-fixes-nobar.webp" width="807" height="900" loading="lazy" alt="teh fixed to the">
       <div>
         <h2>Fixes typos. Cleverly. Like, <span class="box">scarily</span> cleverly</h2>
         <p>Press Space and the typo you just made is gone. It picks the fix that fits your sentence, and nobody saw.</p>
       </div>
     </article>
-    <article class="feature">
-      <img src="assets/03-cursor.webp" width="807" height="900" loading="lazy" alt="Two words selected from Space">
+    <article class="feature" data-bar="cursor">
+      <img src="assets/03-cursor.webp" data-nobar="assets/03-cursor-nobar.webp" width="807" height="900" loading="lazy" alt="Two words selected from Space">
       <div>
         <h2>Taps moves the <span class="box">cursor</span>. And selects</h2>
         <p>Tap Space twice, keep the second tap down, and slide to move the cursor. Tap it three times to grab words. No more poking the screen.</p>
       </div>
     </article>
-    <article class="feature">
-      <img src="assets/04-symbols.webp" width="807" height="900" loading="lazy" alt="The Sym panel with symbols and emoji">
+    <article class="feature" data-bar="symbols">
+      <img src="assets/04-symbols.webp" data-nobar="assets/04-symbols-nobar.webp" width="807" height="900" loading="lazy" alt="The Sym panel with symbols and emoji">
       <div>
         <h2>Every symbol. Every <span class="box">emoji</span></h2>
         <p>Hold a key for the symbol printed on it, or open Sym for all of them, emoji included.</p>
       </div>
     </article>
-    <article class="feature">
-      <img src="assets/05-languages.webp" width="807" height="900" loading="lazy" alt="Languages, each in its own name, and the language switcher">
+    <article class="feature" data-bar="languages">
+      <img src="assets/05-languages.webp" data-nobar="assets/05-languages-nobar.webp" width="807" height="900" loading="lazy" alt="Languages, each in its own name, and the language switcher">
       <div>
         <h2>Many <span class="box">Languages!</span></h2>
         <p>49 of them, up to four at once. Hold Sym to switch. Chinese six ways: Cantonese Yale and Jyutping, Pinyin, Zhuyin, Cangjie and Quick.</p>
@@ -87,7 +87,7 @@
     </article>
   </section>
 
-  <section class="cta">
+  <section class="cta" data-bar="download">
     <div class="wrap">
       <div>
       <h2>Works out of the box.<br>Tweak <span class="box dark">everything</span> if you like.</h2>
@@ -97,7 +97,7 @@
         <a class="button ghost dark" href="https://github.com/jasonlok000/titankeys">Source code</a>
       </p>
       </div>
-      <img class="cta-shot" src="assets/06-made-for.webp" width="807" height="900" loading="lazy" alt="The Titan 2 Elite showing Made for the Titan 2 Elite">
+      <img class="cta-shot" src="assets/06-made-for.webp" data-nobar="assets/06-made-for-nobar.webp" width="807" height="900" loading="lazy" alt="The Titan 2 Elite showing Made for the Titan 2 Elite">
     </div>
   </section>
 </main>
@@ -106,7 +106,32 @@
   <p>Part of <a href="https://jasonlok000.github.io/titan2-nightkeys/">Titan Tools</a>, small apps for the Titan 2 Elite. · <a href="privacy/">Privacy policy</a></p>
   <p class="fine">TitanKeys is a modified version of <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall, under the GPL-3.0. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz. "Titan 2 Elite" is a product of Unihertz.</p>
 </footer>
+<img class="phone-bar" id="phone-bar" alt="" aria-hidden="true">
 <script>
+  // On a Titan 2 Elite, the bar each part shows sits where TitanKeys really draws it: pinned to the screen's bottom edge, right over
+  // the keys, and the pictures lose their own copy of it. The strips are 1076 px wide like the screen, so drawn as wide as the
+  // page they land 1:1 on the screen's pixels, whatever its display size. Found by the screen: 1076 or 1080 by 1200 pixels.
+  (() => {
+    const px = n => Math.round(n * devicePixelRatio);
+    const t2e = /[?&]t2e=1/.test(location.search) ||
+      ([1076, 1080].includes(px(screen.width)) && px(screen.height) === 1200);
+    if (!t2e) return;
+    document.documentElement.classList.add("t2e");
+    for (const img of document.querySelectorAll("img[data-nobar]")) img.src = img.dataset.nobar;
+    const bar = document.getElementById("phone-bar"), sections = [...document.querySelectorAll("[data-bar]")];
+    const show = name => { const src = `assets/bars/${name}.png`; if (!bar.src.endsWith(src)) bar.src = src; };
+    for (const s of sections) new Image().src = `assets/bars/${s.dataset.bar}.png`;
+    show("hero");
+    // The part that fills the most of the screen gives the bar.
+    const seen = new Map();
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries) seen.set(e.target, e.intersectionRect.height);
+      const best = [...seen].sort((a, b) => b[1] - a[1])[0];
+      if (best && best[1] > 0) show(best[0].dataset.bar);
+    }, { threshold: [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1] });
+    sections.forEach(s => io.observe(s));
+  })();
+
   // The trailer: a tap plays it from the start, full screen and with sound. Leaving full screen brings back the quiet loop.
   (() => {
     const button = document.getElementById("trailer"), video = button.querySelector("video");

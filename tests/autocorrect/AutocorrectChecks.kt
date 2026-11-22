@@ -2739,7 +2739,7 @@ private fun bugHunt(world: Realistic) {
     fun symbols(field: Field) = Typist(world, field = field, autoCapitalise = false).type("a").also { it.composer.symbol("="); it.settle() }
         .type("1").also { it.composer.symbol("&"); it.settle() }.type("b").text
     same(symbols(url), "a=1&b", "#29: an address bar gets \"=\" and \"&\" alone")
-    same(symbols(Typist.FIELD), "a = 1 & b", "#29: prose still gets spaces around them")
+    same(symbols(Typist.FIELD), "a=1&b", "prose gets them as typed too: \"c&c\" stays (owner, 2026-11-22)")
 
     // #39: one failed load turned autocorrect off for good. It tries again, after longer each time, and a load that works starts over.
     val retry = LoadRetry()

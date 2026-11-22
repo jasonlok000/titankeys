@@ -161,9 +161,9 @@ private fun onlyAClearedStatusIsSentAgain() {
     same(TouchpadHold.statusLost("1"), false, "a status still on is left alone")
     same(TouchpadHold.statusLost(""), false, "a phone without the property has nothing to lose")
     same(TouchpadHold.statusLost(null), false, "a property that can't be read has nothing to lose")
-    same(TouchpadHold.watchDelay(0), 200L, "the property is read five times a second")
-    same(TouchpadHold.watchDelay(2), 200L, "a report or two that didn't take are tried again soon")
-    same(TouchpadHold.watchDelay(3), 5_000L, "a status that won't come back isn't hammered")
+    same(TouchpadHold.keepWatching(0), true, "the property is read five times a second")
+    same(TouchpadHold.keepWatching(2), true, "a report or two that didn't take are tried again")
+    same(TouchpadHold.keepWatching(3), false, "a firmware where it never comes back gets three tries, then none")
     same(TouchpadHold.otherDisposition(1), 0, "the hold's back disposition changes to the default and back")
     same(TouchpadHold.otherDisposition(0), 1, "a field's default changes to another and back")
 }

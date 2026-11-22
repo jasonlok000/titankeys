@@ -880,6 +880,19 @@ class TitanKeysIme : InputMethodService() {
         }
     }
 
+    /**
+     * An app bound to the keyboard. After the keyboard restarts (an update, a crash), an app without a text field never starts an
+     * input, so the hold waited for the next field and every app scrolled until then (owner, 2026-11-22). The binding is the
+     * first word from the app in front, so the hold and its overlay come up from here.
+     */
+    override fun onBindInput() {
+        super.onBindInput()
+        main.post {
+            updateOverlay()
+            updateHold()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         Calibration.init(this)
@@ -1417,7 +1430,8 @@ class TitanKeysIme : InputMethodService() {
                     Log.w("TitanKeys", "Could not report the keyboard status", error)
                 }
             } else failures = 0
-            main.postDelayed(this, TouchpadHold.watchDelay(failures))
+            // A firmware where sending the status never brings it back gets three tries, then none until the next show or hold.
+            if (TouchpadHold.keepWatching(failures)) main.postDelayed(this, TouchpadHold.WATCH_MILLIS) else failures = 0
         }
     }
 

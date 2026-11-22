@@ -4,11 +4,13 @@
 
 ### TitanKeys
 
-A keyboard for the Unihertz Titan 2 Elite. You bought a phone with keys on it, so here's a keyboard that actually uses them.
+A keyboard made for the Unihertz Titan 2 Elite. This phone is pretty unique, so it gets a keyboard of its own.
 
-Type like you always have, in English, Chinese or 47 other languages. Swipe whole words across the keys, move the cursor from Space and flick words into the void. It's free, and what you type stays on your phone, where your spelling can't hurt anyone.
+Swipe whole words on the same keys you press. Type one-handed with ease. Let it fix your typos as you go, in English or 48 other languages.
 
 **[Download it](https://github.com/jasonlok000/titankeys/releases)**
+
+<img src="assets/readme/06-made-for.webp" width="400" alt="Made for the Titan 2 Elite: the phone with TitanKeys on its screen, on orange">
 
 </div>
 
@@ -20,168 +22,194 @@ Two minutes of TitanKeys on a real Titan 2 Elite, keys and all.
 
 > TitanKeys is an independent, modified version of [Atlas](https://github.com/juleshall4/atlas) by Julian Hall. Atlas is the original project and the base of everything here. This fork started in November 2026, and its changes are in the git history. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz.
 
-<p align="center">
-  <img src="assets/screenshots/guide-type.png" width="540" alt="The guide's first slide: Make a typo. We'll fix it., with a line of typos in the text field">
-</p>
+## Why it exists
+
+The Titan 2 Elite has physical keys, and the stock keyboard and the big glass keyboards were never built around them. Seeing Atlas swipe words on those keys started it: what would a keyboard look like if it was made just for this phone? The answer took weeks of very intense work and grew into TitanKeys.
+
+It works right out of the box, and a friendly guide sets it up. If you like tweaking, nearly every behaviour has its own switch in Settings.
+
+## What it does
+
+### Swiping
+
+<img src="assets/readme/01-swipe.webp" width="400" align="right" alt="Swipe words right on the keys: a swiped word on the phone">
+
+- **Swipe whole words on the same keys you press.** Slide across a word's letters without pressing, then lift. Press short words, swipe long ones, in the same sentence.
+- **One thumb is enough,** so one-handed typing really works.
+- **Trained for this phone.** The swipe model is fine-tuned on recorded swipes from this phone's keys, so it lands the word you meant. Numbers are in [How it works](#how-it-works).
+- **Stray touches type nothing.** A resting thumb or a brush between presses is ignored.
+- **One touch fixes a miss.** The bar shows the other words a swipe could have been. Touch one and it goes in.
+- **A swipe trail** on the bar shows what the keys felt.
+- **Swiping is English only** for now. Other languages type and correct as their own pages say.
+- **It knows its own name.** Swipe TitanKeys. Go on.
+
+<br clear="right">
+
+### Autocorrect
+
+<img src="assets/readme/02-fixes.webp" width="400" align="right" alt="Fixes typos. Cleverly. Like, scarily cleverly: a fixed typo on the phone">
+
+- **Typos fixed on Space.** It picks the fix that fits your whole sentence, with a small language model on the phone helping. Typing never waits for it. Built on [Numen](https://github.com/jlo-aug/numen)'s autocorrect, with a lot more on top.
+- **Fix earlier words: Off or On.** When the next word shows the one before was wrong, TitanKeys goes back and fixes it: "get dome food" becomes "get some food", and "their going" becomes "they're going". It's on to start. With **Only fix when sure**, it sticks to apostrophes and one-key slips. English only.
+- **Apostrophes.** dont, whats and cant get theirs. its, lets, your and friends wait for the next two words, then get an apostrophe only if it clearly fits. It never takes one out.
+- **The small slips too.** Missing spaces (hellohow), a last letter twice (yeahh), Shift held too long (THe), a lone i, and names like monday and iphone get their capitals.
+- **Words from this chat.** Once a word has come up twice in the conversation, a slip on it gets fixed to that spelling.
+- **Names from your contacts,** if you turn it on.
+- **Your shorthand is left alone.** shd, sth, idk, cuz and friends never get "fixed". Want them spelled out? Turn on Spell out shorthand, switch off the ones you hate and add your own.
+- **British, American or Canadian spelling.**
+- **Pick your fixes.** Settings > Typing > What gets fixed has a switch for every kind of fix, plus Only fix when sure for fewer, safer ones.
+- **Changed your mind?** Backspace right after a fix puts your word back, typo and all.
+- **A capital to start each sentence.** Shift turns on by itself. Press Shift once if you want lowercase.
+
+<br clear="right">
+
+### Space: cursor and selecting
+
+<img src="assets/readme/03-cursor.webp" width="400" align="right" alt="Taps moves the cursor. And selects: the cursor moving on the phone">
+
+- **Move the cursor.** Tap Space twice, quickly, keep the second tap down, and slide. Slow near the middle, fast near the edge, and it stops when you come back to the middle.
+- **Count words by feel.** A tick for each letter and a stronger one at each space, so you can move without looking.
+- **Select with three taps.** Tap Space three times and slide to grab words. Slide back to let them go one at a time. Three taps and no slide selects the word you're on.
+- **Taps count on Space itself,** not the keys beside it.
+- **Double Space types a full stop.** Switch it off if you hate it.
+- No more poking the screen to fix one letter. Give it a day.
+
+<br clear="right">
+
+### Symbols, emoji and clipboard
+
+<img src="assets/readme/04-symbols.webp" width="400" align="right" alt="Every symbol. Every emoji: the Sym panel on the phone">
+
+- **Hold a letter for its symbol.** Hold V for ?, and so on for the symbol printed on each key. You pick how long the hold is. Great one-handed.
+- **Or press Alt, then the key,** the old-fashioned way.
+- **Sym has every other symbol,** in pages and groups. Swipe up or down for more, or rest a finger on the bottom row to pick a group.
+- **Press Sym twice for emoji.** A third press closes the panel.
+- **Emoji by name.** Type `:smile:` and you get 😄. The bar shows matches as you type.
+- **Clipboard history.** In the panel, A opens your recent clips, then your pinned ones. Press the key under a clip to paste it.
+- **Pin what you want to keep.** Clips go after an hour unless you pin them. Backspace twice clears all but the pinned ones.
+- **Nothing sensitive is kept.** No text an app marks as sensitive, nothing from a password field, and nothing leaves the phone.
+- **Quick settings without leaving your app.** In the panel, Alt opens quick settings, a letter each: S for swiping, V for haptics, F for fixes and more.
+
+<br clear="right">
+
+### Languages
+
+<img src="assets/readme/05-languages.webp" width="400" align="right" alt="Many Languages!: the language switcher on the phone">
+
+- **49 languages.** Pick them in Settings > Languages. Keep up to four on at once, and hold Sym to switch.
+- **Chinese, six ways.** Yale or Jyutping for Cantonese, Pinyin or Zhuyin for Mandarin, Cangjie or Quick by shape, in traditional or simplified characters. Japanese and Korean type on the keys too.
+- **Gestures work by character in Chinese.** Flick to delete takes one character, not the whole phrase.
+- **Enter and Sym know about codes.** With a code half typed, Enter types the code as it is and never sends. Sym clears it first.
+- **Each language speaks for itself.** Its settings, key maps and practice text are in its own language.
+- **Type in yours and tell us how it goes.** Native speakers and developers can help in [issue #56](https://github.com/jasonlok000/titankeys/issues/56).
+
+<br clear="right">
+
+### Deleting
+
+- **Hold Backspace to keep deleting,** like on a computer. A half-typed code loses its letters first.
+- **Flick a word away.** Flick left, fast, from Backspace or the keys next to it, and the word lifts off and dissolves. A flick never leaves two spaces behind.
+- **Hold the flick to delete a lot.** Keep your finger down and it eats a word at a time, with a firm hit for each. Slide further out to go faster.
+- **Pause.** Slide back onto Backspace and it stops. The caret blinks so you know.
+- **Shift + Backspace** deletes a word. **Alt + Backspace** deletes forward, like Delete on a PC, and keeps going if you hold it.
+
+### The bar and the word menu
+
+- **The middle word is what Space types.** Tap it or press Space, same thing. The likeliest one is in bold.
+- **The next word before you type it,** then the word you're typing after each letter.
+- **Three spots that never move,** all the same size.
+- **Your clip, ready to paste** right after you copy something.
+- **Hide it** in apps you pick. Keys, holds, Alt and the Sym panel keep working.
+- **Hold a word on the bar for its menu.** I moves it up a step and O moves it down: Blocked, Not saved, Saved, Favourite. Favourite puts it first among similar words, in suggestions, swipes and fixes. P or Backspace closes the menu.
+- **Fix the word you selected.** Select one word in your text and the bar shows it underlined, ready for the same menu.
+- **Settings > Your words** lists your saved and blocked words, with export and import.
+- **Idle games.** Leave the bar alone for three minutes and it may start playing with your words. Touch anything and it all goes back.
+
+### Power stuff
+
+- **Snippets.** Set one up like `/addr`, type it, press Space, and there's your address. The `/` is Alt+G, or hold G. Snippets never fire in password fields, and you can import and export them.
+- **fn works as Ctrl,** with Ctrl's shortcuts: fn+C, X and V copy, cut and paste.
+- **Alt + Sym** switches to your next keyboard.
+- **The modifier bar.** Shift, Alt and Ctrl show as chips: filled while held, outlined once set. Press twice to lock.
+- **See it before you type it.** Rest a finger on a letter and the bar shows what it types with Shift or Alt. With Ctrl down, it lists Ctrl's shortcuts.
+- **Key Mapper can take a break.** All of this is in TitanKeys itself, each shortcut with its own switch in Settings > Shortcuts.
+
+### Exact typing, for terminals and remote computers
+
+- Still experimental. In terminals, remote desktops and game streaming, every key goes straight to the app exactly as you press it, with Shift, Alt and Ctrl (fn too). No fixes, no suggestions.
+- The bar shows Shift, Alt, Ctrl, Esc, Tab and More. More has the arrows, Home, End, PgUp, PgDn and F1 to F12.
+- Termux, ConnectBot, Termius, AnyDesk, TeamViewer, Windows App, Chrome Remote Desktop, RustDesk, RealVNC Viewer, bVNC, aRDP, Moonlight and Parsec are on the list already. Add or remove any app in Settings.
+
+### This phone's quirks, handled
+
+- **Back does one thing at a time.** With the keyboard up, Back hides it. With the keyboard gone, Back goes back in the app. With a code half typed, it clears the code. Optional, through an Accessibility service the app explains first.
+- **The keys stay yours.** A notification popping up at the top no longer steals the keys while you type.
+- **Smart Launcher's search works,** fixes and all, with the Back service on.
+- **Scroll assistant.** Outside text fields the keys scroll your apps, the way your phone's own Scroll assistant is set, or TitanKeys can block it.
+- **Microsoft Teams works properly.** Yes, that needed fixing.
+
+### Looks and feel
+
+- **Always dark,** so the keyboard blends into the black border under the screen.
+- **Clear of the rounded corners.** Words, chips, menus and idle games stay inside the screen's curve.
+- **Same size at any setting.** The phone's font and display size don't blow it up.
+- **Every buzz means one thing.** Moving, a step, done, locked, gone and "nope" each feel different. The haptics on flick to delete got a lot of care.
+- **Settings > Haptics** has one switch for all of it and one for every single haptic.
+
+### The rest
+
+- **The fun guide** teaches everything on the keys, one small hands-on step at a time. It's mean on purpose.
+- **The boring guide** has every feature in words. Pick your guide in Settings > Guide.
+- **The playground** gives you about an hour of text to type along to, and comments on your speed.
+- **Two resets.** Reset most things keeps your words, snippets and lists. Reset literally everything is a fresh install.
+- **Record a bug** records up to three minutes, shows you what's in it, and you share it where you want.
+- **Support page** at the very bottom of Settings. Nothing is locked behind it.
+
+## How it works
+
+Everything runs on your phone:
+
+- **Swipe engine 2.0.** [FUTO Swipe](https://gitlab.futo.org/keyboard/swipe-library) reads your stroke as you made it, again stretched wider for a fast swipe, and again shifted right, where thumbs aim on this sensor. A [CleverKeys](https://github.com/tribixbite/CleverKeys) encoder, fine-tuned on the Titan's touchpad, adds its own guesses. A ranker of 900 decision trees weighs the shape, the readings and your sentence, and picks the three words on the bar. About 70 ms a swipe, and swiping works while the models load.
+- **Next words.** DistilGPT-2 reads the last 32 tokens of your text and guesses the next word, then the word you're typing after each letter. It runs after the previous word, so you never wait for it. Before any letter, the right next word is in the top 3 on 37.9% of prompted text, up from 24.0%.
+- **Autocorrect.** Typed words are fixed on Space, starting from Numen's autocorrect, and the same model nudges each fix towards the word the sentence expects. Apostrophes like its and it's are decided from the words before them and the two after.
+- **Chinese and Japanese.** Chinese runs on [Rime](https://github.com/rime/librime) with OpenCC, and Japanese on Mozc, both on the phone.
+
+**Size.** TitanKeys is about 290 MB, because the models and dictionaries ship inside the app, so nothing you type has to leave the phone. Downloading languages and models only when you need them is planned in [#104](https://github.com/jasonlok000/titankeys/issues/104).
+
+### Swipe accuracy
+
+The same recorded touches, replayed through each keyboard on the phone. Atlas is at the commit this fork started from (`0981443`, November 2026), and Atlas is actively developed, so some of this may have changed since. TitanKeys 1.2 is the last version before swipe engine 2.0.
+
+| 126 words swiped in real sentences | Atlas | TitanKeys 1.2 | TitanKeys, swipe engine 2.0 (2.0 and later) |
+| --- | --- | --- | --- |
+| Right word first, first try | 86 (68%) | 106 (84%) | 115 (91%) |
+| Right word in the top 3 | 108 (86%) | 111 (88%) | 121 (96%) |
+
+These sentences were never used to tune anything, so that's the row to trust. On 540 other swipes, held back from all of engine 2.0's tuning, the right word came first 78.9% of the time (72.6% before engine 2.0) and in the top 3 85.7% (81.5% before). A set of 300 recorded words scores higher still, but the ranker learned from them, so they carry an asterisk in [the technical paper](docs/paper.md).
+
+It's one person's swipes on one phone, so yours may differ. Every number, the trade-offs and the replay tools are in [the paper](docs/paper.md).
+
+### Keyboards for the Titan 2 Elite
+
+As of November 2026, from each project's public pages. This is what each one does, not a ranking.
+
+| | TitanKeys | Atlas | Pastiera / Plektra | Kika (stock) | Gboard |
+| --- | --- | --- | --- | --- | --- |
+| Swipe words on the keys | ✓ English | ✓ English | ✗ | ✗ (flick up only) | ✗ |
+| Space gestures: cursor and select | ✓ both | Cursor only | Cursor via swipe pad / Nav Mode | The phone's Cursor Assistant | ✗ |
+| Chinese, Japanese, Korean on the keys | ✓ Chinese (6 methods), Japanese, Korean | ✗ | ✗ | ? | ? |
+| Languages | 49 | English | Latin, Greek, Arabic, Cyrillic layouts | Several | Many |
+| Hold a letter for its symbol | ✓ | ✗ | ✓ | ✗ | ✗ |
+| Open source | GPL-3.0 | GPL-3.0 | GPL-3.0 | ✗ | ✗ |
+| Size | About 290 MB (on-device models, [#104](https://github.com/jasonlok000/titankeys/issues/104)) | Small | Small | Comes with the phone | ? |
+
+## Setup
 
 <p align="center">
   <img src="assets/screenshots/guide-setup.png" width="260" alt="The guide's setup: Turn the keyboard on, with a button that opens the keyboard list">
   <img src="assets/screenshots/playground.png" width="260" alt="The playground: Practice. You need it., a line to follow, the text field and the keys">
   <img src="assets/screenshots/settings.png" width="260" alt="Settings: a switch for each part of typing">
 </p>
-
-## What this is
-
-The Titan 2 Elite has keys, a touchpad hiding under them and a screen with rounded corners. Gboard and friends were made for glass, so they've never heard of the touchpad and don't care about the corners. TitanKeys uses all three, down to the spot where your thumb runs off the top of the sensor and the black strip under the screen. Nearly everything works from the keys, so you can stop poking the glass.
-
-It works fine out of the box. If you can't leave things alone, nearly every behaviour has its own switch in Settings. Go wild.
-
-## What it does
-
-### Languages
-
-- **49 languages.** Pick them in Settings > Languages. Keep up to four on at once, and hold Sym to switch.
-- **Chinese, six ways.** Yale or Jyutping for Cantonese, Pinyin or Zhuyin for Mandarin, Cangjie or Quick by shape. Pick traditional characters for Hong Kong or Taiwan, or simplified for mainland China.
-- **Gestures work by character in Chinese.** Flick to delete takes one character, not the whole phrase.
-- **Enter and Sym know about codes.** With a code half typed, Enter types the code as it is and never sends. Sym clears it first.
-- **Each language speaks for itself.** Its settings, key maps and practice text are in its own language.
-- **Swiping is English only.** The other languages type and correct as their own pages say.
-
-### Typing and swiping
-
-- **Type like you already do.** Two hands, one hand, whatever. Press Space and the typo you just made is gone. Nobody saw.
-- **Swipe whole words on the same keys.** The keys are a touchpad too. Slide across a word's letters without pressing, then lift. One thumb is plenty.
-- **Stray touches type nothing.** A resting thumb or a brush between presses is ignored, so you don't have to hold your phone like a surgeon.
-- **A swipe trail.** A small trail on the bar follows your swipe, so you can see what the keys felt.
-- **Type with a light touch.** Pick keys that type when you barely touch them, no press needed.
-- **It knows its own name.** Swipe TitanKeys. Go on.
-
-### Space
-
-- **Move the cursor.** Tap Space twice, keep the second tap down, and slide. Slow near the middle, fast near the edge, and the caret stays solid while it moves.
-- **Count words by feel.** A tick for each letter and a stronger one at each space, so you can move the cursor without looking.
-- **Select with three taps.** Tap Space three times and slide to grab words. Slide back to let them go one at a time. Three taps and no slide selects the word you're on.
-- **Taps count on Space itself,** not the keys beside it, and the first tap counts quickly, so fewer cursor moves get missed.
-- **Double Space types a full stop.** Switch it off if you hate it.
-
-### Deleting
-
-- **Hold Backspace to keep deleting,** like on a computer. A half-typed code loses its letters first.
-- **Flick a word away.** Flick left from Backspace and the word lifts off and dissolves. A flick never leaves two spaces behind.
-- **Hold the flick to delete a lot.** Keep your finger down and it eats a word at a time, with a firm hit for each. Slide further out to go faster.
-- **Pause.** Slide back onto Backspace and it stops. The caret blinks so you know.
-- **Shift + Backspace** deletes a word. **Alt + Backspace** deletes forward, like Delete on a PC, and keeps going if you hold it.
-
-### The bar
-
-- **One touch fixes a miss.** The bar shows the other words a swipe could have been. Touch one and it goes in.
-- **The middle word is what Space types.** Tap it or press Space, same thing. The likeliest one is in bold.
-- **The next word before you type it.** Before your first letter, the bar guesses what comes next. After one letter, it guesses the word you're typing.
-- **Three spots that never move.** Long words squeeze into their spot, and all three words are the same size.
-- **Your clip, ready to paste.** Right after you copy something, the bar offers it. Touch it to paste.
-- **Bar text size.** Smaller, Normal or Bigger. The bar stays the same height.
-- **Hide it.** Turn the bar off in apps you pick, or on an empty home search. Keys, holds, Alt and the Sym panel keep working.
-- **Idle games.** Leave the bar alone for three minutes and, now and then, it starts playing with your words: Bowling, Race, Firework, Pong, Jump rope, Juggle or Drift. Touch anything and it puts everything back like nothing happened.
-
-### The word menu
-
-- **Hold a word on the bar for its menu.** **I** moves it up a step and **O** moves it down: Blocked, Not saved, Saved, Favourite.
-- **Save** keeps a word. **Favourite** puts it first among similar words, in suggestions, swipes and fixes. **Unsave** takes it out without blocking it, so typing it twice brings it back. **Block** keeps it out until you change your mind.
-- **Each step has its own effect.** A book claps shut for a save, hearts burst for a favourite, and every step has its own buzz.
-- **The colour tells you where a word stands.** Orange for a favourite, white for saved, grey for not saved, and grey with a line through it for blocked.
-- **Fix the word you selected.** Select one word in your text, like that name that never swipes right, and the bar shows it underlined, ready for the same menu.
-- **Settings > Your words** lists your saved and blocked words, and you can export and import them.
-
-### Autocorrect
-
-- **Typos fixed on Space,** with a small language model helping pick the fix that fits your sentence. Typing never waits for it.
-- **Fix earlier words.** When the next word shows the one before was wrong, TitanKeys goes back and fixes it: "get dome food" becomes "get some food", and "their going" becomes "they're going". It's on to start. With Only fix when sure, it sticks to apostrophes and one-key slips. English only.
-- **Apostrophes.** dont, whats and cant get theirs. its, lets, your and friends wait for the next two words, then get an apostrophe only if it clearly fits. It never takes one out.
-- **The small slips too.** Missing spaces (hellohow), a last letter twice (yeahh), Shift held too long (THe), a lone i, and names like monday and iphone get their capitals.
-- **Words from this chat.** Once a word has come up twice in the conversation, a slip on it gets fixed to that spelling.
-- **Names from your contacts,** if you turn it on.
-- **Your shorthand is left alone.** shd, sth, idk, cuz and friends never get "fixed". Want them spelled out instead? Turn on Spell out shorthand, switch off the ones you hate and add your own.
-- **British, American or Canadian spelling.** Canadian is colour and realize. Both. Eh.
-- **Pick your fixes.** Settings > What gets fixed has a switch for every kind of fix, plus Only fix when sure if you want fewer, safer ones.
-- **Changed your mind?** Backspace right after a fix puts your word back, typo and all.
-- **A capital to start each sentence.** Shift turns on by itself. Press Shift once if you want lowercase. The bar shows a small arrow and your words stay put.
-
-### Symbols, emoji and clipboard
-
-- **Hold a letter for its symbol.** Hold V for ?, and so on for the symbol printed on each key. You pick how long the hold is.
-- **Or hold Alt and press the key,** the old-fashioned way.
-- **Sym has every other symbol,** in pages and groups. Swipe up or down for more, or rest a finger on the bottom row to pick a group.
-- **Press Sym twice for emoji.** A third press closes the panel.
-- **Quick settings without leaving your app.** In the panel, Alt opens quick settings, a letter each: S for swiping, V for haptics, F for fixes and more.
-- **Clipboard history.** In the panel, A opens your recent clips, then your pinned ones, a page at a time. Press the key under a clip to paste it.
-- **Pin what you want to keep.** Clips go after an hour unless you pin them. Backspace twice clears all but the pinned ones.
-- **Nothing sensitive is kept.** No text an app marks as sensitive, nothing copied from a password field, and nothing leaves the phone.
-- **Nothing gets cut off.** The panels stay clear of the screen's rounded corners.
-
-### Shortcuts and modifiers
-
-- **Snippets.** Type `/addr`, press Space, and there's your address. The `/` is Alt+G, or hold G. Want a different start? Pick one in Settings > Snippets. Snippets never fire in password fields, and you can import and export them.
-- **Emoji by name.** Type `:smile:` and you get 😄. The bar shows matching snippets and emoji as you type.
-- **Alt + Sym** switches to your next keyboard.
-- **fn works as Ctrl,** with Ctrl's shortcuts.
-- **The modifier bar.** Press Shift, Alt or Ctrl and the bar shows a chip for each one that's on: filled while you hold it, outlined once it's set.
-- **See it before you type it.** Rest a finger on a letter and the bar shows what it'll type with Shift or Alt. With Ctrl down, it lists Ctrl's shortcuts.
-- **Press twice to lock** Shift or Alt.
-- **Key Mapper can take a break.** All of this is in TitanKeys itself, and each shortcut has its own switch in Settings > Shortcuts.
-
-### Exact typing, for terminals and remote computers
-
-- Still experimental. In terminals, remote desktops and game streaming, every key goes straight to the app exactly as you press it, with Shift, Alt and Ctrl (fn too). TitanKeys keeps its hands off: no fixes, no suggestions.
-- Termux, ConnectBot, Termius, AnyDesk, TeamViewer, Windows App, Chrome Remote Desktop, RustDesk, RealVNC Viewer, bVNC, aRDP, Moonlight and Parsec are on the list already. Add or remove any app in Settings.
-- Password, email and number fields keep the bar for Shift, Alt and Ctrl, but get no words, and swipes do nothing there.
-
-### This phone's quirks, handled
-
-- **The touchpad stays on the keys.** A notification popping up at the top no longer steals it while you type, even after the screen has been locked.
-- **Back does one thing at a time.** With the keyboard up, Back hides it. With the keyboard gone, Back goes back in the app. With a code half typed, it clears the code.
-- **Smart Launcher's search works.** Smart Launcher grabs your keys before any keyboard sees them. With the Back service on, TitanKeys types there like anywhere else, fixes and all.
-- **Scroll assistant.** Outside text fields the keys scroll your apps, starting out the way your phone's own Scroll assistant is set.
-- **Microsoft Teams works properly.** Yes, that needed fixing.
-
-### Looks and feel
-
-- **Always dark.** The keyboard is pure black whatever your phone's light mode, so it blends into the black border under the screen.
-- **Centred on what you see.** The bar's black runs into that border, so everything on the bar sits in the middle of the black you actually see, not the bar's maths middle.
-- **Clear of the rounded corners.** Words, chips, menu effects and idle games stay inside the screen's curve.
-- **Same size at any setting.** TitanKeys ignores the phone's font size and display size, so cranking the font up doesn't blow it up.
-- **Inter everywhere,** with orange accents. Turn off Orange accents and nothing TitanKeys draws is orange. It'll tell you what it thinks of that.
-- **Every buzz means one thing.** Moving, a step, done, locked, gone and "nope" each feel different, so you know what happened without looking.
-- **A quiet swell** when something changes by itself, like autocorrect, a snippet or a held symbol. Just a nod.
-- **Quiet when it should be.** Key presses don't buzz, and a fast run of buzzes doesn't turn into a rattle.
-- **Your switches.** Settings > Haptics has one switch for all of it and one for every single haptic, if you're that kind of person.
-
-### The rest
-
-- **The fun guide.** It teaches everything on the keys, one small hands-on step at a time, and drags you back when you wander off. It's mean on purpose: you'll paste something you won't like, hunt for ∞ and find a clown. Be quick and it's impressed. Take your time and it roasts you.
-- **The boring guide.** Every feature, in words. All of them. Pick your guide in Settings > Guide.
-- **The playground.** After the guide, the app opens on a text to type along to, about an hour of it, and it insults you the whole way. Type fast and it comments. Type really fast and it puts on a show: confetti, rain, a shake, lightning and a plant. Five quiet seconds and it all calms down.
-- **Two resets, for when you've broken it.** Reset most things puts every switch back how it started and keeps your words, snippets, shorthand and app lists. Reset literally everything wipes all of it, like a fresh install.
-- **Record a bug.** Something broke? Settings > Record a bug records up to three minutes, shows you what's in it, and you share it wherever you want.
-- **Support page.** At the very bottom of Settings. Buy the project a coffee if you like, once or monthly, through Google Play. Nothing is locked behind it, and everything stays free. Supporters can join a board with a name and a message. It never shows amounts.
-
-## How it works
-
-Three parts, all running on your phone:
-
-- **Swipe engine 2.0.** FUTO Swipe reads your stroke as you made it, again stretched wider for a fast swipe, and again shifted right, where thumbs aim on this sensor. A CleverKeys encoder, fine-tuned on the Titan's touchpad, adds its own guesses. A ranker of 900 decision trees weighs the shape, the readings and your sentence, and picks the three words on the bar. About 70 ms a swipe, and swiping works while the models load.
-- **The next-word model.** DistilGPT-2 reads the last 32 tokens of your text and guesses the next word, then the word you're typing after each letter. It runs after the previous word, so you never wait for it. Before any letter, the right next word is in the top 3 on 37.9% of prompted text, up from 24.0%.
-- **Autocorrect.** Typed words are fixed on Space, and the same model nudges each fix towards the word the sentence expects. Apostrophes like its and it's are decided from the words before them and the two after.
-
-The same recorded swipes, replayed through each keyboard on the phone. Atlas is at the commit this fork started from, and it's actively developed, so some of this may have changed since.
-
-| 126 words swiped in real sentences | Atlas | TitanKeys 1.2 | TitanKeys 2.0 |
-| --- | --- | --- | --- |
-| Right word first, first try | 86 (68%) | 106 (84%) | 115 (91%) |
-| Right word in the top 3 | 108 (86%) | 111 (88%) | 121 (96%) |
-
-These sentences were never used to tune anything. It's one person's swipes on one phone, so yours may differ. Every number, the trade-offs and what it costs are in [the technical paper](docs/paper.md).
-
-## Setup
 
 The first slide of the guide is setup. It opens each Settings page for you, sees the switch go on and comes back by itself, so each part takes a touch or two:
 

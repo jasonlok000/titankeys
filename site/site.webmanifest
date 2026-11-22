@@ -1,0 +1,15 @@
+{
+  "name": "TitanKeys",
+  "short_name": "TitanKeys",
+  "description": "A keyboard made for the Unihertz Titan 2 Elite.",
+  "start_url": "/titankeys/",
+  "scope": "/titankeys/",
+  "display": "standalone",
+  "background_color": "#FFF1E6",
+  "theme_color": "#EF804E",
+  "icons": [
+    { "src": "/titankeys/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/titankeys/assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/titankeys/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

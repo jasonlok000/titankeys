@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not found · TitanKeys</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#EF804E">
+<link rel="icon" href="/titankeys/assets/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/titankeys/assets/favicon-32.png" type="image/png" sizes="32x32">
+<style>
+  @font-face { font-family: Inter; src: url(/titankeys/assets/Inter-Bold.otf) format("opentype"); font-weight: 700; font-display: swap; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { display: grid; place-items: center; text-align: center; padding: 24px; color: #160A04; font: 700 18px/1.4 Inter, system-ui, sans-serif;
+    background: linear-gradient(135deg, #F59A6A, #E2622D); }
+  .key { display: inline-grid; place-items: center; width: 96px; height: 96px; border-radius: 22px; background: #160A04; color: #FFF1E6; font-size: 44px;
+    box-shadow: 0 8px 0 rgba(22, 10, 4, .35); }
+  h1 { font-size: clamp(32px, 6vw, 60px); letter-spacing: -.04em; line-height: 1.05; margin: 32px 0 24px; max-width: 14ch; }
+  a { display: inline-block; padding: 12px 22px; border-radius: 999px; background: #160A04; color: #FFF1E6; text-decoration: none; transition: transform .2s; }
+  a:hover { transform: scale(1.04); }
+  @media (prefers-reduced-motion: no-preference) {
+    /* A key that presses and gives nothing. */
+    @keyframes press { 0%, 30%, 100% { transform: none; box-shadow: 0 8px 0 rgba(22, 10, 4, .35); } 15% { transform: translateY(6px); box-shadow: 0 2px 0 rgba(22, 10, 4, .35); } }
+    .key { animation: press 2.4s .4s ease-in-out infinite; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="key" aria-hidden="true">?</div>
+  <h1>This key doesn't type anything.</h1>
+  <a href="/titankeys/">Back to TitanKeys</a>
+</main>
+</body>
+</html>

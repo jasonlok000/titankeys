@@ -159,23 +159,32 @@
       const usual = el("g", {}, s);
       const ts = words(usual, ["I", "the", "a"]);
 
-      // Cursor mode: the text's line on the bar, the word at the caret in letters and the rest as a dot a letter, the caret orange.
-      const LINE_WORDS = ["Move", "the", "cursor", "back", "here"], DOT = 15, GAP = 30;
+      // Cursor mode, as the app draws it (GestureDrawing.cursor): the text as a line of dots, one for each character and a gap for
+      // each space, no words; the caret a thin orange line held in the middle; the line gliding past it a letter at a time, the
+      // dots parting round the caret, strongest beside it and fading to the ends. In px at the phone's 1.5625 px per dp: dots of
+      // 3.5 dp radius 11 dp apart, parting 7.5 dp each side, the caret 2 dp wide and as tall as the words' letters.
+      const STEER_TEXT = "Hold the second tap and the cursor follows", PITCH = 17.2, PART = 11.7, R = 5.5;
       const steer = el("g", { opacity: 0 }, s);
-      const total = LINE_WORDS.reduce((n, w) => n + w.length * DOT, 0) + GAP * (LINE_WORDS.length - 1);
-      let x0 = 538 - total / 2;
-      const placed = LINE_WORDS.map(w => {
-        const g = el("g", {}, steer), left = x0;
-        const dots = [...w].map((_, i) => el("circle", { cx: left + DOT * (i + .5), cy: LINE, r: 3.4, fill: DIM }, g));
-        const text = word(g, left + w.length * DOT / 2, w, { size: 30 }); text.setAttribute("opacity", 0);
-        x0 += w.length * DOT + GAP;
-        return { w, left, dots, text };
-      });
-      const caret = el("rect", { x: 0, y: LINE - 20, width: 3.5, height: 40, rx: 1.75, fill: ORANGE }, steer);
-      const showWord = active => placed.forEach((p, i) => {
-        p.text.setAttribute("opacity", i === active ? 1 : 0);
-        p.dots.forEach(d => d.setAttribute("opacity", i === active ? 0 : 1));
-      });
+      const letterDots = [...STEER_TEXT].map((c, i) => c === " " ? null : el("circle", { cx: -50, cy: LINE, r: R, fill: "#FFF", opacity: 0 }, steer));
+      const caret = el("rect", { x: 538 - 1.55, y: LINE - 17.5, width: 3.1, height: 35, rx: 1.55, fill: ORANGE }, steer);
+      let caretAt = STEER_TEXT.length, stepped = 0, shown = 0, steering = false;
+      const drawSteer = () => {
+        const cursor = caretAt + stepped;
+        letterDots.forEach((d, index) => {
+          if (!d) return;
+          const x = 538 + (index - caretAt - shown + .5) * PITCH + (index < cursor ? -PART : PART);
+          const fade = Math.max(0, 1 - Math.abs(x - 538) / 538);
+          d.setAttribute("cx", x.toFixed(1));
+          d.setAttribute("opacity", ((.28 + (.75 - .28) * fade * fade) * Math.min(1, fade * 4)).toFixed(3));
+        });
+        caret.setAttribute("x", (538 + (stepped - shown) * PITCH - 1.55).toFixed(1));
+      };
+      const glide = () => {
+        if (!steering || !alive()) return;
+        shown += (stepped - shown) * .22;
+        drawSteer();
+        requestAnimationFrame(glide);
+      };
 
       // Select mode: the words as short bars, the box and its handle.
       const select = el("g", { opacity: 0 }, s);
@@ -220,27 +229,25 @@
         swap(usual, steer, select); setWords(ts, ["I", "the", "a"]);
         await wait(1200); if (!alive()) return;
 
-        // Cursor mode: two taps, the second held; the caret walks left from the end, a letter at a time.
+        // Cursor mode: two taps, the second held; the cursor steps left, a letter at a time, the line gliding past the caret. The
+        // underglow leans to the left, the way it goes. A Texture tick for each letter, a Boundary for each space.
         if (!(await taps(2))) return;
         buzz("confirm");
-        const stops = [];
-        placed.forEach((p, i) => { for (let k = 0; k <= p.w.length; k++) stops.push({ i, k }); });
-        let at = stops.length - 1;
-        const put = ({ i, k }) => { caret.setAttribute("x", placed[i].left + k * DOT - 1.75); showWord(i); };
-        caret.style.transition = "none"; put(stops[at]);
+        stepped = 0; shown = 0; drawSteer();
         swap(steer, usual, select);
-        await wait(250);
-        caret.style.transition = "x .08s ease-out";
-        const target = stops.findIndex(st => st.i === 2 && st.k === 0);
-        while (at > target) {
+        // Leaning left: the underglow's brighter side mirrored to the left.
+        under.setAttribute("transform", "translate(1076 0) scale(-1 1)");
+        steering = true; requestAnimationFrame(glide);
+        await wait(300);
+        for (let n = 0; n < 16; n++) {
           if (!alive()) return;
-          const from = stops[at], to = stops[at - 1];
-          at--;
-          // From the start of a word to the end of the one before is the space between them: a Boundary, not a letter.
-          put(to); buzz(to.i !== from.i ? "boundary" : "texture");
-          await wait(110);
+          const crossed = STEER_TEXT[caretAt + stepped - 1];
+          stepped--;
+          buzz(crossed === " " ? "boundary" : "texture");
+          await wait(120);
         }
         await wait(700); if (!alive()) return;
+        steering = false;
         await lift();
         swap(usual, steer, select); setWords(ts, ["and", "the", "to"]);
         await wait(1300); if (!alive()) return;
@@ -249,6 +256,7 @@
         barEls.forEach(b => { b.setAttribute("fill", "#FFF"); b.setAttribute("opacity", .28); });
         box.style.transition = handle.style.transition = "none";
         box.setAttribute("opacity", 0); box.setAttribute("width", 0); handle.setAttribute("opacity", 0);
+        under.setAttribute("transform", "");
         if (!(await taps(3))) return;
         buzz("lock");
         swap(select, usual, steer);

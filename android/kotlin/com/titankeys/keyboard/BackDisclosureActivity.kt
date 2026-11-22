@@ -25,8 +25,8 @@ import kotlin.math.roundToInt
  * Google Play's disclosure for the accessibility service ([BackService]), shown before Android's Accessibility page opens, in the
  * guide's setup and from Settings > Setup. It looks like Share swipes' ([ShareDisclosureActivity], owner, #79): a short title and
  * one line each for what the service does, then what it never does and that TitanKeys works without it. "What exactly does it
- * see?" opens the full detail in place, on the same screen. One orange pill agrees and a quiet "Not now" declines, both pinned to
- * the bottom so they show at any font size.
+ * see?" heads the full detail, open from the start on the same screen. One orange pill agrees and a quiet "Not now" declines,
+ * both pinned to the bottom so they show at any font size.
  *
  * Only the pill counts as agreement. Back counts as "Not now", and the screen never closes by itself. After "Not now" the guide
  * goes on without the service, and Settings > Setup shows this screen again. It's plain, with no jokes, as Play's reviewers read
@@ -41,10 +41,11 @@ class BackDisclosureActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setFinishOnTouchOutside(false)
-        // The full detail, hidden until asked for, in place under the short lines.
+        // The full detail, open from the start under its heading: behind a tap, the screen looked cut off at "What exactly does it
+        // see?" (owner, 2026-11-21: "the disclosure page shd be expanded by default").
         val detail = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
+            addView(text(getString(R.string.back_disclosure_more), BODY_TYPE, bold = true, top = 24))
             addView(text(getString(R.string.back_disclosure_more_keys), BODY_TYPE, top = 8))
             for (line in listOf(R.string.back_disclosure_keys_sym, R.string.back_disclosure_keys_code, R.string.back_disclosure_keys_launcher, R.string.back_disclosure_keys_back))
                 addView(bullet(getString(line)))
@@ -60,13 +61,6 @@ class BackDisclosureActivity : Activity() {
                 addView(bullet(boldLead(getString(line)), top = if (line == R.string.back_disclosure_back) 24 else 8))
             addView(text(getString(R.string.back_disclosure_never), BODY_TYPE, bold = true, top = 24))
             addView(text(getString(R.string.back_disclosure_no), BODY_TYPE, colour = GuideColours.MUTED, top = 12))
-            val more = quiet(getString(R.string.back_disclosure_more), GuideColours.CREAM, Gravity.START or Gravity.CENTER_VERTICAL) {}
-            more.onPress(haptics) {
-                detail.visibility = View.VISIBLE
-                more.visibility = View.GONE
-            }
-            addView(more, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                .apply { topMargin = dp(8) })
             addView(detail)
         }
         val answers = LinearLayout(this).apply {

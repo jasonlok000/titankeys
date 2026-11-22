@@ -47,7 +47,7 @@ Because `isAccessibilityTool` is false:
 
 **Where:** in the guide's setup slide, at the "Let TitanKeys handle the Back key" step, **before** it opens Accessibility. The same screen shows again when the user taps "Turn on TitanKeys in Accessibility" in Settings > Setup. It is its own screen, with nothing about other permissions or data on it.
 
-**Look (#79):** the same style as the Share swipes screen. A short title and one line for each thing the service does, then one line on what it never does and one that TitanKeys works without it. "What exactly does it see?" opens the full detail in place, on the same screen, not on another page. One orange pill, **Agree**, and a quiet **Not now** under it, both pinned to the bottom so they're on screen at any font size. It stays plain, with no jokes: this is the screen Play's reviewers look at.
+**Look (#79):** the same style as the Share swipes screen. A short title and one line for each thing the service does, then one line on what it never does and one that TitanKeys works without it. "What exactly does it see?" heads the full detail, open from the start on the same screen, not behind a tap or on another page (owner, 2026-11-21). One orange pill, **Agree**, and a quiet **Not now** under it, both pinned to the bottom so they're on screen at any font size. It stays plain, with no jokes: this is the screen Play's reviewers look at.
 
 **Buttons:** "Agree" and "Not now". Only "Agree" counts as agreement. Back, Home or tapping outside counts as "Not now", never as agreement. The screen never closes by itself.
 
@@ -71,7 +71,7 @@ Because `isAccessibilityTool` is false:
 >
 > Not now
 
-**"What exactly does it see?"** opens, under the lines:
+**"What exactly does it see?"** is a heading, with this under it from the start:
 
 > It sees which keys you press only at these moments:
 >
@@ -100,7 +100,7 @@ Google's list of what the video must show, in order. Record the screen with `adb
 | # | Shot | Google's requirement | Caption |
 |---|---|---|---|
 | 1 | Start from the home screen. Tap the TitanKeys icon. The guide opens. | Opening the app | "Opening TitanKeys" |
-| 2 | Go through the setup slide to the step "Let TitanKeys handle the Back key". The disclosure screen opens. Hold still on it for a few seconds, then tap "What exactly does it see?" and scroll slowly through the detail, so every line can be read. | The user flow to the disclosure; all text visible | "The disclosure shows before Accessibility opens" |
+| 2 | Go through the setup slide to the step "Let TitanKeys handle the Back key". The disclosure screen opens. Hold still on it for a few seconds, then scroll slowly down through "What exactly does it see?" to the end, so every line can be read. | The user flow to the disclosure; all text visible | "The disclosure shows before Accessibility opens" |
 | 3 | Tap **Not now**. The guide goes on without the service. Show that the keyboard still types. | The flow without consent | "Declining: TitanKeys keeps working without it" |
 | 4 | Open Settings > Setup. Tap "Turn on TitanKeys in Accessibility". The disclosure shows again. | Showing the disclosure again | "The disclosure can be shown again" |
 | 5 | Tap **Agree**. Android's Accessibility page opens. Turn on TitanKeys and accept Android's own dialog. The app comes back. | The consent flow, including granting the permission | "Agreeing, then turning on the service in Android settings" |

@@ -19,12 +19,16 @@
   // Chrome lets a page vibrate only after a tap on it (scrolling doesn't count), and the Titan's motor needs about 20 ms to be felt:
   // the 5-10 ms ticks of before were too short, so each is stretched. A chip asks for the one tap until it has been given.
   const active = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
-  const buzz = ms => { if (navigator.vibrate && active()) navigator.vibrate(Math.max(22, ms * 3)); };
+  // The app's own haptic families (Haptics.kt: on/off pulses at the default strength, which is all Chrome's vibration does too,
+  // so these are the very same patterns): Texture for a swipe's keys, letters and marks; Change for an autocorrect; Lock when a
+  // selection starts; Boundary for each word it takes and each panel page.
+  const H = { texture: [17], boundary: [30], change: [12, 35, 22, 35, 12], lock: [30, 50, 30], confirm: [15, 40, 35] };
+  const buzz = name => { if (navigator.vibrate && active()) navigator.vibrate(H[name]); };
   if (navigator.vibrate && !active()) {
     const chip = document.createElement("button");
     chip.type = "button"; chip.className = "haptic-chip"; chip.textContent = "Tap to feel it";
     document.body.appendChild(chip);
-    const done = () => { navigator.vibrate(30); chip.classList.add("gone"); setTimeout(() => chip.remove(), 400); removeEventListener("pointerup", done); };
+    const done = () => { navigator.vibrate(H.confirm); chip.classList.add("gone"); setTimeout(() => chip.remove(), 400); removeEventListener("pointerup", done); };
     addEventListener("pointerup", done);
   }
 
@@ -88,14 +92,13 @@
             path.style.strokeDashoffset = len * (1 - t);
             dot.setAttribute("cx", at.x); dot.setAttribute("cy", at.y);
             const letter = Math.floor(t * (pts.length - 1) + .001);
-            if (letter > ticked) { ticked = letter; buzz(6); }
+            if (letter > ticked) { ticked = letter; buzz("texture"); }
             t < 1 ? requestAnimationFrame(step) : done();
           };
           requestAnimationFrame(step);
         });
         if (!alive()) return;
         // The lift: the guesses come in, the trail fades.
-        buzz(12);
         setWords(ts, ["spite", "swipe", "spire"]);
         ts.forEach(t => t.setAttribute("fill", CREAM));
         path.style.transition = dot.style.transition = "opacity .6s"; path.style.opacity = dot.style.opacity = 0;
@@ -110,10 +113,10 @@
       const steps = [["to", "t", "the"], ["ten", "te", "tea"], ["ten", "the", "Tehran"]];
       while (alive()) {
         setWords(ts, ["I", "and", "the"]); await wait(800);
-        for (const st of steps) { if (!alive()) return; buzz(5); setWords(ts, st); await wait(420); }
+        for (const st of steps) { if (!alive()) return; buzz("texture"); setWords(ts, st); await wait(420); }
         await wait(500); if (!alive()) return;
         // Space: the middle word goes in, a quick flash in the accent, then the next guesses.
-        buzz(14);
+        buzz("change");
         ts[1].style.transition = "fill .15s"; ts[1].setAttribute("fill", ORANGE);
         await wait(260); ts[1].setAttribute("fill", CREAM);
         setWords(ts, ["is", "and", "was"]);
@@ -144,7 +147,8 @@
         box.setAttribute("opacity", 0); box.setAttribute("width", 0); handle.setAttribute("opacity", 0); under.setAttribute("opacity", 0);
         await wait(700); if (!alive()) return;
         // Three taps on Space, the third held: the glow comes up along the bottom.
-        for (let i = 0; i < 3; i++) { buzz(6); await wait(130); }
+        for (let i = 0; i < 3; i++) { buzz("texture"); await wait(130); }
+        buzz("lock");
         under.style.transition = "opacity .3s"; under.setAttribute("opacity", 1);
         await wait(250);
         for (const last of [1, 2]) {
@@ -155,7 +159,7 @@
           handle.style.transition = "transform .22s cubic-bezier(.2,.7,.2,1), opacity .15s";
           handle.setAttribute("transform", `translate(${r + 8} 0)`); handle.setAttribute("opacity", 1);
           for (let i = 1; i <= last; i++) { bars[i].setAttribute("fill", "#000"); bars[i].setAttribute("opacity", .85); }
-          buzz(9);
+          buzz("boundary");
           await wait(600);
         }
         await wait(1500);
@@ -164,8 +168,10 @@
 
     async languages(s, alive) {
       bg(s);
-      // The real switcher's places, from the owner's screenshot: EN 84-127, 中 307-337, PT 517-560, עב 733-773, Back 1011-1037.
-      const items = ["EN", "中", "PT", "עב"], centres = [106, 322, 538, 753], PW = 150;
+      // The switcher over W to I, clear of the screen's corner (owner, 2026-11-21: "can we make the language menu from w to i
+      // instead? no q"; over Q, EN was cut by the corner). Four languages share W's left edge (122) to I's right (850) evenly;
+      // Back stays on P.
+      const items = ["EN", "中", "PT", "עב"], centres = [213, 395, 577, 759], PW = 150;
       const pill = el("rect", { y: LINE - 25, height: 50, rx: 25, width: PW, x: centres[0] - PW / 2, fill: ORANGE, "fill-opacity": .24, opacity: 0 }, s);
       const ts = items.map((t, i) => word(s, centres[i], t, { fill: i === 0 ? ORANGE : CREAM, size: SIZE }));
       const back = el("path", { d: "M20,11H7.8l5.6,-5.6L12,4l-8,8l8,8l1.4,-1.4L7.8,13H20Z", fill: "#FFF",
@@ -176,7 +182,7 @@
           pill.style.transition = "x .3s cubic-bezier(.2,.7,.2,1), opacity .2s";
           pill.setAttribute("x", centres[i] - PW / 2); pill.setAttribute("opacity", 1);
           ts.forEach((t, j) => t.setAttribute("fill", j === i || j === 0 ? ORANGE : CREAM));
-          buzz(7);
+          buzz("texture");
           await wait(800);
         }
         await wait(500);
@@ -184,22 +190,43 @@
     },
 
     async symbols(s, alive) {
-      // The real Sym panel, as the trailer caught it: it rises from the bottom edge, then turns its pages, symbols to emoji, the
-      // last with a key lit as pressed.
+      // The real Sym panel, as the trailer shows it: it rises from the bottom edge on its symbols page, turns to an emoji page, and a
+      // resting finger drags the orange highlight from emoji to emoji, a tick for each, the emoji staying bright on the orange.
       s.setAttribute("viewBox", "0 0 1076 280");
-      const pages = ["symbols", "symbols-emoji1", "symbols-emoji2"].map((n, i) =>
-        el("image", { href: `assets/bars/${n}.png`, width: 1076, height: 280, opacity: i ? 0 : 1 }, s));
-      pages.forEach(p => { p.style.transition = "opacity .25s"; });
+      const defs = el("defs", {}, s);
+      const keep = el("filter", { id: "keepemoji", "color-interpolation-filters": "sRGB" }, defs);
+      // Black goes see-through, so the emoji alone are laid back over the highlight.
+      el("feColorMatrix", { type: "matrix", values: "1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  3 3 3 0 -0.15" }, keep);
+      const symbols = el("image", { href: "assets/bars/symbols.png", width: 1076, height: 280 }, s);
+      const emoji = el("image", { href: "assets/bars/symbols-emoji1.png", width: 1076, height: 280, opacity: 0 }, s);
+      const clip = el("clipPath", { id: "markclip" }, defs);
+      const clipRect = el("rect", { width: 100, height: 60, rx: 14 }, clip);
+      const mark = el("rect", { width: 100, height: 60, rx: 14, fill: ORANGE, opacity: 0 }, s);
+      const lit = el("image", { href: "assets/bars/symbols-emoji1.png", width: 1076, height: 280, filter: "url(#keepemoji)", "clip-path": "url(#markclip)", opacity: 0 }, s);
+      [symbols, emoji, mark, lit].forEach(e => { e.style.transition = "opacity .25s"; });
       s.style.transform = "translateY(100%)";
       await wait(40); if (!alive()) return;
       s.style.transition = "transform .45s cubic-bezier(.2,.7,.2,1)"; s.style.transform = "none";
-      buzz(12);
-      let i = 0;
-      while (alive()) {
-        await wait(1400); if (!alive()) return;
-        const next = (i + 1) % pages.length;
-        pages[next].setAttribute("opacity", 1); pages[i].setAttribute("opacity", 0);
-        i = next; buzz(8);
+      // The emoji page's grid, in the trailer's frame: columns 108 px apart from 160, rows at 50, 118 and 184.
+      const cols = [160, 268, 376, 484, 592, 700, 808, 916], rows = [50, 118, 184];
+      const route = [[0, 1], [1, 1], [2, 1], [3, 1], [3, 0], [4, 0], [5, 0], [5, 1], [6, 1], [6, 2], [5, 2], [4, 2]];
+      const place = ([c, r]) => {
+        const x = cols[c] - 50, y = rows[r] - 30;
+        for (const e of [mark, clipRect]) { e.setAttribute("x", x); e.setAttribute("y", y); }
+      };
+      // The page turns once; after that the highlight keeps travelling over the emoji, there and back, so nothing on the panel
+      // flashes between loops (owner: "the bottom left of the screen flashes", the page tabs switching each loop).
+      await wait(1300); if (!alive()) return;
+      buzz("boundary");
+      emoji.setAttribute("opacity", 1); symbols.setAttribute("opacity", 0);
+      await wait(500); if (!alive()) return;
+      place(route[0]);
+      await wait(20);
+      mark.setAttribute("opacity", 1); lit.setAttribute("opacity", 1);
+      const path = route.concat(route.slice(1, -1).reverse());
+      for (let i = 0; alive(); i = (i + 1) % path.length) {
+        place(path[i]); buzz("texture");
+        await wait(i === route.length - 1 ? 700 : 190);
       }
     },
 

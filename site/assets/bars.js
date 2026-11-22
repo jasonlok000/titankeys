@@ -20,8 +20,8 @@
   // the 5-10 ms ticks of before were too short, so each is stretched. A chip asks for the one tap until it has been given.
   const active = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
   // The app's own haptic families (Haptics.kt: on/off pulses at the default strength, which is all Chrome's vibration does too,
-  // so these are the very same patterns): Texture for a swipe's keys, letters and marks; Change for an autocorrect; Lock when a
-  // selection starts; Boundary for each word it takes and each panel page.
+  // so these are the very same patterns), played where the app plays them: Texture for a swipe's keys, Space taps and marks;
+  // Change for an autocorrect and a held Sym; Lock when a selection starts; Boundary for each word it takes and each panel page.
   const H = { texture: [17], boundary: [30], change: [12, 35, 22, 35, 12], lock: [30, 50, 30], confirm: [15, 40, 35] };
   const buzz = name => { if (navigator.vibrate && active()) navigator.vibrate(H[name]); };
   if (navigator.vibrate && !active()) {
@@ -84,15 +84,21 @@
         path.style.strokeDasharray = len; path.style.strokeDashoffset = len;
         const dot = el("circle", { r: 6.5, fill: ORANGE, cx: pts[0][0], cy: pts[0][1] }, s);
         const start = performance.now(), dur = 1100;
-        let ticked = 0;
+        // The app's swipe ticks (Haptics.kt, SwipeTicks): the first once the finger has gone 0.6 of a key from where it landed, then
+        // one every 0.7 of a key travelled, at most every 40 ms, so every key the path crosses is felt, not only its letters.
+        // Distances are in keys: 104 px across, 18.75 px between rows.
+        const keys = (a, b) => Math.hypot((b.x - a.x) / 104, (b.y - a.y) / 18.75);
+        const origin = { x: pts[0][0], y: pts[0][1] };
+        let last = origin, travel = 0, lastTick = -1;
         await new Promise(done => {
           const step = now => {
             if (!alive()) return done();
             const t = Math.min(1, (now - start) / dur), at = path.getPointAtLength(len * t);
             path.style.strokeDashoffset = len * (1 - t);
             dot.setAttribute("cx", at.x); dot.setAttribute("cy", at.y);
-            const letter = Math.floor(t * (pts.length - 1) + .001);
-            if (letter > ticked) { ticked = letter; buzz("texture"); }
+            travel += keys(last, at); last = at;
+            const first = lastTick < 0;
+            if (first ? keys(origin, at) >= .6 : travel >= .7 && now - lastTick >= 40) { lastTick = now; travel = 0; buzz("texture"); }
             t < 1 ? requestAnimationFrame(step) : done();
           };
           requestAnimationFrame(step);
@@ -113,6 +119,8 @@
       const steps = [["to", "t", "the"], ["ten", "te", "tea"], ["ten", "the", "Tehran"]];
       while (alive()) {
         setWords(ts, ["I", "and", "the"]); await wait(800);
+        // The app plays nothing for a real key press, the key clicks by itself; on the page there is no key, so a light tick
+        // stands in for each press (owner, 2026-11-22: "the typo thng is ok cuz thy cant feel key press").
         for (const st of steps) { if (!alive()) return; buzz("texture"); setWords(ts, st); await wait(420); }
         await wait(500); if (!alive()) return;
         // Space: the middle word goes in, a quick flash in the accent, then the next guesses.
@@ -192,14 +200,17 @@
 
     async languages(s, alive) {
       bg(s);
-      // The switcher over W to I, clear of the screen's corner (owner, 2026-11-21: "can we make the language menu from w to i
-      // instead? no q"; over Q, EN was cut by the corner). Four languages share W's left edge (122) to I's right (850) evenly;
-      // Back stays on P.
-      const items = ["EN", "中", "PT", "עב"], centres = [213, 395, 577, 759], PW = 150;
+      // The switcher as the app draws four languages (owner, 2026-11-22, #101): Q–W, E–R, T–Y and U–I, two keys each (keys 104 px
+      // apart from 18), every pill drawn in by the same amount so the one over Q clears the screen's corner; Back on P. Holding
+      // Sym plays Change as it opens (Haptic.HeldSymbol), and the pill moving to another language a Texture tick (MenuMark).
+      const items = ["EN", "中", "PT", "עב"], centres = [122, 330, 538, 746], PW = 150;
       const pill = el("rect", { y: LINE - 25, height: 50, rx: 25, width: PW, x: centres[0] - PW / 2, fill: ORANGE, "fill-opacity": .24, opacity: 0 }, s);
       const ts = items.map((t, i) => word(s, centres[i], t, { fill: i === 0 ? ORANGE : CREAM, size: SIZE }));
       const back = el("path", { d: "M20,11H7.8l5.6,-5.6L12,4l-8,8l8,8l1.4,-1.4L7.8,13H20Z", fill: "#FFF",
         transform: `translate(${1024 - 20.6} ${LINE - 20.6}) scale(1.72)` }, s);
+      await wait(150); if (!alive()) return;
+      buzz("change");
+      await wait(500);
       while (alive()) {
         for (let i = 0; i < items.length; i++) {
           if (!alive()) return;

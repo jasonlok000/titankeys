@@ -86,7 +86,16 @@ internal object PhoneChecks {
     fun mode1(context: Context, app: String) = update(context) { it.mode1(app) }
 
     /** A field in [app] gave a trustworthy reading outside Sliding Mode 1 ([SlidingModeList.trustworthy]). */
-    fun outsideReading(context: Context, app: String) = update(context) { it.outsideReading(app) }
+    fun outsideReading(context: Context, app: String) {
+        if (inPicker(context, app)) update(context) { it.outsideReading(app) }
+    }
+
+    /**
+     * Scroll assistant's picker lists only the apps on the home screen. Fields can belong to others: Settings' search box is
+     * Settings Suggestions (com.android.settings.intelligence), which Setup told the owner to find on firmware V02.00.06
+     * (2026-11-22), and the picker has no such entry, on old firmware or new. So an app without a launcher entry never joins.
+     */
+    private fun inPicker(context: Context, app: String) = context.packageManager.getLaunchIntentForPackage(app) != null
 
     private fun update(context: Context, change: (SlidingModeList) -> Unit) {
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -118,6 +127,7 @@ internal object PhoneChecks {
     fun outsideSlidingMode(context: Context): List<String> {
         val packages = context.packageManager
         return slidingList(context).outside
+            .filter { inPicker(context, it) }
             .mapNotNull { app ->
                 try {
                     packages.getApplicationLabel(packages.getApplicationInfo(app, 0)).toString()

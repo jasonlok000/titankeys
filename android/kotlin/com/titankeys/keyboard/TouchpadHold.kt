@@ -108,6 +108,12 @@ class TouchpadHold {
         /** True if a hide from Android must leave the status on. With no window up there is no status to keep. */
         fun keepsStatus(wanted: Boolean, windowUp: Boolean) = wanted && windowUp
 
+        /** The property the firmware reads the status from: "1" with a keyboard up. */
+        const val STATUS_PROPERTY = "debug.sf.agui_input_status"
+
+        /** The firmware cleared the status while the keyboard holds it. A phone without the property never loses it. */
+        fun statusLost(property: String?) = property == "0"
+
         /**
          * True for the Back events that Android's handler for a shown keyboard makes. A system back also has no device, and it comes
          * past the keyboard on its way to the app, so only the flag that the handler alone sets tells them apart.

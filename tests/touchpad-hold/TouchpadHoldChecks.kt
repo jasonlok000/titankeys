@@ -16,6 +16,7 @@ fun main() {
     theHandlerMarkItsOwnEvents()
     aBackFromTheHandlerHidesAndPasses()
     oneRealPushIsOneSystemBack()
+    onlyAClearedStatusIsSentAgain()
     println("Touchpad hold checks passed")
 }
 
@@ -152,4 +153,12 @@ private fun oneRealPushIsOneSystemBack() {
     )
     val backs = push.count { TouchpadHold.backStep(TouchpadHold.fromHandler(it.deviceId, it.flags), it.down) == Back.KeepAndLetGo }
     same(backs, 1, "One push of Back must let go exactly once")
+}
+
+/** Firmware V02.00.06 writes 0 when an app's window gains focus. Older firmware keeps 1, and other phones have no property. */
+private fun onlyAClearedStatusIsSentAgain() {
+    same(TouchpadHold.statusLost("0"), true, "a status the firmware cleared is sent again")
+    same(TouchpadHold.statusLost("1"), false, "a status still on is left alone")
+    same(TouchpadHold.statusLost(""), false, "a phone without the property has nothing to lose")
+    same(TouchpadHold.statusLost(null), false, "a property that can't be read has nothing to lose")
 }

@@ -16,9 +16,17 @@
     return e;
   };
   const wait = ms => new Promise(r => setTimeout(r, ms));
-  let tapped = false;
-  addEventListener("pointerdown", () => { tapped = true; }, { once: true });
-  const buzz = ms => { if (tapped && navigator.vibrate) navigator.vibrate(ms); };
+  // Chrome lets a page vibrate only after a tap on it (scrolling doesn't count), and the Titan's motor needs about 20 ms to be felt:
+  // the 5-10 ms ticks of before were too short, so each is stretched. A chip asks for the one tap until it has been given.
+  const active = () => !navigator.userActivation || navigator.userActivation.hasBeenActive;
+  const buzz = ms => { if (navigator.vibrate && active()) navigator.vibrate(Math.max(22, ms * 3)); };
+  if (navigator.vibrate && !active()) {
+    const chip = document.createElement("button");
+    chip.type = "button"; chip.className = "haptic-chip"; chip.textContent = "Tap to feel it";
+    document.body.appendChild(chip);
+    const done = () => { navigator.vibrate(30); chip.classList.add("gone"); setTimeout(() => chip.remove(), 400); removeEventListener("pointerup", done); };
+    addEventListener("pointerup", done);
+  }
 
   // Two layers crossfade: each scene draws into a fresh one and fades it in over the last.
   const layers = [0, 1].map(() => { const d = document.createElement("div"); d.className = "bar-layer"; root.appendChild(d); return d; });
@@ -156,16 +164,17 @@
 
     async languages(s, alive) {
       bg(s);
-      const items = ["EN", "中", "PT", "עב"], centres = [122, 330, 538, 746];
-      const pill = el("rect", { y: LINE - 25, height: 50, rx: 25, width: 200, x: centres[0] - 100, fill: ORANGE, "fill-opacity": .24, opacity: 0 }, s);
+      // The real switcher's places, from the owner's screenshot: EN 84-127, 中 307-337, PT 517-560, עב 733-773, Back 1011-1037.
+      const items = ["EN", "中", "PT", "עב"], centres = [106, 322, 538, 753], PW = 150;
+      const pill = el("rect", { y: LINE - 25, height: 50, rx: 25, width: PW, x: centres[0] - PW / 2, fill: ORANGE, "fill-opacity": .24, opacity: 0 }, s);
       const ts = items.map((t, i) => word(s, centres[i], t, { fill: i === 0 ? ORANGE : CREAM, size: SIZE }));
       const back = el("path", { d: "M20,11H7.8l5.6,-5.6L12,4l-8,8l8,8l1.4,-1.4L7.8,13H20Z", fill: "#FFF",
-        transform: `translate(${1006 - 20.6} ${LINE - 20.6}) scale(1.72)` }, s);
+        transform: `translate(${1024 - 20.6} ${LINE - 20.6}) scale(1.72)` }, s);
       while (alive()) {
         for (let i = 0; i < items.length; i++) {
           if (!alive()) return;
           pill.style.transition = "x .3s cubic-bezier(.2,.7,.2,1), opacity .2s";
-          pill.setAttribute("x", centres[i] - 100); pill.setAttribute("opacity", 1);
+          pill.setAttribute("x", centres[i] - PW / 2); pill.setAttribute("opacity", 1);
           ts.forEach((t, j) => t.setAttribute("fill", j === i || j === 0 ? ORANGE : CREAM));
           buzz(7);
           await wait(800);
@@ -175,13 +184,23 @@
     },
 
     async symbols(s, alive) {
-      // The real Sym panel, as the trailer caught it, rising from the bottom edge as the panel does.
+      // The real Sym panel, as the trailer caught it: it rises from the bottom edge, then turns its pages, symbols to emoji, the
+      // last with a key lit as pressed.
       s.setAttribute("viewBox", "0 0 1076 280");
-      el("image", { href: "assets/bars/symbols.png", width: 1076, height: 280 }, s);
+      const pages = ["symbols", "symbols-emoji1", "symbols-emoji2"].map((n, i) =>
+        el("image", { href: `assets/bars/${n}.png`, width: 1076, height: 280, opacity: i ? 0 : 1 }, s));
+      pages.forEach(p => { p.style.transition = "opacity .25s"; });
       s.style.transform = "translateY(100%)";
-      await wait(30); if (!alive()) return;
+      await wait(40); if (!alive()) return;
       s.style.transition = "transform .45s cubic-bezier(.2,.7,.2,1)"; s.style.transform = "none";
       buzz(12);
+      let i = 0;
+      while (alive()) {
+        await wait(1400); if (!alive()) return;
+        const next = (i + 1) % pages.length;
+        pages[next].setAttribute("opacity", 1); pages[i].setAttribute("opacity", 0);
+        i = next; buzz(8);
+      }
     },
 
     async download(s, alive) {

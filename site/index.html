@@ -10,7 +10,7 @@
 <meta property="og:description" content="Swipe whole words on the same keys you press. Typos fixed as you go. 49 languages.">
 <meta property="og:image" content="https://jasonlok000.github.io/titankeys/assets/06-made-for.webp">
 <link rel="icon" href="assets/icon-192.png">
-<link rel="stylesheet" href="landing.css?v=8">
+<link rel="stylesheet" href="landing.css?v=9">
 </head>
 <body>
 <!-- The launch page (#58). Same look as the app, the store graphics and the trailer: Inter, cream on near-black, the Titan
@@ -127,9 +127,9 @@
       ((near(px(screen.width), 1076) || near(px(screen.width), 1080)) && near(px(screen.height), 1200));
     if (!t2e) return;
     document.documentElement.classList.add("t2e");
-    for (const img of document.querySelectorAll("img[data-nobar]")) img.src = img.dataset.nobar;
+    for (const img of document.querySelectorAll("img[data-nobar]")) { img.width = 600; img.height = 790; img.src = img.dataset.nobar; }
     const live = document.createElement("script");
-    live.src = "assets/bars.js?v=3";
+    live.src = "assets/bars.js?v=4";
     document.body.appendChild(live);
   })();
 

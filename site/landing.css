@@ -127,9 +127,12 @@ footer .fine { font-size: 13px; }
   /* Buttons lift, pictures tilt toward you a little. */
   .button { transition: transform .2s, box-shadow .2s; }
   .button:hover { box-shadow: 0 10px 24px rgba(0, 0, 0, .25); }
-  .feature img { transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
-  .feature img:hover { transform: perspective(900px) rotateY(-4deg) rotateX(2deg) scale(1.02); }
-  .feature:nth-child(even) img:hover { transform: perspective(900px) rotateY(4deg) rotateX(2deg) scale(1.02); }
+  /* Only with a mouse: on a touch screen a tap left the picture tilted, off its frame. */
+  @media (hover: hover) {
+    .feature img { transition: transform .5s cubic-bezier(.2, .7, .2, 1); }
+    .feature img:hover { transform: perspective(900px) rotateY(-4deg) rotateX(2deg) scale(1.02); }
+    .feature:nth-child(even) img:hover { transform: perspective(900px) rotateY(4deg) rotateX(2deg) scale(1.02); }
+  }
 
   /* Each feature rises in once as it comes into view (the script adds .in), its box sweeping in after. */
   .reveal img, .reveal h2, .reveal p, .reveal .actions { opacity: 0; transform: translateY(28px); transition: opacity .7s, transform .7s cubic-bezier(.2, .7, .2, 1); }
@@ -223,3 +226,9 @@ footer .fine { font-size: 13px; }
    ("right" under "keys", owner 2026-11-21). */
 .box { display: inline-block; line-height: 1.04; padding: 0 .14em; }
 h1, h2 { line-height: 1.1; }
+
+/* The chip asking for the tap that lets the page vibrate, just above the bar. */
+.haptic-chip { position: fixed; left: 50%; bottom: calc(100vw * 88 / 1076 + 2.5vw); transform: translateX(-50%); z-index: 21;
+  border: 0; border-radius: 999px; background: rgba(0, 0, 0, .8); color: var(--cream); font: 700 2.4vw/1 Inter, system-ui, sans-serif;
+  padding: 1.6vw 3vw; box-shadow: 0 0 0 1.5px var(--orange); transition: opacity .35s, transform .35s; }
+.haptic-chip.gone { opacity: 0; transform: translate(-50%, 8px); }

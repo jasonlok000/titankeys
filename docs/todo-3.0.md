@@ -10,7 +10,7 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - **Candidate:** 92d23328, on the owner's phone (switcher labels full size, Back after an app's own hide, the disclosure open by default). The owner daily-drives it before the release.
 - **Pushed with `[skip ci]`, release held** (owner: "do the github bookkeeping but hold the release"). The release starts from Actions > App release > Run workflow, with Publish ticked.
 - **Play:** waiting on identity verification. The store graphics are in .dev/store/play-store-graphics/final. The r/unihertz post and launch plan are in .dev/private.
-- **Known for later:** #101 (3.1: the switcher's highlight as long as it can be), #102 (Back in YouTube search and ChatGPT, shipped as is), #100 (Korean ready, drop its experimental mark).
+- **Known for later:** #101 (3.1: the switcher moves to W to I with Back on P, owner's call on 2026-11-21; that also lets its highlight be as long as it can be), #102 (Back in YouTube search and ChatGPT, shipped as is), #100 (Korean ready, drop its experimental mark).
 
 ## The 3.0 candidate (2026-11-20)
 

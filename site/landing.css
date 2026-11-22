@@ -177,7 +177,11 @@ footer .fine { font-size: 13px; }
 /* A Titan 2 Elite: the real bar, pinned to the screen's bottom edge over the keys (see the script in index.html). Its height is
    88 of the screen's 1076 pixels across, so the parts leave that much room under them. */
 .phone-bar { display: none; }
-.t2e .phone-bar { display: block; position: fixed; left: 0; bottom: 0; width: 100vw; height: auto; z-index: 20; pointer-events: none; }
+.t2e .phone-bar { display: block; position: fixed; left: 0; bottom: 0; width: 100vw; z-index: 20; pointer-events: none; }
+.phone-bar img { position: absolute; left: 0; bottom: 0; width: 100vw; height: auto; opacity: 0; transform: translateY(14px);
+  transition: opacity .45s ease, transform .45s cubic-bezier(.2, .7, .2, 1); }
+.phone-bar img.on { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .phone-bar img { transition: opacity .2s; transform: none; } }
 .t2e body { padding-bottom: calc(100vw * 88 / 1076); }
 @media (min-width: 480px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
   .t2e .hero, .t2e .feature, .t2e .cta { min-height: calc(100svh - 100vw * 88 / 1076); }

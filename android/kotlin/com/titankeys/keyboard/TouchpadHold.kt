@@ -117,6 +117,12 @@ class TouchpadHold {
         /** How often the keyboard reads the property while it holds the status. */
         const val WATCH_MILLIS = 200L
 
+        /**
+         * A back disposition other than [current], so that two changes send the status twice and end where they began. Android's
+         * values run from 0 (default) to 3 (adjust nothing).
+         */
+        fun otherDisposition(current: Int) = if (current == 0) 1 else 0
+
         /** After three reports in a row that didn't bring the status back, the keyboard stops trying so often. */
         fun watchDelay(failures: Int) = if (failures < 3) WATCH_MILLIS else 5_000L
 

@@ -164,4 +164,6 @@ private fun onlyAClearedStatusIsSentAgain() {
     same(TouchpadHold.watchDelay(0), 200L, "the property is read five times a second")
     same(TouchpadHold.watchDelay(2), 200L, "a report or two that didn't take are tried again soon")
     same(TouchpadHold.watchDelay(3), 5_000L, "a status that won't come back isn't hammered")
+    same(TouchpadHold.otherDisposition(1), 0, "the hold's back disposition changes to the default and back")
+    same(TouchpadHold.otherDisposition(0), 1, "a field's default changes to another and back")
 }

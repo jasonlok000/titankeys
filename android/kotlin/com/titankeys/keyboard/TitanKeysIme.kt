@@ -1388,29 +1388,45 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * Firmware V02.00.06 (2026-11-22) writes the status it reads, debug.sf.agui_input_status, as 0 whenever a window that is not
-     * a text field gains focus, though the keyboard's own status stays on. Most apps have no editor, so the keyboard hears
-     * nothing of it, and Android sends a status only when it changes: the hold stayed on and every app scrolled (owner, in Reddit
-     * and Maps). So while the status is held, the keyboard reads the property every [TouchpadHold.WATCH_MILLIS], and when the
-     * firmware has cleared it, reports the status again the way the hold first did: a hide, then the show. Older firmware
-     * never clears it, and other phones have no property, so there this only reads.
+     * Firmware V02.00.06 (2026-11-22) writes the status it reads, debug.sf.agui_input_status, as 0 whenever a window gains
+     * focus, unless that window is a text field and a keyboard is already up, and writes it again only when a keyboard sends a
+     * new status. The hold keeps the keyboard's status on all the time, so after a focus change nothing new was ever sent: the
+     * property stayed 0, outside fields every app scrolled, and in a field a swipe could scroll instead of typing (owner, in
+     * Reddit, Maps and AnyDesk). Most apps never start an input, so the keyboard can't hear the focus change either.
+     *
+     * So while the keyboard wants the status on (held, or shown in a field), it reads the property every
+     * [TouchpadHold.WATCH_MILLIS]. When the firmware has cleared it, a new back disposition and back again sends the current
+     * status twice (InputMethodService.setBackDisposition sends it with every change), which writes 1, with nothing shown or
+     * hidden. Older firmware never clears it, and other phones have no property, so there this only reads.
      */
     private val statusWatch = object : Runnable {
         private var failures = 0
         override fun run() {
-            if (destroyed || !holdWanted() || !hold.held || isInputViewShown) {
+            if (destroyed || !statusWanted()) {
                 failures = 0
                 return
             }
             if (TouchpadHold.statusLost(PhoneChecks.property(TouchpadHold.STATUS_PROPERTY))) {
                 failures++
-                Log.i("TitanKeys", "The firmware cleared the keyboard status; reporting it again ($failures)")
-                hold.hidden()
-                hideHeldWindow()
-                updateHold()
+                if (failures <= 3) Log.i("TitanKeys", "The firmware cleared the keyboard status; sending it again ($failures)")
+                try {
+                    val disposition = backDisposition
+                    backDisposition = TouchpadHold.otherDisposition(disposition)
+                    backDisposition = disposition
+                } catch (error: RuntimeException) {
+                    Log.w("TitanKeys", "Could not report the keyboard status", error)
+                }
             } else failures = 0
             main.postDelayed(this, TouchpadHold.watchDelay(failures))
         }
+    }
+
+    /** The keyboard's status is on: held with no field, or the keyboard shown in one. */
+    private fun statusWanted() = isInputViewShown || hold.held && holdWanted()
+
+    private fun watchStatus() {
+        main.removeCallbacks(statusWatch)
+        main.postDelayed(statusWatch, TouchpadHold.WATCH_MILLIS)
     }
 
     private val showHold = Runnable {
@@ -1428,8 +1444,7 @@ class TitanKeysIme : InputMethodService() {
     private fun holdWindow() {
         window.hide()
         hold.shown()
-        main.removeCallbacks(statusWatch)
-        main.postDelayed(statusWatch, TouchpadHold.WATCH_MILLIS)
+        watchStatus()
     }
 
     /** With no field, a hide takes only the window away. Android's own would also turn the status off. See [TouchpadHold]. */
@@ -2056,6 +2071,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onWindowShown() {
         super.onWindowShown()
+        watchStatus()
         if (field.exact) logExact("window shown")
         if (recycling) {
             recycling = false

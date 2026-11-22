@@ -7,7 +7,7 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 
 ## Launch state (2026-11-21, night)
 
-- **Candidate:** 4362d479, 3.0.0 (59), md5 f6053166fd3079f38fb563a925ae4c09, on the owner's phone since 2026-11-22 11:22 (the guide's Space-gesture boxes, the switcher's 2/3/4 layout, Fix earlier words Off/On, links on everyones-niche.com). Copy in .dev/prerelease. The 3-day daily drive starts again from here.
+- **Candidate:** 16df5d94, 3.0.0 (59), md5 acc55b04caa4c1d62acfdca85fd9e1f8, on the owner's phone since 2026-11-22 17:18 (firmware V02.00.06's touchpad status sent again when cleared, the hold up at a keyboard restart, Setup lists only apps in Scroll assistant's picker, & and = as typed, the stage tags in English, #107 accents). Copy in .dev/prerelease. The 3-day daily drive starts again from here.
 - **Pushed with `[skip ci]`, release held** (owner: "do the github bookkeeping but hold the release"). The release starts from Actions > App release > Run workflow, with Publish ticked.
 - **Play:** waiting on identity verification. The store graphics are in .dev/store/play-store-graphics/final. The r/unihertz post and launch plan are in .dev/private.
 - **Website on its own domain (2026-11-21):** everyones-niche.com is the Everyone's Niche landing page (repo jasonlok000.github.io); TitanKeys is at everyones-niche.com/titankeys/, privacy at /titankeys/privacy/ (GitHub Pages, HTTPS enforced, domain verified on GitHub; GoDaddy DNS: four A records, www CNAME, the challenge TXT; Zoho mail untouched). jasonlok000.github.io/titankeys/* redirects there, so 3.0's built-in feed and privacy links keep working. Play's privacy URL is the new one; 3.1 moves `Connected.SITE` and `PRIVACY_URL` in the app.

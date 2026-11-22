@@ -10,7 +10,7 @@
 <meta property="og:description" content="Swipe whole words on the same keys you press. Typos fixed as you go. 49 languages.">
 <meta property="og:image" content="https://jasonlok000.github.io/titankeys/assets/06-made-for.webp">
 <link rel="icon" href="assets/icon-192.png">
-<link rel="stylesheet" href="landing.css?v=7">
+<link rel="stylesheet" href="landing.css?v=8">
 </head>
 <body>
 <!-- The launch page (#58). Same look as the app, the store graphics and the trailer: Inter, cream on near-black, the Titan
@@ -106,8 +106,16 @@
   <p>Part of <a href="https://jasonlok000.github.io/titan2-nightkeys/">Titan Tools</a>, small apps for the Titan 2 Elite. · <a href="privacy/">Privacy policy</a></p>
   <p class="fine">TitanKeys is a modified version of <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall, under the GPL-3.0. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz. "Titan 2 Elite" is a product of Unihertz.</p>
 </footer>
-<div class="phone-bar" id="phone-bar" aria-hidden="true"><img alt=""><img alt=""></div>
+<div class="phone-bar" id="phone-bar" aria-hidden="true"></div>
 <script>
+  // Each feature rises in the first time it comes into view (scroll-linked animations stuttered on Android Chrome as its address
+  // bar slid).
+  (() => {
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }),
+      { rootMargin: "0px 0px -12% 0px" });
+    document.querySelectorAll(".feature, .cta").forEach(el => { el.classList.add("reveal"); io.observe(el); });
+  })();
+
   // On a Titan 2 Elite, the bar each part shows sits where TitanKeys really draws it: pinned to the screen's bottom edge, right over
   // the keys, and the pictures lose their own copy of it. The strips are 1076 px wide like the screen, so drawn as wide as the
   // page they land 1:1 on the screen's pixels, whatever its display size. Found by the screen: 1076 or 1080 by 1200 pixels.
@@ -120,32 +128,9 @@
     if (!t2e) return;
     document.documentElement.classList.add("t2e");
     for (const img of document.querySelectorAll("img[data-nobar]")) img.src = img.dataset.nobar;
-    // Two layers: the new bar loads in the one underneath, then fades and rises in over the old one, which fades away.
-    const layers = [...document.querySelectorAll("#phone-bar img")], sections = [...document.querySelectorAll("[data-bar]")];
-    let front = 0, wanted = "";
-    const show = name => {
-      if (name === wanted) return;
-      wanted = name;
-      const src = `assets/bars/${name}.png`, next = layers[1 - front], old = layers[front];
-      next.onload = () => {
-        if (wanted !== name) return;
-        next.classList.add("on");
-        old.classList.remove("on");
-        front = 1 - front;
-      };
-      next.src = src;
-      if (next.complete && next.naturalWidth) next.onload();
-    };
-    for (const s of sections) new Image().src = `assets/bars/${s.dataset.bar}.png`;
-    show("hero");
-    // The part that fills the most of the screen gives the bar.
-    const seen = new Map();
-    const io = new IntersectionObserver(entries => {
-      for (const e of entries) seen.set(e.target, e.intersectionRect.height);
-      const best = [...seen].sort((a, b) => b[1] - a[1])[0];
-      if (best && best[1] > 0) show(best[0].dataset.bar);
-    }, { threshold: [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1] });
-    sections.forEach(s => io.observe(s));
+    const live = document.createElement("script");
+    live.src = "assets/bars.js?v=3";
+    document.body.appendChild(live);
   })();
 
   // The trailer: a tap plays it from the start, full screen and with sound. Leaving full screen brings back the quiet loop.

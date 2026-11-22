@@ -131,13 +131,12 @@ footer .fine { font-size: 13px; }
   .feature img:hover { transform: perspective(900px) rotateY(-4deg) rotateX(2deg) scale(1.02); }
   .feature:nth-child(even) img:hover { transform: perspective(900px) rotateY(4deg) rotateX(2deg) scale(1.02); }
 
-  /* Each feature rises into view as you scroll to it, its box sweeping in after. */
-  @supports (animation-timeline: view()) {
-    .feature img, .feature div { animation: rise linear both; animation-timeline: view(); animation-range: entry 5% cover 30%; }
-    .feature div { animation-range: entry 15% cover 35%; }
-    .feature h2 .box, .cta h2 .box { animation: sweep linear both; animation-timeline: view(); animation-range: entry 30% cover 40%; }
-    .cta h2, .cta p { animation: rise linear both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
-  }
+  /* Each feature rises in once as it comes into view (the script adds .in), its box sweeping in after. */
+  .reveal img, .reveal h2, .reveal p, .reveal .actions { opacity: 0; transform: translateY(28px); transition: opacity .7s, transform .7s cubic-bezier(.2, .7, .2, 1); }
+  .reveal h2 { transition-delay: .08s; } .reveal p { transition-delay: .16s; } .reveal .actions { transition-delay: .24s; }
+  .reveal.in img, .reveal.in h2, .reveal.in p, .reveal.in .actions { opacity: 1; transform: none; }
+  .reveal h2 .box { background-size: 0% 100%; transition: background-size .6s .35s cubic-bezier(.6, 0, .2, 1); }
+  .reveal.in h2 .box { background-size: 100% 100%; }
 }
 
 /* The trailer as a button: tap for full screen. */
@@ -177,11 +176,10 @@ footer .fine { font-size: 13px; }
 /* A Titan 2 Elite: the real bar, pinned to the screen's bottom edge over the keys (see the script in index.html). Its height is
    88 of the screen's 1076 pixels across, so the parts leave that much room under them. */
 .phone-bar { display: none; }
-.t2e .phone-bar { display: block; position: fixed; left: 0; bottom: 0; width: 100vw; z-index: 20; pointer-events: none; }
-.phone-bar img { position: absolute; left: 0; bottom: 0; width: 100vw; height: auto; opacity: 0; transform: translateY(14px);
-  transition: opacity .45s ease, transform .45s cubic-bezier(.2, .7, .2, 1); }
-.phone-bar img.on { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) { .phone-bar img { transition: opacity .2s; transform: none; } }
+.t2e .phone-bar { display: block; position: fixed; left: 0; bottom: 0; width: 100vw; height: calc(100vw * 280 / 1076); z-index: 20; pointer-events: none; overflow: hidden; }
+.bar-layer { position: absolute; left: 0; bottom: 0; width: 100vw; opacity: 0; transition: opacity .4s ease; }
+.bar-layer.on { opacity: 1; }
+.bar-layer svg { display: block; width: 100vw; height: auto; overflow: hidden; }
 .t2e body { padding-bottom: calc(100vw * 88 / 1076); }
 @media (min-width: 480px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
   .t2e .hero, .t2e .feature, .t2e .cta { min-height: calc(100svh - 100vw * 88 / 1076); }
@@ -220,3 +218,8 @@ footer .fine { font-size: 13px; }
   footer { font-size: 2.2vw; }
   footer .fine { font-size: 1.9vw; }
 }
+
+/* A box stays inside its own line: drawn as tall as the font's full height, it covered the line above where headings sit tight
+   ("right" under "keys", owner 2026-11-21). */
+.box { display: inline-block; line-height: 1.04; padding: 0 .14em; }
+h1, h2 { line-height: 1.1; }

@@ -38,11 +38,14 @@
           <a class="button ghost" href="#features">See what it does</a>
         </p>
       </div>
-      <!-- The trailer is the hero (owner, 2026-11-21): it plays muted on a loop, with its controls for sound. -->
-      <video class="hero-shot" id="trailer" autoplay muted loop playsinline controls preload="metadata" poster="assets/trailer-poster.jpg" width="1076" height="1200">
-        <source src="assets/trailer.mp4" type="video/mp4">
-        <a href="https://www.youtube.com/watch?v=Sqxws8baNAQ">Watch the trailer on YouTube</a>
-      </video>
+      <!-- The trailer is the hero (owner, 2026-11-21): it plays muted on a loop; a tap plays it from the start, full screen, with
+           sound (owner: "make it tap to view full screen"). -->
+      <button class="hero-media" id="trailer" type="button" aria-label="Watch the trailer full screen">
+        <video class="hero-shot" autoplay muted loop playsinline preload="metadata" poster="assets/trailer-poster.jpg" width="1076" height="1200">
+          <source src="assets/trailer.mp4" type="video/mp4">
+        </video>
+        <span class="tap"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Tap to watch</span>
+      </button>
     </div>
   </section>
 
@@ -86,12 +89,15 @@
 
   <section class="cta">
     <div class="wrap">
+      <div>
       <h2>Works out of the box.<br>Tweak <span class="box dark">everything</span> if you like.</h2>
       <p>The guide sets it up the first time you open it. Nearly every behaviour has its own switch in Settings.</p>
       <p class="actions">
         <a class="button dark" href="https://github.com/jasonlok000/titankeys/releases/latest">Download</a>
         <a class="button ghost dark" href="https://github.com/jasonlok000/titankeys">Source code</a>
       </p>
+      </div>
+      <img class="cta-shot" src="assets/06-made-for.webp" width="807" height="900" loading="lazy" alt="The Titan 2 Elite showing Made for the Titan 2 Elite">
     </div>
   </section>
 </main>
@@ -100,5 +106,29 @@
   <p>Part of <a href="https://jasonlok000.github.io/titan2-nightkeys/">Titan Tools</a>, small apps for the Titan 2 Elite. · <a href="privacy/">Privacy policy</a></p>
   <p class="fine">TitanKeys is a modified version of <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall, under the GPL-3.0. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz. "Titan 2 Elite" is a product of Unihertz.</p>
 </footer>
+<script>
+  // The trailer: a tap plays it from the start, full screen and with sound. Leaving full screen brings back the quiet loop.
+  (() => {
+    const button = document.getElementById("trailer"), video = button.querySelector("video");
+    button.addEventListener("click", () => {
+      video.currentTime = 0;
+      video.muted = false;
+      video.controls = true;
+      const full = video.requestFullscreen || video.webkitRequestFullscreen;
+      if (full) full.call(video).catch(() => {});
+      else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+      video.play();
+    });
+    const back = () => {
+      if (document.fullscreenElement || document.webkitFullscreenElement) return;
+      video.controls = false;
+      video.muted = true;
+      video.play();
+    };
+    document.addEventListener("fullscreenchange", back);
+    document.addEventListener("webkitfullscreenchange", back);
+    video.addEventListener("webkitendfullscreen", back);
+  })();
+</script>
 </body>
 </html>

@@ -12,7 +12,7 @@
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-body { margin: 0; background: var(--black); color: var(--cream); font: 500 18px/1.55 Inter, system-ui, sans-serif; }
+body { margin: 0; overflow-x: clip; background: var(--black); color: var(--cream); font: 500 18px/1.55 Inter, system-ui, sans-serif; }
 img, video { max-width: 100%; height: auto; display: block; }
 a { color: var(--orange); }
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
@@ -63,6 +63,7 @@ h2 { font-weight: 700; font-size: clamp(32px, 4.4vw, 52px); line-height: 1.08; l
 .cta { color: var(--ink); padding: 80px 0;
   background: linear-gradient(160deg, #F8A273 0%, #EF804E 50%, #D9602C 100%); }
 .cta p { font-size: 19px; max-width: 34em; margin: 0 0 28px; }
+.cta-shot { display: none; }
 
 footer { padding-top: 32px; padding-bottom: 48px; color: var(--muted); font-size: 15px; }
 footer .fine { font-size: 13px; }
@@ -137,4 +138,38 @@ footer .fine { font-size: 13px; }
     .feature h2 .box, .cta h2 .box { animation: sweep linear both; animation-timeline: view(); animation-range: entry 30% cover 40%; }
     .cta h2, .cta p { animation: rise linear both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
   }
+}
+
+/* The trailer as a button: tap for full screen. */
+.hero-media { position: relative; display: block; padding: 0; border: 0; background: none; cursor: pointer; justify-self: end; max-width: 440px; width: 100%; color: inherit; font: inherit; }
+.hero-media .hero-shot { max-width: 100%; }
+.tap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(0, 0, 0, .72); color: var(--cream); font-weight: 700; font-size: 15px; padding: 9px 16px 9px 12px; border-radius: 999px;
+  backdrop-filter: blur(6px); white-space: nowrap; }
+.tap svg { width: 18px; height: 18px; fill: var(--orange); }
+.hero-media:hover .tap, .hero-media:focus-visible .tap { background: var(--black); }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 128, 78, .55); } 60% { box-shadow: 0 0 0 12px rgba(239, 128, 78, 0); } }
+  .tap { animation: pulse 2.4s 1.4s ease-out infinite; }
+  .hero .hero-media { animation: slide-in .9s .2s cubic-bezier(.2, .7, .2, 1) both; }
+  .hero .hero-shot { animation: none; }
+}
+
+/* The Titan 2 Elite in Chrome: about 690 px wide and 680 tall, nearly square. Every part fills exactly one screen, picture beside
+   words, sized to the screen's height so nothing is cut (no snapping: owner, 2026-11-21). svh is the height with the browser's
+   bars showing, so a part never hides under them. */
+@media (min-width: 600px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
+  .hero, .feature, .cta { min-height: 100svh; display: grid; align-content: center; }
+  .hero { padding: 64px 0 20px; }
+  .hero-media { max-width: none; justify-self: center; width: auto; }
+  .hero-media .hero-shot { max-height: calc(100svh - 104px); width: auto; }
+  .features { padding: 0 16px; }
+  .feature { padding: 16px 0; min-height: 100svh; grid-template-columns: auto 1fr; }
+  .feature:nth-child(even) { grid-template-columns: 1fr auto; }
+  .feature img { height: min(62svh, 420px); width: auto; max-width: none; max-height: none; }
+  .cta .wrap { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+  .cta-shot { display: block; height: min(70svh, 480px); width: auto; border-radius: 18px; box-shadow: 0 24px 50px rgba(60, 20, 0, .35); }
+  .cta { padding: 24px 0; }
+  .cta h2 { font-size: 34px; }
+  footer { padding-top: 20px; padding-bottom: 24px; }
 }

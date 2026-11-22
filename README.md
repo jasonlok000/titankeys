@@ -10,15 +10,11 @@ Swipe whole words on the same keys you press. Type one-handed with ease. Let it 
 
 **[Download it](https://github.com/jasonlok000/titankeys/releases)**
 
-<img src="assets/readme/06-made-for.webp" width="400" alt="Made for the Titan 2 Elite: the phone with TitanKeys on its screen, on orange">
+<a href="https://www.youtube.com/watch?v=Sqxws8baNAQ"><img src="assets/readme/trailer.webp" width="400" alt="The TitanKeys trailer: swiping, fixes, the cursor, symbols and languages on a real Titan 2 Elite"></a>
+
+**[Watch the trailer with sound](https://www.youtube.com/watch?v=Sqxws8baNAQ)**
 
 </div>
-
-## See it in action
-
-Two minutes of TitanKeys on a real Titan 2 Elite, keys and all.
-
-<!-- TRAILER: paste the GitHub video link here -->
 
 > TitanKeys is an independent, modified version of [Atlas](https://github.com/juleshall4/atlas) by Julian Hall. Atlas is the original project and the base of everything here. This fork started in November 2026, and its changes are in the git history. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz.
 

@@ -83,7 +83,7 @@ footer .fine { font-size: 13px; }
 /* The Titan 2 Elite's square screen: about 690 CSS px wide and nearly as tall in a browser. The phone layout's stacked pictures
    took a whole screen each, so here the picture sits beside its words again, sized to the screen's height, and every section
    fits on one screen. */
-@media (min-width: 600px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
+@media (min-width: 480px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
   .top { flex-wrap: nowrap; }
   .hero { padding: 84px 0 40px; }
   .hero-grid, .feature { grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -158,7 +158,7 @@ footer .fine { font-size: 13px; }
 /* The Titan 2 Elite in Chrome: about 690 px wide and 680 tall, nearly square. Every part fills exactly one screen, picture beside
    words, sized to the screen's height so nothing is cut (no snapping: owner, 2026-11-21). svh is the height with the browser's
    bars showing, so a part never hides under them. */
-@media (min-width: 600px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
+@media (min-width: 480px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
   .hero, .feature, .cta { min-height: 100svh; display: grid; align-content: center; }
   .hero { padding: 64px 0 20px; }
   .hero-media { max-width: none; justify-self: center; width: auto; }
@@ -179,8 +179,40 @@ footer .fine { font-size: 13px; }
 .phone-bar { display: none; }
 .t2e .phone-bar { display: block; position: fixed; left: 0; bottom: 0; width: 100vw; height: auto; z-index: 20; pointer-events: none; }
 .t2e body { padding-bottom: calc(100vw * 88 / 1076); }
-@media (min-width: 600px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
+@media (min-width: 480px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
   .t2e .hero, .t2e .feature, .t2e .cta { min-height: calc(100svh - 100vw * 88 / 1076); }
   .t2e .feature img { height: min(calc(62svh - 40px), 400px); }
   .t2e .hero-media .hero-shot { max-height: calc(100svh - 104px - 100vw * 88 / 1076); }
+}
+
+/* The square screen at any zoom: type and gaps follow the screen's width, so 120% text scaling (574 px across) gets the same
+   layout as 100% (689 px), only bigger. */
+@media (min-width: 480px) and (max-width: 860px) and (min-aspect-ratio: 3/4) {
+  .wrap, .features { padding-left: 3vw; padding-right: 3vw; }
+  .top { padding-top: 2.5vw; padding-bottom: 2.5vw; }
+  .mark { font-size: 3.4vw; }
+  .mark svg { height: 3.4vw; }
+  .top nav a { font-size: 2.6vw; }
+  .top nav { gap: 3vw; }
+  .hero { padding: 11vw 0 3vw; }
+  .hero-grid, .feature, .cta .wrap { gap: 3.5vw; }
+  .kicker { font-size: 2.1vw; margin-bottom: 1.6vw; }
+  h1 { font-size: 6.6vw; margin-bottom: 2vw; }
+  .lead { font-size: 2.6vw; margin-bottom: 3vw; }
+  .button { font-size: 2.3vw; padding: 1.7vw 3.2vw; }
+  .actions { gap: 1.8vw; }
+  h2, .cta h2 { font-size: 4.8vw; margin-bottom: 1.8vw; }
+  .feature p, .cta p { font-size: 2.6vw; margin-bottom: 0; }
+  .cta p { margin-bottom: 3vw; }
+  .tap { font-size: 2.2vw; bottom: 2.5vw; padding: 1.3vw 2.4vw 1.3vw 1.8vw; }
+  .tap svg { width: 2.6vw; height: 2.6vw; }
+  .feature { padding: 2vw 0; }
+  .feature img { height: min(calc(100svh - 18vw), 62vw); }
+  .t2e .feature img { height: min(calc(100svh - 18vw - 100vw * 88 / 1076), 62vw); }
+  .hero-media .hero-shot { max-height: calc(100svh - 16vw); }
+  .t2e .hero-media .hero-shot { max-height: calc(100svh - 16vw - 100vw * 88 / 1076); }
+  .cta-shot { height: min(calc(100svh - 14vw), 66vw); }
+  .t2e .cta-shot { height: min(calc(100svh - 14vw - 100vw * 88 / 1076), 66vw); }
+  footer { font-size: 2.2vw; }
+  footer .fine { font-size: 1.9vw; }
 }

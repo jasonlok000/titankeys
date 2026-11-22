@@ -10,7 +10,7 @@
 <meta property="og:description" content="Swipe whole words on the same keys you press. Typos fixed as you go. 49 languages.">
 <meta property="og:image" content="https://jasonlok000.github.io/titankeys/assets/06-made-for.webp">
 <link rel="icon" href="assets/icon-192.png">
-<link rel="stylesheet" href="landing.css?v=5">
+<link rel="stylesheet" href="landing.css?v=6">
 </head>
 <body>
 <!-- The launch page (#58). Same look as the app, the store graphics and the trailer: Inter, cream on near-black, the Titan
@@ -112,9 +112,11 @@
   // the keys, and the pictures lose their own copy of it. The strips are 1076 px wide like the screen, so drawn as wide as the
   // page they land 1:1 on the screen's pixels, whatever its display size. Found by the screen: 1076 or 1080 by 1200 pixels.
   (() => {
-    const px = n => Math.round(n * devicePixelRatio);
+    // Chrome's zoom (Accessibility > text scaling) changes the ratio, and rounding can put a pixel or two either side (owner's
+    // phone at 120%: 574 x 641 at 1.875, 1076 x 1202).
+    const px = n => n * devicePixelRatio, near = (a, b) => Math.abs(a - b) <= 6;
     const t2e = /[?&]t2e=1/.test(location.search) ||
-      ([1076, 1080].includes(px(screen.width)) && px(screen.height) === 1200);
+      ((near(px(screen.width), 1076) || near(px(screen.width), 1080)) && near(px(screen.height), 1200));
     if (!t2e) return;
     document.documentElement.classList.add("t2e");
     for (const img of document.querySelectorAll("img[data-nobar]")) img.src = img.dataset.nobar;

@@ -1345,8 +1345,16 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** With no field active, a touchpad event only stops here, so that the app under the overlay does not scroll. */
+    /** Tells Titan Tools when you type, for its keyboard light. See [TitanToolsLink]. */
+    private val titanTools = TitanToolsLink()
+
     private val overlayEvent: (MotionEvent) -> Boolean = { event ->
-        touchpad.accepts(event).also { if (it && editing) motion(event) }
+        touchpad.accepts(event).also {
+            if (it && editing) {
+                motion(event)
+                titanTools.active(this)
+            }
+        }
     }
 
     /**
@@ -2095,6 +2103,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onWindowShown() {
         super.onWindowShown()
+        if (editing) titanTools.active(this)
         watchStatus()
         if (field.exact) logExact("window shown")
         if (recycling) {
@@ -2111,6 +2120,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onWindowHidden() {
+        titanTools.idle(this)
         panelHover.keysReleased()
         panelPress = -1
         barHover.keysReleased()
@@ -4944,6 +4954,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (editing) titanTools.active(this)
         if (keyCode != KeyEvent.KEYCODE_DEL) return keyDown(keyCode, event)
         // A held Backspace repeats, as on a PC: Android's own repeats where they come, else TitanKeys' ([BackspaceRepeat]).
         val handled = keyDown(keyCode, event)

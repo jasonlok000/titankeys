@@ -8,7 +8,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Only with "Names from my contacts" on: given and family names, kept in memory on the phone, never sent. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- The link with Titan Tools, for its keyboard light: only apps signed with the same key hold it (TitanToolsLink.kt). Both
+         apps declare it, so either can be installed first. -->
+    <permission
+        android:name="com.everyonesniche.titantools.permission.LINK"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.everyonesniche.titantools.permission.LINK" />
     <queries>
+        <package android:name="com.everyonesniche.titantools" />
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />

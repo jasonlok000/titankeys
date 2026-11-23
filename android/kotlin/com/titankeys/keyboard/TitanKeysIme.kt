@@ -1421,17 +1421,27 @@ class TitanKeysIme : InputMethodService() {
             }
             if (TouchpadHold.statusLost(PhoneChecks.property(TouchpadHold.STATUS_PROPERTY))) {
                 failures++
-                if (failures <= 3) Log.i("TitanKeys", "The firmware cleared the keyboard status; sending it again ($failures)")
+                if (failures <= 6) Log.i("TitanKeys", "The firmware cleared the keyboard status; sending it again ($failures)")
                 try {
-                    val disposition = backDisposition
-                    backDisposition = TouchpadHold.otherDisposition(disposition)
-                    backDisposition = disposition
+                    if (TouchpadHold.reportAgain(failures) && hold.held && !isInputViewShown) {
+                        // After a hide from Android the status this sends no longer says "shown", so the firmware kept writing 0
+                        // and the keys scrolled the app (owner, 2026-11-22 22:45). Hiding and showing the held status again, as the
+                        // hold first does, reports it shown.
+                        hold.hidden()
+                        hideHeldWindow()
+                        updateHold()
+                    } else {
+                        val disposition = backDisposition
+                        backDisposition = TouchpadHold.otherDisposition(disposition)
+                        backDisposition = disposition
+                    }
                 } catch (error: RuntimeException) {
                     Log.w("TitanKeys", "Could not report the keyboard status", error)
                 }
             } else failures = 0
-            // A firmware where sending the status never brings it back gets three tries, then none until the next show or hold.
-            if (TouchpadHold.keepWatching(failures)) main.postDelayed(this, TouchpadHold.WATCH_MILLIS) else failures = 0
+            // It never stops while the status is wanted: a status left off lets every swipe scroll the app. A firmware where it
+            // never comes back is read every two seconds after a few tries.
+            main.postDelayed(this, TouchpadHold.watchDelay(failures))
         }
     }
 

@@ -123,8 +123,11 @@ class TouchpadHold {
          */
         fun otherDisposition(current: Int) = if (current == 0) 1 else 0
 
-        /** After three reports in a row that didn't bring the status back, the keyboard stops until the status is next reported. */
-        fun keepWatching(failures: Int) = failures < 3
+        /** The first try sends the status again; when that didn't bring it back, the held status is shown again (a hide, then the show). */
+        fun reportAgain(failures: Int) = failures in 2..6
+
+        /** Five reads a second while the status comes back; after six tries that didn't, one read every two seconds. */
+        fun watchDelay(failures: Int) = if (failures <= 6) WATCH_MILLIS else 2_000L
 
         /**
          * True for the Back events that Android's handler for a shown keyboard makes. A system back also has no device, and it comes

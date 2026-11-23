@@ -10,9 +10,9 @@ Swipe whole words on the same keys you press. Type one-handed with ease. Let it 
 
 **[Download it](https://github.com/jasonlok000/titankeys/releases)**
 
-<a href="https://www.youtube.com/watch?v=Sqxws8baNAQ"><img src="assets/readme/trailer.webp" width="400" alt="The TitanKeys trailer: swiping, fixes, the cursor, symbols and languages on a real Titan 2 Elite"></a>
+<a href="https://www.youtube.com/watch?v=3lLzW0JsKiw"><img src="assets/readme/trailer.webp" width="400" alt="The TitanKeys trailer: swiping, fixes, the cursor, symbols and languages on a real Titan 2 Elite"></a>
 
-**[Watch the trailer with sound](https://www.youtube.com/watch?v=Sqxws8baNAQ)**
+**[Watch the trailer with sound](https://www.youtube.com/watch?v=3lLzW0JsKiw)**
 
 </div>
 

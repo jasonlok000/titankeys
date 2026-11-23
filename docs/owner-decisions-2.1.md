@@ -1050,6 +1050,9 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - **Accents, for 3.1 (2026-11-22, #107):** "yea i think abc". A letter with one accent: the hold types it. Several: the hold
   types the commonest, and the row stays after the lift for a touch on the screen to change it ("more intuitive to just press
   the screen"); keys keep typing as keys. The key's own symbol joins every hold row.
+- **A pick closes the accent row (2026-11-23):** "the menu stays even when i chose one. i think it shdnt stay after i clicked
+  on it and selected one." A touch on an item swaps the letter and closes the row; picked while the letter is still held, it
+  closes when the letter comes up.
 - **Experimental means not yet as refined as Chinese (2026-11-22):** "ok keep it experimental". A language loses the mark when
   it's as refined as Chinese, not just correct: Korean types correctly and was checked by a native speaker, but stays
   experimental until it has next words and slip fixes (#100 waits). Exact typing in English (#108) stays for 3.1 (owner: "can stay as a issue").

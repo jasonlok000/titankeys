@@ -4298,6 +4298,10 @@ class TitanKeysIme : InputMethodService() {
         heldRowKey = -1
         val open = openPicker() as? LanguagePicker.Accents ?: return
         open.row.lift()
+        if (open.row.picked) {
+            closePicker()
+            return
+        }
         strip?.pickerMark = -1
         setPaging()
         updateKeyWatch()
@@ -4384,7 +4388,9 @@ class TitanKeysIme : InputMethodService() {
         if (choice == open.row.current) return
         val item = open.row.pick(choice) ?: return
         if (pendingInput.isNotEmpty()) enqueue { composer.replaceLetter(item, keep = true) } else composer.replaceLetter(item, keep = true)
-        showPicker(LanguagePicker.Accents(open.row))
+        open.row.picked = true
+        // A pick closes the row: at once after the lift, or at the lift while the letter is still held.
+        if (open.row.held) showPicker(LanguagePicker.Accents(open.row)) else closePicker()
     }
 
     private fun switcherBack(open: LanguagePicker.Switch) {

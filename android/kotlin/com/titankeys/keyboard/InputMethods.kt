@@ -359,6 +359,9 @@ class HeldRow(choices: List<String>, symbol: String?, held: String) {
         private set
     /** Whether the held letter is still down. Only then does a key under an item pick it. */
     var held = true
+
+    /** An item was picked from the row: it closes once the letter is up (owner, 2026-11-23: "it shouldn't stay after I selected one"). */
+    var picked = false
         private set
 
     /** What the hold types in place of the letter. */

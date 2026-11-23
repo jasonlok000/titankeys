@@ -112,6 +112,8 @@ test("the release manifest has exactly the expected components", () => {
     "android.permission.ACCESS_NETWORK_STATE",
     "android.permission.POST_NOTIFICATIONS",
     "android.permission.READ_CONTACTS",
+    // The Titan Tools link: a signature permission, so only apps signed with the same key hold it (TitanToolsLink.kt).
+    "com.everyonesniche.titantools.permission.LINK",
   ]);
   expect(manifest()).not.toContain("android:debuggable");
   expect(manifest()).not.toContain("android:testOnly");

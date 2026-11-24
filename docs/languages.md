@@ -66,7 +66,7 @@ Cyrillic and Greek; then the rest.
 Every language is at one of three stages (owner, 2026-11-22). Settings shows it on the language's row and page.
 
 - **Experimental:** it works in the tests, but no native speaker has checked it. Its page says so, and asks for help.
-- **Tested:** a native speaker has confirmed it types correctly, but it isn't as refined as Chinese yet. Today: Korean, Italian, Russian and Ukrainian.
+- **Tested:** a native speaker has confirmed it types correctly, but it isn't as refined as Chinese yet. Today: Korean, Italian, Russian, Ukrainian and Danish.
 - **Polished:** as refined as Chinese. Today: English and Chinese.
 
 `tools/im/make.py` sets them: `NOT_EXPERIMENTAL` (polished) and `TESTED`. The index gives each language `"experimental"`

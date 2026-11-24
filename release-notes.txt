@@ -3,7 +3,7 @@
 ## Languages
 
 - Pick from 49 languages in Settings. Keep up to four on at a time. Hold Sym to switch.
-- Italian, Russian and Ukrainian are now Tested: native speakers confirmed they type right.
+- Italian, Russian, Ukrainian and Danish are now Tested: native speakers confirmed they type right.
 - With English and Chinese enabled, hold Sym from English to see your Chinese methods if you use more than one. Press P to go back in the language and method menus.
 - The settings, key maps and practice prompts use each language's own text. The maps show the full layout and the outputs for Shift and held keys where available.
 - Choose Yale or Jyutping for Cantonese, Pinyin or Zhuyin for Mandarin, or Cangjie or Quick for shape input. Choose 正體中文 for Hong Kong or Taiwan, or 简体中文 for mainland China.

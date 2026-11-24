@@ -115,7 +115,8 @@ class TitanKeysIme : InputMethodService() {
     /** The swipe's trail on the bar (#112). Off, a swipe still types and the bar draws nothing for it. */
     private var swipeTrail = true
     /** The Sym panel stays open after a pick, until Sym or Back (#110). */
-    private var symPanelStays = false
+    private var symbolsStay = false
+    private var emojiStays = false
     /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
     private val heldTaps = ArrayList<(Boolean) -> Unit>()
     /** The word that the word drag started from, as its start and end in the field. */
@@ -1978,7 +1979,8 @@ class TitanKeysIme : InputMethodService() {
         cursorGesture.doubles = TypingSettings.doubleSpaceCursor(this)
         cursorGesture.triples = TypingSettings.tripleSpaceSelect(this)
         swipeTrail = TypingSettings.swipeTrail(this)
-        symPanelStays = TypingSettings.symPanelStays(this)
+        symbolsStay = TypingSettings.symbolsStay(this)
+        emojiStays = TypingSettings.emojiStays(this)
         panel?.largerEmoji = TypingSettings.largerEmoji(this)
         exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
@@ -3707,7 +3709,7 @@ class TitanKeysIme : InputMethodService() {
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
             getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
         }
-        if (symPanelStays) showModifiers() else closePanel()
+        if (if (modifiers.panel == Modifiers.Panel.Emoji) emojiStays else symbolsStay) showModifiers() else closePanel()
     }
 
     private fun closePanel() {

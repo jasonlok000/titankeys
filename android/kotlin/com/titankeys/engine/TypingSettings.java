@@ -252,12 +252,24 @@ public final class TypingSettings {
     }
 
     /** The Sym panel stays open after a pick, until Sym or Back closes it (#110). Off, one pick closes it. */
-    public static boolean symPanelStays(Context context) {
-        return preferences(context).getBoolean("sym_panel_stays", false);
+    /** The symbol pages stay open after a pick. Until set, it follows the old one switch, "sym_panel_stays". */
+    public static boolean symbolsStay(Context context) {
+        SharedPreferences preferences = preferences(context);
+        return preferences.getBoolean("symbols_stay", preferences.getBoolean("sym_panel_stays", false));
     }
 
-    public static void symPanelStays(Context context, boolean enabled) {
-        preferences(context).edit().putBoolean("sym_panel_stays", enabled).apply();
+    public static void symbolsStay(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("symbols_stay", enabled).apply();
+    }
+
+    /** The emoji page stays open after a pick. Until set, it follows the old one switch, "sym_panel_stays". */
+    public static boolean emojiStays(Context context) {
+        SharedPreferences preferences = preferences(context);
+        return preferences.getBoolean("emoji_stays", preferences.getBoolean("sym_panel_stays", false));
+    }
+
+    public static void emojiStays(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("emoji_stays", enabled).apply();
     }
 
     /** The emoji in the Sym panel draw a quarter larger, in the same cells. Off, they are the symbols' size. */

@@ -8,7 +8,7 @@ import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
 import { barTextSizeLabel, barTextSizeTitle } from "./bar-text-size";
 import { accentLabel, accentTitle, altBackspaceLabel, altBackspaceNote, altSymLabel, altSymNote, barLabel, deleteFlickLabel, doubleSpaceLabel,
-  scrollLabel, shiftBackspaceLabel, shiftBackspaceNote, swipeTrailLabel, symPanelStaysLabel, symPanelStaysNote, largerEmojiLabel,
+  scrollLabel, shiftBackspaceLabel, shiftBackspaceNote, swipeTrailLabel, symbolsStayLabel, emojiStaysLabel, panelStaysNote, largerEmojiLabel,
   tripleSpaceLabel } from "../../lib/setting-names";
 import pageText from "../../tools/im/page-text.json";
 import { parentOf } from "../../lib/settings-tree";
@@ -99,8 +99,10 @@ export default function Settings() {
     <Section title="Keys">
       <Toggle label="Press twice to lock Shift and Alt" value={settings.doublePressLocks}
         onChange={doublePressLocks => save.run({ doublePressLocks })} />
-      <Toggle label={symPanelStaysLabel} subtitle={symPanelStaysNote} value={settings.symPanelStays}
-        onChange={symPanelStays => save.run({ symPanelStays })} />
+      <Toggle label={symbolsStayLabel} subtitle={panelStaysNote} value={settings.symbolsStay}
+        onChange={symbolsStay => save.run({ symbolsStay })} />
+      <Toggle label={emojiStaysLabel} subtitle={panelStaysNote} value={settings.emojiStays}
+        onChange={emojiStays => save.run({ emojiStays })} />
       <Toggle label={largerEmojiLabel} value={settings.largerEmoji}
         onChange={largerEmoji => save.run({ largerEmoji })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}

@@ -65,6 +65,18 @@ h2 { font-weight: 700; font-size: clamp(32px, 4.4vw, 52px); line-height: 1.08; l
 .cta p { font-size: 19px; max-width: 34em; margin: 0 0 28px; }
 .cta-shot { display: none; }
 
+/* Get it on Google Play: three numbered steps, each with its own button. */
+.get { padding-top: 64px; padding-bottom: 72px; scroll-margin-top: 24px; }
+.get h2 { font-size: clamp(30px, 6vw, 48px); line-height: 1.1; margin: 0 0 16px; }
+.get > p { color: var(--muted); font-size: 19px; max-width: 34em; margin: 0 0 28px; }
+.get ol { list-style: none; counter-reset: step; padding: 0; margin: 0 0 28px; display: grid; gap: 14px; max-width: 40em; }
+.get li { counter-increment: step; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 16px 18px; border-radius: 18px; background: #160A04; }
+.get li span::before { content: counter(step); display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 12px;
+  border-radius: 50%; background: var(--orange); color: var(--black); font-weight: 700; }
+.get li .button { background: var(--orange); color: var(--black); padding: 12px 22px; }
+.get .fine { color: var(--muted); font-size: 16px; margin: 0; }
+
 footer { padding-top: 32px; padding-bottom: 48px; color: var(--muted); font-size: 15px; }
 footer .fine { font-size: 13px; }
 

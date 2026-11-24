@@ -1483,10 +1483,10 @@ class GuideDecor(private val font: Typeface? = null) {
         private const val TAU = (2 * PI).toFloat()
 
         /**
-         * The accent as the decorations draw it: orange, or with Orange accents off, cream at the orange's lightness, so a slide's
+         * The accent as the decorations draw it: the accent, or with Accent colour off, cream at the orange's lightness, so a slide's
          * decoration keeps its strength instead of turning 2.6 times brighter.
          */
-        fun accentColour(): Int = Accent.warm(Accent.of(true))
+        fun accentColour(): Int = Accent.decor
 
         /**
          * Each slide's colour and how strong its whole layer is: the accent at 36–46%, or cream for the struck e, its layer at

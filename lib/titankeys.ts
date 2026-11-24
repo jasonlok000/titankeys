@@ -116,8 +116,10 @@ export type State = {
   symPanelStays: boolean;
   /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Settings shows this reversed, as Scroll assistant. */
   touchpadOnlyInFields: boolean;
-  /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they are white or black. */
-  orangeAccents: boolean;
+  /** Settings > Accent colour: "off", "orange" (the default), a preset or "phone" (lib/setting-names.ts's accentChoices). */
+  accentColour: string;
+  /** The accent the app draws now, as "#RRGGBB": the chosen colour made readable, or the text's cream with it off (Accent.kt). */
+  accent: string;
   /** The bar's text size: your pick, or Normal ("medium"). */
   barTextSize: BarTextSize;
   /** Swipes and typing know contacts' given and family names. True only while the setting is on and Android allows it. */
@@ -256,7 +258,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "doubleSpaceCursor" | "tripleSpaceSelect" | "deleteFlick" | "swipeTrail" | "symPanelStays" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "doubleSpaceCursor" | "tripleSpaceSelect" | "deleteFlick" | "swipeTrail" | "symPanelStays" | "touchpadOnlyInFields" | "accentColour" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
   /** A language's page: its own values, by language id. A write sends only the ones that changed. */

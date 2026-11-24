@@ -15,6 +15,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.titankeys.keyboard.Accent
 import com.titankeys.keyboard.AppBuild
 import com.titankeys.keyboard.FixedScale
 import com.titankeys.keyboard.GuideMotion
@@ -55,6 +56,12 @@ class SupportWebActivity : Activity() {
     private fun sendCut() {
         if (!pageReady) return
         web.evaluateJavascript("window.titankeysCut && window.titankeysCut($cutTop)", null)
+    }
+
+    /** Settings > Accent colour on the page too (#111): orange keeps the page's own tone; any other choice is set as it loads. */
+    private fun sendAccent() {
+        if (!pageReady || Accent.isDefault) return
+        web.evaluateJavascript("window.titankeysAccent && window.titankeysAccent('${Accent.hex()}')", null)
     }
 
     /** The same sizes at any display or font size, as every TitanKeys screen ([FixedScale]). The page also zooms itself to
@@ -191,6 +198,7 @@ class SupportWebActivity : Activity() {
         override fun onPageFinished(view: WebView, url: String) {
             takeEarly()
             sendCut()
+            sendAccent()
             pageLoaded = pageReady
             // A receipt that came while the page was still loading plays now. See [billingChanged].
             if (pageLoaded && !preview) runCatching { billingChanged() }

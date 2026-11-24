@@ -78,8 +78,8 @@ internal fun appBaseContext(base: Context): Context = FixedScale.wrap(base)
  */
 internal fun appUserScale(@Suppress("UNUSED_PARAMETER") context: Context): Float = FixedScale.UNSCALED
 
-/** Settings > Orange accents: with it off, Ink's screens take the cream that stands in for orange everywhere (Accent). */
-internal fun appAccent(context: Context): Int = if (Accent.on) 0 else Accent.colour
+/** Settings > Accent colour: Ink's theme draws the orange itself (0); any other choice, cream for Off too, overrides it (Accent). */
+internal fun appAccent(context: Context): Int = if (Accent.isDefault) 0 else Accent.colour
 
 /**
  * Ink's press haptic is Android's stock click, which TitanKeys never plays (docs/haptics.md, rule 5). Every press in Ink's pages
@@ -818,7 +818,8 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("swipeTrail", TypingSettings.swipeTrail(activity))
             .put("symPanelStays", TypingSettings.symPanelStays(activity))
             .put("touchpadOnlyInFields", TypingSettings.touchpadOnlyInFields(activity))
-            .put("orangeAccents", TypingSettings.orangeAccents(activity))
+            .put("accentColour", Accent.choice)
+            .put("accent", Accent.hex())
             .put("barTextSize", FixedScale.size(activity).id)
             .put("enterKey", TypingSettings.enterKey(activity))
             .also(::putEnterApps)
@@ -1064,10 +1065,10 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             "swipeTrail" -> TypingSettings.swipeTrail(activity, value as Boolean)
             "symPanelStays" -> TypingSettings.symPanelStays(activity, value as Boolean)
             "touchpadOnlyInFields" -> TypingSettings.touchpadOnlyInFields(activity, value as Boolean)
-            "orangeAccents" -> {
-                TypingSettings.orangeAccents(activity, value as Boolean)
+            "accentColour" -> {
+                TypingSettings.accentColour(activity, value as String)
                 // Everything follows at once: Settings now, and every other window as it next draws.
-                Accent.on = value
+                Accent.set(activity, value)
                 activity.applyAccent()
             }
             // A pick sticks, even one that matches the phone's text size. A keyboard that is up makes its bar again at once

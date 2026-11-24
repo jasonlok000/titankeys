@@ -7,7 +7,7 @@ import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
 import { barTextSizeLabel, barTextSizeTitle } from "./bar-text-size";
-import { accentsNote, altBackspaceLabel, altBackspaceNote, altSymLabel, altSymNote, barLabel, deleteFlickLabel, doubleSpaceLabel,
+import { accentLabel, accentTitle, altBackspaceLabel, altBackspaceNote, altSymLabel, altSymNote, barLabel, deleteFlickLabel, doubleSpaceLabel,
   scrollLabel, shiftBackspaceLabel, shiftBackspaceNote, swipeTrailLabel, symPanelStaysLabel, symPanelStaysNote,
   tripleSpaceLabel } from "../../lib/setting-names";
 import pageText from "../../tools/im/page-text.json";
@@ -111,8 +111,7 @@ export default function Settings() {
       <Field label="Haptics" href="/settings/haptics">{hapticsLabel(settings)}</Field>
       {/* The Haptics lab is only in TitanKeys Debug. Other builds get null for it, so the row never shows there. */}
       {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
-      <Toggle label="Orange accents" subtitle={accentsNote(settings.orangeAccents)} value={settings.orangeAccents}
-        onChange={orangeAccents => save.run({ orangeAccents })} />
+      <Field label={accentTitle} href="/settings/accent">{accentLabel(settings.accentColour)}</Field>
     </Section>
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />

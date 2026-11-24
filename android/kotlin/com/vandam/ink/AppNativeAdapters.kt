@@ -823,6 +823,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("touchpadOnlyInFields", TypingSettings.touchpadOnlyInFields(activity))
             .put("accentColour", Accent.choice)
             .put("accent", Accent.hex())
+            .put("accentSwatches", JSONObject(Accent.swatches(activity)))
             .put("barTextSize", FixedScale.size(activity).id)
             .put("enterKey", TypingSettings.enterKey(activity))
             .also(::putEnterApps)

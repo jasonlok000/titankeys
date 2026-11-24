@@ -119,10 +119,12 @@ export type State = {
   largerEmoji: boolean;
   /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Settings shows this reversed, as Scroll assistant. */
   touchpadOnlyInFields: boolean;
-  /** Settings > Accent colour, one of "off", "orange" (the default), a preset or "phone" (lib/setting-names.ts's accentChoices). */
+  /** Settings > Accent colour, one of "off", "orange" (the default), a preset, "phone" or Custom's "hue:N" (lib/setting-names.ts's accentChoices). */
   accentColour: string;
   /** The accent the app draws now, as "#RRGGBB": the chosen colour made readable, or the text's cream with it off (Accent.kt). */
   accent: string;
+  /** Each choice's own colour as "#RRGGBB" (Accent.swatches): "off", every preset and "phone", for the swatches. */
+  accentSwatches: Record<string, string>;
   /** The bar's text size: your pick, or Normal ("medium"). */
   barTextSize: BarTextSize;
   /** Swipes and typing know contacts' given and family names. True only while the setting is on and Android allows it. */

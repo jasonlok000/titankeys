@@ -75,8 +75,6 @@ export default function Settings() {
     <Section title="Gestures">
       <Toggle label={pageText.settings.swipe} value={settings.swipeTyping}
         onChange={swipeTyping => save.run({ swipeTyping })} />
-      {settings.swipeTyping && <Toggle label={swipeTrailLabel} value={settings.swipeTrail}
-        onChange={swipeTrail => save.run({ swipeTrail })} />}
       <Toggle label={doubleSpaceLabel} value={settings.doubleSpaceCursor}
         onChange={doubleSpaceCursor => save.run({ doubleSpaceCursor })} />
       <Toggle label={tripleSpaceLabel} value={settings.tripleSpaceSelect}
@@ -113,6 +111,9 @@ export default function Settings() {
       {/* The Haptics lab is only in TitanKeys Debug. Other builds get null for it, so the row never shows there. */}
       {settings.hapticsLab && <Field label="Haptics lab" href="/settings/haptics-lab" />}
       <Field label={accentTitle} href="/settings/accent">{accentLabel(settings.accentColour)}</Field>
+      {/* The swipe trail is how swiping looks (owner, 2026-11-24): here, not under Gestures. */}
+      {settings.swipeTyping && <Toggle label={swipeTrailLabel} value={settings.swipeTrail}
+        onChange={swipeTrail => save.run({ swipeTrail })} />}
     </Section>
     <Section title="Your data">
       <Field label="Your words" href="/settings/data" />

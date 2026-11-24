@@ -630,8 +630,10 @@
       <h1 data-t="join"></h1>
       <div class="limit" id="limit"></div>
       <div class="optpreview" id="optpreview"></div>
-      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="name" maxlength="40" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Your name"></div>
-      <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="msg" rows="1" placeholder="Say hi"></textarea></div></div>
+      <!-- The board name is never filled for you (owner, 2026-11-24: "some people might not want their real name"): the ids and
+           autocomplete tokens aren't ones autofill reads as a person's name, and the app turns autofill off for the page. -->
+      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="bn" maxlength="40" autocomplete="tk-board-label" autocorrect="off" spellcheck="false" data-lpignore="true" placeholder="Your name"></div>
+      <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="bm" rows="1" autocomplete="tk-board-note" placeholder="Say hi"></textarea></div></div>
       <div class="limitnote" id="overlimit"></div>
     </div>
     <div class="dock actions"><button class="primary" data-act="add" data-t="addMe"></button><button class="quiet" data-act="later" data-t="later"></button></div>
@@ -1180,9 +1182,11 @@ function confetti(pinned = false) {
 function drawOptin(rank) {
   const n = limitAt(rank), t = tierAt(rank);
   $("#optin [data-act=add]").textContent = editing ? T.save : T.addMe;
-  $("#limit").innerHTML = `<span class="badge">${t ? "Top " + t : "Beyond 100"}</span><span>${esc(T.limits[t])}</span>`;
+  // A rank the server couldn't give (offline, or no answer) isn't "Beyond 100": the badge and the preview wait for a real one.
+  $("#limit").innerHTML = rank ? `<span class="badge">${t ? "Top " + t : "Beyond 100"}</span><span>${esc(T.limits[t])}</span>` : "";
+  $("#limit").style.display = rank ? "" : "none";
   $("#msgfield").style.display = n ? "" : "none";
-  const name = $("#name"), msg = $("#msg");
+  const name = $("#bn"), msg = $("#bm");
   msg.maxLength = n || 0;
   msg.rows = 1;
   const grow = () => { msg.style.height = "auto"; msg.style.height = msg.scrollHeight + "px"; };
@@ -1196,6 +1200,7 @@ function drawOptin(rank) {
     const me = { id: "p", rank, name: name.value.trim() || T.namePlaceholder, message: n ? msg.value.slice(0, n) || null : null, you: true };
     // Beyond the top 100, the places around yours, so the row has a board to sit on.
     const rows = n ? [me] : [{ id: "a", rank: rank - 1, name: "Jun", message: null, ghost: true }, me, { id: "b", rank: rank + 1, name: "Sam", message: null, ghost: true }];
+    if (!rank) { $("#optpreview").innerHTML = ""; return; }
     $("#optpreview").innerHTML = `<div class="kicker">${T.previewLabel}</div>` + (rank <= 3
       ? podium([me]).replace('<div class="podium">', '<div class="podium solo">').replace(rank === 1 ? /$^/ : /<svg class="crown"[\s\S]*?<\/svg>/, "")
       : ranks(rows, 0, rows.length, false));
@@ -1229,7 +1234,7 @@ document.addEventListener("click", async ev => {
   // The phone's Back key clicks the page's own back button, and a key press already clicks under the thumb, so it plays nothing
   // (handbook, docs/haptics.md: physical keys never buzz; owner, 2026-11-24: "no need haptics for physical back").
   const pressed = ev.isTrusted && ev.target.closest("button, [data-go], [data-tier], [data-cad]");
-  if (pressed) buzz(pressed.closest("[data-tier], #quick") || (pressed.dataset.act === "add" && $("#name").value.trim()) ? "pick" : "press");
+  if (pressed) buzz(pressed.closest("[data-tier], #quick") || (pressed.dataset.act === "add" && $("#bn").value.trim()) ? "pick" : "press");
   const go = ev.target.closest("[data-go]"); if (go) { route(go.dataset.go); return; }
   const ex = ev.target.closest("[data-expand]"); if (ex) { ex.classList.toggle("open"); return; }
   const cad = ev.target.closest("[data-cad]"); if (cad) { cadence = cad.dataset.cad; if (tier === 3) tier = 0; drawTiers(); return; }
@@ -1243,15 +1248,15 @@ document.addEventListener("click", async ev => {
   document.querySelectorAll(".rank.held").forEach(x => x.classList.remove("held"));
   const act = ev.target.closest("[data-act]")?.dataset.act;
   if (act === "nah") api.nah();
-  if (act === "add" && !$("#name").value.trim()) return;
-  if (act === "add") { await api.join(false, $("#name").value.trim(), $("#msg").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
+  if (act === "add" && !$("#bn").value.trim()) return;
+  if (act === "add") { await api.join(false, $("#bn").value.trim(), $("#bm").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
   if (act === "remove") { await api.remove().catch(() => {}); SAMPLE.joined = false; route("board"); }
   if (act === "later") route(optinBack);
   if (act === "manage") api.manage();
   if (act === "joinlater" || act === "edit") {
     const me = act === "edit" && (board.entries || []).find(x => x.you);
     const r = me ? { available: true, rank: me.rank } : await api.preview(0).catch(() => ({ available: false }));
-    $("#name").value = me?.name || ""; $("#msg").value = me?.message || "";
+    $("#bn").value = me?.name || ""; $("#bm").value = me?.message || "";
     paidRank = r.available ? r.rank : null; optinBack = "board"; editing = !!me; route("optin");
   }
   if (act === "first") { cadence = "o"; tier = 0; drawTiers(); const v = scroller($("#support")); v.scrollTo({ top: v.scrollHeight, behavior: reduce ? "auto" : "smooth" }); }
@@ -1301,7 +1306,13 @@ $("#custd").oninput = e => {
   const unit = customUnit(), each = unit?.amountMicros ? unit.amountMicros / 1e6 : 1;
   const v = Math.round(typedAmount(e.target.value) / each);
   if (v >= 1 && v <= 50) { dollars = v; drawCustom(); }
+  // Custom buys whole coffees, so after a short pause the box shows what the button charges (overnight test, 2026-11-24: the
+  // box said 15 while the button said CA$15.29).
+  clearTimeout(snapWait);
+  snapWait = setTimeout(() => { const p = unit?.amountMicros != null && moneyParts(unit.amountMicros * dollars, unit.currency);
+    if (p) $("#custd").value = p.num; }, 900);
 };
+let snapWait;
 document.querySelectorAll("#quick button").forEach(b => b.onclick = () => { dollars = +b.dataset.dollars; drawCustom(); });
 $("#custd").onblur = () => { drawCustom(); };
 for (const id of ["support", "board", "settings", "optin", "custom"]) scroller($("#" + id)).addEventListener("scroll", e => {
@@ -1361,11 +1372,13 @@ const waitingState = () => native && state === SAMPLE.state ? { products: [], to
 async function route(id) {
   // In the app, Settings is behind this screen: going back closes it.
   if (id === "settings" && native) { api.close(); return; }
+  // Back from Custom, the list's button belongs to a coffee on the list again, not Custom's amount (overnight test, 2026-11-24).
+  if (id === "support" && tier === 3) { tier = 0; cadence = "o"; }
   if (id === "support") { rankMemo.clear(); board = await within(api.board(), OFFLINE_BOARD); state = await within(api.state(), waitingState()); drawBoardPreview(); drawTiers(); }
   if (id === "board" || id === "fund") { board = await within(api.board(), OFFLINE_BOARD); drawBoardFull(id === "fund" || !!state.supporter); show("board"); return; }
   if (id === "custom") drawCustom();
   if (id === "popup") { if (native) state = await within(api.state(), waitingState()); drawPopup(await api.stats()); }
-  if (id === "optin") drawOptin(paidRank || (native ? 101 : sampleRank(selected()?.cents || 0)));
+  if (id === "optin") drawOptin(paidRank || (native ? null : sampleRank(selected()?.cents || 0)));
   show(id);
 }
 
@@ -1386,7 +1399,7 @@ if (q.get("dollars")) dollars = +q.get("dollars");
   if (s === "thanks") { await route("support"); paid(selected().cents, { cups: q.get("cups") ? +q.get("cups") : undefined, gift: q.get("gift") ? +q.get("gift") : undefined, moveUp: q.get("moveup") ? true : undefined, pin: q.get("pin") }); }
   else if (s === "optin") {
     show("optin"); const rank = +(q.get("rank") || 8); drawOptin(rank);
-    if (q.get("fill")) { $("#name").value = "Maximilian Alexander von Hohenzollern"; $("#msg").value = L120.slice(0, limitAt(rank)).replace(/\s+\S*$/, L120.length <= limitAt(rank) ? "$&" : ""); $("#name").dispatchEvent(new Event("input")); }
+    if (q.get("fill")) { $("#bn").value = "Maximilian Alexander von Hohenzollern"; $("#bm").value = L120.slice(0, limitAt(rank)).replace(/\s+\S*$/, L120.length <= limitAt(rank) ? "$&" : ""); $("#bn").dispatchEvent(new Event("input")); }
   }
   else if (s === "checkout") {
     tiersSeen = true;

@@ -80,6 +80,9 @@ class SupportWebActivity : Activity() {
             // No autofill on this page (owner, 2026-11-24): it offered the phone owner's real name for the board, and a
             // supporter picks the name they want shown. Nothing on the page needs it.
             importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+            // And forget what was typed here before: the overnight test (2026-11-24) found the box filled with the owner's own
+            // name, from an earlier test. The page's fields also carry ids and autocomplete tokens no autofill reads as a name.
+            clearFormData()
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = false

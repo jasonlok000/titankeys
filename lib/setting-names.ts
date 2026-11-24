@@ -55,11 +55,29 @@ export const accentChoices = [
   { value: "purple", label: "Purple" },
   { value: "pink", label: "Pink" },
   { value: "gold", label: "Gold" },
+  { value: "red", label: "Red" },
+  { value: "yellow", label: "Yellow" },
+  { value: "lime", label: "Lime" },
+  { value: "cyan", label: "Cyan" },
+  { value: "indigo", label: "Indigo" },
+  { value: "magenta", label: "Magenta" },
   { value: "phone", label: "Phone colour" },
 ] as const;
-export const accentLabel = (id: string) => accentChoices.find(choice => choice.value === id)?.label ?? "Orange";
+/** Custom's hue, as "hue:210" (Accent.kt's HUE), 0 to 359, or null for any other choice. */
+export const hueOf = (id: string) => {
+  const match = /^hue:(-?\d+)$/.exec(id);
+  return match ? ((Number(match[1]) % 360) + 360) % 360 : null;
+};
+export const customTitle = "Custom";
+export const accentLabel = (id: string) => {
+  const hue = hueOf(id);
+  if (hue !== null) return `${customTitle}, ${hue}°`;
+  return accentChoices.find(choice => choice.value === id)?.label ?? "Orange";
+};
 export const accentsNote = (id: string) => id === "off"
   ? "No accents anywhere. Boring, just like you."
   : id === "phone"
     ? "Your phone's own colour, nudged lighter or darker so it shows up on black."
-    : "Used for the small marks on the keys, the bar, the guide and these pages.";
+    : hueOf(id) !== null
+      ? "Your own hue, made lighter or darker so it shows up on black."
+      : "Used for the small marks on the keys, the bar, the guide and these pages.";

@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { HUE_LIGHTNESS, HUE_SATURATION, MAX_LIGHTNESS, MIN_LIGHTNESS, hueColour } from "../../lib/accent-hue";
+import { accentLabel, hueOf } from "../../lib/setting-names";
 
 // Accent colour (#111; before it, Orange accents) off means "literally everything globally" (owner, 2026-11-13): every accent
 // comes from one source that the choice sets. Native: Accent.kt. The app's drawings: lib/brand.ts's useAccent. Ink's own colours: theme.ts, overridden at
@@ -130,12 +132,9 @@ const backgrounds = {
 };
 const onAccent = { ink: "#160A04", supportOnAccent: "#1A0F0A", keyboardOnAccent: "#000000" };
 
-test("every accent preset reads, as text and under text, on every surface it's drawn on", () => {
-  const all = presets();
-  expect(Object.keys(all).length).toBeGreaterThanOrEqual(6);
-  const rows: string[] = [];
-  const orange = all.orange;
-  for (const [id, hex] of Object.entries(all)) {
+/** Every surface check one accent must pass, with its ratios for the table. */
+function surfaces(id: string, hex: string, orange: string): Record<string, number> {
+  {
     const ratios: Record<string, number> = {};
     for (const [name, background] of Object.entries(backgrounds)) ratios[name] = contrast(hex, background);
     for (const [name, text] of Object.entries(onAccent)) ratios[name] = contrast(text, hex);
@@ -149,9 +148,49 @@ test("every accent preset reads, as text and under text, on every surface it's d
     ratios.markOnPill = contrast(hex, overBlack(hex, .35));
     expect({ id, passes: ratios.creamButton >= contrast("#FFF1E6", orange) - .3 }).toEqual({ id, passes: true });
     expect({ id, passes: ratios.markOnPill >= 2.5 }).toEqual({ id, passes: true });
-    rows.push(`${id} ${hex} ` + Object.entries(ratios).map(([name, ratio]) => `${name} ${ratio.toFixed(2)}`).join(", "));
+    return ratios;
+  }
+}
+
+test("every accent preset reads, as text and under text, on every surface it's drawn on", () => {
+  const all = presets();
+  expect(Object.keys(all)).toEqual(["orange", "blue", "teal", "green", "purple", "pink", "gold", "red", "yellow", "lime", "cyan", "indigo", "magenta"]);
+  const rows: string[] = [];
+  for (const [id, hex] of Object.entries(all)) {
+    const ratios = surfaces(id, hex, all.orange);
+    rows.push(`${id} ${hex} luminance ${luminance(hex).toFixed(3)} ` + Object.entries(ratios).map(([name, ratio]) => `${name} ${ratio.toFixed(2)}`).join(", "));
   }
   if (process.env.ACCENT_TABLE) console.log(rows.join("\n"));
+});
+
+test("Custom: every hue, fitted into the band, reads on every surface", () => {
+  const orange = presets().orange;
+  for (let degrees = 0; degrees < 360; degrees += 5) {
+    const hex = hueColour(degrees);
+    expect(hex).toMatch(/^#[0-9A-F]{6}$/);
+    expect(luminance(hex)).toBeGreaterThanOrEqual(MIN_LIGHTNESS);
+    expect(luminance(hex)).toBeLessThanOrEqual(MAX_LIGHTNESS);
+    surfaces(`hue:${degrees}`, hex, orange);
+  }
+});
+
+test("Custom's hue flows through Accent.set and hex, as lib/accent-hue.ts draws it", () => {
+  const accent = read("android/kotlin/com/titankeys/keyboard/Accent.kt");
+  // The app's mirror uses Accent.kt's numbers.
+  expect(+accent.match(/MIN_LIGHTNESS = ([\d.]+)/)![1]).toBe(MIN_LIGHTNESS);
+  expect(+accent.match(/MAX_LIGHTNESS = ([\d.]+)/)![1]).toBe(MAX_LIGHTNESS);
+  expect(+accent.match(/HUE_SATURATION = ([\d.]+)f/)![1]).toBe(HUE_SATURATION);
+  expect(+accent.match(/HUE_LIGHTNESS = ([\d.]+)f/)![1]).toBe(HUE_LIGHTNESS);
+  expect(accent).toContain('const val HUE = "hue:"');
+  expect(accent).toContain("else -> hueOf(id)?.let(::hue) ?: PRESETS[id] ?: ORANGE");
+  expect(accent).toContain("return fit((0xFF shl 24) or (channel(0) shl 16) or (channel(8) shl 8) or channel(4))");
+  expect(read("android/kotlin/com/vandam/ink/AppNativeAdapters.kt")).toContain('.put("accentSwatches", JSONObject(Accent.swatches(activity)))');
+  // The app reads the same ids; anything else is still Orange.
+  expect(hueOf("hue:210")).toBe(210);
+  expect(hueOf("hue:-15")).toBe(345);
+  expect(hueOf("blue")).toBeNull();
+  expect(accentLabel("hue:210")).toBe("Custom, 210°");
+  expect(accentLabel("nonsense")).toBe("Orange");
 });
 
 test("Off's cream reads too, as text and under ink", () => {

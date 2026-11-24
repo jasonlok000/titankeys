@@ -39,7 +39,33 @@ internal object Accent {
         "purple" to 0xFFA88AEE.toInt(),
         "pink" to 0xFFEA79A9.toInt(),
         "gold" to 0xFFC99A22.toInt(),
+        "red" to 0xFFEF5D5D.toInt(),
+        "yellow" to 0xFFB5A01C.toInt(),
+        "lime" to 0xFF79AE34.toInt(),
+        "cyan" to 0xFF22ABC2.toInt(),
+        "indigo" to 0xFF8C93F2.toInt(),
+        "magenta" to 0xFFD877E0.toInt(),
     )
+
+    /** Custom: "hue:210" is that hue (0 to 359 degrees) at [HUE_SATURATION] and [HUE_LIGHTNESS], fitted into the band ([fit]). */
+    const val HUE = "hue:"
+    private const val HUE_SATURATION = .85f
+    private const val HUE_LIGHTNESS = .6f
+
+    /** The hue of a "hue:N" id, 0 to 359, or null for any other id. */
+    fun hueOf(id: String): Int? =
+        if (id.startsWith(HUE)) id.removePrefix(HUE).toIntOrNull()?.let { ((it % 360) + 360) % 360 } else null
+
+    /** The colour Custom draws for [degrees]: the hue as HSL, then fitted into the band, as the phone's colour is. */
+    fun hue(degrees: Int): Int {
+        val h = ((degrees % 360) + 360) % 360
+        val a = HUE_SATURATION * minOf(HUE_LIGHTNESS, 1 - HUE_LIGHTNESS)
+        fun channel(n: Int): Int {
+            val k = (n + h / 30f) % 12
+            return Math.round(255 * (HUE_LIGHTNESS - a * maxOf(-1f, minOf(k - 3, 9 - k, 1f))))
+        }
+        return fit((0xFF shl 24) or (channel(0) shl 16) or (channel(8) shl 8) or channel(4))
+    }
 
     /** WCAG relative luminance band every accent keeps (see the class note). */
     private const val MIN_LIGHTNESS = 0.22
@@ -120,13 +146,20 @@ internal object Accent {
         current = when (id) {
             OFF -> CREAM
             PHONE -> phone(context)
-            else -> PRESETS[id] ?: ORANGE
+            else -> hueOf(id)?.let(::hue) ?: PRESETS[id] ?: ORANGE
         }
-        choice = if (id == OFF || id == PHONE || id in PRESETS) id else DEFAULT
+        val degrees = hueOf(id)
+        choice = if (degrees != null) HUE + degrees else if (id == OFF || id == PHONE || id in PRESETS) id else DEFAULT
     }
 
     /** The colour as "#RRGGBB", for the app's screens (state's accent) and the support page. */
-    fun hex(): String = String.format("#%06X", colour and 0xFFFFFF)
+    fun hex(): String = hex(colour)
+
+    private fun hex(colour: Int): String = String.format("#%06X", colour and 0xFFFFFF)
+
+    /** Every choice's own colour as "#RRGGBB", for the swatches on Settings > Accent colour: Off's cream, each preset, the phone's. */
+    fun swatches(context: Context): Map<String, String> =
+        linkedMapOf(OFF to hex(CREAM)) + PRESETS.mapValues { hex(it.value) } + (PHONE to hex(phone(context)))
 
     /** The phone's Material You accent, pulled into the readable band. Before Android 12 there is none, so it's orange. */
     private fun phone(context: Context): Int {

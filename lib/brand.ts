@@ -20,10 +20,11 @@ export const DIVIDER = "#2A2623";
 export const INK = "#160A04";
 
 /**
- * The accent now: orange, or with Settings > Orange accents off, the text's cream (owner, 2026-11-13: off means "literally
- * everything globally"). Ink's own accent follows the same switch through the Ink patch (appAccent).
+ * The accent now: the colour from Settings > Accent colour, made readable by Accent.kt, or with it off the text's cream (owner,
+ * 2026-11-13: off means "literally everything globally"). Ink's own accent follows the same choice through the Ink patch
+ * (appAccent). Orange until the state is ready.
  */
 export function useAccent(): string {
   const result = useSnapshot(state);
-  return result.status === "ready" && !result.data.orangeAccents ? CREAM : ORANGE;
+  return result.status === "ready" && result.data.accent ? result.data.accent : ORANGE;
 }

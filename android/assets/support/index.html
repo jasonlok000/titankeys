@@ -16,6 +16,12 @@
   const setCut = () => document.documentElement.style.setProperty("--cut", cutPx / devicePixelRatio / window.ZOOM + "px");
   window.titankeysCut = px => { cutPx = +px || 0; setCut(); };
   fitZoom(); addEventListener("resize", () => { fitZoom(); setCut(); });
+  // Settings > Accent colour (#111): the app tells the page its accent, already checked to read on black (Accent.kt).
+  window.titankeysAccent = hex => {
+    if (!/^#[0-9A-F]{6}$/i.test(hex)) return;
+    const style = document.documentElement.style;
+    style.setProperty("--accent", hex); style.setProperty("--accent-soft", hex + "24");
+  };
 </script>
 <link rel="icon" href="data:,">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'">
@@ -120,7 +126,7 @@
   .coffeecard { position: relative; display: flex; align-items: center; gap: var(--g4); width: 100%; margin: var(--g6) 0 var(--g7); padding: var(--g5);
     border-radius: var(--r-l); background: radial-gradient(120% 140% at 0% 0%, #2A150B, var(--s1) 60%); text-align: left; isolation: isolate; }
   .coffeecard::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; z-index: -1;
-    background: linear-gradient(135deg, #F07C4A 0%, #8A4A2C 50%, #F07C4A 100%);
+    background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 55%, #000) 50%, var(--accent) 100%);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
   }
   @property --spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
@@ -171,7 +177,7 @@
     padding: var(--g5) var(--g4) var(--g5); border-radius: var(--r-l); background: var(--s1);
     animation: rise .6s cubic-bezier(.2, .9, .25, 1.05) backwards; }
   .place.p1 { grid-column: 1 / 3; order: -1; padding: var(--g6) var(--g6) var(--g5); border: 1.5px solid var(--accent);
-    background: radial-gradient(90% 70% at 50% 0%, #F07C4A24, var(--s1) 70%); animation: land .55s cubic-bezier(.2, .9, .25, 1.1) backwards; }
+    background: radial-gradient(90% 70% at 50% 0%, var(--accent-soft), var(--s1) 70%); animation: land .55s cubic-bezier(.2, .9, .25, 1.1) backwards; }
   .place.p2 { animation-delay: .14s; }
   .place.p3 { animation-delay: .24s; }
   .crown { position: absolute; top: -17px; left: 50%; width: 48px; height: 32px; transform: translateX(-50%); animation: crownpop .45s var(--spring) .35s backwards; }
@@ -214,7 +220,7 @@
   .rank { position: relative; display: grid; grid-template-columns: 32px 1fr; gap: var(--g4); align-items: start; padding: var(--g4) var(--g3);
     -webkit-user-select: none; user-select: none;
     border-bottom: 1px solid var(--line); animation: rise .45s var(--ease) backwards; }
-  .rank .n { color: #F07C4AD9; font-weight: 700; font-size: var(--t-m); font-variant-numeric: tabular-nums; line-height: 1.35; text-align: right; }
+  .rank .n { color: color-mix(in srgb, var(--accent) 85%, transparent); font-weight: 700; font-size: var(--t-m); font-variant-numeric: tabular-nums; line-height: 1.35; text-align: right; }
   .rank .who { min-width: 0; }
   .rank .who b { display: flex; align-items: center; font-size: var(--t-m); line-height: 1.35; min-width: 0; }
   .rank .who b .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -243,7 +249,7 @@
     letter-spacing: .1em; text-transform: uppercase; list-style: none; }
   .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   /* Your row keeps the same indent as every other row: the panel is drawn outside it. */
-  .rank.you { background: var(--s3); border-radius: var(--r-s); border: 1px solid #F07C4A80; margin: 6px 0; }
+  .rank.you { background: var(--s3); border-radius: var(--r-s); border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); margin: 6px 0; }
   .rank.you .n { color: var(--accent); }
   .tag { flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; margin-left: var(--g2); border-radius: 6px;
     background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 700; letter-spacing: .06em; line-height: 1; }
@@ -363,7 +369,7 @@
   /* ---------- The thank-you: a warm rise, then the words, centred near 42%. ---------- */
   #thanks { background: #000; overflow: hidden; }
   .flood { position: absolute; left: -12px; right: -12px; bottom: 0; height: 0; will-change: height; }
-  .flood .body { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(0deg, #E8693A 0%, #F07C4A 30%, #F7A570 70%, #FFD3A8 100%); }
+  .flood .body { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(0deg, color-mix(in srgb, var(--accent) 90%, #000) 0%, var(--accent) 30%, color-mix(in srgb, var(--accent) 70%, #FFF1E6) 70%, color-mix(in srgb, var(--accent) 35%, #FFF1E6) 100%); }
   .flood svg { position: absolute; left: 0; top: -30px; width: 200%; height: 32px; animation: wave 3.4s linear infinite; }
   .flood .foam { stroke-width: 7px; vector-effect: non-scaling-stroke; opacity: .95; }
   @keyframes wave { to { left: -100%; } }
@@ -400,13 +406,13 @@
   @keyframes markpulse { 30% { top: -6px; } 100% { top: 0; } }
   .thanks-words .bigcup.mark::before { content: ""; position: absolute; left: 50%; top: 50%; width: var(--glow, 160px); height: var(--glow, 160px);
     margin: calc(var(--glow, 160px) / -2) 0 0 calc(var(--glow, 160px) / -2); border-radius: 50%;
-    background: radial-gradient(closest-side, #F07C4A2E 55%, #F07C4A00); z-index: -1; opacity: var(--fade); animation: glow .65s var(--ease) forwards;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 18%, transparent) 55%, color-mix(in srgb, var(--accent) 0%, transparent)); z-index: -1; opacity: var(--fade); animation: glow .65s var(--ease) forwards;
     clip-path: inset(var(--glowclip, 0px) 0 0 0); }
   @keyframes glow { from { --fade: 0; } 40% { --fade: 1; } to { --fade: 0; } }
   .bigcup.mark.pinned::before { animation: none; --fade: 1; }
   .thanks-words .bigcup.mark::after { content: ""; position: absolute; left: 50%; top: 50%; width: var(--ring, 96px); height: var(--ring, 96px);
     margin: calc(var(--ring, 96px) / -2) 0 0 calc(var(--ring, 96px) / -2); z-index: -1;
-    border-radius: 50%; border: 2px solid #F07C4A99; animation: ring .65s var(--ease) forwards; }
+    border-radius: 50%; border: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); animation: ring .65s var(--ease) forwards; }
   @keyframes ring {
     from { width: calc(var(--ring, 96px) * .85); height: calc(var(--ring, 96px) * .85); margin: calc(var(--ring, 96px) * -.425) 0 0 calc(var(--ring, 96px) * -.425); opacity: 1; }
     to { width: calc(var(--ring, 96px) * 1.25); height: calc(var(--ring, 96px) * 1.25); margin: calc(var(--ring, 96px) * -.625) 0 0 calc(var(--ring, 96px) * -.625); opacity: 0; } }
@@ -487,7 +493,7 @@
   .optpreview .podium.solo { padding: 0 !important; }
   .optpreview .place { animation: none !important; }
   .limitnote:empty { display: none; }
-  .optpreview .podium.solo .place { padding: var(--g3) var(--g4); border-color: #F07C4A80 !important; }
+  .optpreview .podium.solo .place { padding: var(--g3) var(--g4); border-color: color-mix(in srgb, var(--accent) 50%, transparent) !important; }
   .optpreview .podium.solo .medal { width: 28px; height: 28px; font-size: var(--t-xs); margin-bottom: 6px; box-shadow: none; }
   .optpreview .podium.solo .name { font-size: var(--t-m); }
   .optpreview .podium.solo .msg { font-size: var(--t-xs); line-height: 1.35; margin-top: 4px; }
@@ -501,7 +507,7 @@
   /* The supporter's own place, pinned under the title of their board. */
   .mine { position: sticky; top: 64px; z-index: 4; display: grid; grid-template-columns: 32px 1fr; gap: var(--g4); align-items: center;
     min-height: 72px; margin: var(--g5) var(--side) 0; padding: var(--g3) var(--g3); border-radius: var(--r-m); background: var(--s3);
-    border: 1px solid #F07C4A80; overflow: hidden; }
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); overflow: hidden; }
   .mine .r { font-size: var(--t-m); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 32px; text-align: right; }
   .mine .who { min-width: 0; } .mine .who b { display: flex; align-items: center; font-size: var(--t-m); }
   .mine .who b .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

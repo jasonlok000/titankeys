@@ -2,7 +2,6 @@ package com.titankeys.keyboard
 
 import android.content.Context
 import android.graphics.Color
-import com.titankeys.engine.TypingSettings
 
 /**
  * The keyboard's colours: always the dark look, white text on black, whatever the phone's dark mode (owner, 2026-11-13: "I never
@@ -10,7 +9,7 @@ import com.titankeys.engine.TypingSettings
  * the screen's own black border, so the bar reads as part of the edge. The bar, the panels, the word menu and exact typing's bar
  * all take it from here, and the app is dark too.
  *
- * An accent for the few small marks that come and go, such as the key under a finger: orange, or with Orange accents off, the
+ * An accent for the few small marks that come and go, such as the key under a finger: the chosen accent, or with Accent colour off, the
  * cream every other drawing uses ([Accent]; bug hunt 2.1, #36).
  */
 internal class Look(val orange: Boolean) {
@@ -22,7 +21,7 @@ internal class Look(val orange: Boolean) {
     val onAccent = Color.BLACK
     /**
      * The idle games' floor (owner, 2026-11-13, of the phone preview: "let's do 3"): the text's cream at 55%. It's never orange,
-     * so Orange accents changes nothing.
+     * so Accent colour changes nothing.
      */
     val floorLine = (Accent.TEXT_CREAM and 0xFFFFFF) or (FLOOR_ALPHA shl 24)
     /** A faint wash of [accent], for a mark that stays, such as the open group. */
@@ -32,6 +31,6 @@ internal class Look(val orange: Boolean) {
         /** 55%, of 255. */
         private const val FLOOR_ALPHA = 140
 
-        fun of(context: Context) = Look(TypingSettings.orangeAccents(context).also { Accent.on = it })
+        fun of(context: Context) = Look(Accent.load(context).let { Accent.on })
     }
 }

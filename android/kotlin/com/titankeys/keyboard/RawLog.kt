@@ -170,7 +170,7 @@ object RawLog {
         "cursorControl" to TypingSettings.cursorControl(context),
         "swipeTyping" to TypingSettings.swipeTyping(context),
         "touchpadOnlyInFields" to TypingSettings.touchpadOnlyInFields(context),
-        "orangeAccents" to TypingSettings.orangeAccents(context),
+        "accentColour" to TypingSettings.accentColour(context),
         "barTextSize" to FixedScale.size(context).id,
         "enterKey" to TypingSettings.enterKey(context),
         "enterApps" to TypingSettings.enterApps(context).sorted().joinToString(","),

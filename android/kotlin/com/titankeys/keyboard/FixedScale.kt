@@ -110,7 +110,7 @@ object FixedScale {
 
     /** For an activity's attachBaseContext: the same context, with fixed sizes, unscaled whatever Bar text size says. */
     fun wrap(base: Context): Context {
-        // Every window starts here, so each starts with Orange accents as it is now.
+        // Every window starts here, so each starts with Accent colour as it is now.
         Accent.load(base)
         return configuration(base)?.let(base::createConfigurationContext) ?: base
     }

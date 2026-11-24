@@ -344,13 +344,24 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("alt_sym_next_keyboard", enabled).apply();
     }
 
-    /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they take the colour of the text. */
-    public static boolean orangeAccents(Context context) {
-        return preferences(context).getBoolean("orange_accents", true);
+    /**
+     * Settings > Accent colour (#111): "off", "orange" (the default), a preset or "phone", as Accent names them. Before it there
+     * was a switch, Orange accents ("orange_accents"): off becomes Off, on stays Orange.
+     */
+    public static String accentColour(Context context) {
+        SharedPreferences preferences = preferences(context);
+        String chosen = preferences.getString("accent_colour", null);
+        if (chosen != null) return chosen;
+        return preferences.getBoolean("orange_accents", true) ? "orange" : "off";
     }
 
-    public static void orangeAccents(Context context, boolean enabled) {
-        preferences(context).edit().putBoolean("orange_accents", enabled).apply();
+    public static void accentColour(Context context, String id) {
+        preferences(context).edit().putString("accent_colour", id).remove("orange_accents").apply();
+    }
+
+    /** Any accent at all: every choice but Off. */
+    public static boolean accentsOn(Context context) {
+        return !"off".equals(accentColour(context));
     }
 
     /** Apps the Enter key setting also applies to, each saved as "package=method". The rules are in EnterKey. */

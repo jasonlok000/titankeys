@@ -28,10 +28,26 @@ export const altSymLabel = "Hold Alt + Sym for the next keyboard";
 export const altSymNote = "Off, Android's own keyboard switcher still works.";
 
 /**
- * The note under Orange accents. It changes every orange TitanKeys draws: the keyboard, the bar, the guide, the front page and
- * these pages (owner, 2026-11-13: "literally everything globally"). Turned off, it roasts you (the Orchestrator's line, the
- * owner may change it); turned back on, it says what the switch does.
+ * Settings > Accent colour (#111). It changes every accent TitanKeys draws: the keyboard, the bar, the guide, the front page,
+ * the support page and these pages (owner, 2026-11-13: "literally everything globally"). The ids are Accent.kt's, which holds
+ * the colours, each checked to stay readable (tools/checks/accent.test.ts). Off, it roasts you (the Orchestrator's line, the
+ * owner may change it).
  */
-export const accentsNote = (on: boolean) => on
-  ? "Orange marks everywhere TitanKeys draws: the keys, the bar, the guide and these pages. Off, they match the text."
-  : "Orange is off everywhere. Boring, just like you.";
+export const accentTitle = "Accent colour";
+export const accentChoices = [
+  { value: "off", label: "Off" },
+  { value: "orange", label: "Orange" },
+  { value: "blue", label: "Blue" },
+  { value: "teal", label: "Teal" },
+  { value: "green", label: "Green" },
+  { value: "purple", label: "Purple" },
+  { value: "pink", label: "Pink" },
+  { value: "gold", label: "Gold" },
+  { value: "phone", label: "Phone colour" },
+] as const;
+export const accentLabel = (id: string) => accentChoices.find(choice => choice.value === id)?.label ?? "Orange";
+export const accentsNote = (id: string) => id === "off"
+  ? "Accents are off everywhere. Boring, just like you."
+  : id === "phone"
+    ? "Your phone's own colour, made lighter or darker until it reads on black."
+    : "The marks everywhere TitanKeys draws: the keys, the bar, the guide and these pages. Off, they match the text.";

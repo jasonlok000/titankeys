@@ -92,7 +92,7 @@ export default function BoringGuide() {
     </Section>
     <Section title="Look and feel">
       <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>
-      <Topic title="Orange accents">{"A few small marks on the keyboard are orange, like the key under your finger. Prefer white? Turn off Orange accents in Settings."}</Topic>
+      <Topic title="Accent colour">{"A few small marks on the keyboard are orange, like the key under your finger. Prefer another colour, or none? Pick one in Settings > Accent colour."}</Topic>
     </Section>
     <Section title="News and sharing">
       <Topic title="News">{"TitanKeys can tell you about a new version and anything else worth knowing. It checks the TitanKeys website once a day and sends nothing about you. News shows as a silent notification, never while you type, with Snooze and Don't show again. Settings > News has the same news and a switch to turn it off."}</Topic>

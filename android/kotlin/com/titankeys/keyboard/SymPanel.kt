@@ -130,6 +130,14 @@ class SymPanel(
     /** The quick setting on [key], unless it's hidden in the language typing. */
     private fun quickItem(key: String) = QuickSetting.on(key)?.takeIf { key !in hiddenKeys }
 
+    /** The emoji draw [EMOJI_LARGER] times the symbols' size, still no larger than [ITEM_LARGEST], so in the same cells. */
+    var largerEmoji = false
+        set(value) {
+            if (field == value) return
+            field = value
+            render()
+        }
+
     /** Null until the emoji list has loaded. */
     var emoji: EmojiPages? = null
         set(value) {
@@ -481,7 +489,7 @@ class SymPanel(
             if (quick || clipboard || isPosition) view.setAutoSizeTextTypeUniformWithConfiguration(LABEL_SMALLEST, LABEL_LARGEST, 1, TypedValue.COMPLEX_UNIT_DIP)
             else {
                 view.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE)
-                view.sized(ITEM_SIZE, ITEM_LARGEST)
+                view.sized(if (largerEmoji && mode == Modifiers.Panel.Emoji) ITEM_SIZE * EMOJI_LARGER else ITEM_SIZE, ITEM_LARGEST)
             }
             // The page position is only to read.
             view.isEnabled = !isPosition && (value != null || icon != null)
@@ -790,6 +798,8 @@ class SymPanel(
         const val PREVIEW_LARGEST = 18
         const val ITEM_SIZE = 22f
         const val ITEM_LARGEST = 30f
+        /** Larger emoji: 22 sp becomes 27.5, under the 30 dp that already fits a cell at the largest system font. */
+        const val EMOJI_LARGER = 1.25f
         const val LABEL_SMALLEST = 13
         const val LABEL_LARGEST = 16
         /** A clip in its field: two lines that fit the row at any system font size. */

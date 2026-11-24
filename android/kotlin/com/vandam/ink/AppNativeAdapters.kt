@@ -819,6 +819,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             .put("deleteFlick", TypingSettings.deleteFlick(activity))
             .put("swipeTrail", TypingSettings.swipeTrail(activity))
             .put("symPanelStays", TypingSettings.symPanelStays(activity))
+            .put("largerEmoji", TypingSettings.largerEmoji(activity))
             .put("touchpadOnlyInFields", TypingSettings.touchpadOnlyInFields(activity))
             .put("accentColour", Accent.choice)
             .put("accent", Accent.hex())
@@ -1068,6 +1069,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             "deleteFlick" -> TypingSettings.deleteFlick(activity, value as Boolean)
             "swipeTrail" -> TypingSettings.swipeTrail(activity, value as Boolean)
             "symPanelStays" -> TypingSettings.symPanelStays(activity, value as Boolean)
+            "largerEmoji" -> TypingSettings.largerEmoji(activity, value as Boolean)
             "touchpadOnlyInFields" -> TypingSettings.touchpadOnlyInFields(activity, value as Boolean)
             "accentColour" -> {
                 TypingSettings.accentColour(activity, value as String)

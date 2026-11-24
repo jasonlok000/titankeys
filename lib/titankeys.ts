@@ -116,6 +116,7 @@ export type State = {
   swipeTrail: boolean;
   /** The Sym panel stays open after a pick, until Sym or Back closes it. */
   symPanelStays: boolean;
+  largerEmoji: boolean;
   /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Settings shows this reversed, as Scroll assistant. */
   touchpadOnlyInFields: boolean;
   /** Settings > Accent colour, one of "off", "orange" (the default), a preset or "phone" (lib/setting-names.ts's accentChoices). */
@@ -260,7 +261,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "doubleSpaceCursor" | "tripleSpaceSelect" | "deleteFlick" | "swipeTrail" | "symPanelStays" | "touchpadOnlyInFields" | "accentColour" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "doubleSpaceCursor" | "tripleSpaceSelect" | "deleteFlick" | "swipeTrail" | "symPanelStays" | "largerEmoji" | "touchpadOnlyInFields" | "accentColour" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
   /** A language's page: its own values, by language id. A write sends only the ones that changed. */

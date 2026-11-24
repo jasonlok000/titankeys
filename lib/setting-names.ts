@@ -26,6 +26,7 @@ export const swipeTrailLabel = "Swipe trail on the bar";
 /** The Sym panel stays open after a pick, until Sym or Back (#110). */
 export const symPanelStaysLabel = "Keep Sym open after a pick";
 export const symPanelStaysNote = "Close it with Sym or Back.";
+export const largerEmojiLabel = "Larger emoji";
 
 /** Alt + Backspace as Delete on a PC (owner, 2026-11-13: "alt+backspace = forward delete too"). On to start. */
 export const altBackspaceLabel = "Alt + Backspace deletes forward";

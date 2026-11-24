@@ -174,6 +174,7 @@ object RawLog {
         "deleteFlick" to TypingSettings.deleteFlick(context),
         "swipeTrail" to TypingSettings.swipeTrail(context),
         "symPanelStays" to TypingSettings.symPanelStays(context),
+        "largerEmoji" to TypingSettings.largerEmoji(context),
         "touchpadOnlyInFields" to TypingSettings.touchpadOnlyInFields(context),
         "accentColour" to TypingSettings.accentColour(context),
         "barTextSize" to FixedScale.size(context).id,

@@ -1979,6 +1979,7 @@ class TitanKeysIme : InputMethodService() {
         cursorGesture.triples = TypingSettings.tripleSpaceSelect(this)
         swipeTrail = TypingSettings.swipeTrail(this)
         symPanelStays = TypingSettings.symPanelStays(this)
+        panel?.largerEmoji = TypingSettings.largerEmoji(this)
         exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
         // Swipe typing and the flick from Backspace each have their own switch (#120).

@@ -8,7 +8,7 @@ import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
 import { barTextSizeLabel, barTextSizeTitle } from "./bar-text-size";
 import { accentLabel, accentTitle, altBackspaceLabel, altBackspaceNote, altSymLabel, altSymNote, barLabel, deleteFlickLabel, doubleSpaceLabel,
-  scrollLabel, shiftBackspaceLabel, shiftBackspaceNote, swipeTrailLabel, symPanelStaysLabel, symPanelStaysNote,
+  scrollLabel, shiftBackspaceLabel, shiftBackspaceNote, swipeTrailLabel, symPanelStaysLabel, symPanelStaysNote, largerEmojiLabel,
   tripleSpaceLabel } from "../../lib/setting-names";
 import pageText from "../../tools/im/page-text.json";
 import { parentOf } from "../../lib/settings-tree";
@@ -101,6 +101,8 @@ export default function Settings() {
         onChange={doublePressLocks => save.run({ doublePressLocks })} />
       <Toggle label={symPanelStaysLabel} subtitle={symPanelStaysNote} value={settings.symPanelStays}
         onChange={symPanelStays => save.run({ symPanelStays })} />
+      <Toggle label={largerEmojiLabel} value={settings.largerEmoji}
+        onChange={largerEmoji => save.run({ largerEmoji })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
       <Needs list={needs.fnAsCtrl(settings)} />

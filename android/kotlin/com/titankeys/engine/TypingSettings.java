@@ -260,6 +260,15 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("sym_panel_stays", enabled).apply();
     }
 
+    /** The emoji in the Sym panel draw a quarter larger, in the same cells. Off, they are the symbols' size. */
+    public static boolean largerEmoji(Context context) {
+        return preferences(context).getBoolean("larger_emoji", false);
+    }
+
+    public static void largerEmoji(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("larger_emoji", enabled).apply();
+    }
+
     // A broken swipe always joins, no longer a setting (owner, 2026-11-21: "let's remove the switch"). The joining itself is
     // Swipe.sameStroke's rule, tuned on the recordings (docs/paper.md 4.7); this only keeps a brief flicker, and how long a
     // swiped word waits before its last check. An old "lift_off_grace" or "lift_off_duration_ms" left in preferences is ignored.

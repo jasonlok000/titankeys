@@ -1,4 +1,4 @@
-# 3.0.0
+# 3.0.1
 
 ## Languages
 
@@ -22,6 +22,7 @@
 
 ## Typing fixes
 
+- On the newest Titan 2 Elite firmware (V02.00.06), Scroll assistant no longer scrolls apps through the keys when "touchpad only in text fields" is on.
 - Hold Backspace and it keeps deleting, like on a computer. A pending code loses its letters first.
 - Regular search fields, including Google Maps, keep their usual suggestions and corrections. In a URL field, the centre slot shows the text Space will leave in the field.
 - When Space will keep what you typed, the middle suggestion shows those letters. Pressing Space types the word you can see.

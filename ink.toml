@@ -1,7 +1,7 @@
 name = "TitanKeys Keyboard"
 package = "com.titankeys"
-version = "3.0.0"
-version_code = 59
+version = "3.0.1"
+version_code = 61
 # Row images need native decoding; Ink's detection misses them with preserved symlinks.
 capabilities = ["image"]
 

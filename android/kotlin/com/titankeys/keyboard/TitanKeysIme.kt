@@ -2836,7 +2836,13 @@ class TitanKeysIme : InputMethodService() {
         super.onFinishInput()
     }
 
-    override fun onEvaluateInputViewShown() = editing
+    /**
+     * In a field the input view shows. With no field, the hold also says yes: on a configuration change Android rebuilds the
+     * reported status from this alone (resetStateForNewConfiguration, V02.00.06's framework), and a "no" there reported the
+     * keyboard active but not visible, which V02.00.06 takes as the touchpad status off. Everywhere else Android asks this only
+     * with a show requested, and the hold never requests one, so the hold still shows no view.
+     */
+    override fun onEvaluateInputViewShown() = editing || TouchpadHold.reportsVisible(hold.held, editing)
 
     /**
      * The keyboard's own "shown in a field". Everything in this class asks this, not [isInputViewShown], which Android also

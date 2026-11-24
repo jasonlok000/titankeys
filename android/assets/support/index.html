@@ -91,6 +91,7 @@
   .chev-down { position: relative; animation: nudge 1.6s ease-in-out infinite; }
   @keyframes nudge { 50% { top: 3px; } }
   .primary .sub { font-size: var(--t-xs); font-weight: 400; opacity: .85; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .primary .sub.blank { visibility: hidden; }
   .primary .sub b { font-weight: 700; display: inline-grid; vertical-align: baseline; overflow: hidden; line-height: 1.2; height: 1.2em; }
   .primary .sub b > span { grid-area: 1 / 1; position: relative; }
   .primary .sub b .old { animation: rollout .4s var(--ease) forwards; }
@@ -315,6 +316,13 @@
 
   /* Custom: the cups, the amount and the slider as one centred group. */
   #custom .middle { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding: var(--g4) var(--side) 0; }
+  /* A short screen (the phone held sideways, 1200 x 1076) can't fit the cups, the amount, the slider and the quick picks
+     above the dock: the group scrolls, with smaller cups, and the dock stays put. */
+  @media (max-height: 560px) {
+    #custom .middle { min-height: 0; overflow-y: auto; padding-bottom: var(--g4); }
+    #custom .cups { height: 72px; }
+    #custom .quick { margin-bottom: var(--g4); }
+  }
   .chip { display: inline-flex; align-items: center; height: 24px; padding: 0; margin-top: var(--g2); border: 0 !important; letter-spacing: .1em; text-transform: uppercase;
     border: 1px solid var(--line-strong); color: var(--muted); font-size: var(--t-xs); font-weight: 700; }
   .quick { display: flex; justify-content: center; gap: var(--g2); margin: var(--g5) 0 56px; }
@@ -632,8 +640,8 @@
       <div class="optpreview" id="optpreview"></div>
       <!-- The board name is never filled for you (owner, 2026-11-24: "some people might not want their real name"): the ids and
            autocomplete tokens aren't ones autofill reads as a person's name, and the app turns autofill off for the page. -->
-      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="bn" maxlength="40" autocomplete="tk-board-label" autocorrect="off" spellcheck="false" data-lpignore="true" placeholder="Your name"></div>
-      <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="bm" rows="1" autocomplete="tk-board-note" placeholder="Say hi"></textarea></div></div>
+      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="bn" maxlength="40" autocomplete="tk-board-label" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" placeholder="Your name"></div>
+      <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="bm" rows="1" autocomplete="tk-board-note" autocapitalize="off" placeholder="Say hi"></textarea></div></div>
       <div class="limitnote" id="overlimit"></div>
     </div>
     <div class="dock actions"><button class="primary" data-act="add" data-t="addMe"></button><button class="quiet" data-act="later" data-t="later"></button></div>
@@ -684,7 +692,7 @@ const T = {
   privacy: "Only names, messages and rank. Leave any time.", removeMe: "Remove me", editMe: "Edit my name and message", joinLink: "Join the board", yourEntry: "Your name on it", save: "Save",
   billing: "Play can't take payments on this phone.", notReady: "Play's still waking up. Try again soon.",
   offline: "You're offline. The board will be back.",
-  allRanks: () => "See everyone", retry: "Try again", previewLabel: "Here's you on the board",
+  allRanks: () => "See everyone", retry: "Try again", joinFailed: "Couldn't add you just now. Try again in a moment.", previewLabel: "Here's you on the board",
   perMonth: "/month",
   beFirst: "Be the first", topBadge: "Top 3",
   popupAfter: "TitanKeys is free. Buy me a coffee?",
@@ -890,14 +898,14 @@ function drawBoardPreview() {
   const e = board.entries || [];
   // Supporters see their own name for the board (the good people) from the first screen on.
   document.querySelector('#support [data-t="fund"]').textContent = state.supporter ? T.supporters : T.fund;
-  // Past three, the whole board. A supporter always gets a way in, whatever its size, to join later or to edit or leave
-  // (overnight test, 2026-11-24: on an empty board, Not now left no way back on).
-  $("#seeall").textContent = e.length > 3 ? T.allRanks() + " ›"
-    : state.supporter && board.available ? (board.joined ? T.yourEntry : T.joinLink) + " ›" : "";
+  // Always the whole board (owner, 2026-11-24: "join the board > … should be everyone"). From there a supporter joins, edits
+  // or leaves; an empty or offline board has nothing more to show.
+  $("#seeall").textContent = board.available && (e.length || state.supporter) ? T.allRanks() + " ›" : "";
   $("#boardpreview").innerHTML = e.length ? podiumCompact(e) : emptyBoard();
 }
 function drawBoardFull(supporter) {
   const e = board.entries || [];
+  if (e.some(x => x.you)) board.joined = true;
   $("#boardtitle").textContent = $("#boardbartitle").textContent = supporter ? T.supporters : T.fund;
   $("#boardline").textContent = supporter ? T.supportersLine : T.fundLine;
   $("#boardline").classList.toggle("orange", supporter);
@@ -1005,7 +1013,10 @@ async function drawPay(button) {
   const head = `<span>${mine ? T.switchTo : T.chipIn} · ${s.price}${monthly ? T.perMonth : ""}</span>`;
   if (note && button.id === "pay") note.textContent = state.billing !== "ready" ? T.billing : mine ? T.switchNote : monthly ? T.monthlyNote : "";
   // The price changes at once; the rank follows when it comes.
-  if (!button.querySelector(".sub")) button.innerHTML = head;
+  // The rank line's space is kept from the start: the button stays one size while the rank loads or can't load (owner,
+  // 2026-11-24: "you'd be flickering size").
+  const blank = `<span class="sub blank" aria-hidden="true">${T.putsYou(1)}</span>`;
+  if (!button.querySelector(".sub")) button.innerHTML = head + blank;
   else button.firstElementChild.outerHTML = head;
   // The rank is a question to our server, so it waits until the slider rests for a moment: one question, not one a step.
   const r = rankMemo.get(s.cents) || await new Promise(resolve => {
@@ -1014,7 +1025,7 @@ async function drawPay(button) {
   });
   if (r.available) rankMemo.set(s.cents, r);
   if (draw !== payDraws[button.id]) return;
-  if (!r.available) { button.innerHTML = head; return; }
+  if (!r.available) { button.innerHTML = head + blank; return; }
   // The rank rolls: the old number slides up and out as the new one comes in.
   const was = lastRank;
   button.innerHTML = `${head}<span class="sub">${T.putsYou(r.rank, r.myRank)}</span>`;
@@ -1252,7 +1263,12 @@ document.addEventListener("click", async ev => {
   const act = ev.target.closest("[data-act]")?.dataset.act;
   if (act === "nah") api.nah();
   if (act === "add" && !$("#bn").value.trim()) return;
-  if (act === "add") { await api.join(false, $("#bn").value.trim(), $("#bm").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
+  if (act === "add") {
+    // A join the server turned down stays on the form and says so (owner, 2026-11-24: "it looped me back to join the board").
+    const r = await api.join(false, $("#bn").value.trim(), $("#bm").value.trim()).catch(() => null);
+    if (!r || r.available === false || r.error) { toast(T.joinFailed); return; }
+    SAMPLE.joined = true; route("fund");
+  }
   if (act === "remove") { await api.remove().catch(() => {}); SAMPLE.joined = false; route("board"); }
   if (act === "later") route(optinBack);
   if (act === "manage") api.manage();

@@ -1,4 +1,4 @@
-# 3.0.2
+# 3.0.3
 
 ## Languages
 
@@ -41,3 +41,9 @@
 - The board's name box is never filled in for you, so your real name only goes up if you type it.
 - Custom shows the amount you'll actually pay a moment after you type, in whole coffees.
 - Picking a different monthly coffee switches the one you have, through Play. You never pay for two.
+- Once you're on the board, the page shows Edit and Remove instead of asking you to join again.
+- "See everyone ›" beside the board always opens the whole board.
+- If joining the board doesn't go through, the page says so and keeps what you typed.
+- The board's name and message boxes no longer capitalise every letter.
+- The Buy button stays one size while it works out your place.
+- With the phone held sideways, Custom scrolls so the slider and quick amounts are in reach.

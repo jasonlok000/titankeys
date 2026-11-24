@@ -307,10 +307,12 @@ class SupportWebActivity : Activity() {
         val ledger = billing?.ledger
         val key = ledger?.accountKey()?.takeIf { ledger.boardJoined }
         SupportBoard.read(this, page * PAGE, PAGE) { board ->
-            if (key == null || !board.optBoolean("available")) return@read done(board.put("myRank", JSONObject.NULL))
+            if (key == null || !board.optBoolean("available")) return@read done(board.put("myRank", JSONObject.NULL).put("joined", false))
             SupportBoard.preview(this, key, 0) { mine ->
                 val myId = mine.optString("myId").takeIf { mine.optBoolean("available") && it.isNotEmpty() && it != "null" }
                 board.put("myRank", if (myId != null && mine.has("myRank")) mine.get("myRank") else JSONObject.NULL)
+                // On the board by the server's word, so the page offers Edit and Remove, not "Put me on the board" (owner, 2026-11-24).
+                board.put("joined", myId != null)
                 val entries = board.optJSONArray("entries") ?: JSONArray()
                 for (index in 0 until entries.length()) entries.optJSONObject(index)?.let { if (it.optString("id") == myId) it.put("you", true) }
                 done(board)

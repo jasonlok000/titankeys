@@ -3,13 +3,16 @@ import { parseReleaseNotes, releaseNotesMarkdown, releaseNotesProblem } from "..
 import { hasReleaseNotes, releaseNotes } from "../../lib/release-notes";
 
 const cases: [name: string, text: string, problem: string | null][] = [
-  ["ready notes", "# 1.0.2\n\n## Fixed\n- Search: It works.", null],
-  ["notes with a v prefix and no section", "# v1.0.2\n- Search", null],
+  ["ready notes", "# 1.0.2\n\n> Search works.\n\n## Fixed\n- Search: It works.", null],
+  ["notes with a v prefix and no section", "# v1.0.2\n> Search.\n- Search", null],
+  ["no summary", "# 1.0.2\n\n## Fixed\n- Search", "has no summary"],
+  ["a summary below the notes", "# 1.0.2\n> Search.\n## Fixed\n- Search\n> Again.", '"> Again."'],
+  ["a summary too long", `# 1.0.2\n> ${"x".repeat(161)}\n## Fixed\n- Search`, "Keep it to 160"],
   ["skip", "# 1.0.2\n\nSKIP", null],
   ["another version", "# 1.0.1\n\n## Fixed\n- Search", "is for 1.0.1, but the app is 1.0.2"],
   ["no version heading", "## Fixed\n- Search", "is for no version"],
   ["a draft", "# 1.0.2\n<!-- draft: rewrite these -->\n## New\n- Search", "still a draft"],
-  ["a heading without notes", "# 1.0.2\n\n## New\n", "has no notes"],
+  ["a heading without notes", "# 1.0.2\n> New.\n\n## New\n", "has no notes"],
   ["a note without a dash", "# 1.0.2\n\n## Fixed\n- Search\nForgot the dash", '"Forgot the dash"'],
   ["a heading without a space", "# 1.0.2\n\n##Fixed\n- Search", '"##Fixed"'],
 ];

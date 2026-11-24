@@ -16,6 +16,23 @@ in Settings shows the same entries.
 
 3. Commit `entries.json` and `site/feed.json`, then publish the site: `bash tools/site/publish.sh`.
 
+### A new release
+
+After a release is out on Google Play and GitHub, tell people on older versions:
+
+1. Write the release's entries. They come from the summary under `# <version>` in `release-notes.txt` (the line starting
+   `> `):
+
+   ```bash
+   bun tools/announcements/release.ts 3.0.3
+   ```
+
+   It writes `release-3-0-3-play` (Play builds: "Auto-updates off? Update it in Play.", with Open Play) and
+   `release-3-0-3-github` (GitHub builds: "Get it from Google Play and updates come by themselves.", with How to get it),
+   both for the previous version and older (`maxVersion`), from now for 30 days. It removes older `release-*` entries,
+   as only the latest release matters. It doesn't sign or publish.
+2. Check the entries, then sign and publish them as in steps 2 and 3 above.
+
 Phones see it the next time they check, within a day. Test first with `"builds": ["debug"]`: only TitanKeys Debug shows
 it. On the phone, `adb shell cmd jobscheduler run -f com.titankeys.debug 42001` makes the debug app check at once.
 

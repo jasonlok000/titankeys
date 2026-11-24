@@ -134,7 +134,7 @@ export default function Home() {
   if (choice === "warning") return <PhoneWarning />;
   if (choice === "setup") return <SetupStart first={guideDue} />;
   if (choice === "guide") return <GuideStart />;
-  if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} onClose={() => void markNotesSeen()} />;
+  if (whatsNew && hasReleaseNotes(version)) return <WhatsNew version={version} from={result.data.notesFrom} onClose={() => void markNotesSeen()} />;
   // The guide offers data contributions once, at its end. The answer can change any time in Settings. The playground
   // waits for this answer, so that it does not open only to close again.
   if (connected.status === "loading") return <Screen />;

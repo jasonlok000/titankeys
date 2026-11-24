@@ -35,9 +35,10 @@ jobs:
           body: |
             Release v${{ inputs.version }}. Merging this PR builds and publishes the signed APK.
 
-            Before merging, rewrite the draft in `release-notes.txt` and delete its draft line. The app shows these notes after the update, and they become the GitHub release notes. Write `skip` under the version heading to release without notes.
+            Before merging, rewrite the draft in `release-notes.txt` and delete its draft line. Write the one-line summary under the version heading (the line starting `> `), then run `bun run notes` and commit what it changes. The app shows these notes after the update, and they become the GitHub release notes. Write `skip` under the version heading to release without notes.
           add-paths: |
             ink.toml
             package.json
             README.md
             release-notes.txt
+            release-history.txt

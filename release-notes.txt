@@ -1,5 +1,7 @@
 # 3.0.3
 
+> Sym can stay open, pick your accent colour, and a switch for each gesture.
+
 ## New in 3.0.3
 
 - Sym can stay open after you pick a symbol. Turn on Keep Sym open after a pick in Settings.

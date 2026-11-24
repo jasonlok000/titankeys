@@ -1,0 +1,3 @@
+3.0.3	Sym can stay open, pick your accent colour, and a switch for each gesture.
+3.0.2	
+3.0.1	

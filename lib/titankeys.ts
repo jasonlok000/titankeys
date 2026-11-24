@@ -26,6 +26,8 @@ export type State = {
   version: string;
   /** TitanKeys was updated and its release notes haven't been closed yet. */
   whatsNew: boolean;
+  /** The version someone had before this update, so What's new shows every version since (#121); null on a fresh install. */
+  notesFrom: string | null;
   /** The interactive guide has not opened yet, so it opens by itself after setup. */
   guideDue: boolean;
   phone: string;

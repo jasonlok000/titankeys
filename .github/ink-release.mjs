@@ -36,9 +36,17 @@ switch (process.argv[2]) {
     const subjects = run(["git", "log", "--no-merges", "--reverse", "--format=%s", ...(previous ? [`${previous}..HEAD`] : [])])
       .split("\n")
       .filter((subject) => subject && !/^release: v/.test(subject));
+    // The last version's notes move to release-history.txt, newest first, so What's new can show every version someone
+    // skipped (#121).
+    const last = (await readFile("release-notes.txt", "utf8")).trim();
+    const history = await readFile("release-history.txt", "utf8");
+    const start = history.indexOf("\n# ") + 1;
+    if (last && !history.includes(`\n${last.split("\n")[0]}\n`))
+      await writeFile("release-history.txt", start > 0
+        ? `${history.slice(0, start)}${last}\n\n${history.slice(start)}` : `${history.trimEnd()}\n\n${last}\n`);
     await writeFile(
       "release-notes.txt",
-      `# ${version}\n\n${DRAFT_MARKER} rewrite these notes for people using TitanKeys, then delete this line. ` +
+      `# ${version}\n\n> Write a one-line summary here: the bar shows it after the update, and the News feed too.\n\n${DRAFT_MARKER} rewrite these notes for people using TitanKeys, then delete this line. ` +
         `Each line is "Title: what changed". Write skip instead to release without notes. -->\n\n` +
         `## New\n${subjects.map((subject) => `- ${subject}`).join("\n") || "- "}\n\n## Fixed\n- \n`,
     );

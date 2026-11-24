@@ -1,0 +1,86 @@
+<!-- Earlier versions' notes, newest first. Preparing a release moves release-notes.txt here (#121). -->
+
+# 3.0.2
+
+## Languages
+
+- Pick from 49 languages in Settings. Keep up to four on at a time. Hold Sym to switch.
+- With English and Chinese enabled, hold Sym from English to see your Chinese methods if you use more than one. Press P to go back in the language and method menus.
+- The settings, key maps and practice prompts use each language's own text. The maps show the full layout and the outputs for Shift and held keys where available.
+- Choose Yale or Jyutping for Cantonese, Pinyin or Zhuyin for Mandarin, or Cangjie or Quick for shape input. Choose 正體中文 for Hong Kong or Taiwan, or 简体中文 for mainland China.
+- The Chinese and Japanese bars use their wider prediction row for first words. In Quick and Cangjie, pressing the hovered key turns the faded radical into typed code in one step.
+- Chinese gestures work one character at a time. Flick to delete takes the last character, not the whole phrase.
+- Chinese with a code pending: Enter types the code as it is and never sends. Sym clears the code first, then works as usual.
+- The Chinese bar shows more words, and picking one brings the next words straight after.
+- Word swiping is available in English. Other languages use the typing and correction options listed on their own pages.
+
+## Setup and practice
+
+- Leaving the guide after setup opens the Playground. If a required system setting changes later, the app opens setup again so you can restore it.
+- Screen readers can focus Settings actions and toggles by their names.
+- Use Settings > Languages to manage input methods, open their key maps, and find Guide & practice. Chinese gets a card for each method, grouped under Cantonese, Mandarin and By shape. Use Settings > Typing for the typing options of each enabled language.
+- Every key in the Settings key maps now draws its own symbol.
+- Use the Playground to practise switching methods or use the Try it field to practise one method at a time.
+
+## Typing fixes
+
+- On the newest Titan 2 Elite firmware (V02.00.06), Scroll assistant no longer scrolls apps through the keys when "touchpad only in text fields" is on.
+- Hold Backspace and it keeps deleting, like on a computer. A pending code loses its letters first.
+- Regular search fields, including Google Maps, keep their usual suggestions and corrections. In a URL field, the centre slot shows the text Space will leave in the field.
+- When Space will keep what you typed, the middle suggestion shows those letters. Pressing Space types the word you can see.
+- While a word is still being looked up, the bar keeps its row instead of flickering one word at a time.
+- Switching input methods clears the previous method's suggestions as the new one starts. When you type while Korean loads, those keys go to the new input method once it is ready.
+- Chinese keeps an unfinished selection in the code tab while you flick away a pending code. The next flick clears the remaining composition before another flick deletes text from the field.
+- Space gestures can steer and select in the text field while the compact suggestions are visible. The expanded choices menu and language switcher keep the text and cursor in place while you move through their pages.
+- Back from Symbols closes Symbols first.
+
+## Support
+
+- A new support page, one offline page inside the app. Find it at the very bottom of Settings.
+- Supporting is optional. Everything in the keyboard stays free, and nothing is locked behind it.
+- Supporters can join a board if they want to, with a name and a short message. It never shows amounts.
+- Payments go through Google Play: a sip, a big sip, half a coffee, or any amount, once or every month. Prices are in your own money.
+- The board's name box is never filled in for you, so your real name only goes up if you type it.
+- Custom shows the amount you'll actually pay a moment after you type, in whole coffees.
+- Picking a different monthly coffee switches the one you have, through Play. You never pay for two.
+
+# 3.0.1
+
+## Languages
+
+- Pick from 49 languages in Settings. Keep up to four on at a time. Hold Sym to switch.
+- With English and Chinese enabled, hold Sym from English to see your Chinese methods if you use more than one. Press P to go back in the language and method menus.
+- The settings, key maps and practice prompts use each language's own text. The maps show the full layout and the outputs for Shift and held keys where available.
+- Choose Yale or Jyutping for Cantonese, Pinyin or Zhuyin for Mandarin, or Cangjie or Quick for shape input. Choose 正體中文 for Hong Kong or Taiwan, or 简体中文 for mainland China.
+- The Chinese and Japanese bars use their wider prediction row for first words. In Quick and Cangjie, pressing the hovered key turns the faded radical into typed code in one step.
+- Chinese gestures work one character at a time. Flick to delete takes the last character, not the whole phrase.
+- Chinese with a code pending: Enter types the code as it is and never sends. Sym clears the code first, then works as usual.
+- The Chinese bar shows more words, and picking one brings the next words straight after.
+- Word swiping is available in English. Other languages use the typing and correction options listed on their own pages.
+
+## Setup and practice
+
+- Leaving the guide after setup opens the Playground. If a required system setting changes later, the app opens setup again so you can restore it.
+- Screen readers can focus Settings actions and toggles by their names.
+- Use Settings > Languages to manage input methods, open their key maps, and find Guide & practice. Chinese gets a card for each method, grouped under Cantonese, Mandarin and By shape. Use Settings > Typing for the typing options of each enabled language.
+- Every key in the Settings key maps now draws its own symbol.
+- Use the Playground to practise switching methods or use the Try it field to practise one method at a time.
+
+## Typing fixes
+
+- On the newest Titan 2 Elite firmware (V02.00.06), Scroll assistant no longer scrolls apps through the keys when "touchpad only in text fields" is on.
+- Hold Backspace and it keeps deleting, like on a computer. A pending code loses its letters first.
+- Regular search fields, including Google Maps, keep their usual suggestions and corrections. In a URL field, the centre slot shows the text Space will leave in the field.
+- When Space will keep what you typed, the middle suggestion shows those letters. Pressing Space types the word you can see.
+- While a word is still being looked up, the bar keeps its row instead of flickering one word at a time.
+- Switching input methods clears the previous method's suggestions as the new one starts. When you type while Korean loads, those keys go to the new input method once it is ready.
+- Chinese keeps an unfinished selection in the code tab while you flick away a pending code. The next flick clears the remaining composition before another flick deletes text from the field.
+- Space gestures can steer and select in the text field while the compact suggestions are visible. The expanded choices menu and language switcher keep the text and cursor in place while you move through their pages.
+- Back from Symbols closes Symbols first.
+
+## Support
+
+- A new support page, one offline page inside the app. Find it at the very bottom of Settings.
+- Supporting is optional. Everything in the keyboard stays free, and nothing is locked behind it.
+- Supporters can join a board if they want to, with a name and a short message. It never shows amounts.
+- Payments go through Google Play: a sip, a big sip, half a coffee, or any amount, once or every month. Prices are in your own money.

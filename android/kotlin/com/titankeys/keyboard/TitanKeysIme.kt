@@ -359,6 +359,28 @@ class TitanKeysIme : InputMethodService() {
         main.postDelayed(endTeamsEgg, KEY_WARNING_MILLIS)
     }
 
+    /**
+     * The first field on a new version (#121): one line says what changed, and a tap opens Settings > What's new. Once per
+     * version, never on a fresh install ([UpdateNote]). With the bar off it's skipped and still counts as seen. Never over a
+     * word's menu, a picker or another line such as the key warning: then it waits for the next field.
+     */
+    private fun showUpdateNote() {
+        if (!TypingSettings.suggestionBar(this)) {
+            UpdateNote.markSeen(this)
+            return
+        }
+        val strip = strip ?: return
+        if (strip.notice != null) return
+        val update = UpdateNote.due(this) ?: return
+        UpdateNote.markSeen(this)
+        strip.notice = Strip.Notice.Line(UpdateNote.text(update)) {
+            clearTeamsEgg()
+            runCatching { startActivity(Connected.pageIntent(this, WHATS_NEW_PAGE)) }
+        }
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, KEY_WARNING_MILLIS)
+    }
+
     /** Android's boot count, where an app can read it, and the time this boot started. Neither changes when TitanKeys restarts. */
     private fun currentBoot(): OncePerBoot.Boot {
         val count = try {
@@ -2130,6 +2152,8 @@ class TitanKeysIme : InputMethodService() {
         main.post { if (editing) showHoldHint() }
         // Sym or fn not set to Programmable key: the bar says so once, where people type, not only in Settings > Setup (#116).
         main.post { if (editing) warnKeysOff() }
+        // A new version: the bar says what changed, once, after any key warning; with one showing it waits for the next field (#121).
+        main.post { if (editing) showUpdateNote() }
         offerClip()
         // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
         // for the app in front as it comes in, so this reads it a moment later and again seconds later, if the keyboard is
@@ -5905,6 +5929,7 @@ class TitanKeysIme : InputMethodService() {
         private const val HOLD_HINT_MILLIS = 6_000L
         /** Long enough to read a warning that names a path (#116); the next key still clears it at once. */
         private const val KEY_WARNING_MILLIS = 10_000L
+        private const val WHATS_NEW_PAGE = "/settings/whats-new"
         /** How long the bar says which input method types, after a switch in the overlay. */
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"

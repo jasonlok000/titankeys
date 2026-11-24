@@ -25,6 +25,7 @@ import com.titankeys.engine.EnglishSpelling
 import com.titankeys.engine.SwipeTyping
 import com.titankeys.engine.TypingSettings
 import com.titankeys.keyboard.Accent
+import com.titankeys.keyboard.UpdateNote
 import com.titankeys.keyboard.AppBuild
 import com.titankeys.keyboard.BackDisclosureActivity
 import com.titankeys.keyboard.BackService
@@ -767,6 +768,7 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
         return JSONObject()
             .put("version", installedVersion())
             .put("whatsNew", whatsNew())
+            .put("notesFrom", UpdateNote.notesFrom(activity) ?: JSONObject.NULL)
             .put("guideDue", GuideActivity.due(activity))
             .put("phone", "${Build.MANUFACTURER} ${Build.MODEL}")
             .put("android", Build.VERSION.RELEASE)
@@ -994,6 +996,8 @@ private class TitanKeysAdapter(private val activity: MainActivity) : NativeAdapt
             preferences.edit().putString(SEEN_NOTES, info.versionName).apply()
             info.versionName
         } else null
+        // The version before this update, kept for What's new to show every version since, even once these notes are closed.
+        if (seen != null && seen != info.versionName) UpdateNote.recordFrom(activity, seen, info.versionName ?: "")
         return seen != info.versionName
     }
 

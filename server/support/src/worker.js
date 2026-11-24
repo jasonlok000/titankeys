@@ -183,13 +183,17 @@ async function publish(request, env, verifier) {
     const accountId = await hash(body.accountKey);
     const verified = await Promise.allSettled(Array.from(unique.values(), purchase => verifier.verify(env, accountId, purchase)));
     const receipts = [];
+    let lastRejection;
     for (const result of verified) {
         // A subscription answers with each paid month's order; a tip with its one.
         if (result.status === "fulfilled") receipts.push(...[result.value].flat());
-        else if (!(result.reason instanceof ExpiredSubscription)) throw result.reason;
+        // Play keeps listing a refunded or ended purchase for a while. It counts for nothing, but it mustn't block the
+        // purchases that do count, so a rejected one is skipped. Play being unreachable still fails the whole post.
+        else if (!(result.reason instanceof SupportError) || result.reason.status >= 500) throw result.reason;
+        else lastRejection = result.reason;
     }
     // Old, expired proofs cannot authorize a profile or grant new credit.
-    if (receipts.length === 0) throw new ExpiredSubscription();
+    if (receipts.length === 0) throw lastRejection ?? new ExpiredSubscription();
     const db = env.DB;
     const statements = [db.prepare(`
         INSERT INTO supporters (account_id, public_id, name, message)

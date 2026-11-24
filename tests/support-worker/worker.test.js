@@ -244,12 +244,16 @@ test("fixed tiers, the sip, and zero or pending receipts use the Play data", asy
     expect(await cupsAfter(publish([...choices, sip]))).toBe(17.7);
 });
 
-test("a rejected receipt rolls back the entire submission and provider errors stay private", async () => {
+test("a rejected receipt counts for nothing, alone it posts nothing, and provider errors stay private", async () => {
     const tip = await paid({ label: "valid" });
     const unproved = { ...tip, purchaseToken: "fixture-unproved" };
-    const response = await publish([tip, unproved]);
+    const response = await publish([unproved]);
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({ error: "purchase_unverified" });
+    expect(await entries()).toEqual([]);
+    // Beside a verified one, it's skipped: only the verified purchase counts.
+    expect(await cupsAfter(publish([tip, unproved]))).toBe(await cupsAfter(publish([tip])));
+    expect((await api("remove", { accountKey: ACCOUNT })).status).toBe(204);
     expect(await entries()).toEqual([]);
     failAt = "orders/GPA.fixture-valid";
     const offline = await publish([tip]);
@@ -258,7 +262,7 @@ test("a rejected receipt rolls back the entire submission and provider errors st
     expect(await entries()).toEqual([]);
 });
 
-test("only a documented expired subscription can be skipped alongside a fresh verified receipt", async () => {
+test("a purchase Play no longer vouches for is skipped alongside a fresh verified receipt, and fails alone", async () => {
     const old = await paid({ kind: "subscription", productId: MONTHLY, label: "expired", cents: 200 });
     expect(await cupsAfter(publish([old]))).toBe(.4);
     const active = await paid({ label: "active" });
@@ -271,15 +275,19 @@ test("only a documented expired subscription can be skipped alongside a fresh ve
     expect(await cupsAfter(publish([old, active], { name: "Verified edit" }))).toBe(.6);
     expect((await entries())[0].name).toBe("Verified edit");
 
-    for (const error of [
+    // Play keeps listing a refunded purchase on the phone for a while (owner's join failed with one, 2026-11-24): it adds
+    // nothing, and the fresh purchase still posts. Alone, it's refused as before.
+    for (const [index, error] of [
         { status: 410, reason: "purchaseTokenNoLongerValid" },
         { status: 404, reason: "subscriptionNoLongerAvailable" },
-    ]) {
+    ].entries()) {
         PROVIDER_ERRORS.set(path, error);
-        const rejected = await publish([old, active], { name: "Unverified edit" });
-        expect(rejected.status).toBe(422);
-        expect(await rejected.json()).toEqual({ error: "purchase_unverified" });
-        expect((await entries())[0].name).toBe("Verified edit");
+        const alone = await publish([old], { name: "Unverified edit" });
+        expect(alone.status).toBe(422);
+        expect(await alone.json()).toEqual({ error: "purchase_unverified" });
+        expect((await entries())[0].name).toBe(index ? "Skipped 0" : "Verified edit");
+        expect(await cupsAfter(publish([old, active], { name: `Skipped ${index}` }))).toBe(.6);
+        expect((await entries())[0].name).toBe(`Skipped ${index}`);
     }
 });
 

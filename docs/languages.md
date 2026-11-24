@@ -73,17 +73,39 @@ Every language is at one of three stages (owner, 2026-11-22). Settings shows it 
 and `"tested"`, and its guide a `"status"` of `experimental`, `tested` or `polished`. A tested language stays
 `"experimental"` in the index, so the switcher and the rest of the keyboard treat it as before.
 
-**Tested** needs a native speaker's check that it types correctly. **Polished** needs all of these:
-- correct typing, in the layout native speakers expect;
-- checked by a native speaker;
-- good candidates, ranked, with the bar showing what Space types;
-- next words after a word, from a licensed corpus;
-- slip handling: a cautious fix, or an engine whose candidates cover slips, changing under 0.5% of words wrongly;
-- the gestures (double Space, triple Space, flick to delete) in the language's unit;
-- its own settings, key maps and practice text;
-- documented here.
+**Tested** needs a native speaker's check that it types correctly.
 
-Never required, at any stage: swiping, an on-phone model, fixing earlier words, handwriting and voice.
+**Polished** (owner, 2026-11-24, #124): **every English feature that applies to the language is ported and tuned.** A feature
+that can't be ported well counts as **not applicable** for that language, with the reason written down here. Chinese is
+Polished on this rule: Rime does what autocorrect and next words do, and swiping its sound-based methods isn't applicable for
+now (#99 is a refinement).
+
+The English features, and where each applies (audit of 2026-11-24, full table in #124):
+
+| Feature | Applies to |
+|---|---|
+| Autocorrect with context (and accent fixes) | Latin, Cyrillic, Greek, Georgian, Hebrew; Vietnamese and Korean with work; engines (Chinese, Japanese) do their own |
+| Apostrophe and elision fixes (c'est, dell') | French, Italian, Dutch, Catalan, Turkish |
+| Two-letter fixes, shorthand, name fixes | most word-list languages, with per-language lists |
+| Swipe typing | Latin and Cyrillic (accents folded), Greek and Georgian with work; hard for Hebrew, Vietnamese, Korean, Thai, Hindi and Chinese sound methods; not applicable to Cangjie, Quick and Zhuyin |
+
+Already in every language: completions, next words, sentence starters, learning, blocked words and favourites, :shortcodes:,
+snippets, the gestures, hold for accents, sentence capitals and double Space's full stop.
+
+### The protocol: one feature, one language at a time
+
+1. **Feasible?** Decide from the table; not applicable is a valid answer, with its reason.
+2. **Target first,** anchored to English: run English through the same benchmark, and set the language's target from it
+   before tuning (wrong fixes no higher than English's, missed fixes within a few points, the bar's first word right as often;
+   swiping at least 70% first guess). English's own numbers must not move.
+3. **Tune offline** on the language's public text (Leipzig) with realistic slips on the Titan's keys (tests/corrections), trying
+   solutions until it hits the target. No user data.
+4. **Internal, then Candidate:** the owner on Play's Internal track, then a native tester on the Candidate track daily-drives
+   it for 3 days and confirms it works. Sharing's daily totals, split by language with a missed-fix count, back it up.
+5. **Main:** promoted and released.
+
+Order (2026-11-24): autocorrect for Latin and Cyrillic (French and Italian first, with their elision), then swiping for Latin
+(Italian #109, Danish #117, French), then Cyrillic (Russian, Ukrainian), then the rest as testers appear.
 
 ## The input method file
 

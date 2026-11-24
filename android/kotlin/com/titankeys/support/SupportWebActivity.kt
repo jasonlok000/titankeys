@@ -137,7 +137,13 @@ class SupportWebActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        inFront = true
         runCatching { billing?.onResume() }
+    }
+
+    override fun onPause() {
+        inFront = false
+        super.onPause()
     }
 
     override fun onDestroy() {
@@ -365,6 +371,15 @@ class SupportWebActivity : Activity() {
     }
 
     companion object {
+        /**
+         * The page is in front. The keyboard runs in this same process, and the page's text boxes answer the keyboard on this same
+         * main thread, so a question the keyboard asks them while a box starts waits for Android's timeout: on 2026-11-24 the
+         * name box on "join the board" froze for 16 s (an ANR) while auto-capitalisation asked for the text before the cursor.
+         * While this is true, the keyboard reads that text from what Android handed it with the field instead.
+         */
+        @Volatile @JvmStatic var inFront = false
+            private set
+
         private const val MODE = "com.titankeys.support.MODE"
         const val PREVIEW_FIXTURE = "com.titankeys.debug.supportPreview"
         private const val BRIDGE = "TitanKeysSupport"

@@ -1,6 +1,7 @@
 package com.titankeys.keyboard
 
 import com.titankeys.support.SupportStats
+import com.titankeys.support.SupportWebActivity
 
 import android.app.KeyguardManager
 import android.content.BroadcastReceiver
@@ -5701,9 +5702,13 @@ class TitanKeysIme : InputMethodService() {
 
     private fun sentenceStartHere(): Boolean {
         if (!editing || field.exact || !field.sentenceCapitalisation) return false
-        val before = currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0) ?: return false
+        val before = (if (onOwnPage()) currentInputEditorInfo?.getInitialTextBeforeCursor(SENTENCE_REACH, 0)
+            else currentInputConnection?.getTextBeforeCursor(SENTENCE_REACH, 0)) ?: return false
         return SwipeTyping.startsSentence(before)
     }
+
+    /** A text box on TitanKeys' own Support page, which answers on this same main thread. See [SupportWebActivity.inFront]. */
+    private fun onOwnPage() = SupportWebActivity.inFront && currentInputEditorInfo?.packageName == packageName
 
     private fun showModifierBar() {
         // Shift and Caps show only where Shift changes what a key types: not in Hebrew, Chinese or Japanese.

@@ -1,4 +1,4 @@
-# 3.0.1
+# 3.0.2
 
 ## Languages
 
@@ -38,3 +38,6 @@
 - Supporting is optional. Everything in the keyboard stays free, and nothing is locked behind it.
 - Supporters can join a board if they want to, with a name and a short message. It never shows amounts.
 - Payments go through Google Play: a sip, a big sip, half a coffee, or any amount, once or every month. Prices are in your own money.
+- The board's name box is never filled in for you, so your real name only goes up if you type it.
+- Custom shows the amount you'll actually pay a moment after you type, in whole coffees.
+- Picking a different monthly coffee switches the one you have, through Play. You never pay for two.

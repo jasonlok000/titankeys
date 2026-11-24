@@ -24,7 +24,7 @@ const NEEDS = {
     button: "Open Scroll assistant", open: openScrollAssistant },
   backService: { id: "backService", line: "Blocking needs TitanKeys Keyboard on in Accessibility. It's off, so apps still scroll.",
     button: "Turn it on in Accessibility", open: allowBack },
-  fnKey: { id: "fnKey", line: "fn can't work as Ctrl (fn+C to copy). In phone Settings > Shortcut keys > fn key, pick Programmable key.", button: "Open Shortcut keys", open: openShortcutKeys },
+  fnKey: { id: "fnKey", line: "fn can't work as Ctrl (fn+C copies). In phone Settings > Shortcut keys > fn key, pick Programmable key.", button: "Open Shortcut keys", open: openShortcutKeys },
   symKey: { id: "symKey", line: "Sym can't open TitanKeys' symbols. In phone Settings > Shortcut keys > Sym key, pick Programmable key.", button: "Open Shortcut keys",
     open: openShortcutKeys },
   contacts: { id: "contacts", line: "Android's Contacts permission is off, so TitanKeys can't read the names.", button: "Allow contacts",

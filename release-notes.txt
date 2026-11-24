@@ -1,5 +1,14 @@
 # 3.0.3
 
+## New in 3.0.3
+
+- Sym can stay open after you pick a symbol. Turn on Keep Sym open after a pick in Settings.
+- Pick your accent colour: orange, blue, teal, green, purple, pink, gold, your phone's own colour, or off.
+- The swipe trail on the bar has its own switch.
+- New Gestures section in Settings, with a switch each for swiping, Double Space, Triple Space and flick to delete. With swiping off, autocorrect still works.
+- If the phone's fn or Sym key isn't set to Programmable key, TitanKeys tells you and opens the right page.
+- Danish is now Tested.
+
 ## Languages
 
 - Pick from 49 languages in Settings. Keep up to four on at a time. Hold Sym to switch.

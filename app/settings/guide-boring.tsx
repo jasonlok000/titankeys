@@ -61,9 +61,9 @@ export default function BoringGuide() {
     </Section>
     <Section title="Cursor and picking text">
       <Topic title="Space gestures: tap a bit higher">{"The double and triple taps on Space work best a little higher up. The touch zone stops around the middle of Space, so a tap low on Space can go unfelt. Tap the top half of Space, or the keys right above it, from C to N. Anywhere as wide as Space, on those two rows, counts."}</Topic>
-      <Topic title="Move the cursor">{"Tap Space twice, quickly, and keep your finger down after the second tap. Slide left or right. The cursor goes slowly near the middle and fast near the edges, and stops when you come back to the middle. You feel a stronger buzz each time it passes a space. Turn it off with Double Space moves the cursor in Settings."}</Topic>
+      <Topic title="Move the cursor">{"Tap Space twice, quickly, and keep your finger down after the second tap. Slide left or right. The cursor goes slowly near the middle and fast near the edges, and stops when you come back to the middle. You feel a stronger buzz each time it passes a space. Don't want it? Turn off Double Space moves the cursor in Settings."}</Topic>
       <Topic title="Pick a word">{"Tap Space twice, lifting after each tap. That picks the word at the cursor."}</Topic>
-      <Topic title="Pick more words">{"Tap Space three times to pick the word at the cursor. Keep your finger down after the third tap and slide to take more words. Lean back the other way to give them back, one at a time. Triple Space selects in Settings turns these taps off."}</Topic>
+      <Topic title="Pick more words">{"Tap Space three times to pick the word at the cursor. Keep your finger down after the third tap and slide to take more words. Lean back the other way to give them back, one at a time. Don't want it? Turn off Triple Space selects in Settings."}</Topic>
     </Section>
     <Section title="Symbols and emoji">
       <Topic title="Alt symbols">{"Each letter has a symbol printed in its corner. Press Alt, then the letter, to type it. Or hold the letter, if that's on."}</Topic>
@@ -92,7 +92,7 @@ export default function BoringGuide() {
     </Section>
     <Section title="Look and feel">
       <Topic title="Feel the keys">{"A little buzz for each key your swipe crosses, so you can swipe without looking. Pick what buzzes, or turn it all off, in Settings > Haptics."}</Topic>
-      <Topic title="Accent colour">{"A few small marks on the keyboard are orange, like the key under your finger. Prefer another colour, or none? Pick one in Settings > Accent colour."}</Topic>
+      <Topic title="Accent colour">{"A few small marks are orange, like the key under your finger. Want another colour, or none? Pick one in Settings > Accent colour."}</Topic>
     </Section>
     <Section title="News and sharing">
       <Topic title="News">{"TitanKeys can tell you about a new version and anything else worth knowing. It checks the TitanKeys website once a day and sends nothing about you. News shows as a silent notification, never while you type, with Snooze and Don't show again. Settings > News has the same news and a switch to turn it off."}</Topic>
@@ -103,8 +103,8 @@ export default function BoringGuide() {
     <Section title="Problems">
       <Topic title="Check the setup">{"Something fucked up? Nine times out of ten it's Setup. Settings > Setup, make every step say Done."}</Topic>
       <Topic title="Messed up your settings">{"Changed so much you can't find your way back? At the bottom of Settings: Reset most things puts every switch and choice back how it started, and your words, snippets, shorthand and app lists stay. Reset literally everything wipes all of that too, like a fresh install. What you already shared stays on our side until you delete it in Settings > Sharing."}</Topic>
-      <Topic title="Sym doesn't open the panel">{"In phone Settings > Shortcut keys > Sym key, pick Programmable key. Settings > Setup checks it and opens that page."}</Topic>
-      <Topic title="fn doesn't work as Ctrl">{"In phone Settings > Shortcut keys > fn key, pick Programmable key. Settings > Setup checks it and opens that page."}</Topic>
+      <Topic title="Sym doesn't open the panel">{"In phone Settings > Shortcut keys > Sym key, pick Programmable key. Settings > Setup checks it and takes you there."}</Topic>
+      <Topic title="fn doesn't work as Ctrl">{"In phone Settings > Shortcut keys > fn key, pick Programmable key. Settings > Setup checks it and takes you there."}</Topic>
       <Topic title="Swiping doesn't work in an app">{"Settings > Setup lists the apps that need Sliding Mode 1. Tap the row naming the app to open Scroll assistant, then find the app and pick Sliding Mode 1. An app goes on the list after confirmed readings in two separate fields you used. It comes off as soon as TitanKeys sees Sliding Mode 1."}</Topic>
       <Topic title="Back takes two presses">{"Turn TitanKeys Keyboard on in Accessibility. Settings > Setup has the step."}</Topic>
     </Section>

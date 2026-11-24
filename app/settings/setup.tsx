@@ -58,7 +58,7 @@ export default function Setup() {
       <Field label="Sym opens TitanKeys' symbols" onPress={() => void openSetupStep("shortcutKeys")}>{status(settings.symKey)}</Field>
       {!settings.symKey && <Note>{"Sym isn't set up, so it can't open TitanKeys' symbols. Tap above, then in phone Settings > Shortcut keys > Sym key, pick Programmable key."}</Note>}
       <Field label="fn works as Ctrl" onPress={() => void openSetupStep("shortcutKeys")}>{status(settings.fnKey)}</Field>
-      {!settings.fnKey && <Note>{"fn isn't set up, so it can't work as Ctrl (fn+C to copy). Tap above, then in phone Settings > Shortcut keys > fn key, pick Programmable key."}</Note>}
+      {!settings.fnKey && <Note>{"fn isn't set up, so it can't work as Ctrl (fn+C copies). Tap above, then in phone Settings > Shortcut keys > fn key, pick Programmable key."}</Note>}
     </Section>
     {/* The guide's setup asks for it last, after saying what it's for. Here it flips the same setting as Settings > Your words:
         turning it on asks Android first (ContactsPermissionActivity), and it's On only once Android allows it. */}

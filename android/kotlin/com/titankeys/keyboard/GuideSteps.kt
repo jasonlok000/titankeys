@@ -70,9 +70,9 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
     // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.
     // Not now shows a warning first: see KEYS_WARN_TITLE. F (docs/words-m1.md).
     // #116: the body names the whole path and why, as a key on another mode (fn on Tab) is the case this part catches.
-    Keys("Set up Sym and fn.", "In phone Settings > Shortcut keys, set Sym key and fn key to Programmable key, so Sym opens " +
-        "TitanKeys' symbols and fn works as Ctrl (fn+C to copy).", "Open Shortcut keys",
-        "Sym key and fn key are both on that page. Pick Programmable key for each, not Tab or an app.", skip = "Not now",
+    Keys("Set up Sym and fn.", "In phone Settings > Shortcut keys, set Sym key and fn key to Programmable key. Then Sym opens " +
+        "TitanKeys' symbols, and fn works as Ctrl (fn+C copies).", "Open Shortcut keys",
+        "Both are on that page. Pick Programmable key for each, not Tab or an app.", skip = "Not now",
         guideOnly = true),
     // Names from contacts, last (owner, #87). It says what it's for and that the names stay on the phone before Android asks.
     // Not now moves on, and the guide never asks again.

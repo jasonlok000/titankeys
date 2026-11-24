@@ -106,9 +106,9 @@ internal object PhoneChecks {
 
     /** The bar's words for [key] not being Programmable key, or for fn when its setting can't be read ([reading] null). */
     fun keyWarning(key: Key, reading: Boolean?): String = when {
-        key == Key.Sym -> "Sym can't open TitanKeys' symbols. Tap here, then: Sym key > Programmable key."
-        reading == null -> "fn works as Ctrl, as in fn+C to copy. If it doesn't, tap here, then: fn key > Programmable key."
-        else -> "fn can't work as Ctrl (fn+C to copy). Tap here, then: fn key > Programmable key."
+        key == Key.Sym -> "Sym can't open symbols. Tap, then Sym key > Programmable key."
+        reading == null -> "fn works as Ctrl (fn+C copies). Not working? Tap, then fn key > Programmable key."
+        else -> "fn isn't working as Ctrl. Tap, then fn key > Programmable key."
     }
 
     /** The Shortcut keys app's entry, as the phone's Settings lists it. */

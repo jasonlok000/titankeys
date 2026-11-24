@@ -21,10 +21,10 @@ export const cursorLabel = "Space taps move and select";
 export const doubleSpaceLabel = "Double Space moves the cursor";
 export const tripleSpaceLabel = "Triple Space selects";
 export const deleteFlickLabel = "Flick from Backspace deletes a word";
-export const swipeTrailLabel = "Show the swipe trail on the bar";
+export const swipeTrailLabel = "Swipe trail on the bar";
 
 /** The Sym panel stays open after a pick, until Sym or Back (#110). */
-export const symPanelStaysLabel = "Keep the Sym panel open after a pick";
+export const symPanelStaysLabel = "Keep Sym open after a pick";
 export const symPanelStaysNote = "Close it with Sym or Back.";
 
 /** Alt + Backspace as Delete on a PC (owner, 2026-11-13: "alt+backspace = forward delete too"). On to start. */
@@ -57,7 +57,7 @@ export const accentChoices = [
 ] as const;
 export const accentLabel = (id: string) => accentChoices.find(choice => choice.value === id)?.label ?? "Orange";
 export const accentsNote = (id: string) => id === "off"
-  ? "Accents are off everywhere. Boring, just like you."
+  ? "No accents anywhere. Boring, just like you."
   : id === "phone"
-    ? "Your phone's own colour, made lighter or darker until it reads on black."
-    : "The marks everywhere TitanKeys draws: the keys, the bar, the guide and these pages. Off, they match the text.";
+    ? "Your phone's own colour, nudged lighter or darker so it shows up on black."
+    : "Used for the small marks on the keys, the bar, the guide and these pages.";

@@ -95,7 +95,7 @@ test("a button on an accent background stays visible with accents off", () => {
 
 test("turned off, the choice roasts you; Settings and Accent.kt offer the same choices", () => {
   const names = read("lib/setting-names.ts");
-  expect(names).toContain('"Accents are off everywhere. Boring, just like you."');
+  expect(names).toContain('"No accents anywhere. Boring, just like you."');
   expect(read("app/settings/index.tsx")).toContain('<Field label={accentTitle} href="/settings/accent">{accentLabel(settings.accentColour)}</Field>');
   const ids = [...names.matchAll(/\{ value: "(\w+)", label: "[^"]+" \}/g)].map(match => match[1]);
   expect(ids).toEqual(["off", ...Object.keys(presets()), "phone"]);

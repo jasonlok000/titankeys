@@ -68,6 +68,8 @@ sealed interface SupportCall {
     data object DismissPopup : SupportCall
     /** The page asks to close the screen. */
     data object Close : SupportCall
+    /** Opens Play's page for the monthly coffee this account has, where it can be cancelled or changed. */
+    data object ManageMonthly : SupportCall
     /** One of the page's haptics, by name: see [SupportWebProtocol.HAPTICS]. */
     data class Haptic(val name: String) : SupportCall
 }
@@ -139,6 +141,7 @@ object SupportWebProtocol {
             "board" -> { only("page"); SupportCall.Board(if (args["page"] == null) 0 else number("page", 0L..MAX_PAGE).toInt()) }
             "dismissPopup" -> { only(); SupportCall.DismissPopup }
             "close" -> { only(); SupportCall.Close }
+            "manageMonthly" -> { only(); SupportCall.ManageMonthly }
             "haptic" -> { only("name"); SupportCall.Haptic((args["name"] as? String)?.takeIf { it in HAPTICS } ?: bad()) }
             else -> throw SupportBadRequest(id, "unknown_op")
         }

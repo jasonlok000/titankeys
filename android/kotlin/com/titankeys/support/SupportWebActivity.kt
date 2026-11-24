@@ -281,6 +281,14 @@ class SupportWebActivity : Activity() {
                 answer(JSONObject().put("ok", true))
                 finish()
             }
+            SupportCall.ManageMonthly -> {
+                // Play's own subscriptions page, at this coffee when there is one: cancel or change it there.
+                val sku = billing?.monthlyId()
+                val url = "https://play.google.com/store/account/subscriptions" +
+                    (if (sku != null) "?sku=$sku&package=$packageName" else "")
+                runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                answer(JSONObject().put("ok", true))
+            }
             // No answer: the page doesn't wait on a haptic, so each one lands with its frame.
             is SupportCall.Haptic -> haptics.play(when (call.name) {
                 "tick" -> Haptic.AppStep

@@ -374,6 +374,9 @@
   /* Colour and position, never opacity or transform: see tools/checks/support-web.test.ts. */
   @keyframes waitdot { 40% { background: color-mix(in srgb, currentColor 80%, transparent); top: -2px; } }
   .reduce .waitdots i { animation: none; background: color-mix(in srgb, currentColor 50%, transparent); }
+  .mymonthly { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: var(--g3, 16px); color: var(--muted, #aaa); }
+  .mymonthly .link { flex: none; }
+  #pay.owned { filter: saturate(.4); }
   .bubble { position: absolute; bottom: -16px; border-radius: 50%; background: #FFF4E8; animation: bubble linear infinite; }
   /* Bubbles rise by position, not transform: on the phone, transform-animated bubbles made the WebView draw the whole
      thank-you squeezed or stretched. */
@@ -590,6 +593,7 @@
     <div class="section">
       <div class="seg" id="cadence"><span class="knob"></span><button data-cad="m" data-t="monthly"></button><button data-cad="o" data-t="oneTime"></button></div>
       <div class="tiers" id="tiers"></div>
+      <div id="mymonthly"></div>
       <div class="privacy" data-t="privacy"></div>
     </div>
     <div class="dock"><button class="primary" id="pay"></button><div class="note" id="paynote"></div></div>
@@ -601,7 +605,7 @@
     <div class="pad"><h1 data-t="howMuch"></h1><span class="chip" data-t="oneTime"></span></div>
     <div class="middle">
       <div class="cups" id="custcups"></div>
-      <div class="readout"><label class="d">$<input id="custd" type="number" inputmode="numeric" min="1" max="50" aria-label="Dollars"><svg class="pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></label><div class="c" id="custc"></div><div class="pot" id="custpot"></div></div>
+      <div class="readout"><label class="d"><span id="custpre">$</span><input id="custd" type="text" inputmode="decimal" autocomplete="off" aria-label="Amount"><span id="custsuf"></span><svg class="pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></label><div class="c" id="custc"></div><div class="pot" id="custpot"></div></div>
       <div class="slider"><input type="range" id="slider" min="0" max="400" step="1" value="100" aria-label="Dollars">
         <div class="ticks"><span style="left:0">$1</span><span style="left:25%">$5</span><span style="left:50%">$10</span><span style="left:75%">$25</span><span style="left:100%">$50</span></div></div>
     </div>
@@ -660,7 +664,11 @@ const T = {
   oneTime: "One-time", monthly: "Monthly",
   tiers: [["A sip", "Small, but it counts."], ["A bigger sip", "Now we're brewing."], ["Half a coffee", "That's real caffeine."]],
   custom: ["Custom", "You pick."],
-  monthlyNote: "Every month · cancel any time in Play", howMuch: "How much coffee?",
+  monthlyNote: "Every month · cancel any time in Play",
+  // The monthly coffee you have, and switching it (owner, 2026-11-24: easy to see, never two at once).
+  yourMonthly: (name, renewing) => renewing ? `You give ${name} each month.` : `Your monthly coffee (${name}) stops at the end of this month.`,
+  manage: "Manage", yours: "Your monthly coffee", switchTo: "Switch to this",
+  switchNote: "Replaces the one you have. Play counts what's left of this month.", howMuch: "How much coffee?",
   wholePot: "That's a whole pot. I'll need a bigger table.",
   putsYou: (n, m) => m && m !== n ? `<b>#${n}</b><span class="from"> ▲ from #${m}</span>` : `You'd be <b>#${n}</b>`,
   chipIn: "Buy it",
@@ -800,6 +808,7 @@ const api = {
   remove: () => native ? call("removeMe") : Promise.resolve({ available: true }),
   nah: () => native ? call("dismissPopup").then(() => call("close")) : Promise.resolve(history.back()),
   close: () => native ? call("close") : Promise.resolve(history.back()),
+  manage: () => native ? call("manageMonthly") : Promise.resolve({}),
   stats: async () => native ? STAT_KEYS.map(k => (state.stats || {})[k] || 0) : SAMPLE.stats,
 };
 
@@ -905,14 +914,28 @@ const tierId = (cad, i) => state.tiers ? state.tiers[cad === "m" ? "monthly" : "
  * Play's price in the phone's own money. A bare "$" says too little (owner, 2026-11-24: "the money doesn't localize?"):
  * outside US dollars it reads with its country, CA$0.69 or A$1.49, the way Play's own sheet writes it.
  */
+function moneyFormat(currency) {
+  const opts = { style: "currency", currency };
+  const here = new Intl.NumberFormat(navigator.language || "en", opts);
+  return currency !== "USD" && /(^|[^A-Za-z])\$/.test(here.format(1)) ? new Intl.NumberFormat("en-US", opts) : here;
+}
 function money(micros, currency) {
   if (micros == null || !currency) return null;
-  const amount = micros / 1e6, opts = { style: "currency", currency };
+  const p = moneyParts(micros, currency);
+  return p && p.pre + p.num + p.suf;
+}
+/** An amount split for the Custom readout: the symbol before, the number, and anything after (7,50 €). Whole amounts drop .00. */
+function moneyParts(micros, currency) {
   try {
-    const here = new Intl.NumberFormat(navigator.language || "en", opts).format(amount);
-    return currency !== "USD" && /(^|[^A-Za-z])\$/.test(here) ? new Intl.NumberFormat("en-US", opts).format(amount) : here;
+    const amount = micros / 1e6, whole = Math.abs(amount - Math.round(amount)) < 1e-9;
+    const parts = moneyFormat(currency).formatToParts(amount), isNum = t => ["integer", "group", "decimal", "fraction"].includes(t);
+    const first = parts.findIndex(x => isNum(x.type)), last = parts.length - 1 - [...parts].reverse().findIndex(x => isNum(x.type));
+    let num = parts.slice(first, last + 1).map(x => x.value).join("");
+    if (whole) num = parts.slice(first, last + 1).filter(x => x.type === "integer" || x.type === "group").map(x => x.value).join("");
+    return { pre: parts.slice(0, first).map(x => x.value).join(""), num, suf: parts.slice(last + 1).map(x => x.value).join("") };
   } catch (_) { return null; }
 }
+const customUnit = () => product(state.tiers?.custom || "support_tip_unit");
 const priceOf = p => money(p.amountMicros, p.currency) || p.price;
 function selected() {
   // Custom is a count of the unit coffee, so its price is the unit's own local price times the count.
@@ -935,6 +958,8 @@ function drawTiers() {
   $("#tiers").innerHTML = rows.join("");
   // The selected cup keeps its fill and gives a small pulse.
   $("#tiers .tier.on .cup")?.classList.add("pick");
+  const m = state.monthly, mi = m ? [0, 1, 2].findIndex(i => tierId("m", i) === m.id) : -1;
+  $("#mymonthly").innerHTML = m && mi >= 0 ? `<div class="mymonthly"><span>${esc(T.yourMonthly(T.tiers[mi][0].toLowerCase(), m.renewing))}</span><button class="link" data-act="manage">${T.manage}</button></div>` : "";
   drawPay($("#pay"));
 }
 /** The pay button: "Buy it" and the price, and under it the place it buys (hidden when the server can't say). */
@@ -955,10 +980,15 @@ async function drawPay(button) {
     const note = $("#paynote"); if (note) note.textContent = "";
     return;
   }
-  const monthly = cadence === "m" && tier !== 3;
-  const head = `<span>${T.chipIn} · ${s.price}${monthly ? T.perMonth : ""}</span>`;
+  const monthly = cadence === "m" && tier !== 3, mine = monthly && state.monthly;
   const note = $("#paynote");
-  if (note && button.id === "pay") note.textContent = state.billing !== "ready" ? T.billing : monthly ? T.monthlyNote : "";
+  if (mine && state.monthly.id === s.id) {
+    button.innerHTML = `<span>${T.yours} · ${s.price}${T.perMonth}</span>`; button.classList.add("owned");
+    if (note) note.textContent = ""; return;
+  }
+  button.classList.remove("owned");
+  const head = `<span>${mine ? T.switchTo : T.chipIn} · ${s.price}${monthly ? T.perMonth : ""}</span>`;
+  if (note && button.id === "pay") note.textContent = state.billing !== "ready" ? T.billing : mine ? T.switchNote : monthly ? T.monthlyNote : "";
   const r = await api.preview(s.cents).catch(() => ({ available: false }));
   if (!r.available) { button.innerHTML = head; return; }
   // The rank rolls: the old number slides up and out as the new one comes in.
@@ -976,15 +1006,22 @@ function drawCustom() {
   if (toDollars(+s.value) !== dollars) s.value = pos;
   s.style.setProperty("--p", (+s.value / 4) + "%");
   const cups = dollars / 5;
-  if (document.activeElement !== $("#custd")) $("#custd").value = dollars;
-  $("#custd").style.width = (String(dollars).length * .62 + .1) + "em";
-  // Outside US dollars, the count reads with what it costs here.
-  const unit = product(state.tiers?.custom || "support_tip_unit"), local = unit && unit.currency !== "USD" && money(unit.amountMicros * dollars, unit.currency);
-  $("#custc").textContent = cupsText(cups) + (local ? ` · ${local}` : "");
+  // One price, the local one (owner, 2026-11-24: "shouldn't have two price… just local is fine"): the readout, the ticks and
+  // the quick buttons are what it costs here. Custom buys whole units, so a typed amount lands on the nearest one.
+  const unit = customUnit(), here = unit?.amountMicros != null && moneyParts(unit.amountMicros * dollars, unit.currency);
+  const shown = here ? here.num : String(dollars);
+  $("#custpre").textContent = here ? here.pre : "$"; $("#custsuf").textContent = here ? here.suf : "";
+  if (document.activeElement !== $("#custd")) $("#custd").value = shown;
+  $("#custd").style.width = (shown.length * .62 + .1) + "em";
+  document.querySelectorAll("#custom .ticks span").forEach((t, i) => {
+    const n = [1, 5, 10, 25, 50][i], p = unit?.amountMicros != null && moneyParts(unit.amountMicros * n, unit.currency);
+    if (p) t.textContent = p.pre + p.num + p.suf;
+  });
+  $("#custc").textContent = cupsText(cups);
   document.querySelectorAll("#quick button").forEach(b => {
     b.classList.toggle("on", +b.dataset.dollars === dollars);
-    const n = +b.dataset.dollars, here = unit && money(unit.amountMicros * n, unit.currency);
-    if (here) b.textContent = `${here} · ${n / 5} cup${n === 5 ? "" : "s"}`;
+    const n = +b.dataset.dollars, p = unit?.amountMicros != null && moneyParts(unit.amountMicros * n, unit.currency);
+    if (p) b.textContent = `${p.pre}${p.num}${p.suf} · ${n / 5} cup${n === 5 ? "" : "s"}`;
   });
   $("#custpot").textContent = cups > 5 ? T.wholePot : "";
   $("#custcups").innerHTML = cupRow(cups, 104);
@@ -1191,6 +1228,7 @@ document.addEventListener("click", async ev => {
   if (act === "add") { await api.join(false, $("#name").value.trim(), $("#msg").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
   if (act === "remove") { await api.remove().catch(() => {}); SAMPLE.joined = false; route("board"); }
   if (act === "later") route(optinBack);
+  if (act === "manage") api.manage();
   if (act === "joinlater" || act === "edit") {
     const me = act === "edit" && (board.entries || []).find(x => x.you);
     const r = me ? { available: true, rank: me.rank } : await api.preview(0).catch(() => ({ available: false }));
@@ -1229,14 +1267,24 @@ $("#pay").onclick = $("#pay2").onclick = async ev => {
     return;
   }
   const s = selected(); if (!s) return;
+  if (cadence === "m" && tier !== 3 && state.monthly?.id === s.id) return;
   const r = await api.buy(s.id, tier === 3 ? dollars : 1).catch(() => ({ result: "unavailable" }));
   if (r.result === "unavailable") $("#paynote").textContent = T.billing;
   if (!native) paid(s.cents);
 };
 $("#slider").oninput = e => { const was = dollars; dollars = toDollars(+e.target.value); if (dollars !== was) buzz("tick"); drawCustom(); };
-$("#custd").oninput = e => { const v = Math.round(+e.target.value); if (v >= 1 && v <= 50) { dollars = v; drawCustom(); } };
+// The typed amount is local money: "7.50", "7,50" or "1,500" all read. It becomes the nearest whole number of units, 1 to 50.
+const typedAmount = text => {
+  const t = text.replace(/[^\d.,]/g, ""), m = t.match(/^(.*)[.,](\d{1,2})$/);
+  return m ? +(m[1].replace(/[.,]/g, "") + "." + m[2]) : +t.replace(/[.,]/g, "");
+};
+$("#custd").oninput = e => {
+  const unit = customUnit(), each = unit?.amountMicros ? unit.amountMicros / 1e6 : 1;
+  const v = Math.round(typedAmount(e.target.value) / each);
+  if (v >= 1 && v <= 50) { dollars = v; drawCustom(); }
+};
 document.querySelectorAll("#quick button").forEach(b => b.onclick = () => { dollars = +b.dataset.dollars; drawCustom(); });
-$("#custd").onblur = () => { $("#custd").value = dollars; };
+$("#custd").onblur = () => { drawCustom(); };
 for (const id of ["support", "board", "settings", "optin", "custom"]) scroller($("#" + id)).addEventListener("scroll", e => {
   e.target.closest(".view").querySelector(".bar")?.classList.toggle("scrolled", e.target.scrollTop > 8);
   docks();

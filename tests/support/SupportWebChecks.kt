@@ -38,7 +38,7 @@ fun supportWebChecks() {
         SupportCall.Report("0f8fad5b-d9cb-469f-a165-70867728950e"))
     check(parse("""{"id":7,"op":"board","args":{"page":2}}""").call == SupportCall.Board(2))
     check(parse("""{"id":8,"op":"board"}""").call == SupportCall.Board(0))
-    for (op in listOf("removeMe", "dismissPopup", "close")) parse("""{"id":9,"op":"$op"}""")
+    for (op in listOf("removeMe", "dismissPopup", "close", "manageMonthly")) parse("""{"id":9,"op":"$op"}""")
     // The page's haptics: only TitanKeys' own five, by name.
     for (name in SupportWebProtocol.HAPTICS) check(parse("""{"id":10,"op":"haptic","args":{"name":"$name"}}""").call == SupportCall.Haptic(name))
     check(refused("""{"id":1,"op":"haptic","args":{"name":"buzz_forever"}}""") == "bad_args")

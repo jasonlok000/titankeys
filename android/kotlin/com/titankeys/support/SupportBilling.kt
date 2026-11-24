@@ -33,6 +33,11 @@ internal class SupportBilling(private val activity: Activity, private val change
     private var launchedOffer: Offer? = null
     private val finalizing = mutableSetOf<String>()
     private val offers = linkedMapOf<String, Offer>()
+    /**
+     * The monthly coffee this Play account has now, as Play last said: picking another one replaces it, so nobody pays for two
+     * (owner, 2026-11-24), and the page shows it with a way to manage it in Play.
+     */
+    private var monthly: Purchase? = null
 
     private val clientSource = lazy {
         BillingClient.newBuilder(activity.applicationContext)
@@ -56,6 +61,9 @@ internal class SupportBilling(private val activity: Activity, private val change
         }))
         .put("totalCents", ledger.cents)
         .put("receipt", ledger.receipt ?: JSONObject.NULL)
+        .put("monthly", monthly?.let { sub ->
+            JSONObject().put("id", sub.products.singleOrNull()).put("renewing", sub.isAutoRenewing)
+        } ?: JSONObject.NULL)
 
     private fun post(action: () -> Unit) {
         main.post { if (!closed) action() }
@@ -178,10 +186,20 @@ internal class SupportBilling(private val activity: Activity, private val change
         if (flowOpen) return "pending"
         if (ledger.broken) return "unavailable"
         val offer = offers[productId] ?: return "unavailable"
+        val current = monthly?.takeIf { offer.product.monthly }
+        if (current != null && current.products.singleOrNull() == offer.product.id) return "owned"
         val product = BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(offer.details)
             .apply { offer.token?.let(::setOfferToken) }.build()
         val params = BillingFlowParams.newBuilder().setProductDetailsParamsList(listOf(product))
-            .setObfuscatedAccountId(ledger.accountId()).build()
+            .setObfuscatedAccountId(ledger.accountId())
+            .apply {
+                // Another monthly coffee replaces the one they have, at once, with what's left of this month counted toward it.
+                if (current != null) setSubscriptionUpdateParams(BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                    .setOldPurchaseToken(current.purchaseToken)
+                    .setSubscriptionReplacementMode(BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITH_TIME_PRORATION)
+                    .build())
+            }
+            .build()
         ledger.quote(offer.product, offer.micros, offer.currency)
         // Play's cart sets a unit purchase's quantity. There is no quantity input on BillingFlowParams.
         return when (client.launchBillingFlow(activity, params).responseCode) {
@@ -207,16 +225,32 @@ internal class SupportBilling(private val activity: Activity, private val change
             BillingResponseCode.USER_CANCELED -> "cancelled"
             else -> "unavailable"
         }
-        if (response.responseCode == BillingResponseCode.OK) purchases.forEach { credit(it, fromFlow = true) }
+        if (response.responseCode == BillingResponseCode.OK) {
+            activeMonthly(purchases)?.let { monthly = it }
+            purchases.forEach { credit(it, fromFlow = true) }
+        }
         if (purchases.none { it.purchaseState == Purchase.PurchaseState.PENDING }) launchedOffer = null
         changed()
     }
+
+    /** The monthly coffee's product id, if this account has one. */
+    fun monthlyId(): String? = monthly?.products?.singleOrNull()
+
+    /** The monthly coffee among [purchases] that's in force: a renewing one first. */
+    private fun activeMonthly(purchases: List<Purchase>) = purchases
+        .filter { it.purchaseState == Purchase.PurchaseState.PURCHASED && it.products.singleOrNull()?.let(SupportProduct::find)?.monthly == true }
+        .sortedByDescending { it.isAutoRenewing }.firstOrNull()
 
     private fun reconcile() {
         for (type in listOf(ProductType.INAPP, ProductType.SUBS)) {
             val query = QueryPurchasesParams.newBuilder().setProductType(type).build()
             client.queryPurchasesAsync(query) { response, purchases -> post {
-                if (response.responseCode == BillingResponseCode.OK) purchases.forEach { credit(it, fromFlow = false) }
+                if (response.responseCode != BillingResponseCode.OK) return@post
+                if (type == ProductType.SUBS) {
+                    monthly = activeMonthly(purchases)
+                    changed()
+                }
+                purchases.forEach { credit(it, fromFlow = false) }
             } }
         }
     }

@@ -75,6 +75,10 @@ h2 { font-weight: 700; font-size: clamp(32px, 4.4vw, 52px); line-height: 1.08; l
 .get li span::before { content: counter(step); display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 12px;
   border-radius: 50%; background: var(--orange); color: var(--black); font-weight: 700; }
 .get li .button { background: var(--orange); color: var(--black); padding: 12px 22px; }
+.get .stuck { max-width: 40em; margin: 0 0 24px; color: var(--muted); font-size: 16px; }
+.get .stuck p { margin: 0 0 8px; }
+.get .stuck ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.get .stuck li { display: list-item; counter-increment: none; padding: 0; border-radius: 0; background: none; }
 .get .fine { color: var(--muted); font-size: 16px; margin: 0; }
 
 footer { padding-top: 32px; padding-bottom: 48px; color: var(--muted); font-size: 15px; }

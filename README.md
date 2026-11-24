@@ -250,6 +250,12 @@ TitanKeys is on Google Play as a test for now. It shows up in Play's search once
 
 Then open TitanKeys: the guide takes it from there. Play keeps it up to date.
 
+**Stuck on step 3?**
+- **"Requested URL was not found":** Play needs a few minutes to unlock it after steps 1 and 2. Grab a coffee, then try again.
+- **Still not there?** Check that Play uses the same Google account as steps 1 and 2. It's your picture at the top right of the Play Store.
+- **"Can't download TitanKeys Keyboard":** uninstall any TitanKeys you got from GitHub first (2.0.0 was signed with another key), and keep about 1 GB free.
+- **Nothing works?** The APK below is the same app, signed with the same key.
+
 **No Google Play?** Download the APK from [the latest release](https://github.com/jasonlok000/titankeys/releases/latest) and install it. It's the same app, signed with the same key, so you can move to the Play version later without reinstalling.
 
 TitanKeys installs next to Atlas, so it doesn't replace it or touch Atlas's saved words.

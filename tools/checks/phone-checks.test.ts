@@ -15,9 +15,34 @@ test("the phone checks only read", () => {
   expect(checks).toContain('"persist.sys.touchpad_forcescroll"');
 });
 
+test("a key is judged by its function too, and the bar warns at most once a day (#116)", () => {
+  const keyCheck = read("android/kotlin/com/titankeys/keyboard/KeyCheck.kt");
+  // The owner's fn key on Programmable key > Sym key passed when only the mode was read (2026-11-24).
+  expect(checks).toContain('"${key.id}_programmable_key_function"');
+  expect(checks).toContain("KeyCheck.of(key == Key.Sym, programmable, function)");
+  for (const row of ["| 0     | None", "| 1     | Ctrl key |", "| 2     | Sym key  |", "| 5     | Tab key  |", "| 7     | Shift key |", "| 8     | Alt key  |"])
+    expect(keyCheck).toContain(row);
+  expect(keyCheck).toContain("val right = if (sym) function == SYM else function == CTRL || function == NONE");
+  expect(keyCheck).toContain('"$key isn\'t a Programmable key"');
+  expect(keyCheck).toContain('"$key types another key" else "$key types $name"');
+  expect(keyCheck).toContain('SYM_PATH = "Sym key > Programmable key > Sym key"');
+  expect(keyCheck).toContain('FN_PATH = "fn key > Programmable key > Ctrl key"');
+  expect(keyCheck).toContain("now - last >= DAY_MILLIS");
+  expect(checks).toContain("KeyCheck.warningDue(");
+  // fn is always Ctrl: the warning no longer waits on a setting.
+  const ime = read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
+  expect(ime).not.toContain("fnAsCtrl");
+  expect(ime).toContain("for (key in listOf(PhoneChecks.Key.Fn, PhoneChecks.Key.Sym))");
+  expect(ime).toContain("PhoneChecks.shortcutKeysPage(this)");
+  // Setup names what's wrong.
+  const setup = read("app/settings/setup.tsx");
+  expect(setup).toContain('settings.fnKeyProblem || "To do"');
+  expect(setup).toContain('settings.symKeyProblem || "To do"');
+});
+
 test("Setup shows each phone setting as a step that opens its page", () => {
   const setup = read("app/settings/setup.tsx");
-  for (const step of ["Sym works as Sym", "fn works as Ctrl", "Shortcut keys > fn key", "Shortcut keys > Sym key"]) expect(setup).toContain(step);
+  for (const step of ["Sym works as Sym", "fn works as Ctrl", "fn key > Programmable key > Ctrl key", "Sym key > Programmable key > Sym key"]) expect(setup).toContain(step);
   expect(setup).toContain('openSetupStep("shortcutKeys")');
   expect(setup).toContain('openSetupStep("scrollAssistant")');
   // Scroll assistant and each app's Sliding Mode 1 are one step (owner, 2026-11-14: the second row was "redundant").

@@ -5,8 +5,8 @@ import android.content.Intent
 import android.provider.Settings
 
 /**
- * The phone's own settings that TitanKeys needs but must never change: the Sym and fn keys set to Programmable key, and
- * each app's Scroll assistant set to Sliding Mode 1. Settings > Setup shows them as steps, and opens the phone's page for
+ * The phone's own settings that TitanKeys needs but must never change: the Sym and fn keys set to Programmable key (Sym key
+ * and Ctrl key, [KeyCheck]), and each app's Scroll assistant set to Sliding Mode 1. Settings > Setup shows them as steps, and opens the phone's page for
  * each. Everything here only reads.
  *
  * Where the Titan 2 Elite keeps them (read on the owner's phone, 2026-11-12):
@@ -32,32 +32,38 @@ internal object PhoneChecks {
     enum class Key(val id: String) { Sym("sym"), Fn("fn") }
 
     /** Phones without the Titan's programmable keys have nothing to set, so there the step counts as done. */
-    fun programmable(context: Context, key: Key) = programmableReading(context, key) ?: true
+    fun programmable(context: Context, key: Key) = keyCheck(context, key)?.ok ?: true
 
     /**
-     * Whether [key] is set to Programmable key: true, false, or null when its setting can't be confirmed (another phone, or the
-     * Titan's setting can't be read). Cheap enough to call as a field starts or a key is pressed (#116).
+     * How [key] is set on the Shortcut keys page, judged for TitanKeys ([KeyCheck], which has the table of functions), or null
+     * when its setting can't be confirmed (another phone, or the Titan's setting can't be read). Cheap enough to call as a field
+     * starts or a key is pressed (#116).
      *
-     * What it returns for each mode:
-     * - `persist.sys.agui_smart_<key>_key` = `programmable_key_enable`: true. Any other non-empty value is another mode on the
-     *   Shortcut keys page (Tab, an app, a shortcut and so on): false. Those values aren't recorded yet: the owner is to read them
-     *   on the phone (`adb shell getprop persist.sys.agui_smart_fn_key` after picking each mode) and note them here.
-     * - The property empty: Settings.System `<key>_programmable_key_enable`, 1 true, 0 false, missing or unreadable null.
+     * The mode:
+     * - `persist.sys.agui_smart_<key>_key` = `programmable_key_enable`: Programmable key, whatever the function. Any other
+     *   non-empty value is another mode (Shortcut settings and so on).
+     * - The property empty: Settings.System `<key>_programmable_key_enable`, 1 Programmable key, 0 not, missing or unreadable null.
      * - `ro.agui.symkey_fnkey_default` empty (not a Titan with these keys): null.
+     * The function, under Programmable key: Settings.System `<key>_programmable_key_function`; when it can't be read, the mode
+     * alone decides.
      */
-    fun programmableReading(context: Context, key: Key): Boolean? {
+    fun keyCheck(context: Context, key: Key): KeyCheck? {
         if (property("ro.agui.symkey_fnkey_default").isNullOrEmpty()) return null
         val mode = property("persist.sys.agui_smart_${key.id}_key")
-        if (!mode.isNullOrEmpty()) return mode == "programmable_key_enable"
-        return try {
-            when (Settings.System.getInt(context.contentResolver, "${key.id}_programmable_key_enable", -1)) {
+        val programmable = if (!mode.isNullOrEmpty()) mode == "programmable_key_enable" else
+            when (system(context, "${key.id}_programmable_key_enable")) {
                 0 -> false
                 1 -> true
-                else -> null
+                else -> return null
             }
-        } catch (error: SecurityException) {
-            null
-        }
+        val function = if (programmable) system(context, "${key.id}_programmable_key_function") else null
+        return KeyCheck.of(key == Key.Sym, programmable, function)
+    }
+
+    private fun system(context: Context, name: String): Int? = try {
+        Settings.System.getInt(context.contentResolver, name, -1).takeIf { it >= 0 }
+    } catch (error: SecurityException) {
+        null
     }
 
     /**
@@ -79,19 +85,21 @@ internal object PhoneChecks {
     }
 
     /**
-     * The keyboard's warning that [key] isn't Programmable key (#116), shown once: true the first time it's asked while the
-     * reading is false. Once the key reads Programmable key again, the warning is armed again, so a later change is caught too.
-     * A null reading has its own once-only note, [unreadableNoteDue].
+     * The keyboard's warning that [key] is set wrong (#116): true at most once a day while [check] says so, as a field starts.
+     * Once the key reads right, the day's mark goes, so a later change is caught at once. A null [check] has its own once-only
+     * note, [unreadableNoteDue].
      */
-    fun keyWarningDue(context: Context, key: Key, reading: Boolean?): Boolean {
+    fun keyWarningDue(context: Context, key: Key, check: KeyCheck?, now: Long = System.currentTimeMillis()): Boolean {
+        if (check == null) return false
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-        val name = "warned_${key.id}_key"
-        if (reading == true) {
-            if (preferences.getBoolean(name, false)) preferences.edit().remove(name).apply()
+        val name = "warned_${key.id}_key_at"
+        if (check.ok) {
+            if (preferences.contains(name)) preferences.edit().remove(name).apply()
             return false
         }
-        if (reading == null || preferences.getBoolean(name, false)) return false
-        preferences.edit().putBoolean(name, true).apply()
+        if (!KeyCheck.warningDue(preferences.getLong(name, -1L).takeIf { it >= 0 }, now)) return false
+        // The first warning was once ever, a Boolean under the old name: it goes.
+        preferences.edit().putLong(name, now).remove("warned_${key.id}_key").apply()
         return true
     }
 
@@ -104,11 +112,11 @@ internal object PhoneChecks {
         return true
     }
 
-    /** The bar's words for [key] not being Programmable key, or for fn when its setting can't be read ([reading] null). */
-    fun keyWarning(key: Key, reading: Boolean?): String = when {
-        key == Key.Sym -> "Sym can't open symbols. Tap, then Sym key > Programmable key."
-        reading == null -> "fn works as Ctrl (fn+C copies). Not working? Tap, then fn key > Programmable key."
-        else -> "fn isn't working as Ctrl. Tap, then fn key > Programmable key."
+    /** The bar's words for [key] set wrong ([check]), or for fn when its setting can't be read ([check] null). */
+    fun keyWarning(key: Key, check: KeyCheck?): String = when {
+        key == Key.Sym -> "${check?.problem ?: "Sym isn't set up"}. Tap, then ${KeyCheck.SYM_PATH}."
+        check == null -> "fn works as Ctrl (fn+C copies). Not working? Tap, then ${KeyCheck.FN_PATH}."
+        else -> "${check.problem ?: "fn isn't set up"}. Tap, then ${KeyCheck.FN_PATH}."
     }
 
     /** The Shortcut keys app's entry, as the phone's Settings lists it. */

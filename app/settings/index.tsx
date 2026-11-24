@@ -105,9 +105,6 @@ export default function Settings() {
         onChange={emojiStays => save.run({ emojiStays })} />
       <Toggle label={largerEmojiLabel} value={settings.largerEmoji}
         onChange={largerEmoji => save.run({ largerEmoji })} />
-      <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
-        onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
-      <Needs list={needs.fnAsCtrl(settings)} />
       <Toggle label={altBackspaceLabel} subtitle={altBackspaceNote} value={settings.altBackspaceForward}
         onChange={altBackspaceForward => save.run({ altBackspaceForward })} />
     </Section>

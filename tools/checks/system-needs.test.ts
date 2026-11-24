@@ -22,12 +22,11 @@ test("each need opens the exact system screen through the app's own actions", ()
 test("each feature's own row says what's off, and there is no banner", () => {
   expect(settings).toContain('<Needs list={needs.touchpad(settings)} />');
   expect(settings).toContain('<Needs list={needs.scrollBlock(settings).filter(need => need.id === "backService")} />');
-  expect(settings).toContain('<Needs list={needs.fnAsCtrl(settings)} />');
+  expect(settings).not.toContain("fnAsCtrl");
   expect(settings).toContain('<Needs list={needs.altSym(settings)} />');
   expect(settings).toContain('<Needs list={needs.keyboard(settings)} />');
   expect(read("app/settings/data/index.tsx")).toContain("<Needs list={needs.contactNames(result.data)} />");
   // Each sits right under its row.
-  expect(settings.indexOf("needs.fnAsCtrl")).toBeGreaterThan(settings.indexOf('label="Use fn as Ctrl"'));
   expect(settings.indexOf("needs.scrollBlock")).toBeGreaterThan(settings.indexOf("label={scrollLabel}"));
   // No list of everything off at the top.
   const top = settings.slice(settings.indexOf("<Screen title=\"Settings\" rightAction={closeAction}>"), settings.indexOf('<Section title="Shortcuts">'));

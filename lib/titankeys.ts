@@ -62,10 +62,14 @@ export type State = {
   overlayOnList: boolean;
   /** The same for the Accessibility step. */
   backOnList: boolean;
-  /** The phone's Sym key is set to Programmable key, so it opens the Sym panel. Read only (PhoneChecks.kt). */
+  /** The phone's Sym key is set to Programmable key > Sym key, so it opens the Sym panel. Read only (PhoneChecks.kt, KeyCheck.kt). */
   symKey: boolean;
-  /** The phone's fn key is set to Programmable key, so it can work as Ctrl. */
+  /** The phone's fn key is set to Programmable key > Ctrl key (or None), so it works as Ctrl. */
   fnKey: boolean;
+  /** What's wrong with the Sym key's setting ("Sym types Tab"), or "" when it's right or can't be read. */
+  symKeyProblem: string;
+  /** The same for fn ("fn types Sym", "fn isn't a Programmable key"). */
+  fnKeyProblem: string;
   /** The apps the keyboard saw outside Sliding Mode 1 in two fields, where swiping doesn't work, by name (SlidingModeList). */
   outsideSlidingMode: string[];
   learning: boolean;
@@ -75,7 +79,6 @@ export type State = {
   holdSymbols: boolean;
   holdSymbolMillis: number;
   /** The keyboard treats fn as Ctrl, so Key Mapper is not needed for this. */
-  fnAsCtrl: boolean;
   /** Alt + Backspace deletes forward, like Delete on a PC. Off, Android's own Alt + Backspace deletes the line. */
   altBackspaceForward: boolean;
   /** A held Shift + Backspace deletes a word. Off, it's a plain Backspace. */
@@ -264,7 +267,11 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
+<<<<<<< HEAD
 export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "doubleSpaceCursor" | "tripleSpaceSelect" | "deleteFlick" | "swipeTrail" | "symbolsStay" | "emojiStays" | "largerEmoji" | "touchpadOnlyInFields" | "accentColour" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
+=======
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "doubleSpaceCursor" | "tripleSpaceSelect" | "deleteFlick" | "swipeTrail" | "symPanelStays" | "largerEmoji" | "touchpadOnlyInFields" | "accentColour" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
+>>>>>>> worktree-agent-a162fab291fec1eb1
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
   /** A language's page: its own values, by language id. A write sends only the ones that changed. */

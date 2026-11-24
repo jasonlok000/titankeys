@@ -96,8 +96,8 @@ internal object PhoneSetup {
                     else -> null
                 } else null
             SetupSetting.Accessibility -> BackService.enabled(context)
-            SetupSetting.Sym -> PhoneChecks.programmableReading(context, PhoneChecks.Key.Sym)
-            SetupSetting.Fn -> PhoneChecks.programmableReading(context, PhoneChecks.Key.Fn)
+            SetupSetting.Sym -> PhoneChecks.keyCheck(context, PhoneChecks.Key.Sym)?.ok
+            SetupSetting.Fn -> PhoneChecks.keyCheck(context, PhoneChecks.Key.Fn)?.ok
             SetupSetting.Contacts -> PhoneNameSource.contactsAllowed(context)
         }
     } catch (_: SecurityException) {

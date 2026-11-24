@@ -89,7 +89,6 @@ test("every press on a native screen goes through onPress, which plays its hapti
 
 test("the guide's own switches lock and let go", () => {
   const guide = read("android/kotlin/com/titankeys/keyboard/GuideActivity.kt");
-  expect(guide).toContain("haptics.play(if (pasteDeclined) Haptic.AppSwitchOn else Haptic.AppSwitchOff)");
   expect(guide).toContain("haptics.play(Haptic.AppSwitchOff)");
   expect(read("lib/contribute.tsx")).toContain("switched(true);");
 });

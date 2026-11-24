@@ -75,7 +75,6 @@ export default function BoringGuide() {
     </Section>
     <Section title="Copy and paste">
       <Topic title="Copy, cut and paste">{"Pick some text, then hold fn and press C to copy, X to cut, or V to paste. fn works as Ctrl, so every Ctrl shortcut works with it."}</Topic>
-      <Topic title="Use fn as Ctrl">{"On by default. Want fn for the phone's own shortcuts instead? Turn off Use fn as Ctrl in Settings."}</Topic>
       <Topic title="The clipboard">{"Press Sym, let go, then press A. Your last copies are there, newest first, a few to a page. Swipe up or down on the keys for more, and left or right for Pinned. Press a key to paste its clip. Enter pins clips so they stay. Backspace clears the ones that aren't pinned. Alt goes back to the symbols."}</Topic>
     </Section>
     <Section title="Shortcuts">
@@ -103,8 +102,8 @@ export default function BoringGuide() {
     <Section title="Problems">
       <Topic title="Check the setup">{"Something fucked up? Nine times out of ten it's Setup. Settings > Setup, make every step say Done."}</Topic>
       <Topic title="Messed up your settings">{"Changed so much you can't find your way back? At the bottom of Settings: Reset most things puts every switch and choice back how it started, and your words, snippets, shorthand and app lists stay. Reset literally everything wipes all of that too, like a fresh install. What you already shared stays on our side until you delete it in Settings > Sharing."}</Topic>
-      <Topic title="Sym doesn't open the panel">{"In phone Settings > Shortcut keys > Sym key, pick Programmable key. Settings > Setup checks it and takes you there."}</Topic>
-      <Topic title="fn doesn't work as Ctrl">{"In phone Settings > Shortcut keys > fn key, pick Programmable key. Settings > Setup checks it and takes you there."}</Topic>
+      <Topic title="Sym doesn't open the panel">{"In phone Settings > Shortcut keys, pick Sym key > Programmable key > Sym key. Settings > Setup checks it and takes you there."}</Topic>
+      <Topic title="fn doesn't work as Ctrl">{"In phone Settings > Shortcut keys, pick fn key > Programmable key > Ctrl key. Not Sym key or Tab key. Settings > Setup checks it and takes you there."}</Topic>
       <Topic title="Swiping doesn't work in an app">{"Settings > Setup lists the apps that need Sliding Mode 1. Tap the row naming the app to open Scroll assistant, then find the app and pick Sliding Mode 1. An app goes on the list after confirmed readings in two separate fields you used. It comes off as soon as TitanKeys sees Sliding Mode 1."}</Topic>
       <Topic title="Back takes two presses">{"Turn TitanKeys Keyboard on in Accessibility. Settings > Setup has the step."}</Topic>
     </Section>

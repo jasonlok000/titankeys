@@ -92,7 +92,6 @@ fun main() {
     ctrlLeavesTheSymPanelAlone()
     ctrlLeavesStickyKeysAlone()
     bothCtrlKeys()
-    fnIsNotCtrlByDefault()
     fnAsCtrl()
     fnAndKeyMapperAreOneCtrl()
     closingThePanelLeavesCtrlHeld()
@@ -181,7 +180,7 @@ private fun cornersKeepContentClear() {
 
 private fun aCancelledFeedKeepsNewerModifierPresses() {
     for (code in listOf(SHIFT, ALT, CTRL, SYM, FN)) {
-        val modifiers = Modifiers().apply { fnIsCtrl = true }
+        val modifiers = Modifiers()
         fun isHeld() = if (modifiers.isCtrl(code)) modifiers.ctrlHeld else modifiers.isHeld(code)
         modifiers.down(code, 100L)
         // A physical down can arrive before the synthetic up.
@@ -1311,33 +1310,20 @@ private fun bothCtrlKeys() = Keyboard().run {
     same(modifiers.ctrlHeld, false, "Ctrl must end with the last Ctrl key")
 }
 
-private fun fnIsNotCtrlByDefault() = Keyboard().run {
-    same(modifiers.fnIsCtrl, false, "fn must not be Ctrl until the user turns the setting on")
-    same(modifiers.isCtrl(FN), false, "With the setting off, fn must not count as Ctrl")
-    down(FN)
-    idle(WORD)
-    same(modifiers.ctrlHeld, false, "With the setting off, fn must not hold Ctrl")
-    same(bar(), null, "With the setting off, fn must not show in the bar")
-    down(CTRL)
-    same(modifiers.ctrlHeld, true, "With the setting off, Key Mapper's Ctrl must still count")
-}
-
 private fun fnAsCtrl() = Keyboard().run {
-    modifiers.fnIsCtrl = true
-    same(modifiers.isCtrl(FN), true, "With the setting on, fn must count as Ctrl")
+    same(modifiers.isCtrl(FN), true, "fn must always count as Ctrl")
     same(Modifiers.isModifier(FN), false, "fn must not join the sticky modifiers")
     down(FN)
-    same(bar()?.chips, listOf(ModifierBar.CTRL), "With the setting on, holding fn must show Ctrl")
+    same(bar()?.chips, listOf(ModifierBar.CTRL), "Holding fn must show Ctrl")
     same(shift, Level.Off, "fn as Ctrl must not turn Shift on")
     up(FN)
-    same(bar(), null, "With the setting on, letting go of fn must bring the words back")
-    same(modifiers.ctrlHeld, false, "With the setting on, fn must not stay on")
+    same(bar(), null, "Letting go of fn must bring the words back")
+    same(modifiers.ctrlHeld, false, "fn must not stay on")
 }
 
 private fun fnAndKeyMapperAreOneCtrl() {
     Keyboard().run {
         // If Key Mapper leaves fn in place, the keyboard hears both fn and Key Mapper's Ctrl.
-        modifiers.fnIsCtrl = true
         down(FN)
         idle(150)
         down(CTRL)
@@ -1348,7 +1334,6 @@ private fun fnAndKeyMapperAreOneCtrl() {
         same(modifiers.ctrlHeld, false, "Ctrl must end when both are let go")
     }
     Keyboard().run {
-        modifiers.fnIsCtrl = true
         down(CTRL)
         down(FN)
         up(CTRL)
@@ -1402,7 +1387,6 @@ private fun ctrlThroughAFieldStart() {
         same(modifiers.ctrlHeld, false, "Ctrl must not stay on when the field takes text again")
     }
     Keyboard().run {
-        modifiers.fnIsCtrl = true
         down(FN)
         modifiers.fieldStarted(restarting = true, editing = false)
         same(modifiers.ctrlHeld, false, "A restart as a field that takes no text must also forget fn as Ctrl")

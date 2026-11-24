@@ -681,7 +681,7 @@ const T = {
   limits: { 3: "120 characters. Say something grand.", 10: "80 characters. Make it count.", 100: "40 characters. Short and sweet.", 0: "Name only for now. Climb for a message." },
   addMe: "Add me",
   invite: tier => `You're in the top ${tier} now. Want a longer message?`, writeMore: "Write more", later: "Not now",
-  privacy: "Only names, messages and rank. Leave any time.", removeMe: "Remove me", editMe: "Edit my name and message", save: "Save",
+  privacy: "Only names, messages and rank. Leave any time.", removeMe: "Remove me", editMe: "Edit my name and message", joinLink: "Join the board", yourEntry: "Your name on it", save: "Save",
   billing: "Play can't take payments on this phone.", notReady: "Play's still waking up. Try again soon.",
   offline: "You're offline. The board will be back.",
   allRanks: () => "See everyone", retry: "Try again", previewLabel: "Here's you on the board",
@@ -890,7 +890,10 @@ function drawBoardPreview() {
   const e = board.entries || [];
   // Supporters see their own name for the board (the good people) from the first screen on.
   document.querySelector('#support [data-t="fund"]').textContent = state.supporter ? T.supporters : T.fund;
-  $("#seeall").textContent = e.length > 3 ? T.allRanks() + " ›" : "";
+  // Past three, the whole board. A supporter always gets a way in, whatever its size, to join later or to edit or leave
+  // (overnight test, 2026-11-24: on an empty board, Not now left no way back on).
+  $("#seeall").textContent = e.length > 3 ? T.allRanks() + " ›"
+    : state.supporter && board.available ? (board.joined ? T.yourEntry : T.joinLink) + " ›" : "";
   $("#boardpreview").innerHTML = e.length ? podiumCompact(e) : emptyBoard();
 }
 function drawBoardFull(supporter) {

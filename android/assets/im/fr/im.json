@@ -47,7 +47,7 @@
     "Hold a letter for its accents: hold E for é, è, ê or ë, C for ç, O for ô or œ. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "guide": {
-    "status": "experimental",
+    "status": "tested",
     "family": "latin",
     "line": "French on the printed letters, with its accents held.",
     "points": [

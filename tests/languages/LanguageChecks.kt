@@ -1868,11 +1868,11 @@ private fun everyGuideIsComplete(folder: File) {
         val guide = root["guide"] as? Map<*, *>
         check("${dir.name}: has a guide", guide != null)
         guide ?: continue
-        // Its stage (owner, 2026-11-22): Chinese is polished, the tested ones tested (Korean; Italian, Russian, Ukrainian and Danish,
+        // Its stage (owner, 2026-11-22): Chinese is polished, the tested ones tested (Korean; Italian, Russian, Ukrainian, Danish and French,
         // owner 2026-11-24, tools/im/make.py TESTED), the rest experimental.
         same("${dir.name}: its status", guide["status"], when {
             (root["script"] as? String) == "Hani" -> "polished"
-            dir.name in setOf("ko", "it", "ru", "uk", "da") -> "tested"
+            dir.name in setOf("ko", "it", "ru", "uk", "da", "fr") -> "tested"
             else -> "experimental"
         })
         check("${dir.name}: its family", (guide["family"] as? String).orEmpty().isNotEmpty())

@@ -178,7 +178,7 @@ test("the menu: a press picks, Enter and Backspace turn pages, each key logged, 
   expect(controls).toContain("KeyEvent.KEYCODE_DEL -> if (menu.previous())");
   expect(controls).toContain("KeyEvent.KEYCODE_SYM -> closeChoicesMenu()");
   expect(keys).toContain("pickFromMenu(index)");
-  expect(ime).toContain("if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen && inputViewShown) {");
+  expect(ime).toContain("if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen && backShown) {");
   // Swipes up and down turn its pages, the Sym panel's way (EmojiPages.forward: up goes forward).
   expect(body(ime, "pageChoices")).toContain("ChineseKeys.Swipe.NextPage -> if (choicesMenu?.next() == true)");
   expect(body(ime, "pageChoices")).toContain("ChineseKeys.Swipe.PageBefore -> if (choicesMenu?.previous() == true)");

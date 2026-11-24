@@ -491,9 +491,22 @@ class TitanKeysIme : InputMethodService() {
 
     /** Whether this Back push was kept from the app, so its release is kept too, whatever changed in between. */
     private var backKept = false
-    /** When the keyboard last handled a Back's release (uptime), and whether the push now down is that Back's replay. */
+    /** When the keyboard last handled a Back's release (its event time), and whether the push now down is that Back's replay. */
     private var backHandledAt = Long.MIN_VALUE / 2
     private var backEcho = false
+    /** Whether the keyboard's window is on screen: shown and not hidden since, or its input view finished ([BackRule.onScreen]). */
+    private var windowShown = false
+    /** The keyboard really on screen, for Back: never a stale input-view flag after Android hid the keyboard (#125). */
+    private val backShown get() = BackRule.onScreen(inputViewShown, windowShown)
+
+    /**
+     * Release builds too: each Back the keyboard takes or passes on, with why, so a lost Back can be read over adb on the owner's
+     * phone (`adb logcat -s TitanKeysBack`). Never what was typed.
+     */
+    private fun backLog(message: String) {
+        Log.i(BACK_TAG, message)
+        keyAudit(message)
+    }
 
     /** The touchpad hold's wait for a second Back ends after a while, so the Back service stops hearing every key. */
     private val letGoExpired = Runnable {
@@ -2046,7 +2059,7 @@ class TitanKeysIme : InputMethodService() {
         if (event.keyCode == KeyEvent.KEYCODE_SYM) symLog("service heard Sym ${if (down) "down" else "up"}: watching $watchingKeys, panel ${modifiers.panel}")
         // The second push of Back goes on to the app. Its release says that the app has it.
         if (event.keyCode == KeyEvent.KEYCODE_BACK && hold.lettingGo && !editing) {
-            if (!down) main.post(backWentThrough)
+            if (down) backLog("Back passed on: the touchpad hold's second push") else main.post(backWentThrough)
             return false
         }
         if (event.keyCode == KeyEvent.KEYCODE_BACK) keyAudit("Back ${if (down) "down" else "up"} heard by the service first " +
@@ -2059,12 +2072,15 @@ class TitanKeysIme : InputMethodService() {
         }
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
-        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && inputViewShown && backKey(event, down)) return true
+        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && backShown && backKey(event, down)) {
+            if (down) backLog("Back taken before the app: closed the panel")
+            return true
+        }
         // Smart Launcher takes Back before the keyboard too: with the keyboard up, the launcher went home instead of the keyboard
         // hiding (owner, 2026-11-21: "on smart launcher it didn't hide the keyboard it went back to the home page"). The keyboard
         // takes the push, and its release, as Back in any other field: it hides, and nothing else happens.
-        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && (if (down) inputViewShown || backEcho ||
-                SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS else backKept || backEcho)) {
+        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && (if (down) backShown || backEcho ||
+                BackRule.isEcho(event.eventTime, backHandledAt) else backKept || backEcho)) {
             if (down) onKeyDown(code, event) else onKeyUp(code, event)
             return true
         }
@@ -2143,6 +2159,8 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // A restart in a shown window gets no new onWindowShown; a first start comes before it, with the window not yet visible.
+        windowShown = window.window?.decorView?.windowVisibility == View.VISIBLE
         if (!restarting) timeOpening()
         // Bar text size changed since the bar was made, by a pick or the phone's text size, so it's made again at the new size.
         if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
@@ -2185,6 +2203,7 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onWindowShown() {
         super.onWindowShown()
+        windowShown = true
         if (editing) titanTools.active(this)
         watchStatus()
         if (field.exact) logExact("window shown")
@@ -2202,6 +2221,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     override fun onWindowHidden() {
+        windowShown = false
         titanTools.idle(this)
         panelHover.keysReleased()
         panelPress = -1
@@ -2878,6 +2898,11 @@ class TitanKeysIme : InputMethodService() {
 
     /** The selection the bar shows, for a strip that is made after it, as [barWords] is. */
     private var barSelected: String? = null
+
+    override fun onFinishInputView(finishingInput: Boolean) {
+        windowShown = false
+        super.onFinishInputView(finishingInput)
+    }
 
     override fun onFinishInput() {
         backKept = false
@@ -5139,29 +5164,32 @@ class TitanKeysIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
-        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0) keyAudit("Back down: shown $inputViewShown, code " +
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0) keyAudit("Back down: shown $inputViewShown, window $windowShown, code " +
             "${codeOnBar()} (composing ${codePending()}), picker ${openPicker()?.javaClass?.simpleName}, menu $choicesMenuOpen, " +
-            "panel $panelOpen, ${SystemClock.uptimeMillis() - backHandledAt} ms after the last handled Back")
+            "panel $panelOpen, ${event.eventTime - backHandledAt} ms after the last handled Back's release")
         // Key Mapper replays every Back about 15 ms after its release. Where the keyboard also heard the press itself (the Back
         // service hears keys while a code is built), the replay came as a second press: Back cleared the code, then its replay
-        // hid the keyboard (owner, 2026-11-21: "rn its hiding the keyboard instead"). A Back within [BACK_ECHO_MILLIS] of one the
-        // keyboard handled is that press again, and is kept with its release.
-        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0 && SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS) {
+        // hid the keyboard (owner, 2026-11-21: "rn its hiding the keyboard instead"). A Back right after the release of one the
+        // keyboard handled is that press again, and is kept with its release. Only within [BackRule.ECHO_MILLIS] of that Back's
+        // release: the old 250 ms from the push also ate a person's quick second Back (#125).
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0 && BackRule.isEcho(event.eventTime, backHandledAt)) {
             backEcho = true
-            keyAudit("Back again ${SystemClock.uptimeMillis() - backHandledAt} ms after a handled one: its replay, kept")
+            backLog("Back taken: a replay ${event.eventTime - backHandledAt} ms after a handled Back's release")
             return true
         }
         if (keyCode == KeyEvent.KEYCODE_BACK && backEcho) return true
         // Back closes the visible Sym panel before the picker hidden beneath it. Repeats from that push stay with the panel.
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && inputViewShown && backKey(event, down = true)) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && backShown && backKey(event, down = true)) {
             backKept = true
+            if (event.repeatCount == 0) backLog("Back taken: closed the panel")
             return true
         }
         // A code being built: Back clears it, exactly as a Sym tap does ([clearCode]), the bigger menu with it, and types nothing.
         // Before, it closed the picker and the bar fell back to three suggestions (owner, 2026-11-21: "just clear the code, so
         // identical to what sym does now"). The next Back hides the keyboard.
-        if (keyCode == KeyEvent.KEYCODE_BACK && codeOnBar() && inputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && codeOnBar() && backShown) {
             if (event.repeatCount == 0) {
+                backLog("Back taken: cleared the code")
                 clearCode()
                 keyAudit("Back cleared the code, as Sym does; the keyboard stays")
             }
@@ -5170,16 +5198,20 @@ class TitanKeysIme : InputMethodService() {
         }
         // Back closes the bigger menu, and the choices stay on the bar. Only one that can be seen: a hidden keyboard's menu or
         // picker doesn't take the app's Back (key audit, 2026-11-20).
-        if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen && inputViewShown) {
-            if (event.repeatCount == 0) closeChoicesMenu()
+        if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen && backShown) {
+            if (event.repeatCount == 0) {
+                backLog("Back taken: closed the bigger menu")
+                closeChoicesMenu()
+            }
             pickerKey = keyCode
             return true
         }
         // Back closes the switcher or the accents, and its release goes with it. Never an engine's row: with no code on it, that
         // is the bar's own words, and Back hides the keyboard as anywhere (closing it left three words, owner, 2026-11-21: "It shd
         // not show the 3 words no matter what").
-        if (keyCode == KeyEvent.KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && inputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && backShown) {
             if (event.repeatCount == 0) {
+                backLog("Back taken: closed the picker")
                 keyAudit("Back closed the ${if (openPicker() is LanguagePicker.Switch) "switcher" else "accents"}")
                 closePicker()
             }
@@ -5188,20 +5220,27 @@ class TitanKeysIme : InputMethodService() {
         }
         // Back closes the word menu and stays in the app, as it closes the panel and the picker: before, the menu closed with the
         // keyboard's hide and the app went back too (key audit, 2026-11-20).
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && inputViewShown && menuOpen) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && backShown && menuOpen) {
             if (event.repeatCount == 0) {
+                backLog("Back taken: closed the word menu")
                 closeMenu()
                 keyAudit("Back closed the word menu; the app keeps its screen")
             }
             pickerKey = keyCode
             return true
         }
-        if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = true)
+        if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) {
+            if (event.repeatCount == 0) backLog("Back to the touchpad hold")
+            return heldBack(event, down = true)
+        }
         // Android hands back to a shown keyboard first, which would only close the strip.
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && inputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && backShown) {
             backKept = true
+            if (event.repeatCount == 0) backLog("Back taken: the keyboard is on screen, it hides at the release")
             return true
         }
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0) backLog("Back passed on to the app: " +
+            if (!editing) "no field" else if (inputViewShown) "the keyboard's window is hidden (stale shown flag)" else "the keyboard is hidden")
         if (!editing || keyCode == KeyEvent.KEYCODE_BACK) {
             if (keyCode == KeyEvent.KEYCODE_SYM) symLog("Sym outside a field went on to Android")
             if (!editing) noteKeyToApp(event)
@@ -5340,7 +5379,7 @@ class TitanKeysIme : InputMethodService() {
         // The release of a key that picked from the picker, or closed it, belongs to that.
         if (keyCode == pickerKey) {
             pickerKey = -1
-            if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = SystemClock.uptimeMillis()
+            if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = event.eventTime
             return true
         }
         // Published before the take-back, so the guide hears the letter let go too soon.
@@ -5366,10 +5405,10 @@ class TitanKeysIme : InputMethodService() {
         }
         if (keyCode == KeyEvent.KEYCODE_BACK && backKept) {
             backKept = false
-            backHandledAt = SystemClock.uptimeMillis()
+            backHandledAt = event.eventTime
             // Back closes an open panel and stays in the app.
             if (!backKey(event, down = false)) {
-                if (editing && inputViewShown) {
+                if (editing && backShown) {
                     // Hide only, as on any Android keyboard: the app stays where it is, and the next Back is the app's (owner,
                     // 2026-11-21: "after i released my back and the keyboard is away, a software back is issued"). Before, the
                     // hide sent the app a back too.
@@ -5914,10 +5953,10 @@ class TitanKeysIme : InputMethodService() {
         private const val LET_GO_MILLIS = 10_000L
         /** Debug's log of keys the keyboard kept, passed on or sent itself ([keyAudit]). */
         private const val KEY_AUDIT_TAG = "TitanKeysKeyAudit"
+        private const val BACK_TAG = "TitanKeysBack"
         /** How soon after a key went to the app a field's start, or the same key typed, counts as part of that press. */
         private const val KEY_TWICE_MILLIS = 1500L
         /** A Back this soon after one the keyboard handled is that press's replay (Key Mapper's comes about 15 ms after). */
-        private const val BACK_ECHO_MILLIS = 250L
         /** How long Android has to show the strip before the keyboard shows its window itself. */
         private const val SHOW_FALLBACK_MILLIS = 300L
         /** A show this soon after a hide is the app's quick hide and show. Teams took 160 to 530 ms. */

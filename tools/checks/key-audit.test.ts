@@ -47,9 +47,9 @@ test("Back with the keyboard shown only hides it: no back is sent after the hide
 
 test("a hidden switcher, accents or menu doesn't take Back, and the word menu's Back stays in the app", async () => {
   const text = await ime();
-  expect(text).toContain("KEYCODE_BACK && choicesMenuOpen && inputViewShown");
-  expect(text).toContain("KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && inputViewShown");
-  expect(text).toContain("KEYCODE_BACK && editing && inputViewShown && menuOpen");
+  expect(text).toContain("KEYCODE_BACK && choicesMenuOpen && backShown");
+  expect(text).toContain("KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && backShown");
+  expect(text).toContain("KEYCODE_BACK && editing && backShown && menuOpen");
   const hidden = between(text, "override fun onWindowHidden()", "updateHold()");
   expect(hidden).toContain("it is LanguagePicker.Switch || it is LanguagePicker.Accents");
   expect(hidden).toContain("closePicker()");
@@ -72,7 +72,7 @@ test("Back with an engine's code pending clears it as a Sym tap does, never fall
   // identical to what sym does now".
   const text = await ime();
   const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
-  const back = down.slice(down.indexOf("KEYCODE_BACK && codeOnBar() && inputViewShown"));
+  const back = down.slice(down.indexOf("KEYCODE_BACK && codeOnBar() && backShown"));
   expect(back.slice(0, 200)).toContain("clearCode()");
   expect(down.indexOf("KEYCODE_BACK && codeOnBar()")).toBeLessThan(down.indexOf("KEYCODE_BACK && choicesMenuOpen"));
   expect(down).not.toContain("KEYCODE_BACK && openPicker() != null");
@@ -83,10 +83,10 @@ test("a Back right after one the keyboard handled is its replay, and is kept wit
   // Owner, 2026-11-21: Back cleared the code, then Key Mapper's replay of the same press hid the keyboard.
   const text = await ime();
   const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
-  expect(down.indexOf("BACK_ECHO_MILLIS")).toBeGreaterThan(0);
-  expect(down.indexOf("BACK_ECHO_MILLIS")).toBeLessThan(down.indexOf("KEYCODE_BACK && codeOnBar()"));
+  expect(down.indexOf("BackRule.isEcho(")).toBeGreaterThan(0);
+  expect(down.indexOf("BackRule.isEcho(")).toBeLessThan(down.indexOf("KEYCODE_BACK && codeOnBar()"));
   const up = between(text, "override fun onKeyUp(", "private fun switchKeyboardIfAsked");
-  expect(up).toContain("if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = SystemClock.uptimeMillis()");
+  expect(up).toContain("if (keyCode == KeyEvent.KEYCODE_BACK) backHandledAt = event.eventTime");
   expect(up.indexOf("KEYCODE_BACK && backEcho")).toBeLessThan(up.indexOf("KEYCODE_BACK && backKept"));
 });
 
@@ -94,8 +94,24 @@ test("in Smart Launcher's field, Back with the keyboard up is the keyboard's, an
   // Owner, 2026-11-21: "on smart launcher it didn't hide the keyboard it went back to the home page".
   const watched = between(await ime(), "private fun watchedKey(", "/**");
   const back = watched.slice(watched.indexOf("Smart Launcher takes Back before the keyboard too"));
-  expect(back.slice(0, 700)).toContain("SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS");
+  expect(back.slice(0, 700)).toContain("BackRule.isEcho(event.eventTime, backHandledAt)");
   expect(back.slice(0, 700)).toContain("if (down) onKeyDown(code, event) else onKeyUp(code, event)");
+});
+
+test("Back is the keyboard's only while its window is really on screen, and Key Mapper's replay only right after a release", async () => {
+  // #125: Android had hidden the keyboard while its shown flag stayed true, and Back was taken for a keyboard already gone; the
+  // 250 ms echo rule also ate a quick second Back.
+  const text = await ime();
+  expect(text).toContain("private val backShown get() = BackRule.onScreen(inputViewShown, windowShown)");
+  expect(between(text, "override fun onWindowShown()", "}")).toContain("windowShown = true");
+  expect(between(text, "override fun onWindowHidden()", "titanTools")).toContain("windowShown = false");
+  expect(between(text, "override fun onFinishInputView(", "}")).toContain("windowShown = false");
+  const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
+  expect(down).not.toMatch(/KEYCODE_BACK && [^\n]*inputViewShown\)/);
+  expect(text).not.toContain("BACK_ECHO_MILLIS");
+  expect(await read("android/kotlin/com/titankeys/keyboard/BackRule.kt")).toContain("const val ECHO_MILLIS = 50L");
+  expect(text).toContain("Log.i(BACK_TAG, message)");
+  expect(text).toContain('private const val BACK_TAG = "TitanKeysBack"');
 });
 
 test("Chinese never falls back to the three-word bar: a closed picker gives its words back to the engine's row", async () => {

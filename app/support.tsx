@@ -54,7 +54,7 @@ const TEXT = {
 // The amounts, as Play's products: one-time and monthly have the same three, and Custom is one-time only (N x $1).
 const tiers = [
   { id: "sip", label: "A sip", line: "A little nudge." },
-  { id: "small", label: "A bigger sip", line: "Keeps the fixes coming." },
+  { id: "small", label: "A big sip", line: "Keeps the fixes coming." },
   { id: "full", label: "Half a coffee", line: "A proper boost." },
 ] as const;
 /** Custom's dollars: the $1 unit product, bought N times (Google Play asks how many, from 1 to 50 here). */

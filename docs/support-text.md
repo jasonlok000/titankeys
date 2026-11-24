@@ -54,7 +54,7 @@ The juice first shows in the thank-you. After that, only the supporter's own boa
 - PRE **Cadence:** One-time · Monthly (Monthly first)
 - PRE **Tiers**, each with Play's price:
   - **A sip:** Small, but it counts.
-  - **A bigger sip:** Now we're brewing.
+  - **A big sip:** Now we're brewing.
   - **Half a coffee:** That's real caffeine.
   - **Custom** (one-time only): You pick. Its chip: One-time
 - PRE **Monthly, under the tiers:** Custom is one-time only.

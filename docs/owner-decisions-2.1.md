@@ -1030,6 +1030,7 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - **Back from Settings (2026-11-21):** "backing from settings shdn't quit the app. it shd go back to playground as that's the home
   page." Back at the top of Settings with nothing under it goes where × goes, the front page and its playground; the top of
   Settings still has no ←. Ink asks the app before closing (appBackAtRoot, tools/ink/titankeys.patch).
+- **Big sip (2026-11-24):** "Change bigger sip to big sip": the $1 coffee is "A big sip" in the app, the Support page and Play.
 - **Coffee amounts in words (2026-11-21):** "better to be vague, like a sip, a bigger sip, half a coffee, etc."; "I dont really like
   a quarter sth". The support page never shows a fraction or a count of cups in words: under $1 a sip, $1 a bigger sip, $2.50 half
   a coffee, $5 a coffee, $10 a few coffees, $25 and up a whole pot, in the thank-you, its total and the custom readout. The cups

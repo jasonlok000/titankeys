@@ -662,7 +662,7 @@ const T = {
   supporters: "The good people", supportersLine: "Cheers, all of you.",
   empty: "Nobody here yet. Any amount puts you at #1.", anonymous: "Anonymous", report: "Report", reported: "Got it. We'll take a look.",
   oneTime: "One-time", monthly: "Monthly",
-  tiers: [["A sip", "Small, but it counts."], ["A bigger sip", "Now we're brewing."], ["Half a coffee", "That's real caffeine."]],
+  tiers: [["A sip", "Small, but it counts."], ["A big sip", "Now we're brewing."], ["Half a coffee", "That's real caffeine."]],
   custom: ["Custom", "You pick."],
   monthlyNote: "Every month · cancel any time in Play",
   // The monthly coffee you have, and switching it (owner, 2026-11-24: easy to see, never two at once).
@@ -705,13 +705,13 @@ const LIMITS = [[3, 120], [10, 80], [100, 40]];
 const limitAt = rank => rank ? (LIMITS.find(([top]) => rank <= top) || [0, 0])[1] : 0;
 const tierAt = rank => rank ? (LIMITS.find(([top]) => rank <= top) || [0])[0] : 0;
 /**
- * How much, in words that only grow, never a number: a sip, a bigger sip, half a coffee, a coffee, a few coffees, a whole pot
- * (owner, 2026-11-21: "better to be vague, like a sip, a bigger sip, half a coffee"; "I dont really like a quarter sth"). A cup
+ * How much, in words that only grow, never a number: a sip, a big sip, half a coffee, a coffee, a few coffees, a whole pot
+ * (owner, 2026-11-21: "better to be vague, like a sip, a big sip, half a coffee"; "I dont really like a quarter sth"). A cup
  * is $5. The cups drawn beside it show the exact amount.
  */
 function cupsText(cups) {
   const dollars = cups * 5 + 1e-6;
-  return dollars < 1 ? "a sip" : dollars < 2.5 ? "a bigger sip" : dollars < 5 ? "half a coffee"
+  return dollars < 1 ? "a sip" : dollars < 2.5 ? "a big sip" : dollars < 5 ? "half a coffee"
     : dollars < 10 ? "a coffee" : dollars < 25 ? "a few coffees" : "a whole pot";
 }
 

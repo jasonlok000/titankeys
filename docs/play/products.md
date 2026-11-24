@@ -20,11 +20,11 @@ must be exactly these: the app, the page and the Worker all name them.
 | Product ID | Type | Page label | USD price | Notes |
 |---|---|---|---|---|
 | `support_tip_sip` | One-time, consumable | A sip | Play's lowest USD price | The app counts it as 50 cents outside USD (`SupportProduct.TipSip`); the page's sample shows $0.50 |
-| `support_tip_small` | One-time, consumable | A bigger sip | $1.00 | |
+| `support_tip_small` | One-time, consumable | A big sip | $1.00 | |
 | `support_tip_full` | One-time, consumable | Half a coffee | $2.50 | |
 | `support_tip_unit` | One-time, consumable, **multi-quantity** | Custom | $1.00 each | Custom's amounts are $3, $5, $10, $20 and $50 (`customPrices`). The quantity is set in Play's purchase screen, not by the app. |
 | `support_monthly_sip` | Subscription, auto-renewing monthly | A sip | Play's lowest USD price | Counted as 50 cents outside USD |
-| `support_monthly_small` | Subscription, auto-renewing monthly | A bigger sip | $1.00 | |
+| `support_monthly_small` | Subscription, auto-renewing monthly | A big sip | $1.00 | |
 | `support_monthly_full` | Subscription, auto-renewing monthly | Half a coffee | $2.50 | |
 
 **Consumable** is not a setting in Play Console. The app consumes each one-time purchase once its credit is on the phone
@@ -54,7 +54,7 @@ Go to **Monetize with Play > Products > In-app products** and click **Create pro
 
 For each one-time product above:
 1. **Product ID:** exactly as in the table. It can't be changed or reused later.
-2. **Title:** short, 25 characters or fewer shows best. For example "A sip", "A bigger sip", "Half a coffee", "A dollar toward a coffee".
+2. **Title:** short, 25 characters or fewer shows best. For example "A sip", "A big sip", "Half a coffee", "A dollar toward a coffee".
 3. **Description:** up to 200 characters. Say what it is: a tip to support TitanKeys, with nothing unlocked.
 4. **Price:** set the USD price from the table and let Play convert it to local prices. For the sip, pick the lowest USD price
    Play offers, and write that figure down (below).

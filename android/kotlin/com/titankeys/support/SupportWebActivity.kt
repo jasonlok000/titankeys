@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -76,6 +77,9 @@ class SupportWebActivity : Activity() {
             // See-through only for the popup over the front page; the page itself is opaque, as a transparent WebView drew
             // its layered parts (the pay button, the thank-you) squeezed.
             setBackgroundColor(if (mode == "popup") Color.TRANSPARENT else Color.BLACK)
+            // No autofill on this page (owner, 2026-11-24): it offered the phone owner's real name for the board, and a
+            // supporter picks the name they want shown. Nothing on the page needs it.
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = false
@@ -281,7 +285,6 @@ class SupportWebActivity : Activity() {
             is SupportCall.Haptic -> haptics.play(when (call.name) {
                 "tick" -> Haptic.AppStep
                 "pick" -> Haptic.AppPicked
-                "join" -> Haptic.AppSwitchOn
                 "celebrate" -> Haptic.GuideCelebration
                 else -> Haptic.AppPress
             })

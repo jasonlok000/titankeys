@@ -367,6 +367,12 @@
   .flood svg { position: absolute; left: 0; top: -30px; width: 200%; height: 32px; animation: wave 3.4s linear infinite; }
   .flood .foam { stroke-width: 7px; vector-effect: non-scaling-stroke; opacity: .95; }
   @keyframes wave { to { left: -100%; } }
+  /* Play's prices on their way: three soft dots in the pay button (owner, 2026-11-24: "a subtle loading animation"). */
+  .waitdots { display: inline-flex; gap: 8px; align-items: center; height: 1em; }
+  .waitdots i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .25; animation: waitdot 1.2s ease-in-out infinite; }
+  .waitdots i:nth-child(2) { animation-delay: .2s; } .waitdots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes waitdot { 40% { opacity: .8; transform: translateY(-2px); } }
+  .reduce .waitdots i { animation: none; opacity: .5; }
   .bubble { position: absolute; bottom: -16px; border-radius: 50%; background: #FFF4E8; animation: bubble linear infinite; }
   /* Bubbles rise by position, not transform: on the phone, transform-animated bubbles made the WebView draw the whole
      thank-you squeezed or stretched. */
@@ -617,7 +623,7 @@
       <h1 data-t="join"></h1>
       <div class="limit" id="limit"></div>
       <div class="optpreview" id="optpreview"></div>
-      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="name" maxlength="40" autocomplete="off" placeholder="Your name"></div>
+      <div class="fields"><div class="field"><label><span data-t="nameField"></span><span class="count" id="namecount"></span></label><input id="name" maxlength="40" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Your name"></div>
       <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="msg" rows="1" placeholder="Say hi"></textarea></div></div>
       <div class="limitnote" id="overlimit"></div>
     </div>
@@ -933,9 +939,16 @@ function drawTiers() {
 /** The pay button: "Buy it" and the price, and under it the place it buys (hidden when the server can't say). */
 // Nothing is picked on the first view; the dock says "Pick a cup" until a tier is tapped.
 let tiersSeen = false;
+// Play's prices usually come within a second of opening. Until this long has passed, no prices yet isn't news: the button
+// waits quietly instead of flashing "still waking up" (owner, 2026-11-24: "shows for a split second which I don't like").
+const OPENED = performance.now(), WAKE_GRACE = 4000;
 async function drawPay(button) {
   const s = selected();
-  if (!s) { button.innerHTML = T.notReady; return; }
+  if (!s) {
+    const left = WAKE_GRACE - (performance.now() - OPENED);
+    if (left > 0) { button.innerHTML = '<span class="waitdots" aria-label="Loading"><i></i><i></i><i></i></span>'; setTimeout(() => { if (!selected()) drawPay(button); }, left); return; }
+    button.innerHTML = T.notReady; return;
+  }
   if (button.id === "pay" && !tiersSeen) {
     button.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px">${T.pickCup}<svg class="chev-down" width="20" height="20" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
     const note = $("#paynote"); if (note) note.textContent = "";
@@ -1035,10 +1048,10 @@ function thanks(totalCups, rank, after, giftCups = totalCups, pin = null) {
     `<span class="drift" style="left:${i % 2 ? 84 + (i * 3) % 10 : 4 + (i * 3) % 10}%;animation-delay:${(i * .43).toFixed(2)}s;animation-duration:${(4.2 + (i % 3) * .7).toFixed(1)}s;top:${30 + (i * 37) % 55}%">${cup(.7, 16 + (i % 3) * 4)}</span>`).join("") : "";
   clearTimeout(raf);
   const start = performance.now(), D = 1800, HOLD = 650, FILL = 900, fills = [...document.querySelectorAll("#thankscup .fill")];
-  // The pour's haptics, each from the frame it belongs to (owner, 2026-11-24: "really really fancy, syncing with the bubbles").
-  // The rise ticks each time the orange climbs another step, so they come quick as it gushes in and slow as it eases; the
-  // crest is done; the beat at the mark, with its ring, is the guide's rising three; the orange taking the screen ticks
-  // faster to the end; and each bubble that comes up is a tick of its own, for as long as the pour runs.
+  // The pour's haptics, each from the frame it belongs to (owner, 2026-11-24: "syncing with the bubbles", "mostly texture").
+  // All texture, one 17 ms tick each (handbook), but one message: the rise ticks each time the orange climbs another step, so
+  // they come quick as it gushes in and slow as it eases, the crest is one more tick, the beat at the mark, with its ring, is the
+  // guide's rising three, the orange taking the screen ticks to the end, and each bubble that comes up is a tick of its own.
   const STEPS = 14, feel = { rise: 0, crest: false, mark: false, finish: 0, end: start + D + HOLD + FILL + 1200, last: 0 };
   const bubbleTick = () => {
     const now = performance.now();
@@ -1063,7 +1076,7 @@ function thanks(totalCups, rank, after, giftCups = totalCups, pin = null) {
     if (!pin && !reduce) {
       const now = performance.now(), step = Math.floor(e * STEPS), fstep = Math.floor(Math.max(0, finish) * 8);
       if (x < 1 && step > feel.rise) { feel.rise = step; feel.last = now; buzz("tick"); }
-      if (x >= .8 && !feel.crest) { feel.crest = true; feel.last = now; buzz("pick"); }
+      if (x >= .8 && !feel.crest) { feel.crest = true; feel.last = now; buzz("tick"); }
       if (el >= D && !feel.mark) { feel.mark = true; feel.last = now; buzz("celebrate"); }
       if (fstep > feel.finish) { feel.finish = fstep; feel.last = now; buzz("tick"); }
     }
@@ -1155,10 +1168,11 @@ function show(id) {
   const v = $("#" + id); if (v) scroller(v).scrollTop = 0;
 }
 document.addEventListener("click", async ev => {
-  // Every press plays something, as in the app: a coffee or an amount picked is done, joining locks in, the rest is a click.
-  const pressed = ev.target.closest("button, [data-go], [data-tier], [data-cad]");
-  if (pressed) buzz(pressed.closest("[data-tier], #quick") ? "pick"
-    : pressed.dataset.act === "add" ? ($("#name").value.trim() ? "join" : "press") : "press");
+  // Every touch press plays something, as in the app: a coffee or an amount picked, or joining, is done; the rest is a click.
+  // The phone's Back key clicks the page's own back button, and a key press already clicks under the thumb, so it plays nothing
+  // (handbook, docs/haptics.md: physical keys never buzz; owner, 2026-11-24: "no need haptics for physical back").
+  const pressed = ev.isTrusted && ev.target.closest("button, [data-go], [data-tier], [data-cad]");
+  if (pressed) buzz(pressed.closest("[data-tier], #quick") || (pressed.dataset.act === "add" && $("#name").value.trim()) ? "pick" : "press");
   const go = ev.target.closest("[data-go]"); if (go) { route(go.dataset.go); return; }
   const ex = ev.target.closest("[data-expand]"); if (ex) { ex.classList.toggle("open"); return; }
   const cad = ev.target.closest("[data-cad]"); if (cad) { cadence = cad.dataset.cad; if (tier === 3) tier = 0; drawTiers(); return; }

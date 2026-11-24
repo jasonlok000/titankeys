@@ -86,10 +86,10 @@ object SupportWebProtocol {
     const val MAX_PAGE = 10_000
     /**
      * The haptics the page may play (owner, 2026-11-24: haptics on the Support page, "really really fancy", in step with the
-     * pour). Each is one of TitanKeys' own, so it keeps its rhythm and its switch: press and tick are texture, pick is done,
-     * join locks in, and celebrate is the guide's rising three. The page times them to its animations.
+     * pour). Each is one of TitanKeys' own, so it keeps its rhythm and its switch (docs/haptics.md): press and tick are texture,
+     * pick is done, and celebrate is the guide's rising three. The page times them to its animations.
      */
-    val HAPTICS = setOf("press", "tick", "pick", "join", "celebrate")
+    val HAPTICS = setOf("press", "tick", "pick", "celebrate")
     private val PUBLIC_ID = Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 
     /** Reads one message from the page. Throws [SupportBadRequest] with the reply's id, if it could be read, and a code. */

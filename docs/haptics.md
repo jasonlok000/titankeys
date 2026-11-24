@@ -249,6 +249,14 @@ seconds, with the number back to nothing) and the show reaches it anew. Lightnin
 storm lasts. A jump in speed that passes several at once plays only the highest, and counts the rest as reached, so two never run
 into each other. All five share one switch, **Playground effects**.
 
+**The Support page** (a web page in its own screen) asks the app for its haptics by name, `buzz` in
+android/assets/support/index.html, and plays only TitanKeys' own (SupportWebProtocol.HAPTICS): a touch press is **Press**, a
+coffee, an amount or joining the board is **Confirm** (AppPicked), and each dollar the Custom slider moves is a **Texture** tick
+(AppStep). The phone's Back key plays nothing: it's a key press. The orange-juice pour after a payment is texture, timed to its
+frames: a tick each time the orange climbs another of 14 steps, so they come quick as it gushes in and slow as it eases, one at
+the crest, one for each bubble that comes up (at most one every 70 ms), and ticks as the orange takes the screen. Its one message
+is the beat at the mark, where the ring pulses: **Celebrate**, the guide's rising three. With reduced motion, only the Celebrate.
+
 Every press goes through one place, so none can be forgotten. On the native screens, the guide, the playground and the
 others, a control is made with `onPress` (AppPress.kt), which plays its haptic and turns Android's click off. In Ink's pages,
 Ink sends every press, the header's ✕ and ← too, to `appPressHaptic`, which plays Press 50 ms later. A control that plays its

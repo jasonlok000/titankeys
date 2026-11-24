@@ -1762,6 +1762,8 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onStartInput(info: EditorInfo, restarting: Boolean) {
         startingInput = true
+        // A page's boxes can share one connection, so each start begins a fresh copy of its text. See [OwnPageConnection].
+        ownPageConnection = null
         clearKeyPreview()
         main.post { showGuideExtras() }
         val exact = ExactTyping.applies(info.packageName, ExactTyping.apps(this))
@@ -5709,6 +5711,21 @@ class TitanKeysIme : InputMethodService() {
 
     /** A text box on TitanKeys' own Support page, which answers on this same main thread. See [SupportWebActivity.inFront]. */
     private fun onOwnPage() = SupportWebActivity.inFront && currentInputEditorInfo?.packageName == packageName
+
+    /** The stand-in connection for the Support page's box that started last. See [OwnPageConnection]. */
+    private var ownPageConnection: OwnPageConnection? = null
+
+    /**
+     * Everything here asks for the connection through this, so a box on TitanKeys' own Support page gets [OwnPageConnection],
+     * which answers the keyboard's questions without waiting for the page. Every other app gets its own connection as before.
+     */
+    override fun getCurrentInputConnection(): InputConnection? {
+        val real = super.getCurrentInputConnection() ?: return null
+        if (!onOwnPage()) return real
+        ownPageConnection?.takeIf { it.wraps(real) }?.let { return it }
+        return OwnPageConnection(real, currentInputEditorInfo?.getInitialTextBeforeCursor(OwnPageConnection.REACH, 0))
+            .also { ownPageConnection = it }
+    }
 
     private fun showModifierBar() {
         // Shift and Caps show only where Shift changes what a key types: not in Hebrew, Chinese or Japanese.

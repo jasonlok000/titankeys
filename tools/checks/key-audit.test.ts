@@ -19,7 +19,7 @@ test("Back's release follows its press: kept with it, or the app's with it", asy
   const text = await ime();
   const up = between(text, "override fun onKeyUp(", "private fun switchKeyboardIfAsked");
   expect(up).toContain("keyCode == KeyEvent.KEYCODE_BACK && backKept");
-  expect(up).not.toContain("keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {");
+  expect(up).not.toContain("keyCode == KeyEvent.KEYCODE_BACK && editing && inputViewShown) {");
   expect(text.match(/backKept = true/g)?.length).toBe(2);
 });
 
@@ -47,9 +47,9 @@ test("Back with the keyboard shown only hides it: no back is sent after the hide
 
 test("a hidden switcher, accents or menu doesn't take Back, and the word menu's Back stays in the app", async () => {
   const text = await ime();
-  expect(text).toContain("KEYCODE_BACK && choicesMenuOpen && isInputViewShown");
-  expect(text).toContain("KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && isInputViewShown");
-  expect(text).toContain("KEYCODE_BACK && editing && isInputViewShown && menuOpen");
+  expect(text).toContain("KEYCODE_BACK && choicesMenuOpen && inputViewShown");
+  expect(text).toContain("KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && inputViewShown");
+  expect(text).toContain("KEYCODE_BACK && editing && inputViewShown && menuOpen");
   const hidden = between(text, "override fun onWindowHidden()", "updateHold()");
   expect(hidden).toContain("it is LanguagePicker.Switch || it is LanguagePicker.Accents");
   expect(hidden).toContain("closePicker()");
@@ -72,7 +72,7 @@ test("Back with an engine's code pending clears it as a Sym tap does, never fall
   // identical to what sym does now".
   const text = await ime();
   const down = between(text, "private fun keyDown(", "override fun onKeyUp(");
-  const back = down.slice(down.indexOf("KEYCODE_BACK && codeOnBar() && isInputViewShown"));
+  const back = down.slice(down.indexOf("KEYCODE_BACK && codeOnBar() && inputViewShown"));
   expect(back.slice(0, 200)).toContain("clearCode()");
   expect(down.indexOf("KEYCODE_BACK && codeOnBar()")).toBeLessThan(down.indexOf("KEYCODE_BACK && choicesMenuOpen"));
   expect(down).not.toContain("KEYCODE_BACK && openPicker() != null");

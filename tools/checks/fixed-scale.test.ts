@@ -35,7 +35,7 @@ test("Bar text size grows only the keyboard's bar, at once while it's up (#86)",
   expect(ime).toContain("barSize = FixedScale.listen(this) { main.post(::followBarSize) }");
   expect(ime).toContain("barSize?.let { FixedScale.stopListening(this, it) }");
   const follow = ime.slice(ime.indexOf("private fun followBarSize()"), ime.indexOf("override fun onStartInputView"));
-  expect(follow).toContain("if (!isInputViewShown || field.exact) return");
+  expect(follow).toContain("if (!inputViewShown || field.exact) return");
   const scale = read("android/kotlin/com/titankeys/keyboard/FixedScale.kt");
   expect(scale).toContain("if (key == SIZE || key == null) changed()");
   // The page tries it: a field at the top with a sample line, opening the keyboard by itself, and no "catches up" note.

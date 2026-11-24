@@ -7,7 +7,7 @@ const read = (path: string) => Bun.file(new URL(path, root)).text();
 test("fn picks a Sym panel group before Ctrl takes it", async () => {
   const ime = await read("android/kotlin/com/titankeys/keyboard/TitanKeysIme.kt");
   const keyDown = ime.slice(ime.indexOf("override fun onKeyDown("), ime.indexOf("override fun onKeyUp("));
-  const group = keyDown.indexOf("keyCode == Modifiers.FN && panelOpen && isInputViewShown && categoryKey(event)");
+  const group = keyDown.indexOf("keyCode == Modifiers.FN && panelOpen && inputViewShown && categoryKey(event)");
   const ctrl = keyDown.indexOf("if (ctrlKey(event))");
   expect(group).toBeGreaterThan(0);
   expect(ctrl).toBeGreaterThan(0);

@@ -100,10 +100,20 @@ export type State = {
   suggestionBar: boolean;
   /** A home screen's search field has no suggestion bar until you type in it. */
   launcherHidesBar: boolean;
-  /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
+  /** Either Space gesture is on; setting it sets both. */
   cursorControl: boolean;
-  /** A swipe on the touchpad types a word, and a flick left from Backspace deletes one. */
+  /** A swipe on the touchpad types a word. */
   swipeTyping: boolean;
+  /** Double Space: two taps pick the word, a tap then a held drag moves the cursor. */
+  doubleSpaceCursor: boolean;
+  /** Triple Space: three taps pick the word, two taps then a held drag select words. */
+  tripleSpaceSelect: boolean;
+  /** A flick left from Backspace deletes a word. */
+  deleteFlick: boolean;
+  /** A swipe draws its trail on the suggestion bar. */
+  swipeTrail: boolean;
+  /** The Sym panel stays open after a pick, until Sym or Back closes it. */
+  symPanelStays: boolean;
   /** The touchpad overlay stays up when no field is active, so the touchpad does not scroll apps. Settings shows this reversed, as Scroll assistant. */
   touchpadOnlyInFields: boolean;
   /** A few small marks on the keyboard are orange, such as the key under a finger. Off, they are white or black. */
@@ -246,7 +256,7 @@ export type HapticsLab = {
   selectionEnds: { id: string; label: string }[];
 };
 
-export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
+export type Settings = Pick<State, "learning" | "contactNames" | "tapKeys" | "holdSymbols" | "holdSymbolMillis" | "fnAsCtrl" | "altBackspaceForward" | "shiftBackspaceWord" | "altSymNextKeyboard" | "doublePressLocks" | "autoCapitalise" | "autoPunctuation" | "sentenceSpaces" | "commaSpace" | "autocorrect" | "fixToggles" | "fixOnlyWhenSure" | "earlierWords" | "suggestionBar" | "launcherHidesBar" | "cursorControl" | "swipeTyping" | "doubleSpaceCursor" | "tripleSpaceSelect" | "deleteFlick" | "swipeTrail" | "symPanelStays" | "touchpadOnlyInFields" | "orangeAccents" | "barTextSize" | "enterKey" | "snippetStart" | "shortcodes" | "exactRealAlt" | "expandShorthand" | "haptics" | "hapticToggles" | "spelling" | "rawLog" | "inputMethods" | "chineseVariant" | "inputMethodVariants"> & {
   /** Switches listed shorthand on or off, by its shorthand. A write sends only the ones that changed. */
   shorthandToggles: Record<string, boolean>;
   /** A language's page: its own values, by language id. A write sends only the ones that changed. */

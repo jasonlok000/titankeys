@@ -47,6 +47,11 @@ class CursorGesture {
     }
 
     private var state: State = State.Idle
+
+    /** Double Space: two taps pick the word, and a tap then a held drag moves the cursor. Its own setting (#120). */
+    var doubles = true
+    /** Triple Space: three taps pick the word, and two taps then a held drag select words. Its own setting (#120). */
+    var triples = true
     /** A touch that lands before this time can't be a first tap. */
     private var firstTapFrom = 0L
     /** When the touch that is down now landed, so its lift knows how long it lasted. */
@@ -76,6 +81,7 @@ class CursorGesture {
     fun held(now: Long): Int {
         val current = state as? State.NextTouch ?: return 0
         if (current.registered || now - current.landed.time < REGISTER_MILLIS) return 0
+        if (!(if (current.taps == 2) triples else doubles)) return 0
         current.registered = true
         return current.taps + 1
     }
@@ -89,6 +95,8 @@ class CursorGesture {
             // A fourth touch is a resting finger's series, which never makes a gesture. Only one that follows the third as a
             // series would: a touch long after a triple is a new first tap (owner, 2026-11-12: a triple left the next touch dead).
             previous is State.Tapped && previous.taps == 3 && follows(previous, sample) -> State.Idle
+            // With Triple Space off, a touch after two taps calls them off and starts nothing.
+            previous is State.Tapped && previous.taps == 2 && !triples && follows(previous, sample) -> State.Idle
             previous is State.Tapped && follows(previous, sample) -> State.NextTouch(previous.taps, sample, sample.time - previous.lifted, previous.landed)
             sample.time >= firstTapFrom -> State.FirstTouch(sample)
             else -> State.Idle
@@ -120,7 +128,8 @@ class CursorGesture {
             val sideways = current.across >= DRAG_KEYS && current.across >= (if (onSpace) SIDEWAYS else ABOVE_SIDEWAYS) * current.up
             if (onSpace && current.up >= UP_ROWS || sideways) {
                 state = State.Idle
-                return Drag(current.landed, words = current.taps == 2)
+                val words = current.taps == 2
+                return if (if (words) triples else doubles) Drag(current.landed, words) else null
             }
         }
         return null
@@ -154,7 +163,7 @@ class CursorGesture {
             state = State.Tapped(2, current.landed, time)
             // A double tap by itself selects a word only on Space, after today's gap. Above Space, or after a longer gap,
             // two taps can only lead on to a drag that selects: two quick taps on V or B must never select a word.
-            val picks = current.gap <= MAX_GAP_MILLIS && current.landed.y >= BOTTOM_ROW_TOP && current.tapLanded.y >= BOTTOM_ROW_TOP
+            val picks = doubles && current.gap <= MAX_GAP_MILLIS && current.landed.y >= BOTTOM_ROW_TOP && current.tapLanded.y >= BOTTOM_ROW_TOP
             twoAbove = !picks
             return picks
         }
@@ -174,7 +183,7 @@ class CursorGesture {
 
     /** True if the double tap still stands [CONFIRM_MILLIS] after it lifted. It can only be used once. */
     fun confirm(): Boolean {
-        if ((state as? State.Tapped)?.taps != 2) return false
+        if ((state as? State.Tapped)?.taps != 2 || !doubles) return false
         state = State.Idle
         return true
     }

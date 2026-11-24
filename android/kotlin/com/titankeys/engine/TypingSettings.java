@@ -195,7 +195,7 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("autocorrect", enabled).apply();
     }
 
-    /** A swipe on the touchpad types a word, and a flick left from Backspace deletes one. Tap keys and the panel do not depend on this. */
+    /** A swipe on the touchpad types a word. Tap keys and the panel do not depend on this. */
     public static boolean swipeTyping(Context context) {
         return preferences(context).getBoolean("swipe_typing", true);
     }
@@ -204,13 +204,60 @@ public final class TypingSettings {
         preferences(context).edit().putBoolean("swipe_typing", enabled).apply();
     }
 
-    /** Resting a finger on Space starts cursor mode: lean towards either end to move the cursor. */
+    /** Either Space gesture is on: double Space moves the cursor, triple Space selects. Setting it sets both. */
     public static boolean cursorControl(Context context) {
-        return preferences(context).getBoolean("cursor_control", true);
+        return doubleSpaceCursor(context) || tripleSpaceSelect(context);
     }
 
     public static void cursorControl(Context context, boolean enabled) {
-        preferences(context).edit().putBoolean("cursor_control", enabled).apply();
+        preferences(context).edit().putBoolean("double_space_cursor", enabled).putBoolean("triple_space_select", enabled).apply();
+    }
+
+    /** Two taps on Space pick the word, and a tap then a held drag moves the cursor. Until set, it follows the old one switch, "cursor_control" (#120). */
+    public static boolean doubleSpaceCursor(Context context) {
+        SharedPreferences preferences = preferences(context);
+        return preferences.getBoolean("double_space_cursor", preferences.getBoolean("cursor_control", true));
+    }
+
+    public static void doubleSpaceCursor(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("double_space_cursor", enabled).apply();
+    }
+
+    /** Three taps on Space pick the word, and two taps then a held drag select words. Until set, it follows "cursor_control" (#120). */
+    public static boolean tripleSpaceSelect(Context context) {
+        SharedPreferences preferences = preferences(context);
+        return preferences.getBoolean("triple_space_select", preferences.getBoolean("cursor_control", true));
+    }
+
+    public static void tripleSpaceSelect(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("triple_space_select", enabled).apply();
+    }
+
+    /** A flick left from Backspace deletes a word (#120). Swipe typing no longer turns it off. */
+    public static boolean deleteFlick(Context context) {
+        return preferences(context).getBoolean("delete_flick", true);
+    }
+
+    public static void deleteFlick(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("delete_flick", enabled).apply();
+    }
+
+    /** The trail a swipe draws on the suggestion bar (#112). Off, the swipe still types. */
+    public static boolean swipeTrail(Context context) {
+        return preferences(context).getBoolean("swipe_trail", true);
+    }
+
+    public static void swipeTrail(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("swipe_trail", enabled).apply();
+    }
+
+    /** The Sym panel stays open after a pick, until Sym or Back closes it (#110). Off, one pick closes it. */
+    public static boolean symPanelStays(Context context) {
+        return preferences(context).getBoolean("sym_panel_stays", false);
+    }
+
+    public static void symPanelStays(Context context, boolean enabled) {
+        preferences(context).edit().putBoolean("sym_panel_stays", enabled).apply();
     }
 
     // A broken swipe always joins, no longer a setting (owner, 2026-11-21: "let's remove the switch"). The joining itself is

@@ -44,9 +44,11 @@ test("a held delete takes the same composition steps as flicks before editing th
 });
 
 test("language and field changes select the touch gestures the keyboard can use", () => {
-  expect(ime).toContain("!field.words || !TypingSettings.swipeTyping(this) -> Contact.Swipes.Off");
-  expect(ime).toContain("english -> Contact.Swipes.WordsAndDeletes");
-  expect(ime).toContain("else -> Contact.Swipes.DeletesOnly");
+  expect(ime).toContain("val words = field.words && english && TypingSettings.swipeTyping(this)");
+  expect(ime).toContain("val deletes = field.words && TypingSettings.deleteFlick(this)");
+  expect(ime).toContain("words && deletes -> Contact.Swipes.WordsAndDeletes");
+  expect(ime).toContain("words -> Contact.Swipes.WordsOnly");
+  expect(ime).toContain("deletes -> Contact.Swipes.DeletesOnly");
   expect(ime).toContain("!panelOpen && open == Overlays.Open.Choices -> Contact.Paging.Choices");
   expect(ime).toContain("Overlays.paging(open, panelOpen) -> Contact.Paging.PagesOnly");
   expect(ime).toContain("if (!altOrPanel && !outcome.deletesWord && pageChoices(outcome.points)) return");

@@ -112,6 +112,10 @@ class TitanKeysIme : InputMethodService() {
     /** The cursor has moved far from where its text was read, so the next step reads it again. */
     private var rereadCursorText = false
     private var cursorControl = true
+    /** The swipe's trail on the bar (#112). Off, a swipe still types and the bar draws nothing for it. */
+    private var swipeTrail = true
+    /** The Sym panel stays open after a pick, until Sym or Back (#110). */
+    private var symPanelStays = false
     /** Taps on a tap key that may be part of a double tap. Each call gives its input, typed if the argument is true. */
     private val heldTaps = ArrayList<(Boolean) -> Unit>()
     /** The word that the word drag started from, as its start and end in the field. */
@@ -1913,12 +1917,20 @@ class TitanKeysIme : InputMethodService() {
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         modifiers.altSymSwitches = TypingSettings.altSymNextKeyboard(this)
         cursorControl = TypingSettings.cursorControl(this)
+        cursorGesture.doubles = TypingSettings.doubleSpaceCursor(this)
+        cursorGesture.triples = TypingSettings.tripleSpaceSelect(this)
+        swipeTrail = TypingSettings.swipeTrail(this)
+        symPanelStays = TypingSettings.symPanelStays(this)
         exactRealAlt = ExactTyping.realAlt(this)
         // A word gesture could send the wrong keys to a terminal or a remote computer, or a word into a password.
+        // Swipe typing and the flick from Backspace each have their own switch (#120).
+        val words = field.words && english && TypingSettings.swipeTyping(this)
+        val deletes = field.words && TypingSettings.deleteFlick(this)
         contact.swipes = when {
-            !field.words || !TypingSettings.swipeTyping(this) -> Contact.Swipes.Off
-            english -> Contact.Swipes.WordsAndDeletes
-            else -> Contact.Swipes.DeletesOnly
+            words && deletes -> Contact.Swipes.WordsAndDeletes
+            words -> Contact.Swipes.WordsOnly
+            deletes -> Contact.Swipes.DeletesOnly
+            else -> Contact.Swipes.Off
         }
         enterApps = EnterKey.apps(TypingSettings.enterApps(this))
         // English's autocorrect and shorthand are English's own. Other input methods with a word list fix slips on their keys,
@@ -3165,7 +3177,7 @@ class TitanKeysIme : InputMethodService() {
         val travel = contact.travel
         val first = points.firstOrNull()
         val far = swipeCarried && gesture.swiping || travel != null && travel >= Contact.SWIPE_KEYS
-        if (inPractice || !contact.wordSwipes || altOrPanel || travel == null || !far || first == null
+        if (inPractice || !swipeTrail || !contact.wordSwipes || altOrPanel || travel == null || !far || first == null
             || startsDeleteFlick(first.x, first.y) && (isDeleteWordSwipe(points) || flickCrunch.mayBeFlick)) {
             gesture.swipeCancelled()
             swipeShown = 0
@@ -3622,7 +3634,7 @@ class TitanKeysIme : InputMethodService() {
         return if (cursor >= around.selectionStart) cursor - around.selectionStart else null
     }
 
-    /** Types a symbol or emoji from the panel, then goes back to normal typing. */
+    /** Types a symbol or emoji from the panel, then goes back to normal typing, unless the panel stays open (#110). */
     private fun typePanelItem(item: String) {
         // A code being typed goes first, as its first choice; suggestions with no code are cleared, not picked.
         val choices = openPicker() as? LanguagePicker.Choices
@@ -3632,7 +3644,7 @@ class TitanKeysIme : InputMethodService() {
         if (modifiers.panel == Modifiers.Panel.Emoji) emoji?.use(item)?.let { recents ->
             getSharedPreferences(EMOJI_PREFERENCES, MODE_PRIVATE).edit().putString(RECENT_EMOJI, recents.joinToString(" ")).apply()
         }
-        closePanel()
+        if (symPanelStays) showModifiers() else closePanel()
     }
 
     private fun closePanel() {

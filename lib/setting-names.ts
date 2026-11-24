@@ -14,8 +14,18 @@ export const barLabel = "Show the bar";
  */
 export const scrollLabel = "Scroll assistant";
 
-/** Space taps: a double tap moves the cursor, a triple tap selects words. */
+/** Space taps: a double tap moves the cursor, a triple tap selects words. The quick setting turns both (#120). */
 export const cursorLabel = "Space taps move and select";
+
+/** Settings' Gestures section: each gesture has its own switch (#120). */
+export const doubleSpaceLabel = "Double Space moves the cursor";
+export const tripleSpaceLabel = "Triple Space selects";
+export const deleteFlickLabel = "Flick from Backspace deletes a word";
+export const swipeTrailLabel = "Show the swipe trail on the bar";
+
+/** The Sym panel stays open after a pick, until Sym or Back (#110). */
+export const symPanelStaysLabel = "Keep the Sym panel open after a pick";
+export const symPanelStaysNote = "Close it with Sym or Back.";
 
 /** Alt + Backspace as Delete on a PC (owner, 2026-11-13: "alt+backspace = forward delete too"). On to start. */
 export const altBackspaceLabel = "Alt + Backspace deletes forward";

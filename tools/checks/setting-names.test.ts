@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { altBackspaceLabel, barLabel, cursorLabel, scrollLabel } from "../../lib/setting-names";
+import { altBackspaceLabel, barLabel, cursorLabel, doubleSpaceLabel, scrollLabel, tripleSpaceLabel } from "../../lib/setting-names";
 import pageText from "../im/page-text.json";
 
 // A setting has one name everywhere: Settings, the keyboard's quick settings and the fun guide's "Turn on" steps.
@@ -31,9 +31,12 @@ test("the fun guide's steps name settings as Settings does", () => {
 
 test("the bar is turned off in one place, and the cursor setting uses its one name", () => {
   expect(settings).toContain("label={barLabel}");
-  expect(settings).toContain("label={cursorLabel}");
+  // The quick setting turns both Space gestures; Settings has a switch for each (#120).
+  expect(settings).toContain("label={doubleSpaceLabel}");
+  expect(settings).toContain("label={tripleSpaceLabel}");
   expect(read("app/settings/hidden-bar.tsx")).not.toContain("<Toggle");
-  expect(read("app/settings/guide-boring.tsx")).toContain(cursorLabel);
+  expect(read("app/settings/guide-boring.tsx")).toContain(`Turn it off with ${doubleSpaceLabel} in Settings`);
+  expect(read("app/settings/guide-boring.tsx")).toContain(`${tripleSpaceLabel} in Settings`);
   expect(read("app/settings/guide-boring.tsx")).toContain(`turn off ${barLabel}`);
   expect(settings).toContain("label={scrollLabel}");
   // Alt + Backspace: the boring guide and the release notes name the switch as Settings shows it.

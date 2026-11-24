@@ -85,11 +85,11 @@ class Contact {
     /** Hears each paging contact's decision, for TitanKeys Debug's log; null when nothing listens. */
     var pageLog: ((String) -> Unit)? = null
 
-    /** Only English recognises words. Other languages still take a delete flick in a field that accepts words. */
-    enum class Swipes { Off, DeletesOnly, WordsAndDeletes }
+    /** Only English recognises words. Other languages still take a delete flick in a field that accepts words. Each has its own switch. */
+    enum class Swipes { Off, DeletesOnly, WordsOnly, WordsAndDeletes }
     var swipes = Swipes.WordsAndDeletes
-    val wordSwipes get() = swipes == Swipes.WordsAndDeletes && paging == Paging.None
-    val deleteFlicks get() = swipes != Swipes.Off && paging != Paging.PagesOnly
+    val wordSwipes get() = (swipes == Swipes.WordsAndDeletes || swipes == Swipes.WordsOnly) && paging == Paging.None
+    val deleteFlicks get() = (swipes == Swipes.WordsAndDeletes || swipes == Swipes.DeletesOnly) && paging != Paging.PagesOnly
 
     /** Whether the current contact could still type, with how far it has moved in key widths. */
     val travel: Float? get() = (state as? State.Touching)?.takeIf { it.counts }?.travel
@@ -258,6 +258,8 @@ class Contact {
         if (deletes && !wordSwipes) {
             return Outcome.Swipe(points.toList(), first.time, last.time, deletesWord = true)
         }
+        // With the flick from Backspace turned off, a stroke shaped like one does nothing, rather than type a word.
+        if (swipe && wordSwipes && swipes == Swipes.WordsOnly && isDeleteWordSwipe(points)) return null
         // A finger that takes its time is looking at the keys in the panel, so its path turns no page.
         if (paging != Paging.None) {
             val swiped = touching.travel >= PAGE_KEYS && last.time - first.time <= PAGE_MILLIS

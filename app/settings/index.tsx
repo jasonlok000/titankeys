@@ -7,8 +7,10 @@ import { connectedState } from "../../lib/connected";
 import { bugText } from "../../lib/bug-text";
 import { contributeText, newsText } from "../../lib/connected-text";
 import { barTextSizeLabel, barTextSizeTitle } from "./bar-text-size";
-import { accentsNote, altBackspaceLabel, altBackspaceNote, altSymLabel, altSymNote, barLabel, cursorLabel, scrollLabel, shiftBackspaceLabel,
-  shiftBackspaceNote } from "../../lib/setting-names";
+import { accentsNote, altBackspaceLabel, altBackspaceNote, altSymLabel, altSymNote, barLabel, deleteFlickLabel, doubleSpaceLabel,
+  scrollLabel, shiftBackspaceLabel, shiftBackspaceNote, swipeTrailLabel, symPanelStaysLabel, symPanelStaysNote,
+  tripleSpaceLabel } from "../../lib/setting-names";
+import pageText from "../../tools/im/page-text.json";
 import { parentOf } from "../../lib/settings-tree";
 import { contributeLabel } from "./contribute";
 import { exactAppsLabel } from "./exact-apps";
@@ -69,12 +71,23 @@ export default function Settings() {
       {settings.suggestionBar && <Field label={hiddenBarTitle} href="/settings/hidden-bar">{hiddenBarLabel(settings)}</Field>}
       {settings.suggestionBar && <Field label={barTextSizeTitle} href="/settings/bar-text-size">{barTextSizeLabel(settings)}</Field>}
     </Section>
+    {/* Each touch gesture has its own switch, for every language (#120). Swiping types words in English only. */}
+    <Section title="Gestures">
+      <Toggle label={pageText.settings.swipe} value={settings.swipeTyping}
+        onChange={swipeTyping => save.run({ swipeTyping })} />
+      {settings.swipeTyping && <Toggle label={swipeTrailLabel} value={settings.swipeTrail}
+        onChange={swipeTrail => save.run({ swipeTrail })} />}
+      <Toggle label={doubleSpaceLabel} value={settings.doubleSpaceCursor}
+        onChange={doubleSpaceCursor => save.run({ doubleSpaceCursor })} />
+      <Toggle label={tripleSpaceLabel} value={settings.tripleSpaceSelect}
+        onChange={tripleSpaceSelect => save.run({ tripleSpaceSelect })} />
+      <Toggle label={deleteFlickLabel} value={settings.deleteFlick}
+        onChange={deleteFlick => save.run({ deleteFlick })} />
+    </Section>
     <Section title="Touchpad">
       {/* What stops the touchpad reaching TitanKeys at all (lib/system-needs.tsx). */}
       <Needs list={needs.touchpad(settings)} />
 
-      <Toggle label={cursorLabel} value={settings.cursorControl}
-        onChange={cursorControl => save.run({ cursorControl })} />
       <Field label="Type with a light touch" href="/settings/tap-keys">{tapKeysLabel(settings)}</Field>
       <Toggle label={scrollLabel} value={!settings.touchpadOnlyInFields}
         onChange={scroll => save.run({ touchpadOnlyInFields: !scroll })} />
@@ -86,6 +99,8 @@ export default function Settings() {
     <Section title="Keys">
       <Toggle label="Press twice to lock Shift and Alt" value={settings.doublePressLocks}
         onChange={doublePressLocks => save.run({ doublePressLocks })} />
+      <Toggle label={symPanelStaysLabel} subtitle={symPanelStaysNote} value={settings.symPanelStays}
+        onChange={symPanelStays => save.run({ symPanelStays })} />
       <Toggle label="Use fn as Ctrl" value={settings.fnAsCtrl}
         onChange={fnAsCtrl => save.run({ fnAsCtrl })} />
       <Needs list={needs.fnAsCtrl(settings)} />

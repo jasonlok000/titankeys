@@ -7,7 +7,7 @@
 - Sym can stay open after you pick a symbol or an emoji. Symbols and emoji each have a switch in Settings: Keep symbols open after a pick, and Keep emoji open after a pick.
 - Pick your accent colour: 13 colours, your phone's own, any hue you like with Custom, or off. Each one stays readable.
 - The swipe trail on the bar has its own switch.
-- Emoji too small? Turn on Larger emoji in Settings.
+- Emoji are a bit bigger on the emoji page. Prefer them small? Turn off Larger emoji in Settings.
 - New Gestures section in Settings, with a switch each for swiping, Double Space, Triple Space and flick to delete. With swiping off, autocorrect still works.
 - If the phone's fn or Sym key isn't set up right, TitanKeys tells you what's wrong and opens the right page. fn always works as Ctrl now, so its switch is gone.
 - Danish and French are now Tested.

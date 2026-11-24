@@ -274,7 +274,7 @@ public final class TypingSettings {
 
     /** The emoji in the Sym panel draw a quarter larger, in the same cells. Off, they are the symbols' size. */
     public static boolean largerEmoji(Context context) {
-        return preferences(context).getBoolean("larger_emoji", false);
+        return preferences(context).getBoolean("larger_emoji", true);
     }
 
     public static void largerEmoji(Context context, boolean enabled) {

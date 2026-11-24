@@ -374,7 +374,7 @@
   /* Colour and position, never opacity or transform: see tools/checks/support-web.test.ts. */
   @keyframes waitdot { 40% { background: color-mix(in srgb, currentColor 80%, transparent); top: -2px; } }
   .reduce .waitdots i { animation: none; background: color-mix(in srgb, currentColor 50%, transparent); }
-  .mymonthly { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: var(--g3, 16px); color: var(--muted, #aaa); }
+  .mymonthly { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: var(--g4) var(--side) 0; color: var(--dim); font-size: var(--t-sm, var(--t-xs)); }
   .mymonthly .link { flex: none; }
   #pay.owned { filter: saturate(.4); }
   .bubble { position: absolute; bottom: -16px; border-radius: 50%; background: #FFF4E8; animation: bubble linear infinite; }
@@ -968,7 +968,11 @@ let tiersSeen = false;
 // Play's prices usually come within a second of opening. Until this long has passed, no prices yet isn't news: the button
 // waits quietly instead of flashing "still waking up" (owner, 2026-11-24: "shows for a split second which I don't like").
 const OPENED = performance.now(), WAKE_GRACE = 4000;
+// Each draw of a pay button is numbered: an answer from an older draw (a slower rank, while the slider moves) never paints
+// over a newer price (owner, 2026-11-24: "the price is flickering in custom").
+const payDraws = {};
 async function drawPay(button) {
+  const draw = payDraws[button.id] = (payDraws[button.id] || 0) + 1;
   const s = selected();
   if (!s) {
     const left = WAKE_GRACE - (performance.now() - OPENED);
@@ -989,7 +993,11 @@ async function drawPay(button) {
   button.classList.remove("owned");
   const head = `<span>${mine ? T.switchTo : T.chipIn} · ${s.price}${monthly ? T.perMonth : ""}</span>`;
   if (note && button.id === "pay") note.textContent = state.billing !== "ready" ? T.billing : mine ? T.switchNote : monthly ? T.monthlyNote : "";
+  // The price changes at once; the rank follows when it comes.
+  if (!button.querySelector(".sub")) button.innerHTML = head;
+  else button.firstElementChild.outerHTML = head;
   const r = await api.preview(s.cents).catch(() => ({ available: false }));
+  if (draw !== payDraws[button.id]) return;
   if (!r.available) { button.innerHTML = head; return; }
   // The rank rolls: the old number slides up and out as the new one comes in.
   const was = lastRank;

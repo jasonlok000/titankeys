@@ -2,7 +2,6 @@ package com.titankeys.keyboard
 
 import android.content.Context
 import android.os.Build
-import com.titankeys.engine.TypingSettings
 
 /**
  * Every accent TitanKeys draws natively comes from here, and Settings > Accent colour picks it (#111). Off means "literally
@@ -57,8 +56,15 @@ internal object Accent {
         private set
     @Volatile private var current = ORANGE
 
-    /** Any colour at all, not Off. */
-    val on: Boolean get() = choice != OFF
+    /**
+     * Any colour at all, not Off. The JVM render checks set it (ACCENT=off): false is Off, true the default orange.
+     */
+    var on: Boolean
+        get() = choice != OFF
+        set(value) {
+            choice = if (value) DEFAULT else OFF
+            current = ORANGE
+        }
 
     /** The plain orange, which Ink's theme already draws, so Ink needs no override. */
     val isDefault: Boolean get() = choice == DEFAULT
@@ -100,7 +106,14 @@ internal object Accent {
         .2126f * ((colour shr 16) and 0xFF) + .7152f * ((colour shr 8) and 0xFF) + .0722f * (colour and 0xFF)
 
     /** Reads the setting. Every window TitanKeys draws starts in FixedScale, which calls this, so each starts with it as it is. */
-    fun load(context: Context) = set(context, TypingSettings.accentColour(context))
+    fun load(context: Context) = set(context, stored(context))
+
+    /** The setting as TypingSettings.accentColour reads it, with the old Orange accents switch as its fallback. Read here so this file
+     * needs nothing else, as the JVM render checks compile it alone. */
+    private fun stored(context: Context): String {
+        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        return preferences.getString(KEY, null) ?: if (preferences.getBoolean(OLD_KEY, true)) DEFAULT else OFF
+    }
 
     /** Takes [id] at once, as Settings picks it. An unknown id is the default. */
     fun set(context: Context, id: String) {
@@ -126,13 +139,18 @@ internal object Accent {
      * [colour] blended towards white while it is too dark, or towards black while it is too light, until its luminance is inside
      * the band every preset keeps. Grey or not, it ends up readable on every surface the presets are checked on.
      */
+    private fun mix(from: Int, to: Int, amount: Float): Int {
+        fun channel(shift: Int) = Math.round(((from shr shift) and 0xFF) * (1 - amount) + ((to shr shift) and 0xFF) * amount)
+        return (0xFF shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
+    }
+
     fun fit(colour: Int): Int {
         var result = colour or 0xFF000000.toInt()
         repeat(64) {
             val l = luminance(result)
             result = when {
-                l < MIN_LIGHTNESS + .005 -> GuideMotion.blend(result, 0xFFFFFFFF.toInt(), .04f)
-                l > MAX_LIGHTNESS - .005 -> GuideMotion.blend(result, 0xFF000000.toInt(), .04f)
+                l < MIN_LIGHTNESS + .005 -> mix(result, 0xFFFFFFFF.toInt(), .04f)
+                l > MAX_LIGHTNESS - .005 -> mix(result, 0xFF000000.toInt(), .04f)
                 else -> return result
             }
         }

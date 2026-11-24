@@ -912,8 +912,6 @@ class GuideActivity : Activity() {
     private var autoTyping = false
     /** The next hint is a line of its own, as the box to tick is, and not a chip. */
     private var keepHint = false
-    /** The user ticked the box to go on without pasting. */
-    private var pasteDeclined = false
     /** Alt is on, as the keyboard last said. */
     private var altOn = false
     private val idleOnce = Runnable { idle(IDLE_TITLE, -1) }
@@ -2184,7 +2182,6 @@ class GuideActivity : Activity() {
         scenarioShown = false
         idleShown = false
         autoTyping = false
-        pasteDeclined = false
         endButtons.visibility = View.GONE
         hint.setOnClickListener(null)
         // A chapter with one text box carries its field on from slide to slide; any other slide starts a clean one.
@@ -2255,7 +2252,6 @@ class GuideActivity : Activity() {
         val missing = flow.missing
         // The title is always the slide's own. A line about arriving, or about a setting that's off, is a chip.
         val (said, shownBody) = when {
-            missing == GuideNeed.FnAsCtrl -> FN_OFF_TITLE to FN_OFF_BODY
             missing == GuideNeed.HoldSymbols -> HOLD_OFF_TITLE to HOLD_OFF_BODY
             missing != null -> FEATURE_OFF_TITLE to FEATURE_OFF_BODY
             else -> arrivalTitle to flow.instruction
@@ -2286,7 +2282,6 @@ class GuideActivity : Activity() {
         logMark(GuideLog.SLIDE, step.id)
         liveShown = null
         panelHintShown = null
-        if (missing == GuideNeed.FnAsCtrl) offerDecline()
         // Sym or fn isn't Programmable key, as setup's part for them was skipped: the slide can't work, so one line says to skip
         // it, and Skip shows at once. No button (owner, #72).
         keyOff(step)?.let { key ->
@@ -3105,26 +3100,7 @@ class GuideActivity : Activity() {
                 // The keyboard reads its settings when the field starts.
                 input.restartInput(field)
                 offerFor(step)
-                if (need == GuideNeed.FnAsCtrl) hideHint()
                 backOnTrack()
-            }
-        }
-    }
-
-    /** The paste slide's box, for going on without fn as Ctrl: ticked, the slide counts as passed. */
-    private fun offerDecline() {
-        keepHint = true
-        showHint(DECLINE_OFF)
-        keepHint = false
-        // A switch: it plays its own lock or release, not Press.
-        hint.onPress(haptics, haptic = null) {
-            pasteDeclined = !pasteDeclined
-            haptics.play(if (pasteDeclined) Haptic.AppSwitchOn else Haptic.AppSwitchOff)
-            hint.text = if (pasteDeclined) DECLINE_ON else DECLINE_OFF
-            if (pasteDeclined && !passed) {
-                passed = true
-                paintNext()
-                showBigNext(true)
             }
         }
     }
@@ -3134,14 +3110,12 @@ class GuideActivity : Activity() {
         GuideNeed.HoldSymbols -> TypingSettings.holdSymbolsIn(this, InputMethod.ENGLISH_ID, true)
         GuideNeed.CursorControl -> TypingSettings.cursorControl(this, true)
         GuideNeed.SwipeTyping -> TypingSettings.swipeTyping(this, true)
-        GuideNeed.FnAsCtrl -> TypingSettings.fnAsCtrl(this, true)
     }
 
     private fun readSettings() = GuideSettings(
         holdSymbols = TypingSettings.holdSymbolsIn(this, InputMethod.ENGLISH_ID),
         cursorControl = TypingSettings.cursorControl(this),
         swipeTyping = TypingSettings.swipeTyping(this),
-        fnAsCtrl = TypingSettings.fnAsCtrl(this),
         panelOpen = panelOpen,
         shareUnanswered = Contributions.unanswered(this),
     )
@@ -4179,13 +4153,6 @@ class GuideActivity : Activity() {
                 haptics.play(Haptic.GuideBlocked)
             }
         }
-        if (event is KeyboardEvent.Pushed && event.code == KeyEvent.KEYCODE_V && step.id == "paste" && !passed) {
-            val before = field.text.toString()
-            main.postDelayed({
-                if (!passed && flow.step.id == "paste" && field.text.toString() == before && flow.missing == GuideNeed.FnAsCtrl)
-                    showScenario(NOTHING_PASTED_TITLE, NOTHING_PASTED_BODY)
-            }, NOTHING_PASTED_MILLIS)
-        }
     }
 
     /** The slide is not done after all, as the user undid it: it goes back to ink, and says why. */
@@ -5030,10 +4997,6 @@ class GuideActivity : Activity() {
         private const val FEATURE_OFF_BODY = "Press the button below to turn it back on, then try again."
         private const val HOLD_OFF_TITLE = "You turned this off. We'll pretend you didn't."
         private const val HOLD_OFF_BODY = "Press the button below to turn it on."
-        private const val FN_OFF_TITLE = "Your fn key isn't Ctrl."
-        private const val FN_OFF_BODY = "Paste needs it. Turn it on?"
-        private const val DECLINE_OFF = "☐  I'd rather not paste. That's on me, and I accept the consequences."
-        private const val DECLINE_ON = "☑  I'd rather not paste. That's on me, and I accept the consequences."
         private const val SCREEN_TOUCHED = "The screen? Really? Why'd you buy this phone?"
         /** A touch on the screen moved the cursor from where the slide needs it, and the guide put it back. */
         private const val SCREEN_PUT_BACK = "Put it back. The keys do this, not the screen."
@@ -5051,15 +5014,11 @@ class GuideActivity : Activity() {
         private const val COME_BACK_BODY = "Pick up where you left off."
         private const val FIX_UNDONE_TITLE = "You wanted the typo back? Rebel."
         private const val FIX_UNDONE_BODY = "Let it fix one and leave it. Type a typo, then Space."
-        private const val NOTHING_PASTED_TITLE = "Nothing happened. Shocking."
-        private const val NOTHING_PASTED_BODY = "fn isn't Ctrl yet. Press the button below to turn it on."
         private const val TOO_LATE_TITLE = "Still open? The last slide's over. Let it go."
         private const val TOO_LATE_PANEL = "Press Sym to close it."
         private const val TOO_LATE_ALT = "Press Alt to turn it off."
         /** How long the too-late line shows while the panel closes by itself. */
         private const val TOO_LATE_MILLIS = 1600L
-        /** fn and V that changed nothing in this long says so. */
-        private const val NOTHING_PASTED_MILLIS = 600L
         /** When the word menu's demo presses O: late in the hold demo, early once the menu is really open. */
         private const val MENU_O_AT = .75f
         private const val MENU_O_OPEN_AT = .3f

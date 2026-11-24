@@ -29,7 +29,9 @@ test("Alt + Backspace deletes forward without Alt, or goes to the app with its A
   expect(names).toContain('altBackspaceLabel = "Alt + Backspace deletes forward"');
   expect(names).toContain('altBackspaceNote = "Like Delete on a PC. Off, Android deletes the whole line instead."');
   const settings = readFileSync(join(root, "app/settings/index.tsx"), "utf8");
-  expect(settings.indexOf("<Toggle label={altBackspaceLabel}")).toBeGreaterThan(settings.indexOf('<Toggle label="Use fn as Ctrl"'));
+  expect(settings).toContain("<Toggle label={altBackspaceLabel}");
+  // fn is always Ctrl: there's no Use fn as Ctrl switch (#116).
+  expect(settings).not.toContain('label="Use fn as Ctrl"');
   expect(readFileSync(join(root, "app/settings/guide-boring.tsx"), "utf8")).toContain("Alt and Backspace deletes forward");
   expect(readFileSync(join(root, "docs/release-notes-2.1.md"), "utf8")).toContain("- Alt + Backspace: Deletes forward");
 });

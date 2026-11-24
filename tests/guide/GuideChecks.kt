@@ -1483,7 +1483,7 @@ private fun eachPageSaysWhereYouAre() {
     same(clips.liveLine(), CLIPBOARD_PAGES[PanelSpot.OtherGroup], "Pinned, with none of the guide's clips")
 
     // The paste slide needs no panel.
-    val paste = GuideFlow({ GuideSettings(fnAsCtrl = true) })
+    val paste = GuideFlow({ GuideSettings() })
     paste.start("paste")
     paste.event(face(Panel.Symbols, "1/9", "&"))
     same(paste.liveLine() to paste.panelHint(), PASTE_PAGES[PanelSpot.Symbols] to null, "A panel on the paste slide: how to close it")
@@ -1608,8 +1608,7 @@ private fun settingsThatStepsNeed() {
     flow.start("holdsym")
     same(flow.missing, GuideNeed.HoldSymbols, "The hold slide offers holding a letter when it's off")
     flow.start("paste")
-    same(flow.missing, GuideNeed.FnAsCtrl, "The paste step needs fn as Ctrl")
-    same(GuideNeed.FnAsCtrl.optional, false, "and offers it at once, as paste needs it")
+    same(flow.missing, null, "The paste step needs no setting: fn is always Ctrl")
 }
 
 private fun goingBack() {

@@ -170,7 +170,7 @@ private fun framesFor(step: GuideStep): List<Frame> {
     BLOCKED[step.id]?.let { lesson -> frames += frame("3-blocked", step.title, first, chip = blockedChip(step, lesson.name)) }
     // A real mistake: its chip over the instruction.
     MISTAKES[step.id]?.let { events ->
-        val flow = GuideFlow({ GuideSettings(holdSymbols = true, fnAsCtrl = true) })
+        val flow = GuideFlow({ GuideSettings(holdSymbols = true) })
         flow.start(step.id)
         flow.seed(field.field, field.start)
         flow.aim(field.target)

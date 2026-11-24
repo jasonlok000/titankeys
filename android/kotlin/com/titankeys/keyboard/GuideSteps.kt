@@ -70,8 +70,9 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
     // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.
     // Not now shows a warning first: see KEYS_WARN_TITLE. F (docs/words-m1.md).
     // #116: the body names the whole path and why, as a key on another mode (fn on Tab) is the case this part catches.
-    Keys("Set up Sym and fn.", "Set Sym and fn to Programmable key: Sym opens symbols, fn works as Ctrl.", "Open Shortcut keys",
-        "It's in phone Settings > Shortcut keys. Pick Programmable key for both Sym key and fn key, not Tab or an app.", skip = "Not now",
+    // 2026-11-24: Programmable key has a function too (fn on Programmable key > Sym key passed), so both name the whole path.
+    Keys("Set up Sym and fn.", "Set both to Programmable key: Sym key for Sym, Ctrl key for fn.", "Open Shortcut keys",
+        "In phone Settings > Shortcut keys: Sym key > Programmable key > Sym key, and fn key > Programmable key > Ctrl key.", skip = "Not now",
         guideOnly = true),
     // Names from contacts, last (owner, #87). It says what it's for and that the names stay on the phone before Android asks.
     // Not now moves on, and the guide never asks again.
@@ -659,7 +660,6 @@ internal enum class GuideNeed(val offer: String, val optional: Boolean = false) 
     HoldSymbols("Turn on Hold a letter for its symbol"),
     CursorControl("Turn on Space taps move and select"),
     SwipeTyping("Turn on Swipe to type words"),
-    FnAsCtrl("Turn it on"),
 }
 
 /** The settings that change which steps show. */
@@ -667,7 +667,6 @@ internal data class GuideSettings(
     val holdSymbols: Boolean = false,
     val cursorControl: Boolean = true,
     val swipeTyping: Boolean = true,
-    val fnAsCtrl: Boolean = false,
     /** The Sym panel is on the screen now. */
     val panelOpen: Boolean = false,
     /** The offer to share swipes has no answer yet, so its slide shows. */
@@ -677,7 +676,6 @@ internal data class GuideSettings(
         GuideNeed.HoldSymbols -> holdSymbols
         GuideNeed.CursorControl -> cursorControl
         GuideNeed.SwipeTyping -> swipeTyping
-        GuideNeed.FnAsCtrl -> fnAsCtrl
     }
 }
 
@@ -1825,7 +1823,6 @@ internal val GUIDE_STEPS = listOf(
         praise = "Hold fn, press V to paste. C copies.",
         line = PASTE_LINE,
         seed = PASTE_SEED,
-        needs = GuideNeed.FnAsCtrl,
         clip = PASTE_TEXT,
         pageLines = PASTE_PAGES,
         preselect = true,

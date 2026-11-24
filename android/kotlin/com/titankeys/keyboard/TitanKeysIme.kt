@@ -324,17 +324,18 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /**
-     * Sym or fn isn't Programmable key on the phone's Shortcut keys page (#116): then Sym can't open the symbols and fn can't
-     * work as Ctrl, and nothing else says so while typing. The bar says it once per key, as a field starts, and a tap opens
-     * Shortcut keys. It's armed again once the key reads Programmable key ([PhoneChecks.keyWarningDue]). Nothing about fn while
-     * Use fn as Ctrl is off. Never over a word's menu or a picker.
+     * Sym or fn is set wrong on the phone's Shortcut keys page (#116): not Programmable key, or Programmable key with the wrong
+     * function (fn types Sym or Tab). Then Sym can't open the symbols or fn can't work as Ctrl, and nothing else says so while
+     * typing. The bar names what's wrong at most once a day per key while it lasts, as a field starts, and a tap opens Shortcut
+     * keys ([PhoneChecks.keyWarningDue]). Never over a word's menu or a picker.
      */
     private fun warnKeysOff() {
-        val fn = if (TypingSettings.fnAsCtrl(this)) PhoneChecks.Key.Fn else null
-        val key = listOfNotNull(fn, PhoneChecks.Key.Sym).firstOrNull {
-            PhoneChecks.keyWarningDue(this, it, PhoneChecks.programmableReading(this, it))
-        } ?: return
-        showKeyWarning(PhoneChecks.keyWarning(key, false))
+        for (key in listOf(PhoneChecks.Key.Fn, PhoneChecks.Key.Sym)) {
+            val check = PhoneChecks.keyCheck(this, key)
+            if (!PhoneChecks.keyWarningDue(this, key, check)) continue
+            showKeyWarning(PhoneChecks.keyWarning(key, check))
+            return
+        }
     }
 
     /**
@@ -342,8 +343,7 @@ class TitanKeysIme : InputMethodService() {
      * the key may be on another mode that the keyboard can't see.
      */
     private fun noteFnUnreadable() {
-        if (!TypingSettings.fnAsCtrl(this)) return
-        if (PhoneChecks.programmableReading(this, PhoneChecks.Key.Fn) != null) return
+        if (PhoneChecks.keyCheck(this, PhoneChecks.Key.Fn) != null) return
         if (!PhoneChecks.unreadableNoteDue(this, PhoneChecks.Key.Fn)) return
         showKeyWarning(PhoneChecks.keyWarning(PhoneChecks.Key.Fn, null))
     }
@@ -1971,7 +1971,6 @@ class TitanKeysIme : InputMethodService() {
         tapKeys = TypingSettings.tapKeys(this)
         holdSymbols = TypingSettings.holdSymbolsIn(this, languages.languageId)
         holdEngine.threshold(TypingSettings.holdSymbolMillis(this))
-        modifiers.fnIsCtrl = TypingSettings.fnAsCtrl(this)
         modifiers.doublePressLocks = TypingSettings.doublePressLocks(this)
         modifiers.altSymSwitches = TypingSettings.altSymNextKeyboard(this)
         cursorControl = TypingSettings.cursorControl(this)

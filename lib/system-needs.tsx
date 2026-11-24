@@ -24,8 +24,8 @@ const NEEDS = {
     button: "Open Scroll assistant", open: openScrollAssistant },
   backService: { id: "backService", line: "Blocking needs TitanKeys Keyboard on in Accessibility. It's off, so apps still scroll.",
     button: "Turn it on in Accessibility", open: allowBack },
-  fnKey: { id: "fnKey", line: "fn can't work as Ctrl (fn+C copies). In phone Settings > Shortcut keys > fn key, pick Programmable key.", button: "Open Shortcut keys", open: openShortcutKeys },
-  symKey: { id: "symKey", line: "Sym can't open TitanKeys' symbols. In phone Settings > Shortcut keys > Sym key, pick Programmable key.", button: "Open Shortcut keys",
+  fnKey: { id: "fnKey", line: "fn can't work as Ctrl (fn+C copies). In phone Settings > Shortcut keys, pick fn key > Programmable key > Ctrl key.", button: "Open Shortcut keys", open: openShortcutKeys },
+  symKey: { id: "symKey", line: "Sym can't open TitanKeys' symbols. In phone Settings > Shortcut keys, pick Sym key > Programmable key > Sym key.", button: "Open Shortcut keys",
     open: openShortcutKeys },
   contacts: { id: "contacts", line: "Android's Contacts permission is off, so TitanKeys can't read the names.", button: "Allow contacts",
     open: () => update({ contactNames: true }) },
@@ -40,7 +40,6 @@ export const needs = {
   /** Scroll assistant off in TitanKeys, which blocks the phone's scrolling outside text fields (TouchpadHold.wanted). */
   scrollBlock: (s: State): Need[] => s.touchpadOnlyInFields
     ? [...when(!s.selected, NEEDS.selected), ...when(!s.overlay, NEEDS.overlay), ...when(!s.backService, NEEDS.backService)] : [],
-  fnAsCtrl: (s: State): Need[] => s.fnAsCtrl && !s.fnKey ? [NEEDS.fnKey] : [],
   altSym: (s: State): Need[] => s.altSymNextKeyboard && !s.symKey ? [NEEDS.symKey] : [],
   contactNames: (s: State): Need[] => s.contactNamesBlocked ? [NEEDS.contacts] : [],
 };

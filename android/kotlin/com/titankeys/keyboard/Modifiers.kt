@@ -50,9 +50,6 @@ class Modifiers {
     /** Shift was pushed off where it had come on by itself. It stays off until the place is no longer a sentence start. */
     private var autoDeclined = false
 
-    /** fn counts as a Ctrl key, for the Use fn as Ctrl setting. */
-    var fnIsCtrl = false
-
     /** A quick second press locks Shift or Alt, for the setting of the same name. */
     var doublePressLocks = false
     /** A held Alt + Sym switches to the next keyboard. Off, Sym does what it would without it. See [down]. */
@@ -263,7 +260,7 @@ class Modifiers {
         panel = target
     }
 
-    fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || fnIsCtrl && code == FN
+    fun isCtrl(code: Int) = code == KeyEvent.KEYCODE_CTRL_LEFT || code == KeyEvent.KEYCODE_CTRL_RIGHT || code == FN
 
     fun key(event: KeyEvent) {
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) down(event.keyCode, event.eventTime, event.metaState)
@@ -384,7 +381,7 @@ class Modifiers {
 
     companion object {
         const val DOUBLE_PRESS_MILLIS = 300L
-        /** The key code that the Use fn as Ctrl setting listens for. */
+        /** fn, which always counts as Ctrl. */
         const val FN = KeyEvent.KEYCODE_FUNCTION
 
         /** What Ctrl does with each letter that the keyboard treats as a field shortcut. */

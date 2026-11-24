@@ -5721,11 +5721,17 @@ class TitanKeysIme : InputMethodService() {
      */
     override fun getCurrentInputConnection(): InputConnection? {
         val real = super.getCurrentInputConnection() ?: return null
-        if (!onOwnPage()) return real
+        if (!onOwnPage()) {
+            guardedConnection?.takeIf { it.wraps(real) }?.let { return it }
+            return GuardedConnection(real, currentInputEditorInfo?.packageName).also { guardedConnection = it }
+        }
         ownPageConnection?.takeIf { it.wraps(real) }?.let { return it }
         return OwnPageConnection(real, currentInputEditorInfo?.getInitialTextBeforeCursor(OwnPageConnection.REACH, 0))
             .also { ownPageConnection = it }
     }
+
+    /** Every other app's connection, which stops asking an app that was just slow to answer. See [GuardedConnection]. */
+    private var guardedConnection: GuardedConnection? = null
 
     private fun showModifierBar() {
         // Shift and Caps show only where Shift changes what a key types: not in Hebrew, Chinese or Japanese.

@@ -17,7 +17,7 @@ test("the phone checks only read", () => {
 
 test("Setup shows each phone setting as a step that opens its page", () => {
   const setup = read("app/settings/setup.tsx");
-  for (const step of ["Set Sym to Programmable key", "Set fn to Programmable key"]) expect(setup).toContain(step);
+  for (const step of ["Sym opens TitanKeys' symbols", "fn works as Ctrl", "Shortcut keys > fn key", "Shortcut keys > Sym key"]) expect(setup).toContain(step);
   expect(setup).toContain('openSetupStep("shortcutKeys")');
   expect(setup).toContain('openSetupStep("scrollAssistant")');
   // Scroll assistant and each app's Sliding Mode 1 are one step (owner, 2026-11-14: the second row was "redundant").

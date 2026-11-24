@@ -34,7 +34,17 @@ internal object PhoneChecks {
     /** Phones without the Titan's programmable keys have nothing to set, so there the step counts as done. */
     fun programmable(context: Context, key: Key) = programmableReading(context, key) ?: true
 
-    /** Null when the key's setting can't be confirmed. */
+    /**
+     * Whether [key] is set to Programmable key: true, false, or null when its setting can't be confirmed (another phone, or the
+     * Titan's setting can't be read). Cheap enough to call as a field starts or a key is pressed (#116).
+     *
+     * What it returns for each mode:
+     * - `persist.sys.agui_smart_<key>_key` = `programmable_key_enable`: true. Any other non-empty value is another mode on the
+     *   Shortcut keys page (Tab, an app, a shortcut and so on): false. Those values aren't recorded yet: the owner is to read them
+     *   on the phone (`adb shell getprop persist.sys.agui_smart_fn_key` after picking each mode) and note them here.
+     * - The property empty: Settings.System `<key>_programmable_key_enable`, 1 true, 0 false, missing or unreadable null.
+     * - `ro.agui.symkey_fnkey_default` empty (not a Titan with these keys): null.
+     */
     fun programmableReading(context: Context, key: Key): Boolean? {
         if (property("ro.agui.symkey_fnkey_default").isNullOrEmpty()) return null
         val mode = property("persist.sys.agui_smart_${key.id}_key")
@@ -66,6 +76,39 @@ internal object PhoneChecks {
             return Intent(Intent.ACTION_MAIN).setClassName(it.packageName, it.name)
         }
         return Intent(Settings.ACTION_SETTINGS)
+    }
+
+    /**
+     * The keyboard's warning that [key] isn't Programmable key (#116), shown once: true the first time it's asked while the
+     * reading is false. Once the key reads Programmable key again, the warning is armed again, so a later change is caught too.
+     * A null reading has its own once-only note, [unreadableNoteDue].
+     */
+    fun keyWarningDue(context: Context, key: Key, reading: Boolean?): Boolean {
+        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        val name = "warned_${key.id}_key"
+        if (reading == true) {
+            if (preferences.getBoolean(name, false)) preferences.edit().remove(name).apply()
+            return false
+        }
+        if (reading == null || preferences.getBoolean(name, false)) return false
+        preferences.edit().putBoolean(name, true).apply()
+        return true
+    }
+
+    /** True once ever: the first time [key] is used while its setting can't be read (#116). */
+    fun unreadableNoteDue(context: Context, key: Key): Boolean {
+        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        val name = "noted_${key.id}_key_unreadable"
+        if (preferences.getBoolean(name, false)) return false
+        preferences.edit().putBoolean(name, true).apply()
+        return true
+    }
+
+    /** The bar's words for [key] not being Programmable key, or for fn when its setting can't be read ([reading] null). */
+    fun keyWarning(key: Key, reading: Boolean?): String = when {
+        key == Key.Sym -> "Sym can't open TitanKeys' symbols. Tap here, then: Sym key > Programmable key."
+        reading == null -> "fn works as Ctrl, as in fn+C to copy. If it doesn't, tap here, then: fn key > Programmable key."
+        else -> "fn can't work as Ctrl (fn+C to copy). Tap here, then: fn key > Programmable key."
     }
 
     /** The Shortcut keys app's entry, as the phone's Settings lists it. */

@@ -55,10 +55,10 @@ export default function Setup() {
     </Section>
     {/* The phone's own settings. TitanKeys only reads them, so each step opens the phone's page for you to change it. */}
     <Section title="Phone settings">
-      <Field label="Set Sym to Programmable key" onPress={() => void openSetupStep("shortcutKeys")}>{status(settings.symKey)}</Field>
-      {!settings.symKey && <Note>Without it, Sym doesn't open the Sym panel. In Shortcut keys, set Sym key to Programmable key.</Note>}
-      <Field label="Set fn to Programmable key" onPress={() => void openSetupStep("shortcutKeys")}>{status(settings.fnKey)}</Field>
-      {!settings.fnKey && <Note>Without it, fn can't work as Ctrl. In Shortcut keys, set fn key to Programmable key.</Note>}
+      <Field label="Sym opens TitanKeys' symbols" onPress={() => void openSetupStep("shortcutKeys")}>{status(settings.symKey)}</Field>
+      {!settings.symKey && <Note>{"Sym isn't set up, so it can't open TitanKeys' symbols. Tap above, then in phone Settings > Shortcut keys > Sym key, pick Programmable key."}</Note>}
+      <Field label="fn works as Ctrl" onPress={() => void openSetupStep("shortcutKeys")}>{status(settings.fnKey)}</Field>
+      {!settings.fnKey && <Note>{"fn isn't set up, so it can't work as Ctrl (fn+C to copy). Tap above, then in phone Settings > Shortcut keys > fn key, pick Programmable key."}</Note>}
     </Section>
     {/* The guide's setup asks for it last, after saying what it's for. Here it flips the same setting as Settings > Your words:
         turning it on asks Android first (ContactsPermissionActivity), and it's On only once Android allows it. */}

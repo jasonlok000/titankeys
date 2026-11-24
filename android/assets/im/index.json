@@ -290,7 +290,7 @@
    "Hold a letter for its accents: hold E for é or è, A for à, O for ò. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
   ],
   "guide": {
-   "status": "experimental",
+   "status": "tested",
    "family": "latin",
    "line": "Italian on the printed letters, with its accents held.",
    "points": [
@@ -2134,7 +2134,7 @@
    "The letter types at once. Touch another on the bar to swap it."
   ],
   "guide": {
-   "status": "experimental",
+   "status": "tested",
    "family": "cyrillic",
    "line": "Russian on the PC layout (ЙЦУКЕН).",
    "points": [
@@ -2225,7 +2225,7 @@
    "The letter types at once. Touch another on the bar to swap it."
   ],
   "guide": {
-   "status": "experimental",
+   "status": "tested",
    "family": "cyrillic",
    "line": "Ukrainian on the PC layout (ЙЦУКЕН).",
    "points": [

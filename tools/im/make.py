@@ -1255,7 +1255,8 @@ LANGUAGES = {
 # (as refined as Chinese). Every language is experimental but Chinese (owner, 2026-11-16); English is the keyboard's own.
 NOT_EXPERIMENTAL = {"zh"}
 # Tested languages stay "experimental" too, so the switcher and every other reader of it are unchanged.
-TESTED = {"ko"}
+# Italian, Russian and Ukrainian: native speakers confirmed them (owner, 2026-11-24).
+TESTED = {"ko", "it", "ru", "uk"}
 
 
 def stage_of(language):

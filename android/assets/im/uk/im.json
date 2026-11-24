@@ -73,7 +73,7 @@
     "The letter types at once. Touch another on the bar to swap it."
   ],
   "guide": {
-    "status": "experimental",
+    "status": "tested",
     "family": "cyrillic",
     "line": "Ukrainian on the PC layout (ЙЦУКЕН).",
     "points": [

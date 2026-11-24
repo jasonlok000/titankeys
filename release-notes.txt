@@ -37,4 +37,4 @@
 - A new support page, one offline page inside the app. Find it at the very bottom of Settings.
 - Supporting is optional. Everything in the keyboard stays free, and nothing is locked behind it.
 - Supporters can join a board if they want to, with a name and a short message. It never shows amounts.
-- Payments go through Google Play once they're available.
+- Payments go through Google Play: a sip, a big sip, half a coffee, or any amount, once or every month. Prices are in your own money.

@@ -284,7 +284,7 @@
    "label": "IT",
    "script": "Latn",
    "experimental": true,
-   "tested": false
+   "tested": true
   },
   "howTo": [
    "Hold a letter for its accents: hold E for é or è, A for à, O for ò. The first one types at once, and the bar shows the rest. Touch another to swap it, or keep typing. Shift gives the capital one. Keys without accents hold for their symbol."
@@ -2127,7 +2127,7 @@
    "label": "РУ",
    "script": "Cyrl",
    "experimental": true,
-   "tested": false
+   "tested": true
   },
   "howTo": [
    "The keys follow the Russian PC layout (ЙЦУКЕН): Q is й, W is ц, A is ф. The letters without a key of their own are held: ж or э on L, б or ю on M, х or ъ on P, ё on T.",
@@ -2218,7 +2218,7 @@
    "label": "УК",
    "script": "Cyrl",
    "experimental": true,
-   "tested": false
+   "tested": true
   },
   "howTo": [
    "The keys follow the Ukrainian PC layout (ЙЦУКЕН): Q is й, W is ц, S is і. The letters without a key of their own are held: ж or є on L, б or ю on M, х, ї or the apostrophe on P, ґ on U.",

@@ -55,7 +55,8 @@ test("each input method has a language: one per language, Serbian and Chinese gr
     byId.set(language.id, language);
     expect({ id, experimental: language.experimental }).toEqual({ id, experimental: language.id !== "zh" });
     // Tested only for Korean (owner, 2026-11-22): a native speaker checked it; it stays experimental.
-    expect({ id, tested: language.tested }).toEqual({ id, tested: language.id === "ko" });
+    // Tested: a native speaker confirmed it (Korean, 2026-11-22; Italian, Russian and Ukrainian, owner 2026-11-24).
+    expect({ id, tested: language.tested }).toEqual({ id, tested: ["ko", "it", "ru", "uk"].includes(language.id) });
   }
   const methods = (language: string) => indexed.filter(e => e.language.id === language).map(e => e.id).sort();
   expect(methods("sr")).toEqual(["sr", "sr-latn"]);

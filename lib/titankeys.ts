@@ -207,7 +207,7 @@ export type Guide = {
 
 /**
  * A language, as Settings > Languages lists it. Every one but English and Chinese is marked experimental (owner, 2026-11-16);
- * [tested] ones (Korean) are experimental too, and show as Tested (owner, 2026-11-22: experimental, tested, polished).
+ * [tested] ones (Korean, Italian, Russian, Ukrainian) are experimental too, and show as Tested (owner, 2026-11-22: experimental, tested, polished).
  * [settings] are the controls it supports in Settings > Typing, and [stop] is what Double Space types in it
  * (LanguageSettings.kt).
  */

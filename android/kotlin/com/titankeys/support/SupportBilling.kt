@@ -3,6 +3,7 @@ package com.titankeys.support
 import android.app.Activity
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClient.BillingResponseCode
@@ -76,9 +77,11 @@ internal class SupportBilling(private val activity: Activity, private val change
             override fun onBillingSetupFinished(response: BillingResult) = post {
                 connecting = false
                 if (response.responseCode == BillingResponseCode.OK) ready() else {
+                    Log.i("TitanKeys", "Support: Play billing didn't connect (${response.responseCode})")
                     offers.clear()
                     offersRequested = false
                     changed()
+                    retryIfEmpty()
                 }
             }
 
@@ -93,6 +96,12 @@ internal class SupportBilling(private val activity: Activity, private val change
     }
 
     fun onResume() {
+        // Nothing loaded yet: the page asks Play again each time it comes back. See [retryIfEmpty].
+        if (offers.isEmpty() && !querying) {
+            emptyRetries = 0
+            refresh()
+            return
+        }
         if (clientSource.isInitialized() && client.isReady) reconcile()
         else if (ledger.accountKey() != null) connect()
     }
@@ -115,6 +124,8 @@ internal class SupportBilling(private val activity: Activity, private val change
             }
             val request = QueryProductDetailsParams.newBuilder().setProductList(products).build()
             client.queryProductDetailsAsync(request) { response, details -> post {
+                Log.i("TitanKeys", "Support: Play answered ${response.responseCode} with ${details.productDetailsList.size} " +
+                    (if (monthly) "monthly" else "one-time") + " products")
                 if (response.responseCode == BillingResponseCode.OK) {
                     for (item in details.productDetailsList) offer(item)?.let { incoming[it.product.id] = it }
                 }
@@ -124,9 +135,27 @@ internal class SupportBilling(private val activity: Activity, private val change
                     querying = false
                     reconcile()
                     changed()
+                    retryIfEmpty()
                 }
             } }
         }
+    }
+
+    /**
+     * No coffees came back: Play may not have the products yet, or the query went out while the connection was still being made
+     * (the library logged "Reconnection failed with result: 5" on 2026-11-24, and the page then said "waking up" until reopened).
+     * Asks again a few times, a little later each time. A page opened again asks once more from the start, in [onResume].
+     */
+    private var emptyRetries = 0
+
+    private fun retryIfEmpty() {
+        if (offers.isNotEmpty() || closed) {
+            emptyRetries = 0
+            return
+        }
+        if (emptyRetries >= EMPTY_RETRIES) return
+        emptyRetries++
+        main.postDelayed({ if (!closed && offers.isEmpty()) refresh() }, EMPTY_RETRY_MILLIS * emptyRetries)
     }
 
     private fun offer(details: ProductDetails): Offer? {
@@ -229,5 +258,11 @@ internal class SupportBilling(private val activity: Activity, private val change
             val params = ConsumeParams.newBuilder().setPurchaseToken(token).build()
             client.consumeAsync(params) { _, _ -> post { finalizing.remove(token) } }
         }
+    }
+
+    private companion object {
+        /** How many times an empty answer is asked again, 3, 6 and 9 seconds apart. */
+        const val EMPTY_RETRIES = 3
+        const val EMPTY_RETRY_MILLIS = 3_000L
     }
 }

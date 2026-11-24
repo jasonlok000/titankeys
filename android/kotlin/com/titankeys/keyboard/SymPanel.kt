@@ -11,6 +11,8 @@ import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -280,6 +282,50 @@ class SymPanel(
         }
         KeyboardEvents.publish { KeyboardEvent.PanelSwiped(across, down, moved) }
         return moved
+    }
+
+    /** Where a finger landed on the screen, for a sideways swipe across the panel (owner: swipe on the screen as on the touchpad). */
+    private var screenDownX = 0f
+    private var screenDownY = 0f
+    private var screenSwiping = false
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+
+    /**
+     * A finger that slides sideways on the screen takes the touch from the cells, so it types nothing, and turns to the group
+     * beside it when it lifts, as a sideways swipe on the touchpad does: left for the next, right for the one before. A tap
+     * still goes to its cell.
+     */
+    override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                screenDownX = event.x
+                screenDownY = event.y
+                screenSwiping = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val across = event.x - screenDownX
+                if (!screenSwiping && kotlin.math.abs(across) > touchSlop && kotlin.math.abs(across) > kotlin.math.abs(event.y - screenDownY))
+                    screenSwiping = true
+            }
+        }
+        return screenSwiping
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                screenDownX = event.x
+                screenDownY = event.y
+                screenSwiping = false
+            }
+            MotionEvent.ACTION_UP -> {
+                val across = event.x - screenDownX
+                if (screenSwiping && kotlin.math.abs(across) >= dp(SCREEN_SWIPE) && swipe(across.sign, 0f)) pageChanged()
+                screenSwiping = false
+            }
+            MotionEvent.ACTION_CANCEL -> screenSwiping = false
+        }
+        return true
     }
 
     /** The strip of groups shows, so the bottom row of the touchpad chooses a group. */
@@ -813,6 +859,8 @@ class SymPanel(
         const val BAND_TEXT_LARGEST = 16f
         const val QUICK_TITLE = "Quick settings"
         const val SLIDE_DISTANCE = 12
+        /** How far a finger slides sideways on the screen to change the group, in dp. */
+        const val SCREEN_SWIPE = 40
         const val SLIDE_ALPHA = .5f
         const val SLIDE_MILLIS = 120L
     }

@@ -3763,10 +3763,17 @@ class TitanKeysIme : InputMethodService() {
      * A key that toggled a quick setting under the finger: the finger is on it, so the page's mark stays there, whatever the touchpad
      * reports around the press, as the word menu's hover does (owner, 2026-11-13: the page was the model, so it must really stay).
      * The press's own lift comes after the key on the phone, and the plain wait after it cleared the mark. See [SteadyKey.press].
-     * Only a page that stays open keeps it: Open, Kbd and Clip leave it.
+     * Only a page that stays open keeps it: Open, Kbd and Clip leave it. The symbols and emoji keep it too after a pick while
+     * they stay open (symbolsStay, emojiStays): the finger is still on the item it typed (owner, 2026-11-24).
      */
     private fun keepPanelHover(key: String, keyCode: Int) {
-        if (modifiers.panel != Modifiers.Panel.Settings) return
+        val stays = when (modifiers.panel) {
+            Modifiers.Panel.Settings -> true
+            Modifiers.Panel.Symbols -> symbolsStay
+            Modifiers.Panel.Emoji -> emojiStays
+            else -> false
+        }
+        if (!stays || !panelOpen) return
         panelHover.press(key)
         panelPress = keyCode
         panel?.hover = panelHover.key
@@ -5562,6 +5569,7 @@ class TitanKeysIme : InputMethodService() {
         } else panel?.item(letter)?.let { item ->
             pickedKey = event.keyCode
             typePanelItem(item)
+            keepPanelHover(letter, event.keyCode)
         } ?: run { if (inGuide) KeyboardEvents.publish { KeyboardEvent.EmptyKey } }
         return true
     }

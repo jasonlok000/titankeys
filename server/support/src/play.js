@@ -85,7 +85,7 @@ async function authorize(env, fetcher) {
         const signature = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(jwt)));
         const response = await fetcher(TOKEN_URL, {
             method: "POST",
-            redirect: "error",
+            redirect: "manual", // Workers reject "error"; a redirect answers 3xx, not ok, so it still fails.
             signal: AbortSignal.timeout(8000),
             body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
                 assertion: `${jwt}.${base64url(signature)}` }),
@@ -181,7 +181,7 @@ export function playVerifier(fetcher = fetch) {
             const url = new URL(PLAY + encodeURIComponent(env.APP_PACKAGE) + path);
             url.search = new URLSearchParams(query);
             const response = await fetcher(url, {
-                headers: { Authorization: `Bearer ${token.value}` }, redirect: "error", signal: AbortSignal.timeout(8000),
+                headers: { Authorization: `Bearer ${token.value}` }, redirect: "manual", signal: AbortSignal.timeout(8000),
             });
             // Other 410 reasons include deleted accounts. Accept only Google's specific expiry signal for this lookup.
             if (response.status === 410 && path.startsWith("/purchases/subscriptionsv2/tokens/")) {

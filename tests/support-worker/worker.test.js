@@ -61,7 +61,7 @@ async function fakeGoogle(url, options) {
     }
     expect(url.origin).toBe("https://androidpublisher.googleapis.com");
     expect(options.headers.Authorization).toBe("Bearer fake-oauth");
-    expect(options.redirect).toBe("error");
+    expect(options.redirect).toBe("manual");
     expect(url.pathname).toStartWith("/androidpublisher/v3/applications/com.titankeys/");
     const path = url.pathname.split("/com.titankeys/")[1];
     outgoing.push(path);

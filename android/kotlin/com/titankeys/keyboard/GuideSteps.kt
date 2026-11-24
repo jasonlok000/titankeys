@@ -69,8 +69,11 @@ internal enum class SetupPart(val title: String, val body: String, val action: S
     // Sym and fn as Programmable key, both on the phone's one Shortcut keys page (owner, #72: in the guide's setup only, after
     // Back, "skippable with a warning"). Only on a phone whose keys aren't set: PhoneChecks.programmable.
     // Not now shows a warning first: see KEYS_WARN_TITLE. F (docs/words-m1.md).
-    Keys("Set up Sym and fn.", "Set both to Programmable key. Sym opens the panel, fn works as Ctrl.", "Open Shortcut keys",
-        "Sym key and fn key are both on that page. Pick Programmable key for each.", skip = "Not now", guideOnly = true),
+    // #116: the body names the whole path and why, as a key on another mode (fn on Tab) is the case this part catches.
+    Keys("Set up Sym and fn.", "In phone Settings > Shortcut keys, set Sym key and fn key to Programmable key, so Sym opens " +
+        "TitanKeys' symbols and fn works as Ctrl (fn+C to copy).", "Open Shortcut keys",
+        "Sym key and fn key are both on that page. Pick Programmable key for each, not Tab or an app.", skip = "Not now",
+        guideOnly = true),
     // Names from contacts, last (owner, #87). It says what it's for and that the names stay on the phone before Android asks.
     // Not now moves on, and the guide never asks again.
     // Its help shows if Android says no. F (docs/words-m1.md).

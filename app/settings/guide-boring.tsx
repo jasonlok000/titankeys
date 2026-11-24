@@ -103,8 +103,8 @@ export default function BoringGuide() {
     <Section title="Problems">
       <Topic title="Check the setup">{"Something fucked up? Nine times out of ten it's Setup. Settings > Setup, make every step say Done."}</Topic>
       <Topic title="Messed up your settings">{"Changed so much you can't find your way back? At the bottom of Settings: Reset most things puts every switch and choice back how it started, and your words, snippets, shorthand and app lists stay. Reset literally everything wipes all of that too, like a fresh install. What you already shared stays on our side until you delete it in Settings > Sharing."}</Topic>
-      <Topic title="Sym doesn't open the panel">{"Settings > Setup checks it. Set Sym to Programmable key opens the phone's Shortcut keys: set Sym key to Programmable key there."}</Topic>
-      <Topic title="fn doesn't work as Ctrl">{"Settings > Setup checks it. Set fn to Programmable key opens the phone's Shortcut keys: set fn key to Programmable key there."}</Topic>
+      <Topic title="Sym doesn't open the panel">{"In phone Settings > Shortcut keys > Sym key, pick Programmable key. Settings > Setup checks it and opens that page."}</Topic>
+      <Topic title="fn doesn't work as Ctrl">{"In phone Settings > Shortcut keys > fn key, pick Programmable key. Settings > Setup checks it and opens that page."}</Topic>
       <Topic title="Swiping doesn't work in an app">{"Settings > Setup lists the apps that need Sliding Mode 1. Tap the row naming the app to open Scroll assistant, then find the app and pick Sliding Mode 1. An app goes on the list after confirmed readings in two separate fields you used. It comes off as soon as TitanKeys sees Sliding Mode 1."}</Topic>
       <Topic title="Back takes two presses">{"Turn TitanKeys Keyboard on in Accessibility. Settings > Setup has the step."}</Topic>
     </Section>

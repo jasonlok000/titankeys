@@ -323,6 +323,42 @@ class TitanKeysIme : InputMethodService() {
         main.postDelayed(endTeamsEgg, HOLD_HINT_MILLIS)
     }
 
+    /**
+     * Sym or fn isn't Programmable key on the phone's Shortcut keys page (#116): then Sym can't open the symbols and fn can't
+     * work as Ctrl, and nothing else says so while typing. The bar says it once per key, as a field starts, and a tap opens
+     * Shortcut keys. It's armed again once the key reads Programmable key ([PhoneChecks.keyWarningDue]). Nothing about fn while
+     * Use fn as Ctrl is off. Never over a word's menu or a picker.
+     */
+    private fun warnKeysOff() {
+        val fn = if (TypingSettings.fnAsCtrl(this)) PhoneChecks.Key.Fn else null
+        val key = listOfNotNull(fn, PhoneChecks.Key.Sym).firstOrNull {
+            PhoneChecks.keyWarningDue(this, it, PhoneChecks.programmableReading(this, it))
+        } ?: return
+        showKeyWarning(PhoneChecks.keyWarning(key, false))
+    }
+
+    /**
+     * fn pressed while its setting can't be read (#116): the bar says once ever what fn does in TitanKeys and how to set it, as
+     * the key may be on another mode that the keyboard can't see.
+     */
+    private fun noteFnUnreadable() {
+        if (!TypingSettings.fnAsCtrl(this)) return
+        if (PhoneChecks.programmableReading(this, PhoneChecks.Key.Fn) != null) return
+        if (!PhoneChecks.unreadableNoteDue(this, PhoneChecks.Key.Fn)) return
+        showKeyWarning(PhoneChecks.keyWarning(PhoneChecks.Key.Fn, null))
+    }
+
+    private fun showKeyWarning(text: String) {
+        val strip = strip ?: return
+        if (strip.notice != null && strip.notice !is Strip.Notice.Line) return
+        strip.notice = Strip.Notice.Line(text) {
+            clearTeamsEgg()
+            runCatching { startActivity(PhoneChecks.shortcutKeysPage(this).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+        main.removeCallbacks(endTeamsEgg)
+        main.postDelayed(endTeamsEgg, KEY_WARNING_MILLIS)
+    }
+
     /** Android's boot count, where an app can read it, and the time this boot started. Neither changes when TitanKeys restarts. */
     private fun currentBoot(): OncePerBoot.Boot {
         val count = try {
@@ -2092,6 +2128,8 @@ class TitanKeysIme : InputMethodService() {
         // The hold hint also shows as a field starts, not only as the input method changes in one: one picked in Settings, or
         // loaded with the keyboard away, is never changed in a field, and its hint never showed. Once ever, as before.
         main.post { if (editing) showHoldHint() }
+        // Sym or fn not set to Programmable key: the bar says so once, where people type, not only in Settings > Setup (#116).
+        main.post { if (editing) warnKeysOff() }
         offerClip()
         // Settings > Setup lists the apps whose Scroll assistant isn't in Sliding Mode 1. The system sets the touchpad's mode
         // for the app in front as it comes in, so this reads it a moment later and again seconds later, if the keyboard is
@@ -5034,6 +5072,12 @@ class TitanKeysIme : InputMethodService() {
                 consumeKeyPreview(barHover.key)
         }
         clearTeamsEgg()
+        // fn whose setting can't be read gets a once-ever note (#116). A Tab from the phone's own keys while fn reads as another
+        // mode is likely fn set to Tab: the warning shows then, if the field's start didn't already show it.
+        if (editing && event.repeatCount == 0) when {
+            keyCode == KeyEvent.KEYCODE_FUNCTION -> main.post { noteFnUnreadable() }
+            keyCode == KeyEvent.KEYCODE_TAB && event.device?.isVirtual == false -> main.post { warnKeysOff() }
+        }
         // A held letter's row left after the lift closes on the next key, whatever it is, and the key goes on as always (#107).
         if (event.repeatCount == 0 && !touchpad.isGestureKey(event)) closeLiftedRow()
         interruptGesture()
@@ -5859,6 +5903,8 @@ class TitanKeysIme : InputMethodService() {
         private const val TEAMS_EGG_MILLIS = 500L
         /** How long the hold hint stays on the bar, unless a key or touch takes it first. */
         private const val HOLD_HINT_MILLIS = 6_000L
+        /** Long enough to read a warning that names a path (#116); the next key still clears it at once. */
+        private const val KEY_WARNING_MILLIS = 10_000L
         /** How long the bar says which input method types, after a switch in the overlay. */
         private const val EGG_PREFERENCES = "easter_egg"
         private const val EGG_BOOT_COUNT = "teams_boot_count"

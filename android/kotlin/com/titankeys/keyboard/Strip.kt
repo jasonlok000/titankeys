@@ -59,7 +59,11 @@ class Strip(
             override val word = ""
         }
         /** A short line the keyboard has to say, such as that swipe typing didn't load (see [SwipeLoad]). It has no buttons. */
-        data class Line(val text: String) : Notice {
+        data class Line(
+            val text: String,
+            /** A tap on the line, such as opening the phone's Shortcut keys (#116). Null: it has no action. */
+            val onTap: (() -> Unit)? = null,
+        ) : Notice {
             override val word get() = ""
         }
         /**
@@ -93,6 +97,8 @@ class Strip(
     private val wordViews = List(3) { slot -> item({ choose(order[slot]) }, { hold(order[slot]) }) }
     /** The word that the field has selected, alone in the middle. A touch or a hold opens its menu. */
     private val selectedView = item({ act(Action.OpenSelected) }, { act(Action.OpenSelected); true })
+    /** A tappable line's action, kept from the finger going down ([Notice.Line.onTap]). */
+    private var tappedLine: (() -> Unit)? = null
     private val noticeLabel = TextView(context).apply {
         typeface = this@Strip.typeface
         textSize = NOTICE_SIZE
@@ -102,7 +108,16 @@ class Strip(
         isFocusable = false
         setPadding(dp(8), 0, dp(8), 0)
         // A touch beside the buttons is a way out of the menu.
-        setOnClickListener { if (notice is Notice.Menu) act(Action.Close) }
+        setOnClickListener {
+            val shown = notice
+            if (shown is Notice.Menu) act(Action.Close) else ((shown as? Notice.Line)?.onTap ?: tappedLine)?.invoke()
+            tappedLine = null
+        }
+        // A touch may clear the line before the click lands, so a tappable line's action is kept as the finger goes down.
+        setOnTouchListener { _, event ->
+            if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) tappedLine = (notice as? Notice.Line)?.onTap
+            false
+        }
         accessibilityDelegate = object : View.AccessibilityDelegate() {
             override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
                 super.onInitializeAccessibilityNodeInfo(host, info)

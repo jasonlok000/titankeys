@@ -40,7 +40,9 @@ test("the form has the owner's kinds, sends only on Send, and offers email when 
   const ids = [...kinds.matchAll(/value: "([a-z]+)"/g)].map(match => match[1]);
   expect(read("android/kotlin/com/titankeys/connected/Reports.kt")).toContain(`val KINDS = listOf(${ids.map(id => `"${id}"`).join(", ")})`);
   const form = read("app/settings/report.tsx");
-  expect(form).toContain('<Button disabled={!kind || what.trim() === ""');
+  // Every field is optional (owner, 2026-11-24): Send waits only for a mistyped email or a send already going.
+  expect(form).toContain("<Button disabled={!emailOk || send.status === \"pending\"}");
+  expect(form).toContain('kind: kind ?? "other"');
   expect(form).toContain('label="Email it instead"');
   const adapter = read("android/kotlin/com/vandam/ink/ConnectedAdapter.kt");
   expect(adapter).toContain("Reports.keep(activity.noBackupFilesDir, name, zip)");

@@ -45,7 +45,9 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
   const idea = kind === "idea";
   const emailOk = email.trim() === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const send = useAction(async () => {
-    const sent = await sendReport({ kind: kind!, what, expected: idea ? "" : expected, email: email.trim(), recording, crash: hasCrash });
+    // Every field is optional (owner, 2026-11-24): nobody should have to write much to tell us something broke. A report with
+    // no kind picked goes as "Something else"; the versions, and any crash report or recording, still go along.
+    const sent = await sendReport({ kind: kind ?? "other", what, expected: idea ? "" : expected, email: email.trim(), recording, crash: hasCrash });
     setOutcome(sent);
     if (sent === "sent") playHaptic("app_picked");
   });
@@ -80,8 +82,8 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
     </Section>
     <Stack gap={24}>
       <TextInput label={idea ? "Your idea" : "What happened?"} value={what} onChange={setWhat}
-        placeholder={idea ? "What should TitanKeys do?" : "What you did, and what went wrong"} minLines={3} maxLines={10} action="return" />
-      {!idea && <TextInput label="What did you expect?" value={expected} onChange={setExpected} placeholder="What should have happened" minLines={2} maxLines={6} action="return" />}
+        placeholder={idea ? "Optional: what should TitanKeys do?" : "Optional: what you did, and what went wrong"} minLines={3} maxLines={10} action="return" />
+      {!idea && <TextInput label="What did you expect?" value={expected} onChange={setExpected} placeholder="Optional" minLines={2} maxLines={6} action="return" />}
       <TextInput label="Your email, if you want a reply" value={email} onChange={setEmail} placeholder="Optional"
         autoCapitalise={false} action="done" />
       {!emailOk && <Note>That email doesn't look right.</Note>}
@@ -97,7 +99,7 @@ function ReportForm({ start, recording: hasRecording, crash: hasCrash, froze, ve
         : "The crash report: where it crashed, and the versions. Nothing you typed. It always goes along."}</Note>}
     </Section>
     {send.status === "error" && <Note>{send.error.message}</Note>}
-    <Button disabled={!kind || what.trim() === "" || !emailOk || send.status === "pending"} onPress={() => void send.run()}>
+    <Button disabled={!emailOk || send.status === "pending"} onPress={() => void send.run()}>
       {send.status === "pending" ? "Sending…" : "Send"}
     </Button>
   </Screen>;

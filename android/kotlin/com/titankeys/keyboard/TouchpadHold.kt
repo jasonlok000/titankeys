@@ -126,6 +126,13 @@ class TouchpadHold {
         /** The first try sends the status again; when that didn't bring it back, the held status is shown again (a hide, then the show). */
         fun reportAgain(failures: Int) = failures in 2..6
 
+        /**
+         * True when the keyboard should report itself visible though no field shows it: the hold is on and there is no field.
+         * Firmware V02.00.06 takes the status as on only from a visible keyboard; V02.00.04 took any report, so this changes
+         * nothing there.
+         */
+        fun reportsVisible(held: Boolean, editing: Boolean) = held && !editing
+
         /** Five reads a second while the status comes back; after six tries that didn't, one read every two seconds. */
         fun watchDelay(failures: Int) = if (failures <= 6) WATCH_MILLIS else 2_000L
 

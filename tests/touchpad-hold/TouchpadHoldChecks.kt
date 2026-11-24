@@ -167,6 +167,9 @@ private fun onlyAClearedStatusIsSentAgain() {
     same(TouchpadHold.watchDelay(0), 200L, "the property is read five times a second")
     same(TouchpadHold.watchDelay(6), 200L, "and while it's being brought back")
     same(TouchpadHold.watchDelay(7), 2_000L, "then every two seconds, never stopping")
+    same(TouchpadHold.reportsVisible(held = true, editing = false), true, "the hold with no field reports the keyboard visible, which V02.00.06 needs")
+    same(TouchpadHold.reportsVisible(held = true, editing = true), false, "in a field, Android's own shown state decides")
+    same(TouchpadHold.reportsVisible(held = false, editing = false), false, "with no hold, nothing is reported visible")
     same(TouchpadHold.otherDisposition(1), 0, "the hold's back disposition changes to the default and back")
     same(TouchpadHold.otherDisposition(0), 1, "a field's default changes to another and back")
 }

@@ -231,7 +231,7 @@ class TitanKeysIme : InputMethodService() {
      */
     private val nudge = Runnable {
         val root = inputRoot ?: return@Runnable
-        if (!isInputViewShown) return@Runnable
+        if (!inputViewShown) return@Runnable
         root.setPadding(0, 0, 0, 1)
         main.postDelayed(unNudge, NUDGE_MILLIS)
     }
@@ -245,7 +245,7 @@ class TitanKeysIme : InputMethodService() {
      * on the box do, so in the apps in [BOUNCE_APPS] the keyboard does that by itself, once. The strip flickers once.
      */
     private val recycle = Runnable {
-        if (!isInputViewShown || !canShowStrip()) return@Runnable
+        if (!inputViewShown || !canShowStrip()) return@Runnable
         recycling = true
         recycleAwaitsHide = true
         try {
@@ -375,7 +375,7 @@ class TitanKeysIme : InputMethodService() {
 
     /** A cancelled show request can leave the client waiting for a window surface, so the window shows itself if Android's did not. */
     private val forceStrip = Runnable {
-        if (!isInputViewShown && canShowStrip()) {
+        if (!inputViewShown && canShowStrip()) {
             try {
                 showWindow(true)
                 requestShowSelf(0)
@@ -384,7 +384,7 @@ class TitanKeysIme : InputMethodService() {
             }
         }
         // A panel that could not show must not take the next key.
-        if (panelOpen && !isInputViewShown) closePanel()
+        if (panelOpen && !inputViewShown) closePanel()
     }
 
     // Apps can drop a field yet still start input on it, so only a field that answers gets the strip.
@@ -414,7 +414,7 @@ class TitanKeysIme : InputMethodService() {
      * window has not shown by the time of the fallback in [forceStrip], the panel closes there.
      */
     private val showPanel = Runnable {
-        if (!panelOpen || isInputViewShown) return@Runnable
+        if (!panelOpen || inputViewShown) return@Runnable
         if (canShowStrip()) showStrip.run() else closePanel()
     }
 
@@ -455,7 +455,7 @@ class TitanKeysIme : InputMethodService() {
         if (event.isSystem || event.repeatCount > 0 || Modifiers.isModifier(event.keyCode)) return
         keyToAppCode = event.keyCode
         keyToAppAt = SystemClock.uptimeMillis()
-        keyAudit("A key went to the app with no field (${currentInputEditorInfo?.packageName}, shown $isInputViewShown)")
+        keyAudit("A key went to the app with no field (${currentInputEditorInfo?.packageName}, shown $inputViewShown)")
     }
 
     /** The keyboard typed [event]'s key: the same key the app had just had with no field is the double letter. */
@@ -1012,7 +1012,7 @@ class TitanKeysIme : InputMethodService() {
                 if (target == modifiers.panel) return@post
                 modifiers.openPanel(target)
                 showModifiers()
-                if (panelOpen && !isInputViewShown) main.post(showPanel)
+                if (panelOpen && !inputViewShown) main.post(showPanel)
             }
         }
         autocorrect = AutocorrectLoader(this, SwipeTyping.get(this))
@@ -1248,7 +1248,7 @@ class TitanKeysIme : InputMethodService() {
             val mark = if (intent.hasExtra("mark")) intent.getIntExtra("mark", -1) else null
             val mod = intent.getStringExtra("mod")?.lowercase()
             main.post {
-                if (!editing || !isInputViewShown) {
+                if (!editing || !inputViewShown) {
                     Log.i("TitanKeys", "Panel check: no field has the keyboard up")
                     return@post
                 }
@@ -1303,7 +1303,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     // Exact typing and an app where the bar hides (both from Settings) keep it off, as do fields with no suggestions or fixes.
-    private fun idleBarAllowed() = editing && isInputViewShown && !panelOpen && !field.exact && !barHidden && field.suggestions &&
+    private fun idleBarAllowed() = editing && inputViewShown && !panelOpen && !field.exact && !barHidden && field.suggestions &&
         field.autocorrect && showSuggestions() && ValueAnimator.areAnimatorsEnabled() && getSystemService(PowerManager::class.java).isInteractive
 
     private fun startIdleBar(kind: IdlePlayer.Kind? = null, random: Random = Random(System.nanoTime()), schedule: IdleSchedule? = null) =
@@ -1397,7 +1397,7 @@ class TitanKeysIme : InputMethodService() {
     private fun updateHold() {
         if (holdWanted()) {
             // A strip that is still up keeps the status on until it hides, and its hide leaves the status on.
-            if (hold.held || isInputViewShown || main.hasCallbacks(showHold)) return
+            if (hold.held || inputViewShown || main.hasCallbacks(showHold)) return
             main.postDelayed(showHold, hold.delay(SystemClock.uptimeMillis()))
             return
         }
@@ -1431,7 +1431,7 @@ class TitanKeysIme : InputMethodService() {
                 failures++
                 if (failures <= 6) Log.i("TitanKeys", "The firmware cleared the keyboard status; sending it again ($failures)")
                 try {
-                    if (TouchpadHold.reportAgain(failures) && hold.held && !isInputViewShown) {
+                    if (TouchpadHold.reportAgain(failures) && hold.held && !inputViewShown) {
                         // After a hide from Android the status this sends no longer says "shown", so the firmware kept writing 0
                         // and the keys scrolled the app (owner, 2026-11-22 22:45). Hiding and showing the held status again, as the
                         // hold first does, reports it shown.
@@ -1454,7 +1454,7 @@ class TitanKeysIme : InputMethodService() {
     }
 
     /** The keyboard's status is on: held with no field, or the keyboard shown in one. */
-    private fun statusWanted() = isInputViewShown || hold.held && holdWanted()
+    private fun statusWanted() = inputViewShown || hold.held && holdWanted()
 
     private fun watchStatus() {
         main.removeCallbacks(statusWatch)
@@ -1462,13 +1462,16 @@ class TitanKeysIme : InputMethodService() {
     }
 
     private val showHold = Runnable {
-        if (!holdWanted() || hold.held || isInputViewShown || currentInputBinding == null) return@Runnable
+        if (!holdWanted() || hold.held || inputViewShown || currentInputBinding == null) return@Runnable
         try {
             backDisposition = BACK_DISPOSITION_WILL_NOT_DISMISS
+            // Held before the show, so the status that the show reports says visible. See isInputViewShown.
+            hold.shown()
             showWindow(false)
             // Only the status is wanted. Before the first frame, this takes the window back off the screen.
             holdWindow()
         } catch (error: RuntimeException) {
+            if (!window.isShowing) hold.hidden()
             Log.w("TitanKeys", "Could not report the keyboard status", error)
         }
     }
@@ -1481,7 +1484,7 @@ class TitanKeysIme : InputMethodService() {
 
     /** With no field, a hide takes only the window away. Android's own would also turn the status off. See [TouchpadHold]. */
     override fun hideWindow() {
-        if (!TouchpadHold.keepsStatus(holdWanted(), isInputViewShown)) {
+        if (!TouchpadHold.keepsStatus(holdWanted(), inputViewShown)) {
             super.hideWindow()
             return
         }
@@ -1732,7 +1735,7 @@ class TitanKeysIme : InputMethodService() {
         super.onComputeInsets(outInsets)
         val keyboard = inputRoot ?: return
         val decor = window.window?.decorView ?: return
-        if (!isInputViewShown || !keyboard.isAttachedToWindow) return
+        if (!inputViewShown || !keyboard.isAttachedToWindow) return
         val top = if (keyboard.isShown && keyboard.height > 0) {
             keyboard.getLocationInWindow(keyboardAt)
             keyboardAt[1]
@@ -1981,11 +1984,11 @@ class TitanKeysIme : InputMethodService() {
         }
         val code = event.keyCode
         // The app takes Back before the keyboard, so an open panel must close here.
-        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && isInputViewShown && backKey(event, down)) return true
+        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && inputViewShown && backKey(event, down)) return true
         // Smart Launcher takes Back before the keyboard too: with the keyboard up, the launcher went home instead of the keyboard
         // hiding (owner, 2026-11-21: "on smart launcher it didn't hide the keyboard it went back to the home page"). The keyboard
         // takes the push, and its release, as Back in any other field: it hides, and nothing else happens.
-        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && (if (down) isInputViewShown || backEcho ||
+        if (watchingKeys && code == KeyEvent.KEYCODE_BACK && (if (down) inputViewShown || backEcho ||
                 SystemClock.uptimeMillis() - backHandledAt < BACK_ECHO_MILLIS else backKept || backEcho)) {
             if (down) onKeyDown(code, event) else onKeyUp(code, event)
             return true
@@ -2059,7 +2062,7 @@ class TitanKeysIme : InputMethodService() {
      * ([onCreateInputView]). A keyboard that isn't up, or one in exact typing, catches up as the next field starts instead.
      */
     private fun followBarSize() {
-        if (!isInputViewShown || field.exact) return
+        if (!inputViewShown || field.exact) return
         if (FixedScale.size(this) != viewSize) setInputView(onCreateInputView())
     }
 
@@ -2835,6 +2838,21 @@ class TitanKeysIme : InputMethodService() {
 
     override fun onEvaluateInputViewShown() = editing
 
+    /**
+     * The keyboard's own "shown in a field". Everything in this class asks this, not [isInputViewShown], which Android also
+     * asks when it reports the keyboard's status.
+     */
+    private val inputViewShown get() = super.isInputViewShown()
+
+    /**
+     * Firmware V02.00.06 writes the touchpad status as on only when the keyboard reports itself visible (IME_VISIBLE), where
+     * V02.00.04 took any report. With no field the hold shows the window with showWindow(false), which reports only "active",
+     * so the status stayed 0 and Scroll assistant scrolled the app (owner, 2026-11-24, in Reddit: vis 1, status 0, six re-sends
+     * that all wrote 0). Android builds the reported status from this method, so while the hold is on with no field it says
+     * visible. The window itself stays off the screen, as [holdWindow] leaves it.
+     */
+    override fun isInputViewShown(): Boolean = super.isInputViewShown() || TouchpadHold.reportsVisible(hold.held, editing)
+
     /** Android calls this when you tap the field, so the tap also brings the strip back after Back. */
     override fun onShowInputRequested(flags: Int, configChange: Boolean): Boolean {
         if (field.exact || currentInputEditorInfo?.inputType == EditorInfo.TYPE_NULL)
@@ -2854,7 +2872,7 @@ class TitanKeysIme : InputMethodService() {
     override fun onViewClicked(focusChanged: Boolean) {
         @Suppress("DEPRECATION")
         super.onViewClicked(focusChanged)
-        if (!editing || !isInputViewShown || recycling) return
+        if (!editing || !inputViewShown || recycling) return
         if (currentInputEditorInfo?.packageName !in BOUNCE_APPS) return
         main.removeCallbacks(recycle)
         main.postDelayed(recycle, RECYCLE_DELAY_MILLIS)
@@ -2926,7 +2944,7 @@ class TitanKeysIme : InputMethodService() {
     private fun readSlidingMode(sample: SlidingModeField.Sample, late: Boolean) {
         val field = sample.field
         val sameField = slidingField === field && field.current(sample) &&
-            field.owns(currentInputEditorInfo?.packageName, currentInputEditorInfo?.fieldId, currentInputConnection) && isInputViewShown
+            field.owns(currentInputEditorInfo?.packageName, currentInputEditorInfo?.fieldId, currentInputConnection) && inputViewShown
         val reading = if (sameField) PhoneChecks.slidingReading(this, field.app) else null
         if (AppBuild.kind(this) == "debug")
             Log.i("TitanKeysSliding", "${field.app} ${if (late) "late" else "early"}: $reading (same field $sameField, mode 1 touch ${field.mode1Touch})")
@@ -4984,7 +5002,7 @@ class TitanKeysIme : InputMethodService() {
     private fun keyDown(keyCode: Int, event: KeyEvent): Boolean {
         noteSlidingInteraction()
         if (keyCode == KeyEvent.KEYCODE_DEL && event.repeatCount == 0 && !backspaceRepeat.sending) heldBackspace = KeyEvent(event)
-        if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym down, repeat ${event.repeatCount}: shown $isInputViewShown, " +
+        if (keyCode == KeyEvent.KEYCODE_SYM) symLog("keyboard heard Sym down, repeat ${event.repeatCount}: shown $inputViewShown, " +
             "panel ${modifiers.panel}, guide $inGuide, menu $menuOpen, waiting ${pendingInput.size}")
         // The panel's mark of the key under a resting finger stays while a key is down, as when it toggles a quick setting.
         if (!touchpad.isGestureKey(event)) {
@@ -5023,7 +5041,7 @@ class TitanKeysIme : InputMethodService() {
         Recording.sink?.key(event, touchpad.isGestureKey(event))
         inputLog()?.key(event, touchpad.isGestureKey(event))
         if (KeyCapture.waiting?.invoke(event) == true) return true
-        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0) keyAudit("Back down: shown $isInputViewShown, code " +
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0) keyAudit("Back down: shown $inputViewShown, code " +
             "${codeOnBar()} (composing ${codePending()}), picker ${openPicker()?.javaClass?.simpleName}, menu $choicesMenuOpen, " +
             "panel $panelOpen, ${SystemClock.uptimeMillis() - backHandledAt} ms after the last handled Back")
         // Key Mapper replays every Back about 15 ms after its release. Where the keyboard also heard the press itself (the Back
@@ -5037,14 +5055,14 @@ class TitanKeysIme : InputMethodService() {
         }
         if (keyCode == KeyEvent.KEYCODE_BACK && backEcho) return true
         // Back closes the visible Sym panel before the picker hidden beneath it. Repeats from that push stay with the panel.
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown && backKey(event, down = true)) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && inputViewShown && backKey(event, down = true)) {
             backKept = true
             return true
         }
         // A code being built: Back clears it, exactly as a Sym tap does ([clearCode]), the bigger menu with it, and types nothing.
         // Before, it closed the picker and the bar fell back to three suggestions (owner, 2026-11-21: "just clear the code, so
         // identical to what sym does now"). The next Back hides the keyboard.
-        if (keyCode == KeyEvent.KEYCODE_BACK && codeOnBar() && isInputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && codeOnBar() && inputViewShown) {
             if (event.repeatCount == 0) {
                 clearCode()
                 keyAudit("Back cleared the code, as Sym does; the keyboard stays")
@@ -5054,7 +5072,7 @@ class TitanKeysIme : InputMethodService() {
         }
         // Back closes the bigger menu, and the choices stay on the bar. Only one that can be seen: a hidden keyboard's menu or
         // picker doesn't take the app's Back (key audit, 2026-11-20).
-        if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen && isInputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && choicesMenuOpen && inputViewShown) {
             if (event.repeatCount == 0) closeChoicesMenu()
             pickerKey = keyCode
             return true
@@ -5062,7 +5080,7 @@ class TitanKeysIme : InputMethodService() {
         // Back closes the switcher or the accents, and its release goes with it. Never an engine's row: with no code on it, that
         // is the bar's own words, and Back hides the keyboard as anywhere (closing it left three words, owner, 2026-11-21: "It shd
         // not show the 3 words no matter what").
-        if (keyCode == KeyEvent.KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && isInputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && openPicker().let { it != null && it !is LanguagePicker.Choices } && inputViewShown) {
             if (event.repeatCount == 0) {
                 keyAudit("Back closed the ${if (openPicker() is LanguagePicker.Switch) "switcher" else "accents"}")
                 closePicker()
@@ -5072,7 +5090,7 @@ class TitanKeysIme : InputMethodService() {
         }
         // Back closes the word menu and stays in the app, as it closes the panel and the picker: before, the menu closed with the
         // keyboard's hide and the app went back too (key audit, 2026-11-20).
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown && menuOpen) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && inputViewShown && menuOpen) {
             if (event.repeatCount == 0) {
                 closeMenu()
                 keyAudit("Back closed the word menu; the app keeps its screen")
@@ -5082,7 +5100,7 @@ class TitanKeysIme : InputMethodService() {
         }
         if (keyCode == KeyEvent.KEYCODE_BACK && hold.held && !editing) return heldBack(event, down = true)
         // Android hands back to a shown keyboard first, which would only close the strip.
-        if (keyCode == KeyEvent.KEYCODE_BACK && editing && isInputViewShown) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && editing && inputViewShown) {
             backKept = true
             return true
         }
@@ -5096,7 +5114,7 @@ class TitanKeysIme : InputMethodService() {
         // Keys like volume reach the keyboard too, but they are not typing.
         if (!event.isSystem) showStripAfterBack()
         // An exact typing app can hide the keyboard by itself, as AnyDesk's own keyboard button does. A key brings the bar back.
-        if (field.exact && !event.isSystem && !isInputViewShown && !hiddenByBack) {
+        if (field.exact && !event.isSystem && !inputViewShown && !hiddenByBack) {
             logExact("bar back for a key")
             main.post(showStrip)
         }
@@ -5147,7 +5165,7 @@ class TitanKeysIme : InputMethodService() {
         }
         if (accentlessRepeat(carried)) return true
         // With the panel's groups on the screen, fn picks the one at its place, also as Ctrl, which would take it first (bug hunt #37).
-        if (keyCode == Modifiers.FN && panelOpen && isInputViewShown && categoryKey(event)) {
+        if (keyCode == Modifiers.FN && panelOpen && inputViewShown && categoryKey(event)) {
             consumedKeys += keyCode
             return true
         }
@@ -5253,7 +5271,7 @@ class TitanKeysIme : InputMethodService() {
             backHandledAt = SystemClock.uptimeMillis()
             // Back closes an open panel and stays in the app.
             if (!backKey(event, down = false)) {
-                if (editing && isInputViewShown) {
+                if (editing && inputViewShown) {
                     // Hide only, as on any Android keyboard: the app stays where it is, and the next Back is the app's (owner,
                     // 2026-11-21: "after i released my back and the keyboard is away, a software back is issued"). Before, the
                     // hide sent the app a back too.
@@ -5335,10 +5353,10 @@ class TitanKeysIme : InputMethodService() {
         if (Modifiers.isModifier(event.keyCode)) {
             modifiers.key(event)
             if (event.keyCode == KeyEvent.KEYCODE_SYM && event.action == KeyEvent.ACTION_DOWN)
-                symLog("Sym handled: panel now ${modifiers.panel}, shown $isInputViewShown")
+                symLog("Sym handled: panel now ${modifiers.panel}, shown $inputViewShown")
             switchKeyboardIfAsked()
             if (field.exact) logModifiers(event)
-            if (panelOpen && !isInputViewShown) main.post(showPanel)
+            if (panelOpen && !inputViewShown) main.post(showPanel)
             return true
         }
         if (panelKey(event)) return true
@@ -5419,7 +5437,7 @@ class TitanKeysIme : InputMethodService() {
         if (event.repeatCount > 0 && event.keyCode == pickedKey) return true
         pickedKey = 0
         if (!panelOpen) return false
-        if (modifiers.panel == Modifiers.Panel.Clipboard && isInputViewShown) {
+        if (modifiers.panel == Modifiers.Panel.Clipboard && inputViewShown) {
             val key = when (event.keyCode) {
                 KeyEvent.KEYCODE_DEL -> Layout.BACKSPACE
                 KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> Layout.ENTER
@@ -5436,7 +5454,7 @@ class TitanKeysIme : InputMethodService() {
             if (event.repeatCount == 0 && rows != 0f && panel?.swipe(0f, rows) == true) haptics.play(Haptic.PanelPage)
             return true
         }
-        if (!isInputViewShown || event.isCtrlPressed || event.isMetaPressed) return false
+        if (!inputViewShown || event.isCtrlPressed || event.isMetaPressed) return false
         if (!HoldEngine.isLetter(event.keyCode)) return categoryKey(event)
         if (event.repeatCount > 0) return true
         val letter = ('A' + (event.keyCode - KeyEvent.KEYCODE_A)).toString()

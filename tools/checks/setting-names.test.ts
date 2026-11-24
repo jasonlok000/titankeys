@@ -35,7 +35,7 @@ test("the bar is turned off in one place, and the cursor setting uses its one na
   expect(settings).toContain("label={doubleSpaceLabel}");
   expect(settings).toContain("label={tripleSpaceLabel}");
   expect(read("app/settings/hidden-bar.tsx")).not.toContain("<Toggle");
-  expect(read("app/settings/guide-boring.tsx")).toContain(`Turn it off with ${doubleSpaceLabel} in Settings`);
+  expect(read("app/settings/guide-boring.tsx")).toContain(`Turn off ${doubleSpaceLabel} in Settings`);
   expect(read("app/settings/guide-boring.tsx")).toContain(`${tripleSpaceLabel} in Settings`);
   expect(read("app/settings/guide-boring.tsx")).toContain(`turn off ${barLabel}`);
   expect(settings).toContain("label={scrollLabel}");

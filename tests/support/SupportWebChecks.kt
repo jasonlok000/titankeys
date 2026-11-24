@@ -39,6 +39,10 @@ fun supportWebChecks() {
     check(parse("""{"id":7,"op":"board","args":{"page":2}}""").call == SupportCall.Board(2))
     check(parse("""{"id":8,"op":"board"}""").call == SupportCall.Board(0))
     for (op in listOf("removeMe", "dismissPopup", "close")) parse("""{"id":9,"op":"$op"}""")
+    // The page's haptics: only TitanKeys' own five, by name.
+    for (name in SupportWebProtocol.HAPTICS) check(parse("""{"id":10,"op":"haptic","args":{"name":"$name"}}""").call == SupportCall.Haptic(name))
+    check(refused("""{"id":1,"op":"haptic","args":{"name":"buzz_forever"}}""") == "bad_args")
+    check(refused("""{"id":1,"op":"haptic"}""") == "bad_args")
     check(refused("not json") == "bad_json")
     check(refused("""{"op":"state"}""") == "bad_id")
     check(refused("""{"id":1.5,"op":"state"}""") == "bad_id")

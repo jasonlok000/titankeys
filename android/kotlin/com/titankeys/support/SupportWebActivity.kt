@@ -17,6 +17,8 @@ import android.webkit.WebViewClient
 import com.titankeys.keyboard.AppBuild
 import com.titankeys.keyboard.FixedScale
 import com.titankeys.keyboard.GuideMotion
+import com.titankeys.keyboard.Haptic
+import com.titankeys.keyboard.Haptics
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
@@ -42,6 +44,9 @@ class SupportWebActivity : Activity() {
     private var billing: SupportBilling? = null
     private var lastReceipt: String? = null
     private var pageReady = false
+    /** The page has finished loading, so its script can play a receipt's thank-you. See [billingChanged]. */
+    private var pageLoaded = false
+    private val haptics by lazy { Haptics(this) }
     /** The camera cutout's height at the top of the screen, in phone pixels; the page keeps its controls below it. */
     private var cutTop = 0
 
@@ -179,6 +184,9 @@ class SupportWebActivity : Activity() {
         override fun onPageFinished(view: WebView, url: String) {
             takeEarly()
             sendCut()
+            pageLoaded = pageReady
+            // A receipt that came while the page was still loading plays now. See [billingChanged].
+            if (pageLoaded && !preview) runCatching { billingChanged() }
         }
 
         private fun refused() = WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", emptyMap(), ByteArrayInputStream(ByteArray(0)))
@@ -269,6 +277,14 @@ class SupportWebActivity : Activity() {
                 answer(JSONObject().put("ok", true))
                 finish()
             }
+            // No answer: the page doesn't wait on a haptic, so each one lands with its frame.
+            is SupportCall.Haptic -> haptics.play(when (call.name) {
+                "tick" -> Haptic.AppStep
+                "pick" -> Haptic.AppPicked
+                "join" -> Haptic.AppSwitchOn
+                "celebrate" -> Haptic.GuideCelebration
+                else -> Haptic.AppPress
+            })
         }
     }
 
@@ -313,12 +329,15 @@ class SupportWebActivity : Activity() {
     private fun billingChanged() {
         val state = state()
         event("state", state)
-        // A new receipt: its own event, once, so the page plays the thank-you.
+        // A new receipt: its own event, once, so the page plays the thank-you, and only to a page that has loaded and can play it.
+        // It's then marked seen, so opening the page again doesn't play the thank-you again (owner, 2026-11-24: the pour came
+        // back on every visit, as only the old app screen ever marked a receipt seen).
         val receipt = state.optJSONObject("receipt")
         val id = receipt?.optString("id")
-        if (receipt != null && id != lastReceipt) {
+        if (receipt != null && id != null && id != lastReceipt && pageLoaded) {
             lastReceipt = id
             event("receipt", receipt)
+            runCatching { billing?.ledger?.receiptSeen(id) }
         }
         state.optString("purchaseResult").takeIf { it.isNotEmpty() && it != "null" }?.let { event("purchase", JSONObject().put("result", it)) }
     }

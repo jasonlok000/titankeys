@@ -621,7 +621,7 @@
       <div class="field" id="msgfield"><label><span data-t="messageField"></span><span class="count" id="msgcount"></span></label><textarea id="msg" rows="1" placeholder="Say hi"></textarea></div></div>
       <div class="limitnote" id="overlimit"></div>
     </div>
-    <div class="dock actions"><button class="primary" data-act="add" data-t="addMe"></button><button class="quiet" data-act="anon" data-t="stayAnonymous"></button></div>
+    <div class="dock actions"><button class="primary" data-act="add" data-t="addMe"></button><button class="quiet" data-act="later" data-t="later"></button></div>
   </section>
 
   <!-- The board: everyone, or the supporter's own view. -->
@@ -660,16 +660,16 @@ const T = {
   thanksTitle: "Thank you!", thanksLine: "Fun fact: I don't actually drink coffee. I'm more of an orange juice person. But this means a lot.",
   join: "Join the board?", nameField: "Name", namePlaceholder: "Your name", messageField: "Message (optional)",
   limits: { 3: "120 characters. Say something grand.", 10: "80 characters. Make it count.", 100: "40 characters. Short and sweet.", 0: "Name only for now. Climb for a message." },
-  addMe: "Add me", stayAnonymous: "Skip the board",
-  invite: tier => `You're in the top ${tier} now. Want a longer message?`, writeMore: "Write more", later: "Later",
-  privacy: "Only names, messages and rank. Leave any time.", removeMe: "Remove me",
+  addMe: "Add me",
+  invite: tier => `You're in the top ${tier} now. Want a longer message?`, writeMore: "Write more", later: "Not now",
+  privacy: "Only names, messages and rank. Leave any time.", removeMe: "Remove me", editMe: "Edit my name and message", save: "Save",
   billing: "Play can't take payments on this phone.", notReady: "Play's still waking up. Try again soon.",
   offline: "You're offline. The board will be back.",
   allRanks: () => "See everyone", retry: "Try again", previewLabel: "Here's you on the board",
   perMonth: "/month",
   beFirst: "Be the first", topBadge: "Top 3",
   popupAfter: "TitanKeys is free. Buy me a coffee?",
-  youGave: cups => `You gave ${cupsText(cups)}`,
+  youGave: cups => `You bought me ${cupsText(cups)}`,
   inTotal: (cups, rank) => `${cups} in total${rank ? ` · you're #${rank}` : ""}`,
   unlockHead: (spots, top) => `${spots} ${spots === 1 ? "spot" : "spots"} from the top ${top}`,
   unlockSub: (top, chars) => `Top ${top} gets ${chars} characters`,
@@ -766,6 +766,11 @@ const call = (op, args = {}) => new Promise((resolve, reject) => {
   waiting.set(id, { resolve, reject });
   native.post(JSON.stringify({ id, op, args }));
 });
+/**
+ * One of TitanKeys' haptics, timed by the page (SupportWebProtocol.HAPTICS): press, tick, pick, join or celebrate. It doesn't
+ * wait for an answer, so it lands on the frame that asked for it. The app's own switches and pacing still apply.
+ */
+const buzz = name => { if (native) native.post(JSON.stringify({ id: nextId++, op: "haptic", args: { name } })); };
 const STAT_KEYS = ["words", "swipes", "corrections", "gestures"];
 const api = {
   state: () => native ? call("state") : Promise.resolve(SAMPLE.state),
@@ -802,6 +807,8 @@ let state = SAMPLE.state, board = { available: false, entries: [] };
 let cadence = "m", tier = 0, dollars = 5, lastRank = null;
 // The place the last payment reached: the opt-in and its message limit follow it, not a fresh estimate.
 let paidRank = null;
+// Where Not now on the join form goes: the coffees after a payment, the board when joining later or editing from it.
+let optinBack = "support", editing = false;
 
 let cupId = 0;
 /** The cup: [fill] 0..1, [size] its width; [steam] curls above; [dashed] is Custom's outline with a plus. */
@@ -879,16 +886,33 @@ function drawBoardFull(supporter) {
   if (!supporter && !board.joined && board.available && e.length) api.preview(product(tierId("o", 0))?.baseCents || 50).then(r => {  // "a sip": the rank a one-time sip buys
     if (r.available) $("#boardbar").innerHTML = `<div class="boardbar"><button class="primary" data-go="support">${esc(T.boardBar(r.rank))}</button></div>`;
   });
-  $("#removebox").innerHTML = board.joined ? `<div style="border-top:1px solid var(--line);padding-top:16px"><button class="link" data-act="remove">${T.removeMe}</button></div>` : "";
+  // A supporter who said Not now can join any time from here (owner, 2026-11-24), and one on it can edit or leave.
+  if (supporter && !board.joined && board.available) $("#boardbar").innerHTML = `<div class="boardbar"><button class="primary" data-act="joinlater">${esc(T.joinAction)}</button></div>`;
+  $("#removebox").innerHTML = board.joined ? `<div style="border-top:1px solid var(--line);padding-top:16px;display:flex;gap:24px"><button class="link" data-act="edit">${T.editMe}</button><button class="link" data-act="remove">${T.removeMe}</button></div>` : "";
 }
 
 const product = id => (state.products || []).find(p => p.id === id);
 // Product ids for a tier: native's tiers list where it gives one, else the usual names.
 const tierId = (cad, i) => state.tiers ? state.tiers[cad === "m" ? "monthly" : "oneTime"][i] : `support_${cad === "m" ? "monthly" : "tip"}_${["sip", "small", "full"][i]}`;
+/**
+ * Play's price in the phone's own money. A bare "$" says too little (owner, 2026-11-24: "the money doesn't localize?"):
+ * outside US dollars it reads with its country, CA$0.69 or A$1.49, the way Play's own sheet writes it.
+ */
+function money(micros, currency) {
+  if (micros == null || !currency) return null;
+  const amount = micros / 1e6, opts = { style: "currency", currency };
+  try {
+    const here = new Intl.NumberFormat(navigator.language || "en", opts).format(amount);
+    return currency !== "USD" && /(^|[^A-Za-z])\$/.test(here) ? new Intl.NumberFormat("en-US", opts).format(amount) : here;
+  } catch (_) { return null; }
+}
+const priceOf = p => money(p.amountMicros, p.currency) || p.price;
 function selected() {
-  if (tier === 3) { const unit = product(state.tiers?.custom || "support_tip_unit"); return unit && { id: unit.id, price: "$" + dollars, cents: unit.baseCents * dollars }; }
+  // Custom is a count of the unit coffee, so its price is the unit's own local price times the count.
+  if (tier === 3) { const unit = product(state.tiers?.custom || "support_tip_unit"); return unit && { id: unit.id,
+    price: money(unit.amountMicros * dollars, unit.currency) || "$" + dollars, cents: unit.baseCents * dollars }; }
   const p = product(tierId(cadence, tier));
-  return p && { id: p.id, price: p.price, cents: p.baseCents };
+  return p && { id: p.id, price: priceOf(p), cents: p.baseCents };
 }
 const LEVELS = [.15, .25, .5];  // the same steps for monthly and one-time; a sip still shows
 function drawTiers() {
@@ -897,7 +921,7 @@ function drawTiers() {
   if (cadence === "m" && tier === 3) tier = 0;
   const rows = T.tiers.map(([nm, ln], i) => {
     const p = product(tierId(cadence, i)), on = tiersSeen && i === tier;
-    return `<button class="tier${on ? " on" : ""}" data-tier="${i}">${cup(LEVELS[i], 34)}<span><div class="nm">${nm}</div><div class="ln">${ln}</div></span><span class="pr">${p ? p.price : ""}</span></button>`;
+    return `<button class="tier${on ? " on" : ""}" data-tier="${i}">${cup(LEVELS[i], 34)}<span><div class="nm">${nm}</div><div class="ln">${ln}</div></span><span class="pr">${p ? priceOf(p) : ""}</span></button>`;
   });
   if (cadence === "o") rows.push(`<button class="tier" data-go="custom">${cup(0, 30, { dashed: true })}<span><div class="nm">${T.custom[0]}</div><div class="ln">${T.custom[1]}</div></span><svg class="chev" width="22" height="22" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`);
 
@@ -940,8 +964,14 @@ function drawCustom() {
   const cups = dollars / 5;
   if (document.activeElement !== $("#custd")) $("#custd").value = dollars;
   $("#custd").style.width = (String(dollars).length * .62 + .1) + "em";
-  $("#custc").textContent = cupsText(cups);
-  document.querySelectorAll("#quick button").forEach(b => b.classList.toggle("on", +b.dataset.dollars === dollars));
+  // Outside US dollars, the count reads with what it costs here.
+  const unit = product(state.tiers?.custom || "support_tip_unit"), local = unit && unit.currency !== "USD" && money(unit.amountMicros * dollars, unit.currency);
+  $("#custc").textContent = cupsText(cups) + (local ? ` · ${local}` : "");
+  document.querySelectorAll("#quick button").forEach(b => {
+    b.classList.toggle("on", +b.dataset.dollars === dollars);
+    const n = +b.dataset.dollars, here = unit && money(unit.amountMicros * n, unit.currency);
+    if (here) b.textContent = `${here} · ${n / 5} cup${n === 5 ? "" : "s"}`;
+  });
   $("#custpot").textContent = cups > 5 ? T.wholePot : "";
   $("#custcups").innerHTML = cupRow(cups, 104);
   drawPay($("#pay2"));
@@ -1005,6 +1035,18 @@ function thanks(totalCups, rank, after, giftCups = totalCups, pin = null) {
     `<span class="drift" style="left:${i % 2 ? 84 + (i * 3) % 10 : 4 + (i * 3) % 10}%;animation-delay:${(i * .43).toFixed(2)}s;animation-duration:${(4.2 + (i % 3) * .7).toFixed(1)}s;top:${30 + (i * 37) % 55}%">${cup(.7, 16 + (i % 3) * 4)}</span>`).join("") : "";
   clearTimeout(raf);
   const start = performance.now(), D = 1800, HOLD = 650, FILL = 900, fills = [...document.querySelectorAll("#thankscup .fill")];
+  // The pour's haptics, each from the frame it belongs to (owner, 2026-11-24: "really really fancy, syncing with the bubbles").
+  // The rise ticks each time the orange climbs another step, so they come quick as it gushes in and slow as it eases; the
+  // crest is done; the beat at the mark, with its ring, is the guide's rising three; the orange taking the screen ticks
+  // faster to the end; and each bubble that comes up is a tick of its own, for as long as the pour runs.
+  const STEPS = 14, feel = { rise: 0, crest: false, mark: false, finish: 0, end: start + D + HOLD + FILL + 1200, last: 0 };
+  const bubbleTick = () => {
+    const now = performance.now();
+    if (now > feel.end || now - feel.last < 70) return;
+    feel.last = now; buzz("tick");
+  };
+  if (!pin && !reduce) { $("#bubbles").onanimationstart = bubbleTick; $("#bubbles").onanimationiteration = bubbleTick; }
+  else { $("#bubbles").onanimationstart = $("#bubbles").onanimationiteration = null; if (!pin) buzz("celebrate"); }
   const f = now => {
     // A deliberate rise: slow start, a little past the mark, then it settles back.
     // 1) rise to the total, a little past and back; 2) a beat at the mark; 3) the orange finishes the screen.
@@ -1018,6 +1060,13 @@ function thanks(totalCups, rank, after, giftCups = totalCups, pin = null) {
     $("#thankscup").classList.toggle("pinned", !!pin);
     const finish = ease((el - D - HOLD) / FILL);
     flood.style.height = (e * level + over + finish * (full - level)) + "px";
+    if (!pin && !reduce) {
+      const now = performance.now(), step = Math.floor(e * STEPS), fstep = Math.floor(Math.max(0, finish) * 8);
+      if (x < 1 && step > feel.rise) { feel.rise = step; feel.last = now; buzz("tick"); }
+      if (x >= .8 && !feel.crest) { feel.crest = true; feel.last = now; buzz("pick"); }
+      if (el >= D && !feel.mark) { feel.mark = true; feel.last = now; buzz("celebrate"); }
+      if (fstep > feel.finish) { feel.finish = fstep; feel.last = now; buzz("tick"); }
+    }
     if (giftCups > 3 && el >= D && !burst) { burst = true; confetti(!!pin); }
     const t = el / D;
     // The cups fill one after another to the gift, in step with the rise.
@@ -1060,6 +1109,7 @@ function confetti(pinned = false) {
 }
 function drawOptin(rank) {
   const n = limitAt(rank), t = tierAt(rank);
+  $("#optin [data-act=add]").textContent = editing ? T.save : T.addMe;
   $("#limit").innerHTML = `<span class="badge">${t ? "Top " + t : "Beyond 100"}</span><span>${esc(T.limits[t])}</span>`;
   $("#msgfield").style.display = n ? "" : "none";
   const name = $("#name"), msg = $("#msg");
@@ -1105,6 +1155,10 @@ function show(id) {
   const v = $("#" + id); if (v) scroller(v).scrollTop = 0;
 }
 document.addEventListener("click", async ev => {
+  // Every press plays something, as in the app: a coffee or an amount picked is done, joining locks in, the rest is a click.
+  const pressed = ev.target.closest("button, [data-go], [data-tier], [data-cad]");
+  if (pressed) buzz(pressed.closest("[data-tier], #quick") ? "pick"
+    : pressed.dataset.act === "add" ? ($("#name").value.trim() ? "join" : "press") : "press");
   const go = ev.target.closest("[data-go]"); if (go) { route(go.dataset.go); return; }
   const ex = ev.target.closest("[data-expand]"); if (ex) { ex.classList.toggle("open"); return; }
   const cad = ev.target.closest("[data-cad]"); if (cad) { cadence = cad.dataset.cad; if (tier === 3) tier = 0; drawTiers(); return; }
@@ -1119,9 +1173,15 @@ document.addEventListener("click", async ev => {
   const act = ev.target.closest("[data-act]")?.dataset.act;
   if (act === "nah") api.nah();
   if (act === "add" && !$("#name").value.trim()) return;
-  if (act === "add" || act === "anon") { await api.join(act === "anon", $("#name").value.trim(), $("#msg").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
+  if (act === "add") { await api.join(false, $("#name").value.trim(), $("#msg").value.trim()).catch(() => {}); SAMPLE.joined = true; route("fund"); }
   if (act === "remove") { await api.remove().catch(() => {}); SAMPLE.joined = false; route("board"); }
-  if (act === "later") route("support");
+  if (act === "later") route(optinBack);
+  if (act === "joinlater" || act === "edit") {
+    const me = act === "edit" && (board.entries || []).find(x => x.you);
+    const r = me ? { available: true, rank: me.rank } : await api.preview(0).catch(() => ({ available: false }));
+    $("#name").value = me?.name || ""; $("#msg").value = me?.message || "";
+    paidRank = r.available ? r.rank : null; optinBack = "board"; editing = !!me; route("optin");
+  }
   if (act === "first") { cadence = "o"; tier = 0; drawTiers(); const v = scroller($("#support")); v.scrollTo({ top: v.scrollHeight, behavior: reduce ? "auto" : "smooth" }); }
   if (act === "write") route("optin");
   if (act === "retry") route(document.querySelector(".view.on").id === "board" ? "board" : "support");
@@ -1158,7 +1218,7 @@ $("#pay").onclick = $("#pay2").onclick = async ev => {
   if (r.result === "unavailable") $("#paynote").textContent = T.billing;
   if (!native) paid(s.cents);
 };
-$("#slider").oninput = e => { dollars = toDollars(+e.target.value); drawCustom(); };
+$("#slider").oninput = e => { const was = dollars; dollars = toDollars(+e.target.value); if (dollars !== was) buzz("tick"); drawCustom(); };
 $("#custd").oninput = e => { const v = Math.round(+e.target.value); if (v >= 1 && v <= 50) { dollars = v; drawCustom(); } };
 document.querySelectorAll("#quick button").forEach(b => b.onclick = () => { dollars = +b.dataset.dollars; drawCustom(); });
 $("#custd").onblur = () => { $("#custd").value = dollars; };
@@ -1189,7 +1249,7 @@ function afterPayment(totalCups, rank, before, joined, forceMoveUp, giftCups = t
   const actions = movedUp ? `${card}<button class="primary" data-act="write">${T.writeMore}</button><button class="quiet" data-act="later">${T.later}</button>`
     : joined ? `<button class="primary" data-go="fund">${T.popupButton}</button>`
     : `<button class="primary" data-go="optin">${T.joinAction}</button><button class="quiet" data-act="later">${T.later}</button>`;
-  paidRank = rank || null;
+  paidRank = rank || null; optinBack = "support"; editing = false;
   show("thanks"); thanks(totalCups, rank, actions, giftCups, pin);
   drawOptin(rank || 101);
 }

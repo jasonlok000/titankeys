@@ -68,6 +68,8 @@ sealed interface SupportCall {
     data object DismissPopup : SupportCall
     /** The page asks to close the screen. */
     data object Close : SupportCall
+    /** One of the page's haptics, by name: see [SupportWebProtocol.HAPTICS]. */
+    data class Haptic(val name: String) : SupportCall
 }
 
 data class SupportRequest(val id: Long, val call: SupportCall)
@@ -82,6 +84,12 @@ object SupportWebProtocol {
     const val MAX_QUANTITY = 100
     const val MAX_CENTS = 1_000_000L
     const val MAX_PAGE = 10_000
+    /**
+     * The haptics the page may play (owner, 2026-11-24: haptics on the Support page, "really really fancy", in step with the
+     * pour). Each is one of TitanKeys' own, so it keeps its rhythm and its switch: press and tick are texture, pick is done,
+     * join locks in, and celebrate is the guide's rising three. The page times them to its animations.
+     */
+    val HAPTICS = setOf("press", "tick", "pick", "join", "celebrate")
     private val PUBLIC_ID = Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 
     /** Reads one message from the page. Throws [SupportBadRequest] with the reply's id, if it could be read, and a code. */
@@ -131,6 +139,7 @@ object SupportWebProtocol {
             "board" -> { only("page"); SupportCall.Board(if (args["page"] == null) 0 else number("page", 0L..MAX_PAGE).toInt()) }
             "dismissPopup" -> { only(); SupportCall.DismissPopup }
             "close" -> { only(); SupportCall.Close }
+            "haptic" -> { only("name"); SupportCall.Haptic((args["name"] as? String)?.takeIf { it in HAPTICS } ?: bad()) }
             else -> throw SupportBadRequest(id, "unknown_op")
         }
         return SupportRequest(id, call)

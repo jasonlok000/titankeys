@@ -8,7 +8,7 @@ A keyboard made for the Unihertz Titan 2 Elite. This phone is pretty unique, so 
 
 Swipe whole words on the same keys you press. Type one-handed with ease. Let it fix your typos as you go, in English or 48 other languages.
 
-**[Download it](https://github.com/jasonlok000/titankeys/releases)**
+**[Get it on Google Play](#install)** · or [the APK](https://github.com/jasonlok000/titankeys/releases/latest)
 
 <a href="https://www.youtube.com/watch?v=3lLzW0JsKiw"><img src="assets/readme/trailer.webp" width="400" alt="The TitanKeys trailer: swiping, fixes, the cursor, symbols and languages on a real Titan 2 Elite"></a>
 
@@ -242,7 +242,17 @@ TitanKeys asks to display over other apps because of how the Titan 2 sends touch
 
 ## Install
 
-Download the latest APK from [releases](https://github.com/jasonlok000/titankeys/releases) and install it, then open TitanKeys: the guide takes it from there. TitanKeys installs next to Atlas, so it doesn't replace it or touch Atlas's saved words.
+TitanKeys is on Google Play as a test for now. It shows up in Play's search once enough people join, so today it takes one extra step:
+
+1. Join the testers group: [groups.google.com/g/titankeys-testers](https://groups.google.com/g/titankeys-testers)
+2. Become a tester, with the same Google account: [play.google.com/apps/testing/com.titankeys](https://play.google.com/apps/testing/com.titankeys)
+3. Install it from Google Play: [TitanKeys on Google Play](https://play.google.com/store/apps/details?id=com.titankeys)
+
+Then open TitanKeys: the guide takes it from there. Play keeps it up to date.
+
+**No Google Play?** Download the APK from [the latest release](https://github.com/jasonlok000/titankeys/releases/latest) and install it. It's the same app, signed with the same key, so you can move to the Play version later without reinstalling.
+
+TitanKeys installs next to Atlas, so it doesn't replace it or touch Atlas's saved words.
 
 When a new version is out, TitanKeys tells you with a short, silent notification, never while you type. The same news is in **Settings > News**, where you can turn it off.
 

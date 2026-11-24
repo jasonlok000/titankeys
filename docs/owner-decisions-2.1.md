@@ -1060,3 +1060,15 @@ Owner, trying Debug 5f4d7224: "Rn chinese suggestion (first word) doesn't get up
 - **Three language stages (2026-11-22):** Experimental (not checked by a native speaker), Tested (a native speaker confirmed
   it types correctly; Korean), Polished (as refined as Chinese; English and Chinese), replacing "Ready". In 3.0, with the
   accent build ("ok do that and also ride along with the accent build").
+- **Overnight decisions, made for the owner to check (2026-11-24, "u make the decisions for me and ill check those decisions later"):**
+  - Released 3.0.1 (Play code 64): Play's closed test (approved and live about 01:20) and GitHub (v3.0.1, the signed APK as
+    titankeys-3.0.1.apk, marked latest, so the site's Download buttons serve it). GitHub's Release workflow failed: it wants
+    Ink pinned to a published npm version and this repo builds Ink from a local folder, so the release was made by hand, as
+    2.1.0 was. The release notes' last Support line now says payments are live.
+  - Real money: four orders (CAD 0.79, 1.70, 0.79 and a CAD 0.00 switch), all refunded with the entitlement removed, the big
+    sip cancelled. Play's "Turn on backup payment methods?" declined. jasonlok000 left off the license testers afterwards.
+  - Not done: the board server update (auto mode refused the production deploy). The live board is the 2026-11-18 copy, so the
+    board, its rank and joining don't work with 3.0.1 until `.dev/phone-tools/board-deploy.sh` runs.
+  - 3.0.2 (code 65, Play 66): the board name is never filled in (new field ids and autocomplete tokens, and the page's saved form
+    data cleared), Custom shows whole coffees after a pause, the list resets after Custom, a rank the page couldn't get shows no
+    badge. Built and tested; not released, since 3.0.1 is the launch build and the owner hasn't seen these.

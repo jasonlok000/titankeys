@@ -668,8 +668,8 @@ const T = {
   custom: ["Custom", "You pick."],
   monthlyNote: "Every month · cancel any time in Play",
   // The monthly coffee you have, and switching it (owner, 2026-11-24: easy to see, never two at once).
-  yourMonthly: (name, renewing) => renewing ? `You give ${name} each month.` : `Your monthly coffee (${name}) stops at the end of this month.`,
-  manage: "Manage", yours: "Your monthly coffee", switchTo: "Switch to this",
+  yourMonthly: (name, renewing) => renewing ? `You give ${name} each month.` : `Cancelled. ${name[0].toUpperCase() + name.slice(1)} a month, until this month ends.`,
+  manage: "Manage", yours: "Your monthly coffee", switchTo: "Switch to this", keepGoing: "Keep it going",
   switchNote: "Replaces the one you have. Play counts what's left of this month.", howMuch: "How much coffee?",
   wholePot: "That's a whole pot. I'll need a bigger table.",
   putsYou: (n, m) => m && m !== n ? `<b>#${n}</b><span class="from"> ▲ from #${m}</span>` : `You'd be <b>#${n}</b>`,
@@ -991,7 +991,9 @@ async function drawPay(button) {
   const monthly = cadence === "m" && tier !== 3, mine = monthly && state.monthly;
   const note = $("#paynote");
   if (mine && state.monthly.id === s.id) {
-    button.innerHTML = `<span>${T.yours} · ${s.price}${T.perMonth}</span>`; button.classList.add("owned");
+    // Cancelled but still running: Play restarts it on its own subscriptions page, so the button opens it there.
+    const again = !state.monthly.renewing;
+    button.innerHTML = `<span>${again ? T.keepGoing : T.yours} · ${s.price}${T.perMonth}</span>`; button.classList.toggle("owned", !again);
     if (note) note.textContent = ""; return;
   }
   button.classList.remove("owned");
@@ -1284,7 +1286,7 @@ $("#pay").onclick = $("#pay2").onclick = async ev => {
     return;
   }
   const s = selected(); if (!s) return;
-  if (cadence === "m" && tier !== 3 && state.monthly?.id === s.id) return;
+  if (cadence === "m" && tier !== 3 && state.monthly?.id === s.id) { if (!state.monthly.renewing) api.manage(); return; }
   const r = await api.buy(s.id, tier === 3 ? dollars : 1).catch(() => ({ result: "unavailable" }));
   if (r.result === "unavailable") $("#paynote").textContent = T.billing;
   if (!native) paid(s.cents);

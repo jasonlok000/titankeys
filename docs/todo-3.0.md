@@ -10,6 +10,7 @@ against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 - Contributions Worker deployed with the daily-totals route (`/v1/counts`, Counts object, v3 migration), version 73c9cc97. `counts.ts download` now answers (0 days yet). Phones hold up to 7 days, so launch-day totals still arrive.
 - Swipe batches so far: 147 from 7 contributors, mostly the owner; 1–2 real users. Low numbers are opt-in plus the 12-hour Wi-Fi upload.
 - The first real user report (Play 3.0.2): filed as #133 (Glass OS home typing) and #134 (scrolling types). The owner's reply sent: being investigated, asked which apps and touchpad or keys.
+- **3.0.4 so far, held on local branch `next-304` (8bac12af) until the 3.0.3 release is out, then merged into main:** no filter on rude words (all languages; full verify PASS) and the short update line "Updated: tap to see what's new". Next post idea: TitanTools first, 3.0.3/3.0.4 fixes second, around Nov 30–Dec 2; needs a 3.0.4 candidate on the owner's phone by about Nov 27 (3-day rule). F rework and any visual wait for the owner's go. #135: Chinese should show the bar on the first key.
 - Reach plan (owner, 2026-11-25): no new r/unihertz post for 3.0.3; a soft "week one" update post around Nov 30–Dec 2 (F drafting); Play + 3.1 big-news post at the public listing; megathread a week after. Other subreddits ruled out (Clicks sub didn't work). Facebook: official groups Titan 2 Elite 15.8K and Titan 2 12.2K members; no Unihertz Discord found.
 
 ## Launch state (2026-11-21, night)

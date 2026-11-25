@@ -13,12 +13,22 @@ import android.util.Log
  */
 internal class TitanToolsLink(private val now: () -> Long = SystemClock::uptimeMillis) {
     private var typing = false
+    private var kind = TYPING
     private var sentAt = Long.MIN_VALUE / 2
 
     /** A key or a swipe in a field. Sends "typing" at once, then again at most every [REPEAT_MILLIS] while it goes on. */
     fun active(context: Context) {
-        if (typing && now() - sentAt < REPEAT_MILLIS) return
-        send(context, true)
+        if (typing && now() - sentAt < REPEAT_MILLIS && kind == TYPING) return
+        send(context, true, TYPING)
+    }
+
+    /**
+     * A field opened, nothing typed yet (owner, 2026-11-24: Typing lit as the text box opened, before a key). Sent as "typing" with
+     * kind [FIELD], so an older Titan Tools lights as before, and a newer one tells a field open from typing.
+     */
+    fun opened(context: Context) {
+        if (typing) return
+        send(context, true, FIELD)
     }
 
     /** The keyboard hid. */
@@ -34,11 +44,12 @@ internal class TitanToolsLink(private val now: () -> Long = SystemClock::uptimeM
         else -> null
     }
 
-    private fun send(context: Context, on: Boolean) {
+    private fun send(context: Context, on: Boolean, kind: String = this.kind) {
         typing = on
+        this.kind = kind
         sentAt = now()
         try {
-            context.sendBroadcast(Intent(ACTION).setPackage(PACKAGE).putExtra("typing", on)
+            context.sendBroadcast(Intent(ACTION).setPackage(PACKAGE).putExtra("typing", on).putExtra("kind", kind)
                 .putExtra("at", System.currentTimeMillis()), PERMISSION)
         } catch (error: RuntimeException) {
             Log.w("TitanKeys", "Could not tell Titan Tools", error)
@@ -51,5 +62,8 @@ internal class TitanToolsLink(private val now: () -> Long = SystemClock::uptimeM
         const val PERMISSION = "com.everyonesniche.titantools.permission.LINK"
         /** Titan Tools counts the link as alive for 10 minutes; a reminder this often keeps a long stretch of typing lit. */
         const val REPEAT_MILLIS = 2_000L
+        /** The "kind" extra: a key or a swipe, or only a field that opened. */
+        const val TYPING = "typing"
+        const val FIELD = "field"
     }
 }

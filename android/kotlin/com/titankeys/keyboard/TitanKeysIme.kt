@@ -2204,7 +2204,7 @@ class TitanKeysIme : InputMethodService() {
     override fun onWindowShown() {
         super.onWindowShown()
         windowShown = true
-        if (editing) titanTools.active(this)
+        if (editing) titanTools.opened(this)
         watchStatus()
         if (field.exact) logExact("window shown")
         if (recycling) {

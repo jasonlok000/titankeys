@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { hash, playVerifier } from "../../server/support/src/play.js";
-import { createWorker } from "../../server/support/src/worker.js";
+import { createWorker, visitSource } from "../../server/support/src/worker.js";
 
 const ACCOUNT = "0".repeat(63) + "1";
 const OWNER_SECRET = "a".repeat(64);
@@ -21,6 +21,7 @@ let env;
 let serviceAccount;
 const schema = await Bun.file(new URL("../../server/support/migrations/0001_support.sql", import.meta.url)).text();
 const ranksSchema = await Bun.file(new URL("../../server/support/migrations/0002_ranks_reports.sql", import.meta.url)).text();
+const visitsSchema = await Bun.file(new URL("../../server/support/migrations/0003_site_visits.sql", import.meta.url)).text();
 
 beforeAll(async () => {
     const signer = await crypto.subtle.generateKey({
@@ -85,7 +86,7 @@ async function fakeGoogle(url, options) {
 beforeEach(() => {
     if (db) db.close();
     db = new Database(":memory:");
-    db.exec("PRAGMA foreign_keys=ON; " + schema + ranksSchema);
+    db.exec("PRAGMA foreign_keys=ON; " + schema + ranksSchema + visitsSchema);
     worker = createWorker(playVerifier(fakeGoogle));
     env = { DB: fixtureD1(db), PLAY_SERVICE_ACCOUNT: serviceAccount, APP_PACKAGE: "com.titankeys",
         TIP_SIP_CENTS: "49", MONTHLY_SIP_CENTS: "69", ADMIN_TOKEN: OWNER_SECRET, RATE_SALT: "fixture-salt-0123456789" };
@@ -494,4 +495,23 @@ test("half a coffee is $2.50, one-time and monthly, and counts no more than that
     expect(await cupsAfter(publish([over]))).toBe(1);
     const month = await paid({ kind: "subscription", productId: MONTHLY, label: "half-month", cents: 250 });
     expect(await cupsAfter(publish([month]))).toBe(1.5);
+});
+
+test("website visits count by day, page, source and event, and keep nothing about the person", async () => {
+    const hit = query => worker.fetch(new Request("https://fixture.invalid/v1/visit?" + query, { method: "POST" }), env);
+    expect((await hit("e=view&p=/titankeys/&s=l.facebook.com")).status).toBe(204);
+    expect((await hit("e=view&p=/titankeys/&s=com.facebook.katana")).status).toBe(204);
+    expect((await hit("e=group&p=/titankeys/&s=fb")).status).toBe(204);
+    expect((await hit("e=view&p=/titankeys/")).status).toBe(204);
+    expect((await hit("e=steal&p=/titankeys/")).status).toBe(400);
+    expect((await hit("e=view&p=https://evil")).status).toBe(400);
+    const rows = db.query("SELECT page, source, event, count FROM site_visits ORDER BY source, event").all();
+    expect(rows).toEqual([
+        { page: "/titankeys/", source: "direct", event: "view", count: 1 },
+        { page: "/titankeys/", source: "facebook", event: "group", count: 1 },
+        { page: "/titankeys/", source: "facebook", event: "view", count: 2 },
+    ]);
+    expect(Object.keys(db.query("SELECT * FROM site_visits").get())).toEqual(["day", "page", "source", "event", "count"]);
+    expect(["www.reddit.com", "com.reddit.frontpage", "www.google.com.hk", "youtu.be", "github.com", "forum.example.org", "<script>"]
+        .map(visitSource)).toEqual(["reddit", "reddit", "google", "youtube", "github", "forum.example.org", "other"]);
 });

@@ -334,11 +334,44 @@ async function reconcileRefunds(env, verifier) {
     } while (page);
 }
 
+const VISIT_EVENTS = new Set(["view", "group", "tester", "play", "apk", "tools"]);
+const VISIT_PAGE = /^\/[a-z0-9/_.-]{0,63}$/;
+const VISIT_SOURCE = /^[a-z0-9.-]{1,64}$/;
+
+/** A site name for where a visit came from: a referrer's host, an app's package or a ?ref= label, made short. */
+export function visitSource(raw) {
+    const host = String(raw ?? "").toLowerCase().trim().replace(/^(www|m|l|lm|mobile|mbasic|web|old|new|out|np)\./, "");
+    if (!host || host === "direct") return "direct";
+    if (/^(fb|facebook)$|(^|\.)(facebook\.com|fb\.com|fb\.me|messenger\.com)$|^com\.facebook\./.test(host)) return "facebook";
+    if (/^reddit$|(^|\.)(reddit\.com|redd\.it)$|^com\.reddit\./.test(host)) return "reddit";
+    if (/^google$|(^|\.)google\.[a-z.]+$|^com\.google\.android\.googlequicksearchbox$/.test(host)) return "google";
+    if (/^(youtube|yt)$|(^|\.)(youtube\.com|youtu\.be)$|^com\.google\.android\.youtube$/.test(host)) return "youtube";
+    if (/^(x|twitter)$|(^|\.)(x\.com|twitter\.com|t\.co)$/.test(host)) return "x";
+    if (/(^|\.)github\.com$/.test(host)) return "github";
+    if (/(^|\.)everyones-niche\.com$/.test(host)) return "website";
+    return VISIT_SOURCE.test(host) ? host : "other";
+}
+
+/** Counts one website visit or button tap (owner, 2026-11-25): a daily counter, nothing about the person. */
+async function visit(request, env) {
+    const params = new URL(request.url).searchParams;
+    const event = params.get("e") ?? "view";
+    const page = (params.get("p") ?? "").toLowerCase();
+    if (!VISIT_EVENTS.has(event) || !VISIT_PAGE.test(page)) throw badRequest();
+    const day = new Date().toISOString().slice(0, 10);
+    await env.DB.prepare(`
+        INSERT INTO site_visits (day, page, source, event, count) VALUES (?, ?, ?, ?, 1)
+        ON CONFLICT (day, page, source, event) DO UPDATE SET count = count + 1
+    `).bind(day, page, visitSource(params.get("s")), event).run();
+    return new Response(null, { status: 204, headers: { ...RESPONSE_HEADERS, "Access-Control-Allow-Origin": "*" } });
+}
+
 export function createWorker(verifier = playVerifier()) {
     return {
         async fetch(request, env) {
             try {
                 const path = new URL(request.url).pathname;
+                if (request.method === "POST" && path === "/v1/visit") return await visit(request, env);
                 if (request.method === "GET" && path === "/v1/leaderboard") return await board(request, env);
                 if (request.method === "POST" && path === "/v1/rank-preview") return await preview(request, env);
                 if (request.method === "POST" && path === "/v1/report") return await report(request, env);

@@ -1596,8 +1596,20 @@ class TitanKeysIme : InputMethodService() {
             hideHeldWindow()
             hold.hidden()
             updateKeyWatch()
+            // One Back is one Back (owner, 2026-11-24: "the first back not quitting the app"): the push that lets go of the
+            // touchpad also goes on to the app, as a system back once the hold's handler is gone, instead of waiting for a second push.
+            main.removeCallbacks(heldBackToApp)
+            main.postDelayed(heldBackToApp, HELD_BACK_MILLIS)
             true
         }
+    }
+
+    /** The Back that let go of the touchpad, sent on to the app as a system back ([heldBack]). Without the service, the next push goes. */
+    private val heldBackToApp = Runnable {
+        val sent = BackService.back()
+        backLog(if (sent) "Back sent to the app: a system back, after letting go of the touchpad"
+            else "Back: no system back (Back service off), the next push goes to the app")
+        if (sent) main.post(backWentThrough)
     }
 
     /** The second push of Back has gone on to the app, so the hold comes back once the app has had it. */
@@ -5952,6 +5964,8 @@ class TitanKeysIme : InputMethodService() {
         private val GUIDE_RECENT_EMOJI = listOf("🍑", "🍆", "🤏", "💦", "😏", "🥵", "🫦", "👀", "💅", "🙈", "🔥", "🫠")
         /** Delayed hides from the previous app arrived within 25 ms of the new field starting. */
         private const val STALE_HIDE_MILLIS = 500L
+        /** How long after letting go of the touchpad its Back goes on to the app, so the hold's back handler is gone first. */
+        private const val HELD_BACK_MILLIS = 80L
         /** How long the touchpad hold waits for a second Back before it comes back ([letGoExpired]). */
         private const val LET_GO_MILLIS = 10_000L
         /** Debug's log of keys the keyboard kept, passed on or sent itself ([keyAudit]). */

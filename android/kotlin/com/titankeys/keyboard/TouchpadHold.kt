@@ -17,8 +17,9 @@ import kotlin.math.max
  * stays on. It stops only for Back, as [backStep] says, or when it is no longer wanted.
  *
  * While the status is on, Android gives Back to the keyboard first, and a Back sent on to the app after that came too late for
- * some apps. So Back takes two pushes: the first lets go of the touchpad and stays on the screen, and the second goes to the app
- * the usual way. The hold comes back once that Back has gone through, or when another app or a text field starts.
+ * some apps. So the push lets go of the touchpad, and the keyboard then sends the app a system back through the Back service
+ * (owner, 2026-11-24: one Back is one Back). Without the service, the second push goes to the app the usual way. The hold comes
+ * back once that Back has gone through, or when another app or a text field starts.
  *
  * While the status is on, the firmware's letter shortcuts and its space bar to home stop, because they need the status off.
  *

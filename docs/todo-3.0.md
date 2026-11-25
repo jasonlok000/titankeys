@@ -5,6 +5,14 @@ the 2.1 milestone is closed. The 2.1 list is [todo-2.1.md](todo-2.1.md), kept as
 [owner-decisions-2.1.md](owner-decisions-2.1.md), under "3.0". The orchestrating session keeps this list up to date, checked
 against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 
+## 3.0.3 released (2026-11-25, ~12:35 UTC, owner: "Publish 3.0.3 too", ahead of the 8:45 slot)
+
+- Play: code 78 on the testers' closed track (alpha) with the 3.0.3 notes; internal also 78.
+- GitHub: [v3.0.3](https://github.com/jasonlok000/titankeys/releases/tag/v3.0.3), tag at dc9189ba, APK code 77 as `titankeys-3.0.3.apk` and `titankeys.apk`, md5 720ff0c1e727367edd7111a5e454689a; the latest/download link serves it.
+- News: release-3-0-3-play and release-3-0-3-github (versions up to 3.0.2, until 2026-12-25), b42a6831.
+- Closed #110 #111 #112 #114 #116 #120 #121 #125. `next-304` merged into main for 3.0.4.
+- Website: the TitanTools card fits the Titan's square screen (dc9189ba); the Shizuku line is being reworded by F.
+
 ## Sharing check (2026-11-25, early)
 
 - Contributions Worker deployed with the daily-totals route (`/v1/counts`, Counts object, v3 migration), version 73c9cc97. `counts.ts download` now answers (0 days yet). Phones hold up to 7 days, so launch-day totals still arrive.

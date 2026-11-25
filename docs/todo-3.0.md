@@ -5,6 +5,12 @@ the 2.1 milestone is closed. The 2.1 list is [todo-2.1.md](todo-2.1.md), kept as
 [owner-decisions-2.1.md](owner-decisions-2.1.md), under "3.0". The orchestrating session keeps this list up to date, checked
 against main and the workers' branches. Last checked: 2026-11-16, 01:20.
 
+## Sharing check (2026-11-25, early)
+
+- Contributions Worker deployed with the daily-totals route (`/v1/counts`, Counts object, v3 migration), version 73c9cc97. `counts.ts download` now answers (0 days yet). Phones hold up to 7 days, so launch-day totals still arrive.
+- Swipe batches so far: 147 from 7 contributors, mostly the owner; 1–2 real users. Low numbers are opt-in plus the 12-hour Wi-Fi upload.
+- The first real user report (Play 3.0.2): filed as #133 (Glass OS home typing) and #134 (scrolling types). The owner's reply sent: being investigated, asked which apps and touchpad or keys.
+
 ## Launch state (2026-11-21, night)
 
 - **Candidate:** e3bcc20d, 3.0.0 (59), md5 c867b13a00d7b0f5b69393576a22c94b, on the owner's phone since 2026-11-23 15:09 (a pick closes the accent row, the touchpad status kept on firmware V02.00.06, the Titan Tools link, & and = as typed). Copy in .dev/prerelease. Launch planned 2026-11-24.

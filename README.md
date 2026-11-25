@@ -270,6 +270,11 @@ bash tools/debug.sh --install
 
 This installs **TitanKeys Debug**, a separate test build.
 
+
+## TitanTools
+
+**Meet TitanKeys' sidekick: TitanTools.** A separate little app that makes your Titan 2 Elite and TitanKeys work even better together: key light, hold-a-letter shortcuts, layout switch and more. [Download TitanTools (APK)](https://github.com/jasonlok000/titantools/releases/latest/download/titantools.apk) · [more on the website](https://everyones-niche.com/titankeys/#tools)
+
 ## Questions
 
 **Does it work on other phones?** Nope. It needs the Titan 2 Elite's keys and touchpad. Got another keyboard phone? The [contributing guide](CONTRIBUTING.md#bring-titankeys-to-another-device) says how to bring TitanKeys to it.

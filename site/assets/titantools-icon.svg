@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Titan Tools app icon">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="TitanTools app icon">
   <!-- Logo direction C (owner, 2026-11-24): a T in TitanKeys' cut-letter style on cream over a faint grid, with TitanKeys'
        swipe line in orange. The launcher layers (res/drawable/titantools_icon_*.xml) are this at 1/10 scale on the 108 dp grid. -->
   <rect width="1080" height="1080" rx="230" fill="#FFF1E6"/>

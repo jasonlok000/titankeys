@@ -77,8 +77,8 @@ and `"tested"`, and its guide a `"status"` of `experimental`, `tested` or `polis
 
 **Polished** (owner, 2026-11-24, #124): **every English feature that applies to the language is ported and tuned.** A feature
 that can't be ported well counts as **not applicable** for that language, with the reason written down here. Chinese is
-Polished on this rule: Rime does what autocorrect and next words do, and swiping its sound-based methods isn't applicable for
-now (#99 is a refinement).
+Polished except swiping its sound methods (pinyin, Jyutping, Yale), which is applicable (owner, 2026-11-24, as Gboard shows)
+and next on its list; Rime does what autocorrect and next words do (#99 is a refinement).
 
 The English features, and where each applies (audit of 2026-11-24, full table in #124):
 
@@ -87,7 +87,7 @@ The English features, and where each applies (audit of 2026-11-24, full table in
 | Autocorrect with context (and accent fixes) | Latin, Cyrillic, Greek, Georgian, Hebrew; Vietnamese and Korean with work; engines (Chinese, Japanese) do their own |
 | Apostrophe and elision fixes (c'est, dell') | French, Italian, Dutch, Catalan, Turkish |
 | Two-letter fixes, shorthand, name fixes | most word-list languages, with per-language lists |
-| Swipe typing | Latin and Cyrillic (accents folded), Greek and Georgian with work; hard for Hebrew, Vietnamese, Korean, Thai, Hindi and Chinese sound methods; not applicable to Cangjie, Quick and Zhuyin |
+| Swipe typing | Latin and Cyrillic (accents folded), Greek and Georgian with work; Chinese sound methods (pinyin, Jyutping, Yale) with work: decode to their spellings, then Rime picks, as Gboard does; hard for Hebrew, Vietnamese, Korean, Thai and Hindi; not applicable to Cangjie, Quick and Zhuyin |
 
 Already in every language: completions, next words, sentence starters, learning, blocked words and favourites, :shortcodes:,
 snippets, the gestures, hold for accents, sentence capitals and double Space's full stop.

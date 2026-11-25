@@ -179,7 +179,7 @@ public final class TypingSettings {
 
     /** A home screen's search field has no suggestion bar until you type in it. When this is off, it is like any other field. */
     public static boolean launcherHidesBar(Context context) {
-        return preferences(context).getBoolean("launcher_hides_bar", false);
+        return preferences(context).getBoolean("launcher_hides_bar", true);
     }
 
     public static void launcherHidesBar(Context context, boolean enabled) {

@@ -1,13 +1,50 @@
 {
   "entries": [
     {
+      "id": "release-3-0-3-play",
+      "title": "TitanKeys 3.0.3 is out",
+      "text": "Sym can stay open, pick your accent colour, and a switch for each gesture. Auto-updates off? Update it in Play.",
+      "action": {
+        "label": "Open Play",
+        "url": "https://play.google.com/store/apps/details?id=com.titankeys"
+      },
+      "from": "2026-11-25T12:37:07Z",
+      "until": "2026-12-25T12:37:07Z",
+      "maxVersion": "3.0.2",
+      "builds": [
+        "play"
+      ],
+      "notify": true
+    },
+    {
+      "id": "release-3-0-3-github",
+      "title": "TitanKeys 3.0.3 is out",
+      "text": "Sym can stay open, pick your accent colour, and a switch for each gesture. Get it from Google Play and updates come by themselves.",
+      "action": {
+        "label": "How to get it",
+        "url": "https://everyones-niche.com/titankeys/#get"
+      },
+      "from": "2026-11-25T12:37:07Z",
+      "until": "2026-12-25T12:37:07Z",
+      "maxVersion": "3.0.2",
+      "builds": [
+        "github"
+      ],
+      "notify": true
+    },
+    {
       "id": "test-2026-11-10",
       "title": "Test news",
       "text": "Just testing the news feed. Only TitanKeys Debug sees this. Snooze and Don't show again work like the real thing.",
-      "action": { "label": "Privacy policy", "url": "https://jasonlok000.github.io/titankeys/privacy/" },
+      "action": {
+        "label": "Privacy policy",
+        "url": "https://jasonlok000.github.io/titankeys/privacy/"
+      },
       "from": "2026-11-10T00:00:00Z",
       "until": "2027-01-31T00:00:00Z",
-      "builds": ["debug"],
+      "builds": [
+        "debug"
+      ],
       "notify": true
     }
   ]

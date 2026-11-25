@@ -5,8 +5,8 @@ import com.titankeys.connected.Feed
 
 /**
  * The bar's line after an update (#121): the first field on a new version says what changed, once per version, and a tap opens
- * Settings > What's new. Never on a fresh install. Someone who skipped versions hears how many, and What's new shows them all,
- * from the version they had ([notesFrom]).
+ * Settings > What's new. Never on a fresh install. Someone who skipped versions gets the same line, and What's new shows them all,
+ * from the version they had ([notesFrom]). Opening the app after an update shows What's new first, tapped or not.
  *
  * The summaries come from release-notes.txt and release-history.txt, carried into android/assets/release-summaries.txt by
  * `bun run notes`: one "version<TAB>summary" line per version, newest first.
@@ -23,12 +23,9 @@ object UpdateNote {
     /** An update to [to] from [from], [count] versions on, with [to]'s summary. */
     data class Update(val from: String, val to: String, val count: Int, val summary: String)
 
-    /** What the bar says about [update]. */
-    fun text(update: Update): String = when {
-        update.count > 1 -> "Updated to ${update.to}, with ${update.count} updates since yours. Tap for what's new."
-        update.summary.isNotEmpty() -> "Updated to ${update.to}: ${update.summary.trimEnd('.')}. Tap for what's new."
-        else -> "Updated to ${update.to}. Tap for what's new."
-    }
+    /** What the bar says about [update]: short, and What's new has the rest (owner, 2026-11-25: "just updated: tap to see whats new"). */
+    @Suppress("UNUSED_PARAMETER")
+    fun text(update: Update): String = "Updated: tap to see what's new"
 
     /**
      * The update the bar should tell about now, or null. A fresh install, or a version already handled, has none; a fresh

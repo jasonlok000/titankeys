@@ -347,6 +347,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=aquí,f=159
  word=nosotros,f=159
  word=ejemplo,f=159
+ word=serie,f=159
  word=medida,f=158
  word=encuentro,f=158
  word=sólo,f=158
@@ -979,6 +980,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=diario,f=144
  word=Martín,f=144
  word=Santiago,f=144
+ word=maduro,f=144
  word=lugares,f=144
  word=voy,f=144
  word=significa,f=144
@@ -1371,6 +1373,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=pleno,f=139
  word=compartir,f=139
  word=construir,f=139
+ word=sexual,f=139
  word=isla,f=139
  word=amplia,f=139
  word=cifras,f=139
@@ -2078,6 +2081,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=tecnologías,f=132
  word=monto,f=132
  word=vuelto,f=132
+ word=escolar,f=132
  word=encontraron,f=132
  word=plena,f=132
  word=discusión,f=132
@@ -2824,6 +2828,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=continuó,f=126
  word=históricos,f=126
  word=posesión,f=126
+ word=perro,f=126
  word=encontraban,f=126
  word=sesiones,f=126
  word=traslado,f=126
@@ -3096,6 +3101,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=armado,f=124
  word=paseo,f=124
  word=claves,f=124
+ word=violación,f=124
  word=conectar,f=124
  word=sencilla,f=124
  word=toca,f=124
@@ -3295,6 +3301,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=ganadores,f=123
  word=Raúl,f=123
  word=gesto,f=123
+ word=chino,f=123
  word=alcaldía,f=123
  word=destinado,f=123
  word=flujo,f=123
@@ -3805,6 +3812,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=células,f=120
  word=une,f=120
  word=eje,f=120
+ word=sexo,f=120
  word=limitado,f=120
  word=colegios,f=120
  word=ejercicios,f=120
@@ -4073,6 +4081,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=conectividad,f=118
  word=estructuras,f=118
  word=terminal,f=118
+ word=caliente,f=118
  word=compleja,f=118
  word=marcada,f=118
  word=veía,f=118
@@ -4330,6 +4339,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=moderna,f=117
  word=ocupar,f=117
  word=espectáculos,f=117
+ word=polvo,f=117
  word=derrotas,f=117
  word=favoritos,f=117
  word=importar,f=117
@@ -4681,6 +4691,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=Bruselas,f=115
  word=comunicó,f=115
  word=encanta,f=115
+ word=amarillo,f=115
  word=paisaje,f=115
  word=suiza,f=115
  word=diarias,f=115
@@ -5159,6 +5170,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=comunicarse,f=113
  word=protocolos,f=113
  word=confirmación,f=113
+ word=violaciones,f=113
  word=recomendación,f=113
  word=desató,f=113
  word=podremos,f=113
@@ -5490,6 +5502,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=diplomático,f=112
  word=énfasis,f=112
  word=coincide,f=112
+ word=expuesto,f=112
  word=involucrado,f=112
  word=maniobras,f=112
  word=esperaban,f=112
@@ -6654,6 +6667,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=ocupó,f=108
  word=adquirido,f=108
  word=integra,f=108
+ word=huevo,f=108
  word=determinadas,f=108
  word=propaganda,f=108
  word=afirmación,f=108
@@ -8934,6 +8948,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=aragoneses,f=100
  word=cohesión,f=100
  word=supuestas,f=100
+ word=violar,f=100
  word=inmediatas,f=100
  word=moderación,f=100
  word=incluya,f=100
@@ -9441,6 +9456,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=cubiertos,f=99
  word=relativo,f=99
  word=resultando,f=99
+ word=trío,f=99
  word=dictador,f=99
  word=patente,f=99
  word=semilla,f=99
@@ -9985,6 +10001,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=demencia,f=98
  word=remates,f=98
  word=zapatero,f=98
+ word=calvo,f=98
  word=bici,f=98
  word=contingencia,f=98
  word=esperadas,f=98
@@ -10128,6 +10145,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=rutinas,f=97
  word=asesora,f=97
  word=atlas,f=97
+ word=mierda,f=97
  word=multimillonario,f=97
  word=virales,f=97
  word=PBI,f=97
@@ -10401,6 +10419,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=desarrollos,f=97
  word=apoyaron,f=97
  word=tumores,f=97
+ word=mango,f=97
  word=crueldad,f=97
  word=monitor,f=97
  word=ecuatoriana,f=97
@@ -10598,11 +10617,13 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=guiar,f=96
  word=entregadas,f=96
  word=quitarle,f=96
+ word=lactancia,f=96
  word=merecido,f=96
  word=pedían,f=96
  word=diseñadora,f=96
  word=guiadas,f=96
  word=intoxicación,f=96
+ word=moro,f=96
  word=abstención,f=96
  word=encantado,f=96
  word=expectación,f=96
@@ -10928,6 +10949,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=aledañas,f=95
  word=generadas,f=95
  word=levantarse,f=95
+ word=pornografía,f=95
  word=reclamando,f=95
  word=sofisticado,f=95
  word=ocasionar,f=95
@@ -12234,6 +12256,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=australiana,f=92
  word=definidos,f=92
  word=secas,f=92
+ word=desnudo,f=92
  word=merced,f=92
  word=hortalizas,f=92
  word=oponentes,f=92
@@ -12425,6 +12448,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=filipinas,f=92
  word=morgue,f=92
  word=saludó,f=92
+ word=escote,f=92
  word=comencé,f=92
  word=concluya,f=92
  word=volví,f=92
@@ -12520,6 +12544,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=bailes,f=92
  word=comarcas,f=92
  word=partiendo,f=92
+ word=porno,f=92
  word=demográfico,f=92
  word=veranos,f=92
  word=juramento,f=92
@@ -12789,6 +12814,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=vincula,f=91
  word=abastecer,f=91
  word=sencillamente,f=91
+ word=corrido,f=91
  word=aparezca,f=91
  word=priori,f=91
  word=detallados,f=91
@@ -13571,6 +13597,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=potasio,f=89
  word=tomaba,f=89
  word=atribuciones,f=89
+ word=inútil,f=89
  word=tratada,f=89
  word=convergencia,f=89
  word=sostenía,f=89
@@ -13660,6 +13687,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=distinguido,f=89
  word=escalas,f=89
  word=grabando,f=89
+ word=penetración,f=89
  word=magnética,f=89
  word=segundas,f=89
  word=terminación,f=89
@@ -14201,6 +14229,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=acumuladas,f=88
  word=aprueban,f=88
  word=interpuso,f=88
+ word=perra,f=88
  word=adheridos,f=88
  word=semáforos,f=88
  word=materializar,f=88
@@ -14300,6 +14329,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=abraza,f=88
  word=construirá,f=88
  word=reportera,f=88
+ word=violado,f=88
  word=convocadas,f=88
  word=demandar,f=88
  word=gobiernan,f=88
@@ -14691,6 +14721,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=fabrica,f=87
  word=cruzados,f=87
  word=significados,f=87
+ word=conejo,f=87
  word=saltos,f=87
  word=tomados,f=87
  word=desaparecieron,f=87
@@ -14925,6 +14956,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=gratuitamente,f=87
  word=paleta,f=87
  word=cambiaría,f=87
+ word=corrida,f=87
  word=vendía,f=87
  word=genéticas,f=87
  word=queriendo,f=87
@@ -15025,6 +15057,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=alcanzaba,f=86
  word=atrapar,f=86
  word=batió,f=86
+ word=pasivo,f=86
  word=plásticas,f=86
  word=portando,f=86
  word=preparaba,f=86
@@ -15288,6 +15321,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=materno,f=86
  word=misterios,f=86
  word=casar,f=86
+ word=corridas,f=86
  word=uniendo,f=86
  word=entraba,f=86
  word=londinense,f=86
@@ -15325,6 +15359,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=bombo,f=86
  word=bucal,f=86
  word=despoblación,f=86
+ word=faciales,f=86
  word=nacidas,f=86
  word=colgar,f=86
  word=complicación,f=86
@@ -15405,7 +15440,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=entendí,f=86
  word=caldas,f=86
  word=fluminense,f=86
- word=trabajaremos,f=86
  word=halla,f=86
  word=situadas,f=86
  word=usaban,f=86
@@ -15611,6 +15645,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=tazas,f=85
  word=dificultan,f=85
  word=echaron,f=85
+ word=puta,f=85
  word=soleado,f=85
  word=desconcierto,f=85
  word=administradora,f=85
@@ -15954,6 +15989,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=armenia,f=85
  word=ilustra,f=85
  word=lanchas,f=85
+ word=gallina,f=85
  word=plateado,f=85
  word=suprimir,f=85
  word=firmantes,f=85
@@ -16391,10 +16427,12 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=divididas,f=84
  word=inca,f=84
  word=vinilo,f=84
+ word=maldición,f=84
  word=audición,f=84
  word=filmación,f=84
  word=voló,f=84
  word=aclamado,f=84
+ word=madura,f=84
  word=urbanístico,f=84
  word=cabra,f=84
  word=hundido,f=84
@@ -16543,6 +16581,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=contraposición,f=84
  word=esposas,f=84
  word=aguja,f=84
+ word=desnuda,f=84
  word=subsistencia,f=84
  word=televisivos,f=84
  word=vertientes,f=84
@@ -16849,6 +16888,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=telenovelas,f=83
  word=acabando,f=83
  word=incorporada,f=83
+ word=paja,f=83
  word=mutación,f=83
  word=numeroso,f=83
  word=pesadas,f=83
@@ -16896,6 +16936,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=engañado,f=83
  word=enérgico,f=83
  word=orientar,f=83
+ word=tonto,f=83
  word=vainilla,f=83
  word=despegó,f=83
  word=arrastrar,f=83
@@ -16936,6 +16977,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=quitan,f=83
  word=caerá,f=83
  word=paralizada,f=83
+ word=zorra,f=83
  word=afectivo,f=83
  word=argumentaron,f=83
  word=avalada,f=83
@@ -17748,6 +17790,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=improvisada,f=82
  word=pagada,f=82
  word=principiantes,f=82
+ word=carnal,f=82
  word=exceder,f=82
  word=jota,f=82
  word=reiniciar,f=82
@@ -17873,6 +17916,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=introduciendo,f=81
  word=parajes,f=81
  word=principado,f=81
+ word=supremacía,f=81
  word=ambientada,f=81
  word=exitosamente,f=81
  word=suburbio,f=81
@@ -18257,6 +18301,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=venas,f=81
  word=arqueros,f=81
  word=citan,f=81
+ word=pene,f=81
  word=postulados,f=81
  word=grasos,f=81
  word=muelles,f=81
@@ -18298,6 +18343,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=comercializan,f=81
  word=elogiado,f=81
  word=idealista,f=81
+ word=maldito,f=81
  word=quebró,f=81
  word=sirena,f=81
  word=sonaba,f=81
@@ -18351,6 +18397,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=bloquean,f=81
  word=bondades,f=81
  word=comprarse,f=81
+ word=culo,f=81
  word=goteo,f=81
  word=ocupacional,f=81
  word=pausas,f=81
@@ -18511,6 +18558,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=adaptador,f=80
  word=fanatismo,f=80
  word=gracioso,f=80
+ word=melón,f=80
  word=recopilados,f=80
  word=sindicalistas,f=80
  word=ímpetu,f=80
@@ -19455,6 +19503,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=elegimos,f=79
  word=hialurónico,f=79
  word=imaginamos,f=79
+ word=judas,f=79
  word=tuviéramos,f=79
  word=imputa,f=79
  word=enteramos,f=79
@@ -19488,6 +19537,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=válvulas,f=79
  word=asigna,f=79
  word=representadas,f=79
+ word=bruja,f=79
  word=tuberculosis,f=79
  word=diferenciación,f=79
  word=expandió,f=79
@@ -19636,6 +19686,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=floja,f=79
  word=irreversibles,f=79
  word=mareos,f=79
+ word=perverso,f=79
  word=raqueta,f=79
  word=buzos,f=79
  word=embestida,f=79
@@ -20255,6 +20306,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=constituida,f=77
  word=verso,f=77
  word=denominó,f=77
+ word=homosexual,f=77
  word=sucesivas,f=77
  word=coloniales,f=77
  word=japonesas,f=77
@@ -20497,7 +20549,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=proyectará,f=77
  word=irte,f=77
  word=encarecido,f=77
- word=tocamientos,f=77
  word=graba,f=77
  word=percusión,f=77
  word=pesetas,f=77
@@ -21394,6 +21445,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=vello,f=76
  word=atlética,f=76
  word=correspondido,f=76
+ word=empalme,f=76
  word=inadecuada,f=76
  word=mercantiles,f=76
  word=musa,f=76
@@ -22320,6 +22372,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=lanzadera,f=74
  word=materializó,f=74
  word=preexistentes,f=74
+ word=violada,f=74
  word=antídoto,f=74
  word=apoyarse,f=74
  word=correas,f=74
@@ -22650,6 +22703,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=rienda,f=74
  word=Faustino,f=74
  word=controvertidos,f=74
+ word=despreciable,f=74
  word=empujado,f=74
  word=locaciones,f=74
  word=meros,f=74
@@ -22676,6 +22730,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=disfrutaban,f=74
  word=encargar,f=74
  word=engañó,f=74
+ word=estúpido,f=74
  word=ignorante,f=74
  word=ja,f=74
  word=lince,f=74
@@ -22946,6 +23001,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=congelación,f=73
  word=contenidas,f=73
  word=convirtiéndola,f=73
+ word=erótico,f=73
  word=esquizofrenia,f=73
  word=orienta,f=73
  word=severidad,f=73
@@ -23436,6 +23492,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=comes,f=73
  word=desaprobación,f=73
  word=devolvieron,f=73
+ word=idiota,f=73
  word=involuntaria,f=73
  word=jade,f=73
  word=mallas,f=73
@@ -23713,6 +23770,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=ejercieron,f=72
  word=liberalización,f=72
  word=rodear,f=72
+ word=semen,f=72
  word=banqueros,f=72
  word=capitanía,f=72
  word=constructivas,f=72
@@ -23891,6 +23949,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=familiarizarse,f=72
  word=fugado,f=72
  word=hospitalarias,f=72
+ word=perversa,f=72
  word=protestando,f=72
  word=separatismo,f=72
  word=tandas,f=72
@@ -24037,6 +24096,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=compuestas,f=72
  word=acrónimo,f=72
  word=filósofos,f=72
+ word=flauta,f=72
  word=posterioridad,f=72
  word=abolición,f=72
  word=decorados,f=72
@@ -25667,6 +25727,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=contrainteligencia,f=70
  word=cordobesas,f=70
  word=crematorio,f=70
+ word=estrangulamiento,f=70
  word=levantará,f=70
  word=leyeron,f=70
  word=matriculación,f=70
@@ -25790,6 +25851,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=colisionaron,f=70
  word=extreme,f=70
  word=interesen,f=70
+ word=maricón,f=70
  word=proporcionarán,f=70
  word=colapsada,f=70
  word=tanatorio,f=70
@@ -25980,10 +26042,12 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=aniquilar,f=69
  word=crepúsculo,f=69
  word=elogiada,f=69
+ word=esperma,f=69
  word=estadísticamente,f=69
  word=inmensamente,f=69
  word=multiplicando,f=69
  word=ofendido,f=69
+ word=orgasmo,f=69
  word=pragmática,f=69
  word=retomaron,f=69
  word=amazónico,f=69
@@ -25998,6 +26062,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=desprecia,f=69
  word=enriquecida,f=69
  word=fragmentado,f=69
+ word=impotente,f=69
  word=olvidadas,f=69
  word=promedia,f=69
  word=párpados,f=69
@@ -26006,6 +26071,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=traficante,f=69
  word=adquiera,f=69
  word=ardiendo,f=69
+ word=castración,f=69
  word=concurrentes,f=69
  word=cuidaba,f=69
  word=decimocuarta,f=69
@@ -26265,6 +26331,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=Barboza,f=69
  word=agradecía,f=69
  word=crediticias,f=69
+ word=joder,f=69
  word=levanten,f=69
  word=pautada,f=69
  word=aplauden,f=69
@@ -26824,6 +26891,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=adeudo,f=69
  word=amagó,f=69
  word=corremos,f=69
+ word=nenas,f=69
  word=preliminarmente,f=69
  word=visitamos,f=69
  word=finalizarán,f=69
@@ -27001,6 +27069,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=enmarcadas,f=68
  word=firmara,f=68
  word=fundamentada,f=68
+ word=ostras,f=68
  word=recogían,f=68
  word=reconstruye,f=68
  word=renovador,f=68
@@ -27317,6 +27386,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=manden,f=68
  word=mesita,f=68
  word=caí,f=68
+ word=chulo,f=68
  word=desodorante,f=68
  word=marchará,f=68
  word=premeditación,f=68
@@ -27422,6 +27492,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=orbita,f=67
  word=étnicas,f=67
  word=adornado,f=67
+ word=ano,f=67
  word=cúpulas,f=67
  word=diques,f=67
  word=discutida,f=67
@@ -28420,6 +28491,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=extraíble,f=66
  word=multimillonaria,f=66
  word=organice,f=66
+ word=pedófilo,f=66
  word=quebranto,f=66
  word=rezagado,f=66
  word=sonrió,f=66
@@ -28776,12 +28848,14 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=meritorio,f=66
  word=poderosamente,f=66
  word=protagonizados,f=66
+ word=rabo,f=66
  word=terriblemente,f=66
  word=veladas,f=66
  word=barbilla,f=66
  word=besar,f=66
  word=caldos,f=66
  word=cerdas,f=66
+ word=desnudez,f=66
  word=dibujan,f=66
  word=fu,f=66
  word=milenario,f=66
@@ -29282,6 +29356,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=trazos,f=65
  word=vengar,f=65
  word=coreanos,f=65
+ word=erótica,f=65
  word=germen,f=65
  word=invertida,f=65
  word=surrealismo,f=65
@@ -29820,6 +29895,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=ajetreo,f=65
  word=alertada,f=65
  word=analizarlo,f=65
+ word=cabrón,f=65
  word=compartiera,f=65
  word=elaborará,f=65
  word=engañaron,f=65
@@ -30264,6 +30340,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=insaciable,f=64
  word=invocó,f=64
  word=leerlo,f=64
+ word=libido,f=64
  word=manipulan,f=64
  word=nostálgica,f=64
  word=preservativo,f=64
@@ -30569,6 +30646,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=chanclas,f=64
  word=corear,f=64
  word=habilitaciones,f=64
+ word=jodido,f=64
  word=recuperarán,f=64
  word=seríamos,f=64
  word=adjudicatario,f=64
@@ -30618,7 +30696,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=desgranar,f=64
  word=grabé,f=64
  word=senadoras,f=64
- word=tomarme,f=64
  word=reinos,f=63
  word=electrones,f=63
  word=tallo,f=63
@@ -30648,6 +30725,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=duraría,f=63
  word=hocico,f=63
  word=ilustrador,f=63
+ word=mástil,f=63
  word=fraile,f=63
  word=glándula,f=63
  word=mutantes,f=63
@@ -30694,6 +30772,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=mulas,f=63
  word=pigmento,f=63
  word=sapo,f=63
+ word=vagina,f=63
  word=vestigio,f=63
  word=andinos,f=63
  word=camaradas,f=63
@@ -30763,6 +30842,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=asediada,f=63
  word=asiduo,f=63
  word=billar,f=63
+ word=bisexual,f=63
  word=comparadas,f=63
  word=culebra,f=63
  word=eclosión,f=63
@@ -30932,6 +31012,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=diametralmente,f=63
  word=ejercitar,f=63
  word=facultativo,f=63
+ word=fecal,f=63
  word=hamacas,f=63
  word=impregna,f=63
  word=indeciso,f=63
@@ -30977,6 +31058,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=hablarle,f=63
  word=idóneas,f=63
  word=indigentes,f=63
+ word=melones,f=63
  word=pareciendo,f=63
  word=pasivas,f=63
  word=poblano,f=63
@@ -31385,6 +31467,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=Reverte,f=63
  word=adeudados,f=63
  word=contentas,f=63
+ word=coño,f=63
  word=reojo,f=63
  word=abstenido,f=63
  word=alícuotas,f=63
@@ -31474,6 +31557,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=habitaba,f=62
  word=nórdica,f=62
  word=poéticas,f=62
+ word=prostituta,f=62
  word=reformada,f=62
  word=cavidades,f=62
  word=estanques,f=62
@@ -32319,7 +32403,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=castraciones,f=62
  word=moratorias,f=62
  word=reporten,f=62
- word=vulneraciones,f=62
  word=membrana,f=61
  word=WWF,f=61
  word=faraón,f=61
@@ -32350,6 +32433,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=filosóficos,f=61
  word=ortodoxos,f=61
  word=vikingos,f=61
+ word=anal,f=61
  word=concibió,f=61
  word=programador,f=61
  word=tallado,f=61
@@ -32373,6 +32457,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=cuántico,f=61
  word=dibujado,f=61
  word=donada,f=61
+ word=erección,f=61
  word=fotosíntesis,f=61
  word=fundadas,f=61
  word=hereditario,f=61
@@ -32795,6 +32880,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=irrevocable,f=61
  word=kurda,f=61
  word=negara,f=61
+ word=pedofilia,f=61
  word=pepinos,f=61
  word=suscribe,f=61
  word=tambos,f=61
@@ -33559,6 +33645,8 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=gorilas,f=60
  word=moradas,f=60
  word=papelera,f=60
+ word=pilón,f=60
+ word=polvos,f=60
  word=subjetivos,f=60
  word=tumoral,f=60
  word=Alcoy,f=60
@@ -33943,6 +34031,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=subvencionados,f=60
  word=vincularon,f=60
  word=violarla,f=60
+ word=afeitado,f=60
  word=agacharse,f=60
  word=alborotadores,f=60
  word=ame,f=60
@@ -34315,7 +34404,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=notifique,f=60
  word=recetó,f=60
  word=tengáis,f=60
- word=trascendidos,f=60
  word=topónimo,f=59
  word=inglesas,f=59
  word=óperas,f=59
@@ -35578,9 +35666,11 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=gamba,f=58
  word=gráficamente,f=58
  word=hábilmente,f=58
+ word=incesto,f=58
  word=inyectado,f=58
  word=jabalina,f=58
  word=juncos,f=58
+ word=lujuria,f=58
  word=maquina,f=58
  word=matarlos,f=58
  word=montaba,f=58
@@ -36577,7 +36667,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=reabrirá,f=58
  word=reactive,f=58
  word=reído,f=58
- word=ventiló,f=58
  word=romanas,f=56
  word=hablantes,f=56
  word=navíos,f=56
@@ -36838,6 +36927,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=disparaba,f=56
  word=enseño,f=56
  word=evangélicas,f=56
+ word=eyaculación,f=56
  word=farmacología,f=56
  word=gaitas,f=56
  word=hermosura,f=56
@@ -36991,10 +37081,12 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=desposeídos,f=56
  word=estrepitosamente,f=56
  word=impropio,f=56
+ word=insultado,f=56
  word=irradia,f=56
  word=izar,f=56
  word=metafórica,f=56
  word=murcianos,f=56
+ word=nalgas,f=56
  word=paracaidismo,f=56
  word=percibían,f=56
  word=predilectos,f=56
@@ -37144,6 +37236,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=obsesiona,f=56
  word=pastelerías,f=56
  word=pavor,f=56
+ word=pezón,f=56
  word=pornográficos,f=56
  word=proliferar,f=56
  word=regate,f=56
@@ -37261,6 +37354,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=votaban,f=56
  word=asaltados,f=56
  word=asombró,f=56
+ word=bestial,f=56
  word=borran,f=56
  word=botiquín,f=56
  word=cesara,f=56
@@ -37887,7 +37981,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=predominará,f=56
  word=reclamará,f=56
  word=resuene,f=56
- word=torrezno,f=56
  word=ecuaciones,f=55
  word=otomano,f=55
  word=persas,f=55
@@ -37968,6 +38061,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=análogos,f=55
  word=astronómicas,f=55
  word=bíblicas,f=55
+ word=clímax,f=55
  word=confundida,f=55
  word=cuantificación,f=55
  word=espiga,f=55
@@ -37989,6 +38083,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=espín,f=55
  word=impares,f=55
  word=implantó,f=55
+ word=lesbiana,f=55
  word=mencionarse,f=55
  word=minúsculas,f=55
  word=oficialidad,f=55
@@ -38304,6 +38399,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=encerraron,f=55
  word=expedir,f=55
  word=exportada,f=55
+ word=fetiche,f=55
  word=haciéndolas,f=55
  word=hinchadas,f=55
  word=indestructible,f=55
@@ -39208,6 +39304,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=engordan,f=55
  word=espolvorear,f=55
  word=estremecedores,f=55
+ word=gilipollas,f=55
  word=lasa,f=55
  word=limpien,f=55
  word=potencie,f=55
@@ -39275,8 +39372,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=procuren,f=55
  word=reconfortantes,f=55
  word=subestiman,f=55
- word=titubeó,f=55
- word=trapero,f=55
  word=espectral,f=53
  word=administrativamente,f=53
  word=gentilicio,f=53
@@ -39437,6 +39532,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=narrativos,f=53
  word=soplan,f=53
  word=subtítulo,f=53
+ word=transexuales,f=53
  word=trovador,f=53
  word=túnicas,f=53
  word=vikingo,f=53
@@ -39536,6 +39632,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=laringe,f=53
  word=melancólica,f=53
  word=ostentando,f=53
+ word=pederastia,f=53
  word=polifacético,f=53
  word=preservada,f=53
  word=primigenia,f=53
@@ -40187,6 +40284,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=despacha,f=53
  word=despidiéndose,f=53
  word=deudos,f=53
+ word=entrepierna,f=53
  word=espeluznantes,f=53
  word=exagerando,f=53
  word=explicara,f=53
@@ -40439,6 +40537,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=sostenerla,f=53
  word=soñaban,f=53
  word=suenen,f=53
+ word=teta,f=53
  word=tipicidad,f=53
  word=tocarle,f=53
  word=transalpino,f=53
@@ -40614,6 +40713,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=comercializadoras,f=53
  word=complacientes,f=53
  word=conmociones,f=53
+ word=correrse,f=53
  word=cía,f=53
  word=delicatessen,f=53
  word=desahogarse,f=53
@@ -41189,6 +41289,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=celibato,f=51
  word=constitucionalismo,f=51
  word=cuenco,f=51
+ word=desgraciado,f=51
  word=divida,f=51
  word=diáconos,f=51
  word=internó,f=51
@@ -41239,6 +41340,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=bondadoso,f=51
  word=bordada,f=51
  word=clichés,f=51
+ word=clítoris,f=51
  word=didácticas,f=51
  word=disipación,f=51
  word=encajes,f=51
@@ -42536,6 +42638,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=fijarán,f=51
  word=homologa,f=51
  word=impulsarlo,f=51
+ word=mirón,f=51
  word=nono,f=51
  word=regulará,f=51
  word=revisaran,f=51
@@ -42678,6 +42781,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=apurarse,f=51
  word=botonera,f=51
  word=brete,f=51
+ word=cagar,f=51
  word=cansé,f=51
  word=cuadruplicar,f=51
  word=daros,f=51
@@ -42725,7 +42829,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=orines,f=51
  word=osetia,f=51
  word=pandémico,f=51
- word=Badiraguato,f=51
  word=msnm,f=49
  word=dialecto,f=49
  word=ábside,f=49
@@ -42908,6 +43011,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=fiebres,f=49
  word=gargantas,f=49
  word=gobernaban,f=49
+ word=gorila,f=49
  word=intimista,f=49
  word=jarras,f=49
  word=mandioca,f=49
@@ -43329,6 +43433,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=jalea,f=49
  word=limonada,f=49
  word=numerada,f=49
+ word=orgía,f=49
  word=pecuarias,f=49
  word=pelícano,f=49
  word=perdurar,f=49
@@ -43641,6 +43746,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=indicativa,f=49
  word=insensibilidad,f=49
  word=involución,f=49
+ word=nudista,f=49
  word=pedidas,f=49
  word=perspicaz,f=49
  word=plegar,f=49
@@ -44754,8 +44860,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=ralentizaron,f=49
  word=replicadas,f=49
  word=tex,f=49
- word=traducirán,f=49
- word=veranillo,f=49
  word=sacristía,f=47
  word=armenios,f=47
  word=marismas,f=47
@@ -44988,6 +45092,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=atribuían,f=47
  word=bibliográfica,f=47
  word=bufón,f=47
+ word=burdel,f=47
  word=cacicazgo,f=47
  word=capturarlo,f=47
  word=caudalosos,f=47
@@ -45001,6 +45106,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=hechiceros,f=47
  word=interiormente,f=47
  word=linfático,f=47
+ word=masturbación,f=47
  word=noruegas,f=47
  word=patrocina,f=47
  word=prensas,f=47
@@ -45056,6 +45162,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=ambient,f=47
  word=autodenominada,f=47
  word=celosamente,f=47
+ word=coito,f=47
  word=criadas,f=47
  word=databa,f=47
  word=decidiría,f=47
@@ -45152,6 +45259,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=talismán,f=47
  word=tenebroso,f=47
  word=tornos,f=47
+ word=vulva,f=47
  word=Buitrago,f=47
  word=Caín,f=47
  word=Darmstadt,f=47
@@ -46080,6 +46188,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=evitarían,f=47
  word=expiden,f=47
  word=falsificada,f=47
+ word=gamberro,f=47
  word=gradúan,f=47
  word=hallarlo,f=47
  word=imperó,f=47
@@ -46617,6 +46726,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=echadas,f=47
  word=escotado,f=47
  word=extraviadas,f=47
+ word=follar,f=47
  word=fotografiarse,f=47
  word=frenara,f=47
  word=fruncido,f=47
@@ -46989,9 +47099,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=recular,f=47
  word=reeligieron,f=47
  word=saboreando,f=47
- word=veáis,f=47
- word=viceconsejero,f=47
- word=vilipendiados,f=47
  word=bizantino,f=45
  word=ducado,f=45
  word=relieves,f=45
@@ -47337,6 +47444,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=arboladas,f=45
  word=bardo,f=45
  word=bolera,f=45
+ word=capullo,f=45
  word=compartimientos,f=45
  word=condenación,f=45
  word=cotos,f=45
@@ -47521,6 +47629,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=sedante,f=45
  word=sifón,f=45
  word=sirviéndose,f=45
+ word=striptease,f=45
  word=subtitulado,f=45
  word=suplica,f=45
  word=sustituiría,f=45
@@ -48320,6 +48429,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=floreros,f=45
  word=funesta,f=45
  word=gastada,f=45
+ word=gemidos,f=45
  word=giroscopio,f=45
  word=gula,f=45
  word=hiperactivo,f=45
@@ -48966,6 +49076,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=sorteados,f=45
  word=sospechada,f=45
  word=subterfugio,f=45
+ word=supremacismo,f=45
  word=surtieron,f=45
  word=suspensivos,f=45
  word=tecnólogo,f=45
@@ -49366,6 +49477,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=apreciará,f=45
  word=calzarse,f=45
  word=cariños,f=45
+ word=castrar,f=45
  word=competenciales,f=45
  word=contraprestaciones,f=45
  word=despida,f=45
@@ -49836,9 +49948,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=robé,f=45
  word=suscriba,f=45
  word=tamberos,f=45
- word=tiradero,f=45
- word=tumban,f=45
- word=vademécum,f=45
  word=teorema,f=42
  word=dialectos,f=42
  word=legiones,f=42
@@ -50491,6 +50600,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=secuencialmente,f=42
  word=suculentos,f=42
  word=trasmitido,f=42
+ word=travesti,f=42
  word=usurpado,f=42
  word=Jacinta,f=42
  word=accionados,f=42
@@ -50671,6 +50781,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=exhaustos,f=42
  word=exploradora,f=42
  word=federada,f=42
+ word=felación,f=42
  word=fisionomía,f=42
  word=folklóricos,f=42
  word=fragmentadas,f=42
@@ -50953,9 +51064,11 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=militaristas,f=42
  word=mundanas,f=42
  word=nevar,f=42
+ word=nudismo,f=42
  word=observacionales,f=42
  word=optaban,f=42
  word=pamplonés,f=42
+ word=pederasta,f=42
  word=pirenaicas,f=42
  word=poniéndola,f=42
  word=quebrados,f=42
@@ -50997,6 +51110,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=casen,f=42
  word=cenote,f=42
  word=cetros,f=42
+ word=chupar,f=42
  word=clavadas,f=42
  word=cociendo,f=42
  word=compresiones,f=42
@@ -51237,6 +51351,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=multiculturalismo,f=42
  word=muta,f=42
  word=naif,f=42
+ word=negrito,f=42
  word=noquea,f=42
  word=pagase,f=42
  word=pomposo,f=42
@@ -52019,6 +52134,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=llevárselos,f=42
  word=malogró,f=42
  word=manifestados,f=42
+ word=marica,f=42
  word=menosprecia,f=42
  word=metidas,f=42
  word=mofas,f=42
@@ -53180,10 +53296,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=soufflé,f=42
  word=tenerles,f=42
  word=terminarlas,f=42
- word=tirotearon,f=42
- word=tuertos,f=42
- word=voleo,f=42
- word=yonqui,f=42
  word=inflorescencia,f=38
  word=ateniense,f=38
  word=Borgoña,f=38
@@ -54417,6 +54529,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=vengador,f=38
  word=vertebra,f=38
  word=vívidas,f=38
+ word=zoofilia,f=38
  word=Angamos,f=38
  word=Churruca,f=38
  word=Delibes,f=38
@@ -55170,6 +55283,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=letrina,f=38
  word=limitara,f=38
  word=maléfica,f=38
+ word=masturbarse,f=38
  word=mean,f=38
  word=mejorarlos,f=38
  word=mercería,f=38
@@ -55370,6 +55484,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=manejarlos,f=38
  word=manigua,f=38
  word=manipulaba,f=38
+ word=mariquita,f=38
  word=microbianos,f=38
  word=multilingües,f=38
  word=multilingüismo,f=38
@@ -56347,6 +56462,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=horripilantes,f=38
  word=imprescriptibles,f=38
  word=indicarán,f=38
+ word=infantilismo,f=38
  word=infinidades,f=38
  word=insaturadas,f=38
  word=instaban,f=38
@@ -56525,6 +56641,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=bajándose,f=38
  word=bajísimas,f=38
  word=bes,f=38
+ word=bestialidad,f=38
  word=botaron,f=38
  word=cautelas,f=38
  word=cibernautas,f=38
@@ -57200,11 +57317,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=tecnificar,f=38
  word=temblaban,f=38
  word=tercamente,f=38
- word=titubea,f=38
- word=ultraligera,f=38
- word=valorarla,f=38
- word=venid,f=38
- word=vetarlo,f=38
  word=ISBN,f=33
  word=atenienses,f=33
  word=NGC,f=33
@@ -57566,6 +57678,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=electrólisis,f=33
  word=encarnaciones,f=33
  word=enlazada,f=33
+ word=esvástica,f=33
  word=evolucionada,f=33
  word=expansionismo,f=33
  word=extremeños,f=33
@@ -57829,6 +57942,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=organizándose,f=33
  word=ornitología,f=33
  word=personificado,f=33
+ word=pervertido,f=33
  word=porosidad,f=33
  word=privatizada,f=33
  word=proliferaron,f=33
@@ -57962,6 +58076,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=empedernido,f=33
  word=envolviendo,f=33
  word=eremita,f=33
+ word=escatología,f=33
  word=escenografías,f=33
  word=exiliaron,f=33
  word=explicita,f=33
@@ -59962,6 +60077,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=estruendosa,f=33
  word=expositivas,f=33
  word=exteriorizar,f=33
+ word=eyacular,f=33
  word=fisicoquímicos,f=33
  word=flamear,f=33
  word=formulaba,f=33
@@ -60051,6 +60167,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=uterinos,f=33
  word=varíen,f=33
  word=vengará,f=33
+ word=verga,f=33
  word=vieiras,f=33
  word=ígneos,f=33
  word=Abellán,f=33
@@ -61117,6 +61234,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=alfeñique,f=33
  word=amenizadas,f=33
  word=angustiosos,f=33
+ word=apestoso,f=33
  word=apostarse,f=33
  word=aprisa,f=33
  word=bailaores,f=33
@@ -62463,13 +62581,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=suponerle,f=33
  word=tendederos,f=33
  word=testarudos,f=33
- word=tipificó,f=33
- word=trascendían,f=33
- word=vendettas,f=33
- word=vendérselos,f=33
- word=verificadores,f=33
- word=vibrado,f=33
- word=Benites,f=33
  word=podó,f=26
  word=pilastras,f=26
  word=herbáceas,f=26
@@ -62544,6 +62655,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=prehistórica,f=26
  word=renombró,f=26
  word=sedimentarias,f=26
+ word=sodomía,f=26
  word=subdividida,f=26
  word=teoremas,f=26
  word=aristocrático,f=26
@@ -63178,6 +63290,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=enamorándose,f=26
  word=ensenadas,f=26
  word=enzimático,f=26
+ word=esfínter,f=26
  word=estudiosa,f=26
  word=fascículo,f=26
  word=gelatinosa,f=26
@@ -63599,6 +63712,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=monteses,f=26
  word=musico,f=26
  word=narraban,f=26
+ word=naturista,f=26
  word=naufragado,f=26
  word=novelesca,f=26
  word=nucleico,f=26
@@ -63982,6 +64096,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=inulina,f=26
  word=iridio,f=26
  word=jingles,f=26
+ word=lamer,f=26
  word=latifundista,f=26
  word=liguillas,f=26
  word=llamándolos,f=26
@@ -64165,6 +64280,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=renuentes,f=26
  word=restaurarlo,f=26
  word=sabueso,f=26
+ word=semental,f=26
  word=separadores,f=26
  word=separarla,f=26
  word=separo,f=26
@@ -64721,6 +64837,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=valvular,f=26
  word=vascongadas,f=26
  word=vasodilatador,f=26
+ word=vibrador,f=26
  word=vizcaínas,f=26
  word=voladizos,f=26
  word=Amedeo,f=26
@@ -65334,6 +65451,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=carbonada,f=26
  word=carburación,f=26
  word=champaña,f=26
+ word=chocho,f=26
  word=cigarreras,f=26
  word=cinceles,f=26
  word=circunvalar,f=26
@@ -66449,6 +66567,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=multinúcleo,f=26
  word=museísticos,f=26
  word=nadaban,f=26
+ word=nalga,f=26
  word=neogranadina,f=26
  word=nomine,f=26
  word=objetan,f=26
@@ -69576,25 +69695,6 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=terso,f=26
  word=testea,f=26
  word=tilma,f=26
- word=toad,f=26
- word=tocho,f=26
- word=torean,f=26
- word=trancos,f=26
- word=transferirle,f=26
- word=transmitiese,f=26
- word=treintaidosavos,f=26
- word=tronada,f=26
- word=tuteló,f=26
- word=ursulinas,f=26
- word=vacilan,f=26
- word=valiese,f=26
- word=vapuleada,f=26
- word=venturoso,f=26
- word=vigilen,f=26
- word=zarzal,f=26
- word=zueco,f=26
- word=Balagueró,f=26
- word=Barré,f=26
  word=subfamilia,f=15
  word=notación,f=15
  word=presbiterio,f=15
@@ -70049,6 +70149,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=fisiólogo,f=15
  word=fonológico,f=15
  word=geológicamente,f=15
+ word=introducciones,f=15
  word=inútilmente,f=15
  word=libertos,f=15
  word=magnifico,f=15
@@ -70149,6 +70250,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=asimilada,f=15
  word=azulada,f=15
  word=caducifolia,f=15
+ word=capullos,f=15
  word=cernícalo,f=15
  word=coenzima,f=15
  word=conjuntivo,f=15
@@ -71593,6 +71695,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=minaron,f=15
  word=mixtapes,f=15
  word=molinera,f=15
+ word=necrofilia,f=15
  word=nidifican,f=15
  word=ordenaría,f=15
  word=ordeño,f=15
@@ -71970,6 +72073,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=figurante,f=15
  word=filtrante,f=15
  word=fonográfica,f=15
+ word=fornicación,f=15
  word=fosforilada,f=15
  word=fotónico,f=15
  word=fraccionó,f=15
@@ -72304,6 +72408,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=pinchadiscos,f=15
  word=plazuelas,f=15
  word=polinizan,f=15
+ word=polla,f=15
  word=pretiles,f=15
  word=programaba,f=15
  word=progresaron,f=15
@@ -72471,6 +72576,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=etnológica,f=15
  word=evocadoras,f=15
  word=exconvento,f=15
+ word=exhibicionista,f=15
  word=exterminó,f=15
  word=extratropicales,f=15
  word=extremaunción,f=15
@@ -72872,6 +72978,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=sintonizado,f=15
  word=sinuosidad,f=15
  word=sismógrafos,f=15
+ word=sodomita,f=15
  word=solaparse,f=15
  word=subatómica,f=15
  word=sublevan,f=15
@@ -74268,6 +74375,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=mantequillas,f=15
  word=marcaciones,f=15
  word=marcajes,f=15
+ word=marimacho,f=15
  word=martilleo,f=15
  word=masturba,f=15
  word=medievalistas,f=15
@@ -74275,6 +74383,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=miserablemente,f=15
  word=monterías,f=15
  word=moscardón,f=15
+ word=naturismo,f=15
  word=negociaría,f=15
  word=negrura,f=15
  word=nevus,f=15
@@ -77158,6 +77267,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=comprenderlas,f=15
  word=comprometerían,f=15
  word=computaciones,f=15
+ word=comérsela,f=15
  word=conciliadoras,f=15
  word=conciliando,f=15
  word=concilió,f=15
@@ -79546,6 +79656,7 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=martillando,f=15
  word=mascada,f=15
  word=masticadas,f=15
+ word=mear,f=15
  word=mecates,f=15
  word=meciéndose,f=15
  word=mencionarlos,f=15
@@ -79685,32 +79796,3 @@ dictionary=main:es,locale=es,description=Español,date=1414726268,version=54
  word=tembladera,f=15
  word=temporalidades,f=15
  word=teteras,f=15
- word=titiritera,f=15
- word=tomándoles,f=15
- word=tragaron,f=15
- word=transfirieran,f=15
- word=trasporta,f=15
- word=turbó,f=15
- word=ultrasónicos,f=15
- word=unirle,f=15
- word=urticarias,f=15
- word=usarle,f=15
- word=vacada,f=15
- word=verterse,f=15
- word=vertimientos,f=15
- word=vicerrectorados,f=15
- word=vigesimosexta,f=15
- word=vigesimotercera,f=15
- word=vitorear,f=15
- word=volantín,f=15
- word=volapié,f=15
- word=vulgaridades,f=15
- word=yacido,f=15
- word=yuxtapuesto,f=15
- word=zancuda,f=15
- word=AAL,f=15
- word=Afilarmónica,f=15
- word=Agustini,f=15
- word=Alienware,f=15
- word=Antímano,f=15
- word=Baltra,f=15

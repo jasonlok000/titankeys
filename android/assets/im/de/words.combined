@@ -295,6 +295,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=kein,f=149
  word=kleine,f=149
  word=kleinen,f=149
+ word=kommen,f=149
  word=lässt,f=149
  word=setzte,f=149
  word=sogar,f=149
@@ -1125,6 +1126,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=errichten,f=132
  word=erscheinen,f=132
  word=fallen,f=132
+ word=gekommen,f=132
  word=gelangte,f=132
  word=gelegt,f=132
  word=getötet,f=132
@@ -1887,6 +1889,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=erinnern,f=125
  word=erklären,f=125
  word=erzielt,f=125
+ word=extrem,f=125
  word=ferner,f=125
  word=fertig,f=125
  word=festgestellt,f=125
@@ -2429,6 +2432,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=voraus,f=122
  word=vorerst,f=122
  word=wahr,f=122
+ word=weißer,f=122
  word=wichtiges,f=122
  word=worauf,f=122
  word=zugeschrieben,f=122
@@ -6261,6 +6265,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=dicke,f=108
  word=dir,f=108
  word=dokumentieren,f=108
+ word=dreier,f=108
  word=drittgrößte,f=108
  word=dunkelbraun,f=108
  word=durchgängig,f=108
@@ -6695,6 +6700,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=bloß,f=107
  word=brasilianische,f=107
  word=bspw,f=107
+ word=böse,f=107
  word=dachte,f=107
  word=denjenigen,f=107
  word=derzeitigen,f=107
@@ -8325,6 +8331,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=schätzt,f=104
  word=schöner,f=104
  word=sechsmal,f=104
+ word=sexuell,f=104
  word=sm,f=104
  word=stillgelegten,f=104
  word=stoppen,f=104
@@ -8846,6 +8853,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=mögen,f=103
  word=nachgesagt,f=103
  word=nachtaktiv,f=103
+ word=nackt,f=103
  word=namensgebenden,f=103
  word=neutrale,f=103
  word=niederließ,f=103
@@ -9860,6 +9868,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=dänisch,f=101
  word=dünner,f=101
  word=ebd,f=101
+ word=eindringen,f=101
  word=eingefasst,f=101
  word=eingelagert,f=101
  word=eingeschrieben,f=101
@@ -10562,6 +10571,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=hindern,f=100
  word=hofft,f=100
  word=holländische,f=100
+ word=homosexuelle,f=100
  word=homosexuellen,f=100
  word=höchstwahrscheinlich,f=100
  word=immatrikulierte,f=100
@@ -12127,6 +12137,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=vereinten,f=98
  word=verewigt,f=98
  word=verfüllt,f=98
+ word=vergewaltigt,f=98
  word=vergleichbarer,f=98
  word=verkürzen,f=98
  word=verpassten,f=98
@@ -16908,6 +16919,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=ausgelassen,f=92
  word=ausgemalt,f=92
  word=ausgewiesenen,f=92
+ word=ausgezogen,f=92
  word=auslaufenden,f=92
  word=aussetzen,f=92
  word=aussichtsreicher,f=92
@@ -17189,6 +17201,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=ranken,f=92
  word=raue,f=92
  word=reiches,f=92
+ word=reif,f=92
  word=relativer,f=92
  word=renommierter,f=92
  word=rhythmisch,f=92
@@ -18246,6 +18259,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=schmerzhaft,f=91
  word=schmückt,f=91
  word=schriftstellerisch,f=91
+ word=schritt,f=91
  word=schwand,f=91
  word=schwangere,f=91
  word=schwarzbraun,f=91
@@ -19453,6 +19467,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=variabler,f=90
  word=vegetativen,f=90
  word=verbrauchen,f=90
+ word=verdammt,f=90
  word=verdoppeln,f=90
  word=verehren,f=90
  word=verfallene,f=90
@@ -20468,6 +20483,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=journalistisch,f=89
  word=jure,f=89
  word=jährliches,f=89
+ word=jüdisch,f=89
  word=kalifornische,f=89
  word=kalter,f=89
  word=kapitulieren,f=89
@@ -21689,6 +21705,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=hochgezogen,f=88
  word=hochrangiger,f=88
  word=hohle,f=88
+ word=homo,f=88
  word=hundertjährigen,f=88
  word=hunderttausend,f=88
  word=häuften,f=88
@@ -24617,6 +24634,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=sensationellen,f=86
  word=sichtete,f=86
  word=simplen,f=86
+ word=sinnlich,f=86
  word=sinnlichen,f=86
  word=skurrilen,f=86
  word=social,f=86
@@ -25780,6 +25798,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=fachlicher,f=85
  word=fadenförmig,f=85
  word=fakultativ,f=85
+ word=farbiger,f=85
  word=faszinierte,f=85
  word=fertigstellen,f=85
  word=festzunehmen,f=85
@@ -26063,6 +26082,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=schlagenden,f=85
  word=schleicht,f=85
  word=schlichtes,f=85
+ word=schmutzig,f=85
  word=schnellem,f=85
  word=schrumpfen,f=85
  word=schränkt,f=85
@@ -27397,6 +27417,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=gallische,f=84
  word=ganzzahlige,f=84
  word=gastronomischen,f=84
+ word=geblasen,f=84
  word=gefahrenen,f=84
  word=gefahrlos,f=84
  word=gefiederten,f=84
@@ -27762,6 +27783,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=verflochten,f=84
  word=verfrachtet,f=84
  word=verfärben,f=84
+ word=vergewaltigen,f=84
  word=verhasst,f=84
  word=verlaufender,f=84
  word=verlässlich,f=84
@@ -28781,6 +28803,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=abweichender,f=83
  word=abzweigte,f=83
  word=adeliger,f=83
+ word=after,f=83
  word=aggressives,f=83
  word=aktivierten,f=83
  word=algerische,f=83
@@ -32912,6 +32935,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=schreitender,f=81
  word=schroffe,f=81
  word=schwerfällig,f=81
+ word=schwuler,f=81
  word=schwäbischer,f=81
  word=schwächste,f=81
  word=schützend,f=81
@@ -36183,6 +36207,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=bildgebende,f=79
  word=bilingualen,f=79
  word=bipolaren,f=79
+ word=blasen,f=79
  word=blenden,f=79
  word=blickte,f=79
  word=bogenförmigen,f=79
@@ -38385,6 +38410,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=erlegten,f=78
  word=ermahnte,f=78
  word=ermächtigte,f=78
+ word=erotisch,f=78
  word=erreichende,f=78
  word=erreichenden,f=78
  word=erschossenen,f=78
@@ -38477,6 +38503,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=gemaltes,f=78
  word=gemeindefreien,f=78
  word=gemeißelt,f=78
+ word=genagelt,f=78
  word=generalisierte,f=78
  word=generalisierten,f=78
  word=generierte,f=78
@@ -41100,6 +41127,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=sensibilisiert,f=77
  word=sequenziert,f=77
  word=seriell,f=77
+ word=sex,f=77
  word=sexy,f=77
  word=show,f=77
  word=siamesischen,f=77
@@ -45350,6 +45378,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=biographisches,f=75
  word=biologisches,f=75
  word=bipolare,f=75
+ word=bisexuell,f=75
  word=bizarr,f=75
  word=blaugrünen,f=75
  word=blies,f=75
@@ -50515,6 +50544,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=angebrachtes,f=73
  word=angebraten,f=73
  word=angedrückt,f=73
+ word=angekettet,f=73
  word=angekoppelt,f=73
  word=angelandet,f=73
  word=angesehenes,f=73
@@ -50783,6 +50813,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=endemischer,f=73
  word=engagiertes,f=73
  word=entbinden,f=73
+ word=entblößt,f=73
  word=entdecktes,f=73
  word=entferntes,f=73
  word=entflohenen,f=73
@@ -51229,6 +51260,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=patriarchalischen,f=73
  word=pauschalen,f=73
  word=peace,f=73
+ word=penis,f=73
  word=perfektionieren,f=73
  word=performance,f=73
  word=peripher,f=73
@@ -53982,6 +54014,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=gescheiterter,f=72
  word=geschenkte,f=72
  word=geschichtsträchtigen,f=72
+ word=geschlechtlich,f=72
  word=geschlechtsreife,f=72
  word=geschmacklos,f=72
  word=geschuldeten,f=72
@@ -57390,6 +57423,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=lebenslangem,f=71
  word=lebensnotwendig,f=71
  word=lebensnotwendige,f=71
+ word=lecken,f=71
  word=legaler,f=71
  word=legalisieren,f=71
  word=legendäres,f=71
@@ -60640,6 +60674,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=ranghohe,f=70
  word=rasanter,f=70
  word=rasenden,f=70
+ word=rasiert,f=70
  word=rauschenden,f=70
  word=recherchierten,f=70
  word=rechtsliberalen,f=70
@@ -63942,6 +63977,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=pejorativ,f=69
  word=personalisierte,f=69
  word=personalisierten,f=69
+ word=pervers,f=69
  word=ph,f=69
  word=philosophiert,f=69
  word=photographische,f=69
@@ -73178,6 +73214,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=dotierter,f=66
  word=dpt,f=66
  word=dramaturgischer,f=66
+ word=dreckig,f=66
  word=dreifaches,f=66
  word=dreifarbig,f=66
  word=dreizehnmal,f=66
@@ -96776,6 +96813,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=maskieren,f=60
  word=massenhafter,f=60
  word=massivsten,f=60
+ word=masturbiert,f=60
  word=materialistischer,f=60
  word=maßvollen,f=60
  word=medio,f=60
@@ -96879,6 +96917,7 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=poppige,f=60
  word=poppiger,f=60
  word=population,f=60
+ word=pornografisch,f=60
  word=portionsweise,f=60
  word=positionellen,f=60
  word=potential,f=60
@@ -99960,42 +99999,3 @@ dictionary=main:de,locale=de,description=Deutsch,date=1414726263,version=54,REQU
  word=Sternzeichen,f=59
  word=Steuerbehörde,f=59
  word=Steuereinnehmer,f=59
- word=Steuereintreiber,f=59
- word=Steuergeldern,f=59
- word=Steuerklasse,f=59
- word=Steuerknüppel,f=59
- word=Steuersenkungen,f=59
- word=Steuerungstechnik,f=59
- word=Stichel,f=59
- word=Stichkappen,f=59
- word=Stickstoffs,f=59
- word=Stickstoffverbindungen,f=59
- word=Stiegler,f=59
- word=Stigmata,f=59
- word=Stilelement,f=59
- word=Stilepochen,f=59
- word=Stimmbänder,f=59
- word=Stimmführung,f=59
- word=Stirnband,f=59
- word=Stockfisch,f=59
- word=Stoddard,f=59
- word=Stoffel,f=59
- word=Stoffklasse,f=59
- word=Stoffmengenverhältnis,f=59
- word=Stokowski,f=59
- word=Strafgesetze,f=59
- word=Strafrahmen,f=59
- word=Strafrechtsreform,f=59
- word=Strahlendosis,f=59
- word=Strahlungsdruck,f=59
- word=Strausberger,f=59
- word=Strauße,f=59
- word=Straßenansicht,f=59
- word=Straßenecke,f=59
- word=Straßenfahrzeugen,f=59
- word=Straßenlage,f=59
- word=Straßenlaternen,f=59
- word=Streckenposten,f=59
- word=Streichhölzer,f=59
- word=Streitfällen,f=59
- word=Stromboli,f=59

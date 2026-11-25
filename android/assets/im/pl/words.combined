@@ -5495,6 +5495,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=Madryt,f=116
  word=jakimi,f=116
  word=relacja,f=116
+ word=nastolatek,f=116
  word=bliska,f=116
  word=macie,f=116
  word=określa,f=116
@@ -5516,6 +5517,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=kadrze,f=116
  word=mniejszych,f=116
  word=odcinków,f=116
+ word=czarny,f=116
  word=dół,f=116
  word=ów,f=116
  word=oddał,f=116
@@ -7718,6 +7720,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=pracach,f=109
  word=DNA,f=109
  word=zapis,f=109
+ word=stosunek,f=109
  word=gdańskiego,f=109
  word=uznano,f=109
  word=medalu,f=109
@@ -8085,6 +8088,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=przyznanie,f=108
  word=zabiegu,f=108
  word=sonda,f=108
+ word=seks,f=108
  word=dialog,f=108
  word=dolnośląskiego,f=108
  word=nietypowe,f=108
@@ -8239,6 +8243,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=Odrą,f=108
  word=utrzymaniu,f=108
  word=ukryć,f=108
+ word=chłopcy,f=108
  word=startem,f=108
  word=pozwolenia,f=108
  word=wykorzystali,f=108
@@ -9969,6 +9974,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=normalny,f=104
  word=sięgnęła,f=104
  word=spółką,f=104
+ word=pyta,f=104
  word=przeglądu,f=104
  word=wskazywały,f=104
  word=podpisów,f=104
@@ -10299,6 +10305,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=zachęcić,f=103
  word=zastrzeżenia,f=103
  word=giełda,f=103
+ word=kakao,f=103
  word=kultowego,f=103
  word=wypadkiem,f=103
  word=zatrzymane,f=103
@@ -10570,6 +10577,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=jakichś,f=103
  word=witamin,f=103
  word=gorąca,f=103
+ word=gwałt,f=103
  word=nadchodzi,f=103
  word=minionego,f=103
  word=poruszenie,f=103
@@ -11571,6 +11579,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=pacjentki,f=101
  word=postu,f=101
  word=zdrowotna,f=101
+ word=czarni,f=101
  word=sięgnęły,f=101
  word=przyjechać,f=101
  word=rezerwacji,f=101
@@ -12093,6 +12102,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=świadectwa,f=100
  word=objawami,f=100
  word=robota,f=100
+ word=ser,f=100
  word=warszawska,f=100
  word=Siergiej,f=100
  word=działaniom,f=100
@@ -12947,6 +12957,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=niebezpieczeństwa,f=98
  word=sukcesywnie,f=98
  word=wiedząc,f=98
+ word=wyższość,f=98
  word=koleje,f=98
  word=niższą,f=98
  word=płacenia,f=98
@@ -14241,6 +14252,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=zmarłym,f=96
  word=papierze,f=96
  word=transporcie,f=96
+ word=lód,f=96
  word=nastawienie,f=96
  word=sportem,f=96
  word=zaangażowana,f=96
@@ -14879,6 +14891,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=matematyka,f=95
  word=zasiada,f=95
  word=Michaela,f=95
+ word=koń,f=95
  word=przegranych,f=95
  word=ujęcia,f=95
  word=wybranym,f=95
@@ -18466,11 +18479,13 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=pieprz,f=90
  word=trud,f=90
  word=Kujawach,f=90
+ word=apartament,f=90
  word=ciężarówkę,f=90
  word=ekstradycji,f=90
  word=jadące,f=90
  word=udostępniła,f=90
  word=wyciek,f=90
+ word=amatorzy,f=90
  word=grubo,f=90
  word=krytykują,f=90
  word=nadleśnictwo,f=90
@@ -18634,6 +18649,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=wznowieniu,f=90
  word=zagraniczni,f=90
  word=bazowych,f=90
+ word=uczennica,f=90
  word=usterki,f=90
  word=interwencją,f=90
  word=kulminacyjnym,f=90
@@ -23950,6 +23966,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=patriotycznych,f=83
  word=początkowe,f=83
  word=poddana,f=83
+ word=trójkąt,f=83
  word=uzupełniające,f=83
  word=wicemistrzyni,f=83
  word=wykazano,f=83
@@ -25240,6 +25257,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=Słowację,f=82
  word=epicentrum,f=82
  word=felgi,f=82
+ word=gwałty,f=82
  word=indeksy,f=82
  word=lekarstwo,f=82
  word=ministrami,f=82
@@ -26404,6 +26422,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=panoramę,f=80
  word=podróżach,f=80
  word=poprzedzającym,f=80
+ word=porno,f=80
  word=równoznaczne,f=80
  word=skomplikowaną,f=80
  word=stosowali,f=80
@@ -26723,7 +26742,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=taryfa,f=80
  word=trójcy,f=80
  word=dworcowej,f=80
- word=górka,f=80
  word=pol,f=80
  word=skał,f=80
  word=zastąpiony,f=80
@@ -27465,6 +27483,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=ciesząc,f=79
  word=dyskoteki,f=79
  word=kwaśny,f=79
+ word=nagi,f=79
  word=piekarni,f=79
  word=planetarium,f=79
  word=przestrzegał,f=79
@@ -27928,6 +27947,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=spał,f=79
  word=umyślnie,f=79
  word=wkraczają,f=79
+ word=zgwałcona,f=79
  word=zielenią,f=79
  word=Bejrucie,f=79
  word=Turek,f=79
@@ -28320,6 +28340,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=masce,f=78
  word=oddzielić,f=78
  word=pozostawiony,f=78
+ word=seksualny,f=78
  word=worka,f=78
  word=zapobieganiu,f=78
  word=zapytań,f=78
@@ -29928,6 +29949,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=guzy,f=77
  word=kartami,f=77
  word=koszykówka,f=77
+ word=naga,f=77
  word=naprawie,f=77
  word=obrotem,f=77
  word=podejrzewano,f=77
@@ -32275,6 +32297,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=Stalin,f=74
  word=dynamicznej,f=74
  word=dziadkami,f=74
+ word=erotyczne,f=74
  word=gangstera,f=74
  word=horrorów,f=74
  word=korespondencja,f=74
@@ -33842,6 +33865,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=klubowego,f=73
  word=kowala,f=73
  word=krwawą,f=73
+ word=laski,f=73
  word=naraził,f=73
  word=niespotykaną,f=73
  word=powietrznym,f=73
@@ -33991,6 +34015,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=charyzmatyczny,f=73
  word=coroczną,f=73
  word=dachowe,f=73
+ word=dojrzała,f=73
  word=gościły,f=73
  word=kolanem,f=73
  word=kontuzjowany,f=73
@@ -34275,7 +34300,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=Roweckiego,f=73
  word=Skawina,f=73
  word=TWh,f=73
- word=haczyk,f=73
  word=gęstość,f=72
  word=tegoż,f=72
  word=radzieckiej,f=72
@@ -35557,6 +35581,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=epidemią,f=71
  word=jednopłciowych,f=71
  word=kursowania,f=71
+ word=laska,f=71
  word=leczniczy,f=71
  word=narciarskiej,f=71
  word=nieuchronnie,f=71
@@ -36228,6 +36253,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=jarosławskim,f=70
  word=komorników,f=70
  word=nabawił,f=70
+ word=nago,f=70
  word=oddanym,f=70
  word=opuszczonej,f=70
  word=parter,f=70
@@ -36783,7 +36809,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=ciekawostka,f=70
  word=dojedzie,f=70
  word=gorzką,f=70
- word=górkę,f=70
  word=dynastii,f=70
  word=włączono,f=70
  word=dywizja,f=70
@@ -39377,6 +39402,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=kapitale,f=68
  word=korepetycji,f=68
  word=lampki,f=68
+ word=libido,f=68
  word=motocyklowe,f=68
  word=obciążające,f=68
  word=pisemny,f=68
@@ -40852,7 +40878,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=fanek,f=67
  word=gaszeniu,f=67
  word=gate,f=67
- word=głupich,f=67
  word=PPS,f=66
  word=albumem,f=66
  word=wykładał,f=66
@@ -42009,7 +42034,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=cebulki,f=66
  word=domino,f=66
  word=grasuje,f=66
- word=gwarantowanych,f=66
  word=prezbiterium,f=65
  word=konklawe,f=65
  word=obrządku,f=65
@@ -42532,6 +42556,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=obławy,f=65
  word=odbiegają,f=65
  word=odjeżdża,f=65
+ word=pedał,f=65
  word=powołaną,f=65
  word=prologu,f=65
  word=przewodni,f=65
@@ -43975,6 +44000,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=rozpoznaniem,f=63
  word=różnicach,f=63
  word=socjalnym,f=63
+ word=spust,f=63
  word=strateg,f=63
  word=tańczył,f=63
  word=tenisowa,f=63
@@ -44082,6 +44108,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=pralni,f=63
  word=preludium,f=63
  word=prezentowanej,f=63
+ word=sex,f=63
  word=spożywany,f=63
  word=strażnikami,f=63
  word=słabszego,f=63
@@ -44623,7 +44650,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=deco,f=63
  word=dyrektywie,f=63
  word=gospodarkach,f=63
- word=głodówki,f=63
  word=niem,f=62
  word=Formula,f=62
  word=DVD,f=62
@@ -46104,6 +46130,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=spalili,f=61
  word=stacjonowały,f=61
  word=uchodźstwie,f=61
+ word=zarośla,f=61
  word=zestrzelił,f=61
  word=zostawał,f=61
  word=Karla,f=61
@@ -47356,6 +47383,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=autostopem,f=61
  word=bezbronne,f=61
  word=brudnej,f=61
+ word=cholera,f=61
  word=drinka,f=61
  word=ewidencja,f=61
  word=foyer,f=61
@@ -48226,9 +48254,11 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=detonacji,f=59
  word=dogodnym,f=59
  word=doszukiwać,f=59
+ word=erotyczny,f=59
  word=estońskich,f=59
  word=farbami,f=59
  word=gabinetem,f=59
+ word=homo,f=59
  word=indywidualności,f=59
  word=kameralną,f=59
  word=kolarskich,f=59
@@ -51172,8 +51202,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=dwujęzycznym,f=58
  word=dysproporcja,f=58
  word=giełdowa,f=58
- word=hałda,f=58
- word=heroizmu,f=58
  word=fr,f=56
  word=arab,f=56
  word=plemię,f=56
@@ -52956,6 +52984,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=plastikowym,f=56
  word=pogromca,f=56
  word=popisem,f=56
+ word=pornografia,f=56
  word=porządkach,f=56
  word=powtórzyły,f=56
  word=pozwalali,f=56
@@ -53194,6 +53223,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=przyrządów,f=54
  word=płocki,f=54
  word=rzecznych,f=54
+ word=wiązanie,f=54
  word=wywarła,f=54
  word=zachowanym,f=54
  word=zastępstwie,f=54
@@ -54839,6 +54869,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=sześcioletniego,f=54
  word=szklanymi,f=54
  word=słomę,f=54
+ word=tchórz,f=54
  word=toczącą,f=54
  word=uchodziło,f=54
  word=utrzymującego,f=54
@@ -55289,7 +55320,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=finalistami,f=54
  word=fotografuje,f=54
  word=gryfem,f=54
- word=głosowego,f=54
  word=zaludnienia,f=52
  word=planetoidy,f=52
  word=hrabstwo,f=52
@@ -56620,6 +56650,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=watykańskiego,f=52
  word=wiceburmistrza,f=52
  word=wiszących,f=52
+ word=współżycie,f=52
  word=wychowankami,f=52
  word=wykluczając,f=52
  word=wypełnieniem,f=52
@@ -57682,9 +57713,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=gospodarzowi,f=52
  word=graniach,f=52
  word=groteska,f=52
- word=gwarancjach,f=52
- word=góralska,f=52
- word=harcerza,f=52
  word=szlachecki,f=50
  word=plemion,f=50
  word=siedleckiego,f=50
@@ -59398,6 +59426,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=eksportowej,f=50
  word=fascynował,f=50
  word=fotomodelka,f=50
+ word=gej,f=50
  word=hangarów,f=50
  word=hierarchy,f=50
  word=hotelowa,f=50
@@ -59569,6 +59598,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=migowego,f=50
  word=nadciągającej,f=50
  word=nagonce,f=50
+ word=nagość,f=50
  word=naniesione,f=50
  word=nasycona,f=50
  word=niedużym,f=50
@@ -60086,6 +60116,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=ściekach,f=50
  word=święconą,f=50
  word=żołądkowe,f=50
+ word=żądza,f=50
  word=Deo,f=50
  word=Godlewski,f=50
  word=Islandią,f=50
@@ -60418,7 +60449,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=epitetów,f=50
  word=feministki,f=50
  word=feniksa,f=50
- word=gwałtownemu,f=50
  word=galaktyka,f=47
  word=tamże,f=47
  word=guberni,f=47
@@ -64417,6 +64447,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=chrześcijanina,f=44
  word=dobrzyńskiej,f=44
  word=domenie,f=44
+ word=dzięcioł,f=44
  word=egzemplarzu,f=44
  word=emigracją,f=44
  word=emitowano,f=44
@@ -64647,6 +64678,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=potworami,f=44
  word=prochów,f=44
  word=produkowało,f=44
+ word=prostytutka,f=44
  word=prostytutką,f=44
  word=przechodzącym,f=44
  word=przedwczesnego,f=44
@@ -64974,6 +65006,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=balonami,f=44
  word=basztą,f=44
  word=bibliotekarzy,f=44
+ word=cielesne,f=44
  word=ciągnięcia,f=44
  word=donosu,f=44
  word=dużemu,f=44
@@ -66422,6 +66455,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=nieskuteczność,f=44
  word=nieuchronnej,f=44
  word=niewidzialnego,f=44
+ word=nonsens,f=44
  word=obrania,f=44
  word=odbytym,f=44
  word=odnoszącej,f=44
@@ -67036,10 +67070,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=gazetka,f=44
  word=generowaniu,f=44
  word=grzałki,f=44
- word=góralki,f=44
- word=głębią,f=44
- word=habitat,f=44
- word=haute,f=44
  word=ros,f=40
  word=gromady,f=40
  word=przyłączono,f=40
@@ -68841,6 +68871,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=utwardzoną,f=40
  word=uwiódł,f=40
  word=versus,f=40
+ word=walenie,f=40
  word=wbudowana,f=40
  word=wchłonęła,f=40
  word=wciśnięcie,f=40
@@ -68932,6 +68963,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=dysfunkcji,f=40
  word=dyskwalifikację,f=40
  word=eliminacyjnego,f=40
+ word=erotyczna,f=40
  word=estradowy,f=40
  word=faktorii,f=40
  word=fizjologiczny,f=40
@@ -69161,6 +69193,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=kompozytorski,f=40
  word=kuropatwy,f=40
  word=laboratoryjnego,f=40
+ word=lochy,f=40
  word=mafię,f=40
  word=magistralę,f=40
  word=maltretowanie,f=40
@@ -69180,6 +69213,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=number,f=40
  word=objawiający,f=40
  word=ocaliła,f=40
+ word=odbyt,f=40
  word=odciążenia,f=40
  word=odprawiali,f=40
  word=ograniczonymi,f=40
@@ -69188,6 +69222,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=otoczka,f=40
  word=pantery,f=40
  word=paralotni,f=40
+ word=penis,f=40
  word=pianistki,f=40
  word=plastycznie,f=40
  word=pobożnego,f=40
@@ -71004,11 +71039,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=grekokatolicy,f=40
  word=grotów,f=40
  word=grupkach,f=40
- word=grzęda,f=40
- word=górnikom,f=40
- word=handlarzom,f=40
- word=hiena,f=40
- word=hipermarketu,f=40
  word=planetoida,f=34
  word=nawy,f=34
  word=piotrkowskiego,f=34
@@ -72703,6 +72733,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=narastania,f=34
  word=niechętnych,f=34
  word=niedalekim,f=34
+ word=nimfa,f=34
  word=obora,f=34
  word=obyczajowości,f=34
  word=oczyścił,f=34
@@ -73536,6 +73567,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=harfie,f=34
  word=histaminy,f=34
  word=hodowlany,f=34
+ word=homoseksualista,f=34
  word=humanistyczną,f=34
  word=ilustrujący,f=34
  word=imperator,f=34
@@ -75647,9 +75679,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=geofizyka,f=34
  word=gipsowy,f=34
  word=grzeszne,f=34
- word=gwardziści,f=34
- word=gwiezdny,f=34
- word=hatchbacka,f=34
  word=gwiazdozbiorze,f=27
  word=ukr,f=27
  word=słow,f=27
@@ -78088,6 +78117,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=skrzyp,f=27
  word=solistką,f=27
  word=spektroskopia,f=27
+ word=spermy,f=27
  word=ssp,f=27
  word=stajnią,f=27
  word=sterowanym,f=27
@@ -78328,6 +78358,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=pojawiającą,f=27
  word=polipów,f=27
  word=poprzysiągł,f=27
+ word=pornograficzny,f=27
  word=postulowała,f=27
  word=powierzano,f=27
  word=powoływana,f=27
@@ -79509,6 +79540,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=atlantyckiej,f=27
  word=awatara,f=27
  word=azymut,f=27
+ word=bambus,f=27
  word=bandami,f=27
  word=bazyliszka,f=27
  word=bluesową,f=27
@@ -80449,6 +80481,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=papirusów,f=27
  word=parterową,f=27
  word=patrzącego,f=27
+ word=penetracja,f=27
  word=pieniądzem,f=27
  word=piractwem,f=27
  word=piętrowymi,f=27
@@ -81279,7 +81312,6 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=granatowa,f=27
  word=granicom,f=27
  word=gromiąc,f=27
- word=głogu,f=27
  word=singel,f=15
  word=gromad,f=15
  word=SRR,f=15
@@ -85578,6 +85610,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=stylizowanymi,f=15
  word=sufizmu,f=15
  word=suwerenem,f=15
+ word=swastyka,f=15
  word=symbiozy,f=15
  word=symetrią,f=15
  word=szachulcowy,f=15
@@ -86374,6 +86407,7 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=jednorodności,f=15
  word=jugosłowiańską,f=15
  word=kapitalistycznym,f=15
+ word=kapucyn,f=15
  word=karczmarz,f=15
  word=karolińska,f=15
  word=kasetowa,f=15
@@ -88325,10 +88359,3 @@ dictionary=main:pl,locale=pl,description=Polski,date=1414726264,version=54
  word=gościńca,f=15
  word=grizzly,f=15
  word=gruntowymi,f=15
- word=gładkości,f=15
- word=głoszoną,f=15
- word=głownią,f=15
- word=hamowane,f=15
- word=hanowerski,f=15
- word=hawajska,f=15
- word=hierarchie,f=15

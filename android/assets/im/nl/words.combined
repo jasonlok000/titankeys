@@ -1506,6 +1506,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=gedeeltelijk,f=132
  word=gelegd,f=132
  word=gelegenheid,f=132
+ word=gemeenschap,f=132
  word=gescheiden,f=132
  word=gevangen,f=132
  word=gewicht,f=132
@@ -1643,6 +1644,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=kapel,f=131
  word=komst,f=131
  word=krachten,f=131
+ word=kruis,f=131
  word=kunstenaar,f=131
  word=leerde,f=131
  word=luchthaven,f=131
@@ -1700,6 +1702,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=vertaling,f=131
  word=vervoer,f=131
  word=vijftig,f=131
+ word=volwassen,f=131
  word=voorbeelden,f=131
  word=voornaamste,f=131
  word=vormden,f=131
@@ -1767,6 +1770,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=groeien,f=130
  word=hangt,f=130
  word=harde,f=130
+ word=hoogtepunt,f=130
  word=indien,f=130
  word=industrie,f=130
  word=ingang,f=130
@@ -1882,6 +1886,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=gekenmerkt,f=129
  word=gemakkelijk,f=129
  word=geweld,f=129
+ word=gezicht,f=129
  word=gitarist,f=129
  word=grenzen,f=129
  word=grondwet,f=129
@@ -4398,6 +4403,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=schaduw,f=117
  word=schilders,f=117
  word=schreven,f=117
+ word=seks,f=117
  word=sleutel,f=117
  word=sluis,f=117
  word=sneuvelde,f=117
@@ -4998,6 +5004,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=schildpad,f=115
  word=schoonheid,f=115
  word=sectie,f=115
+ word=seksueel,f=115
  word=serieuze,f=115
  word=shows,f=115
  word=signalen,f=115
@@ -5462,6 +5469,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=afgevaardigden,f=113
  word=afspraak,f=113
  word=althans,f=113
+ word=amateurs,f=113
  word=archieven,f=113
  word=arrestatie,f=113
  word=artistiek,f=113
@@ -6225,6 +6233,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=gekleed,f=111
  word=gelegenheden,f=111
  word=gelegerd,f=111
+ word=gemeen,f=111
  word=gemeld,f=111
  word=genen,f=111
  word=genootschap,f=111
@@ -7110,6 +7119,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=mijnbouw,f=109
  word=millennium,f=109
  word=motie,f=109
+ word=naakt,f=109
  word=naamgeving,f=109
  word=naamwoord,f=109
  word=naargelang,f=109
@@ -8066,6 +8076,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=pen,f=107
  word=plantensoorten,f=107
  word=plantentaxonomie,f=107
+ word=plassen,f=107
  word=plekke,f=107
  word=plot,f=107
  word=poppen,f=107
@@ -8920,6 +8931,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=bloeddruk,f=105
  word=bloedvaten,f=105
  word=bloeitijd,f=105
+ word=bloot,f=105
  word=brein,f=105
  word=brutoformule,f=105
  word=buitenaf,f=105
@@ -9171,6 +9183,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=programmering,f=105
  word=puntje,f=105
  word=racen,f=105
+ word=racisme,f=105
  word=recept,f=105
  word=rechthoekig,f=105
  word=rechtszaken,f=105
@@ -9651,6 +9664,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=mutanten,f=104
  word=mutatie,f=104
  word=muziekschool,f=104
+ word=naakte,f=104
  word=naald,f=104
  word=naastgelegen,f=104
  word=nationaalsocialisme,f=104
@@ -10820,6 +10834,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=meeldraden,f=102
  word=meespelen,f=102
  word=meewerken,f=102
+ word=meiden,f=102
  word=meningsverschillen,f=102
  word=metamorfose,f=102
  word=middags,f=102
@@ -10902,6 +10917,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=plakken,f=102
  word=plantaardige,f=102
  word=plantage,f=102
+ word=plas,f=102
  word=pleegden,f=102
  word=plichten,f=102
  word=porselein,f=102
@@ -11555,6 +11571,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=profeten,f=101
  word=prolongeerde,f=101
  word=proloog,f=101
+ word=prostituee,f=101
  word=protagonist,f=101
  word=protestant,f=101
  word=psychologisch,f=101
@@ -12107,6 +12124,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=jaloezie,f=100
  word=joint,f=100
  word=jonkheer,f=100
+ word=jood,f=100
  word=kaarsen,f=100
  word=kamertemperatuur,f=100
  word=karakteristieken,f=100
@@ -14856,6 +14874,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=zeventienjarige,f=97
  word=zijbeuken,f=97
  word=zodanige,f=97
+ word=zuigen,f=97
  word=zulk,f=97
  word=zwaargewond,f=97
  word=Andries,f=96
@@ -15537,6 +15556,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=statisch,f=96
  word=stempels,f=96
  word=sterrenstelsel,f=96
+ word=stijve,f=96
  word=stilstaande,f=96
  word=storingen,f=96
  word=straatbeeld,f=96
@@ -16287,6 +16307,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=middenstand,f=95
  word=militante,f=95
  word=miljonair,f=95
+ word=minderjarigen,f=95
  word=minerale,f=95
  word=miniaturen,f=95
  word=miskraam,f=95
@@ -16474,6 +16495,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=spoken,f=95
  word=spoorwegstations,f=95
  word=sportvereniging,f=95
+ word=spuiten,f=95
  word=staatsvorm,f=95
  word=stabiliseren,f=95
  word=stadsgenoot,f=95
@@ -17863,6 +17885,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=boezem,f=93
  word=bolwerken,f=93
  word=bootsen,f=93
+ word=bordeel,f=93
  word=bordelen,f=93
  word=boring,f=93
  word=borstkas,f=93
@@ -20012,6 +20035,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=entertainer,f=91
  word=envelop,f=91
  word=erevoorzitter,f=91
+ word=erotisch,f=91
  word=ertsen,f=91
  word=escorte,f=91
  word=estafetteteam,f=91
@@ -20668,6 +20692,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=vetgedrukt,f=91
  word=viaducten,f=91
  word=vierkanten,f=91
+ word=vies,f=91
  word=vinding,f=91
  word=virtuoze,f=91
  word=vleugelspanwijdte,f=91
@@ -21557,6 +21582,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=poolcirkel,f=90
  word=poppodium,f=90
  word=populieren,f=90
+ word=pornografie,f=90
  word=port,f=90
  word=posterijen,f=90
  word=postume,f=90
@@ -24960,6 +24986,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=gerold,f=87
  word=geschikter,f=87
  word=geschiktheid,f=87
+ word=geschoren,f=87
  word=geschrokken,f=87
  word=geslonken,f=87
  word=gespierd,f=87
@@ -25396,6 +25423,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=raadselachtige,f=87
  word=raadzaam,f=87
  word=racecircuit,f=87
+ word=racistisch,f=87
  word=raffinaderij,f=87
  word=randschrift,f=87
  word=range,f=87
@@ -25511,6 +25539,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=stuntman,f=87
  word=stuwdammen,f=87
  word=succesrijke,f=87
+ word=swastika,f=87
  word=symposia,f=87
  word=synagogen,f=87
  word=synchrone,f=87
@@ -27341,6 +27370,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=acceleratie,f=85
  word=accordeonist,f=85
  word=achterbank,f=85
+ word=achterdeur,f=85
  word=activiste,f=85
  word=acupunctuur,f=85
  word=additief,f=85
@@ -27918,6 +27948,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=muziekonderwijs,f=85
  word=muziekstroming,f=85
  word=muziekvideo,f=85
+ word=naaktheid,f=85
  word=nachtactieve,f=85
  word=nachtegaal,f=85
  word=nagekomen,f=85
@@ -29536,6 +29567,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=patriarchale,f=84
  word=patrouilleren,f=84
  word=peiling,f=84
+ word=penetratie,f=84
  word=pensionaris,f=84
  word=pijnbomen,f=84
  word=pits,f=84
@@ -29555,6 +29587,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=politbureau,f=84
  word=popband,f=84
  word=popster,f=84
+ word=porno,f=84
  word=pornoactrice,f=84
  word=positiever,f=84
  word=positivisme,f=84
@@ -31283,6 +31316,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=televisiekanaal,f=83
  word=televisies,f=83
  word=temperatuurstijging,f=83
+ word=tepel,f=83
  word=terdege,f=83
  word=terechtkwamen,f=83
  word=terminaal,f=83
@@ -32524,6 +32558,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=onthullingen,f=82
  word=ontkomt,f=82
  word=ontneemt,f=82
+ word=ontucht,f=82
  word=ontvreemd,f=82
  word=ontwerpster,f=82
  word=ontzeggen,f=82
@@ -33979,6 +34014,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=ligplaatsen,f=81
  word=lijnmotor,f=81
  word=lijstverbinding,f=81
+ word=likken,f=81
  word=limonade,f=81
  word=linkerheup,f=81
  word=litho,f=81
@@ -34365,11 +34401,13 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=sluw,f=81
  word=smaldeel,f=81
  word=smeltkroes,f=81
+ word=smerig,f=81
  word=smering,f=81
  word=snelheidsmeter,f=81
  word=sneltramlijn,f=81
  word=snuitpunt,f=81
  word=sociologen,f=81
+ word=sodomie,f=81
  word=sofisten,f=81
  word=softdrugs,f=81
  word=sojabonen,f=81
@@ -35679,6 +35717,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=hall,f=80
  word=hamsters,f=80
  word=han,f=80
+ word=handboeien,f=80
  word=handelende,f=80
  word=handelsnederzetting,f=80
  word=handelspartners,f=80
@@ -36362,6 +36401,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=smaragd,f=80
  word=smoes,f=80
  word=smog,f=80
+ word=snee,f=80
  word=snelstromende,f=80
  word=snelwandelaar,f=80
  word=snijvlak,f=80
@@ -36423,6 +36463,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=strijdkreet,f=80
  word=strijdmachten,f=80
  word=strijkt,f=80
+ word=strippen,f=80
  word=stroomlijn,f=80
  word=strooptochten,f=80
  word=studentenclubs,f=80
@@ -37831,6 +37872,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=kous,f=79
  word=kousenband,f=79
  word=krantenstrip,f=79
+ word=krikken,f=79
  word=krimp,f=79
  word=kromstaf,f=79
  word=kruisvormige,f=79
@@ -38026,6 +38068,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=onpartijdig,f=79
  word=onpopulair,f=79
  word=ontberen,f=79
+ word=ontbloot,f=79
  word=ontbrandde,f=79
  word=ontbrandt,f=79
  word=ontheemden,f=79
@@ -38262,6 +38305,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=separatie,f=79
  word=septiem,f=79
  word=sequenties,f=79
+ word=serienummers,f=79
  word=serveert,f=79
  word=showroom,f=79
  word=sierde,f=79
@@ -39331,6 +39375,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=campagneleider,f=78
  word=cartouche,f=78
  word=cartridge,f=78
+ word=castratie,f=78
  word=cava,f=78
  word=cavia,f=78
  word=centrifuge,f=78
@@ -39714,6 +39759,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=impliceerde,f=78
  word=impotentie,f=78
  word=inbedding,f=78
+ word=incestueuze,f=78
  word=independent,f=78
  word=indringend,f=78
  word=inerte,f=78
@@ -40187,6 +40233,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=polka,f=78
  word=polymeriseren,f=78
  word=poneerde,f=78
+ word=pooier,f=78
  word=popje,f=78
  word=populariseren,f=78
  word=populisme,f=78
@@ -40637,6 +40684,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=verklede,f=78
  word=verkrachter,f=78
  word=verkrijging,f=78
+ word=verleidelijk,f=78
  word=vermomt,f=78
  word=vernederingen,f=78
  word=vernieuwers,f=78
@@ -42209,6 +42257,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=platenzaak,f=77
  word=plattelandsgemeente,f=77
  word=plausibel,f=77
+ word=playboy,f=77
  word=plezierig,f=77
  word=plug,f=77
  word=po,f=77
@@ -42227,6 +42276,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=poppenspel,f=77
  word=poppodia,f=77
  word=populistisch,f=77
+ word=pornografisch,f=77
  word=portiek,f=77
  word=postdoctorale,f=77
  word=poststukken,f=77
@@ -44248,6 +44298,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=pedofielen,f=76
  word=pelshandel,f=76
  word=pentagram,f=76
+ word=penthouse,f=76
  word=peperdure,f=76
  word=perfectionist,f=76
  word=periostracum,f=76
@@ -47082,6 +47133,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=toonhoogtes,f=75
  word=toorts,f=75
  word=topklasse,f=75
+ word=topless,f=75
  word=toponymie,f=75
  word=toptijd,f=75
  word=torpedeerde,f=75
@@ -48155,6 +48207,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=caroteen,f=74
  word=carter,f=74
  word=cartesisch,f=74
+ word=castraat,f=74
  word=centralisme,f=74
  word=chemin,f=74
  word=chocolademelk,f=74
@@ -48677,6 +48730,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=levenssfeer,f=74
  word=leveranties,f=74
  word=liberal,f=74
+ word=libido,f=74
  word=lichaamskleur,f=74
  word=lichtheid,f=74
  word=liederencyclus,f=74
@@ -48974,6 +49028,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=poolvossen,f=74
  word=poorter,f=74
  word=popmuzikant,f=74
+ word=pornoster,f=74
  word=portieren,f=74
  word=portrettist,f=74
  word=poststuk,f=74
@@ -48995,6 +49050,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=prolactine,f=74
  word=prominentere,f=74
  word=propagandafilm,f=74
+ word=proxy,f=74
  word=psychoanalytische,f=74
  word=psychopathologie,f=74
  word=puriteinen,f=74
@@ -49200,6 +49256,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=strekten,f=74
  word=strijdbare,f=74
  word=strijdperk,f=74
+ word=stripper,f=74
  word=stripweekblad,f=74
  word=studiegebied,f=74
  word=studieobject,f=74
@@ -50880,6 +50937,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=nan,f=73
  word=naoorlogs,f=73
  word=narratieve,f=73
+ word=naturisme,f=73
  word=natuurvorser,f=73
  word=neergekeken,f=73
  word=neergekomen,f=73
@@ -51204,6 +51262,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=schizofrene,f=73
  word=schlagers,f=73
  word=schlagerzanger,f=73
+ word=schoft,f=73
  word=schokdempers,f=73
  word=scholekster,f=73
  word=scholingsgraad,f=73
@@ -51343,6 +51402,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=stofwolk,f=73
  word=stomverbaasd,f=73
  word=stories,f=73
+ word=stout,f=73
  word=strandjes,f=73
  word=stressstoornis,f=73
  word=strijdbijl,f=73
@@ -52853,6 +52913,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=legeren,f=72
  word=leidinggeven,f=72
  word=lensvormig,f=72
+ word=lesbienne,f=72
  word=lettercombinatie,f=72
  word=levensgeschiedenis,f=72
  word=levensvatbaarheid,f=72
@@ -52872,6 +52933,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=lijkrede,f=72
  word=lijnmotoren,f=72
  word=lijvig,f=72
+ word=likt,f=72
  word=linden,f=72
  word=linkerkolom,f=72
  word=lippenstift,f=72
@@ -56760,6 +56822,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=bagger,f=70
  word=bakte,f=70
  word=balanceert,f=70
+ word=balzak,f=70
  word=bami,f=70
  word=bananenplantages,f=70
  word=banditisme,f=70
@@ -62594,6 +62657,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=recruten,f=68
  word=rederijkerskamers,f=68
  word=redes,f=68
+ word=reet,f=68
  word=referee,f=68
  word=refereerden,f=68
  word=referentievlak,f=68
@@ -63444,6 +63508,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=wielerteam,f=68
  word=wielerwereld,f=68
  word=wierookvat,f=68
+ word=wijf,f=68
  word=wijkpark,f=68
  word=wijnrode,f=68
  word=wijsgeren,f=68
@@ -64206,6 +64271,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=natuurlijkheid,f=67
  word=natuurontwikkelingsgebied,f=67
  word=neoconservatieve,f=67
+ word=neonazi,f=67
  word=neonazistische,f=67
  word=nes,f=67
  word=neuropsycholoog,f=67
@@ -65914,6 +65980,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=klokkengieterij,f=66
  word=kloostergoederen,f=66
  word=kloosterwezen,f=66
+ word=kloot,f=66
  word=klopper,f=66
  word=klossen,f=66
  word=kneedbaar,f=66
@@ -67794,6 +67861,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=bestuurswetenschappen,f=65
  word=betaler,f=65
  word=betalingsachterstand,f=65
+ word=betasten,f=65
  word=betekening,f=65
  word=beteugeld,f=65
  word=betimmering,f=65
@@ -69547,6 +69615,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=schoolcarrière,f=65
  word=schoolfeest,f=65
  word=schooljeugd,f=65
+ word=schoolmeisje,f=65
  word=schoolwet,f=65
  word=schoonheden,f=65
  word=schoonspringer,f=65
@@ -73971,6 +74040,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=luchtvaartgeschiedenis,f=63
  word=luchtvracht,f=63
  word=luchtwachttorens,f=63
+ word=luilak,f=63
  word=luminescentie,f=63
  word=lunet,f=63
  word=lusteloosheid,f=63
@@ -74011,6 +74081,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=marketingterm,f=63
  word=martelwerktuig,f=63
  word=martiale,f=63
+ word=masochist,f=63
  word=massacre,f=63
  word=massahysterie,f=63
  word=massatraagheid,f=63
@@ -75567,6 +75638,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=vorstenpaar,f=63
  word=vorstschade,f=63
  word=vossenstaart,f=63
+ word=voyeurisme,f=63
  word=vrachtluchtvaartmaatschappij,f=63
  word=vrachtversie,f=63
  word=vrederechters,f=63
@@ -76795,6 +76867,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=krachtenveld,f=62
  word=kransje,f=62
  word=kreukelzone,f=62
+ word=kreunen,f=62
  word=kringetje,f=62
  word=kromzwaarden,f=62
  word=kronkelig,f=62
@@ -77454,6 +77527,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=strelen,f=62
  word=strijdtonelen,f=62
  word=strijkstokken,f=62
+ word=striptease,f=62
  word=strookten,f=62
  word=stroomafnemers,f=62
  word=stroomrug,f=62
@@ -79403,6 +79477,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=pientere,f=61
  word=pinautomaten,f=61
  word=piramidespelen,f=61
+ word=pis,f=61
  word=plaatvormige,f=61
  word=planschade,f=61
  word=plantencel,f=61
@@ -82734,6 +82809,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=zijlinies,f=60
  word=zijtakjes,f=60
  word=zinnebeelden,f=60
+ word=zinnelijkheid,f=60
  word=zinspelen,f=60
  word=zolderkamertje,f=60
  word=zombiefilms,f=60
@@ -83324,6 +83400,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=deer,f=59
  word=defensieminister,f=59
  word=definieerbaar,f=59
+ word=dekhengst,f=59
  word=dekkingsgebied,f=59
  word=dekzeil,f=59
  word=delegatielid,f=59
@@ -84457,6 +84534,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=sleuteltje,f=59
  word=slijter,f=59
  word=slingerbeweging,f=59
+ word=slipje,f=59
  word=slokte,f=59
  word=sloperij,f=59
  word=slotnoot,f=59
@@ -90239,6 +90317,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=verbruiksbelasting,f=57
  word=verbum,f=57
  word=verdergaand,f=57
+ word=verdomme,f=57
  word=verdraagzame,f=57
  word=verdragsorganisatie,f=57
  word=verdwijnend,f=57
@@ -90320,6 +90399,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=viervoud,f=57
  word=vijfhoeken,f=57
  word=vijfpuntig,f=57
+ word=vingeren,f=57
  word=vingeroefening,f=57
  word=vingervlugheid,f=57
  word=vioolconcerto,f=57
@@ -91049,6 +91129,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=bijleren,f=56
  word=bijsluiters,f=56
  word=bijtekenen,f=56
+ word=billenkoek,f=56
  word=bilzekruid,f=56
  word=binnenbracht,f=56
  word=binnengereden,f=56
@@ -91649,6 +91730,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=glidkruid,f=56
  word=glijvlak,f=56
  word=godsdiensthistoricus,f=56
+ word=godverdomme,f=56
  word=godvrezende,f=56
  word=godvruchtige,f=56
  word=goededoelenorganisaties,f=56
@@ -92332,6 +92414,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=notitieblok,f=56
  word=noveen,f=56
  word=noviteiten,f=56
+ word=nudisme,f=56
  word=objectiever,f=56
  word=objectiveren,f=56
  word=observatieposten,f=56
@@ -92922,6 +93005,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=seismogram,f=56
  word=seitan,f=56
  word=seksespecifieke,f=56
+ word=seksvideo,f=56
  word=sentimentalisme,f=56
  word=sergeants,f=56
  word=seriematig,f=56
@@ -93041,6 +93125,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=standaardmeter,f=56
  word=standaardmolen,f=56
  word=standaardwaarde,f=56
+ word=standjes,f=56
  word=standwerkers,f=56
  word=stapelbaar,f=56
  word=stapeltjes,f=56
@@ -93734,6 +93819,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=zijsprong,f=56
  word=zilverfolie,f=56
  word=zilverprijs,f=56
+ word=zinnelijk,f=56
  word=zinvoller,f=56
  word=zitter,f=56
  word=zittingsjaar,f=56
@@ -95696,6 +95782,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=muziektradities,f=55
  word=mycologen,f=55
  word=naaktloperij,f=55
+ word=naaktmodellen,f=55
  word=naamfeest,f=55
  word=naamkunde,f=55
  word=nabuur,f=55
@@ -95712,6 +95799,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=nakomer,f=55
  word=nasynchroniseren,f=55
  word=nationaliteitsbeginsel,f=55
+ word=naturist,f=55
  word=natuurbeheerders,f=55
  word=natuurcompensatie,f=55
  word=natuurfilms,f=55
@@ -96508,6 +96596,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=spinnerijen,f=55
  word=spioneert,f=55
  word=spitsten,f=55
+ word=spleetje,f=55
  word=splintergroepering,f=55
  word=splitten,f=55
  word=spoedberaad,f=55
@@ -96887,6 +96976,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=verdedigingswapen,f=55
  word=verdedigingswapens,f=55
  word=verdiepten,f=55
+ word=verdomd,f=55
  word=verdragsbepalingen,f=55
  word=verdriedubbelde,f=55
  word=verdrukte,f=55
@@ -98371,6 +98461,7 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=ergerlijke,f=53
  word=ergon,f=53
  word=ervarenheid,f=53
+ word=escortservice,f=53
  word=essenhouten,f=53
  word=etaleert,f=53
  word=eurocentrisme,f=53
@@ -99908,94 +99999,3 @@ dictionary=main:nl,locale=nl,description=Nederlands,date=1414726258,version=54
  word=personeelsfunctionaris,f=53
  word=personeelsgebrek,f=53
  word=personeelsselectie,f=53
- word=persoonlijkheidsontwikkeling,f=53
- word=persoonsbeveiliging,f=53
- word=perspectivisch,f=53
- word=petrischaal,f=53
- word=petroleumindustrie,f=53
- word=petroleumproducten,f=53
- word=picogram,f=53
- word=pies,f=53
- word=pijlkruid,f=53
- word=pijpaarde,f=53
- word=pilletjes,f=53
- word=pilotproject,f=53
- word=pinassen,f=53
- word=pinchhitter,f=53
- word=pinkstermaandag,f=53
- word=pinnetje,f=53
- word=pirouettes,f=53
- word=pistolet,f=53
- word=pistolets,f=53
- word=pitabroodje,f=53
- word=pitbull,f=53
- word=plaatsgrijpt,f=53
- word=plaatstalen,f=53
- word=plafon,f=53
- word=plafondhoogte,f=53
- word=plakkers,f=53
- word=plakten,f=53
- word=plamuurmes,f=53
- word=plantenbakken,f=53
- word=plateautje,f=53
- word=platleggen,f=53
- word=platvloers,f=53
- word=plechtstatige,f=53
- word=pleeg,f=53
- word=pleisterkalk,f=53
- word=plezieriger,f=53
- word=plichtsgetrouwe,f=53
- word=ploeterde,f=53
- word=plof,f=53
- word=pluimpjes,f=53
- word=pluimveehouderijen,f=53
- word=pluimveehouders,f=53
- word=plunjerpomp,f=53
- word=plutoniumbom,f=53
- word=poenale,f=53
- word=poesta,f=53
- word=polderhuis,f=53
- word=polemiseerde,f=53
- word=politiedistrict,f=53
- word=politiegebouw,f=53
- word=politiemedewerkers,f=53
- word=politiestation,f=53
- word=poloshirt,f=53
- word=polsband,f=53
- word=polsstokspringen,f=53
- word=polymorfismen,f=53
- word=ponen,f=53
- word=poolhonden,f=53
- word=pootgoed,f=53
- word=popjournalistiek,f=53
- word=popmusici,f=53
- word=poppenspelen,f=53
- word=pornoblad,f=53
- word=pornograaf,f=53
- word=porseleinaarde,f=53
- word=portefeuilleverdeling,f=53
- word=portiersloge,f=53
- word=portretschilders,f=53
- word=postkamer,f=53
- word=posttarieven,f=53
- word=posttreinen,f=53
- word=postuniversitair,f=53
- word=postwagens,f=53
- word=postweg,f=53
- word=potent,f=53
- word=potkachel,f=53
- word=potloodtekeningen,f=53
- word=praatgroep,f=53
- word=praatpaal,f=53
- word=praktijkgedeelte,f=53
- word=praktijkproef,f=53
- word=praktijksituaties,f=53
- word=predikantenopleiding,f=53
- word=preekverbod,f=53
- word=preferenties,f=53
- word=preker,f=53
- word=preoccupaties,f=53
- word=presbyterium,f=53
- word=prescriptieve,f=53
- word=prestigeobject,f=53
- word=prettigst,f=53

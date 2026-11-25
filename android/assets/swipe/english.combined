@@ -134023,7 +134023,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=walkups,f=15,flags=,originalFreq=15
  word=walleye's,f=15,flags=,originalFreq=15
  word=walleyed,f=15,flags=,originalFreq=15
- word=walrus's,f=15,flags=offensive,originalFreq=15
+ word=walrus's,f=15,flags=,originalFreq=15
  word=warbonnets,f=15,flags=,originalFreq=15
  word=wardresses,f=15,flags=,originalFreq=15
  word=warfarin's,f=15,flags=,originalFreq=15
@@ -164129,9 +164129,9 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=Bacula's,f=0,flags=medical,originalFreq=1
  word=Bawdies,f=0,flags=babytalk,originalFreq=1
  word=Boff's,f=0,flags=babytalk,originalFreq=1
- word=Boffs,f=0,flags=offensive,originalFreq=1
+ word=Boffs,f=1,flags=,originalFreq=1
  word=Bordello's,f=0,flags=medical,originalFreq=1
- word=Bullshits,f=0,flags=offensive,originalFreq=1
+ word=Bullshits,f=1,flags=,originalFreq=1
  word=Buxomly,f=0,flags=babytalk,originalFreq=1
  word=CI,f=0,flags=,originalFreq=86
  word=CR,f=0,flags=,originalFreq=112
@@ -164158,16 +164158,16 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=GE,f=0,flags=abbreviation,originalFreq=103
  word=Garmin,f=0,flags=hand-added,originalFreq=0
  word=Gog,f=0,flags=,originalFreq=64
- word=Gooch,f=0,flags=offensive,originalFreq=69
- word=Gooch's,f=0,flags=offensive,originalFreq=38
- word=Gooches,f=0,flags=offensive,originalFreq=1
+ word=Gooch,f=69,flags=,originalFreq=69
+ word=Gooch's,f=38,flags=,originalFreq=38
+ word=Gooches,f=1,flags=,originalFreq=1
  word=HW,f=0,flags=abbreviation,originalFreq=64
  word=Heinies,f=0,flags=babytalk,originalFreq=21
  word=Heiny,f=0,flags=babytalk,originalFreq=10
  word=Hermaphroditus,f=0,flags=medical,originalFreq=41
- word=Hooker,f=0,flags=offensive,originalFreq=86
+ word=Hooker,f=86,flags=,originalFreq=86
  word=Hooker's,f=0,flags=babytalk,originalFreq=63
- word=Hornier,f=0,flags=offensive,originalFreq=1
+ word=Hornier,f=1,flags=,originalFreq=1
  word=Hymen,f=0,flags=medical,originalFreq=45
  word=Hymen's,f=0,flags=medical,originalFreq=1
  word=IMAX,f=0,flags=hand-added,originalFreq=0
@@ -164177,7 +164177,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=Inc,f=0,flags=abbreviation,originalFreq=122
  word=KKK,f=0,flags=abbreviation,originalFreq=79
  word=KR,f=0,flags=,originalFreq=82
- word=Kahuna's,f=0,flags=offensive,originalFreq=1
+ word=Kahuna's,f=1,flags=,originalFreq=1
  word=Kaif's,f=0,flags=medical,originalFreq=15
  word=Kaka's,f=0,flags=babytalk,originalFreq=15
  word=LAN,f=0,flags=,originalFreq=95
@@ -164186,7 +164186,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=LR,f=0,flags=,originalFreq=82
  word=LSAT,f=0,flags=abbreviation,originalFreq=70
  word=Labia's,f=0,flags=medical,originalFreq=10
- word=Lech's,f=0,flags=offensive,originalFreq=1
+ word=Lech's,f=1,flags=,originalFreq=1
  word=Liam,f=0,flags=,originalFreq=91
  word=Lochiorrhea,f=0,flags=medical,originalFreq=1
  word=Luz,f=0,flags=,originalFreq=77
@@ -164197,7 +164197,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=Maj,f=0,flags=,originalFreq=94
  word=Mariposa's,f=0,flags=babytalk,originalFreq=1
  word=Menstruation's,f=0,flags=medical,originalFreq=1
- word=Minge's,f=0,flags=offensive,originalFreq=1
+ word=Minge's,f=1,flags=,originalFreq=1
  word=Mt,f=0,flags=,originalFreq=101
  word=NB,f=0,flags=,originalFreq=87
  word=NC,f=0,flags=,originalFreq=109
@@ -164208,7 +164208,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=Nudeness,f=0,flags=babytalk,originalFreq=1
  word=Nudie's,f=0,flags=babytalk,originalFreq=15
  word=Nympho's,f=0,flags=babytalk,originalFreq=1
- word=Nymphos,f=0,flags=offensive,originalFreq=1
+ word=Nymphos,f=1,flags=,originalFreq=1
  word=OS,f=0,flags=abbreviation,originalFreq=119
  word=Orgasm's,f=0,flags=medical,originalFreq=1
  word=Orgy's,f=0,flags=medical,originalFreq=15
@@ -164224,9 +164224,9 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=STD,f=0,flags=abbreviation,originalFreq=86
  word=Semen's,f=0,flags=medical,originalFreq=1
  word=Sexism's,f=0,flags=medical,originalFreq=1
- word=Shithead's,f=0,flags=offensive,originalFreq=1
+ word=Shithead's,f=1,flags=,originalFreq=1
  word=Siam,f=0,flags=,originalFreq=85
- word=Skat's,f=0,flags=offensive,originalFreq=1
+ word=Skat's,f=1,flags=,originalFreq=1
  word=Smegma's,f=0,flags=medical,originalFreq=1
  word=Sri,f=0,flags=,originalFreq=116
  word=Stirling,f=0,flags=,originalFreq=95
@@ -164235,9 +164235,9 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=TFT,f=0,flags=abbreviation,originalFreq=72
  word=TGIF,f=0,flags=abbreviation,originalFreq=67
  word=TM,f=0,flags=,originalFreq=95
- word=TUP,f=0,flags=offensive,originalFreq=52
+ word=TUP,f=52,flags=,originalFreq=52
  word=Tampax,f=0,flags=medical,originalFreq=23
- word=Titty's,f=0,flags=offensive,originalFreq=1
+ word=Titty's,f=1,flags=,originalFreq=1
  word=UAE,f=0,flags=abbreviation,originalFreq=99
  word=US,f=0,flags=,originalFreq=152
  word=UnitedStates,f=0,not_a_word=true
@@ -164246,12 +164246,12 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=Utero's,f=0,flags=medical,originalFreq=1
  word=WB,f=0,flags=,originalFreq=104
  word=Weers,f=0,flags=babytalk,originalFreq=1
- word=Whang's,f=0,flags=offensive,originalFreq=1
- word=Whanger,f=0,flags=offensive,originalFreq=1
- word=Whoremasters,f=0,flags=offensive,originalFreq=1
+ word=Whang's,f=1,flags=,originalFreq=1
+ word=Whanger,f=1,flags=,originalFreq=1
+ word=Whoremasters,f=1,flags=,originalFreq=1
  word=XP,f=0,flags=,originalFreq=104
  word=XXX,f=0,flags=abbreviation,originalFreq=89
- word=Yoni's,f=0,flags=offensive,originalFreq=1
+ word=Yoni's,f=1,flags=,originalFreq=1
  word=acct,f=0,flags=,originalFreq=25
  word=acomodate,f=0,not_a_word=true
   shortcut=accommodate,f=whitelist
@@ -164287,12 +164287,12 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=asexuals,f=0,flags=medical,originalFreq=43
  word=aspermatism,f=0,flags=medical,originalFreq=1
  word=aspermia,f=0,flags=medical,originalFreq=18
- word=ass,f=0,flags=offensive,originalFreq=92
- word=ass's,f=0,flags=offensive,originalFreq=44
- word=asses,f=0,flags=offensive,originalFreq=73
- word=asshole,f=0,flags=offensive,originalFreq=65
- word=asshole's,f=0,flags=offensive,originalFreq=1
- word=assholes,f=0,flags=offensive,originalFreq=45
+ word=ass,f=92,flags=,originalFreq=92
+ word=ass's,f=44,flags=,originalFreq=44
+ word=asses,f=73,flags=,originalFreq=73
+ word=asshole,f=65,flags=,originalFreq=65
+ word=asshole's,f=1,flags=,originalFreq=1
+ word=assholes,f=45,flags=,originalFreq=45
  word=au,f=0,flags=,originalFreq=105
  word=auk,f=0,flags=,originalFreq=61
  word=autosexing,f=0,flags=medical,originalFreq=10
@@ -164301,26 +164301,26 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=awn,f=0,flags=,originalFreq=52
  word=babes,f=0,flags=n,originalFreq=62
  word=baculums,f=0,flags=medical,originalFreq=1
- word=ballsier,f=0,flags=offensive,originalFreq=21
- word=ballsiest,f=0,flags=offensive,originalFreq=18
- word=ballsiness,f=0,flags=offensive,originalFreq=1
- word=ballsy,f=0,flags=offensive,originalFreq=47
+ word=ballsier,f=21,flags=,originalFreq=21
+ word=ballsiest,f=18,flags=,originalFreq=18
+ word=ballsiness,f=1,flags=,originalFreq=1
+ word=ballsy,f=47,flags=,originalFreq=47
  word=bareback,f=0,flags=n,originalFreq=66
- word=bastard,f=0,flags=offensive,originalFreq=88
- word=bastard's,f=0,flags=offensive,originalFreq=18
- word=bastardry,f=0,flags=offensive,originalFreq=10
+ word=bastard,f=88,flags=,originalFreq=88
+ word=bastard's,f=18,flags=,originalFreq=18
+ word=bastardry,f=10,flags=,originalFreq=10
  word=bastards,f=0,flags=medical,originalFreq=73
- word=bastardy,f=0,flags=offensive,originalFreq=44
+ word=bastardy,f=44,flags=,originalFreq=44
  word=baton,f=0,flags=n,originalFreq=94
  word=batons,f=0,flags=n,originalFreq=79
  word=bawd,f=0,flags=babytalk,originalFreq=40
  word=bawdier,f=0,flags=babytalk,originalFreq=27
  word=bawdiest,f=0,flags=babytalk,originalFreq=23
  word=bawdily,f=0,flags=babytalk,originalFreq=15
- word=bawdiness,f=0,flags=offensive,originalFreq=41
+ word=bawdiness,f=41,flags=,originalFreq=41
  word=bawdry,f=0,flags=babytalk,originalFreq=23
  word=bawds,f=0,flags=babytalk,originalFreq=21
- word=bawdyhouse,f=0,flags=offensive,originalFreq=15
+ word=bawdyhouse,f=15,flags=,originalFreq=15
  word=belladonna,f=0,flags=n,originalFreq=59
  word=bern,f=0,not_a_word=true
   shortcut=been,f=whitelist
@@ -164341,16 +164341,16 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=bitchy,f=0,flags=babytalk,originalFreq=59
  word=blacks,f=0,flags=,originalFreq=0
  word=blowhole,f=0,flags=n,originalFreq=61
- word=blowjob,f=0,flags=offensive,originalFreq=44
- word=blowjobs,f=0,flags=offensive,originalFreq=21
- word=boff,f=0,flags=offensive,originalFreq=15
- word=bollocking,f=0,flags=offensive,originalFreq=33
- word=bollocks,f=0,flags=offensive,originalFreq=63
+ word=blowjob,f=44,flags=,originalFreq=44
+ word=blowjobs,f=21,flags=,originalFreq=21
+ word=boff,f=15,flags=,originalFreq=15
+ word=bollocking,f=33,flags=,originalFreq=33
+ word=bollocks,f=63,flags=,originalFreq=63
  word=bondage,f=0,flags=,originalFreq=92
  word=boner,f=0,flags=r,originalFreq=38
  word=boners,f=0,flags=,originalFreq=10
  word=boob,f=0,flags=n,originalFreq=50
- word=boobed,f=0,flags=offensive,originalFreq=1
+ word=boobed,f=1,flags=,originalFreq=1
  word=boobs,f=0,flags=babytalk,originalFreq=53
  word=booty,f=0,flags=n,originalFreq=87
  word=bordello,f=0,flags=medical,originalFreq=61
@@ -164362,26 +164362,26 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=brothels,f=0,flags=medical,originalFreq=90
  word=bugger,f=0,flags=r,originalFreq=57
  word=buggery,f=0,flags=r,originalFreq=61
- word=bullshit,f=0,flags=offensive,originalFreq=73
- word=bullshitted,f=0,flags=offensive,originalFreq=10
- word=bullshitter,f=0,flags=offensive,originalFreq=25
- word=bullshitters,f=0,flags=offensive,originalFreq=21
- word=bullshitting,f=0,flags=offensive,originalFreq=25
+ word=bullshit,f=73,flags=,originalFreq=73
+ word=bullshitted,f=10,flags=,originalFreq=10
+ word=bullshitter,f=25,flags=,originalFreq=25
+ word=bullshitters,f=21,flags=,originalFreq=21
+ word=bullshitting,f=25,flags=,originalFreq=25
  word=bunghole,f=0,flags=r,originalFreq=35
  word=bustier,f=0,flags=babytalk,originalFreq=48
  word=bustiest,f=0,flags=babytalk,originalFreq=10
  word=busty,f=0,flags=babytalk,originalFreq=58
  word=butch,f=0,flags=,originalFreq=68
  word=butt,f=0,flags=n,originalFreq=94
- word=butthead,f=0,flags=offensive,originalFreq=18
- word=butthole,f=0,flags=offensive,originalFreq=18
+ word=butthead,f=18,flags=,originalFreq=18
+ word=butthole,f=18,flags=,originalFreq=18
  word=buttock,f=0,flags=babytalk,originalFreq=64
  word=buttocked,f=0,flags=babytalk,originalFreq=15
  word=buttocks,f=0,flags=babytalk,originalFreq=88
  word=butts,f=0,flags=n,originalFreq=75
  word=buxom,f=0,flags=babytalk,originalFreq=65
- word=cajon,f=0,flags=offensive,originalFreq=35
- word=cajones,f=0,flags=offensive,originalFreq=21
+ word=cajon,f=35,flags=,originalFreq=35
+ word=cajones,f=21,flags=,originalFreq=21
  word=callboy,f=0,flags=n,originalFreq=10
  word=carnal,f=0,flags=n,originalFreq=77
  word=carnality,f=0,flags=n,originalFreq=40
@@ -164396,8 +164396,8 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=castrato's,f=0,flags=medical,originalFreq=10
  word=castrator,f=0,flags=medical,originalFreq=18
  word=castrators,f=0,flags=medical,originalFreq=1
- word=cathouse,f=0,flags=offensive,originalFreq=25
- word=cathouses,f=0,flags=offensive,originalFreq=1
+ word=cathouse,f=25,flags=,originalFreq=25
+ word=cathouses,f=1,flags=,originalFreq=1
  word=catsuit,f=0,flags=,originalFreq=57
  word=catsuits,f=0,flags=,originalFreq=44
  word=cervicectomy,f=0,flags=medical,originalFreq=1
@@ -164435,8 +164435,8 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=cockier,f=0,flags=,originalFreq=27
  word=cocking,f=0,flags=,originalFreq=73
  word=cocks,f=0,flags=,originalFreq=71
- word=cocksucker,f=0,flags=offensive,originalFreq=41
- word=cocksuckers,f=0,flags=offensive,originalFreq=15
+ word=cocksucker,f=41,flags=,originalFreq=41
+ word=cocksuckers,f=15,flags=,originalFreq=15
  word=codeine,f=0,flags=s,originalFreq=80
  word=codpiece,f=0,flags=medical,originalFreq=50
  word=codpieces,f=0,flags=medical,originalFreq=35
@@ -164444,15 +164444,15 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=coitally,f=0,flags=medical,originalFreq=1
  word=coition,f=0,flags=medical,originalFreq=32
  word=coitus,f=0,flags=medical,originalFreq=64
- word=cojones,f=0,flags=offensive,originalFreq=45
+ word=cojones,f=45,flags=,originalFreq=45
  word=concubinage,f=0,flags=medical,originalFreq=59
  word=condom,f=0,flags=medical,originalFreq=80
  word=condom's,f=0,flags=medical,originalFreq=1
  word=condoms,f=0,flags=medical,originalFreq=86
  word=config,f=0,flags=,originalFreq=61
- word=cooch,f=0,flags=offensive,originalFreq=27
- word=coochie,f=0,flags=offensive,originalFreq=18
- word=cootch,f=0,flags=offensive,originalFreq=30
+ word=cooch,f=27,flags=,originalFreq=27
+ word=coochie,f=18,flags=,originalFreq=18
+ word=cootch,f=30,flags=,originalFreq=30
  word=coprolagnia,f=0,flags=medical,originalFreq=10
  word=coprolalia,f=0,flags=medical,originalFreq=48
  word=coprolite,f=0,flags=medical,originalFreq=42
@@ -164486,18 +164486,18 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=crotches,f=0,flags=r,originalFreq=42
  word=crystalluria,f=0,flags=medical,originalFreq=27
  word=cum,f=0,flags=,originalFreq=106
- word=cums,f=0,flags=offensive,originalFreq=10
+ word=cums,f=10,flags=,originalFreq=10
  word=cunnilinctus,f=0,flags=medical,originalFreq=10
  word=cunnilingus,f=0,flags=medical,originalFreq=61
  word=cunnus,f=0,flags=medical,originalFreq=33
- word=cunt,f=0,flags=offensive,originalFreq=69
- word=cunt's,f=0,flags=offensive,originalFreq=1
- word=cunts,f=0,flags=offensive,originalFreq=39
+ word=cunt,f=69,flags=,originalFreq=69
+ word=cunt's,f=1,flags=,originalFreq=1
+ word=cunts,f=39,flags=,originalFreq=39
  word=cuprammonium,f=0,flags=medical,originalFreq=10
  word=cybersex,f=0,flags=babytalk,originalFreq=51
  word=dago,f=0,flags=,originalFreq=0
  word=dammit,f=0,flags=nonword,originalFreq=43
- word=damn,f=0,flags=offensive,originalFreq=89
+ word=damn,f=89,flags=,originalFreq=89
  word=damned,f=0,flags=babytalk,originalFreq=86
  word=damning,f=0,flags=,originalFreq=76
  word=damns,f=0,flags=babytalk,originalFreq=40
@@ -164521,14 +164521,14 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=dev,f=0,flags=,originalFreq=73
  word=devirginized,f=0,flags=medical,originalFreq=1
  word=diazepam,f=0,flags=s,originalFreq=74
- word=dick,f=0,flags=offensive,originalFreq=68
+ word=dick,f=68,flags=,originalFreq=68
  word=dick's,f=0,flags=,originalFreq=15
- word=dicking,f=0,flags=offensive,originalFreq=15
+ word=dicking,f=15,flags=,originalFreq=15
  word=dicks,f=0,flags=,originalFreq=39
  word=didint,f=0,not_a_word=true
   shortcut=didn't,f=whitelist
- word=dildo,f=0,flags=offensive,originalFreq=69
- word=dildos,f=0,flags=offensive,originalFreq=62
+ word=dildo,f=69,flags=,originalFreq=69
+ word=dildos,f=62,flags=,originalFreq=62
  word=dogfood,f=0,flags=hand-added,originalFreq=0
  word=dogging,f=0,flags=n,originalFreq=56
  word=dominatrices,f=0,flags=medical,originalFreq=39
@@ -164598,10 +164598,10 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=falsies,f=0,flags=babytalk,originalFreq=23
  word=fannies,f=0,flags=babytalk,originalFreq=18
  word=fanny,f=0,flags=babytalk,originalFreq=51
- word=fart,f=0,flags=offensive,originalFreq=69
- word=farted,f=0,flags=offensive,originalFreq=41
- word=farting,f=0,flags=offensive,originalFreq=58
- word=farts,f=0,flags=offensive,originalFreq=56
+ word=fart,f=69,flags=,originalFreq=69
+ word=farted,f=41,flags=,originalFreq=41
+ word=farting,f=58,flags=,originalFreq=58
+ word=farts,f=56,flags=,originalFreq=56
  word=fave,f=0,flags=hand-added,originalFreq=0
  word=fecal,f=0,flags=medical,originalFreq=84
  word=fecaliths,f=0,flags=medical,originalFreq=10
@@ -164640,19 +164640,19 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=fornicators,f=0,flags=medical,originalFreq=37
  word=fornicatory,f=0,flags=medical,originalFreq=1
  word=fornicatrix,f=0,flags=medical,originalFreq=1
- word=frig,f=0,flags=offensive,originalFreq=1
- word=frigging,f=0,flags=offensive,originalFreq=25
+ word=frig,f=1,flags=,originalFreq=1
+ word=frigging,f=25,flags=,originalFreq=25
  word=frigs,f=0,flags=,originalFreq=0
  word=frottage,f=0,flags=n,originalFreq=47
- word=fuck,f=0,flags=offensive,originalFreq=91
- word=fuck's,f=0,flags=offensive,originalFreq=35
- word=fucked,f=0,flags=offensive,originalFreq=71
- word=fucker,f=0,flags=offensive,originalFreq=51
- word=fucker's,f=0,flags=offensive,originalFreq=10
- word=fuckers,f=0,flags=offensive,originalFreq=41
- word=fucking,f=0,flags=offensive,originalFreq=89
- word=fuckings,f=0,flags=offensive,originalFreq=15
- word=fucks,f=0,flags=offensive,originalFreq=41
+ word=fuck,f=91,flags=,originalFreq=91
+ word=fuck's,f=35,flags=,originalFreq=35
+ word=fucked,f=71,flags=,originalFreq=71
+ word=fucker,f=51,flags=,originalFreq=51
+ word=fucker's,f=10,flags=,originalFreq=10
+ word=fuckers,f=41,flags=,originalFreq=41
+ word=fucking,f=89,flags=,originalFreq=89
+ word=fuckings,f=15,flags=,originalFreq=15
+ word=fucks,f=41,flags=,originalFreq=41
  word=fwd,f=0,flags=,originalFreq=30
  word=gage,f=0,flags=,originalFreq=68
  word=gangbang,f=0,flags=n,originalFreq=40
@@ -164673,10 +164673,10 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=glandes,f=0,flags=,originalFreq=0
  word=glans,f=0,flags=medical,originalFreq=74
  word=glans's,f=0,flags=,originalFreq=0
- word=goddammit,f=0,flags=nonword:offensive,originalFreq=30
- word=goddamn,f=0,flags=offensive,originalFreq=62
- word=goddamned,f=0,flags=offensive,originalFreq=42
- word=goddamns,f=0,flags=offensive,originalFreq=1
+ word=goddammit,f=30,flags=,originalFreq=30
+ word=goddamn,f=62,flags=,originalFreq=62
+ word=goddamned,f=42,flags=,originalFreq=42
+ word=goddamns,f=1,flags=,originalFreq=1
  word=goldarn,f=0,flags=babytalk,originalFreq=1
  word=gollywog,f=0,flags=e,originalFreq=1
  word=gonad,f=0,flags=medical,originalFreq=58
@@ -164702,10 +164702,10 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=hardcore,f=0,flags=n,originalFreq=112
  word=harem,f=0,flags=,originalFreq=87
  word=harems,f=0,flags=,originalFreq=64
- word=harlot,f=0,flags=offensive,originalFreq=59
- word=harlot's,f=0,flags=offensive,originalFreq=23
- word=harlotry,f=0,flags=offensive,originalFreq=32
- word=harlots,f=0,flags=offensive,originalFreq=45
+ word=harlot,f=59,flags=,originalFreq=59
+ word=harlot's,f=23,flags=,originalFreq=23
+ word=harlotry,f=32,flags=,originalFreq=32
+ word=harlots,f=45,flags=,originalFreq=45
  word=hed,f=0,not_a_word=true
   shortcut=he'd,f=whitelist
  word=heh,f=0,flags=,originalFreq=53
@@ -164732,14 +164732,14 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=homo,f=0,flags=,originalFreq=0
  word=homos,f=0,flags=e,originalFreq=27
  word=hon,f=0,flags=,originalFreq=70
- word=hooker,f=0,flags=offensive,originalFreq=85
+ word=hooker,f=85,flags=,originalFreq=85
  word=hooker's,f=0,flags=babytalk,originalFreq=31
- word=hookers,f=0,flags=offensive,originalFreq=61
+ word=hookers,f=61,flags=,originalFreq=61
  word=horniest,f=0,flags=,originalFreq=0
- word=hornily,f=0,flags=offensive,originalFreq=1
- word=horniness,f=0,flags=offensive,originalFreq=23
- word=horny,f=0,flags=offensive,originalFreq=73
- word=horseshit,f=0,flags=offensive,originalFreq=27
+ word=hornily,f=1,flags=,originalFreq=1
+ word=horniness,f=23,flags=,originalFreq=23
+ word=horny,f=73,flags=,originalFreq=73
+ word=horseshit,f=27,flags=,originalFreq=27
  word=howd,f=0,not_a_word=true
   shortcut=how'd,f=whitelist
  word=howll,f=0,not_a_word=true
@@ -164748,7 +164748,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
   shortcut=how've,f=whitelist
  word=hoy,f=0,flags=,originalFreq=58
  word=hr,f=0,flags=abbreviation,originalFreq=82
- word=humping,f=0,flags=offensive,originalFreq=47
+ word=humping,f=47,flags=,originalFreq=47
  word=hustler,f=0,flags=n,originalFreq=74
  word=hymen,f=0,flags=medical,originalFreq=61
  word=hymenal,f=0,flags=medical,originalFreq=36
@@ -164798,12 +164798,12 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
   shortcut=it's a,f=whitelist
  word=jailbait,f=0,flags=p,originalFreq=31
  word=jerking,f=0,flags=r,originalFreq=67
- word=jism,f=0,flags=offensive,originalFreq=33
+ word=jism,f=33,flags=,originalFreq=33
  word=john,f=0,flags=,originalFreq=62
  word=junkie,f=0,flags=,originalFreq=70
  word=kW,f=0,flags=,originalFreq=113
- word=kahuna,f=0,flags=offensive,originalFreq=53
- word=kahunas,f=0,flags=offensive,originalFreq=21
+ word=kahuna,f=53,flags=,originalFreq=53
+ word=kahunas,f=21,flags=,originalFreq=21
  word=kaif,f=0,flags=medical,originalFreq=15
  word=kaka,f=0,flags=babytalk,originalFreq=48
  word=kakas,f=0,flags=babytalk,originalFreq=1
@@ -164819,7 +164819,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=lactating,f=0,flags=n,originalFreq=66
  word=lactation,f=0,flags=n,originalFreq=76
  word=lam,f=0,flags=,originalFreq=73
- word=lech,f=0,flags=offensive,originalFreq=32
+ word=lech,f=32,flags=,originalFreq=32
  word=lecher,f=0,flags=medical,originalFreq=42
  word=lecher's,f=0,flags=medical,originalFreq=1
  word=lecheries,f=0,flags=medical,originalFreq=1
@@ -164832,7 +164832,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=leching,f=0,flags=medical,originalFreq=1
  word=lei,f=0,flags=,originalFreq=80
  word=lem,f=0,flags=,originalFreq=35
- word=letch,f=0,flags=offensive,originalFreq=18
+ word=letch,f=18,flags=,originalFreq=18
  word=libido,f=0,flags=n,originalFreq=77
  word=librium,f=0,flags=s,originalFreq=1
  word=lil,f=0,flags=,originalFreq=56
@@ -164845,7 +164845,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=lotta,f=0,flags=,originalFreq=47
  word=lovemaking,f=0,flags=,originalFreq=65
  word=ltd,f=0,flags=abbreviation,originalFreq=68
- word=lues,f=0,flags=offensive,originalFreq=28
+ word=lues,f=28,flags=,originalFreq=28
  word=lupanar,f=0,flags=medical,originalFreq=18
  word=lupanars,f=0,flags=medical,originalFreq=1
  word=maam,f=0,not_a_word=true
@@ -164889,7 +164889,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=microphallus,f=0,flags=medical,originalFreq=18
  word=micturate,f=0,flags=medical,originalFreq=21
  word=micturating,f=0,flags=medical,originalFreq=10
- word=minge,f=0,flags=offensive,originalFreq=18
+ word=minge,f=18,flags=,originalFreq=18
  word=monorchid,f=0,flags=medical,originalFreq=15
  word=monorchidism,f=0,flags=medical,originalFreq=1
  word=monorchism,f=0,flags=medical,originalFreq=23
@@ -164899,10 +164899,10 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
   shortcut=not,f=whitelist
  word=mote,f=0,not_a_word=true
   shortcut=note,f=whitelist
- word=motherfucker,f=0,flags=offensive,originalFreq=61
- word=motherfucker's,f=0,flags=offensive,originalFreq=15
- word=motherfuckers,f=0,flags=offensive,originalFreq=49
- word=motherfucking,f=0,flags=offensive,originalFreq=38
+ word=motherfucker,f=61,flags=,originalFreq=61
+ word=motherfucker's,f=15,flags=,originalFreq=15
+ word=motherfuckers,f=49,flags=,originalFreq=49
+ word=motherfucking,f=38,flags=,originalFreq=38
  word=muff,f=0,flags=n,originalFreq=48
  word=muliebria,f=0,flags=medical,originalFreq=10
  word=multigravida,f=0,flags=medical,originalFreq=1
@@ -164922,7 +164922,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=nigger's,f=0,flags=,originalFreq=0
  word=niggers,f=0,flags=,originalFreq=0
  word=nipple,f=0,flags=medical,originalFreq=85
- word=nipple's,f=0,flags=offensive,originalFreq=10
+ word=nipple's,f=10,flags=,originalFreq=10
  word=nippled,f=0,flags=n,originalFreq=10
  word=nipples,f=0,flags=medical,originalFreq=80
  word=nonintercourse,f=0,flags=medical,originalFreq=10
@@ -164931,7 +164931,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=nuder,f=0,flags=,originalFreq=0
  word=nudes,f=0,flags=medical,originalFreq=78
  word=nudest,f=0,flags=babytalk,originalFreq=1
- word=nudie,f=0,flags=offensive,originalFreq=51
+ word=nudie,f=51,flags=,originalFreq=51
  word=nudies,f=0,flags=babytalk,originalFreq=28
  word=nudism,f=0,flags=medical,originalFreq=61
  word=nudist,f=0,flags=medical,originalFreq=73
@@ -164941,10 +164941,10 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=nudity,f=0,flags=medical,originalFreq=97
  word=nymphet,f=0,flags=n,originalFreq=44
  word=nymphets,f=0,flags=n,originalFreq=27
- word=nympho,f=0,flags=offensive,originalFreq=28
+ word=nympho,f=28,flags=,originalFreq=28
  word=nymphomania,f=0,flags=medical,originalFreq=45
  word=nymphomaniac,f=0,flags=medical,originalFreq=56
- word=nymphomaniac's,f=0,flags=offensive,originalFreq=1
+ word=nymphomaniac's,f=1,flags=,originalFreq=1
  word=nymphomaniacal,f=0,flags=medical,originalFreq=21
  word=nymphomaniacs,f=0,flags=medical,originalFreq=31
  word=oestrogen,f=0,flags=medical,originalFreq=50
@@ -165023,16 +165023,16 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=phalluses,f=0,flags=medical,originalFreq=40
  word=phosphaturia,f=0,flags=medical,originalFreq=18
  word=phosphaturic,f=0,flags=medical,originalFreq=1
- word=pimp,f=0,flags=offensive,originalFreq=84
- word=pimp's,f=0,flags=offensive,originalFreq=33
+ word=pimp,f=84,flags=,originalFreq=84
+ word=pimp's,f=33,flags=,originalFreq=33
  word=pis,f=0,flags=,originalFreq=39
- word=piss,f=0,flags=offensive,originalFreq=71
+ word=piss,f=71,flags=,originalFreq=71
  word=pissant,f=0,flags=babytalk,originalFreq=28
- word=pissed,f=0,flags=offensive,originalFreq=70
- word=pisser,f=0,flags=offensive,originalFreq=15
- word=pissers,f=0,flags=offensive,originalFreq=10
- word=pisses,f=0,flags=offensive,originalFreq=39
- word=pissing,f=0,flags=offensive,originalFreq=51
+ word=pissed,f=70,flags=,originalFreq=70
+ word=pisser,f=15,flags=,originalFreq=15
+ word=pissers,f=10,flags=,originalFreq=10
+ word=pisses,f=39,flags=,originalFreq=39
+ word=pissing,f=51,flags=,originalFreq=51
  word=pissoir,f=0,flags=medical,originalFreq=21
  word=pissoirs,f=0,flags=medical,originalFreq=1
  word=pix,f=0,flags=,originalFreq=39
@@ -165070,9 +165070,9 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=pooping,f=0,flags=babytalk,originalFreq=30
  word=poops,f=0,flags=babytalk,originalFreq=23
  word=poot,f=0,flags=babytalk,originalFreq=10
- word=porn,f=0,flags=offensive,originalFreq=99
- word=porn's,f=0,flags=offensive,originalFreq=27
- word=porno,f=0,flags=offensive,originalFreq=69
+ word=porn,f=99,flags=,originalFreq=99
+ word=porn's,f=27,flags=,originalFreq=27
+ word=porno,f=69,flags=,originalFreq=69
  word=pornocracy,f=0,flags=medical,originalFreq=23
  word=pornographer,f=0,flags=medical,originalFreq=59
  word=pornographers,f=0,flags=babytalk,originalFreq=46
@@ -165081,13 +165081,13 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=pornographically,f=0,flags=medical,originalFreq=15
  word=pornography,f=0,flags=medical,originalFreq=105
  word=pornography's,f=0,flags=medical,originalFreq=21
- word=pornos,f=0,flags=offensive,originalFreq=31
+ word=pornos,f=31,flags=,originalFreq=31
  word=pornstar,f=0,flags=babytalk,originalFreq=43
  word=postcoital,f=0,flags=medical,originalFreq=36
  word=preanal,f=0,flags=medical,originalFreq=45
  word=precopulatory,f=0,flags=medical,originalFreq=15
  word=pregenital,f=0,flags=medical,originalFreq=25
- word=preggers,f=0,flags=offensive,originalFreq=1
+ word=preggers,f=1,flags=,originalFreq=1
  word=prepubic,f=0,flags=medical,originalFreq=1
  word=preteen,f=0,flags=p,originalFreq=67
  word=preteens,f=0,flags=p,originalFreq=53
@@ -165123,7 +165123,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=prostitution,f=0,flags=medical,originalFreq=108
  word=prostitutions,f=0,flags=medical,originalFreq=10
  word=pseudocopulation,f=0,flags=medical,originalFreq=35
- word=pubes,f=0,flags=offensive,originalFreq=37
+ word=pubes,f=37,flags=,originalFreq=37
  word=pubescence,f=0,flags=medical,originalFreq=58
  word=pubescent,f=0,flags=medical,originalFreq=77
  word=pubic,f=0,flags=medical,originalFreq=83
@@ -165136,21 +165136,21 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=pudic,f=0,flags=medical,originalFreq=21
  word=puff,f=0,flags=e,originalFreq=81
  word=puffs,f=0,flags=e,originalFreq=70
- word=pussies,f=0,flags=offensive,originalFreq=35
- word=pussy,f=0,flags=offensive,originalFreq=65
- word=pussy's,f=0,flags=offensive,originalFreq=15
+ word=pussies,f=35,flags=,originalFreq=35
+ word=pussy,f=65,flags=,originalFreq=65
+ word=pussy's,f=15,flags=,originalFreq=15
  word=pyrophile,f=0,flags=n,originalFreq=10
  word=pyx,f=0,flags=,originalFreq=46
  word=quickie,f=0,flags=babytalk,originalFreq=57
- word=randiness,f=0,flags=offensive,originalFreq=1
- word=rape,f=0,flags=offensive,originalFreq=115
+ word=randiness,f=1,flags=,originalFreq=1
+ word=rape,f=115,flags=,originalFreq=115
  word=rape's,f=0,flags=medical,originalFreq=10
- word=raped,f=0,flags=offensive,originalFreq=104
+ word=raped,f=104,flags=,originalFreq=104
  word=rapes,f=0,flags=medical,originalFreq=89
- word=raping,f=0,flags=offensive,originalFreq=87
- word=rapist,f=0,flags=offensive,originalFreq=85
- word=rapist's,f=0,flags=offensive,originalFreq=40
- word=rapists,f=0,flags=offensive,originalFreq=72
+ word=raping,f=87,flags=,originalFreq=87
+ word=rapist,f=85,flags=,originalFreq=85
+ word=rapist's,f=40,flags=,originalFreq=40
+ word=rapists,f=72,flags=,originalFreq=72
  word=re,f=0,flags=,originalFreq=149
  word=recta,f=0,flags=medical,originalFreq=56
  word=recta's,f=0,flags=medical,originalFreq=1
@@ -165219,33 +165219,33 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=sexy,f=0,flags=medical,originalFreq=95
  word=sez,f=0,flags=hand-added,originalFreq=0
  word=shag,f=0,flags=,originalFreq=66
- word=shagged,f=0,flags=offensive,originalFreq=40
- word=shagging,f=0,flags=offensive,originalFreq=39
- word=shat,f=0,flags=offensive,originalFreq=40
- word=shit,f=0,flags=offensive,originalFreq=93
- word=shit's,f=0,flags=offensive,originalFreq=25
- word=shithead,f=0,flags=offensive,originalFreq=35
- word=shitheads,f=0,flags=offensive,originalFreq=10
- word=shithouse,f=0,flags=offensive,originalFreq=30
- word=shits,f=0,flags=offensive,originalFreq=34
- word=shitted,f=0,flags=offensive,originalFreq=10
- word=shitter,f=0,flags=offensive,originalFreq=15
- word=shitters,f=0,flags=offensive,originalFreq=15
- word=shittiest,f=0,flags=offensive,originalFreq=30
- word=shitting,f=0,flags=offensive,originalFreq=41
- word=shitty,f=0,flags=offensive,originalFreq=56
+ word=shagged,f=40,flags=,originalFreq=40
+ word=shagging,f=39,flags=,originalFreq=39
+ word=shat,f=40,flags=,originalFreq=40
+ word=shit,f=93,flags=,originalFreq=93
+ word=shit's,f=25,flags=,originalFreq=25
+ word=shithead,f=35,flags=,originalFreq=35
+ word=shitheads,f=10,flags=,originalFreq=10
+ word=shithouse,f=30,flags=,originalFreq=30
+ word=shits,f=34,flags=,originalFreq=34
+ word=shitted,f=10,flags=,originalFreq=10
+ word=shitter,f=15,flags=,originalFreq=15
+ word=shitters,f=15,flags=,originalFreq=15
+ word=shittiest,f=30,flags=,originalFreq=30
+ word=shitting,f=41,flags=,originalFreq=41
+ word=shitty,f=56,flags=,originalFreq=56
  word=shod,f=0,flags=,originalFreq=67
  word=shouldent,f=0,not_a_word=true
   shortcut=shouldn't,f=whitelist
  word=shrimping,f=0,flags=n,originalFreq=57
  word=silverback,f=0,flags=e,originalFreq=55
- word=skat,f=0,flags=offensive,originalFreq=37
+ word=skat,f=37,flags=,originalFreq=37
  word=slut,f=0,flags=,originalFreq=0
  word=sluts,f=0,flags=,originalFreq=0
  word=sluttier,f=0,flags=,originalFreq=0
  word=sluttish,f=0,flags=,originalFreq=0
  word=slutty,f=0,flags=n,originalFreq=28
- word=smartass,f=0,flags=offensive,originalFreq=36
+ word=smartass,f=36,flags=,originalFreq=36
  word=smegma,f=0,flags=medical,originalFreq=46
  word=smut,f=0,flags=,originalFreq=65
  word=smuttier,f=0,flags=,originalFreq=10
@@ -165270,7 +165270,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=sodomizing,f=0,flags=,originalFreq=0
  word=sodomy,f=0,flags=,originalFreq=0
  word=softcore,f=0,flags=n,originalFreq=75
- word=sonuvabitch,f=0,flags=offensive:nonword,originalFreq=1
+ word=sonuvabitch,f=1,flags=nonword,originalFreq=1
  word=spanking,f=0,flags=n,originalFreq=73
  word=sperm,f=0,flags=medical,originalFreq=104
  word=sperm's,f=0,flags=medical,originalFreq=35
@@ -165347,7 +165347,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=swastika,f=0,flags=e,originalFreq=87
  word=swinger,f=0,flags=n,originalFreq=58
  word=swingers,f=0,flags=n,originalFreq=63
- word=swive,f=0,flags=offensive,originalFreq=10
+ word=swive,f=10,flags=,originalFreq=10
  word=syphilis,f=0,flags=medical,originalFreq=88
  word=syphilitic,f=0,flags=medical,originalFreq=54
  word=syphilitics,f=0,flags=medical,originalFreq=18
@@ -165372,18 +165372,18 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=threesomes,f=0,flags=,originalFreq=46
  word=thud,f=0,flags=,originalFreq=59
  word=tic,f=0,flags=,originalFreq=75
- word=tit,f=0,flags=offensive,originalFreq=77
- word=tit's,f=0,flags=offensive,originalFreq=15
- word=tits,f=0,flags=offensive,originalFreq=82
- word=tittie,f=0,flags=offensive,originalFreq=1
- word=titties,f=0,flags=offensive,originalFreq=35
- word=titty,f=0,flags=offensive,originalFreq=34
+ word=tit,f=77,flags=,originalFreq=77
+ word=tit's,f=15,flags=,originalFreq=15
+ word=tits,f=82,flags=,originalFreq=82
+ word=tittie,f=1,flags=,originalFreq=1
+ word=titties,f=35,flags=,originalFreq=35
+ word=titty,f=34,flags=,originalFreq=34
  word=tog,f=0,flags=,originalFreq=52
  word=tom,f=0,flags=,originalFreq=81
  word=topless,f=0,flags=,originalFreq=86
- word=trannie,f=0,flags=offensive,originalFreq=10
- word=trannies,f=0,flags=offensive,originalFreq=18
- word=tranny,f=0,flags=offensive,originalFreq=38
+ word=trannie,f=10,flags=,originalFreq=10
+ word=trannies,f=18,flags=,originalFreq=18
+ word=tranny,f=38,flags=,originalFreq=38
  word=transsexual,f=0,flags=medical,originalFreq=87
  word=transsexual's,f=0,flags=medical,originalFreq=10
  word=transsexualism,f=0,flags=medical,originalFreq=63
@@ -165394,7 +165394,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=transvaginal,f=0,flags=medical,originalFreq=47
  word=transvestism,f=0,flags=medical,originalFreq=60
  word=transvestite,f=0,flags=babytalk,originalFreq=76
- word=transvestite's,f=0,flags=offensive,originalFreq=10
+ word=transvestite's,f=10,flags=,originalFreq=10
  word=transvestites,f=0,flags=babytalk,originalFreq=65
  word=transvestitism,f=0,flags=medical,originalFreq=40
  word=transvestitism's,f=0,flags=medical,originalFreq=1
@@ -165402,8 +165402,8 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=tribades,f=0,flags=medical,originalFreq=18
  word=tribadism,f=0,flags=medical,originalFreq=41
  word=tty,f=0,flags=,originalFreq=47
- word=turd,f=0,flags=offensive,originalFreq=52
- word=turds,f=0,flags=offensive,originalFreq=30
+ word=turd,f=52,flags=,originalFreq=52
+ word=turds,f=30,flags=,originalFreq=30
  word=twat,f=0,flags=babytalk,originalFreq=44
  word=twats,f=0,flags=babytalk,originalFreq=25
  word=twit,f=0,flags=,originalFreq=49
@@ -165567,12 +165567,12 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=vulvovaginal,f=0,flags=medical,originalFreq=33
  word=vulvovaginitis,f=0,flags=medical,originalFreq=23
  word=wah,f=0,flags=,originalFreq=86
- word=wank,f=0,flags=offensive,originalFreq=43
- word=wanked,f=0,flags=offensive,originalFreq=1
- word=wanker,f=0,flags=offensive,originalFreq=56
- word=wankers,f=0,flags=offensive,originalFreq=39
- word=wanking,f=0,flags=offensive,originalFreq=34
- word=wanks,f=0,flags=offensive,originalFreq=1
+ word=wank,f=43,flags=,originalFreq=43
+ word=wanked,f=1,flags=,originalFreq=1
+ word=wanker,f=56,flags=,originalFreq=56
+ word=wankers,f=39,flags=,originalFreq=39
+ word=wanking,f=34,flags=,originalFreq=34
+ word=wanks,f=1,flags=,originalFreq=1
  word=wat,f=0,flags=,originalFreq=68
  word=watersports,f=0,flags=n,originalFreq=72
  word=weeing,f=0,flags=babytalk,originalFreq=10
@@ -165583,7 +165583,7 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
   shortcut=we're,f=whitelist
  word=wetback,f=0,flags=e,originalFreq=25
  word=wetbacks,f=0,flags=e,originalFreq=19
- word=whang,f=0,flags=offensive,originalFreq=18
+ word=whang,f=18,flags=,originalFreq=18
  word=whatd,f=0,not_a_word=true
   shortcut=what'd,f=whitelist
  word=whatm,f=0,not_a_word=true
@@ -165601,20 +165601,20 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=whitey's,f=0,flags=,originalFreq=33
  word=wholl,f=0,not_a_word=true
   shortcut=who'll,f=whitelist
- word=whore,f=0,flags=offensive,originalFreq=81
- word=whore's,f=0,flags=offensive,originalFreq=33
- word=whored,f=0,flags=offensive,originalFreq=1
- word=whoredom,f=0,flags=offensive,originalFreq=38
- word=whorehouse,f=0,flags=offensive,originalFreq=57
- word=whorehouses,f=0,flags=offensive,originalFreq=38
- word=whoremaster,f=0,flags=offensive,originalFreq=10
- word=whoremonger,f=0,flags=offensive,originalFreq=21
- word=whoremongers,f=0,flags=offensive,originalFreq=18
- word=whores,f=0,flags=offensive,originalFreq=66
- word=whoreson,f=0,flags=offensive,originalFreq=10
- word=whoresons,f=0,flags=offensive,originalFreq=1
- word=whoring,f=0,flags=offensive,originalFreq=47
- word=whorish,f=0,flags=offensive,originalFreq=35
+ word=whore,f=81,flags=,originalFreq=81
+ word=whore's,f=33,flags=,originalFreq=33
+ word=whored,f=1,flags=,originalFreq=1
+ word=whoredom,f=38,flags=,originalFreq=38
+ word=whorehouse,f=57,flags=,originalFreq=57
+ word=whorehouses,f=38,flags=,originalFreq=38
+ word=whoremaster,f=10,flags=,originalFreq=10
+ word=whoremonger,f=21,flags=,originalFreq=21
+ word=whoremongers,f=18,flags=,originalFreq=18
+ word=whores,f=66,flags=,originalFreq=66
+ word=whoreson,f=10,flags=,originalFreq=10
+ word=whoresons,f=1,flags=,originalFreq=1
+ word=whoring,f=47,flags=,originalFreq=47
+ word=whorish,f=35,flags=,originalFreq=35
  word=whove,f=0,not_a_word=true
   shortcut=who've,f=whitelist
  word=whyd,f=0,not_a_word=true
@@ -165631,8 +165631,8 @@ dictionary=main:en,locale=en,description=English,date=1402373178,version=47
  word=ya,f=0,flags=,originalFreq=91
  word=yall,f=0,not_a_word=true
   shortcut=y'all,f=whitelist
- word=yoni,f=0,flags=offensive,originalFreq=52
- word=yonis,f=0,flags=offensive,originalFreq=27
+ word=yoni,f=52,flags=,originalFreq=52
+ word=yonis,f=27,flags=,originalFreq=27
  word=youd,f=0,not_a_word=true
   shortcut=you'd,f=whitelist
  word=yt,f=0,flags=hand-added,originalFreq=0

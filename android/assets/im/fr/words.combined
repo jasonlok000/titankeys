@@ -286,6 +286,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=présente,f=152
  word=public,f=152
  word=raison,f=152
+ word=sein,f=152
  word=site,f=152
  word=surtout,f=152
  word=troisième,f=152
@@ -690,6 +691,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=allemande,f=142
  word=anciens,f=142
  word=aucune,f=142
+ word=bande,f=142
  word=blanc,f=142
  word=bon,f=142
  word=bonne,f=142
@@ -883,6 +885,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=publie,f=140
  word=rang,f=140
  word=recensement,f=140
+ word=relation,f=140
  word=religieux,f=140
  word=revient,f=140
  word=réalise,f=140
@@ -993,6 +996,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=sert,f=139
  word=sommet,f=139
  word=systèmes,f=139
+ word=séries,f=139
  word=telle,f=139
  word=telles,f=139
  word=tient,f=139
@@ -1386,6 +1390,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pouvoirs,f=135
  word=procès,f=135
  word=produire,f=135
+ word=professionnelle,f=135
  word=profit,f=135
  word=programmes,f=135
  word=propos,f=135
@@ -2687,6 +2692,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=publications,f=127
  word=puisqu'il,f=127
  word=qualités,f=127
+ word=queue,f=127
  word=reconstruction,f=127
  word=recours,f=127
  word=relais,f=127
@@ -3247,6 +3253,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=adaptation,f=124
  word=administratives,f=124
  word=affecté,f=124
+ word=amateurs,f=124
  word=amie,f=124
  word=apparait,f=124
  word=apparu,f=124
@@ -4562,6 +4569,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=trajet,f=120
  word=tranches,f=120
  word=trio,f=120
+ word=trou,f=120
  word=trésor,f=120
  word=tu,f=120
  word=tutelle,f=120
@@ -5607,6 +5615,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=salut,f=117
  word=semblables,f=117
  word=sensibles,f=117
+ word=sexuel,f=117
  word=significative,f=117
  word=signée,f=117
  word=soie,f=117
@@ -5830,6 +5839,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=exercer,f=116
  word=exercé,f=116
  word=exploité,f=116
+ word=exposée,f=116
  word=exposés,f=116
  word=expéditions,f=116
  word=extérieurs,f=116
@@ -5944,6 +5954,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=plateaux,f=116
  word=plats,f=116
  word=pluriel,f=116
+ word=poitrine,f=116
  word=porte-parole,f=116
  word=porteur,f=116
  word=poussé,f=116
@@ -6009,6 +6020,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=show,f=116
  word=sortit,f=116
  word=souffle,f=116
+ word=soumise,f=116
  word=sous-marins,f=116
  word=souterrain,f=116
  word=spectre,f=116
@@ -6291,6 +6303,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=nocturne,f=115
  word=norvégien,f=115
  word=nourrir,f=115
+ word=nu,f=115
  word=négative,f=115
  word=négocier,f=115
  word=nœud,f=115
@@ -6837,6 +6850,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=supprimer,f=114
  word=susceptible,f=114
  word=sûreté,f=114
+ word=tante,f=114
  word=taxes,f=114
  word=terrasse,f=114
  word=testament,f=114
@@ -9749,6 +9763,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=psychiatrique,f=108
  word=pureté,f=108
  word=péché,f=108
+ word=pénétration,f=108
  word=péril,f=108
  word=périodiques,f=108
  word=quels,f=108
@@ -10250,6 +10265,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=maintes,f=107
  word=manipuler,f=107
  word=manquent,f=107
+ word=marteau,f=107
  word=martyr,f=107
  word=masques,f=107
  word=matrices,f=107
@@ -10453,6 +10469,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=vides,f=107
  word=ville-préfecture,f=107
  word=vingt-deux,f=107
+ word=viol,f=107
  word=virtuel,f=107
  word=visait,f=107
  word=visuels,f=107
@@ -10839,6 +10856,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=n'existait,f=106
  word=neurones,f=106
  word=notée,f=106
+ word=nue,f=106
  word=néerlandaises,f=106
  word=nées,f=106
  word=négatives,f=106
@@ -11506,11 +11524,13 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pinot,f=105
  word=playoffs,f=105
  word=plis,f=105
+ word=pointeur,f=105
  word=pois,f=105
  word=politicien,f=105
  word=polluants,f=105
  word=pompes,f=105
  word=pontificaux,f=105
+ word=pornographique,f=105
  word=portions,f=105
  word=posant,f=105
  word=possédé,f=105
@@ -11686,6 +11706,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=épique,f=105
  word=épouses,f=105
  word=éprouve,f=105
+ word=érotique,f=105
  word=érudit,f=105
  word=établissent,f=105
  word=étend,f=105
@@ -11820,6 +11841,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bergers,f=104
  word=biographies,f=104
  word=biographique,f=104
+ word=black,f=104
  word=bloqué,f=104
  word=boite,f=104
  word=bombardier,f=104
@@ -12681,6 +12703,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=fouet,f=103
  word=fourmis,f=103
  word=fourrures,f=103
+ word=fous,f=103
  word=franchissement,f=103
  word=frappée,f=103
  word=frise,f=103
@@ -12710,6 +12733,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=habitait,f=103
  word=habits,f=103
  word=hache,f=103
+ word=hardcore,f=103
  word=hellénistique,f=103
  word=hiérarchique,f=103
  word=homologues,f=103
@@ -13577,6 +13601,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=promenades,f=102
  word=promise,f=102
  word=prononcées,f=102
+ word=prostituée,f=102
  word=protectrice,f=102
  word=protons,f=102
  word=proue,f=102
@@ -13745,6 +13770,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=émetteurs,f=102
  word=énergique,f=102
  word=épices,f=102
+ word=épuisé,f=102
  word=équatoriale,f=102
  word=érotiques,f=102
  word=œuf,f=102
@@ -13931,6 +13957,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=comptaient,f=101
  word=comptoirs,f=101
  word=compétent,f=101
+ word=con,f=101
  word=concentrés,f=101
  word=concret,f=101
  word=concurrente,f=101
@@ -14314,6 +14341,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=porcs,f=101
  word=porteuse,f=101
  word=portuaires,f=101
+ word=postérieur,f=101
  word=poteaux,f=101
  word=poulet,f=101
  word=poursuivra,f=101
@@ -14913,6 +14941,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=jetée,f=100
  word=joignent,f=100
  word=joug,f=100
+ word=jouir,f=100
  word=jouèrent,f=100
  word=joyeux,f=100
  word=jugent,f=100
@@ -15247,6 +15276,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=tiendra,f=100
  word=tira,f=100
  word=tirages,f=100
+ word=tournante,f=100
  word=traduisant,f=100
  word=traduites,f=100
  word=trajets,f=100
@@ -15790,6 +15820,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=marchant,f=99
  word=mare,f=99
  word=marginal,f=99
+ word=maudit,f=99
  word=maximales,f=99
  word=maçon,f=99
  word=menacer,f=99
@@ -15889,9 +15920,11 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pointeurs,f=99
  word=polygone,f=99
  word=pond,f=99
+ word=pornographie,f=99
  word=portraitiste,f=99
  word=positionne,f=99
  word=posteriori,f=99
+ word=poteau,f=99
  word=poupées,f=99
  word=pourriture,f=99
  word=pourvue,f=99
@@ -15920,6 +15953,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=publiera,f=99
  word=purification,f=99
  word=putsch,f=99
+ word=pénis,f=99
  word=pénitentiaire,f=99
  word=pêcher,f=99
  word=qu'avant,f=99
@@ -16086,6 +16120,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=victorienne,f=99
  word=vingt-sept,f=99
  word=violations,f=99
+ word=viole,f=99
  word=virale,f=99
  word=visées,f=99
  word=vitalité,f=99
@@ -16490,6 +16525,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=fréquenta,f=98
  word=fuites,f=98
  word=féminisme,f=98
+ word=fétiche,f=98
  word=gagnés,f=98
  word=gags,f=98
  word=gelée,f=98
@@ -16544,6 +16580,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=inventa,f=98
  word=irlandaises,f=98
  word=isotopes,f=98
+ word=israélite,f=98
  word=jantes,f=98
  word=jeta,f=98
  word=jetés,f=98
@@ -17644,6 +17681,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pâturage,f=97
  word=pèlerin,f=97
  word=pèlerinages,f=97
+ word=pédale,f=97
  word=pédestre,f=97
  word=pénitence,f=97
  word=qu'environ,f=97
@@ -18555,6 +18593,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pigeons,f=96
  word=pignons,f=96
  word=pionnière,f=96
+ word=pipe,f=96
  word=pittoresques,f=96
  word=plaies,f=96
  word=planifié,f=96
@@ -19455,6 +19494,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=perpendiculaires,f=95
  word=persécutés,f=95
  word=perturbée,f=95
+ word=pervers,f=95
  word=perçues,f=95
  word=pesanteur,f=95
  word=philatélique,f=95
@@ -19705,6 +19745,8 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=vectoriels,f=95
  word=ventrale,f=95
  word=verdâtre,f=95
+ word=violer,f=95
+ word=violé,f=95
  word=visités,f=95
  word=vitro,f=95
  word=volante,f=95
@@ -19937,6 +19979,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=brins,f=94
  word=bu,f=94
  word=buisson,f=94
+ word=bâtard,f=94
  word=cabernet,f=94
  word=californienne,f=94
  word=calvinistes,f=94
@@ -20025,6 +20068,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=créances,f=94
  word=crémaillère,f=94
  word=cuirassiers,f=94
+ word=cul,f=94
  word=culturales,f=94
  word=culturellement,f=94
  word=cédés,f=94
@@ -20119,6 +20163,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=domestication,f=94
  word=dortoir,f=94
  word=doués,f=94
+ word=débauche,f=94
  word=débloquer,f=94
  word=déboucher,f=94
  word=déceler,f=94
@@ -20185,6 +20230,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=favorites,f=94
  word=feuillet,f=94
  word=fictifs,f=94
+ word=flic,f=94
  word=florentin,f=94
  word=floréal,f=94
  word=fluidité,f=94
@@ -20323,6 +20369,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=latéralement,f=94
  word=lauréate,f=94
  word=ledit,f=94
+ word=lesbienne,f=94
  word=leucémie,f=94
  word=libyen,f=94
  word=libérées,f=94
@@ -20401,6 +20448,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=nouveau-nés,f=94
  word=novice,f=94
  word=noyade,f=94
+ word=nudité,f=94
  word=nulles,f=94
  word=numériquement,f=94
  word=nymphe,f=94
@@ -20449,6 +20497,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=polyèdre,f=94
  word=ponctuelles,f=94
  word=poney,f=94
+ word=porno,f=94
  word=portiques,f=94
  word=possédés,f=94
  word=postule,f=94
@@ -20675,6 +20724,8 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=vices,f=94
  word=victorieuses,f=94
  word=vingt-et-un,f=94
+ word=viols,f=94
+ word=violée,f=94
  word=virtuelles,f=94
  word=vivaces,f=94
  word=vocations,f=94
@@ -21697,6 +21748,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=usité,f=93
  word=ustensiles,f=93
  word=vacants,f=93
+ word=vagin,f=93
  word=vaguement,f=93
  word=vainc,f=93
  word=valence,f=93
@@ -22510,6 +22562,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=négligeables,f=92
  word=observent,f=92
  word=obsession,f=92
+ word=obsédé,f=92
  word=octogonal,f=92
  word=octroyé,f=92
  word=officieusement,f=92
@@ -22750,6 +22803,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=sires,f=92
  word=sirènes,f=92
  word=skis,f=92
+ word=sodomie,f=92
  word=solubles,f=92
  word=sommairement,f=92
  word=sont-ils,f=92
@@ -23589,6 +23643,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=luthériens,f=91
  word=lyre,f=91
  word=lâché,f=91
+ word=lèvre,f=91
  word=légume,f=91
  word=machinerie,f=91
  word=mairies,f=91
@@ -23765,6 +23820,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pâture,f=91
  word=pédales,f=91
  word=pédestres,f=91
+ word=pédophilie,f=91
  word=péjorative,f=91
  word=pérenne,f=91
  word=périssent,f=91
@@ -24294,6 +24350,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=carbonique,f=90
  word=carences,f=90
  word=carnage,f=90
+ word=castration,f=90
  word=catacombes,f=90
  word=catalyse,f=90
  word=cations,f=90
@@ -24555,6 +24612,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=fardeau,f=90
  word=façonné,f=90
  word=fervents,f=90
+ word=fesses,f=90
  word=figurative,f=90
  word=figurine,f=90
  word=filer,f=90
@@ -24824,6 +24882,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=nota,f=90
  word=notoires,f=90
  word=numismatique,f=90
+ word=nègre,f=90
  word=négligée,f=90
  word=négocia,f=90
  word=névrose,f=90
@@ -26316,6 +26375,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=épousée,f=89
  word=éprouvée,f=89
  word=équipant,f=89
+ word=érection,f=89
  word=érigea,f=89
  word=étanches,f=89
  word=éteindre,f=89
@@ -27155,6 +27215,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=marxiste-léniniste,f=88
  word=massacrent,f=88
  word=massique,f=88
+ word=masturbation,f=88
  word=maxima,f=88
  word=menaçaient,f=88
  word=ment,f=88
@@ -29132,6 +29193,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=ambitionne,f=86
  word=amplifiée,f=86
  word=améliora,f=86
+ word=anal,f=86
  word=ancrés,f=86
  word=animait,f=86
  word=animant,f=86
@@ -29256,6 +29318,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=chefs-lieux,f=86
  word=chevauche,f=86
  word=chevreuil,f=86
+ word=chienne,f=86
  word=choquer,f=86
  word=chutent,f=86
  word=châtaignes,f=86
@@ -29276,6 +29339,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=cm3,f=86
  word=coda,f=86
  word=coexister,f=86
+ word=coincée,f=86
  word=collant,f=86
  word=collégiales,f=86
  word=combativité,f=86
@@ -29584,6 +29648,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=hippodrome,f=86
  word=hl,f=86
  word=homard,f=86
+ word=homo,f=86
  word=homologuées,f=86
  word=houblon,f=86
  word=huguenot,f=86
@@ -30652,6 +30717,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=chart,f=85
  word=charter,f=85
  word=chassées,f=85
+ word=chatte,f=85
  word=chauffant,f=85
  word=chenaux,f=85
  word=chevreuils,f=85
@@ -31460,6 +31526,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=revendeurs,f=85
  word=rockabilly,f=85
  word=rompent,f=85
+ word=rondelle,f=85
  word=rougeole,f=85
  word=roulage,f=85
  word=roy,f=85
@@ -31619,6 +31686,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=tiède,f=85
  word=toge,f=85
  word=tollé,f=85
+ word=touffe,f=85
  word=tournures,f=85
  word=tournèrent,f=85
  word=traita,f=85
@@ -32685,6 +32753,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=lessive,f=84
  word=lexicales,f=84
  word=liait,f=84
+ word=libido,f=84
  word=libyens,f=84
  word=lieue,f=84
  word=lignages,f=84
@@ -32872,6 +32941,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=polluée,f=84
  word=polyglotte,f=84
  word=polyvalents,f=84
+ word=pomper,f=84
  word=ponction,f=84
  word=pondus,f=84
  word=popularisation,f=84
@@ -33176,6 +33246,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=valorisant,f=84
  word=vantant,f=84
  word=vasque,f=84
+ word=verge,f=84
  word=verreries,f=84
  word=vice-royauté,f=84
  word=vingt-et-unième,f=84
@@ -33582,6 +33653,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bipède,f=83
  word=birmans,f=83
  word=bivalves,f=83
+ word=blaireau,f=83
  word=bleu-vert,f=83
  word=boiteux,f=83
  word=boitier,f=83
@@ -34137,6 +34209,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=ivoiriens,f=83
  word=jante,f=83
  word=jeton,f=83
+ word=joui,f=83
  word=journalières,f=83
  word=judicieusement,f=83
  word=jugeaient,f=83
@@ -34268,6 +34341,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=matrimoniales,f=83
  word=maîtrisent,f=83
  word=mentionnons,f=83
+ word=merde,f=83
  word=messianique,f=83
  word=mi-distance,f=83
  word=microclimat,f=83
@@ -35145,6 +35219,8 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=boisement,f=82
  word=boisements,f=82
  word=bols,f=82
+ word=bordel,f=82
+ word=borgne,f=82
  word=bouchée,f=82
  word=boueux,f=82
  word=bourdons,f=82
@@ -35748,6 +35824,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=l'étalement,f=82
  word=l'éthylène,f=82
  word=l'éviter,f=82
+ word=lactation,f=82
  word=laineux,f=82
  word=laisseront,f=82
  word=lambda,f=82
@@ -35998,6 +36075,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=psychotique,f=82
  word=puma,f=82
  word=punks,f=82
+ word=pédophile,f=82
  word=périlleuses,f=82
  word=pêchés,f=82
  word=qu'Israël,f=82
@@ -36779,6 +36857,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bocal,f=81
  word=bolchéviques,f=81
  word=bombé,f=81
+ word=bondage,f=81
  word=bop,f=81
  word=boréales,f=81
  word=boulons,f=81
@@ -36850,6 +36929,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=classifié,f=81
  word=cliquant,f=81
  word=cliquer,f=81
+ word=clitoris,f=81
  word=clôturé,f=81
  word=co-scénariste,f=81
  word=coalisées,f=81
@@ -37153,6 +37233,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=fauche,f=81
  word=fausseté,f=81
  word=fautif,f=81
+ word=fellation,f=81
  word=fermait,f=81
  word=festifs,f=81
  word=fiance,f=81
@@ -37471,6 +37552,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=marginalisation,f=81
  word=marsouins,f=81
  word=marxisme-léninisme,f=81
+ word=masochiste,f=81
  word=mate,f=81
  word=mausolées,f=81
  word=maçonneries,f=81
@@ -37694,6 +37776,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pyridine,f=81
  word=pyrotechniques,f=81
  word=pédagogues,f=81
+ word=pédérastie,f=81
  word=pénétrèrent,f=81
  word=périurbanisation,f=81
  word=qu'André,f=81
@@ -37904,6 +37987,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=théosophique,f=81
  word=théâtraux,f=81
  word=tiers-monde,f=81
+ word=timbré,f=81
  word=tissés,f=81
  word=toluène,f=81
  word=tolérante,f=81
@@ -38464,6 +38548,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=charbonniers,f=80
  word=charbonnière,f=80
  word=chargements,f=80
+ word=charnel,f=80
  word=charnelle,f=80
  word=chassaient,f=80
  word=chaste,f=80
@@ -38870,6 +38955,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=gommes,f=80
  word=gonfle,f=80
  word=gouffres,f=80
+ word=gousse,f=80
  word=gouvernées,f=80
  word=granules,f=80
  word=granulés,f=80
@@ -39236,6 +39322,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=névroses,f=80
  word=nôtres,f=80
  word=objectivité,f=80
+ word=obscène,f=80
  word=obsessionnelle,f=80
  word=obstinément,f=80
  word=occitans,f=80
@@ -39691,6 +39778,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=vicinaux,f=80
  word=vidéosurveillance,f=80
  word=vilains,f=80
+ word=violant,f=80
  word=virtualisation,f=80
  word=visitèrent,f=80
  word=visière,f=80
@@ -39705,6 +39793,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=vrille,f=80
  word=vulgarité,f=80
  word=vulnérabilités,f=80
+ word=vulve,f=80
  word=vélin,f=80
  word=vénère,f=80
  word=vérifiés,f=80
@@ -41219,6 +41308,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=rapportèrent,f=79
  word=rasta,f=79
  word=rationnellement,f=79
+ word=raton,f=79
  word=rauque,f=79
  word=ravagèrent,f=79
  word=ravitailleurs,f=79
@@ -41365,6 +41455,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=situationniste,f=79
  word=sixte,f=79
  word=socles,f=79
+ word=soixante-neuf,f=79
  word=sollicitant,f=79
  word=soluté,f=79
  word=somatiques,f=79
@@ -41550,6 +41641,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=éliminations,f=79
  word=émeraudes,f=79
  word=émotionnelles,f=79
+ word=énervé,f=79
  word=épiphyte,f=79
  word=épistémologiques,f=79
  word=éprouvés,f=79
@@ -42516,6 +42608,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=exportent,f=78
  word=expressifs,f=78
  word=exquis,f=78
+ word=extase,f=78
  word=extradé,f=78
  word=extravagant,f=78
  word=extravagante,f=78
@@ -42618,6 +42711,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=hawaïenne,f=78
  word=haïku,f=78
  word=hercynienne,f=78
+ word=hermaphrodite,f=78
  word=hermétiques,f=78
  word=hexagone,f=78
  word=hispanophone,f=78
@@ -42897,6 +42991,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=manipulent,f=78
  word=manquèrent,f=78
  word=manufacturiers,f=78
+ word=maquereau,f=78
  word=marchaient,f=78
  word=marginalisé,f=78
  word=marre,f=78
@@ -42969,6 +43064,8 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=n'attend,f=78
  word=n'est-ce,f=78
  word=nanotubes,f=78
+ word=naturisme,f=78
+ word=naturiste,f=78
  word=navajo,f=78
  word=navets,f=78
  word=nettoie,f=78
@@ -43986,6 +44083,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=biodisponibilité,f=77
  word=biodégradables,f=77
  word=biome,f=77
+ word=bisexuel,f=77
  word=bismuth,f=77
  word=bleutée,f=77
  word=blizzard,f=77
@@ -44114,6 +44212,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=confucéens,f=77
  word=conifère,f=77
  word=conquistadores,f=77
+ word=cons,f=77
  word=conseillés,f=77
  word=consentie,f=77
  word=conserveries,f=77
@@ -44418,6 +44517,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=est-allemands,f=77
  word=estimèrent,f=77
  word=estudiantin,f=77
+ word=eunuque,f=77
  word=exagérées,f=77
  word=exagérément,f=77
  word=exaltant,f=77
@@ -45370,6 +45470,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=épurées,f=77
  word=érigent,f=77
  word=érodée,f=77
+ word=érotisme,f=77
  word=étagères,f=77
  word=éternité,f=77
  word=étiologique,f=77
@@ -46374,6 +46475,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=examina,f=76
  word=exaspéré,f=76
  word=excitant,f=76
+ word=excitée,f=76
  word=exemptes,f=76
  word=expatrié,f=76
  word=expier,f=76
@@ -46542,6 +46644,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=improvisateur,f=76
  word=inadaptées,f=76
  word=incarnera,f=76
+ word=incestueux,f=76
  word=incohérente,f=76
  word=incompétents,f=76
  word=inconscientes,f=76
@@ -46965,6 +47068,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=permanences,f=76
  word=perpétuation,f=76
  word=persécutée,f=76
+ word=perverse,f=76
  word=perçage,f=76
  word=photoélectrique,f=76
  word=phéniciennes,f=76
@@ -46995,6 +47099,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=podcast,f=76
  word=poignant,f=76
  word=pointés,f=76
+ word=poireau,f=76
  word=poix,f=76
  word=politisation,f=76
  word=polythéistes,f=76
@@ -47050,6 +47155,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=puisqu'au,f=76
  word=punt,f=76
  word=puritanisme,f=76
+ word=putain,f=76
  word=pygargue,f=76
  word=pygmées,f=76
  word=pélicans,f=76
@@ -47432,6 +47538,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=viscéral,f=76
  word=vitrages,f=76
  word=vocalisations,f=76
+ word=volage,f=76
  word=volleyball,f=76
  word=volupté,f=76
  word=vosgiens,f=76
@@ -47916,6 +48023,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=anthropomorphiques,f=75
  word=anti-juives,f=75
  word=antihéros,f=75
+ word=anus,f=75
  word=apercevant,f=75
  word=apothicaires,f=75
  word=appliquait,f=75
@@ -48979,6 +49087,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=procédèrent,f=75
  word=programmateur,f=75
  word=propagateur,f=75
+ word=prostitué,f=75
  word=prostitués,f=75
  word=protéase,f=75
  word=provoquaient,f=75
@@ -49243,6 +49352,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=stigmatiser,f=75
  word=stoïcienne,f=75
  word=stratigraphiques,f=75
+ word=striptease,f=75
  word=stupidité,f=75
  word=sténographie,f=75
  word=stéréotypée,f=75
@@ -50494,6 +50604,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=foulon,f=74
  word=fourmilière,f=74
  word=fourniront,f=74
+ word=foutre,f=74
  word=frai,f=74
  word=framboises,f=74
  word=franc-comtoise,f=74
@@ -51346,6 +51457,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=sous-station,f=74
  word=spacieuses,f=74
  word=spartakiste,f=74
+ word=sphincter,f=74
  word=spider,f=74
  word=spéculé,f=74
  word=spéléologique,f=74
@@ -51516,6 +51628,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=voussoirs,f=74
  word=voutes,f=74
  word=voutée,f=74
+ word=voyeurisme,f=74
  word=voûtement,f=74
  word=vraisemblables,f=74
  word=vulgariser,f=74
@@ -52569,6 +52682,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=frioulan,f=73
  word=frisonne,f=73
  word=frisson,f=73
+ word=frisé,f=73
  word=frustrés,f=73
  word=fumage,f=73
  word=fumoir,f=73
@@ -53000,6 +53114,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=oppressante,f=73
  word=optimisées,f=73
  word=ordinations,f=73
+ word=orgasme,f=73
  word=orgies,f=73
  word=ostrogoth,f=73
  word=ouest-africaine,f=73
@@ -54059,6 +54174,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=avorte,f=72
  word=azotée,f=72
  word=aération,f=72
+ word=babouin,f=72
  word=babouins,f=72
  word=baby-sitter,f=72
  word=bactériophages,f=72
@@ -54754,6 +54870,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=inactivité,f=72
  word=inaperçues,f=72
  word=incarcérées,f=72
+ word=incestueuse,f=72
  word=inclura,f=72
  word=incombait,f=72
  word=incombent,f=72
@@ -55081,6 +55198,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=notifiée,f=72
  word=novels,f=72
  word=numerus,f=72
+ word=négritude,f=72
  word=néo-classicisme,f=72
  word=néo-démocrates,f=72
  word=néonazis,f=72
@@ -56848,6 +56966,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=déciment,f=71
  word=déclinera,f=71
  word=décollant,f=71
+ word=décolleté,f=71
  word=décoloration,f=71
  word=décoraient,f=71
  word=découlé,f=71
@@ -56981,6 +57100,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=fermaient,f=71
  word=ferrite,f=71
  word=ferronnier,f=71
+ word=fessée,f=71
  word=fiacre,f=71
  word=fiancer,f=71
  word=fibrés,f=71
@@ -57012,6 +57132,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=formaliste,f=71
  word=formalisées,f=71
  word=formulant,f=71
+ word=fornication,f=71
  word=fossilifères,f=71
  word=fossilisation,f=71
  word=fossoyeur,f=71
@@ -57177,6 +57298,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=inaltérable,f=71
  word=inappropriés,f=71
  word=incantation,f=71
+ word=inceste,f=71
  word=incohérents,f=71
  word=incommensurable,f=71
  word=inconciliables,f=71
@@ -57436,6 +57558,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=lymphomes,f=71
  word=lynché,f=71
  word=lâchée,f=71
+ word=lécher,f=71
  word=légations,f=71
  word=m'intéresse,f=71
  word=macérer,f=71
@@ -57541,6 +57664,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=métayage,f=71
  word=méthodiques,f=71
  word=métisses,f=71
+ word=métèques,f=71
  word=mêla,f=71
  word=n'a-t-il,f=71
  word=n'aboutirent,f=71
@@ -57762,6 +57886,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=prêtera,f=71
  word=prît,f=71
  word=psychédélisme,f=71
+ word=pute,f=71
  word=putes,f=71
  word=puériculture,f=71
  word=pyramidales,f=71
@@ -57969,6 +58094,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=sacralisation,f=71
  word=sacramentelle,f=71
  word=sacrifiées,f=71
+ word=sadomasochisme,f=71
  word=saint-simonien,f=71
  word=salariées,f=71
  word=salin,f=71
@@ -58142,6 +58268,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=transmettaient,f=71
  word=transplantations,f=71
  word=transposés,f=71
+ word=transsexuel,f=71
  word=trapèzes,f=71
  word=trekking,f=71
  word=trempage,f=71
@@ -58225,6 +58352,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=zaïrois,f=71
  word=zig-zag,f=71
  word=zooms,f=71
+ word=zoophilie,f=71
  word=zoulous,f=71
  word=Éireann,f=71
  word=Évelyne,f=71
@@ -58885,6 +59013,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bellum,f=70
  word=bergères,f=70
  word=berrichon,f=70
+ word=bestialité,f=70
  word=beuveries,f=70
  word=beylical,f=70
  word=bicorne,f=70
@@ -59803,6 +59932,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=maltraite,f=70
  word=malvoisie,f=70
  word=mandarine,f=70
+ word=mandrin,f=70
  word=manichéen,f=70
  word=manichéens,f=70
  word=mansuétude,f=70
@@ -60018,6 +60148,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=planificateur,f=70
  word=planifient,f=70
  word=plaquées,f=70
+ word=playboy,f=70
  word=pleurait,f=70
  word=pluriannuel,f=70
  word=pluvier,f=70
@@ -61816,6 +61947,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=galiléens,f=69
  word=gallican,f=69
  word=galoisienne,f=69
+ word=garce,f=69
  word=garde-manger,f=69
  word=garderies,f=69
  word=gardon,f=69
@@ -62307,6 +62439,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=opéras-comiques,f=69
  word=orangés,f=69
  word=organochlorés,f=69
+ word=orgie,f=69
  word=orgueilleuse,f=69
  word=orienta,f=69
  word=orientalisante,f=69
@@ -62846,6 +62979,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=têtard,f=69
  word=tête-bêche,f=69
  word=unissaient,f=69
+ word=uriner,f=69
  word=urticants,f=69
  word=usitées,f=69
  word=utiliseraient,f=69
@@ -64408,6 +64542,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=foulque,f=68
  word=fourberie,f=68
  word=fourreaux,f=68
+ word=fout,f=68
  word=fragilisent,f=68
  word=fragmenter,f=68
  word=fragrance,f=68
@@ -64852,6 +64987,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=malique,f=68
  word=malmenés,f=68
  word=malts,f=68
+ word=mamelle,f=68
  word=managériales,f=68
  word=mandchous,f=68
  word=mandements,f=68
@@ -65219,6 +65355,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=quatre-vingt-sept,f=68
  word=rabattable,f=68
  word=rabattu,f=68
+ word=racaille,f=68
  word=raccompagner,f=68
  word=raccordées,f=68
  word=rachetèrent,f=68
@@ -65613,6 +65750,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=vont-ils,f=68
  word=votations,f=68
  word=vouvoiement,f=68
+ word=voyeur,f=68
  word=voïvodes,f=68
  word=wagnériens,f=68
  word=weekends,f=68
@@ -65638,6 +65776,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=éclatait,f=68
  word=éclipsant,f=68
  word=édicules,f=68
+ word=éjaculation,f=68
  word=éjecte,f=68
  word=éjectées,f=68
  word=élargissements,f=68
@@ -66459,6 +66598,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bistre,f=67
  word=blanquette,f=67
  word=blastocyste,f=67
+ word=blasé,f=67
  word=blettes,f=67
  word=bleuet,f=67
  word=bloc-notes,f=67
@@ -67665,6 +67805,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=nuitamment,f=67
  word=numismatiques,f=67
  word=nurse,f=67
+ word=nymphomane,f=67
  word=nécromancien,f=67
  word=nécroses,f=67
  word=néocortex,f=67
@@ -69117,6 +69258,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=be-bop,f=66
  word=bergamote,f=66
  word=bernaches,f=66
+ word=bestial,f=66
  word=bhakti,f=66
  word=billon,f=66
  word=biotechnologiques,f=66
@@ -71856,6 +71998,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bafoués,f=65
  word=baignés,f=65
  word=bais,f=65
+ word=baise,f=65
  word=baissait,f=65
  word=balaient,f=65
  word=baliser,f=65
@@ -72177,7 +72320,9 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=cuissardes,f=65
  word=culbuté,f=65
  word=culminèrent,f=65
+ word=culs,f=65
  word=cumuls,f=65
+ word=cunnilingus,f=65
  word=curer,f=65
  word=curtis,f=65
  word=cybercafés,f=65
@@ -73172,6 +73317,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=marqueteries,f=65
  word=mascaron,f=65
  word=massent,f=65
+ word=masturber,f=65
  word=mastères,f=65
  word=mata,f=65
  word=maussade,f=65
@@ -73190,6 +73336,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=milanaises,f=65
  word=milites,f=65
  word=millimétrique,f=65
+ word=minette,f=65
  word=minium,f=65
  word=minus,f=65
  word=minées,f=65
@@ -73313,6 +73460,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=néo-libéralisme,f=65
  word=néocolonialisme,f=65
  word=néoconservateurs,f=65
+ word=néonazi,f=65
  word=néoplatoniciens,f=65
  word=népérien,f=65
  word=névrotiques,f=65
@@ -75157,6 +75305,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=favorisants,f=64
  word=fazenda,f=64
  word=fenaison,f=64
+ word=fessier,f=64
  word=fiancées,f=64
  word=fibroscopie,f=64
  word=fictivement,f=64
@@ -75656,6 +75805,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=nouera,f=64
  word=nubiennes,f=64
  word=nurserie,f=64
+ word=nécrophilie,f=64
  word=néoréaliste,f=64
  word=objecter,f=64
  word=objecteur,f=64
@@ -76226,6 +76376,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=étalages,f=64
  word=éthylène,f=64
  word=étole,f=64
+ word=étouffement,f=64
  word=étourneaux,f=64
  word=étrangle,f=64
  word=étuve,f=64
@@ -77000,6 +77151,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=alarmistes,f=63
  word=alimentèrent,f=63
  word=alitée,f=63
+ word=allaitement,f=63
  word=allaiter,f=63
  word=allogènes,f=63
  word=allègue,f=63
@@ -77634,6 +77786,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=désarment,f=63
  word=désavantageux,f=63
  word=désenchanté,f=63
+ word=déshabillé,f=63
  word=déshonorer,f=63
  word=désintégra,f=63
  word=désintéressent,f=63
@@ -78188,6 +78341,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=libro,f=63
  word=libéralise,f=63
  word=libéralisé,f=63
+ word=liche,f=63
  word=liernes,f=63
  word=ligotée,f=63
  word=liminaire,f=63
@@ -78344,6 +78498,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=méthylique,f=63
  word=méticulosité,f=63
  word=métrisable,f=63
+ word=métèque,f=63
  word=météorique,f=63
  word=n'achève,f=63
  word=n'adhèrent,f=63
@@ -78466,6 +78621,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=persiennes,f=63
  word=personnifier,f=63
  word=persuasive,f=63
+ word=pervertie,f=63
  word=pervertir,f=63
  word=pesées,f=63
  word=peuplèrent,f=63
@@ -78580,6 +78736,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pâtissent,f=63
  word=pédaler,f=63
  word=pédonculées,f=63
+ word=pédérastes,f=63
  word=péremption,f=63
  word=périscolaires,f=63
  word=périscopique,f=63
@@ -78949,6 +79106,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=tarissement,f=63
  word=tarots,f=63
  word=tassé,f=63
+ word=tata,f=63
  word=tauromachique,f=63
  word=tavernier,f=63
  word=taxant,f=63
@@ -80935,6 +81093,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=litigieuses,f=62
  word=lobés,f=62
  word=lofts,f=62
+ word=lolita,f=62
  word=longea,f=62
  word=lorsqu'après,f=62
  word=louables,f=62
@@ -81203,6 +81362,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=planait,f=62
  word=plannings,f=62
  word=plantage,f=62
+ word=plantureuse,f=62
  word=players,f=62
  word=pleurale,f=62
  word=pleureuses,f=62
@@ -82482,6 +82642,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bijectif,f=61
  word=billots,f=61
  word=bipolarité,f=61
+ word=bite,f=61
  word=biterrois,f=61
  word=blackout,f=61
  word=blanchissant,f=61
@@ -82639,6 +82800,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=convoie,f=61
  word=coordonnait,f=61
  word=coquet,f=61
+ word=coquine,f=61
  word=cornéenne,f=61
  word=corp,f=61
  word=corticaux,f=61
@@ -83530,6 +83692,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=purulente,f=61
  word=putschiste,f=61
  word=puînés,f=61
+ word=pédéraste,f=61
  word=pénalisent,f=61
  word=pénétrés,f=61
  word=péquistes,f=61
@@ -83790,6 +83953,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=surveillante,f=61
  word=susdit,f=61
  word=suzeraine,f=61
+ word=swastika,f=61
  word=sympathisa,f=61
  word=synergique,f=61
  word=syntaxes,f=61
@@ -83871,6 +84035,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=télémark,f=61
  word=téléologie,f=61
  word=tératogène,f=61
+ word=téton,f=61
  word=ubac,f=61
  word=ultra-royaliste,f=61
  word=unicolore,f=61
@@ -84978,6 +85143,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=bourdes,f=60
  word=bourrés,f=60
  word=boustrophédon,f=60
+ word=boute-en-train,f=60
  word=braguette,f=60
  word=brai,f=60
  word=brancardiers,f=60
@@ -85160,6 +85326,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=conjecturale,f=60
  word=conjurations,f=60
  word=conjuré,f=60
+ word=connerie,f=60
  word=connotée,f=60
  word=consentait,f=60
  word=consente,f=60
@@ -85200,6 +85367,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=corrélative,f=60
  word=corselet,f=60
  word=couenne,f=60
+ word=couille,f=60
  word=couilles,f=60
  word=coulomb,f=60
  word=coulure,f=60
@@ -86282,6 +86450,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=nounours,f=60
  word=noëls,f=60
  word=nucléoprotéine,f=60
+ word=nudisme,f=60
  word=nuise,f=60
  word=nuisit,f=60
  word=nun,f=60
@@ -86764,6 +86933,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=saisisse,f=60
  word=salam,f=60
  word=saler,f=60
+ word=salope,f=60
  word=salpêtres,f=60
  word=saluèrent,f=60
  word=sanctionnait,f=60
@@ -86888,6 +87058,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=surintendants,f=60
  word=survenaient,f=60
  word=suspensive,f=60
+ word=suçant,f=60
  word=sylphes,f=60
  word=sylviculteurs,f=60
  word=symbioses,f=60
@@ -87028,6 +87199,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=versicolore,f=60
  word=verticille,f=60
  word=vestigiales,f=60
+ word=vibrateur,f=60
  word=vibreurs,f=60
  word=vice-camerlingue,f=60
  word=vice-maire,f=60
@@ -88517,6 +88689,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=gutturaux,f=59
  word=gâbles,f=59
  word=gâtés,f=59
+ word=gémissement,f=59
  word=hadron,f=59
  word=haletante,f=59
  word=hallucinant,f=59
@@ -88826,6 +88999,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=luxuriants,f=59
  word=ly,f=59
  word=lynchés,f=59
+ word=léchage,f=59
  word=lésées,f=59
  word=macaronis,f=59
  word=macromoléculaires,f=59
@@ -91610,6 +91784,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=lestage,f=58
  word=leste,f=58
  word=levantin,f=58
+ word=levrette,f=58
  word=lexicalisation,f=58
  word=liard,f=58
  word=libellées,f=58
@@ -93641,6 +93816,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=casanier,f=57
  word=caspienne,f=57
  word=castellan,f=57
+ word=castrer,f=57
  word=catégorielle,f=57
  word=cautérisation,f=57
  word=cavistes,f=57
@@ -94422,6 +94598,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=jouiront,f=57
  word=jouons,f=57
  word=jubés,f=57
+ word=judas,f=57
  word=juraient,f=57
  word=kar,f=57
  word=kidnappant,f=57
@@ -94965,6 +95142,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pondéral,f=57
  word=pontés,f=57
  word=populeuses,f=57
+ word=pornos,f=57
  word=porte-bagages,f=57
  word=portez,f=57
  word=portraituré,f=57
@@ -95332,6 +95510,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=sous-étage,f=57
  word=sous-évaluation,f=57
  word=soussignés,f=57
+ word=souteneurs,f=57
  word=souvenez-vous,f=57
  word=souviendront,f=57
  word=spatialité,f=57
@@ -95398,6 +95577,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=tanières,f=57
  word=tanner,f=57
  word=taon,f=57
+ word=tapette,f=57
  word=tapée,f=57
  word=tapées,f=57
  word=tapés,f=57
@@ -96282,6 +96462,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=baptismal,f=56
  word=barbiturique,f=56
  word=bas-saxon,f=56
+ word=basané,f=56
  word=bassement,f=56
  word=basses-cours,f=56
  word=bassesses,f=56
@@ -96740,6 +96921,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=exaltées,f=56
  word=excursionnistes,f=56
  word=exhausteur,f=56
+ word=exhibitionniste,f=56
  word=exhortent,f=56
  word=exocrine,f=56
  word=expatriation,f=56
@@ -97076,6 +97258,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=layer,f=56
  word=lettrages,f=56
  word=lev,f=56
+ word=libidineux,f=56
  word=ligné,f=56
  word=liminaires,f=56
  word=limitativement,f=56
@@ -99472,6 +99655,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=massaliotes,f=55
  word=massettes,f=55
  word=masseur-kinésithérapeute,f=55
+ word=masturbe,f=55
  word=matriarcal,f=55
  word=mauritaniennes,f=55
  word=maximalistes,f=55
@@ -99608,6 +99792,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=numéraires,f=55
  word=numérales,f=55
  word=nuptialité,f=55
+ word=nymphette,f=55
  word=nécrologiques,f=55
  word=néo-assyrien,f=55
  word=néo-babylonien,f=55
@@ -99691,6 +99876,7 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=pickles,f=55
  word=pied-bot,f=55
  word=pincettes,f=55
+ word=pine,f=55
  word=pinnules,f=55
  word=piqua,f=55
  word=pirata,f=55
@@ -99813,189 +99999,3 @@ dictionary=main:fr,locale=fr,description=Français,date=1414726264,version=54
  word=recouvrira,f=55
  word=recréations,f=55
  word=rectifiable,f=55
- word=reculera,f=55
- word=redonnèrent,f=55
- word=redressements,f=55
- word=refleurir,f=55
- word=reis,f=55
- word=rejetteront,f=55
- word=relax,f=55
- word=relâchèrent,f=55
- word=rembarquent,f=55
- word=remboursera,f=55
- word=remerciait,f=55
- word=remplaçantes,f=55
- word=remuants,f=55
- word=rendrai,f=55
- word=renfermées,f=55
- word=renflés,f=55
- word=renseignées,f=55
- word=rentabilisé,f=55
- word=renversait,f=55
- word=repartiront,f=55
- word=repartissent,f=55
- word=repiquer,f=55
- word=replantée,f=55
- word=reportait,f=55
- word=reprenons,f=55
- word=reproductifs,f=55
- word=reprogrammée,f=55
- word=resservir,f=55
- word=ressorte,f=55
- word=ressortirent,f=55
- word=ressurgi,f=55
- word=restreignit,f=55
- word=retoucheur,f=55
- word=retraitant,f=55
- word=retranscrivent,f=55
- word=retransformer,f=55
- word=retrouve-t-on,f=55
- word=revirent,f=55
- word=revitalise,f=55
- word=revête,f=55
- word=rhodopsine,f=55
- word=riad,f=55
- word=ricanant,f=55
- word=ridées,f=55
- word=rincée,f=55
- word=rivées,f=55
- word=rodriguais,f=55
- word=romans-photos,f=55
- word=rosser,f=55
- word=rostres,f=55
- word=rouelles,f=55
- word=roulera,f=55
- word=rubato,f=55
- word=ruby,f=55
- word=ruminer,f=55
- word=rustauds,f=55
- word=râperie,f=55
- word=réactionnelles,f=55
- word=réagissaient,f=55
- word=rébarbatif,f=55
- word=récalcitrantes,f=55
- word=récit-cadre,f=55
- word=réduiraient,f=55
- word=réengagé,f=55
- word=réfrigérées,f=55
- word=réfutait,f=55
- word=réfèrera,f=55
- word=réglette,f=55
- word=régularisent,f=55
- word=réhabilitent,f=55
- word=réinitialiser,f=55
- word=réintroduisant,f=55
- word=rémora,f=55
- word=rémouleur,f=55
- word=réparables,f=55
- word=répond-il,f=55
- word=réprimanda,f=55
- word=réprimandée,f=55
- word=répugnantes,f=55
- word=répétitrice,f=55
- word=résonant,f=55
- word=rétro-futuriste,f=55
- word=rétro-éclairé,f=55
- word=rétros,f=55
- word=réveillait,f=55
- word=réveille-matin,f=55
- word=révolues,f=55
- word=révoquées,f=55
- word=révérés,f=55
- word=s'accomplissent,f=55
- word=s'accuser,f=55
- word=s'affilient,f=55
- word=s'agenouillant,f=55
- word=s'agenouillent,f=55
- word=s'agglutiner,f=55
- word=s'agit-là,f=55
- word=s'agrippe,f=55
- word=s'alarme,f=55
- word=s'amoncellent,f=55
- word=s'améliorait,f=55
- word=s'aplatir,f=55
- word=s'appauvrissent,f=55
- word=s'appliqueront,f=55
- word=s'appliquèrent,f=55
- word=s'assigne,f=55
- word=s'assuraient,f=55
- word=s'attèlent,f=55
- word=s'authentifier,f=55
- word=s'effacera,f=55
- word=s'efforceront,f=55
- word=s'enchaînant,f=55
- word=s'engouffrant,f=55
- word=s'ensuivront,f=55
- word=s'enterre,f=55
- word=s'enterrent,f=55
- word=s'entourait,f=55
- word=s'entrainant,f=55
- word=s'envolera,f=55
- word=s'esquisse,f=55
- word=s'essayent,f=55
- word=s'exclamer,f=55
- word=s'exilant,f=55
- word=s'expliqua,f=55
- word=s'habituent,f=55
- word=s'immiscent,f=55
- word=s'impatientent,f=55
- word=s'inflige,f=55
- word=s'interprètent,f=55
- word=s'obliger,f=55
- word=s'octroient,f=55
- word=s'utilisait,f=55
- word=s'éclairent,f=55
- word=s'élaborer,f=55
- word=s'élançait,f=55
- word=s'émancipa,f=55
- word=s'éternisent,f=55
- word=s'éveillent,f=55
- word=saces,f=55
- word=sacramentel,f=55
- word=saisira,f=55
- word=saluera,f=55
- word=sanctifiée,f=55
- word=sanglot,f=55
- word=sapa,f=55
- word=sapajous,f=55
- word=satisfera,f=55
- word=sault,f=55
- word=saupoudrées,f=55
- word=sauves,f=55
- word=scalps,f=55
- word=scanné,f=55
- word=sceau-cylindre,f=55
- word=scellage,f=55
- word=scripteurs,f=55
- word=sectionneurs,f=55
- word=sectionnées,f=55
- word=semaient,f=55
- word=semeuse,f=55
- word=semi-groupe,f=55
- word=semoirs,f=55
- word=sensationnelles,f=55
- word=sensibilisées,f=55
- word=sensiblerie,f=55
- word=sentez,f=55
- word=sera-t-elle,f=55
- word=serin,f=55
- word=sertir,f=55
- word=sharp,f=55
- word=sidéraux,f=55
- word=signet,f=55
- word=sillonnera,f=55
- word=simiens,f=55
- word=singulariser,f=55
- word=situeront,f=55
- word=sodium-potassium,f=55
- word=soixante-huitième,f=55
- word=soixante-treizième,f=55
- word=solderont,f=55
- word=solidifient,f=55
- word=somatisation,f=55
- word=sombrèrent,f=55
- word=somnambules,f=55
- word=sonomètre,f=55
- word=soubresaut,f=55
- word=soue,f=55
- word=souffrantes,f=55

@@ -217,7 +217,7 @@ def read_words(data, name, limit=MAX_WORDS):
                 continue
             fields = [x.strip() for x in line.strip().split(",")]
             word = next((x[5:] for x in fields if x.startswith("word=")), "")
-            if not word or "not_a_word=true" in fields or "possibly_offensive=true" in fields:
+            if not word or "not_a_word=true" in fields:
                 continue
             freq = next((x[2:] for x in fields if x.startswith("f=")), "0")
             words.append((word, int(freq) if freq.isdigit() else 0))
@@ -852,7 +852,7 @@ def top_words(path, kind):
                 fields = line.strip().split(",")
                 word = fields[0][5:]
                 freq = next((int(f[2:]) for f in fields if f.startswith("f=") and f[2:].isdigit()), 0)
-                if "not_a_word=true" not in fields and "possibly_offensive=true" not in fields:
+                if "not_a_word=true" not in fields:
                     words.append((word, freq))
         return [w for w, _ in sorted(words, key=lambda w: -w[1])]
     if kind == "counts":

@@ -10,6 +10,7 @@
 - Emoji are a bit bigger on the emoji page. Prefer them small? Turn off Larger emoji in Settings.
 - New Gestures section in Settings, with a switch each for swiping, Double Space, Triple Space and flick to delete. With swiping off, autocorrect still works.
 - If the phone's fn or Sym key isn't set up right, TitanKeys tells you what's wrong and opens the right page. fn always works as Ctrl now, so its switch is gone.
+- Back works the first time in apps like YouTube and Reddit.
 - Danish and French are now Tested.
 
 ## Languages

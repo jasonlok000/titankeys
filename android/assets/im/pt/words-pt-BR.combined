@@ -342,6 +342,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=papel,f=151
  word=público,f=151
  word=setembro,f=151
+ word=sexo,f=151
  word=termo,f=151
  word=NGC,f=150
  word=abril,f=150
@@ -639,6 +640,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=começa,f=143
  word=cor,f=143
  word=crescimento,f=143
+ word=crianças,f=143
  word=cuja,f=143
  word=cujo,f=143
  word=curso,f=143
@@ -1851,6 +1853,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=mor,f=131
  word=motivos,f=131
  word=máxima,f=131
+ word=negro,f=131
  word=nossa,f=131
  word=nota,f=131
  word=onda,f=131
@@ -1892,6 +1895,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=seguiu,f=131
  word=semelhantes,f=131
  word=serve,f=131
+ word=sexual,f=131
  word=similar,f=131
  word=situações,f=131
  word=sucessos,f=131
@@ -3854,6 +3858,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=oportunidades,f=121
  word=oposto,f=121
  word=participando,f=121
+ word=peito,f=121
  word=percebe,f=121
  word=permanecendo,f=121
  word=persa,f=121
@@ -3966,6 +3971,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=adolescência,f=120
  word=adquirido,f=120
  word=adquirir,f=120
+ word=adulto,f=120
  word=aliado,f=120
  word=ampliação,f=120
  word=animado,f=120
@@ -5145,6 +5151,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=secreto,f=117
  word=sector,f=117
  word=segura,f=117
+ word=seio,f=117
  word=selvagem,f=117
  word=semestre,f=117
  word=sentença,f=117
@@ -5680,6 +5687,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=fã,f=115
  word=garante,f=115
  word=garantiu,f=115
+ word=garotas,f=115
  word=gasolina,f=115
  word=gastos,f=115
  word=governantes,f=115
@@ -6043,6 +6051,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=exercido,f=114
  word=exibe,f=114
  word=expandiu,f=114
+ word=exposto,f=114
  word=expressar,f=114
  word=extenso,f=114
  word=faces,f=114
@@ -6914,6 +6923,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=guerrilha,f=112
  word=habitado,f=112
  word=historia,f=112
+ word=homossexual,f=112
  word=houver,f=112
  word=idades,f=112
  word=identifica,f=112
@@ -6976,6 +6986,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=nomenclatura,f=112
  word=notadamente,f=112
  word=novidade,f=112
+ word=nu,f=112
  word=nutrientes,f=112
  word=obtidas,f=112
  word=obtiveram,f=112
@@ -7184,6 +7195,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=biológico,f=111
  word=bit,f=111
  word=bizantino,f=111
+ word=botão,f=111
  word=brevemente,f=111
  word=bíblico,f=111
  word=cabe,f=111
@@ -7437,6 +7449,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=partilha,f=111
  word=pastagens,f=111
  word=pecados,f=111
+ word=penetração,f=111
  word=pensou,f=111
  word=perdidos,f=111
  word=perfeição,f=111
@@ -9272,6 +9285,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=equipados,f=107
  word=escalar,f=107
  word=escalão,f=107
+ word=escrava,f=107
  word=escreveram,f=107
  word=escudos,f=107
  word=espinhos,f=107
@@ -9517,6 +9531,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=substantivo,f=107
  word=superado,f=107
  word=supermercados,f=107
+ word=supremacia,f=107
  word=suspensa,f=107
  word=sustenta,f=107
  word=suíça,f=107
@@ -10320,6 +10335,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=convertidos,f=105
  word=convívio,f=105
  word=coreana,f=105
+ word=coroas,f=105
  word=correspondia,f=105
  word=coube,f=105
  word=credibilidade,f=105
@@ -10499,6 +10515,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=limitando,f=105
  word=limpo,f=105
  word=liturgia,f=105
+ word=lábios,f=105
  word=lâmpadas,f=105
  word=léguas,f=105
  word=magnésio,f=105
@@ -11351,6 +11368,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=totais,f=104
  word=transmitidas,f=104
  word=transtornos,f=104
+ word=traseiro,f=104
  word=tratadas,f=104
  word=traça,f=104
  word=treinadores,f=104
@@ -11467,8 +11485,10 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=ameaçadas,f=103
  word=ameaçou,f=103
  word=amplos,f=103
+ word=anal,f=103
  word=anarquismo,f=103
  word=andando,f=103
+ word=anormal,f=103
  word=antecessores,f=103
  word=antibióticos,f=103
  word=anão,f=103
@@ -11868,6 +11888,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pontificado,f=103
  word=pontua,f=103
  word=porcelana,f=103
+ word=pornô,f=103
  word=porquê,f=103
  word=portais,f=103
  word=posso,f=103
@@ -11892,6 +11913,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=projetados,f=103
  word=prolongado,f=103
  word=proposições,f=103
+ word=prostituta,f=103
  word=protegendo,f=103
  word=provocaram,f=103
  word=provê,f=103
@@ -11904,6 +11926,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=querido,f=103
  word=quilômetro,f=103
  word=quântico,f=103
+ word=rabo,f=103
  word=razoavelmente,f=103
  word=realidades,f=103
  word=reciclagem,f=103
@@ -11945,6 +11968,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=salvá,f=103
  word=satisfeito,f=103
  word=seguiam,f=103
+ word=seios,f=103
  word=selecionar,f=103
  word=semanais,f=103
  word=semanalmente,f=103
@@ -13260,6 +13284,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=privacidade,f=101
  word=processado,f=101
  word=procurada,f=101
+ word=proibidas,f=101
  word=promissor,f=101
  word=promovidas,f=101
  word=pronomes,f=101
@@ -13382,6 +13407,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=unitário,f=101
  word=urgência,f=101
  word=utilizá,f=101
+ word=vagina,f=101
  word=vago,f=101
  word=varanda,f=101
  word=varejo,f=101
@@ -14100,6 +14126,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=unificar,f=100
  word=unânime,f=100
  word=urbanismo,f=100
+ word=vacas,f=100
  word=valorizar,f=100
  word=vassalos,f=100
  word=venezuelano,f=100
@@ -14628,6 +14655,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=neoclássica,f=99
  word=ninfa,f=99
  word=nm,f=99
+ word=nudez,f=99
  word=náuticas,f=99
  word=observam,f=99
  word=ocasionando,f=99
@@ -14675,6 +14703,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=polímeros,f=99
  word=ponteiro,f=99
  word=pormenores,f=99
+ word=pornografia,f=99
  word=portadora,f=99
  word=portando,f=99
  word=possibilitam,f=99
@@ -15192,6 +15221,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=enunciado,f=98
  word=episcopado,f=98
  word=erguidos,f=98
+ word=erótico,f=98
  word=escalado,f=98
  word=escassas,f=98
  word=escolaridade,f=98
@@ -15209,6 +15239,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=estreitamente,f=98
  word=estrelar,f=98
  word=estrita,f=98
+ word=estupro,f=98
  word=eternamente,f=98
  word=evitado,f=98
  word=evitou,f=98
@@ -15962,6 +15993,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=enxergar,f=97
  word=eretos,f=97
  word=erigido,f=97
+ word=erótica,f=97
  word=escolhendo,f=97
  word=eslavas,f=97
  word=esperados,f=97
@@ -16233,6 +16265,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=permitam,f=97
  word=permitidas,f=97
  word=persegue,f=97
+ word=pica,f=97
  word=pioneirismo,f=97
  word=pique,f=97
  word=planetária,f=97
@@ -16387,6 +16420,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=termais,f=97
  word=terraços,f=97
  word=terças,f=97
+ word=testículos,f=97
  word=texturas,f=97
  word=tirania,f=97
  word=titulado,f=97
@@ -16867,6 +16901,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=extraordinárias,f=96
  word=extraterrestres,f=96
  word=extrato,f=96
+ word=faciais,f=96
  word=falece,f=96
  word=falecidos,f=96
  word=falhado,f=96
@@ -17088,6 +17123,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=orbita,f=96
  word=ordenadas,f=96
  word=ordenando,f=96
+ word=orgasmo,f=96
  word=orienta,f=96
  word=originados,f=96
  word=oscilações,f=96
@@ -17284,12 +17320,14 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=sublevação,f=96
  word=sui,f=96
  word=suja,f=96
+ word=sujo,f=96
  word=superação,f=96
  word=suplementos,f=96
  word=suportados,f=96
  word=surgiam,f=96
  word=surrealista,f=96
  word=suspender,f=96
+ word=suástica,f=96
  word=talentosos,f=96
  word=tapeçarias,f=96
  word=telespectador,f=96
@@ -17341,6 +17379,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=zoólogo,f=96
  word=zumbis,f=96
  word=ária,f=96
+ word=ânus,f=96
  word=épicos,f=96
  word=ópio,f=96
  word=ósseo,f=96
@@ -17943,6 +17982,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=mantivesse,f=95
  word=marchar,f=95
  word=maridos,f=95
+ word=masturbação,f=95
  word=matematicamente,f=95
  word=maçons,f=95
  word=medicação,f=95
@@ -18005,6 +18045,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pecadores,f=95
  word=peculiaridade,f=95
  word=pedestal,f=95
+ word=pedofilia,f=95
  word=pejorativo,f=95
  word=pensaram,f=95
  word=percepções,f=95
@@ -19315,6 +19356,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=alça,f=93
  word=alçado,f=93
  word=alças,f=93
+ word=amadoras,f=93
  word=amareladas,f=93
  word=amenizar,f=93
  word=amnésia,f=93
@@ -19872,6 +19914,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pontuais,f=93
  word=populosas,f=93
  word=pormenor,f=93
+ word=pornográfico,f=93
  word=posicionou,f=93
  word=positivista,f=93
  word=poste,f=93
@@ -20501,6 +20544,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=durava,f=92
  word=débil,f=92
  word=efetividade,f=92
+ word=ejaculação,f=92
  word=elabora,f=92
  word=eletricamente,f=92
  word=eletrodo,f=92
@@ -20529,6 +20573,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=entusiasmado,f=92
  word=enxadristas,f=92
  word=enzimática,f=92
+ word=ereção,f=92
  word=erradas,f=92
  word=erudição,f=92
  word=eróticos,f=92
@@ -20656,6 +20701,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=implicação,f=92
  word=improviso,f=92
  word=impuseram,f=92
+ word=incesto,f=92
  word=inciso,f=92
  word=inconfundível,f=92
  word=incontestável,f=92
@@ -20718,6 +20764,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=lusitana,f=92
  word=luterana,f=92
  word=luteranos,f=92
+ word=lésbica,f=92
  word=magníficos,f=92
  word=malvado,f=92
  word=manchete,f=92
@@ -21038,6 +21085,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=transições,f=92
  word=translação,f=92
  word=transliterado,f=92
+ word=traseiros,f=92
  word=trate,f=92
  word=tratores,f=92
  word=trazê,f=92
@@ -22515,6 +22563,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=bromélias,f=90
  word=buscado,f=90
  word=caboclo,f=90
+ word=cadela,f=90
  word=camaradas,f=90
  word=canadiano,f=90
  word=cansados,f=90
@@ -22930,6 +22979,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=lótus,f=90
  word=macarrão,f=90
  word=macedônios,f=90
+ word=maduras,f=90
  word=magníficas,f=90
  word=maiúscula,f=90
  word=malandro,f=90
@@ -24095,6 +24145,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=noviciado,f=89
  word=nuances,f=89
  word=nutre,f=89
+ word=nádegas,f=89
  word=objeções,f=89
  word=obrigam,f=89
  word=obtinha,f=89
@@ -25595,6 +25646,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=subtipos,f=88
  word=subtração,f=88
  word=subunidade,f=88
+ word=sufocar,f=88
  word=sugeria,f=88
  word=superficialmente,f=88
  word=superpotência,f=88
@@ -26055,6 +26107,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=caracteristicamente,f=87
  word=caracóis,f=87
  word=cardumes,f=87
+ word=carnal,f=87
  word=carnavalescas,f=87
  word=casadas,f=87
  word=castigado,f=87
@@ -26375,6 +26428,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=hipertrofia,f=87
  word=hipoglicemia,f=87
  word=hipogínicos,f=87
+ word=homo,f=87
  word=húngaras,f=87
  word=identificavam,f=87
  word=identificáveis,f=87
@@ -26594,6 +26648,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pitoresca,f=87
  word=plantou,f=87
  word=platônico,f=87
+ word=playboy,f=87
  word=plexo,f=87
  word=polarizada,f=87
  word=poli,f=87
@@ -27226,6 +27281,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=bochechas,f=86
  word=bolinhas,f=86
  word=boné,f=86
+ word=bordel,f=86
  word=boreal,f=86
  word=borlas,f=86
  word=botocudos,f=86
@@ -27257,6 +27313,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=carências,f=86
  word=casarem,f=86
  word=cassados,f=86
+ word=castração,f=86
  word=catalisadores,f=86
  word=catalogados,f=86
  word=catalogar,f=86
@@ -28161,6 +28218,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=sobrados,f=86
  word=sobreposta,f=86
  word=sobrepostos,f=86
+ word=sodomia,f=86
  word=solidário,f=86
  word=somavam,f=86
  word=sondagens,f=86
@@ -28210,6 +28268,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=tratá,f=86
  word=traumática,f=86
  word=traves,f=86
+ word=travesti,f=86
  word=travestis,f=86
  word=traçou,f=86
  word=trenó,f=86
@@ -29068,6 +29127,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=levadiça,f=85
  word=levantador,f=85
  word=libertador,f=85
+ word=libido,f=85
  word=licenciar,f=85
  word=lide,f=85
  word=ligaria,f=85
@@ -30184,6 +30244,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=esculpir,f=84
  word=esculpiu,f=84
  word=esforçado,f=84
+ word=esfíncter,f=84
  word=esgotadas,f=84
  word=espanta,f=84
  word=espantoso,f=84
@@ -31706,6 +31767,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=farda,f=83
  word=faro,f=83
  word=fascinantes,f=83
+ word=fecal,f=83
  word=fechava,f=83
  word=feitio,f=83
  word=feitor,f=83
@@ -32345,6 +32407,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=voivoda,f=83
  word=volatilidade,f=83
  word=vulnerabilidades,f=83
+ word=vulva,f=83
  word=vária,f=83
  word=vêneto,f=83
  word=westerns,f=83
@@ -32773,6 +32836,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=colchões,f=82
  word=colectivamente,f=82
  word=colegiada,f=82
+ word=colegiais,f=82
  word=colorretal,f=82
  word=colosso,f=82
  word=comensais,f=82
@@ -34934,6 +34998,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pavão,f=81
  word=paços,f=81
  word=pecuaristas,f=81
+ word=pedófilo,f=81
  word=penedo,f=81
  word=penhor,f=81
  word=penitenciário,f=81
@@ -36010,6 +36075,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=estrategistas,f=80
  word=estrondo,f=80
  word=estudá,f=80
+ word=estuprada,f=80
  word=esverdeados,f=80
  word=etno,f=80
  word=eucarióticas,f=80
@@ -36533,6 +36599,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=somática,f=80
  word=sopram,f=80
  word=spa,f=80
+ word=stripper,f=80
  word=subclasses,f=80
  word=subdividir,f=80
  word=subestimado,f=80
@@ -37293,6 +37360,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=cristalografia,f=79
  word=cromático,f=79
  word=cruas,f=79
+ word=cu,f=79
  word=culpando,f=79
  word=cultas,f=79
  word=cumpriam,f=79
@@ -37772,6 +37840,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=jumento,f=79
  word=jurema,f=79
  word=justificados,f=79
+ word=lactação,f=79
  word=lagunas,f=79
  word=lamelas,f=79
  word=laminar,f=79
@@ -37855,6 +37924,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=melanoma,f=79
  word=meninges,f=79
  word=mercantilista,f=79
+ word=merda,f=79
  word=meristema,f=79
  word=meseta,f=79
  word=mesoderme,f=79
@@ -39579,6 +39649,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=nanômetros,f=78
  word=narradora,f=78
  word=nascerá,f=78
+ word=naturismo,f=78
  word=navarro,f=78
  word=navegaram,f=78
  word=neandertais,f=78
@@ -39599,6 +39670,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=noticioso,f=78
  word=notificado,f=78
  word=nucleico,f=78
+ word=nudismo,f=78
  word=numerado,f=78
  word=objetivam,f=78
  word=obsessões,f=78
@@ -39682,6 +39754,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pertenceria,f=78
  word=pertençam,f=78
  word=perturbados,f=78
+ word=pervertido,f=78
  word=períneo,f=78
  word=pescando,f=78
  word=petróglifos,f=78
@@ -39690,6 +39763,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pinacoteca,f=78
  word=pincelada,f=78
  word=piqueniques,f=78
+ word=piranha,f=78
  word=piroxenas,f=78
  word=pisca,f=78
  word=piscatórias,f=78
@@ -41507,6 +41581,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pecuniária,f=77
  word=pegado,f=77
  word=peitos,f=77
+ word=pelada,f=77
  word=pendular,f=77
  word=penetrantes,f=77
  word=pensante,f=77
@@ -41534,6 +41609,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pictos,f=77
  word=piedosos,f=77
  word=pingente,f=77
+ word=pinto,f=77
  word=piorando,f=77
  word=pirofosfato,f=77
  word=pirotécnicos,f=77
@@ -41726,6 +41802,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=saborear,f=77
  word=saciar,f=77
  word=sacolas,f=77
+ word=sadomasoquismo,f=77
  word=sagacidade,f=77
  word=sagaz,f=77
  word=salinos,f=77
@@ -42310,6 +42387,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=atrelados,f=76
  word=atípicos,f=76
  word=aumentarem,f=76
+ word=auréola,f=76
  word=autoproclamou,f=76
  word=autógrafo,f=76
  word=aventurada,f=76
@@ -42990,6 +43068,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=nanotubos,f=76
  word=narcisista,f=76
  word=natalinos,f=76
+ word=naturista,f=76
  word=naufragado,f=76
  word=nefastos,f=76
  word=negociadores,f=76
@@ -44658,6 +44737,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=quinhentistas,f=75
  word=quinhão,f=75
  word=quirguiz,f=75
+ word=rabos,f=75
  word=rachar,f=75
  word=radialistas,f=75
  word=radiativo,f=75
@@ -47412,6 +47492,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=bronzeada,f=73
  word=bruma,f=73
  word=bufo,f=73
+ word=bunda,f=73
  word=burocrata,f=73
  word=busquem,f=73
  word=buzina,f=73
@@ -48331,6 +48412,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=negociam,f=73
  word=nenhuns,f=73
  word=neon,f=73
+ word=neonazista,f=73
  word=neopentecostais,f=73
  word=neopentecostal,f=73
  word=neurocirurgião,f=73
@@ -50005,6 +50087,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=esofágico,f=72
  word=espadachins,f=72
  word=espalhe,f=72
+ word=espancar,f=72
  word=espaçosas,f=72
  word=espaçosos,f=72
  word=espelhar,f=72
@@ -51056,6 +51139,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=tolerava,f=72
  word=tombar,f=72
  word=tonsura,f=72
+ word=topless,f=72
  word=toponímicas,f=72
  word=toquem,f=72
  word=tornos,f=72
@@ -52252,6 +52336,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=labaredas,f=71
  word=lacrimais,f=71
  word=ladeadas,f=71
+ word=lamber,f=71
  word=lamentação,f=71
  word=lapa,f=71
  word=lapas,f=71
@@ -52414,6 +52499,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=orava,f=71
  word=organizaria,f=71
  word=organograma,f=71
+ word=orgia,f=71
  word=orgônio,f=71
  word=orientá,f=71
  word=orleanistas,f=71
@@ -54771,6 +54857,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=vestigial,f=70
  word=veteranas,f=70
  word=vibracional,f=70
+ word=vibrador,f=70
  word=videoteca,f=70
  word=vidrada,f=70
  word=vierem,f=70
@@ -56771,6 +56858,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=terminarão,f=69
  word=termodinamicamente,f=69
  word=tesoureiros,f=69
+ word=tetas,f=69
  word=tetraciclina,f=69
  word=tetracloreto,f=69
  word=tetróxido,f=69
@@ -57561,6 +57649,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=berrante,f=68
  word=bestiário,f=68
  word=bianual,f=68
+ word=bicha,f=68
  word=bimotores,f=68
  word=bioengenharia,f=68
  word=bobagem,f=68
@@ -57658,6 +57747,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=chiado,f=68
  word=chinchilas,f=68
  word=chorado,f=68
+ word=chupeta,f=68
  word=chávena,f=68
  word=ciconiforme,f=68
  word=cidreira,f=68
@@ -58104,6 +58194,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=exegetas,f=68
  word=exemplificando,f=68
  word=exercesse,f=68
+ word=exibicionista,f=68
  word=exilaram,f=68
  word=expandisse,f=68
  word=expedidas,f=68
@@ -58823,6 +58914,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=purificados,f=68
  word=purificá,f=68
  word=pusessem,f=68
+ word=puta,f=68
  word=puxavam,f=68
  word=puxá,f=68
  word=pélvicas,f=68
@@ -59514,6 +59606,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=beirada,f=67
  word=beneficiária,f=67
  word=berlinenses,f=67
+ word=bestial,f=67
  word=bexigas,f=67
  word=bilateralmente,f=67
  word=bilionária,f=67
@@ -60012,6 +60105,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=maracatus,f=67
  word=margeada,f=67
  word=marte,f=67
+ word=masturbar,f=67
  word=matuto,f=67
  word=meato,f=67
  word=mediais,f=67
@@ -64474,6 +64568,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pontuaram,f=65
  word=pontudos,f=65
  word=pontão,f=65
+ word=porra,f=65
  word=porrada,f=65
  word=portunhol,f=65
  word=possuirão,f=65
@@ -65635,6 +65730,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=benévolo,f=64
  word=berimbaus,f=64
  word=berçários,f=64
+ word=bestialidade,f=64
  word=bete,f=64
  word=bicudas,f=64
  word=bimestrais,f=64
@@ -65761,6 +65857,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=casei,f=64
  word=castigaram,f=64
  word=castra,f=64
+ word=castrar,f=64
  word=catalisado,f=64
  word=categoriza,f=64
  word=catinona,f=64
@@ -65830,6 +65927,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=climatizadas,f=64
  word=clonal,f=64
  word=clorados,f=64
+ word=clítoris,f=64
  word=coacervados,f=64
  word=coaduna,f=64
  word=coagidos,f=64
@@ -69107,6 +69205,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=flâmulas,f=63
  word=formamos,f=63
  word=formá,f=63
+ word=fornicação,f=63
  word=fortuita,f=63
  word=forçarem,f=63
  word=fotoquímica,f=63
@@ -69333,6 +69432,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=lapão,f=63
  word=largava,f=63
  word=lasciva,f=63
+ word=lascívia,f=63
  word=lavrando,f=63
  word=lavá,f=63
  word=leccionação,f=63
@@ -70012,6 +70112,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=visualizou,f=63
  word=vitorias,f=63
  word=volição,f=63
+ word=voyeurismo,f=63
  word=vênedos,f=63
  word=xelins,f=63
  word=xenófobo,f=63
@@ -71075,6 +71176,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=estudem,f=62
  word=estupefacientes,f=62
  word=estupor,f=62
+ word=estuprando,f=62
  word=etmoide,f=62
  word=etnológica,f=62
  word=etólios,f=62
@@ -71467,6 +71569,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=marra,f=62
  word=martas,f=62
  word=martelada,f=62
+ word=masoquista,f=62
  word=mastigador,f=62
  word=mastodontes,f=62
  word=mates,f=62
@@ -72158,6 +72261,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=xilofones,f=62
  word=zarzuelas,f=62
  word=zelosa,f=62
+ word=zoofilia,f=62
  word=zooxantelas,f=62
  word=Éolo,f=62
  word=ábacos,f=62
@@ -74652,6 +74756,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=estudas,f=60
  word=estufado,f=60
  word=estupefato,f=60
+ word=estupra,f=60
  word=eternizada,f=60
  word=etimologistas,f=60
  word=etiologias,f=60
@@ -74747,6 +74852,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=flácida,f=60
  word=focalizaram,f=60
  word=focinhos,f=60
+ word=foda,f=60
  word=folhosas,f=60
  word=fomentador,f=60
  word=fomentados,f=60
@@ -75239,6 +75345,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=neurotoxinas,f=60
  word=nevou,f=60
  word=nil,f=60
+ word=ninfeta,f=60
  word=nitrificantes,f=60
  word=nitrosaminas,f=60
  word=nomearia,f=60
@@ -75913,6 +76020,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=votivo,f=60
  word=vélites,f=60
  word=xantofilas,f=60
+ word=xixi,f=60
  word=zarabatanas,f=60
  word=zelandeses,f=60
  word=zelotes,f=60
@@ -77928,6 +78036,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=nexos,f=59
  word=nigerianas,f=59
  word=nojenta,f=59
+ word=nojento,f=59
  word=nomeará,f=59
  word=nominações,f=59
  word=normado,f=59
@@ -80426,6 +80535,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=flutter,f=58
  word=focalizava,f=58
  word=focasse,f=58
+ word=foder,f=58
  word=fonoaudióloga,f=58
  word=fonologicamente,f=58
  word=fonêmicas,f=58
@@ -82980,6 +83090,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=chevron,f=57
  word=chiados,f=57
  word=chimarrita,f=57
+ word=chupando,f=57
  word=chutados,f=57
  word=chuvisco,f=57
  word=cicatrículas,f=57
@@ -84646,6 +84757,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=pebolim,f=57
  word=pecas,f=57
  word=pedagogias,f=57
+ word=pederasta,f=57
  word=pedigrees,f=57
  word=pedimento,f=57
  word=pedófila,f=57
@@ -85455,6 +85567,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=utilizaremos,f=57
  word=vacilação,f=57
  word=vacinar,f=57
+ word=vagabunda,f=57
  word=vagabundagem,f=57
  word=vagaram,f=57
  word=vagueavam,f=57
@@ -88183,6 +88296,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=labiodentais,f=55
  word=labiovelar,f=55
  word=laboriosos,f=55
+ word=lactante,f=55
  word=lactonas,f=55
  word=lada,f=55
  word=ladeava,f=55
@@ -88548,6 +88662,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=nubladas,f=55
  word=nucleofílico,f=55
  word=nucleosídeos,f=55
+ word=nudista,f=55
  word=numismáticas,f=55
  word=nêsperas,f=55
  word=obituários,f=55
@@ -89485,6 +89600,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=trancam,f=55
  word=trancá,f=55
  word=tranquiliza,f=55
+ word=transando,f=55
  word=transbordante,f=55
  word=transcendido,f=55
  word=transcraniana,f=55
@@ -89559,6 +89675,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=uádi,f=55
  word=vacantes,f=55
  word=vacilava,f=55
+ word=vadia,f=55
  word=vadiagem,f=55
  word=vadio,f=55
  word=vaiou,f=55
@@ -90576,6 +90693,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=anulável,f=53
  word=anunciará,f=53
  word=apagará,f=53
+ word=apalpar,f=53
  word=apanhavam,f=53
  word=apanhe,f=53
  word=aparada,f=53
@@ -94048,6 +94166,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=socioletos,f=53
  word=socou,f=53
  word=sodalício,f=53
+ word=sodomita,f=53
  word=sofismas,f=53
  word=sofisticando,f=53
  word=sofisticar,f=53
@@ -96329,6 +96448,7 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=coesivos,f=52
  word=cofatores,f=52
  word=cofragens,f=52
+ word=cofrinho,f=52
  word=cogente,f=52
  word=cogitavam,f=52
  word=coincidissem,f=52
@@ -99879,123 +99999,3 @@ dictionary=main:pt_br,locale=pt_BR,description=Português (Brasil),date=17833631
  word=subjugo,f=52
  word=subluxação,f=52
  word=submergidas,f=52
- word=submergiram,f=52
- word=submetera,f=52
- word=subministro,f=52
- word=subnormal,f=52
- word=suboccipital,f=52
- word=subordinativas,f=52
- word=subornando,f=52
- word=subsarianos,f=52
- word=subsecretarias,f=52
- word=subsidiando,f=52
- word=subsistirem,f=52
- word=substantivados,f=52
- word=substituiriam,f=52
- word=substituirmos,f=52
- word=substitutivas,f=52
- word=subsunção,f=52
- word=subtema,f=52
- word=subtraem,f=52
- word=subtraímos,f=52
- word=subutilizado,f=52
- word=subverteu,f=52
- word=succinilcolina,f=52
- word=sucederão,f=52
- word=sucumbiria,f=52
- word=sucumbisse,f=52
- word=sucá,f=52
- word=sudação,f=52
- word=sudra,f=52
- word=sufixado,f=52
- word=sufragar,f=52
- word=sugerimos,f=52
- word=sugerira,f=52
- word=sugerissem,f=52
- word=sujeitavam,f=52
- word=sujidades,f=52
- word=sulfonato,f=52
- word=sulfúreas,f=52
- word=sulindaco,f=52
- word=sulídeos,f=52
- word=sumagre,f=52
- word=sumarizado,f=52
- word=sumarizados,f=52
- word=sumidos,f=52
- word=sumirem,f=52
- word=suntuárias,f=52
- word=superciliar,f=52
- word=superestima,f=52
- word=superestrato,f=52
- word=superfaturados,f=52
- word=superlotada,f=52
- word=superpesado,f=52
- word=superprotetora,f=52
- word=superproteção,f=52
- word=supervalorizado,f=52
- word=supervisada,f=52
- word=supervisionaram,f=52
- word=superácidos,f=52
- word=superóxidos,f=52
- word=suplementadas,f=52
- word=suplicam,f=52
- word=suplico,f=52
- word=supramencionado,f=52
- word=supramencionados,f=52
- word=supremamente,f=52
- word=suprimi,f=52
- word=supusermos,f=52
- word=surfa,f=52
- word=surinamesa,f=52
- word=surpreenda,f=52
- word=surtiam,f=52
- word=suscetibilidades,f=52
- word=suspenderia,f=52
- word=suspendessem,f=52
- word=sussurrada,f=52
- word=sustentações,f=52
- word=suturados,f=52
- word=suvenir,f=52
- word=suçuaranas,f=52
- word=sâmaras,f=52
- word=séquitos,f=52
- word=sílfides,f=52
- word=símia,f=52
- word=sórbico,f=52
- word=sórdida,f=52
- word=súcubo,f=52
- word=tabaqueiros,f=52
- word=tabulados,f=52
- word=tachar,f=52
- word=tachinhas,f=52
- word=tachou,f=52
- word=talmúdicas,f=52
- word=talmúdico,f=52
- word=talâmicas,f=52
- word=tambó,f=52
- word=tamoxifeno,f=52
- word=tampado,f=52
- word=tampados,f=52
- word=tamponado,f=52
- word=tana,f=52
- word=tangenciais,f=52
- word=tangia,f=52
- word=tapires,f=52
- word=tapuiense,f=52
- word=taquari,f=52
- word=taquicardias,f=52
- word=taram,f=52
- word=tardará,f=52
- word=tardava,f=52
- word=tardoz,f=52
- word=taredo,f=52
- word=tarifada,f=52
- word=tarraconense,f=52
- word=tarrafa,f=52
- word=taruca,f=52
- word=tata,f=52
- word=tatuadora,f=52
- word=taubateana,f=52
- word=taurino,f=52
- word=tautológico,f=52
- word=taxiar,f=52

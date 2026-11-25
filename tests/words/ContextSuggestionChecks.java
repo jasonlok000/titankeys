@@ -55,14 +55,14 @@ public final class ContextSuggestionChecks {
                 "Blocked words must not appear as fixes");
         TypedPredictions full = new TypedPredictions(new StringReader("chicken\n"), new StringReader(String.join("\n",
                 "dictionary=main:en,locale=en", " word=nuggets,f=72,flags=,originalFreq=72", " word=nugget,f=68,flags=,originalFreq=68",
-                " word=nuggety,f=0,flags=,originalFreq=0", " word=nugg,f=40,flags=offensive,originalFreq=40",
+                " word=nuggety,f=0,flags=,originalFreq=0", " word=nuggetz,f=40,flags=offensive,originalFreq=40",
                 " word=Nugent,f=60,flags=,originalFreq=60", "  shortcut=nuggs,f=whitelist")),
                 word -> switch (word) { case "nuggets" -> 72; case "nugget" -> 68; default -> 40; });
-        check(Arrays.equals(full.suggest("nugge", List.of(), 20000, word -> true), new String[] { "nuggets", "nugget" }),
-                "Words from the full dictionary must complete, without unused, offensive or name entries");
+        check(Arrays.equals(full.suggest("nugge", List.of(), 20000, word -> true), new String[] { "nuggets", "nugget", "nuggetz" }),
+                "Words from the full dictionary must complete, rude ones too (owner: no filter), without unused or name entries");
         check(full.contains("chicken") && full.contains("nuggets") && !full.contains("nugent"),
                 "Both word lists must count as known words");
-        check(full.lowercase("nuggets") && full.lowercase("Nugg") && full.lowercase("nuggety") && !full.lowercase("nugent")
+        check(full.lowercase("nuggets") && full.lowercase("Nuggetz") && full.lowercase("nuggety") && !full.lowercase("nugent")
                 && !full.lowercase("chicken"), "Only the full list's lowercase lines, whatever their flags, make an ordinary word");
         System.out.println("Context suggestion checks passed");
     }

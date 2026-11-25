@@ -959,6 +959,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=campione,f=139
  word=canale,f=139
  word=capitano,f=139
+ word=cappella,f=139
  word=case,f=139
  word=cattolica,f=139
  word=codice,f=139
@@ -1189,6 +1190,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=lascia,f=137
  word=lasciò,f=137
  word=leader,f=137
+ word=legato,f=137
  word=libero,f=137
  word=linguaggio,f=137
  word=livelli,f=137
@@ -1274,6 +1276,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=cardinale,f=136
  word=chiaro,f=136
  word=chiede,f=136
+ word=cinese,f=136
  word=classica,f=136
  word=coda,f=136
  word=combattimento,f=136
@@ -1473,6 +1476,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=solare,f=135
  word=sonora,f=135
  word=sovrano,f=135
+ word=spagnola,f=135
  word=spedizione,f=135
  word=spettacolo,f=135
  word=stesse,f=135
@@ -2353,6 +2357,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=qualunque,f=129
  word=quarti,f=129
  word=quinta,f=129
+ word=ragazze,f=129
  word=rango,f=129
  word=realizzate,f=129
  word=regionali,f=129
@@ -2378,6 +2383,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=segni,f=129
  word=seguendo,f=129
  word=sepolto,f=129
+ word=sesso,f=129
  word=sfida,f=129
  word=signore,f=129
  word=sinistro,f=129
@@ -2593,6 +2599,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=scienze,f=128
  word=seguita,f=128
  word=selezione,f=128
+ word=sessuale,f=128
  word=settori,f=128
  word=situazioni,f=128
  word=sogno,f=128
@@ -3492,6 +3499,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=negozio,f=124
  word=nell'anno,f=124
  word=normali,f=124
+ word=nudo,f=124
  word=operare,f=124
  word=operazione,f=124
  word=opposto,f=124
@@ -3782,11 +3790,13 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=parallelo,f=123
  word=parametri,f=123
  word=parlato,f=123
+ word=partner,f=123
  word=partì,f=123
  word=periferia,f=123
  word=piatto,f=123
  word=pioggia,f=123
  word=poema,f=123
+ word=polacco,f=123
  word=porre,f=123
  word=pratiche,f=123
  word=prendono,f=123
@@ -4002,6 +4012,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=eserciti,f=122
  word=esilio,f=122
  word=esisteva,f=122
+ word=esposto,f=122
  word=esprime,f=122
  word=esterne,f=122
  word=estesa,f=122
@@ -4428,6 +4439,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=segreta,f=121
  word=seguaci,f=121
  word=sembrava,f=121
+ word=seno,f=121
  word=sentiero,f=121
  word=sentire,f=121
  word=separata,f=121
@@ -5976,6 +5988,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=accessibile,f=116
  word=accorge,f=116
  word=adiacente,f=116
+ word=adulto,f=116
  word=affermare,f=116
  word=affetto,f=116
  word=africana,f=116
@@ -6329,6 +6342,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=sufficienti,f=116
  word=sultano,f=116
  word=superficiale,f=116
+ word=supremo,f=116
  word=tastiere,f=116
  word=telescopio,f=116
  word=testimoniano,f=116
@@ -7056,6 +7070,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=parecchie,f=114
  word=parto,f=114
  word=pellegrinaggio,f=114
+ word=pene,f=114
  word=pensieri,f=114
  word=pericolosa,f=114
  word=perlopiù,f=114
@@ -7566,6 +7581,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=scissione,f=113
  word=scoppiò,f=113
  word=scusa,f=113
+ word=sedere,f=113
  word=segretamente,f=113
  word=sembrare,f=113
  word=seme,f=113
@@ -7815,6 +7831,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=duplice,f=112
  word=durato,f=112
  word=dure,f=112
+ word=ebreo,f=112
  word=eccessivamente,f=112
  word=economicamente,f=112
  word=edilizia,f=112
@@ -8466,6 +8483,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=mogli,f=111
  word=moltissime,f=111
  word=monsignor,f=111
+ word=montata,f=111
  word=montati,f=111
  word=mortali,f=111
  word=nascosti,f=111
@@ -8502,6 +8520,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=peculiare,f=111
  word=peggio,f=111
  word=peggiore,f=111
+ word=penetrazione,f=111
  word=perduti,f=111
  word=perenne,f=111
  word=pericoli,f=111
@@ -8635,6 +8654,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=supporre,f=111
  word=supportare,f=111
  word=supporti,f=111
+ word=supremazia,f=111
  word=sviluppando,f=111
  word=system,f=111
  word=tabellone,f=111
@@ -10270,6 +10290,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=propulsori,f=108
  word=prospettive,f=108
  word=prossimi,f=108
+ word=prostituta,f=108
  word=protocolli,f=108
  word=provenivano,f=108
  word=provino,f=108
@@ -10750,6 +10771,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=l'impatto,f=107
  word=l'informazione,f=107
  word=l'invito,f=107
+ word=labbra,f=107
  word=ladri,f=107
  word=lascerà,f=107
  word=lasciate,f=107
@@ -11141,6 +11163,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=ammassi,f=106
  word=ammasso,f=106
  word=ammissione,f=106
+ word=anale,f=106
  word=anidride,f=106
  word=annullare,f=106
  word=anonima,f=106
@@ -12275,6 +12298,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=ossidazione,f=105
  word=ottiche,f=105
  word=pacifico,f=105
+ word=padrona,f=105
  word=paesino,f=105
  word=papà,f=105
  word=paragonato,f=105
@@ -14087,6 +14111,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=allontanò,f=102
  word=alterazione,f=102
  word=altopiano,f=102
+ word=amatoriali,f=102
  word=ambientate,f=102
  word=amministrare,f=102
  word=ampliò,f=102
@@ -14121,6 +14146,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=balena,f=102
  word=balene,f=102
  word=ballottaggio,f=102
+ word=bambola,f=102
  word=banchine,f=102
  word=bastione,f=102
  word=battelli,f=102
@@ -14699,6 +14725,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=specificità,f=102
  word=speculazione,f=102
  word=speculazioni,f=102
+ word=sporco,f=102
  word=spore,f=102
  word=sposerà,f=102
  word=spostati,f=102
@@ -14711,6 +14738,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=stoffa,f=102
  word=strategiche,f=102
  word=stringere,f=102
+ word=stupro,f=102
  word=subacquea,f=102
  word=sudovest,f=102
  word=sull'asse,f=102
@@ -14728,6 +14756,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=tendenzialmente,f=102
  word=tentava,f=102
  word=terapeutico,f=102
+ word=terrorista,f=102
  word=tibetano,f=102
  word=tifoseria,f=102
  word=timido,f=102
@@ -15136,6 +15165,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=erette,f=101
  word=eretti,f=101
  word=ermafroditi,f=101
+ word=erotico,f=101
  word=esercitava,f=101
  word=esistano,f=101
  word=esita,f=101
@@ -15378,6 +15408,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=ponente,f=101
  word=popolate,f=101
  word=porcellana,f=101
+ word=porno,f=101
  word=posseggono,f=101
  word=poster,f=101
  word=potabile,f=101
@@ -16476,6 +16507,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=traslitterazione,f=100
  word=trasmise,f=100
  word=travagliata,f=100
+ word=travestito,f=100
  word=tribune,f=100
  word=ultimamente,f=100
  word=un'amica,f=100
@@ -16927,6 +16959,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=essenze,f=99
  word=estrae,f=99
  word=etruschi,f=99
+ word=facciale,f=99
  word=falce,f=99
  word=fallimenti,f=99
  word=fallire,f=99
@@ -18081,6 +18114,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=poemetto,f=98
  word=polline,f=98
  word=popolano,f=98
+ word=pornografia,f=98
  word=portellone,f=98
  word=portuali,f=98
  word=posiziona,f=98
@@ -18810,6 +18844,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=equivoci,f=97
  word=eredita,f=97
  word=eroico,f=97
+ word=erotica,f=97
  word=esalta,f=97
  word=esaurimento,f=97
  word=esca,f=97
@@ -20155,6 +20190,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=pontefici,f=96
  word=pool,f=96
  word=popoloso,f=96
+ word=pornografico,f=96
  word=porterebbe,f=96
  word=postura,f=96
  word=potremmo,f=96
@@ -20248,6 +20284,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=rispettata,f=96
  word=ristoro,f=96
  word=ristretti,f=96
+ word=ritardato,f=96
  word=ritenersi,f=96
  word=ritennero,f=96
  word=ritroverà,f=96
@@ -20302,6 +20339,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=segnerà,f=96
  word=selvatiche,f=96
  word=seminterrato,f=96
+ word=seni,f=96
  word=sensoriali,f=96
  word=seppellire,f=96
  word=serrata,f=96
@@ -20995,6 +21033,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=importate,f=95
  word=importazione,f=95
  word=impossibilitato,f=95
+ word=impotente,f=95
  word=improntata,f=95
  word=imputato,f=95
  word=inalterata,f=95
@@ -21086,6 +21125,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=leggono,f=95
  word=legumi,f=95
  word=lemma,f=95
+ word=lesbica,f=95
  word=lessicale,f=95
  word=liberano,f=95
  word=liberarlo,f=95
@@ -21384,6 +21424,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=sfruttò,f=95
  word=sgradevole,f=95
  word=siglò,f=95
+ word=silenzioso,f=95
  word=simboliche,f=95
  word=simmetrici,f=95
  word=simulazioni,f=95
@@ -21513,6 +21554,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=urti,f=95
  word=usura,f=95
  word=utilizzazione,f=95
+ word=vagina,f=95
  word=vago,f=95
  word=valanga,f=95
  word=valletta,f=95
@@ -22533,6 +22575,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=spazzatura,f=94
  word=spedire,f=94
  word=sperati,f=94
+ word=sperma,f=94
  word=spettrali,f=94
  word=spezza,f=94
  word=spiegate,f=94
@@ -23413,6 +23456,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=nominativi,f=93
  word=normalizzazione,f=93
  word=novero,f=93
+ word=nudità,f=93
  word=numerati,f=93
  word=numismatica,f=93
  word=nuora,f=93
@@ -23450,6 +23494,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=patriottismo,f=93
  word=pattini,f=93
  word=pedali,f=93
+ word=pedofilia,f=93
  word=peggiorò,f=93
  word=peluria,f=93
  word=penalizzato,f=93
@@ -23572,6 +23617,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=rilevano,f=93
  word=rimandata,f=93
  word=rimanesse,f=93
+ word=rimpiazzo,f=93
  word=rinculo,f=93
  word=rinomate,f=93
  word=rinviato,f=93
@@ -23639,6 +23685,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=scorsi,f=93
  word=sedicesima,f=93
  word=sedimentarie,f=93
+ word=sega,f=93
  word=segnatamente,f=93
  word=selettiva,f=93
  word=selettivo,f=93
@@ -24310,6 +24357,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=dovunque,f=92
  word=druidi,f=92
  word=durissima,f=92
+ word=eccitato,f=92
  word=eclatante,f=92
  word=economista,f=92
  word=edilizie,f=92
@@ -24915,6 +24963,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=spighe,f=92
  word=spoglia,f=92
  word=spoiler,f=92
+ word=spugna,f=92
  word=squadrata,f=92
  word=squadriglie,f=92
  word=staffette,f=92
@@ -25327,6 +25376,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=bollettino,f=91
  word=bonifiche,f=91
  word=book,f=91
+ word=bordello,f=91
  word=boscaglia,f=91
  word=boschetto,f=91
  word=boschiva,f=91
@@ -25811,6 +25861,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=manubrio,f=91
  word=margravio,f=91
  word=marocchina,f=91
+ word=marocchino,f=91
  word=mazzi,f=91
  word=mediare,f=91
  word=menzionano,f=91
@@ -27537,6 +27588,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=trascinò,f=90
  word=trattenuta,f=90
  word=trattino,f=90
+ word=travestiti,f=90
  word=travolta,f=90
  word=trentesimo,f=90
  word=trequartista,f=90
@@ -29328,6 +29380,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=caratterizzanti,f=88
  word=cardini,f=88
  word=carismatica,f=88
+ word=carnale,f=88
  word=carneficina,f=88
  word=carnose,f=88
  word=carpentiere,f=88
@@ -30231,6 +30284,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=societarie,f=88
  word=socievole,f=88
  word=sociologica,f=88
+ word=soffocamento,f=88
  word=soffocata,f=88
  word=soffrendo,f=88
  word=soggiornare,f=88
@@ -31032,6 +31086,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=eolico,f=87
  word=epistole,f=87
  word=ereditiera,f=87
+ word=erezione,f=87
  word=eroicamente,f=87
  word=errante,f=87
  word=esagonali,f=87
@@ -31323,6 +31378,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=lussuose,f=87
  word=lussuosi,f=87
  word=lussureggiante,f=87
+ word=lussuria,f=87
  word=lutti,f=87
  word=macellazione,f=87
  word=magnetizzazione,f=87
@@ -31341,6 +31397,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=marsupiali,f=87
  word=massacrato,f=87
  word=masserie,f=87
+ word=masturbazione,f=87
  word=materne,f=87
  word=mecenatismo,f=87
  word=membra,f=87
@@ -31665,6 +31722,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=scherno,f=87
  word=schiave,f=87
  word=schivo,f=87
+ word=schizzo,f=87
  word=sciagura,f=87
  word=sciistici,f=87
  word=scomparto,f=87
@@ -31739,6 +31797,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=spillo,f=87
  word=spinosi,f=87
  word=splendori,f=87
+ word=spogliarellista,f=87
  word=spola,f=87
  word=sporgono,f=87
  word=sprezzante,f=87
@@ -31761,6 +31820,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=studenteschi,f=87
  word=studiarono,f=87
  word=stuntman,f=87
+ word=stupri,f=87
  word=succedersi,f=87
  word=successero,f=87
  word=sufi,f=87
@@ -31778,6 +31838,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=supponiamo,f=87
  word=supposizione,f=87
  word=sutra,f=87
+ word=svastica,f=87
  word=sviluppavano,f=87
  word=taiwanesi,f=87
  word=talebani,f=87
@@ -31815,6 +31876,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=trafigge,f=87
  word=tralci,f=87
  word=tranquille,f=87
+ word=transessuale,f=87
  word=trascorsero,f=87
  word=trascritta,f=87
  word=trascura,f=87
@@ -32251,6 +32313,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=biliari,f=86
  word=bilingui,f=86
  word=biplana,f=86
+ word=bisessuale,f=86
  word=bisognerebbe,f=86
  word=blindata,f=86
  word=boera,f=86
@@ -32435,6 +32498,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=dall'ordinamento,f=86
  word=dall'organismo,f=86
  word=dandosi,f=86
+ word=dannato,f=86
  word=dantesca,f=86
  word=dantesco,f=86
  word=danubiana,f=86
@@ -32960,6 +33024,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=nativamente,f=86
  word=navigò,f=86
  word=nazionalsocialismo,f=86
+ word=negro,f=86
  word=nell'Illinois,f=86
  word=nell'Irlanda,f=86
  word=nell'Ohio,f=86
@@ -33073,6 +33138,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=pomeridiano,f=86
  word=ponticello,f=86
  word=popstar,f=86
+ word=pornostar,f=86
  word=portabandiera,f=86
  word=porticati,f=86
  word=portoricano,f=86
@@ -33283,6 +33349,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=semplificati,f=86
  word=senno,f=86
  word=sentinelle,f=86
+ word=seriali,f=86
  word=serializzato,f=86
  word=servisse,f=86
  word=servosterzo,f=86
@@ -33772,6 +33839,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=all'opposto,f=85
  word=allargate,f=85
  word=allarmi,f=85
+ word=allattamento,f=85
  word=alleggerita,f=85
  word=allergia,f=85
  word=allineata,f=85
@@ -33864,6 +33932,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=barbabietola,f=85
  word=barbara,f=85
  word=bare,f=85
+ word=bastardo,f=85
  word=battezzate,f=85
  word=bebop,f=85
  word=benevola,f=85
@@ -34249,6 +34318,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=finanche,f=85
  word=fingersi,f=85
  word=finivano,f=85
+ word=finocchio,f=85
  word=finse,f=85
  word=fiorino,f=85
  word=fiorita,f=85
@@ -35606,6 +35676,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=cartellini,f=84
  word=cash,f=84
  word=casistica,f=84
+ word=castrato,f=84
  word=casus,f=84
  word=catastali,f=84
  word=catrame,f=84
@@ -36247,6 +36318,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=motosiluranti,f=84
  word=multidisciplinare,f=84
  word=murari,f=84
+ word=mutande,f=84
  word=napoleonici,f=84
  word=naviga,f=84
  word=navigava,f=84
@@ -36344,6 +36416,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=peruviani,f=84
  word=pervaso,f=84
  word=perversione,f=84
+ word=perverso,f=84
  word=pestaggio,f=84
  word=pettinatura,f=84
  word=pianificando,f=84
@@ -36590,6 +36663,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=socialdemocratica,f=84
  word=soddisfacimento,f=84
  word=sodo,f=84
+ word=sodomia,f=84
  word=soffiata,f=84
  word=solfati,f=84
  word=somala,f=84
@@ -37999,6 +38073,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=pittoreschi,f=83
  word=plateau,f=83
  word=plausibili,f=83
+ word=playboy,f=83
  word=plc,f=83
  word=plebea,f=83
  word=plettro,f=83
@@ -38084,6 +38159,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=raddoppiò,f=83
  word=rafforzarono,f=83
  word=raffreddata,f=83
+ word=ragazzine,f=83
  word=ragù,f=83
  word=ramificati,f=83
  word=rampanti,f=83
@@ -38908,6 +38984,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=cannoncini,f=82
  word=canonizzata,f=82
  word=capanno,f=82
+ word=capezzolo,f=82
  word=capienti,f=82
  word=capifamiglia,f=82
  word=capitolino,f=82
@@ -38925,6 +39002,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=cartesiana,f=82
  word=cassiere,f=82
  word=castrati,f=82
+ word=castrazione,f=82
  word=catalitico,f=82
  word=catalizzare,f=82
  word=catastrofiche,f=82
@@ -39072,6 +39150,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=dall'evoluzione,f=82
  word=dall'oggetto,f=82
  word=dall'oscurità,f=82
+ word=dannazione,f=82
  word=deambulazione,f=82
  word=decelerazione,f=82
  word=decodificare,f=82
@@ -39317,6 +39396,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=iconoclasta,f=82
  word=identificativa,f=82
  word=identificavano,f=82
+ word=idiota,f=82
  word=idrati,f=82
  word=illuminante,f=82
  word=imbattibilità,f=82
@@ -39555,6 +39635,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=menisco,f=82
  word=menopausa,f=82
  word=mercatini,f=82
+ word=merda,f=82
  word=mere,f=82
  word=merlature,f=82
  word=merletti,f=82
@@ -40678,6 +40759,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=cisteina,f=81
  word=classicheggianti,f=81
  word=classificarono,f=81
+ word=clitoride,f=81
  word=cloroplasti,f=81
  word=cocchio,f=81
  word=cockpit,f=81
@@ -41124,6 +41206,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=incandescenza,f=81
  word=incastro,f=81
  word=incendiarono,f=81
+ word=incesto,f=81
  word=incitamento,f=81
  word=incitò,f=81
  word=incolte,f=81
@@ -41411,6 +41494,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=navigli,f=81
  word=nazifascista,f=81
  word=negozianti,f=81
+ word=negri,f=81
  word=nell'Agro,f=81
  word=nell'Assemblea,f=81
  word=nell'Australia,f=81
@@ -41803,6 +41887,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=serliana,f=81
  word=sessantesimo,f=81
  word=sfilando,f=81
+ word=sfintere,f=81
  word=sfiorata,f=81
  word=sfociato,f=81
  word=sfogare,f=81
@@ -42471,6 +42556,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=beneventano,f=80
  word=bentonici,f=80
  word=berillio,f=80
+ word=bestiale,f=80
  word=beveva,f=80
  word=bibliografici,f=80
  word=biciclo,f=80
@@ -42486,6 +42572,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=blasonato,f=80
  word=blaster,f=80
  word=blocchetti,f=80
+ word=bocchino,f=80
  word=boemi,f=80
  word=boicottare,f=80
  word=bollitura,f=80
@@ -43263,6 +43350,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=orologiaio,f=80
  word=ortografica,f=80
  word=osca,f=80
+ word=osceno,f=80
  word=osserviamo,f=80
  word=ossessioni,f=80
  word=ottemperare,f=80
@@ -43682,6 +43770,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=stufe,f=80
  word=stupita,f=80
  word=stupì,f=80
+ word=succhiare,f=80
  word=sull'Europa,f=80
  word=sull'andamento,f=80
  word=sull'azione,f=80
@@ -43788,6 +43877,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=venderla,f=80
  word=ventilato,f=80
  word=ventralmente,f=80
+ word=verga,f=80
  word=verosimili,f=80
  word=versamenti,f=80
  word=versò,f=80
@@ -44868,6 +44958,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=irruente,f=79
  word=ischemia,f=79
  word=iscrissero,f=79
+ word=ispanico,f=79
  word=ispirerà,f=79
  word=istantanee,f=79
  word=istigato,f=79
@@ -45183,6 +45274,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=pedagogiche,f=79
  word=pedagogici,f=79
  word=pedagogo,f=79
+ word=pedofilo,f=79
  word=peduncolati,f=79
  word=peggiorata,f=79
  word=pegni,f=79
@@ -45290,6 +45382,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=pseudoscienza,f=79
  word=psoriasi,f=79
  word=punite,f=79
+ word=puttana,f=79
  word=puzzola,f=79
  word=quadreria,f=79
  word=quadriportico,f=79
@@ -46433,6 +46526,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=crudezza,f=78
  word=cucchiai,f=78
  word=cucciolata,f=78
+ word=culo,f=78
  word=cultuali,f=78
  word=cumino,f=78
  word=cumulativo,f=78
@@ -47689,6 +47783,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=tolleranze,f=78
  word=tonnara,f=78
  word=toolkit,f=78
+ word=topless,f=78
  word=topografici,f=78
  word=torbide,f=78
  word=torrido,f=78
@@ -49258,6 +49353,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=pelvica,f=77
  word=pelviche,f=77
  word=pendere,f=77
+ word=penetrata,f=77
  word=pentì,f=77
  word=peperoncini,f=77
  word=perbene,f=77
@@ -49865,6 +49961,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=vomere,f=77
  word=vomitare,f=77
  word=vorace,f=77
+ word=vulva,f=77
  word=webmaster,f=77
  word=yang,f=77
  word=zonale,f=77
@@ -50240,6 +50337,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=annegata,f=76
  word=annettersi,f=76
  word=annoiata,f=76
+ word=ano,f=76
  word=anormali,f=76
  word=antartici,f=76
  word=anticamera,f=76
@@ -50414,6 +50512,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=catatonico,f=76
  word=caucasici,f=76
  word=cavitazione,f=76
+ word=cazzo,f=76
  word=cedergli,f=76
  word=ceduo,f=76
  word=celeberrimi,f=76
@@ -50793,6 +50892,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=fecondi,f=76
  word=federate,f=76
  word=feldspato,f=76
+ word=fellatio,f=76
  word=fendente,f=76
  word=fenomenologica,f=76
  word=feriscono,f=76
@@ -50930,6 +51030,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=incassate,f=76
  word=incastrarlo,f=76
  word=incastrati,f=76
+ word=incestuoso,f=76
  word=incisività,f=76
  word=incitando,f=76
  word=incolpare,f=76
@@ -51240,6 +51341,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=nell'ultravioletto,f=76
  word=nell'utilizzare,f=76
  word=neoconservatori,f=76
+ word=neonazista,f=76
  word=neuronali,f=76
  word=nevralgici,f=76
  word=next,f=76
@@ -51439,6 +51541,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=radunata,f=76
  word=raffinare,f=76
  word=rajah,f=76
+ word=rasata,f=76
  word=rasero,f=76
  word=ravvisa,f=76
  word=ravvisare,f=76
@@ -51588,6 +51691,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=schematico,f=76
  word=schiacciando,f=76
  word=schienato,f=76
+ word=schifo,f=76
  word=scismatici,f=76
  word=sconfinare,f=76
  word=sconsigliabile,f=76
@@ -53310,6 +53414,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=localizzazioni,f=75
  word=locandiera,f=75
  word=lodevole,f=75
+ word=lolita,f=75
  word=lontanissimo,f=75
  word=lori,f=75
  word=lucchetto,f=75
@@ -53543,6 +53648,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=pellagra,f=75
  word=penalizzati,f=75
  word=penetrate,f=75
+ word=penetrazioni,f=75
  word=penitenze,f=75
  word=pennate,f=75
  word=pennino,f=75
@@ -53853,6 +53959,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=scivolato,f=75
  word=scolaresche,f=75
  word=scolaro,f=75
+ word=scollatura,f=75
  word=scomponibile,f=75
  word=sconfinato,f=75
  word=scontravano,f=75
@@ -53959,6 +54066,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=spietate,f=75
  word=spionistica,f=75
  word=spiritica,f=75
+ word=spogliarello,f=75
  word=spolette,f=75
  word=spoliazione,f=75
  word=sportivamente,f=75
@@ -54562,6 +54670,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=allagamento,f=74
  word=allagati,f=74
  word=allarmante,f=74
+ word=allattare,f=74
  word=alligatori,f=74
  word=allontanerà,f=74
  word=allucinante,f=74
@@ -55110,6 +55219,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=edificante,f=74
  word=edit,f=74
  word=editato,f=74
+ word=effeminato,f=74
  word=efferato,f=74
  word=effigiato,f=74
  word=egittologi,f=74
@@ -55356,6 +55466,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=incrociava,f=74
  word=incrociò,f=74
  word=incutere,f=74
+ word=indecente,f=74
  word=indecisi,f=74
  word=indicasse,f=74
  word=indicherebbero,f=74
@@ -55776,6 +55887,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=permetterebbero,f=74
  word=peronista,f=74
  word=perturbato,f=74
+ word=pervertito,f=74
  word=pescate,f=74
  word=pesciolini,f=74
  word=piacevano,f=74
@@ -56101,6 +56213,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=socratica,f=74
  word=sofferte,f=74
  word=sofistica,f=74
+ word=softcore,f=74
  word=sognata,f=74
  word=solca,f=74
  word=solstizi,f=74
@@ -58072,6 +58185,8 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=ordinariato,f=73
  word=orecchiette,f=73
  word=orefice,f=73
+ word=orgasmo,f=73
+ word=orge,f=73
  word=orientabili,f=73
  word=orlate,f=73
  word=orografiche,f=73
@@ -58420,6 +58535,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=russificazione,f=73
  word=s'interrompe,f=73
  word=sabati,f=73
+ word=sadomaso,f=73
  word=salasso,f=73
  word=salatura,f=73
  word=salivare,f=73
@@ -60366,6 +60482,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=mungitura,f=72
  word=muovesse,f=72
  word=mure,f=72
+ word=mutandine,f=72
  word=muterà,f=72
  word=mystery,f=72
  word=mèta,f=72
@@ -62071,6 +62188,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=efflusso,f=71
  word=egea,f=71
  word=egemonica,f=71
+ word=eiaculazione,f=71
  word=elargire,f=71
  word=elargì,f=71
  word=elegiaca,f=71
@@ -63131,6 +63249,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=strenui,f=71
  word=stridula,f=71
  word=strombato,f=71
+ word=stuprato,f=71
  word=subendone,f=71
  word=subentrati,f=71
  word=subentro,f=71
@@ -63908,6 +64027,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=benpensanti,f=70
  word=bentoniche,f=70
  word=bestiali,f=70
+ word=bestialità,f=70
  word=betabloccanti,f=70
  word=bicameralismo,f=70
  word=bicilindrici,f=70
@@ -67076,6 +67196,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=forchette,f=69
  word=formattato,f=69
  word=formulari,f=69
+ word=fornicazione,f=69
  word=forniranno,f=69
  word=fornitogli,f=69
  word=forre,f=69
@@ -67439,6 +67560,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=lassismo,f=69
  word=lavanderie,f=69
  word=lavatoi,f=69
+ word=leccare,f=69
  word=legalizzata,f=69
  word=leggerla,f=69
  word=leggerne,f=69
@@ -68177,6 +68299,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=sfavorito,f=69
  word=sferrata,f=69
  word=sferzante,f=69
+ word=sfiatatoio,f=69
  word=sfilarono,f=69
  word=sfoggiando,f=69
  word=sfoggiava,f=69
@@ -70150,6 +70273,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=neutralizzando,f=68
  word=nevaio,f=68
  word=nicotinico,f=68
+ word=ninfomane,f=68
  word=nobilitare,f=68
  word=nobilitazione,f=68
  word=nocche,f=68
@@ -72617,6 +72741,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=lettrici,f=67
  word=leu,f=67
  word=liberaldemocratico,f=67
+ word=libidine,f=67
  word=libitum,f=67
  word=licenzioso,f=67
  word=lillà,f=67
@@ -72754,9 +72879,11 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=nascondino,f=67
  word=natatorie,f=67
  word=naturalizzati,f=67
+ word=naturismo,f=67
  word=naumachia,f=67
  word=nazionalizzare,f=67
  word=nazionalizzato,f=67
+ word=necrofilia,f=67
  word=negozia,f=67
  word=nell'Appendice,f=67
  word=nell'Idaho,f=67
@@ -72888,6 +73015,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=patrocinare,f=67
  word=paventando,f=67
  word=pavoncella,f=67
+ word=pederastia,f=67
  word=pedigree,f=67
  word=pelato,f=67
  word=pellami,f=67
@@ -76708,6 +76836,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=voluttà,f=66
  word=vorticose,f=66
  word=voterà,f=66
+ word=voyeurismo,f=66
  word=vulcanesimo,f=66
  word=xenofobi,f=66
  word=zanzariere,f=66
@@ -78293,6 +78422,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=gelare,f=65
  word=gelaterie,f=65
  word=gelose,f=65
+ word=gemito,f=65
  word=generalizzando,f=65
  word=generalizzano,f=65
  word=gennaker,f=65
@@ -78876,6 +79006,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=nascessero,f=65
  word=natatoie,f=65
  word=naturalizzate,f=65
+ word=naturista,f=65
  word=naumachie,f=65
  word=nazionalizzati,f=65
  word=nebbiose,f=65
@@ -79536,6 +79667,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=servomeccanismi,f=65
  word=sesamoide,f=65
  word=sesquiplana,f=65
+ word=sessantanove,f=65
  word=sessantesima,f=65
  word=sestrese,f=65
  word=settantanove,f=65
@@ -81961,6 +82093,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=paonazza,f=64
  word=papessa,f=64
  word=papillare,f=64
+ word=pappone,f=64
  word=paraffine,f=64
  word=paraguaiane,f=64
  word=paralizzati,f=64
@@ -82309,6 +82442,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=sacrari,f=64
  word=sacrestie,f=64
  word=sacrificavano,f=64
+ word=sadomasochismo,f=64
  word=saette,f=64
  word=saggistico,f=64
  word=salitori,f=64
@@ -82512,6 +82646,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=strettoie,f=64
  word=stringevano,f=64
  word=stroncate,f=64
+ word=stronzo,f=64
  word=strozzato,f=64
  word=strumentalizzato,f=64
  word=strumentalizzazioni,f=64
@@ -85569,6 +85704,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=triposto,f=63
  word=trisezione,f=63
  word=troglodytes,f=63
+ word=troia,f=63
  word=tromboncino,f=63
  word=troncatura,f=63
  word=tropopausa,f=63
@@ -85652,6 +85788,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=vestigiale,f=63
  word=vetturino,f=63
  word=vibrando,f=63
+ word=vibratore,f=63
  word=vibratori,f=63
  word=vicecommissario,f=63
  word=vicinissime,f=63
@@ -86981,6 +87118,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=martellamento,f=62
  word=martellata,f=62
  word=mascolini,f=62
+ word=masochista,f=62
  word=massivamente,f=62
  word=materassino,f=62
  word=materialistiche,f=62
@@ -87092,6 +87230,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=nordcoreane,f=62
  word=nordeuropee,f=62
  word=notavano,f=62
+ word=nudismo,f=62
  word=nunziature,f=62
  word=nuotati,f=62
  word=nutrirà,f=62
@@ -88636,6 +88775,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=clorati,f=61
  word=coatti,f=61
  word=coglierlo,f=61
+ word=coglioni,f=61
  word=coinvolgerli,f=61
  word=collegandoli,f=61
  word=colleganti,f=61
@@ -89183,6 +89323,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=esaustivamente,f=61
  word=escursionista,f=61
  word=esemplificati,f=61
+ word=esibizionista,f=61
  word=esiliando,f=61
  word=esiliate,f=61
  word=esistenzialisti,f=61
@@ -89289,6 +89430,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=fosforescenti,f=61
  word=fotoforo,f=61
  word=fotomoltiplicatore,f=61
+ word=fottuto,f=61
  word=fracassato,f=61
  word=fragorosamente,f=61
  word=frammista,f=61
@@ -89821,6 +89963,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=masticatoria,f=61
  word=masticatorio,f=61
  word=mastodontiche,f=61
+ word=masturba,f=61
  word=materialiste,f=61
  word=materico,f=61
  word=matriciali,f=61
@@ -90037,6 +90180,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=organizzarle,f=61
  word=organizzi,f=61
  word=organofosfati,f=61
+ word=orgia,f=61
  word=orgonica,f=61
  word=orlati,f=61
  word=ornò,f=61
@@ -91067,6 +91211,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=vombati,f=61
  word=vomitato,f=61
  word=votarsi,f=61
+ word=voyeur,f=61
  word=vulcanologo,f=61
  word=whois,f=61
  word=xenodochio,f=61
@@ -91655,6 +91800,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=caricarlo,f=60
  word=carice,f=60
  word=carissimi,f=60
+ word=carnalità,f=60
  word=carniche,f=60
  word=carnitina,f=60
  word=carrozzare,f=60
@@ -91954,6 +92100,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=democristiane,f=60
  word=demolirlo,f=60
  word=denoti,f=60
+ word=denudato,f=60
  word=depositandosi,f=60
  word=depositante,f=60
  word=depositava,f=60
@@ -92027,6 +92174,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=eclittica,f=60
  word=ecumeniche,f=60
  word=effettuarlo,f=60
+ word=eiaculare,f=60
  word=ela,f=60
  word=elefantino,f=60
  word=elettrizzante,f=60
@@ -92631,6 +92779,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=novellista,f=60
  word=novese,f=60
  word=nubifragi,f=60
+ word=nudista,f=60
  word=numerabilità,f=60
  word=numerus,f=60
  word=nuore,f=60
@@ -95082,6 +95231,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=ltd,f=59
  word=lucrose,f=59
  word=luminello,f=59
+ word=lussurioso,f=59
  word=luteina,f=59
  word=macadamia,f=59
  word=macchiano,f=59
@@ -96923,6 +97073,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=coadiuvanti,f=58
  word=codirosso,f=58
  word=cogliendone,f=58
+ word=coglione,f=58
  word=coimputati,f=58
  word=colando,f=58
  word=colecistite,f=58
@@ -97440,6 +97591,8 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=fervevano,f=58
  word=festicciola,f=58
  word=fettina,f=58
+ word=fica,f=58
+ word=fiche,f=58
  word=fideiussore,f=58
  word=filatrici,f=58
  word=filava,f=58
@@ -98080,6 +98233,7 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=narnese,f=58
  word=natron,f=58
  word=necrofagi,f=58
+ word=necrotica,f=58
  word=necrotici,f=58
  word=necrotico,f=58
  word=nefroni,f=58
@@ -99845,157 +99999,3 @@ dictionary=main:it,locale=it,description=Italiano,date=1414726258,version=54
  word=boraciferi,f=57
  word=borato,f=57
  word=borchia,f=57
- word=borsalino,f=57
- word=borseggiatore,f=57
- word=bottegai,f=57
- word=bovaro,f=57
- word=braccetti,f=57
- word=bracciate,f=57
- word=bramosi,f=57
- word=brandita,f=57
- word=brasati,f=57
- word=brefotrofio,f=57
- word=brevettarono,f=57
- word=briantea,f=57
- word=brigantesche,f=57
- word=bromato,f=57
- word=bruciandolo,f=57
- word=bruciarla,f=57
- word=brulicare,f=57
- word=brulli,f=57
- word=bruschetta,f=57
- word=bunny,f=57
- word=busca,f=57
- word=busche,f=57
- word=bustrofedica,f=57
- word=buttava,f=57
- word=butte,f=57
- word=buttero,f=57
- word=bypassando,f=57
- word=cablogramma,f=57
- word=cacciandoli,f=57
- word=cacofonia,f=57
- word=cacofonico,f=57
- word=calcar,f=57
- word=calcolandone,f=57
- word=calderai,f=57
- word=caleidoscopico,f=57
- word=calerà,f=57
- word=calettamento,f=57
- word=calidario,f=57
- word=califfati,f=57
- word=calmiere,f=57
- word=calumet,f=57
- word=camaleontico,f=57
- word=cambiandolo,f=57
- word=camorristici,f=57
- word=campagnole,f=57
- word=campanario,f=57
- word=campanellino,f=57
- word=campanilistico,f=57
- word=campanule,f=57
- word=campeggiavano,f=57
- word=campidanesi,f=57
- word=candelotto,f=57
- word=canditati,f=57
- word=canoista,f=57
- word=cantabrici,f=57
- word=canterino,f=57
- word=cantilenante,f=57
- word=cantonesi,f=57
- word=canturino,f=57
- word=capii,f=57
- word=caporedattrice,f=57
- word=capricciosi,f=57
- word=capuana,f=57
- word=carboniera,f=57
- word=carbonili,f=57
- word=cardanici,f=57
- word=cardellini,f=57
- word=carniere,f=57
- word=carpigiano,f=57
- word=carré,f=57
- word=carso,f=57
- word=cartarie,f=57
- word=caseificazione,f=57
- word=catalizzati,f=57
- word=catalizzò,f=57
- word=catalogando,f=57
- word=cataratte,f=57
- word=catarrine,f=57
- word=categorizzata,f=57
- word=cattedratici,f=57
- word=causo,f=57
- word=cavalcati,f=57
- word=cebo,f=57
- word=cedendola,f=57
- word=cederli,f=57
- word=ceduazione,f=57
- word=cefalo-rachidiano,f=57
- word=ceffi,f=57
- word=celestino,f=57
- word=cementa,f=57
- word=cenerini,f=57
- word=cenone,f=57
- word=centimetriche,f=57
- word=cerbiatti,f=57
- word=cercherebbe,f=57
- word=certificando,f=57
- word=certificatori,f=57
- word=cervellone,f=57
- word=cervelloni,f=57
- word=cetre,f=57
- word=chiarirne,f=57
- word=chiarissime,f=57
- word=chiedermi,f=57
- word=chilowatt,f=57
- word=chilowattora,f=57
- word=chiropratico,f=57
- word=chiuderanno,f=57
- word=chiudi,f=57
- word=ciclostile,f=57
- word=cilecca,f=57
- word=cilici,f=57
- word=cimbali,f=57
- word=cinquantacinquesima,f=57
- word=cinquantanovesima,f=57
- word=cinquantanovesimo,f=57
- word=cinquantaseiesimo,f=57
- word=cinquantasettesima,f=57
- word=cintata,f=57
- word=circassi,f=57
- word=circonvenzione,f=57
- word=circumstellari,f=57
- word=cirripedi,f=57
- word=cito,f=57
- word=clamidia,f=57
- word=clavi,f=57
- word=cliccato,f=57
- word=coagulò,f=57
- word=cocciuto,f=57
- word=coccolato,f=57
- word=coccolone,f=57
- word=coesi,f=57
- word=coguaro,f=57
- word=coin,f=57
- word=colelitiasi,f=57
- word=colga,f=57
- word=collanina,f=57
- word=collassate,f=57
- word=collide,f=57
- word=colloquiare,f=57
- word=colmano,f=57
- word=colofonia,f=57
- word=colonnetta,f=57
- word=colorarsi,f=57
- word=colpetti,f=57
- word=colposa,f=57
- word=colpose,f=57
- word=coltellaccio,f=57
- word=coltivarle,f=57
- word=combatterle,f=57
- word=cominciamo,f=57
- word=commediografa,f=57
- word=commerciò,f=57
- word=comminati,f=57
- word=compaesana,f=57

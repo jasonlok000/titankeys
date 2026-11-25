@@ -922,6 +922,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=baba,f=155
  word=şube,f=155
  word=beri,f=155
+ word=açtı,f=155
  word=katılan,f=155
  word=gerçekleştirdi,f=155
  word=ulaşım,f=155
@@ -1432,6 +1433,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=şirketin,f=148
  word=zafer,f=148
  word=artışla,f=148
+ word=mal,f=148
  word=edildiğini,f=148
  word=ege,f=148
  word=valisi,f=148
@@ -1469,6 +1471,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=seçimi,f=148
  word=prim,f=148
  word=bulutlu,f=148
+ word=yaşlı,f=148
  word=kat,f=148
  word=deplasmanda,f=148
  word=ilde,f=148
@@ -1589,6 +1592,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=oynanacak,f=146
  word=idari,f=146
  word=meslek,f=146
+ word=verici,f=146
  word=başbakan,f=146
  word=çalışmaya,f=146
  word=anlaşma,f=146
@@ -2101,6 +2105,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=gündür,f=141
  word=gök,f=141
  word=projenin,f=141
+ word=arap,f=141
  word=açıklanacak,f=141
  word=etkileri,f=141
  word=basit,f=141
@@ -2290,6 +2295,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=saldırılarda,f=139
  word=otopsi,f=139
  word=kendisinin,f=139
+ word=motor,f=139
  word=tesis,f=139
  word=kullanmak,f=139
  word=dua,f=139
@@ -2958,6 +2964,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=düşünüyoruz,f=135
  word=kenti,f=135
  word=yardımıyla,f=135
+ word=ilişki,f=135
  word=hayvanları,f=135
  word=yorum,f=135
  word=hatırlatan,f=135
@@ -3226,6 +3233,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=görür,f=133
  word=evli,f=133
  word=tamamlayan,f=133
+ word=çekmek,f=133
  word=kazanarak,f=133
  word=köklü,f=133
  word=pratik,f=133
@@ -4745,6 +4753,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=sigortası,f=125
  word=değişiyor,f=125
  word=oktay,f=125
+ word=seri,f=125
  word=bağlar,f=125
  word=tartışmalar,f=125
  word=hamile,f=125
@@ -6330,6 +6339,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=duvar,f=119
  word=başarısını,f=119
  word=belediyesinin,f=119
+ word=yılan,f=119
  word=mekan,f=119
  word=sahnede,f=119
  word=işkence,f=119
@@ -6377,6 +6387,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=dönemini,f=119
  word=topladığı,f=119
  word=liderliğini,f=119
+ word=meme,f=119
  word=sektöre,f=119
  word=ödemek,f=119
  word=uçakla,f=119
@@ -6436,6 +6447,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=sevdiği,f=118
  word=kültürünü,f=118
  word=yasası,f=118
+ word=yetişkin,f=118
  word=değiştirmek,f=118
  word=imzalandı,f=118
  word=servet,f=118
@@ -6571,6 +6583,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=inceleyen,f=118
  word=donanım,f=118
  word=ağabeyi,f=118
+ word=çekme,f=118
  word=etap,f=118
  word=takımla,f=118
  word=birliğini,f=118
@@ -6751,6 +6764,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=hastalıklar,f=117
  word=propaganda,f=117
  word=öngören,f=117
+ word=don,f=117
  word=bilerek,f=117
  word=nezdinde,f=117
  word=turistler,f=117
@@ -8329,8 +8343,10 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=çukurova,f=113
  word=incelemesinin,f=113
  word=kaynağıdır,f=113
+ word=yuvarlak,f=113
  word=açıktır,f=113
  word=bağları,f=113
+ word=üçlü,f=113
  word=ilinde,f=113
  word=ilke,f=113
  word=ölümünün,f=113
@@ -8716,6 +8732,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=suçladı,f=111
  word=hedefini,f=111
  word=ekipman,f=111
+ word=çakmak,f=111
  word=rezervleri,f=111
  word=görecek,f=111
  word=bilmiyor,f=111
@@ -8766,6 +8783,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=bulunuyordu,f=111
  word=hamur,f=111
  word=rolünü,f=111
+ word=çıplak,f=111
  word=mevsiminde,f=111
  word=görünümü,f=111
  word=eserlerin,f=111
@@ -9273,6 +9291,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=kafasına,f=110
  word=üniversiteler,f=110
  word=gelebilecek,f=110
+ word=girme,f=110
  word=anlamaya,f=110
  word=konuşurken,f=110
  word=öğretmenin,f=110
@@ -9335,6 +9354,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=aylarının,f=110
  word=hayalini,f=110
  word=çocuklarıyla,f=110
+ word=bebekler,f=110
  word=katılacağı,f=110
  word=şahitlik,f=110
  word=mark,f=110
@@ -9505,6 +9525,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=artı,f=109
  word=saran,f=109
  word=ilgiyi,f=109
+ word=tecavüz,f=109
  word=Fuat,f=109
  word=yasaklandı,f=109
  word=tasfiye,f=109
@@ -10524,6 +10545,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=unvanını,f=107
  word=kaynaklara,f=107
  word=kurulmasına,f=107
+ word=ateşli,f=107
  word=oluşturarak,f=107
  word=sesler,f=107
  word=elbise,f=107
@@ -11038,6 +11060,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=medyadaki,f=106
  word=cinayetinde,f=106
  word=yıllardan,f=106
+ word=filmler,f=106
  word=geleneği,f=106
  word=konum,f=106
  word=milletvekilliği,f=106
@@ -11635,6 +11658,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=daveti,f=104
  word=engelleyen,f=104
  word=favori,f=104
+ word=olgun,f=104
  word=yakalayan,f=104
  word=geçirdikleri,f=104
  word=bulunma,f=104
@@ -11945,6 +11969,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=çabalarının,f=104
  word=yapmalarını,f=104
  word=dereye,f=104
+ word=dudak,f=104
  word=pazarının,f=104
  word=turizmin,f=104
  word=kaybetme,f=104
@@ -12931,6 +12956,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=röportajında,f=102
  word=duyarlılık,f=102
  word=eşyası,f=102
+ word=muamele,f=102
  word=değerlendirilebilir,f=102
  word=teğmen,f=102
  word=uygulanmasını,f=102
@@ -13100,6 +13126,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ödün,f=101
  word=köşeye,f=101
  word=bitimine,f=101
+ word=genişletmek,f=101
  word=kaldırmaya,f=101
  word=patlamalar,f=101
  word=programla,f=101
@@ -13729,7 +13756,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=Reuters,f=100
  word=meltem,f=100
  word=bıraktık,f=100
- word=şansımız,f=100
  word=denen,f=100
  word=örtüsü,f=100
  word=kare,f=100
@@ -15678,6 +15704,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=felsefe,f=96
  word=okunur,f=96
  word=Angeles,f=96
+ word=delik,f=96
  word=hikâyesi,f=96
  word=işgaline,f=96
  word=kubbe,f=96
@@ -16209,6 +16236,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ederseniz,f=96
  word=soruşturmalar,f=96
  word=ödemeden,f=96
+ word=üniversiteli,f=96
  word=akıntıya,f=96
  word=artışıyla,f=96
  word=etmeyecek,f=96
@@ -16294,6 +16322,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=takımlarda,f=95
  word=hatlar,f=95
  word=menajeri,f=95
+ word=pis,f=95
  word=vurmuş,f=95
  word=MGM,f=95
  word=kampüs,f=95
@@ -17194,6 +17223,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=yenilerek,f=94
  word=MS,f=94
  word=kaplayan,f=94
+ word=seks,f=94
  word=yüzeye,f=94
  word=andıran,f=94
  word=dinin,f=94
@@ -17538,7 +17568,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=biziz,f=94
  word=haşim,f=94
  word=kaçırmamak,f=94
- word=İlber,f=94
  word=geçmektedir,f=93
  word=as,f=93
  word=sinemaya,f=93
@@ -18830,7 +18859,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=edilenleri,f=92
  word=hamsinin,f=92
  word=konforunu,f=92
- word=üzülüyorum,f=92
  word=giderler,f=91
  word=dağın,f=91
  word=tarzında,f=91
@@ -19892,7 +19920,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=müdahaleyle,f=90
  word=tedbirlerine,f=90
  word=ücretine,f=90
- word=ısınmasıyla,f=90
  word=köylere,f=90
  word=dergisinin,f=90
  word=tasarlanmıştır,f=90
@@ -20494,6 +20521,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=düzenlenmişti,f=89
  word=gidiyorlar,f=89
  word=kalifiye,f=89
+ word=sapkın,f=89
  word=yükselmesiyle,f=89
  word=anahtarını,f=89
  word=hotel,f=89
@@ -22093,6 +22121,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=gör,f=87
  word=güller,f=87
  word=milliye,f=87
+ word=saçmalık,f=87
  word=barajların,f=87
  word=elbet,f=87
  word=getirilmesinin,f=87
@@ -23474,7 +23503,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=olmalısınız,f=85
  word=saplandı,f=85
  word=sarımsağın,f=85
- word=ışıklarında,f=85
  word=ayrılır,f=85
  word=yüzyıldan,f=85
  word=fonksiyonu,f=85
@@ -23808,7 +23836,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=kurullarının,f=85
  word=paylaşılacaktır,f=85
  word=çarptırılması,f=85
- word=İlknur,f=85
  word=yanısıra,f=84
  word=nü,f=84
  word=önceleri,f=84
@@ -23847,6 +23874,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ajanı,f=84
  word=lisansını,f=84
  word=mimarisinin,f=84
+ word=siyahi,f=84
  word=yamaçlarında,f=84
  word=yarışmaları,f=84
  word=yükseklikteki,f=84
@@ -24184,7 +24212,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=sürprizlerle,f=84
  word=verilmeyeceğini,f=84
  word=çıkarabilirsiniz,f=84
- word=üreticilerini,f=84
  word=dayanmaktadır,f=84
  word=oluşmuştur,f=84
  word=tir,f=84
@@ -24981,6 +25008,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=geçecektir,f=83
  word=ilkesini,f=83
  word=uçucu,f=83
+ word=yemiş,f=83
  word=yeşili,f=83
  word=yokluğu,f=83
  word=bombaları,f=83
@@ -25003,6 +25031,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=özelliğinin,f=83
  word=Vatikan,f=83
  word=adresleri,f=83
+ word=aptal,f=83
  word=ateşle,f=83
  word=derslerin,f=83
  word=gereçleri,f=83
@@ -25271,6 +25300,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=bitirdikten,f=82
  word=deneysel,f=82
  word=güneydoğusunda,f=82
+ word=oğlan,f=82
  word=antlaşma,f=82
  word=kesilir,f=82
  word=sistemidir,f=82
@@ -25725,6 +25755,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=işlerinden,f=82
  word=kademelerinde,f=82
  word=oluşmaya,f=82
+ word=yaramaz,f=82
  word=dönüştürülmüş,f=82
  word=düşünülmüş,f=82
  word=kültürlü,f=82
@@ -28834,6 +28865,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=eğmeyen,f=78
  word=gidişat,f=78
  word=konuş,f=78
+ word=liseli,f=78
  word=ortaklarına,f=78
  word=taraftarlardan,f=78
  word=traktörle,f=78
@@ -29133,6 +29165,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=kırlangıç,f=78
  word=kızlarına,f=78
  word=multimedya,f=78
+ word=röntgen,f=78
  word=tarifeli,f=78
  word=alışkın,f=78
  word=amacın,f=78
@@ -30320,6 +30353,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=merdivenleri,f=76
  word=meze,f=76
  word=pastası,f=76
+ word=sapık,f=76
  word=servetiyle,f=76
  word=taşımaları,f=76
  word=tırmanmak,f=76
@@ -30746,6 +30780,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=cevheri,f=76
  word=eğlencesi,f=76
  word=fazlalığı,f=76
+ word=sperm,f=76
  word=verem,f=76
  word=yönteme,f=76
  word=çizgisinin,f=76
@@ -31514,6 +31549,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=FAO,f=75
  word=buldukça,f=75
  word=inşaatları,f=75
+ word=kobra,f=75
  word=kuzenleri,f=75
  word=oynamasını,f=75
  word=semptom,f=75
@@ -31920,7 +31956,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=yeniay,f=75
  word=çıktığımızda,f=75
  word=öngörüsünde,f=75
- word=İlkan,f=75
  word=sayımına,f=74
  word=adi,f=74
  word=numaradan,f=74
@@ -31997,6 +32032,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=haberci,f=74
  word=inancının,f=74
  word=kuşku,f=74
+ word=kölelik,f=74
  word=liglerinde,f=74
  word=müzisyenlerin,f=74
  word=okullarından,f=74
@@ -32290,6 +32326,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=komplikasyonlar,f=74
  word=konserlerle,f=74
  word=oynanırken,f=74
+ word=sokma,f=74
  word=yapılanmanın,f=74
  word=yaygınlaştırmak,f=74
  word=yayımlanmasının,f=74
@@ -33398,7 +33435,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ödeneceğini,f=73
  word=önerdiğini,f=73
  word=öptü,f=73
- word=üçüncüsünü,f=73
  word=hayvancılığa,f=72
  word=ayrılmıştır,f=72
  word=oluşturmuştur,f=72
@@ -34221,6 +34257,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=harfleri,f=72
  word=sütun,f=72
  word=Çince,f=72
+ word=am,f=72
  word=elektriksel,f=72
  word=kapsamaktadır,f=72
  word=kökenlidir,f=72
@@ -35143,6 +35180,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=içer,f=71
  word=korunur,f=71
  word=modelleme,f=71
+ word=seksi,f=71
  word=zaferinden,f=71
  word=çocukluğunu,f=71
  word=atalarımız,f=71
@@ -35648,6 +35686,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=göstermelidir,f=71
  word=haşere,f=71
  word=ihtimalinden,f=71
+ word=kalkma,f=71
  word=kermes,f=71
  word=kolaylaştırma,f=71
  word=kurmaktan,f=71
@@ -36179,6 +36218,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ocağını,f=70
  word=piştikten,f=70
  word=sembolün,f=70
+ word=sosis,f=70
  word=tabanından,f=70
  word=uzatılmış,f=70
  word=yakıldığı,f=70
@@ -37734,6 +37774,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=şarkılarına,f=68
  word=algoritması,f=68
  word=arazilere,f=68
+ word=emme,f=68
  word=festivalinde,f=68
  word=hücreye,f=68
  word=motifleri,f=68
@@ -39121,6 +39162,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=dedesinden,f=67
  word=duyulduğunda,f=67
  word=etiketler,f=67
+ word=fesat,f=67
  word=gelişimiyle,f=67
  word=hazırlamıştı,f=67
  word=hikayede,f=67
@@ -39711,8 +39753,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ölümlerini,f=67
  word=öngörülerin,f=67
  word=önünüze,f=67
- word=üreticisine,f=67
- word=ürperten,f=67
  word=sonraları,f=65
  word=vokal,f=65
  word=geliştirilmiştir,f=65
@@ -40876,7 +40916,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=yetiştirecek,f=65
  word=yumruğu,f=65
  word=çağıracak,f=65
- word=ıl,f=65
  word=bilinmemektedir,f=64
  word=şöyledir,f=64
  word=oluşturulmuştur,f=64
@@ -40924,6 +40963,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=atfen,f=64
  word=ayaklanması,f=64
  word=düzlemde,f=64
+ word=erotik,f=64
  word=kavrulur,f=64
  word=lt,f=64
  word=sürülmüş,f=64
@@ -41026,6 +41066,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=sınırdışı,f=64
  word=uyumludur,f=64
  word=uşağı,f=64
+ word=zina,f=64
  word=üçlüsü,f=64
  word=şöhrete,f=64
  word=almışlardı,f=64
@@ -41241,6 +41282,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=Gülhane,f=64
  word=araştırmasını,f=64
  word=avlusuna,f=64
+ word=azgın,f=64
  word=barbunya,f=64
  word=baskılayıcı,f=64
  word=beldeleri,f=64
@@ -41810,6 +41852,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=yüklenme,f=64
  word=yıkılmıştı,f=64
  word=zarfın,f=64
+ word=çakma,f=64
  word=çaldıran,f=64
  word=çalışabileceği,f=64
  word=çanları,f=64
@@ -42173,7 +42216,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=vakasına,f=64
  word=valiliğince,f=64
  word=yakınan,f=64
- word=İslamoğlu,f=64
  word=yayınlanmıştır,f=63
  word=hakimdir,f=63
  word=kütle,f=63
@@ -42367,6 +42409,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=masraflı,f=63
  word=merkezdir,f=63
  word=olmuşlardı,f=63
+ word=penis,f=63
  word=sürümünün,f=63
  word=yarık,f=63
  word=yazılarda,f=63
@@ -42675,6 +42718,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=bulamama,f=63
  word=depolarında,f=63
  word=difüzyon,f=63
+ word=frikik,f=63
  word=gezginci,f=63
  word=geçişli,f=63
  word=girilerek,f=63
@@ -43516,6 +43560,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=katlarını,f=63
  word=kayaklı,f=63
  word=kaçırmadan,f=63
+ word=kolcu,f=63
  word=korumalar,f=63
  word=korumasının,f=63
  word=koymasının,f=63
@@ -45122,6 +45167,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=sayılmaktadır,f=59
  word=IBM,f=59
  word=hücrenin,f=59
+ word=porno,f=59
  word=uzaklık,f=59
  word=hop,f=59
  word=şarkıda,f=59
@@ -46712,7 +46758,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=öngörüde,f=59
  word=öyleydi,f=59
  word=ülkücüler,f=59
- word=üretenler,f=59
  word=uzaklıktadır,f=58
  word=sürmüştür,f=58
  word=pekçok,f=58
@@ -47601,6 +47646,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=koleksiyonundan,f=58
  word=komutanını,f=58
  word=kâtip,f=58
+ word=libido,f=58
  word=martılar,f=58
  word=mekanizmalarına,f=58
  word=meyvelere,f=58
@@ -48517,7 +48563,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=çıraklar,f=58
  word=önleyecektir,f=58
  word=örtüp,f=58
- word=ışığıdır,f=58
  word=RNA,f=56
  word=sarmal,f=56
  word=boyundan,f=56
@@ -48975,6 +49020,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=menşei,f=56
  word=oluşturmaktır,f=56
  word=oluşturulmuştu,f=56
+ word=orgazm,f=56
  word=panzehir,f=56
  word=patentli,f=56
  word=poster,f=56
@@ -49196,6 +49242,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=rejiminde,f=56
  word=ruhlarına,f=56
  word=rüzgarlarının,f=56
+ word=sertleşme,f=56
  word=seyretmektedir,f=56
  word=sınıflaması,f=56
  word=sığmaz,f=56
@@ -50538,10 +50585,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=çağrılacak,f=56
  word=çelişkilerle,f=56
  word=ölçecek,f=56
- word=üstlenebilir,f=56
- word=İYTE,f=56
- word=ısındı,f=56
- word=şairimiz,f=56
  word=kaplıdır,f=54
  word=grubudur,f=54
  word=Portekizce,f=54
@@ -51363,6 +51406,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=eleştirilerden,f=54
  word=eliminasyon,f=54
  word=evleriyle,f=54
+ word=genelev,f=54
  word=gereksinimlerinin,f=54
  word=göstergedir,f=54
  word=hakettiği,f=54
@@ -52749,10 +52793,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=öndeydi,f=54
  word=önlediğini,f=54
  word=önlenebilmesi,f=54
- word=üretkenliğin,f=54
- word=üsteki,f=54
- word=üzmüş,f=54
- word=şanzımanı,f=54
  word=görenekleri,f=51
  word=yerleşmiştir,f=51
  word=çekilmiştir,f=51
@@ -53134,6 +53174,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=trombosit,f=51
  word=uyarlamasında,f=51
  word=uzaylılar,f=51
+ word=vajina,f=51
  word=yazardı,f=51
  word=yetiştirir,f=51
  word=Edinburgh,f=51
@@ -53280,6 +53321,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=yasaktı,f=51
  word=yıkılınca,f=51
  word=çıkartılıp,f=51
+ word=çıplaklık,f=51
  word=Schneider,f=51
  word=Skywalker,f=51
  word=akımlarından,f=51
@@ -55006,6 +55048,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ölenlere,f=51
  word=ölçüp,f=51
  word=önerildiği,f=51
+ word=üstsüz,f=51
  word=şanzımana,f=51
  word=Ayman,f=51
  word=Ozansoy,f=51
@@ -55384,8 +55427,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=önemser,f=51
  word=övünen,f=51
  word=öğrenmesiyle,f=51
- word=üçgül,f=51
- word=İnegölspor,f=51
  word=ptt,f=48
  word=addır,f=48
  word=filmdir,f=48
@@ -56005,6 +56046,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=kürkü,f=48
  word=küçükleri,f=48
  word=marangozluk,f=48
+ word=nektar,f=48
  word=oluştuğundan,f=48
  word=performanslarında,f=48
  word=piyadeleri,f=48
@@ -58276,11 +58318,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=çıkarabiliriz,f=48
  word=çıkarmaması,f=48
  word=çıldırmış,f=48
- word=ürünlü,f=48
- word=ıslatarak,f=48
- word=ısıtması,f=48
- word=şahitlerin,f=48
- word=şahitliğini,f=48
  word=dayalıdır,f=45
  word=görenek,f=45
  word=yy,f=45
@@ -58358,6 +58395,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=sağlamışlardır,f=45
  word=sıralanmıştır,f=45
  word=yararlanılarak,f=45
+ word=zenci,f=45
  word=Floransa,f=45
  word=anlatılmıştır,f=45
  word=antropoloji,f=45
@@ -58376,6 +58414,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=hanedanın,f=45
  word=içerirler,f=45
  word=komutu,f=45
+ word=pornografik,f=45
  word=sözcüğünü,f=45
  word=tasviri,f=45
  word=teorinin,f=45
@@ -58384,6 +58423,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=şirkettir,f=45
  word=Hamlet,f=45
  word=anadili,f=45
+ word=anal,f=45
  word=bahsetmektedir,f=45
  word=bakmaktadır,f=45
  word=besteler,f=45
@@ -58651,6 +58691,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=geçmişler,f=45
  word=geçtiğinden,f=45
  word=görülmekle,f=45
+ word=heybetli,f=45
  word=hikâyeden,f=45
  word=imtiyazlar,f=45
  word=ji,f=45
@@ -58782,6 +58823,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=Molly,f=45
  word=aklandı,f=45
  word=anlaşılmasında,f=45
+ word=anüs,f=45
  word=borçlunun,f=45
  word=boşaltım,f=45
  word=bütünün,f=45
@@ -59089,6 +59131,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=profesörlerinden,f=45
  word=sanatçılarıyla,f=45
  word=senaristlik,f=45
+ word=sıçan,f=45
  word=tahrikli,f=45
  word=talaş,f=45
  word=tuzlarının,f=45
@@ -59270,6 +59313,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=selamlık,f=45
  word=senkron,f=45
  word=sonuçlanmasından,f=45
+ word=soyulmuş,f=45
  word=tabletleri,f=45
  word=tanıtılmış,f=45
  word=tarihçesini,f=45
@@ -60502,6 +60546,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=dönerdi,f=45
  word=düelloyu,f=45
  word=düzeneğinin,f=45
+ word=edepsiz,f=45
  word=ekonomilerinde,f=45
  word=elemanlarla,f=45
  word=enfeksiyondur,f=45
@@ -61629,9 +61674,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=önemsenen,f=45
  word=öğrenimimi,f=45
  word=öğretildi,f=45
- word=üretemeyen,f=45
- word=üstlü,f=45
- word=şanslıydı,f=45
  word=aşireti,f=41
  word=yetiştirilmektedir,f=41
  word=birimidir,f=41
@@ -61668,6 +61710,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=yerleşenler,f=41
  word=benzerdir,f=41
  word=dedir,f=41
+ word=lezbiyen,f=41
  word=nötron,f=41
  word=romanda,f=41
  word=yönelmiştir,f=41
@@ -63685,6 +63728,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=paletler,f=41
  word=pantolonun,f=41
  word=paşaya,f=41
+ word=playboy,f=41
  word=psikolojiyi,f=41
  word=psikoterapist,f=41
  word=rastlanılmamıştır,f=41
@@ -65600,11 +65644,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=özüm,f=41
  word=öğretmeniyle,f=41
  word=ümitleri,f=41
- word=üyeliklerini,f=41
- word=üzüntünün,f=41
- word=üçgenindeki,f=41
- word=ıslahını,f=41
- word=şahısa,f=41
  word=NGC,f=35
  word=dür,f=35
  word=kotunda,f=35
@@ -66107,6 +66146,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=meclisli,f=35
  word=miktarıdır,f=35
  word=nesnelerden,f=35
+ word=pornografi,f=35
  word=pullarla,f=35
  word=ressamlarından,f=35
  word=rivayeti,f=35
@@ -66116,6 +66156,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=temizdir,f=35
  word=trigliserit,f=35
  word=varsayımına,f=35
+ word=yollu,f=35
  word=ölçüsüyle,f=35
  word=öykülerin,f=35
  word=öykülerinde,f=35
@@ -66533,6 +66574,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=frekansın,f=35
  word=gerideki,f=35
  word=gerçekleştiremedi,f=35
+ word=giyinik,f=35
  word=görülebildiği,f=35
  word=gözlenmesi,f=35
  word=halayı,f=35
@@ -66576,6 +66618,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=saplantı,f=35
  word=sarayların,f=35
  word=saraylarında,f=35
+ word=sevişme,f=35
  word=sex,f=35
  word=sinemadan,f=35
  word=soğukluğu,f=35
@@ -67440,6 +67483,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=beşbin,f=35
  word=beşerî,f=35
  word=bilgisayarından,f=35
+ word=bok,f=35
  word=bulunmuşlardı,f=35
  word=büyüyebilen,f=35
  word=cephelerini,f=35
@@ -68340,6 +68384,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=inançtır,f=35
  word=ineğe,f=35
  word=irtibatlarını,f=35
+ word=işeme,f=35
  word=işleviyle,f=35
  word=kablolardan,f=35
  word=kafeslerde,f=35
@@ -69908,6 +69953,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=atlatması,f=35
  word=atmalarına,f=35
  word=atmasıdır,f=35
+ word=attırmak,f=35
  word=avlaması,f=35
  word=avlanabilir,f=35
  word=avlanmayı,f=35
@@ -70371,13 +70417,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=önemsenmeyen,f=35
  word=özgürleştirir,f=35
  word=ümitsizlik,f=35
- word=üretilmek,f=35
- word=üstlerinin,f=35
- word=üstünkörü,f=35
- word=ırkla,f=35
- word=şablonlar,f=35
- word=şahitliğinde,f=35
- word=şairane,f=35
  word=köydür,f=28
  word=yararlanılmaktadır,f=28
  word=köyüdür,f=28
@@ -70827,6 +70866,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=reenkarnasyon,f=28
  word=rengidir,f=28
  word=sayımlarında,f=28
+ word=striptiz,f=28
  word=sükse,f=28
  word=tapınakları,f=28
  word=tarzdaki,f=28
@@ -70878,6 +70918,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=koordinatlar,f=28
  word=kuşakta,f=28
  word=köleliğin,f=28
+ word=kıç,f=28
  word=libretto,f=28
  word=olgunun,f=28
  word=ortaçağda,f=28
@@ -70915,6 +70956,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=destanları,f=28
  word=değiştirilip,f=28
  word=dillerindeki,f=28
+ word=döl,f=28
  word=düzlüklerde,f=28
  word=edilirmiş,f=28
  word=eleştirmenlerinden,f=28
@@ -71403,6 +71445,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=tiplerde,f=28
  word=tüylere,f=28
  word=uğramasından,f=28
+ word=varoş,f=28
  word=yargılanmıştır,f=28
  word=yarışmalarını,f=28
  word=yaslanmış,f=28
@@ -74884,6 +74927,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=serpantin,f=28
  word=sertleşti,f=28
  word=sevecendir,f=28
+ word=sik,f=28
  word=siklon,f=28
  word=silsilesini,f=28
  word=siperi,f=28
@@ -75073,6 +75117,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=asfaltlandı,f=28
  word=askısı,f=28
  word=astrofiziksel,f=28
+ word=asılma,f=28
  word=atasözünde,f=28
  word=avcılardır,f=28
  word=avcılarını,f=28
@@ -75956,6 +76001,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=işlemenin,f=28
  word=işletiliyordu,f=28
  word=işleyenleri,f=28
+ word=jigolo,f=28
  word=kabarma,f=28
  word=kabuksuz,f=28
  word=kadifemsi,f=28
@@ -76181,6 +76227,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=suluca,f=28
  word=suretleri,f=28
  word=söylemişse,f=28
+ word=sübyan,f=28
  word=sülüğün,f=28
  word=süremez,f=28
  word=sürülünce,f=28
@@ -76368,13 +76415,6 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=öğrenilmesinin,f=28
  word=öğretip,f=28
  word=öğrettikleri,f=28
- word=İrlandalılar,f=28
- word=ıslıkla,f=28
- word=ısmarladığı,f=28
- word=ısırıkların,f=28
- word=Şahenk,f=28
- word=şairle,f=28
- word=şampiyonlarından,f=28
  word=kullanılamamaktadır,f=15
  word=yayımlanmıştır,f=15
  word=kuramı,f=15
@@ -77166,6 +77206,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=enerjidir,f=15
  word=erdirmiştir,f=15
  word=eserlerindeki,f=15
+ word=fahişelik,f=15
  word=filmdi,f=15
  word=filmleridir,f=15
  word=fistan,f=15
@@ -77261,6 +77302,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=bellekler,f=15
  word=bronzdan,f=15
  word=ciao,f=15
+ word=damarlı,f=15
  word=dayalıydı,f=15
  word=derili,f=15
  word=değişkene,f=15
@@ -77949,6 +77991,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=tiridi,f=15
  word=tiyatrodur,f=15
  word=toplarına,f=15
+ word=travesti,f=15
  word=tüfeklerinin,f=15
  word=uterus,f=15
  word=vermemişlerdir,f=15
@@ -78658,6 +78701,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=ekinden,f=15
  word=ekolleri,f=15
  word=engellide,f=15
+ word=ereksiyon,f=15
  word=etkilenmemiştir,f=15
  word=eğitilmiştir,f=15
  word=eğlencedir,f=15
@@ -80816,6 +80860,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=algıladığımız,f=15
  word=almaktaydılar,f=15
  word=alışılagelen,f=15
+ word=amatörler,f=15
  word=amaçsız,f=15
  word=anadilini,f=15
  word=anadilinin,f=15
@@ -82420,6 +82465,7 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=söylenmek,f=15
  word=söylentinin,f=15
  word=süpervizörlüğünü,f=15
+ word=sürtme,f=15
  word=sürülmemiş,f=15
  word=sürümündeki,f=15
  word=sütununu,f=15
@@ -84613,19 +84659,3 @@ dictionary=main:tr,locale=tr,description=Türkçe,date=1414726261,version=54
  word=özere,f=15
  word=öğrencili,f=15
  word=öğretmeninden,f=15
- word=üretmekti,f=15
- word=üstada,f=15
- word=üstadının,f=15
- word=üzümlerinin,f=15
- word=üzümüyle,f=15
- word=İMC,f=15
- word=İsdemir,f=15
- word=İvo,f=15
- word=ırmaklarından,f=15
- word=Şahruh,f=15
- word=Şiî,f=15
- word=şahsiyetlerdendir,f=15
- word=şahsiyetlerdir,f=15
- word=şahsiyetti,f=15
- word=şapelinde,f=15
- word=şarapta,f=15

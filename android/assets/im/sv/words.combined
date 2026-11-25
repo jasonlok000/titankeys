@@ -249,6 +249,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=låg,f=155
  word=lång,f=155
  word=skall,f=155
+ word=skrev,f=155
  word=spelar,f=155
  word=utanför,f=155
  word=von,f=155
@@ -316,6 +317,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=mål,f=152
  word=politiker,f=152
  word=samtidigt,f=152
+ word=sex,f=152
  word=sidan,f=152
  word=slutade,f=152
  word=spela,f=152
@@ -652,6 +654,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=platser,f=143
  word=program,f=143
  word=samtliga,f=143
+ word=serie,f=143
  word=skolan,f=143
  word=skriven,f=143
  word=sommaren,f=143
@@ -774,6 +777,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=släppte,f=141
  word=stark,f=141
  word=staten,f=141
+ word=svart,f=141
  word=svenskt,f=141
  word=tjänst,f=141
  word=uppgift,f=141
@@ -1717,6 +1721,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=flagga,f=131
  word=fly,f=131
  word=flygplanet,f=131
+ word=full,f=131
  word=fungerade,f=131
  word=fåtal,f=131
  word=föra,f=131
@@ -1906,6 +1911,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=initiativ,f=130
  word=innehåll,f=130
  word=japansk,f=130
+ word=judar,f=130
  word=judiska,f=130
  word=kamp,f=130
  word=kandidat,f=130
@@ -3095,6 +3101,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=styrde,f=124
  word=ställe,f=124
  word=stål,f=124
+ word=stånd,f=124
  word=svenskar,f=124
  word=svårare,f=124
  word=sätts,f=124
@@ -3603,6 +3610,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=vida,f=122
  word=vikten,f=122
  word=visats,f=122
+ word=vuxen,f=122
  word=vända,f=122
  word=värd,f=122
  word=vård,f=122
@@ -4744,6 +4752,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=sanna,f=118
  word=satsade,f=118
  word=serierna,f=118
+ word=sexuell,f=118
  word=sikt,f=118
  word=skadad,f=118
  word=skal,f=118
@@ -5097,6 +5106,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=spelning,f=117
  word=sporten,f=117
  word=sprang,f=117
+ word=springa,f=117
  word=spåret,f=117
  word=stadsrättigheter,f=117
  word=stambanan,f=117
@@ -5161,6 +5171,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=önskar,f=117
  word=örter,f=117
  word=överhuvudtaget,f=117
+ word=överhöghet,f=117
  word=Bayern,f=116
  word=Bulgarien,f=116
  word=Carlsson,f=116
@@ -8276,6 +8287,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=teoretiskt,f=110
  word=tillbringa,f=110
  word=tillskrivs,f=110
+ word=tjejer,f=110
  word=tjockare,f=110
  word=tjugotal,f=110
  word=tolkningen,f=110
@@ -9373,6 +9385,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=rörlighet,f=108
  word=rötterna,f=108
  word=sagts,f=108
+ word=samlag,f=108
  word=samlingsskiva,f=108
  word=samtiden,f=108
  word=seder,f=108
@@ -9596,6 +9609,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=alger,f=107
  word=alltsedan,f=107
  word=altare,f=107
+ word=amatörer,f=107
  word=aminosyror,f=107
  word=anglikanska,f=107
  word=anglosaxiska,f=107
@@ -9911,6 +9925,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=mässan,f=107
  word=målsättning,f=107
  word=mötas,f=107
+ word=naken,f=107
  word=naturgas,f=107
  word=nazisternas,f=107
  word=nedläggning,f=107
@@ -10128,6 +10143,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=väckt,f=107
  word=väldet,f=107
  word=västlig,f=107
+ word=våldtäkt,f=107
  word=Älvsborgs,f=107
  word=ämnade,f=107
  word=ådrog,f=107
@@ -11229,6 +11245,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=mjöl,f=105
  word=modernisering,f=105
  word=modifierades,f=105
+ word=mogen,f=105
  word=monark,f=105
  word=monumentala,f=105
  word=motståndarens,f=105
@@ -11632,6 +11649,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=avbildad,f=104
  word=avbildade,f=104
  word=avbildningar,f=104
+ word=avföring,f=104
  word=avlider,f=104
  word=avsaknaden,f=104
  word=avslutats,f=104
@@ -11823,6 +11841,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=handtag,f=104
  word=hangul,f=104
  word=hanja,f=104
+ word=hardcore,f=104
  word=helium,f=104
  word=helägt,f=104
  word=hemligheter,f=104
@@ -11880,6 +11899,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=introduktion,f=104
  word=isbrytare,f=104
  word=italienske,f=104
+ word=jude,f=104
  word=järnmalm,f=104
  word=järnvägarna,f=104
  word=kabel,f=104
@@ -12047,6 +12067,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=plundrades,f=104
  word=pluralis,f=104
  word=poker,f=104
+ word=pornografi,f=104
  word=portal,f=104
  word=primater,f=104
  word=programmerare,f=104
@@ -12167,6 +12188,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=stängt,f=104
  word=stöt,f=104
  word=substansen,f=104
+ word=suger,f=104
  word=sumeriska,f=104
  word=svaghet,f=104
  word=svärson,f=104
@@ -12177,6 +12199,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=synpunkter,f=104
  word=syntetiska,f=104
  word=systerson,f=104
+ word=säd,f=104
  word=sägen,f=104
  word=sägnen,f=104
  word=sämst,f=104
@@ -12392,6 +12415,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=babyloniska,f=103
  word=bada,f=103
  word=badminton,f=103
+ word=bakifrån,f=103
  word=bakkroppen,f=103
  word=baletten,f=103
  word=barer,f=103
@@ -12777,6 +12801,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=parningen,f=103
  word=parten,f=103
  word=passion,f=103
+ word=penis,f=103
  word=penna,f=103
  word=persontrafik,f=103
  word=pilgrimer,f=103
@@ -13657,6 +13682,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=polerna,f=102
  word=popmusik,f=102
  word=populärkulturen,f=102
+ word=pornografisk,f=102
  word=predikningar,f=102
  word=presens,f=102
  word=prestationer,f=102
@@ -15418,6 +15444,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=processorn,f=100
  word=produktionsbolag,f=100
  word=promenad,f=100
+ word=prostituerad,f=100
  word=protesterna,f=100
  word=prästgården,f=100
  word=psykedelisk,f=100
@@ -18709,6 +18736,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=tilläggas,f=97
  word=tillämpningen,f=97
  word=tiotals,f=97
+ word=tjur,f=97
  word=topplistorna,f=97
  word=torkad,f=97
  word=torsdagen,f=97
@@ -19328,6 +19356,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=hednisk,f=96
  word=helande,f=96
  word=helgerna,f=96
+ word=helvete,f=96
  word=hemmanet,f=96
  word=hemvärld,f=96
  word=herrlaget,f=96
@@ -19616,6 +19645,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=ordenssällskap,f=96
  word=ordförrådet,f=96
  word=ordnande,f=96
+ word=orgasm,f=96
  word=orientalist,f=96
  word=ornamentik,f=96
  word=otrohet,f=96
@@ -21427,6 +21457,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=annex,f=94
  word=anordnats,f=94
  word=antyds,f=94
+ word=anus,f=94
  word=apparaten,f=94
  word=arabemiraten,f=94
  word=araben,f=94
@@ -22334,6 +22365,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=världsmästarna,f=94
  word=världsranking,f=94
  word=värvad,f=94
+ word=våldtäkter,f=94
  word=wave,f=94
  word=yngst,f=94
  word=yoga,f=94
@@ -22784,6 +22816,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=epidemier,f=93
  word=erbjudanden,f=93
  word=erkännas,f=93
+ word=erotisk,f=93
  word=ester,f=93
  word=etnografiska,f=93
  word=evolutionär,f=93
@@ -23560,6 +23593,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=spiran,f=93
  word=sportjournalist,f=93
  word=spritts,f=93
+ word=spruta,f=93
  word=språkvetenskap,f=93
  word=spänna,f=93
  word=spårar,f=93
@@ -24478,6 +24512,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=inaktiv,f=92
  word=inandning,f=92
  word=inbäddade,f=92
+ word=incest,f=92
  word=indianstammar,f=92
  word=indiske,f=92
  word=infall,f=92
@@ -24545,6 +24580,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=klipper,f=92
  word=klippning,f=92
  word=klipps,f=92
+ word=klitoris,f=92
  word=klocktornet,f=92
  word=klumpar,f=92
  word=klumpiga,f=92
@@ -24634,6 +24670,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=ledighet,f=92
  word=legeringar,f=92
  word=leopard,f=92
+ word=lesbisk,f=92
  word=leveransen,f=92
  word=licensierade,f=92
  word=likvärdig,f=92
@@ -28532,6 +28569,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=fiskevatten,f=89
  word=fjärdeplatsen,f=89
  word=fjärilsim,f=89
+ word=flata,f=89
  word=flockblommiga,f=89
  word=flodhästar,f=89
  word=florerade,f=89
@@ -28836,6 +28874,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=kirurgisk,f=89
  word=klarlagd,f=89
  word=klartext,f=89
+ word=klimax,f=89
  word=klingande,f=89
  word=kliniskt,f=89
  word=klotet,f=89
@@ -29064,6 +29103,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=måtto,f=89
  word=mörkbrunt,f=89
  word=mötesplatser,f=89
+ word=nakenhet,f=89
  word=narkotikabrott,f=89
  word=nasal,f=89
  word=nasala,f=89
@@ -29163,6 +29203,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=passerande,f=89
  word=patrull,f=89
  word=pedagogiken,f=89
+ word=pedofili,f=89
  word=penicillin,f=89
  word=pensionen,f=89
  word=personlige,f=89
@@ -29212,6 +29253,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=psalmböckerna,f=89
  word=pulsen,f=89
  word=pulser,f=89
+ word=pung,f=89
  word=puppan,f=89
  word=putsad,f=89
  word=påhitt,f=89
@@ -29392,6 +29434,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=spelbar,f=89
  word=spelmotor,f=89
  word=spelvärlden,f=89
+ word=sperma,f=89
  word=spetsarna,f=89
  word=spillrorna,f=89
  word=spinna,f=89
@@ -29697,6 +29740,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=vågräta,f=89
  word=våldsbrott,f=89
  word=våldsdåd,f=89
+ word=våldtagen,f=89
  word=vållande,f=89
  word=våras,f=89
  word=vårdades,f=89
@@ -30990,6 +31034,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=släpp,f=88
  word=smalnar,f=88
  word=smittsam,f=88
+ word=smutsig,f=88
  word=smällen,f=88
  word=smärtlindring,f=88
  word=småblad,f=88
@@ -32040,6 +32085,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=hjorden,f=87
  word=hjärnbarken,f=87
  word=ho,f=87
+ word=homo,f=87
  word=homofobi,f=87
  word=hopen,f=87
  word=hoppande,f=87
@@ -33008,6 +33054,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=vävd,f=87
  word=vävstolar,f=87
  word=växelspänning,f=87
+ word=våldta,f=87
  word=vårdhem,f=87
  word=whiskyn,f=87
  word=wordperfect,f=87
@@ -34315,6 +34362,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=straffspark,f=86
  word=stridsmedel,f=86
  word=stridspilot,f=86
+ word=strippa,f=86
  word=stroferna,f=86
  word=strålbehandling,f=86
  word=strömavbrott,f=86
@@ -34472,6 +34520,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=utvecklingslinje,f=86
  word=utvecklingssamarbete,f=86
  word=vadarfåglar,f=86
+ word=vagina,f=86
  word=vakanta,f=86
  word=valdeltagande,f=86
  word=valfria,f=86
@@ -35081,6 +35130,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=bonderörelsen,f=85
  word=boom,f=85
  word=boplatserna,f=85
+ word=bordell,f=85
  word=borden,f=85
  word=borgenär,f=85
  word=borgerligheten,f=85
@@ -35507,6 +35557,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=hjälps,f=85
  word=hjärtas,f=85
  word=hjärtstillestånd,f=85
+ word=hora,f=85
  word=hovdamer,f=85
  word=hovkapellet,f=85
  word=hovmästare,f=85
@@ -36077,6 +36128,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=patenterat,f=85
  word=patriarkala,f=85
  word=pedagogen,f=85
+ word=penetration,f=85
  word=pepparkakor,f=85
  word=perrong,f=85
  word=persilja,f=85
@@ -37716,6 +37768,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=idealt,f=84
  word=idel,f=84
  word=iden,f=84
+ word=idiot,f=84
  word=idrottsförbund,f=84
  word=idrottsgalan,f=84
  word=idrottsutövare,f=84
@@ -38225,6 +38278,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=polygoner,f=84
  word=popduo,f=84
  word=poplåtar,f=84
+ word=porr,f=84
  word=porträtterades,f=84
  word=positionsbestämning,f=84
  word=postadress,f=84
@@ -38416,6 +38470,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=skilts,f=84
  word=skinheads,f=84
  word=skissa,f=84
+ word=skit,f=84
  word=skogsbrand,f=84
  word=skolornas,f=84
  word=skolungdom,f=84
@@ -39805,6 +39860,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=hackade,f=83
  word=hackare,f=83
  word=hake,f=83
+ word=hakkors,f=83
  word=halka,f=83
  word=halkade,f=83
  word=halte,f=83
@@ -40289,6 +40345,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=månadslön,f=83
  word=mönstren,f=83
  word=mörkhyade,f=83
+ word=naket,f=83
  word=namngivande,f=83
  word=namnlösa,f=83
  word=namnändring,f=83
@@ -40391,6 +40448,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=ortodoxi,f=83
  word=ostörd,f=83
  word=otillåten,f=83
+ word=otukt,f=83
  word=oturen,f=83
  word=otympliga,f=83
  word=ovationer,f=83
@@ -41592,6 +41650,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=british,f=82
  word=bromsade,f=82
  word=brottarna,f=82
+ word=brudar,f=82
  word=brädspelet,f=82
  word=brännpunkt,f=82
  word=brådskande,f=82
@@ -41684,6 +41743,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=enkelspåriga,f=82
  word=ensitsiga,f=82
  word=enväldigt,f=82
+ word=erektion,f=82
  word=erfarne,f=82
  word=erlade,f=82
  word=erövringarna,f=82
@@ -42363,6 +42423,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=pneumatiska,f=82
  word=ponnyraserna,f=82
  word=pornografin,f=82
+ word=porrfilm,f=82
  word=portalerna,f=82
  word=portföljen,f=82
  word=poröst,f=82
@@ -43629,6 +43690,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=exponenten,f=81
  word=exponenter,f=81
  word=exponera,f=81
+ word=exponerad,f=81
  word=exportvara,f=81
  word=exportör,f=81
  word=exteriöra,f=81
@@ -45019,6 +45081,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=slakta,f=81
  word=slakteri,f=81
  word=slavarnas,f=81
+ word=slicka,f=81
  word=slingan,f=81
  word=slitas,f=81
  word=slocknar,f=81
@@ -45786,6 +45849,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=alnars,f=80
  word=alternerade,f=80
  word=altruism,f=80
+ word=amning,f=80
  word=anammar,f=80
  word=anat,f=80
  word=anblick,f=80
@@ -47284,6 +47348,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=socialdemokrati,f=80
  word=sociologer,f=80
  word=socionomexamen,f=80
+ word=sodomi,f=80
  word=solfjäder,f=80
  word=solgud,f=80
  word=solot,f=80
@@ -49122,6 +49187,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=nederländare,f=79
  word=nedfallande,f=79
  word=nedlägga,f=79
+ word=neger,f=79
  word=neoklassiska,f=79
  word=niger,f=79
  word=nitar,f=79
@@ -51759,6 +51825,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=passagerartåg,f=78
  word=passningsspel,f=78
  word=patrullerade,f=78
+ word=pedofil,f=78
  word=penningsumma,f=78
  word=penny,f=78
  word=pensionerat,f=78
@@ -53246,6 +53313,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=bärgningen,f=77
  word=bärsärk,f=77
  word=båthamn,f=77
+ word=bög,f=77
  word=böjningen,f=77
  word=böjningsformer,f=77
  word=catch,f=77
@@ -54036,6 +54104,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=kasseras,f=77
  word=kassetterna,f=77
  word=kastalen,f=77
+ word=kastrering,f=77
  word=kastruller,f=77
  word=katapult,f=77
  word=katarerna,f=77
@@ -56326,6 +56395,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=gömts,f=76
  word=hadroner,f=76
  word=hajk,f=76
+ word=hallick,f=76
  word=halskrage,f=76
  word=halvbuske,f=76
  word=halvtimmes,f=76
@@ -56854,6 +56924,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=plantans,f=76
  word=platonsk,f=76
  word=platåberg,f=76
+ word=playboy,f=76
  word=plikttrogen,f=76
  word=plundrad,f=76
  word=pluskvamperfekt,f=76
@@ -59836,6 +59907,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=personskydd,f=75
  word=persontågen,f=75
  word=petad,f=75
+ word=pick,f=75
  word=pikter,f=75
  word=pilgrimsled,f=75
  word=ping,f=75
@@ -59879,6 +59951,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=poplistorna,f=75
  word=pornografiskt,f=75
  word=porrbranschen,f=75
+ word=porrstjärna,f=75
  word=positivisterna,f=75
  word=postadressen,f=75
  word=postalveolar,f=75
@@ -60749,6 +60822,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=troner,f=75
  word=tronstriderna,f=75
  word=trosfrågor,f=75
+ word=trosor,f=75
  word=trumsolo,f=75
  word=truppgymnastik,f=75
  word=tryckpotential,f=75
@@ -62373,6 +62447,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=mönsterkort,f=74
  word=mörkar,f=74
  word=mörke,f=74
+ word=nakenbilder,f=74
  word=namnkunnigaste,f=74
  word=narratologi,f=74
  word=nationalromantikens,f=74
@@ -63394,6 +63469,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=amiraler,f=73
  word=amorf,f=73
  word=amputerade,f=73
+ word=anal,f=73
  word=analogin,f=73
  word=anbringa,f=73
  word=anfallsvinkeln,f=73
@@ -64715,6 +64791,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=passagerarfärjor,f=73
  word=pastan,f=73
  word=patronläget,f=73
+ word=pederasti,f=73
  word=pendeltågslinjer,f=73
  word=penning,f=73
  word=penninglistan,f=73
@@ -64897,6 +64974,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=rökta,f=73
  word=rörförstärkare,f=73
  word=rösträttens,f=73
+ word=sadomasochism,f=73
  word=sagolika,f=73
  word=salmonella,f=73
  word=saltad,f=73
@@ -65136,6 +65214,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=streckat,f=73
  word=stridsgrupp,f=73
  word=stridsplan,f=73
+ word=striptease,f=73
  word=strukturalistisk,f=73
  word=strukturförändringar,f=73
  word=sträckande,f=73
@@ -66812,6 +66891,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=festlig,f=72
  word=festligt,f=72
  word=festplatsen,f=72
+ word=fetisch,f=72
  word=fibromyalgi,f=72
  word=ficklampor,f=72
  word=fila,f=72
@@ -66837,6 +66917,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=fiskedrag,f=72
  word=fiskolja,f=72
  word=fiskrika,f=72
+ word=fitta,f=72
  word=fixerar,f=72
  word=fixstjärnan,f=72
  word=fjolårets,f=72
@@ -67305,6 +67386,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=grundregler,f=72
  word=grundskatternas,f=72
  word=grupperad,f=72
+ word=gruppsex,f=72
  word=grupptillhörighet,f=72
  word=grusades,f=72
  word=grusplaner,f=72
@@ -70373,6 +70455,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=tredjeplacerade,f=72
  word=tredubbel,f=72
  word=trefingrade,f=72
+ word=trekant,f=72
  word=tremastad,f=72
  word=treor,f=72
  word=trettonåriga,f=72
@@ -71278,6 +71361,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=amatörstallet,f=71
  word=ambulansförare,f=71
  word=amfibiefordon,f=71
+ word=ammar,f=71
  word=analyserades,f=71
  word=andfåddhet,f=71
  word=andraplacerade,f=71
@@ -72422,6 +72506,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=kilos,f=71
  word=kinesen,f=71
  word=kiowaer,f=71
+ word=kissa,f=71
  word=kittlar,f=71
  word=kjolarna,f=71
  word=klandrades,f=71
@@ -73288,6 +73373,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=rovor,f=71
  word=royalty,f=71
  word=rullager,f=71
+ word=rumpa,f=71
  word=runalfabetet,f=71
  word=rusat,f=71
  word=rustika,f=71
@@ -75358,6 +75444,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=gruppspelsomgången,f=70
  word=grupptalan,f=70
  word=grupptreorna,f=70
+ word=gruppvåldtäkt,f=70
  word=grusbanorna,f=70
  word=gruvföretaget,f=70
  word=gränssnitten,f=70
@@ -77742,6 +77829,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=volts,f=70
  word=vräktes,f=70
  word=vulkanöar,f=70
+ word=vulva,f=70
  word=vuxendop,f=70
  word=vuxengymnasium,f=70
  word=väckande,f=70
@@ -78819,6 +78907,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=favoritspelare,f=69
  word=favorittippade,f=69
  word=favoritämne,f=69
+ word=fegis,f=69
  word=fegt,f=69
  word=felstavning,f=69
  word=femfaldig,f=69
@@ -81587,6 +81676,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=tomtenissar,f=69
  word=tonårsflicka,f=69
  word=tonårsflickor,f=69
+ word=tonårspojke,f=69
  word=toppförarna,f=69
  word=toppklubbarna,f=69
  word=toppstriden,f=69
@@ -84255,6 +84345,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=kindpåsar,f=67
  word=kinesiskspråkiga,f=67
  word=kiropraktor,f=67
+ word=kiss,f=67
  word=kladdig,f=67
  word=kladistik,f=67
  word=kladistiken,f=67
@@ -85062,6 +85153,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=nykomponerade,f=67
  word=nykterhetsorganisationer,f=67
  word=nynazismen,f=67
+ word=nynazist,f=67
  word=nyproducerad,f=67
  word=nyproduktionen,f=67
  word=nysläpptes,f=67
@@ -85179,6 +85271,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=orelaterad,f=67
  word=organisationsstruktur,f=67
  word=orgelbyggeriet,f=67
+ word=orgie,f=67
  word=orientaliserande,f=67
  word=orientalismen,f=67
  word=originaldokument,f=67
@@ -85786,6 +85879,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=skogvaktaren,f=67
  word=skoja,f=67
  word=skolbiblioteket,f=67
+ word=skolflicka,f=67
  word=skolläraren,f=67
  word=skolmiljö,f=67
  word=skolreform,f=67
@@ -85883,6 +85977,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=smaklökarna,f=67
  word=smalnäbbad,f=67
  word=smalnäbbade,f=67
+ word=smegma,f=67
  word=smidas,f=67
  word=smidesarbeten,f=67
  word=smideshammare,f=67
@@ -85903,6 +85998,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=snittar,f=67
  word=snittytan,f=67
  word=snodde,f=67
+ word=snopp,f=67
  word=snubbar,f=67
  word=snubblande,f=67
  word=snuddar,f=67
@@ -87877,6 +87973,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=bröstbild,f=66
  word=bröstharnesk,f=66
  word=bröstkompressioner,f=66
+ word=bröstvårta,f=66
  word=brûlée,f=66
  word=buddhisterna,f=66
  word=buddistisk,f=66
@@ -88280,6 +88377,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=favoritlaget,f=66
  word=favoritmat,f=66
  word=favoritvapen,f=66
+ word=fekalier,f=66
  word=felbedömning,f=66
  word=felmeddelande,f=66
  word=felsägning,f=66
@@ -89382,6 +89480,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=jättegryta,f=66
  word=jättepandan,f=66
  word=jättestort,f=66
+ word=jävel,f=66
  word=kabelnätet,f=66
  word=kabeloperatörer,f=66
  word=kabelspårväg,f=66
@@ -90346,6 +90445,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=nedtrappning,f=66
  word=nedvända,f=66
  word=nedåtböjda,f=66
+ word=nekrofili,f=66
  word=neonskyltar,f=66
  word=nerflyttade,f=66
  word=nettoeffekten,f=66
@@ -91585,6 +91685,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=stafettlöpning,f=66
  word=stakade,f=66
  word=stakar,f=66
+ word=stake,f=66
  word=stalinismens,f=66
  word=stallorder,f=66
  word=stamkunder,f=66
@@ -92433,6 +92534,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=vattenkvalitén,f=66
  word=vattenmagasinet,f=66
  word=vattenskidåkning,f=66
+ word=vattensport,f=66
  word=vattenstrålar,f=66
  word=vattenvegetation,f=66
  word=vattenytans,f=66
@@ -92468,6 +92570,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=veterligt,f=66
  word=vettet,f=66
  word=vevas,f=66
+ word=vibrator,f=66
  word=vicepresidentposten,f=66
  word=vidmakthållande,f=66
  word=vidmakthålls,f=66
@@ -96054,6 +96157,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=kårhusockupationen,f=65
  word=kåserade,f=65
  word=kåserande,f=65
+ word=kåt,f=65
  word=köksavfall,f=65
  word=köksbord,f=65
  word=köldrekord,f=65
@@ -96781,6 +96885,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=nedtrimmad,f=65
  word=nedväxling,f=65
  word=negligera,f=65
+ word=negrer,f=65
  word=nejden,f=65
  word=nejder,f=65
  word=nektariner,f=65
@@ -97419,6 +97524,7 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=rat,f=65
  word=rationaliserar,f=65
  word=rationelle,f=65
+ word=rattar,f=65
  word=rattstången,f=65
  word=rauk,f=65
  word=reaktionsförmåga,f=65
@@ -99893,109 +99999,3 @@ dictionary=main:sv,locale=sv,description=Svenska,date=1414726264,version=54
  word=Kvarnsjön,f=63
  word=Kvarnsvedens,f=63
  word=Kvillsfors,f=63
- word=Kyrkheddinge,f=63
- word=Kärrtorps,f=63
- word=Kållandsö,f=63
- word=Köpenhamnskriterierna,f=63
- word=Köttgrottorna,f=63
- word=Ladins,f=63
- word=Lagavulin,f=63
- word=Lagerbielke,f=63
- word=Laholmsbukten,f=63
- word=Lambohov,f=63
- word=Landahl,f=63
- word=Landgré,f=63
- word=Landsbro,f=63
- word=Lateranbasilikan,f=63
- word=Laupen,f=63
- word=Laxman,f=63
- word=Legenda,f=63
- word=Leidens,f=63
- word=Leijoncrona,f=63
- word=Lewenhaupts,f=63
- word=Lexus,f=63
- word=Likstammen,f=63
- word=Limericks,f=63
- word=Linkspartei,f=63
- word=Ljugarn,f=63
- word=Loftahammar,f=63
- word=Luleälvens,f=63
- word=Lundagatan,f=63
- word=Lundsten,f=63
- word=Lyell,f=63
- word=Lyellmedaljen,f=63
- word=LysKOM,f=63
- word=Lysistrate,f=63
- word=Länsförsäkringar,f=63
- word=Långasjö,f=63
- word=Lööw,f=63
- word=Lübecks,f=63
- word=MWh,f=63
- word=Magdalenas,f=63
- word=Maines,f=63
- word=Malawisjön,f=63
- word=Malmbergets,f=63
- word=Malmvik,f=63
- word=Mangaåret,f=63
- word=Marklunds,f=63
- word=Markova,f=63
- word=Marsvinsholms,f=63
- word=Martinsons,f=63
- word=Medelhavsspelen,f=63
- word=Melbournes,f=63
- word=Menzies,f=63
- word=MetaPost,f=63
- word=Metafont,f=63
- word=Meänmaa,f=63
- word=Michigans,f=63
- word=Mikes,f=63
- word=Miljöförbundet,f=63
- word=Mingdynastins,f=63
- word=Minnesotas,f=63
- word=Mississippis,f=63
- word=Mitthögskolan,f=63
- word=MobileMe,f=63
- word=Mohammeds,f=63
- word=Monostatos,f=63
- word=Murrays,f=63
- word=Muskat,f=63
- word=Märit,f=63
- word=Möllers,f=63
- word=Nationalliga,f=63
- word=Neri,f=63
- word=Netanyahu,f=63
- word=Nevas,f=63
- word=Nibelungenlied,f=63
- word=Nikodemus,f=63
- word=Noak,f=63
- word=Noaks,f=63
- word=Nordins,f=63
- word=Norlins,f=63
- word=Norrskedika,f=63
- word=Novello,f=63
- word=Nymans,f=63
- word=Nyrop,f=63
- word=Näsbyholm,f=63
- word=Näsbypark,f=63
- word=ODBC,f=63
- word=OEM,f=63
- word=Observatorielunden,f=63
- word=Oftedal,f=63
- word=Okinawas,f=63
- word=Olandsån,f=63
- word=Omans,f=63
- word=Omdurman,f=63
- word=Omri,f=63
- word=Orinoco,f=63
- word=Orkesta,f=63
- word=Orlov,f=63
- word=Oskarsson,f=63
- word=Ostermans,f=63
- word=Ostfrieslands,f=63
- word=Ostmark,f=63
- word=Ottiliana,f=63
- word=Overland,f=63
- word=Ozymandias,f=63
- word=Padjelanta,f=63
- word=Palomarobservatoriet,f=63
- word=Patras,f=63

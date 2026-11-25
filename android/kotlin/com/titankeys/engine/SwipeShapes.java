@@ -56,7 +56,7 @@ final class SwipeShapes {
         if (end < 0 || !line.startsWith("f=", comma + 1)) return;
         int frequency = Integer.parseInt(line.substring(comma + 3, end));
         String flags = line.substring(end + 1);
-        if (frequency < MIN_FREQUENCY || flags.contains("offensive") || flags.contains("nonword")) return;
+        if (frequency < MIN_FREQUENCY || flags.contains("nonword")) return;
         String word = letters(line.substring(6, comma));
         if (word.length() >= 2 && outlinable(word)) commonFrequencies.merge(word, (float) frequency, Math::max);
     }

@@ -91,7 +91,7 @@ public final class TypedPredictions {
         String word = fields[0].substring(5), flags = fields[2].substring(6);
         int frequency;
         try { frequency = Integer.parseInt(fields[1].substring(2)); } catch (NumberFormatException error) { return null; }
-        if (frequency < ACRONYM_FREQUENCY || flags.contains("offensive") || flags.contains("nonword")) return null;
+        if (frequency < ACRONYM_FREQUENCY || flags.contains("nonword")) return null;
         return word.matches("[A-Z]{2,8}") ? word.toLowerCase(Locale.ROOT) : null;
     }
 
@@ -100,13 +100,13 @@ public final class TypedPredictions {
         return Arrays.binarySearch(acronyms, word.toLowerCase(Locale.ROOT)) >= 0;
     }
 
-    /** The word on a " word=nuggets,f=72,flags=,…" line, or null for names, unused words, and words marked offensive or not a word. */
+    /** The word on a " word=nuggets,f=72,flags=,…" line, or null for names, unused words, and words marked not a word. Rude words count like any other (owner, 2026-11-25: "Fully no filter"). */
     static String dictionaryWord(String line) {
         if (!line.startsWith(" word=")) return null;
         String[] fields = line.trim().split(",");
         if (fields.length < 3 || !fields[1].startsWith("f=") || !fields[2].startsWith("flags=")) return null;
         String word = fields[0].substring(5), flags = fields[2].substring(6);
-        if (fields[1].equals("f=0") || flags.contains("offensive") || flags.contains("nonword")) return null;
+        if (fields[1].equals("f=0") || flags.contains("nonword")) return null;
         return word.equals(word.toLowerCase(Locale.ROOT)) ? word : null;
     }
 

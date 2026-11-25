@@ -253,6 +253,9 @@ h1, h2 { line-height: 1.1; }
 .haptic-chip.gone { opacity: 0; transform: translate(-50%, 8px); }
 
 .tools { padding-top: 24px; padding-bottom: 72px; scroll-margin-top: 24px; }
+.tools .feature { background: #110A07; border: 1px solid #2A1B14; border-radius: 28px; padding: 40px; }
+.tools .eyebrow { display: inline-block; margin: 0 0 12px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--cream); box-shadow: inset 0 0 0 1px #5A3A2A; }
+@media (max-width: 720px) { .tools .feature { padding: 24px; } }
 .tools-icon { background: var(--cream); border-radius: 28px; padding: 12%; max-width: 460px; box-sizing: border-box; aspect-ratio: 1; display: grid; place-items: center; }
 .tools-icon img { border-radius: 0; max-width: 100%; width: 100%; height: auto; }
 .tools-list { color: var(--muted); font-size: 17px; line-height: 1.5; padding-left: 20px; margin: 18px 0; max-width: 32em; display: grid; gap: 8px; }

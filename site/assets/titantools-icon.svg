@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" role="img" aria-label="Titan Tools app icon">
+  <!-- Logo direction C (owner, 2026-11-24): a T in TitanKeys' cut-letter style on cream over a faint grid, with TitanKeys'
+       swipe line in orange. The launcher layers (res/drawable/titantools_icon_*.xml) are this at 1/10 scale on the 108 dp grid. -->
+  <rect width="1080" height="1080" rx="230" fill="#FFF1E6"/>
+  <path stroke="#E8D9CB" stroke-width="6" d="M180,0 V1080 M360,0 V1080 M540,0 V1080 M720,0 V1080 M900,0 V1080 M0,180 H1080 M0,360 H1080 M0,540 H1080 M0,720 H1080 M0,900 H1080"/>
+  <path fill="#160A04" d="M310,340 L790,340 L730,425 L595,425 L595,750 L505,750 L505,425 L310,425 Z"/>
+  <path fill="#EF804E" d="M315,746 L330,758 L785,362 L770,350 Z"/>
+</svg>

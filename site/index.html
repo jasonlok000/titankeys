@@ -56,7 +56,7 @@
   "isBasedOn": "https://github.com/juleshall4/atlas"
 }
 </script>
-<link rel="stylesheet" href="landing.css?v=12">
+<link rel="stylesheet" href="landing.css?v=14">
 </head>
 <body>
 <!-- The launch page (#58). Same look as the app, the store graphics and the trailer: Inter, cream on near-black, the Titan
@@ -67,7 +67,7 @@
   </a>
   <nav>
     <a href="#features">Features</a>
-    <a href="https://jasonlok000.github.io/titan2-nightkeys/">Titan Tools ↗</a>
+    <a href="#tools">TitanTools</a>
   </nav>
 </header>
 
@@ -133,6 +133,20 @@
     </article>
   </section>
 
+  <section class="cta" data-bar="download">
+    <div class="wrap">
+      <div>
+      <h2>Works out of the box.<br>Tweak <span class="box dark">everything</span> if you like.</h2>
+      <p>A friendly guide sets you up in minutes. After that, nearly everything has its own switch, down to the haptics on flick to delete.</p>
+      <p class="actions">
+        <a class="button dark" href="#get">Download</a>
+        <a class="button ghost dark" href="https://github.com/jasonlok000/titankeys">Source code</a>
+      </p>
+      </div>
+      <img class="cta-shot" src="assets/06-made-for.webp" data-nobar="assets/06-made-for-nobar.webp" width="807" height="900" loading="lazy" alt="The Titan 2 Elite showing Made for the Titan 2 Elite">
+    </div>
+  </section>
+
   <!-- On Google Play as a closed test until enough testers join (Play's rule): one extra step before installing. -->
   <section id="get" class="get wrap">
     <h2>Get it on Google <span class="box">Play</span></h2>
@@ -151,27 +165,36 @@
         <li><strong>Nothing works?</strong> The APK below is the same app, signed with the same key.</li>
       </ul>
     </div>
-    <p class="apk"><a class="button ghost small" href="https://github.com/jasonlok000/titankeys/releases/latest/download/titankeys.apk">Download the APK</a>
+    <p class="apk"><a class="button ghost small" href="https://github.com/jasonlok000/titankeys/releases/latest/download/titankeys.apk">Download TitanKeys (APK)</a>
       <span class="fine">No Google Play? Same app, same key. <a href="https://github.com/jasonlok000/titankeys/releases/latest">All releases</a></span></p>
   </section>
-
-  <section class="cta" data-bar="download">
-    <div class="wrap">
+  <section id="tools" class="tools wrap">
+    <article class="feature">
+      <div class="tools-icon"><img src="assets/titantools-icon.svg" width="1080" height="1080" loading="lazy" alt="The TitanTools icon: a T on a cream grid"></div>
       <div>
-      <h2>Works out of the box.<br>Tweak <span class="box dark">everything</span> if you like.</h2>
-      <p>A friendly guide sets you up in minutes. After that, nearly everything has its own switch, down to the haptics on flick to delete.</p>
-      <p class="actions">
-        <a class="button dark" href="#get">Download</a>
-        <a class="button ghost dark" href="https://github.com/jasonlok000/titankeys">Source code</a>
-      </p>
+        <p class="eyebrow">A separate app</p>
+        <h2>Meet TitanKeys' <span class="box">sidekick</span></h2>
+        <p>TitanTools is a separate little app that makes your Titan 2 Elite and TitanKeys work even better together.</p>
+        <ul class="tools-list">
+          <li><strong>Key light:</strong> the keys light up in the dark, or only while you type with TitanKeys.</li>
+          <li><strong>Hold a letter for an action:</strong> open an app, flashlight, rotate, Night mode, a widget button and more.</li>
+          <li><strong>Scale Toggle:</strong> flip between phone and tablet layout, at a preset size or your own.</li>
+          <li><strong>Night mode:</strong> Night Light, Extra dim and dark theme in one press.</li>
+          <li><strong>Hold Symbols:</strong> hold a letter for its symbol, for when TitanKeys isn't your keyboard.</li>
+        </ul>
+        <p class="fine">The key light, layout switch and Night mode need Shizuku, a free app, and the setup walks you through it.</p>
+        <p class="actions">
+          <a class="button" href="https://github.com/jasonlok000/titantools/releases/latest/download/titantools.apk">Download TitanTools (APK)</a>
+          <a class="button ghost" href="https://github.com/jasonlok000/titantools/releases">TitanTools releases</a>
+          <a class="button ghost" href="https://github.com/jasonlok000/titantools">TitanTools source</a>
+        </p>
       </div>
-      <img class="cta-shot" src="assets/06-made-for.webp" data-nobar="assets/06-made-for-nobar.webp" width="807" height="900" loading="lazy" alt="The Titan 2 Elite showing Made for the Titan 2 Elite">
-    </div>
+    </article>
   </section>
 </main>
 
 <footer class="wrap">
-  <p>Part of <a href="https://jasonlok000.github.io/titan2-nightkeys/">Titan Tools</a>, small apps made for the Titan 2 Elite. · <a href="privacy/">Privacy policy</a> · <a href="https://everyones-niche.com/">Everyone’s Niche ↗</a></p>
+  <p><a href="#tools">TitanTools</a> · <a href="privacy/">Privacy policy</a> · <a href="https://everyones-niche.com/">Everyone’s Niche ↗</a></p>
   <p class="fine">TitanKeys is a modified version of <a href="https://github.com/juleshall4/atlas">Atlas</a> by Julian Hall, under the GPL-3.0. It is not made by, affiliated with, or endorsed by Atlas, FUTO, or Unihertz. "Titan 2 Elite" is a product of Unihertz.</p>
 </footer>
 <div class="phone-bar" id="phone-bar" aria-hidden="true"></div>

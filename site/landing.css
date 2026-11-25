@@ -169,6 +169,16 @@ footer .fine { font-size: 13px; }
   backdrop-filter: blur(6px); white-space: nowrap; }
 .tap svg { width: 18px; height: 18px; fill: var(--orange); }
 .hero-media:hover .tap, .hero-media:focus-visible .tap { background: var(--black); }
+/* The trailer with sound: a layer over the whole page, with a close button that shows in every browser. */
+.player { position: fixed; inset: 0; z-index: 1000; background: #000; display: grid; place-items: center; }
+.player[hidden] { display: none; }
+.player video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+.player-close { position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); width: 48px; height: 48px;
+  display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .72); cursor: pointer;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .35); }
+.player-close svg { stroke: var(--cream); stroke-width: 2.4; stroke-linecap: round; fill: none; }
+.player-close:hover, .player-close:focus-visible { background: var(--orange); }
+.watching, .watching body { overflow: hidden; }
 @media (prefers-reduced-motion: no-preference) {
   @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 128, 78, .55); } 60% { box-shadow: 0 0 0 12px rgba(239, 128, 78, 0); } }
   .tap { animation: pulse 2.4s 1.4s ease-out infinite; }

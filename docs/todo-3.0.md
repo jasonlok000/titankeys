@@ -738,3 +738,7 @@ These observations came from source and dictionary reviews. Phone results are st
 - Check hyphenated words using Russian по-русски, Bulgarian по-добре, Estonian e-posti, Hungarian tudja-e, Polish e-mail and Indonesian anak-anak. Some whole words have shipped prediction keys although lookup takes only their suffix. Establish the intended selection unit per language.
 - Check sentence capitals after local abbreviations and dates (Polish np. książka, Lithuanian 9 val. ryto, Czech 5. května). Compare Polish suggestions for explicitly accented dziękuję with dziękuje. Review Latvian greeting coverage including labdien. Judge conversational starter quality separately from spelling correctness.
 - Portuguese: both regional tables are present. Compare corrections in complete sentences before changing frequencies. Nynorsk: check whether lower-ranked Bokmål entries affect actual suggestions. Other quality observations include formal starters in Hindi, Hebrew, Georgian and Indonesian.
+
+## Website visit counter (2026-11-25)
+
+Owner asked for analytics. site/visit.js counts each page once per tab and taps on the five join/download buttons, by source (referrer name, ?ref= label, fbclid = facebook, or direct), into site_visits on titankeys-support (migration 0003, daily totals only). Live domain only. Privacy page has "This website" (F wording), dated 25 Nov. Read with: boardq.sh "SELECT source, event, SUM(count) FROM site_visits GROUP BY 1,2". Use ?ref=<label> on links in posts.

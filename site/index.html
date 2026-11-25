@@ -80,7 +80,7 @@
         <p class="lead">This phone deserves a keyboard of its own. So here it is: swipe words on the keys you press, type one-handed with ease, and let it fix your typos as you go.</p>
         <p class="actions">
           <!-- Launch day (2026-11-24): TitanKeys is on Google Play as a test, so Download goes to the three steps below. -->
-          <a class="button" href="#get">Download</a>
+          <a class="button" href="#get">Download <span data-version="titankeys">3.0.3</span></a>
           <a class="button ghost" href="#features">See what it does</a>
         </p>
       </div>
@@ -165,7 +165,7 @@
         <li><strong>Nothing works?</strong> The APK below is the same app, signed with the same key.</li>
       </ul>
     </div>
-    <p class="apk"><a class="button ghost small" href="https://github.com/jasonlok000/titankeys/releases/latest/download/titankeys.apk">Download TitanKeys (APK)</a>
+    <p class="apk"><a class="button ghost small" href="https://github.com/jasonlok000/titankeys/releases/latest/download/titankeys.apk">Download TitanKeys <span data-version="titankeys">3.0.3</span> (APK)</a>
       <span class="fine">No Google Play? Same app, same key. <a href="https://github.com/jasonlok000/titankeys/releases/latest">All releases</a></span></p>
   </section>
   <section id="tools" class="tools wrap">
@@ -184,7 +184,7 @@
         </ul>
         <p class="fine">TitanTools needs Shizuku, a free app, and its setup walks you through it in three steps.</p>
         <p class="actions">
-          <a class="button" href="https://github.com/jasonlok000/titantools/releases/latest/download/titantools.apk">Download TitanTools (APK)</a>
+          <a class="button" href="https://github.com/jasonlok000/titantools/releases/latest/download/titantools.apk">Download TitanTools <span data-version="titantools">1.1.2</span> (APK)</a>
           <a class="button ghost" href="https://github.com/jasonlok000/titantools/releases">TitanTools releases</a>
           <a class="button ghost" href="https://github.com/jasonlok000/titantools">TitanTools source</a>
         </p>
@@ -222,6 +222,28 @@
     const live = document.createElement("script");
     live.src = "assets/bars.js?v=12";
     document.body.appendChild(live);
+  })();
+
+  // The download buttons name the newest version (owner, 2026-11-25): written in at release, then checked against GitHub's latest
+  // release, so a release the page wasn't updated for still shows. Asked once per visit; without an answer the written one stays.
+  (() => {
+    for (const app of ["titankeys", "titantools"]) {
+      const spans = document.querySelectorAll(`[data-version="${app}"]`);
+      if (!spans.length) continue;
+      const show = v => { if (/^\d+(\.\d+)+$/.test(v)) spans.forEach(s => { s.textContent = v; }); };
+      let saved = null;
+      try { saved = sessionStorage.getItem("version-" + app); } catch (e) {}
+      if (saved) { show(saved); continue; }
+      fetch(`https://api.github.com/repos/jasonlok000/${app}/releases/latest`)
+        .then(r => r.ok ? r.json() : null)
+        .then(release => {
+          const v = release && String(release.tag_name || "").replace(/^v/, "");
+          if (!v) return;
+          show(v);
+          try { sessionStorage.setItem("version-" + app, v); } catch (e) {}
+        })
+        .catch(() => {});
+    }
   })();
 
   // The trailer: a tap plays it from the start, full screen and with sound. Leaving full screen brings back the quiet loop.

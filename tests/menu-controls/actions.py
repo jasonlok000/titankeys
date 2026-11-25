@@ -15,7 +15,7 @@ def method(name):
 release=block(source.index("        if (keyCode == pickerKey) {", source.index("// The release of a key that picked from the picker")))
 callback=block(source.index('            control = { key ->'))
 fixture=r'''
-class KeyEvent(val keyCode: Int, val repeatCount: Int=0, val scanCode: Int=0, val flags: Int=0) {
+class KeyEvent(val keyCode: Int, val repeatCount: Int=0, val scanCode: Int=0, val flags: Int=0, val eventTime: Long=0L) {
     companion object { const val KEYCODE_A=29; const val KEYCODE_Z=54; const val KEYCODE_ENTER=66
         const val KEYCODE_NUMPAD_ENTER=160; const val KEYCODE_DEL=67; const val KEYCODE_SYM=63; const val KEYCODE_SPACE=62; const val KEYCODE_BACK=4 }
 }
@@ -52,7 +52,7 @@ class Fixture {
 __CONTROL__
 __KEY__
     fun down(key: Int, repeat: Int=0)=choicesMenuKey(KeyEvent(key,repeat))
-    fun release(keyCode: Int): Boolean { __RELEASE__; return false }
+    fun release(keyCode: Int): Boolean { val event=KeyEvent(keyCode); __RELEASE__; return false }
 }
 fun main() {
     val f=Fixture(); val menu=f.choicesMenu!!

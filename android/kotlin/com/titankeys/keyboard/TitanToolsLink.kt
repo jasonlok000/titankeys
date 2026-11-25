@@ -26,9 +26,9 @@ internal class TitanToolsLink(private val now: () -> Long = SystemClock::uptimeM
      * A field opened, nothing typed yet (owner, 2026-11-24: Typing lit as the text box opened, before a key). Sent as "typing" with
      * kind [FIELD], so an older Titan Tools lights as before, and a newer one tells a field open from typing.
      */
-    fun opened(context: Context) {
+    fun opened(context: Context, home: Boolean = false) {
         if (typing) return
-        send(context, true, FIELD)
+        send(context, true, if (home) HOME else FIELD)
     }
 
     /** The keyboard hid. */
@@ -65,5 +65,7 @@ internal class TitanToolsLink(private val now: () -> Long = SystemClock::uptimeM
         /** The "kind" extra: a key or a swipe, or only a field that opened. */
         const val TYPING = "typing"
         const val FIELD = "field"
+        /** The home launcher's own search box, nothing typed yet: Titan Tools may treat the keys as free (owner, 2026-11-24). */
+        const val HOME = "home"
     }
 }

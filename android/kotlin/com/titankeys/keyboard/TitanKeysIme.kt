@@ -174,6 +174,8 @@ class TitanKeysIme : InputMethodService() {
     /** Back hid the strip, so it stays hidden in this field until you tap the field or type. */
     private var hiddenByBack = false
     private var inLauncher = false
+    /** The field is the home launcher's own search box with nothing in it: Titan Tools' held keys may act (kind "home"). */
+    private var homeSearch = false
     private var launcherFieldHasText = false
     private val consumedKeys = HashSet<Int>()
     private var deadKeyPending = false
@@ -1905,6 +1907,7 @@ class TitanKeysIme : InputMethodService() {
         inLauncher = editing && TypingSettings.launcherHidesBar(this) && info.packageName == launcherPackage()
         barHidden = info.packageName in TypingSettings.hiddenBarApps(this)
         launcherFieldHasText = inLauncher && info.initialSelStart > 0
+        homeSearch = editing && info.packageName == launcherPackage() && info.initialSelStart <= 0
         contact.releaseKeys()
         clearSettlements()
         modifiers.fieldStarted(restarting, editing, samePosition)
@@ -2204,7 +2207,7 @@ class TitanKeysIme : InputMethodService() {
     override fun onWindowShown() {
         super.onWindowShown()
         windowShown = true
-        if (editing) titanTools.opened(this)
+        if (editing) titanTools.opened(this, homeSearch)
         watchStatus()
         if (field.exact) logExact("window shown")
         if (recycling) {
